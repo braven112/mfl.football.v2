@@ -1,0 +1,292 @@
+/* Green Theme - CDN Ready */
+/* Complete standalone CSS file with embedded design tokens */
+
+:root {
+  /* PRIMARY BRAND COLORS - Green Theme */
+  --color-primary: #166534;
+  --color-secondary: #059669;
+  --color-accent: #10b981;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  
+  /* SEMANTIC COLOR TOKENS */
+  --color-league-primary: #166534;
+  --color-league-secondary: #059669;
+  --color-team-highlight: #d1fae5;
+  --color-team-highlight-alt: #ecfdf5;
+  --color-team-text: #166534;
+  
+  /* BACKGROUND COLOR TOKENS - Green Theme */
+  --bg-primary: #f0fdf4;
+  --bg-secondary: #d1fae5;
+  --bg-tertiary: #a7f3d0;
+  --bg-quaternary: #6ee7b7;
+  --bg-contrast: #1e293b;
+  --bg-overlay-light: rgba(22, 101, 52, 0.1);
+  --bg-overlay-medium: rgba(22, 101, 52, 0.3);
+  --bg-tooltip: #ffffff;
+  --bg-hover: #ecfdf5;
+  --bg-active: #d1fae5;
+  
+  /* TEXT COLOR TOKENS - Green Theme */
+  --text-primary: #166534;
+  --text-secondary: #14532d;
+  --text-muted: #10b981;
+  --text-light-muted: #a7f3d0;
+  --text-inverse: #ffffff;
+  --text-black: #000000;
+  --text-link: #166534;
+  --text-link-hover: #14532d;
+  --text-success: #059669;
+  --text-warning: #d97706;
+  --text-error: #dc2626;
+  --text-info: #166534;
+  
+  /* BORDER COLOR TOKENS - Green Theme */
+  --border-primary: #6ee7b7;
+  --border-secondary: #34d399;
+  --border-tertiary: #10b981;
+  --border-accent: #166534;
+  --border-focus: #166534;
+  
+  /* SPACING TOKENS */
+  --space-0: 0;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-15: 15px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-30: 30px;
+  --space-48: 48px;
+  
+  /* TYPOGRAPHY TOKENS */
+  --font-family-primary: "BentonSans400", sans-serif;
+  --font-family-secondary: "playoff-bold", sans-serif;
+  --font-family-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 24px;
+  --font-size-huge: 46px;
+  
+  /* BORDER RADIUS TOKENS */
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-round: 50%;
+  
+  /* SHADOW TOKENS - Green Theme */
+  --shadow-sm: 0 1px 2px 0 rgba(22, 101, 52, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(22, 101, 52, 0.15);
+  --shadow-inset: inset 0px -1px 0px 0px rgba(22, 101, 52, 0.1);
+  
+  /* TRANSITIONS */
+  --transition-base: 0.25s ease;
+}
+
+/* ================================
+   BASE STYLES
+   ================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.2;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-secondary);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-12) 0;
+}
+
+h2 {
+  font-size: var(--font-size-xxl);
+  border-bottom: 4px solid var(--border-primary);
+  padding-bottom: var(--space-4);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+  margin-left: var(--space-8);
+}
+
+a,
+a:link,
+a:visited {
+  color: var(--text-link);
+  font-family: var(--font-family-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--text-link-hover);
+}
+
+.btn,
+input[type="button"],
+input[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-14) var(--space-30);
+  margin-bottom: var(--space-10);
+  border: 2px solid var(--color-league-primary);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-league-primary);
+  color: var(--text-inverse);
+  font-weight: bold;
+  text-transform: uppercase;
+  font-family: var(--font-family-primary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+}
+
+.btn:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  background-color: var(--text-link-hover);
+  border-color: var(--text-link-hover);
+  color: var(--text-inverse);
+}
+
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+  padding: var(--space-8);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family-primary);
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  transition: border-color var(--transition-base);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--border-focus);
+}
+
+.report-wrapper,
+.card {
+  margin-bottom: var(--space-24);
+  padding: var(--space-12);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.report {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-12);
+}
+
+.report td {
+  padding: var(--space-6) var(--space-8);
+  text-align: left;
+}
+
+.report th {
+  font-family: var(--font-family-primary);
+  font-weight: bold;
+  color: var(--text-secondary);
+  text-align: left;
+  padding: var(--space-6) var(--space-8);
+  background-color: transparent;
+}
+
+.report .oddtablerow {
+  background-color: var(--bg-secondary);
+  box-shadow: var(--shadow-inset);
+}
+
+.report .eventablerow {
+  background-color: var(--bg-tertiary);
+}
+
+/* Alert components for green theme */
+.alert {
+  padding: var(--space-12) var(--space-16);
+  margin-bottom: var(--space-16);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+
+.alert-info {
+  background-color: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #166534;
+}
+
+.alert-warning {
+  background-color: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.alert-success {
+  background-color: #d1fae5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  color: #7f1d1d;
+}
+
+/* Utility classes */
+.hidden { display: none !important; }
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+.text-uppercase { text-transform: uppercase !important; }
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+
+/* Scrollbar styling for green theme */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-league-primary);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-link-hover);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
