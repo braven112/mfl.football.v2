@@ -1,0 +1,329 @@
+/* Playoff Blue Green Design Tokens */
+:root {
+  /* ================================
+     PRIMARY BRAND COLORS
+     ================================ */
+  --color-primary: #1c497c;
+  --color-secondary: #2e8743;
+  --color-accent: #2f8b45;
+  --color-success: #008000;
+  --color-warning: #f8b500;
+  --color-error: #ff0000;
+  --color-info: #d9edf7;
+  
+  /* ================================
+     SEMANTIC COLOR TOKENS
+     ================================ */
+  --color-league-primary: #2e8743;
+  --color-league-secondary: #1c497c;
+  --color-team-highlight: #dbefd3;
+  --color-team-highlight-alt: #f0fff0;
+  --color-team-text: #2c501e;
+  
+  /* ================================
+     FANTASY POSITION COLORS
+     ================================ */
+  /* Quarterback */
+  --color-qb-start: #f9a7a7;
+  --color-qb-end: #fcecfc;
+  --color-qb-gradient: linear-gradient(to bottom, var(--color-qb-start), var(--color-qb-end));
+  
+  /* Running Back */
+  --color-rb-start: #b7df2d;
+  --color-rb-end: #e2ffa0;
+  --color-rb-gradient: linear-gradient(to bottom, var(--color-rb-start), var(--color-rb-end));
+  
+  /* Wide Receiver */
+  --color-wr-start: #fff082;
+  --color-wr-end: #fff5aa;
+  --color-wr-gradient: linear-gradient(to bottom, var(--color-wr-start), var(--color-wr-end));
+  
+  /* Tight End */
+  --color-te-start: #b6dffd;
+  --color-te-end: #e0f3fa;
+  --color-te-gradient: linear-gradient(to bottom, var(--color-te-start), var(--color-te-end));
+  
+  /* Placekicker */
+  --color-pk-start: #f8b500;
+  --color-pk-end: #fbdf93;
+  --color-pk-gradient: linear-gradient(to bottom, var(--color-pk-start), var(--color-pk-end));
+  
+  /* Defense */
+  --color-def-start: #c4783a;
+  --color-def-end: #edc4b6;
+  --color-def-gradient: linear-gradient(to bottom, var(--color-def-start), var(--color-def-end));
+  
+  /* ================================
+     BACKGROUND COLOR TOKENS
+     ================================ */
+  --bg-primary: #f9f9f9;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #ececec;
+  --bg-quaternary: #eeeeee;
+  --bg-contrast: #31382d;
+  --bg-overlay-light: rgba(0, 0, 0, 0.1);
+  --bg-overlay-medium: rgba(0, 0, 0, 0.38);
+  --bg-overlay-white: rgba(255, 255, 255, 0.1);
+  --bg-tooltip: #ffffff;
+  --bg-hover: #1c487a;
+  --bg-active: #173d67;
+  --bg-transparent: transparent;
+  
+  /* ================================
+     TEXT COLOR TOKENS
+     ================================ */
+  --text-primary: #333333;
+  --text-secondary: #1c497c;
+  --text-muted: #999999;
+  --text-light-muted: #dddddd;
+  --text-inverse: #ffffff;
+  --text-black: #000000;
+  --text-transparent: transparent;
+  
+  /* Link colors */
+  --text-link: #1c497c;
+  --text-link-hover: #215591;
+  --text-link-visited: #1c497c;
+  
+  /* Status text colors */
+  --text-success: #3c763d;
+  --text-warning: #8a6d3b;
+  --text-warning-dark: #66512c;
+  --text-error: #a94442;
+  --text-info: #31708f;
+  --text-injury: #ffffff;
+  --text-projection: #008000;
+  
+  /* ================================
+     BORDER COLOR TOKENS
+     ================================ */
+  --border-primary: #dddddd;
+  --border-secondary: #f1f1f1;
+  --border-tertiary: #cccccc;
+  --border-accent: #2e8743;
+  --border-focus: #1c497c;
+  --border-calendar-today: #226532;
+  
+  /* Alert borders */
+  --border-warning: #faf2cc;
+  --border-success: #d0e9c6;
+  --border-info: #bcdff1;
+  --border-error: #f2dede;
+  
+  /* ================================
+     INTERACTIVE COLOR TOKENS
+     ================================ */
+  --color-button-primary: #2e8743;
+  --color-button-primary-hover: #349a4c;
+  --color-button-secondary: #1c497c;
+  --color-button-secondary-hover: #215591;
+  
+  /* ================================
+     STATUS/STATE COLOR TOKENS
+     ================================ */
+  --color-draft-timer: #1c497c;
+  --color-draft-controller: #ff0000;
+  --color-draft-edit: #ff0000;
+  --color-draft-edit-hover: #1c497c;
+  --color-injury: #ff0000;
+  --color-projection: #008000;
+  --color-add-highlight: #008000;
+  --color-drop-highlight: #ff0000;
+  
+  /* ================================
+     ALERT/MESSAGE COLOR TOKENS
+     ================================ */
+  --alert-warning-bg: #fcf8e3;
+  --alert-warning-border: #faf2cc;
+  --alert-warning-text: #8a6d3b;
+  --alert-info-bg: #d9edf7;
+  --alert-info-border: #bcdff1;
+  --alert-info-text: #31708f;
+  --alert-success-bg: #dff0d8;
+  --alert-success-border: #d0e9c6;
+  --alert-success-text: #3c763d;
+  --alert-error-bg: #f2dede;
+  --alert-error-text: #a94442;
+  
+  /* ================================
+     AFL LOGO COLORS (if needed)
+     ================================ */
+  --afl-dark-blue: #243c65;
+  --afl-red-brown: #b34826;
+  --afl-red: #c43c3b;
+  --afl-dark-red: #b22626;
+  --afl-white: #ffffff;
+  
+  /* ================================
+     SPACING TOKENS
+     ================================ */
+  /* Micro spacing */
+  --space-0: 0;
+  --space-1: 1px;
+  --space-2: 2px;
+  --space-3: 3px;
+  --space-4: 4px;
+  --space-5: 5px;
+  --space-6: 6px;
+  --space-7: 7px;
+  --space-8: 8px;
+  --space-9: 9px;
+  --space-10: 10px;
+  
+  /* Small spacing */
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-15: 15px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  
+  /* Medium spacing */
+  --space-24: 24px;
+  --space-25: 25px;
+  --space-30: 30px;
+  --space-36: 36px;
+  --space-40: 40px;
+  --space-44: 44px;
+  --space-48: 48px;
+  
+  /* Large spacing */
+  --space-51: 51px;
+  --space-57: 57px;
+  --space-64: 64px;
+  --space-75: 75px;
+  --space-100: 100px;
+  --space-110: 110px;
+  --space-128: 128px;
+  --space-150: 150px;
+  --space-175: 175px;
+  --space-200: 200px;
+  --space-220: 220px;
+  --space-246: 246px;
+  --space-270: 270px;
+  --space-300: 300px;
+  
+  /* Semantic spacing aliases */
+  --space-xxs: var(--space-2);
+  --space-xs: var(--space-4);
+  --space-sm: var(--space-8);
+  --space-md: var(--space-12);
+  --space-lg: var(--space-16);
+  --space-xl: var(--space-20);
+  --space-xxl: var(--space-24);
+  --space-xxxl: var(--space-30);
+  --space-huge: var(--space-48);
+  
+  /* Container spacing */
+  --container-padding: var(--space-15);
+  --container-margin: var(--space-24);
+  --section-margin: var(--space-24);
+  --module-margin: var(--space-12);
+  
+  /* Component spacing */
+  --button-padding-x: var(--space-30);
+  --button-padding-y: var(--space-14);
+  --button-margin: var(--space-10);
+  --input-padding: var(--space-8);
+  --card-padding: var(--space-12);
+  --table-cell-padding: var(--space-6) var(--space-8);
+  --caption-padding: var(--space-8);
+  
+  /* ================================
+     TYPOGRAPHY TOKENS
+     ================================ */
+  --font-family-primary: "BentonSans400", sans-serif;
+  --font-family-secondary: "playoff-bold", sans-serif;
+  --font-family-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  --font-size-8: 8px;
+  --font-size-10: 10px;
+  --font-size-11: 11px;
+  --font-size-12: 12px;
+  --font-size-13: 13px;
+  --font-size-14: 14px;
+  --font-size-15: 15px;
+  --font-size-16: 16px;
+  --font-size-18: 18px;
+  --font-size-20: 20px;
+  --font-size-24: 24px;
+  --font-size-30: 30px;
+  --font-size-32: 32px;
+  --font-size-46: 46px;
+  --font-size-48: 48px;
+  --font-size-60: 60px;
+  
+  /* Semantic font size aliases */
+  --font-size-xs: var(--font-size-10);
+  --font-size-sm: var(--font-size-12);
+  --font-size-base: var(--font-size-14);
+  --font-size-md: var(--font-size-15);
+  --font-size-lg: var(--font-size-16);
+  --font-size-xl: var(--font-size-18);
+  --font-size-xxl: var(--font-size-24);
+  --font-size-xxxl: var(--font-size-32);
+  --font-size-huge: var(--font-size-46);
+  
+  --line-height-tight: 1;
+  --line-height-base: 1.2;
+  --line-height-relaxed: 1.5;
+  
+  /* ================================
+     BORDER RADIUS TOKENS
+     ================================ */
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-round: 50%;
+  
+  /* ================================
+     SHADOW TOKENS
+     ================================ */
+  --shadow-sm: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0px 0px 5px 4px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 5px 5px rgba(0, 0, 0, 0.22);
+  --shadow-inset: inset 0px -1px 0px 0px rgba(0, 0, 0, 0.05);
+  --shadow-inset-dark: inset 0px -2px 15px 5px rgba(0, 0, 0, 0.1);
+  
+  /* ================================
+     LAYOUT TOKENS
+     ================================ */
+  --container-width-sm: 750px;
+  --container-width-md: 970px;
+  --container-width-lg: 1170px;
+  --container-width-xl: 1370px;
+  
+  /* Grid & Layout */
+  --grid-gutter: var(--space-15);
+  --column-gap: var(--space-6);
+  
+  /* ================================
+     TRANSITIONS
+     ================================ */
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* ================================
+     Z-INDEX SCALE
+     ================================ */
+  --z-dropdown: 999;
+  --z-sticky: 1000;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 99999;
+  --z-modal: 99999;
+  
+  /* ================================
+     COMPONENT SPECIFIC
+     ================================ */
+  --icon-size-sm: var(--space-20);
+  --icon-size-base: var(--space-38);
+  --avatar-size: var(--space-51);
+  --franchise-icon-width: var(--space-128);
+  --franchise-icon-min-width: var(--space-75);
+  
+  /* Common component combinations */
+  --space-38: 38px;
+}
