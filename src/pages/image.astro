@@ -1,6 +1,13 @@
 ---
 import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
 import astroLogo from '../assets/logo.png';
 ---
 
-<Image src={astroLogo} alt="Astro Logo" width={50} quality={75} />
+<Layout title="Image Test">
+	<div style="padding: 2rem; text-align: center;">
+		<h1>Image Test</h1>
+		<Image src={astroLogo} alt="Astro Logo" width={50} quality={75} />
+		<p>This page shows an image and should have the footer below.</p>
+	</div>
+</Layout>

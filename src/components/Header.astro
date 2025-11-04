@@ -1,0 +1,283 @@
+---
+// Header component with hamburger menu
+---
+
+<header class="site-header">
+	<div class="header-container">
+		<!-- Logo and Brand -->
+		<a href="/" class="brand">
+			<div class="logo-placeholder">
+				<!-- Placeholder for future SVG logo -->
+				<svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+					<rect width="40" height="40" rx="8" fill="#dc2626"/>
+					<text x="20" y="25" text-anchor="middle" fill="white" font-size="14" font-weight="bold">M</text>
+				</svg>
+			</div>
+			<span class="brand-text">MFL.football</span>
+		</a>
+
+		<!-- Hamburger Menu Button -->
+		<button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu">
+			<span class="hamburger-line"></span>
+			<span class="hamburger-line"></span>
+			<span class="hamburger-line"></span>
+		</button>
+	</div>
+
+	<!-- Navigation Menu -->
+	<nav class="nav-menu" id="nav-menu">
+		<div class="nav-overlay" id="nav-overlay"></div>
+		<div class="nav-content">
+			<button class="close-btn" id="close-btn" aria-label="Close menu">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+			</button>
+			<ul class="nav-links">
+				<li><a href="/instructions">Instructions</a></li>
+				<li><a href="#">Features</a></li>
+				<li><a href="#">Support</a></li>
+				<li><a href="#">Documentation</a></li>
+			</ul>
+		</div>
+	</nav>
+</header>
+
+<style>
+	.site-header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		background: white;
+		border-bottom: 1px solid #e5e5e5;
+		z-index: 1000;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	}
+
+	.header-container {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1rem 1.5rem;
+		max-width: 1200px;
+		margin: 0 auto;
+	}
+
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		text-decoration: none;
+		color: black;
+		transition: all 0.2s ease;
+	}
+
+	.brand:hover {
+		color: #dc2626;
+		text-decoration: none;
+	}
+
+	.brand:hover .brand-text {
+		color: #dc2626;
+	}
+
+	.logo-placeholder svg {
+		display: block;
+	}
+
+	.brand-text {
+		font-size: 1.5rem;
+		font-weight: bold;
+		color: black;
+	}
+
+	.hamburger-btn {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		gap: 0.25rem;
+		transition: all 0.3s ease;
+	}
+
+	.hamburger-line {
+		width: 1.5rem;
+		height: 2px;
+		background: black;
+		transition: all 0.3s ease;
+		transform-origin: center;
+	}
+
+	.hamburger-btn:hover .hamburger-line {
+		background: #dc2626;
+	}
+
+	.hamburger-btn.active .hamburger-line:nth-child(1) {
+		transform: rotate(45deg) translate(0.35rem, 0.35rem);
+	}
+
+	.hamburger-btn.active .hamburger-line:nth-child(2) {
+		opacity: 0;
+	}
+
+	.hamburger-btn.active .hamburger-line:nth-child(3) {
+		transform: rotate(-45deg) translate(0.35rem, -0.35rem);
+	}
+
+	.nav-menu {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 100vh;
+		width: 100%;
+		z-index: 999;
+		visibility: hidden;
+		transition: visibility 0s 0.3s;
+	}
+
+	.nav-menu.active {
+		visibility: visible;
+		transition: visibility 0s 0s;
+	}
+
+	.nav-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.6);
+		opacity: 0;
+		transition: opacity 0.3s ease;
+	}
+
+	.nav-menu.active .nav-overlay {
+		opacity: 1;
+	}
+
+	.nav-content {
+		position: fixed;
+		top: 0;
+		right: 0;
+		height: 100%;
+		width: 300px;
+		background: white;
+		padding: 2rem;
+		box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+		transform: translateX(100%);
+		transition: transform 0.3s ease;
+		z-index: 1000;
+	}
+
+	.nav-menu.active .nav-content {
+		transform: translateX(0);
+	}
+
+	.close-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		color: black;
+		cursor: pointer;
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.close-btn:hover {
+		background: #f5f5f5;
+		color: #dc2626;
+	}
+
+	.close-btn svg {
+		width: 24px;
+		height: 24px;
+	}
+
+	.nav-links {
+		list-style: none;
+		padding: 0;
+		margin: 2rem 0 0 0;
+	}
+
+	.nav-links li {
+		margin-bottom: 1.5rem;
+	}
+
+	.nav-links a {
+		display: block;
+		color: black;
+		text-decoration: none;
+		font-size: 1.125rem;
+		font-weight: 500;
+		padding: 0.75rem 0;
+		border-bottom: 1px solid #f5f5f5;
+		transition: color 0.2s ease;
+	}
+
+	.nav-links a:hover {
+		color: #dc2626;
+	}
+
+	/* Add padding to body when header is fixed */
+	:global(body) {
+		padding-top: 80px;
+	}
+
+	@media (max-width: 300px) {
+		.nav-content {
+			width: 100%;
+		}
+	}
+</style>
+
+<script>
+	// Add interactivity to hamburger menu
+	const hamburgerBtn = document.getElementById('hamburger-btn');
+	const navMenu = document.getElementById('nav-menu');
+	const navOverlay = document.getElementById('nav-overlay');
+	const closeBtn = document.getElementById('close-btn');
+
+	function toggleMenu() {
+		hamburgerBtn?.classList.toggle('active');
+		navMenu?.classList.toggle('active');
+		document.body.style.overflow = navMenu?.classList.contains('active') ? 'hidden' : '';
+	}
+
+	function closeMenu() {
+		hamburgerBtn?.classList.remove('active');
+		navMenu?.classList.remove('active');
+		document.body.style.overflow = '';
+	}
+
+	hamburgerBtn?.addEventListener('click', toggleMenu);
+	navOverlay?.addEventListener('click', closeMenu);
+	closeBtn?.addEventListener('click', closeMenu);
+
+	// Close menu on escape key
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && navMenu?.classList.contains('active')) {
+			closeMenu();
+		}
+	});
+
+	// Close menu on window resize (for responsive behavior)
+	window.addEventListener('resize', () => {
+		if (window.innerWidth > 768 && navMenu?.classList.contains('active')) {
+			closeMenu();
+		}
+	});
+</script>

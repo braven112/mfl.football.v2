@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import '../assets/css/playoff-blue-green-optimized.css';
 
 export const prerender = true;
 ---
@@ -200,13 +199,6 @@ export const prerender = true;
 		--card-shadow: 0 15px 45px -25px rgba(15, 23, 42, 0.45);
 	}
 
-	main {
-		margin: auto;
-		padding: 4rem 1.5rem 5rem;
-		max-width: min(1200px, 92vw);
-		display: grid;
-		gap: 3rem;
-	}
 
 	.intro {
 		text-align: center;
@@ -368,9 +360,6 @@ export const prerender = true;
 	}
 
 	@media (max-width: 768px) {
-		main {
-			padding: 3rem 1rem 4rem;
-		}
 
 		.guide-layout {
 			grid-template-columns: 1fr;

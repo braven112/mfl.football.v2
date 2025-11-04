@@ -21,7 +21,7 @@ const { href, title, body } = Astro.props as Props;
 </li>
 <style>
 	:root {
-		--link-gradient: linear-gradient(45deg, #4f39fa, #da62c4 30%, var(--color-border) 60%);
+		--link-gradient: linear-gradient(45deg, var(--secondary-color) var(--accent-color) 30%, var(--color-border) 60%);
 	}
 
 	.link-card {
@@ -66,7 +66,7 @@ const { href, title, body } = Astro.props as Props;
 	}
 
 	.link-card:is(:hover, :focus-within) h2 {
-		color: #4f39fa;
+		color: var(--primary-link-hover-text-color);
 	}
 
 	.link-card:is(:hover, :focus-within) h2 span {

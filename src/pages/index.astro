@@ -2,8 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
 
-// Import one of your theme CSS files
-import '../assets/css/playoff-blue-green-optimized.css';
 
 export const prerender = true;
 ---
@@ -14,35 +12,34 @@ export const prerender = true;
 			<h1><span class="text-gradient">MFL.football</span></h1>
 			<p class="subtitle">A responsive my fantasy league template from <a href="https://www.mfladdons.com/" target="_blank">MFLaddons</a></p>
 			<div class="hero-actions">
-				<a href="https://www59.myfantasyleague.com/2017/home/65353" target="_blank" class="btn-demo">View Demo</a>
-				<a href="/instructions" class="btn-instructions">Read Instructions</a>
+				<a href="https://www59.myfantasyleague.com/2017/home/65353" target="_blank" class="btn-primary">View Demo</a>
+				<a href="/instructions" class="btn-secondary">Read Instructions</a>
 			</div>
 		</div>
 
-		<section class="features-section">
-			<h2>Template Features</h2>
-			<ul role="list" class="link-card-grid">
-				<Card
-					href="/instructions"
-					title="Easy Installation"
-					body="Step-by-step instructions to install the template on your MFL site with multiple color themes."
-				/>
-				<Card
-					href="#themes"
-					title="Multiple Themes"
-					body="Choose from dark and light themes including black-yellow, blue-green, and custom color schemes."
-				/>
-				<Card
-					href="#responsive"
-					title="Fully Responsive"
-					body="Optimized for all devices - desktop, tablet, and mobile with Bootstrap grid system."
-				/>
-				<Card
-					href="#customization"
-					title="Easy Customization"
-					body="Customize league name, logo, navigation, and modules to match your league's identity."
-				/>
-			</ul>
+		<section class="installation-section" id="installation">
+			<h2>Quick Start</h2>
+			<div class="install-steps">
+				<div class="step">
+					<h3>1. Choose Your Skin</h3>
+					<p>In MFL commish setup, select "none" for skin</p>
+				</div>
+				<div class="step">
+					<h3>2. Add CSS Theme</h3>
+					<p>Paste one of our CSS theme URLs into "Images and Other URL's"</p>
+				</div>
+				<div class="step">
+					<h3>3. Configure HPMs</h3>
+					<p>Set up Header, Footer, and Homepage messages with our provided code</p>
+				</div>
+				<div class="step">
+					<h3>4. Customize</h3>
+					<p>Update league name, logo, and navigation to match your league</p>
+				</div>
+			</div>
+			<p class="instructions-link">
+				Want the long-form walkthrough? <a href="/instructions">Open the full instructions page</a>.
+			</p>
 		</section>
 
 		<section class="themes-section">
@@ -76,30 +73,7 @@ export const prerender = true;
 			</div>
 		</section>
 
-		<section class="installation-section" id="installation">
-			<h2>Quick Start</h2>
-			<div class="install-steps">
-				<div class="step">
-					<h3>1. Choose Your Skin</h3>
-					<p>In MFL commish setup, select "none" for skin</p>
-				</div>
-				<div class="step">
-					<h3>2. Add CSS Theme</h3>
-					<p>Paste one of our CSS theme URLs into "Images and Other URL's"</p>
-				</div>
-				<div class="step">
-					<h3>3. Configure HPMs</h3>
-					<p>Set up Header, Footer, and Homepage messages with our provided code</p>
-				</div>
-				<div class="step">
-					<h3>4. Customize</h3>
-					<p>Update league name, logo, and navigation to match your league</p>
-				</div>
-			</div>
-			<p class="instructions-link">
-				Want the long-form walkthrough? <a href="/instructions">Open the full instructions page</a>.
-			</p>
-		</section>
+
 
 		<section class="docs-section">
 			<h2>Documentation</h2>
@@ -128,24 +102,14 @@ export const prerender = true;
 </Layout>
 
 <style>
-	:root {
-		--mfl-gradient: linear-gradient(135deg, #2563eb, #059669);
-		--mfl-blue: #2563eb;
-		--mfl-green: #059669;
-		--mfl-dark: #1e293b;
-		--mfl-light: #f8fafc;
-	}
 
-	main {
-		margin: auto;
-		padding: 1em;
-		max-width: 80ch;
-	}
+
+
 
 	.hero-section {
 		text-align: center;
 		padding: 3rem 0;
-		background: linear-gradient(135deg, var(--mfl-blue), var(--mfl-green));
+		background-color: var(--inverse-content-bg);
 		border-radius: 1rem;
 		margin-bottom: 3rem;
 		color: white;
@@ -158,7 +122,7 @@ export const prerender = true;
 	}
 
 	.text-gradient {
-		background: linear-gradient(45deg, #fff, #e2e8f0);
+		background: linear-gradient(45deg, #fff, var(--primary-content-border-color));
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-size: 100% 200%;
@@ -181,12 +145,13 @@ export const prerender = true;
 	}
 
 	.subtitle a {
-		color: #fbbf24;
+		color: var(--accent-link-default-text-color);
 		text-decoration: none;
 		font-weight: 600;
 	}
 
 	.subtitle a:hover {
+		color: var(--accent-link-hover-text-color);
 		text-decoration: underline;
 	}
 
@@ -196,33 +161,37 @@ export const prerender = true;
 		justify-content: center;
 		flex-wrap: wrap;
 	}
+		
 
-	.btn-demo,
-	.btn-instructions {
+	.btn-primary,
+	.btn-secondary {
 		display: inline-block;
-		background: rgba(255, 255, 255, 0.2);
-		color: white;
+		background: var(--primary-btn-default-bg-color);
+		color: var(--primary-btn-default-text-color);
 		padding: 0.75rem 2rem;
 		border-radius: 0.5rem;
 		text-decoration: none;
 		font-weight: 600;
-		border: 2px solid rgba(255, 255, 255, 0.3);
+		border: 2px solid var(--primary-btn-default-border-color);
 		transition: all 0.3s ease;
 	}
 
-	.btn-demo:hover,
-	.btn-instructions:hover {
-		background: rgba(255, 255, 255, 0.3);
-		border-color: rgba(255, 255, 255, 0.5);
+	.btn-primary:hover
+	{
+		background: var(--primary-btn-hover-bg-color);
+		color: var(--primary-btn-hover-text-color);
+		border: 2px solid var(--primary-btn-hover-border-color);
 	}
 
-	.btn-instructions {
-		background: rgba(15, 23, 42, 0.75);
-		border-color: rgba(15, 23, 42, 0.6);
+	.btn-secondary {
+		background: var(--secondary-btn-default-bg-color);
+		color: var(--secondary-btn-hover-text-color);
+		border: 2px solid var(--secondary-btn-default-border-color);
 	}
 
-	.btn-instructions:hover {
-		border-color: rgba(15, 23, 42, 0.4);
+	.btn-secondary:hover {
+		background: var(--secondary-btn-hover-bg-color);
+		border: 2px solid var(--secondary-btn-hover-border-color);
 	}
 
 	.features-section {
@@ -233,7 +202,7 @@ export const prerender = true;
 		text-align: center;
 		font-size: 2.5rem;
 		margin-bottom: 2rem;
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 	}
 
 	.link-card-grid {
@@ -252,7 +221,6 @@ export const prerender = true;
 		text-align: center;
 		font-size: 2.5rem;
 		margin-bottom: 2rem;
-		color: var(--mfl-dark);
 	}
 
 	.themes-grid {
@@ -262,11 +230,11 @@ export const prerender = true;
 	}
 
 	.theme-card {
-		background: var(--mfl-light);
+		background: var(--primary-content-bg-color);
 		padding: 2rem;
 		border-radius: 1rem;
-		border: 2px solid #e2e8f0;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		border: 2px solid var(--primary-content-border-color);
+		box-shadow: var(--primary-content-boxshadow-size) var(--primary-content-boxshadow-color);
 	}
 
 	.theme-card h3 {
@@ -282,8 +250,8 @@ export const prerender = true;
 
 	.theme-card li {
 		padding: 0.5rem 0;
-		border-bottom: 1px solid #e2e8f0;
-		color: var(--mfl-dark);
+		border-bottom: 1px solid var(--primary-content-border-color);
+		color: var(--primary-link-default-text-color);
 	}
 
 	.theme-card li:last-child {
@@ -302,7 +270,7 @@ export const prerender = true;
 	}
 
 	.theme-links p {
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 		margin-bottom: 1rem;
 	}
 
@@ -333,7 +301,7 @@ export const prerender = true;
 	}
 
 	.installation-section {
-		background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+		background: linear-gradient(135deg, var(--primary-content-bg-color), var(--primary-content-bg-color));
 		padding: 3rem;
 		border-radius: 1rem;
 		margin-bottom: 4rem;
@@ -343,7 +311,7 @@ export const prerender = true;
 		text-align: center;
 		font-size: 2.5rem;
 		margin-bottom: 2rem;
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 	}
 
 	.install-steps {
@@ -353,21 +321,21 @@ export const prerender = true;
 	}
 
 	.step {
-		background: white;
+		background: var(--accent-content-bg-color);
 		padding: 1.5rem;
 		border-radius: 0.75rem;
-		border: 2px solid var(--mfl-blue);
+		border: 1px solid var(--accent-content-border-color);
 		position: relative;
 	}
 
 	.step h3 {
-		color: var(--mfl-blue);
+		color: var(--accent-content-text-color);
 		margin-bottom: 0.5rem;
 		font-size: 1.25rem;
 	}
 
 	.step p {
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 		margin: 0;
 		line-height: 1.6;
 	}
@@ -395,7 +363,7 @@ export const prerender = true;
 
 	.docs-section h2 {
 		font-size: 2.25rem;
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 		margin-bottom: 2rem;
 	}
 
@@ -412,17 +380,16 @@ export const prerender = true;
 		background: white;
 		padding: 1.75rem;
 		border-radius: 1rem;
-		border: 2px solid rgba(37, 99, 235, 0.12);
-		box-shadow: 0 20px 60px rgba(37, 99, 235, 0.12);
+		border: 2px solid var(--secondary-content-border-color);
+		bbox-shadow: var(--secondary-content-boxshadow-size) var(--secondary-content-boxshadow-color);
 		color: inherit;
 		text-decoration: none;
 		transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 	}
 
 	.doc-card:hover {
-		transform: translateY(-6px);
-		border-color: rgba(5, 150, 105, 0.4);
-		box-shadow: 0 30px 80px rgba(5, 150, 105, 0.2);
+		border-color: var(--accent-content-border-color);
+		box-shadow: var(--accent-content-boxshadow-size) var(--accent-content-boxshadow-color);
 	}
 
 	.doc-title {
@@ -441,13 +408,13 @@ export const prerender = true;
 	.support-section {
 		text-align: center;
 		padding: 2rem;
-		background: var(--mfl-light);
+		background: var(--primary-content-bg-color);
 		border-radius: 1rem;
-		border: 2px solid #e2e8f0;
+		border: 2px solid var(--primary-content-border-color);
 	}
 
 	.support-section h2 {
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 		margin-bottom: 1rem;
 		font-size: 2rem;
 	}
@@ -455,7 +422,7 @@ export const prerender = true;
 	.support-section p {
 		margin-bottom: 1rem;
 		line-height: 1.6;
-		color: var(--mfl-dark);
+		color: var(--primary-link-default-text-color);
 	}
 
 	.support-section a {
