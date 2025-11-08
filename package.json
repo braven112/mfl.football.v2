@@ -1,17 +1,32 @@
 {
   "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
+    "sass:build": "sass src/assets/css/src/base-styles.scss src/assets/css/main.css --no-source-map --style=expanded",
+    "sass:watch": "sass --watch src/assets/css/src/base-styles.scss:src/assets/css/main.css --no-source-map --style=expanded",
+  "build:themes": "node ./scripts/build-themes.js",
+  "postcss:watch": "postcss src/assets/css/main.css -o public/assets/css/main.css --watch & postcss src/assets/css/main.css -o src/assets/css/dist/main.css --watch",
+  "dev:css": "pnpm run sass:watch & pnpm run postcss:watch",
+  "dev": "pnpm run dev:css & astro dev",
+  "start": "astro dev",
+  "build:css": "pnpm run sass:build && postcss src/assets/css/main.css -o public/assets/css/main.css && postcss src/assets/css/main.css -o src/assets/css/dist/main.css",
+  "build": "pnpm run build:css && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.5",
-    "@astrojs/vercel": "8.0.1",
+    "@astrojs/vercel": "^8.0.4",
     "astro": "^5.1.1",
     "react": "18.3.1",
     "typescript": "^5.9.3"
+  }
+  ,
+  "devDependencies": {
+    "sass": "^1.76.0",
+    "postcss": "^8.4.34",
+    "postcss-cli": "^10.1.0",
+    "postcss-import": "^15.1.0",
+    "autoprefixer": "^10.4.14",
+    "cssnano": "^6.0.1"
   }
 }

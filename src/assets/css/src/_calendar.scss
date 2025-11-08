@@ -1,0 +1,62 @@
+@media (max-width: 540px) {
+  .hidden-calendar {
+    display: none !important;
+  }
+}
+
+.homepagecolumn #monthly_calendar {
+  width: 100%;
+}
+
+#monthly_calendar td,
+#monthly_calendar th {
+  border: 1px solid;
+  padding: 12px;
+}
+
+#monthly_calendar td {
+  height: 10em;
+}
+
+#monthly_calendar td a {
+  text-decoration: none;
+}
+
+#monthly_calendar td.today {
+  height: 12em;
+  border: 2px solid;
+  box-shadow: inset 0px -2px 15px 5px rgba(0, 0, 0, 0.1);
+}
+
+#monthly_calendar ul li {
+  font-size: 95%;
+  list-style-type: none;
+  margin-left: -40px;
+  margin-top: 0;
+  margin-bottom: 12px;
+  border-top: 1px solid;
+  padding-top: 12px;
+}
+
+#monthly_calendar ul li:first-child {
+  border: none;
+  padding-top: 18px;
+}
+
+
+#monthly_calendar td.today .calendarday {
+  border-bottom: 1px solid;
+}
+
+#monthly_calendar td .calendarday {
+  float: none;
+  text-align: center;
+  border-bottom: 1px solid;
+  padding-bottom: 1px;
+  border-left: 0px solid;
+  padding-left: 2px;
+  margin-top: -12px;
+  margin-right: -12px;
+  padding: 7px;
+  margin-left: -12px;
+}

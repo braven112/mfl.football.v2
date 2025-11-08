@@ -1,0 +1,209 @@
+/*   MFL RESPONSIVE TABS
+=========================== */
+
+.myfantasyleague_tabmenu {
+  clear: both;
+  font-family: 'Roboto Slab', serif;
+}
+
+.myfantasyleague_tabmenu {
+  background: transparent;
+}
+.myfantasyleague_tabmenu #homepagetabs li {
+  border-radius: 4px 4px 0 0;
+  margin-right: 5px;
+  border-right: 0;
+  height: auto;
+  line-height: 1rem;
+  border-left: 1px solid;
+  border-top: 1px solid;
+  border-right: 1px solid;
+}
+.myfantasyleague_tabmenu #homepagetabs li a {
+  border-right: 0;
+  text-decoration: none;
+  padding: 9px 15px;
+}
+.myfantasyleague_tabmenu #homepagetabs li:hover {
+  box-shadow: none;
+}
+.myfantasyleague_tabmenu #homepagetabs li:hover a {
+  color: #FFF;
+  text-decoration: none;
+}
+.myfantasyleague_tabmenu #homepagetabs li.currenttab,
+.myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
+  border-radius: 4px 4px 0 0;
+  border-bottom: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+/*   MFL RESPONSIVE TABS MOBILE STYLE
+======================================= */
+@media only screen and (max-width:767px) {
+  /*  BASE STYLE FOR ALL SKINS  */
+  
+  .myfantasyleague_tabmenu ul#homepagetabs {
+    padding: 0;
+    list-style: none;
+    white-space: nowrap;
+    text-align: left;
+    border: 0;
+    box-shadow: none;
+    display: none;
+  }
+  
+  .myfantasyleague_tabmenu #homepagetabs li {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .myfantasyleague_tabmenu ul#homepagetabs li b {
+    display: none;
+  }
+  
+  .myfantasyleague_tabmenu label {
+    display: block;
+    width: 100%;
+    height: 45px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    cursor: pointer;
+  }
+  
+  .myfantasyleague_tabmenu {
+    height: 0;
+    padding-top: 45px;
+    position: relative;
+  }
+  
+  .myfantasyleague_tabmenu > label span {
+    width: 35px;
+    height: 35px;
+    position: absolute;
+    right: 5px;
+    top: 6px;
+    border-radius: 5px;
+
+  }
+  
+  .myfantasyleague_tabmenu > label span:before {
+    display: block;
+    content: "";
+    width: 18px;
+    height: 2px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -9px;
+    margin-top: -1px;
+    transition: 0.25s
+  }
+  
+  .myfantasyleague_tabmenu > label span:after {
+    display: block;
+    content: "";
+    width: 2px;
+    height: 18px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -1px;
+    margin-top: -9px;
+    transition: 0.25s;
+  }
+  
+  .myfantasyleague_tabmenu > span {
+    display: block;
+    font-size: 16px;
+    line-height: 16px;
+    font-weight: normal;
+    position: absolute;
+    left: 10px;
+    top: 15px;
+  }
+  
+  .myfantasyleague_tabmenu #homepagetabs li {
+    display: block;
+  }
+  
+  .myfantasyleague_tabmenu ul,
+  .myfantasyleague_tabmenu ul ul {
+    margin: 0;
+    display: block;
+    position: static;
+    max-height: 0;
+    overflow: hidden;
+  }
+  
+  .myfantasyleague_tabmenu > ul > li.has-sub > a,
+  .myfantasyleague_tabmenu #homepagetabs ul > li.has-sub > a {
+    background-image: none;
+  }
+  
+  .myfantasyleague_tabmenu ul#homepagetabs li {
+    float: none;
+    display: block;
+    position: relative;
+    border: 0;
+    padding: 0;
+    margin-right: 0;
+  }
+  
+  .myfantasyleague_tabmenu ul#homepagetabs li label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: none;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    cursor: pointer;
+  }
+  
+  .myfantasyleague_tabmenu ul#homepagetabs {
+    border: 0;
+    border-bottom: 4px solid;
+    border-bottom: 0.25rem solid;
+  }
+  
+  .myfantasyleague_tabmenu ul#homepagetabs li a {
+    display: block;
+    font-weight: normal;
+    font-size: 14px;
+    color: #FFF;
+    text-decoration: none;
+    padding: 0 20px 0 10px;
+    float: none;
+    border-top: 1px solid;
+    text-indent: 10px;
+    text-align: left;
+    border-right: 0;
+  }
+  
+  .myfantasyleague_tabmenu #homepagetabs li.currenttab,
+  .myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
+    background-image: none;
+    box-shadow: none
+  }
+  
+  .myfantasyleague_tabmenu input:checked ~ label span:before {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+  
+  .myfantasyleague_tabmenu input:checked ~ label span:after {
+    -webkit-transform: rotate(270deg);
+    transform: rotate(270deg);
+  }
+  
+  .myfantasyleague_tabmenu input:checked ~ ul {
+    max-height: 3000px;
+  }
+  
+  .myfantasyleague_tabmenu #homepagetabs li:hover {
+    background-color: transparent;
+  }
+ }
