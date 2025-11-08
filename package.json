@@ -3,7 +3,7 @@
   "scripts": {
     "sass:build": "sass src/assets/css/src/base-styles.scss src/assets/css/main.css --no-source-map --style=expanded",
     "sass:watch": "sass --watch src/assets/css/src/base-styles.scss:src/assets/css/main.css --no-source-map --style=expanded",
-  "build:themes": "node ./scripts/build-themes.js",
+  "build:themes": "node ./scripts/build-themes.js && cp -R src/assets/css/dist public/assets/css/dist",
   "postcss:watch": "postcss src/assets/css/main.css -o public/assets/css/main.css --watch & postcss src/assets/css/main.css -o src/assets/css/dist/main.css --watch",
   "dev:css": "pnpm run sass:watch & pnpm run postcss:watch",
   "dev": "pnpm run dev:css & astro dev",
