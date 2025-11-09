@@ -40,3 +40,52 @@ table.homepagemessage td {
     border-radius: 0 0 5px 5px;
     border-top: 0px;
 }
+
+.reportnavigation.alert-warning,
+.alert-warning,
+.reportnavigation.alert-warning a:link,
+.alert-info a:link,
+.reportnavigation.alert-warning a:visited,
+.alert-warning a:visited {
+    background-color: $alert-warning-bg !important;
+    border-color: $alert-warning-border !important;
+    color: $alert-warning-text !important;
+}
+
+.reportnavigation.alert-info,
+.alert-info,
+.reportnavigation.alert-info a:link,
+.alert-info a:link,
+.reportnavigation.alert-info a:visited,
+.alert-info a:visited {
+    background-color: $alert-info-bg !important;
+    border-color: $alert-info-border !important;
+    color: $alert-info-text !important;
+}
+
+.reportnavigation.alert-success,
+.alert-success,
+.reportnavigation.alert-success a:link,
+.alert-success a:link,
+.reportnavigation.alert-success a:visited,
+.alert-success a:visited {
+    background-color: $alert-success-bg !important;
+    border-color: $alert-success-border !important;
+    color: $alert-success-text !important;
+}
+
+.homepagemessage th {
+    color: $alert-warning-text !important;
+    background-color: $alert-warning-bg !important;
+    border: 1px solid $alert-warning-border !important;
+}
+
+.homepagemessage td {
+    background-color: $alert-warning-bg !important;
+    color: $alert-warning-text !important;
+    border-color: $alert-warning-border !important;
+}
+
+.homepagemessage a {
+    color: darken($alert-warning-text, 10%) !important;
+}
