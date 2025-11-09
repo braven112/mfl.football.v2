@@ -152,7 +152,7 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
         max-width: 30px;
     }
     .MFLNFLLiveScore, .MFLLiveScore, .MFLLiveTeam {
-        font-weight: bold;
+        font-weight: $headline-font-weight;
         font-family: $headline-font;
     }
     .MFLLiveClock {
@@ -218,7 +218,7 @@ td#myTopTableHolder {
         padding: 2px;
     }
     #MFLRoadScore>div, #MFLHomeScore>div {
-        font-weight: bold;
+        font-weight: $body-font-weight;
         a {
             font-family: $headline-font;
         }
@@ -241,7 +241,7 @@ td#myTopTableHolder {
 td#myTopTableHolder {
     td#MFLRoadTeamName, td#MFLHomeTeamName {
         width: 25%;
-        font-weight: bold;
+        font-weight: $body-font-weight;
         font-family: $headline-font;
         text-align: center;
         font-size: 16px;
@@ -260,7 +260,7 @@ td#myTopTableHolder {
         }
     }
     #MFLRoadTeamRecord, #MFLHomeTeamRecord {
-        font-weight: bold;
+        font-weight: $body-font-weight;
         font-family: $headline-font;
         font-size: 12px;
         opacity: .8;
@@ -281,7 +281,7 @@ td#myTopTableHolder {
         font-size: 16px;
         text-align: center;
         padding-top: 2px;
-        font-weight: bold;
+        font-weight: $body-font-weight;
         font-family: $headline-font;
         position: relative;
         vertical-align: top;

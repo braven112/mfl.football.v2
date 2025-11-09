@@ -4,7 +4,7 @@ input[type="button"], input[type="submit"] {
   border: 2px solid;
   margin-top: 10px;
   color: white;
-  font-weight: bold;
+  font-weight: $headline-font-weight;
   text-transform: uppercase;
   cursor: pointer;
   border-radius: 2px;
@@ -58,7 +58,7 @@ input[value="Now!"],form.reportform input[type="submit"] {
   position: relative;
   top: 10px;
   text-transform: uppercase;
-  font-weight: bold;
+  font-weight: $body-font-weight;
   display: block;
   text-align: center;
   text-decoration: none;

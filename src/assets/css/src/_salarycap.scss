@@ -21,7 +21,7 @@
 #contractHeader {
   font-size: 32px;
   text-align: center;
-  font-weight: bold;
+  font-weight: $headline-font-weight;
 }
 
 .contractReport {
@@ -89,14 +89,14 @@
 
 .report .ufaStatus {
   font-style: italic;
-  font-weight: bold;
+  font-weight: $body-font-weight;
   text-align: center;
 }
 
 .contractStatus {
   font-size: 8pt;
   color: white;
-  font-weight: bold;
+  font-weight: $body-font-weight;
   margin-left: 4px;
   padding: 0px 3px;
   vertical-align: top;
@@ -191,7 +191,7 @@
 #contractHeader {
   font-size: 32px;
   text-align: center;
-  font-weight: bold;
+  font-weight: $body-font-weight;
 }
 
 .contractReport {
@@ -259,14 +259,14 @@
 
 .report .ufaStatus {
   font-style: italic;
-  font-weight: bold;
+  font-weight: $body-font-weight;
   text-align: center;
 }
 
 .contractStatus {
   font-size: 8pt;
   color: white;
-  font-weight: bold;
+  font-weight: $body-font-weight;
   margin-left: 4px;
   padding: 0px 3px;
   vertical-align: top;

@@ -9,11 +9,11 @@
     padding: 6px 0px 6px;
     vertical-align: top;
     font-size: 18px;
-    font-family: 'Roboto slab';
-    font-weight: bold;
+    font-family: $headline-font;
+    font-weight: $headline-font-weight;
 
     a {
-        font-family: 'Roboto slab';
+        font-family: $headline-font;
         text-decoration: none;
     }
 

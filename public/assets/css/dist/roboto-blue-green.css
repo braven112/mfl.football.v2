@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css?family=Roboto|Roboto:900|Roboto+Slab:700");
+@import url("https://fonts.googleapis.com/css2?family=Vend+Sans:ital,wght@0,300..700;1,300..700&display=swap");
 .homepagecolumn .homepagemodule h3 {
   margin: 0 0 0 -1px;
 }
@@ -106,7 +106,7 @@
 }
 .homepagemessage th {
   font-style: normal;
-  font-weight: bold;
+  font-weight: 700;
   border-radius: 5px 5px 0 0;
   padding: 15px 16px 12px;
   border: 1px solid;
@@ -346,11 +346,11 @@ table.homepagemessage td {
   padding: 6px 0px 6px;
   vertical-align: top;
   font-size: 18px;
-  font-family: "Roboto slab";
-  font-weight: bold;
+  font-family: "Vend Sans";
+  font-weight: 700;
 }
 .cta_button a {
-  font-family: "Roboto slab";
+  font-family: "Vend Sans";
   text-decoration: none;
 }
 .cta_button .cta_button--svg {
@@ -522,7 +522,7 @@ table.homepagemessage td {
   text-align: center;
   font-size: 20px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 700;
 }
 #custom_draftroom caption i {
   cursor: pointer;
@@ -574,7 +574,7 @@ table.homepagemessage td {
 }
 #custom_draftroom #make_pick th.owner-away {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 300;
   border-top: 0;
   border-bottom: 0;
   padding: 6px 18px;
@@ -751,9 +751,9 @@ table.homepagemessage td {
   left: 5px;
   top: -33px;
   font-size: 18px;
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
   text-transform: uppercase;
-  font-weight: bold;
+  font-weight: 300;
   text-decoration: none;
   pointer-events: none;
 }
@@ -967,11 +967,11 @@ table.homepagemessage td {
   list-style-type: none;
   margin-bottom: 5px;
   color: #fff;
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
 }
 .container-footer .defending-champ {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 700;
   color: #fff;
   margin-bottom: 14px;
 }
@@ -2108,6 +2108,7 @@ table.two_column_layout {
   font-size: 32px;
   padding: 6px 0 6px 6px;
   text-transform: uppercase;
+  font-weight: 700;
 }
 .leaguename .leaguename--the {
   padding-right: 5px;
@@ -2314,7 +2315,7 @@ table.two_column_layout {
   fill: #fff;
 }
 .leaguename {
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
   color: #3c9950;
 }
 .leaguename .leaguename--the,
@@ -2393,7 +2394,7 @@ input[type=button], input[type=submit] {
   border: 2px solid;
   margin-top: 10px;
   color: white;
-  font-weight: bold;
+  font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;
   border-radius: 2px;
@@ -2445,7 +2446,7 @@ input[value="Now!"], form.reportform input[type=submit] {
   position: relative;
   top: 10px;
   text-transform: uppercase;
-  font-weight: bold;
+  font-weight: 300;
   display: block;
   text-align: center;
   text-decoration: none;
@@ -2650,13 +2651,13 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   max-width: 30px;
 }
 .MFLGameLinks .MFLNFLLiveScore, .MFLGameLinks .MFLLiveScore, .MFLGameLinks .MFLLiveTeam {
-  font-weight: bold;
-  font-family: "Roboto Slab";
+  font-weight: 700;
+  font-family: "Vend Sans";
 }
 .MFLGameLinks .MFLLiveClock {
   border-top: 1px solid;
   font-size: 10px;
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
 }
 #MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
   text-align: center;
@@ -2676,7 +2677,7 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   height: 26px;
 }
 .MFLPaceScore {
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
   opacity: 0.75;
 }
 @media (min-width: 1200px) {
@@ -2702,10 +2703,10 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   padding: 2px;
 }
 .MFLMainScoreboard #MFLRoadScore > div, .MFLMainScoreboard #MFLHomeScore > div {
-  font-weight: bold;
+  font-weight: 300;
 }
 .MFLMainScoreboard #MFLRoadScore > div a, .MFLMainScoreboard #MFLHomeScore > div a {
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
 }
 .MFLMainScoreboard #MFLRoadScore > div, .MFLMainScoreboard #MFLHomeScore > div {
   text-align: center;
@@ -2725,8 +2726,8 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
 }
 td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
   width: 25%;
-  font-weight: bold;
-  font-family: "Roboto Slab";
+  font-weight: 300;
+  font-family: "Vend Sans";
   text-align: center;
   font-size: 16px;
   padding: 0;
@@ -2750,8 +2751,8 @@ td#myTopTableHolder td#MFLRoadTeamName img, td#myTopTableHolder td#MFLHomeTeamNa
   max-width: 100%;
 }
 td#myTopTableHolder #MFLRoadTeamRecord, td#myTopTableHolder #MFLHomeTeamRecord {
-  font-weight: bold;
-  font-family: "Roboto Slab";
+  font-weight: 300;
+  font-family: "Vend Sans";
   font-size: 12px;
   opacity: 0.8;
   padding: 2px 3px 12px;
@@ -2773,8 +2774,8 @@ td#myTopTableHolder td#MFLCenterTop {
   font-size: 16px;
   text-align: center;
   padding-top: 2px;
-  font-weight: bold;
-  font-family: "Roboto Slab";
+  font-weight: 300;
+  font-family: "Vend Sans";
   position: relative;
   vertical-align: top;
 }
@@ -2962,7 +2963,7 @@ td#myTopTableHolder td#MFLCenterTop {
   max-height: 100px;
 }
 body {
-  font-family: "Roboto", sans-serif;
+  font-family: "Vend Sans";
   color: #333333;
   background: #fff;
 }
@@ -3330,7 +3331,7 @@ a:visited {
 =========================== */
 .myfantasyleague_tabmenu {
   clear: both;
-  font-family: "Roboto Slab", serif;
+  font-family: "Vend Sans";
 }
 .myfantasyleague_tabmenu {
   background: transparent;
@@ -3509,7 +3510,7 @@ a:visited {
   }
 }
 .myfantasyleague_tabmenu {
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
 }
 .myfantasyleague_tabmenu ul#homepagetabs {
   border-bottom-color: #1c497c;
@@ -3594,7 +3595,7 @@ h3 {
   width: 100%;
 }
 caption, caption span {
-  font-weight: bold;
+  font-weight: 700;
   text-align: left;
   font-size: 24px;
 }
@@ -3607,7 +3608,7 @@ caption img {
 }
 th {
   font-style: normal;
-  font-weight: bold;
+  font-weight: 300;
   text-align: left;
   padding: 4px 8px;
   background-color: transparent;
@@ -3793,7 +3794,7 @@ div[id*=usmg_ad] {
   display: none;
 }
 body {
-  font-family: "Roboto", sans-serif;
+  font-family: "Vend Sans";
   color: #333333;
 }
 td a,
@@ -3801,7 +3802,7 @@ td a:link,
 td a:active,
 td a:visited,
 td a:focus {
-  font-family: "Roboto", sans-serif;
+  font-family: "Vend Sans";
 }
 a,
 a:link,
@@ -3855,7 +3856,7 @@ caption a:focus,
 #MFLPlayerPopupLinks .popreport td a,
 #owner_activity td.franchisename,
 .myfantasyleague_tabmenu #homepagetabs li a {
-  font-family: "Roboto", sans-serif;
+  font-family: "Vend Sans";
 }
 a:link,
 a:visited {
@@ -3870,7 +3871,7 @@ a:visited {
 }
 .container-footer ul li {
   color: #fff;
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
 }
 h2 {
   color: #1d4b7e;
@@ -3893,7 +3894,7 @@ table.homepagemessage td {
 }
 caption,
 caption span {
-  font-family: "Roboto Slab", serif;
+  font-family: "Vend Sans";
   color: #1d4b7e;
 }
 th,
@@ -4039,7 +4040,7 @@ span#drop_name_field_id {
 #contractHeader {
   font-size: 32px;
   text-align: center;
-  font-weight: bold;
+  font-weight: 700;
 }
 .contractReport {
   margin-top: 24px;
@@ -4095,13 +4096,13 @@ span#drop_name_field_id {
 }
 .report .ufaStatus {
   font-style: italic;
-  font-weight: bold;
+  font-weight: 300;
   text-align: center;
 }
 .contractStatus {
   font-size: 8pt;
   color: white;
-  font-weight: bold;
+  font-weight: 300;
   margin-left: 4px;
   padding: 0px 3px;
   vertical-align: top;
@@ -4186,7 +4187,7 @@ span#drop_name_field_id {
 #contractReportContainer #contractHeader {
   font-size: 32px;
   text-align: center;
-  font-weight: bold;
+  font-weight: 300;
 }
 #contractReportContainer .contractReport {
   margin-top: 24px;
@@ -4242,13 +4243,13 @@ span#drop_name_field_id {
 }
 #contractReportContainer .report .ufaStatus {
   font-style: italic;
-  font-weight: bold;
+  font-weight: 300;
   text-align: center;
 }
 #contractReportContainer .contractStatus {
   font-size: 8pt;
   color: white;
-  font-weight: bold;
+  font-weight: 300;
   margin-left: 4px;
   padding: 0px 3px;
   vertical-align: top;
@@ -4398,7 +4399,7 @@ table#standings th {
 .homepagecolumn #standings h3, .homepagecolumn #brief_standings h3, .homepagecolumn .homepagemodule caption {
   padding-top: inherit;
   padding-bottom: inherit;
-  font-weight: bold;
+  font-weight: 700;
   text-align: left;
   font-size: 24px;
 }
@@ -4409,7 +4410,7 @@ table#standings th {
 #body_standings caption, #body_standings h3 {
   padding-top: inherit;
   padding-bottom: inherit;
-  font-weight: bold;
+  font-weight: 300;
   text-align: left;
   font-size: 24px;
   padding-left: 12px;
@@ -4436,7 +4437,7 @@ table#standings th {
 .homepagecolumn #brief_standings h3,
 .homepagecolumn .homepagemodule caption {
   background-color: #fff;
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
   color: #1c497c;
 }
 .homepagecolumn #brief_standings h3,
@@ -4447,7 +4448,7 @@ table#standings th {
 #body_standings caption,
 #body_standings h3 {
   background-color: transparent;
-  font-family: "Roboto Slab";
+  font-family: "Vend Sans";
   color: #1c497c;
 }
 #body_lineup .report tr th:first-child {
@@ -5128,7 +5129,7 @@ table#standings th {
 }
 #lineup td.posheader {
   text-align: left !important;
-  font-weight: bold;
+  font-weight: 700;
 }
 #lineup td.inj b {
   padding: 0 4.5px;
@@ -5179,7 +5180,7 @@ table.report {
   border-right: 1px solid;
   transition: none;
   line-height: 25px;
-  font-weight: bold;
+  font-weight: 700;
   color: #fff;
   background-color: #3c9950;
   border-left-color: #3c9950;

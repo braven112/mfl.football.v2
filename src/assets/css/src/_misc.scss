@@ -59,7 +59,7 @@ h3 {
 }
 
 caption, caption span {
-  font-weight: bold;
+  font-weight: $headline-font-weight;
   text-align: left;
   font-size: 24px;
 }
@@ -74,7 +74,7 @@ caption {
 
 th {
   font-style: normal;
-  font-weight: bold;
+  font-weight: $body-font-weight;
   text-align: left;
   padding: 4px 8px;
   background-color: transparent;
@@ -410,7 +410,7 @@ table.homepagemessage td {
 
 caption,
 caption span {
-  font-family: 'Roboto Slab', serif;
+  font-family: $headline-font;
   color: $secondary-color;
 }
 

@@ -29,7 +29,7 @@ table#standings th {
 .homepagecolumn #standings h3, .homepagecolumn #brief_standings h3, .homepagecolumn .homepagemodule caption {
   padding-top: inherit;
   padding-bottom: inherit;
-  font-weight: bold;
+  font-weight: $headline-font-weight;
   text-align: left;
   font-size: 24px;
 }
@@ -45,7 +45,7 @@ table#standings th {
   caption, h3 {
     padding-top: inherit;
     padding-bottom: inherit;
-    font-weight: bold;
+    font-weight: $body-font-weight;
     text-align: left;
     font-size: 24px;
     padding-left: 12px;
