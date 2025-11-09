@@ -55,4 +55,34 @@
     }
 }
 
+#add tr.highlight,
+#add tr:hover {
+  background-color: $add-color;
+}
+
+#drop tr.highlight,
+#drop tr:hover {
+  background-color: $drop-color;
+}
+
+#add_name_field_id {
+  color: $add-color;
+}
+
+#drop_name_field_id {
+  color: $drop-color;
+}
+
+#add .highlight,
+#drop .highlight {
+  color: $white;
+}
+
+#add .highlight {
+  background-color: $add-color;
+}
+
+#drop .highlight {
+  background-color: $drop-color;
+}
 

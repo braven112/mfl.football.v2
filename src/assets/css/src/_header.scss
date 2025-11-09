@@ -266,3 +266,63 @@
       top: 48px;
     }
   }
+
+.container-header {
+  background-color: $white;
+}
+
+.st1 {
+  display: inline;
+  fill: #33373a;
+}
+
+.st2 {
+  fill: $accent-color;
+}
+
+.st3 {
+  fill: $primary-color;
+}
+
+.st4 {
+  display: none;
+  fill: #1c497c;
+}
+
+.st5 {
+  fill: $lightgray;
+}
+
+.st6 {
+  fill: $white;
+}
+
+.leaguename {
+  font-family: $headline-font;
+  color: $accent-color;
+
+  .leaguename--the,
+  .leaguename--dotus {
+    color: $primary-color;
+  }
+}
+
+span.leaguename--the,
+span.leaguename--dotus {
+  color: $primary-color;
+}
+
+.nav_buttons .svg-text {
+  color: $link-color;
+}
+
+.welcome,
+.active.welcome {
+  background: $secondary-color;
+  color: $white;
+}
+
+.welcome a:link,
+.welcome a:visited {
+  color: $white;
+}

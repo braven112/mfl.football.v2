@@ -10,12 +10,26 @@
 ::-webkit-scrollbar-thumb {
   border: 0px none;
   border-radius: 3px;
+  background: $button-bg-color;
+  border-color: $pagebody-bg;
 }
 
 ::-webkit-scrollbar-track {
   border: 0px none;
   border-radius: 0px;
+  background: $pagebody-bg;
+  border-color: $pagebody-bg;
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: $button-bg-color-hover;
+}
+
+::-webkit-scrollbar-track:hover,
+::-webkit-scrollbar-track:active {
+  background: $pagebody-bg;
 }

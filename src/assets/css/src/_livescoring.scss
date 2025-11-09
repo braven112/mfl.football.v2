@@ -33,3 +33,14 @@
     text-align: left;
   }
 }
+
+#body_live_scoring_summary {
+  table.report .report,
+  table.scoresummary .report {
+    background-color: $white;
+  }
+
+  table.scoresummary .report .oddtablerow {
+    background-color: transparent;
+  }
+}

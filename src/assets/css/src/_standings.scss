@@ -74,3 +74,26 @@ table#standings th {
     display: block;
   }
 }
+
+.homepagecolumn #standings h3,
+.homepagecolumn #brief_standings h3,
+.homepagecolumn .homepagemodule caption {
+  background-color: $white;
+  font-family: $headline-font;
+  color: $primary-color;
+}
+
+.homepagecolumn #brief_standings h3,
+.homepagecolumn #standings h3 {
+  color: $primary-color;
+  border-bottom-color: $border-color;
+}
+
+#body_standings {
+  caption,
+  h3 {
+    background-color: transparent;
+    font-family: $headline-font;
+    color: $primary-color;
+  }
+}

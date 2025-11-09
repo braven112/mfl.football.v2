@@ -3,6 +3,8 @@
         padding: 10px 0;
     border: 1px solid;
     border-radius: 5px;
+    background: url(http://www59.myfantasyleague.com/images/wood.jpg);
+    border-color: #000;
   }
   .plaqueframe.flex {
     width: auto;
@@ -10,6 +12,8 @@
   }
   .plaque {
     border: 0px solid;
+    color: #999;
+    border-color: #030100;
   }
   .plaque div {
     overflow: hidden;
@@ -23,6 +27,7 @@
     box-shadow: 1px 1px 1px 1px rgba(0, 0, 0, 0.9) inset;
     padding: 10px 10px;
     line-height: 11px;
+    background: rgba(0, 0, 0, 0.67);
   }
   .plaque h2 {
     padding: 10px;
@@ -32,6 +37,9 @@
     font-size: 20px;
     box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.9) inset;
     display: none;
+    border-color: #030100;
+    background: rgba(0, 0, 0, 0.67);
+    color: #c90;
   }
   .plaque h3 {
     margin: 0;
@@ -41,6 +49,7 @@
     text-transform: uppercase;
     text-align: center;
     background: none;
+    color: #c90 !important;
   }
   .plaque h4 {
     margin: 0;
@@ -52,6 +61,8 @@
     text-align: center;
     background: none;
     line-height: 1;
+    color: rgba(255, 255, 255, 0.61);
+    font-weight: bold;
   }
   .plaque p {
     font-size: 10px;
@@ -61,6 +72,7 @@
     padding: 0 3px;
     text-align: center;
     background: none;
+    color: #999;
   }
   /*     Float containers fix - Thanks to: http://www.csscreator.com/attributes/containedfloat.php
 =============================== */

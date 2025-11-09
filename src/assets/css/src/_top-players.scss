@@ -30,4 +30,18 @@
     position: relative;
     top: 11px;
 }
+    tr.eventablerow.myfranchise {
+        background-color: #dbefd3;
+        color: #2c501e;
+        a {
+            color: #2c501e;
+        }
+    }
+    tr.oddtablerow.myfranchise {
+        background-color: #f0fff0;
+        color: #2c501e;
+        a {
+            color: #2c501e;
+        }
+    }
 }

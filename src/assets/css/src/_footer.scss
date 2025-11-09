@@ -7,8 +7,9 @@
 .container-footer {
   min-height: 16em;
   padding: 24px 0;
+  background-color: $footer-bg-color;
   a {
-    color: white;
+    color: $footer-text-color;
     text-decoration: none;
   }
   ul {
@@ -18,12 +19,14 @@
       margin-left: 0;
       list-style-type: none;
       margin-bottom: 5px;
+      color: $footer-header-text-color;
+      font-family: $headline-font;
     }
   }
   .defending-champ {
     font-size: 18px;
     font-weight: bold;
-    color: white;
+    color: $footer-header-text-color;
     margin-bottom: 14px;
     a {
       margin-top: 14px;

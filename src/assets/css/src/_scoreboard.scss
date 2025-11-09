@@ -17,3 +17,195 @@
         font-size: 20px;
     }
 }
+
+/* Skin-specific scoreboard coloring */
+#outerMFLScoreboardDiv {
+    #MFLFantasyMatchupsUpdate,
+    #MFLNFLMatchupsUpdate,
+    .navWeekCurr,
+    .MFLNFLLiveClock,
+    .MFLLiveClock {
+        color: $accent-color;
+    }
+
+    .MFLGameTable,
+    .MFLNFLGameTable {
+        border-color: $border-color;
+    }
+
+    .MFLGameLinks .MFLPaceScore,
+    .MFLGameLinks .MFLWinMarker,
+    .MFLGameLinks .MFLNFLWinMarker {
+        color: $accent-color;
+    }
+
+    #MFLBoxHolder td.matchupHilite,
+    #MFLBoxHolder td.matchupHilite:hover {
+        background: rgba(0, 0, 0, .5);
+    }
+
+    #MFLBoxHolder td.matchupLolite:hover {
+        background: rgba(255, 255, 255, .1);
+    }
+
+    .MFLMainScoreboard {
+        background: #1d1d1d;
+        border-color: #555;
+    }
+
+    #MFLCenterTop {
+        color: $white;
+        background: $accent-color;
+    }
+
+    #MFLRoadTeamName,
+    #MFLHomeTeamName {
+        color: #ddd;
+        border-color: #222;
+        background: $eventablerow;
+    }
+
+    #MFLRoadScore span,
+    #MFLHomeScore span {
+        border-color: #222;
+        background: #000000;
+        background: -moz-linear-gradient(top, #000000 0%, #333333 50%, #000000 100%);
+        background: -webkit-linear-gradient(top, #000000 0%, #333333 50%, #000000 100%);
+        background: linear-gradient(to bottom, #000000 0%, #333333 50%, #000000 100%);
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#000000', endColorstr='#000000', GradientType=0);
+    }
+
+    #MFLRoadScore span:before,
+    #MFLHomeScore span:before {
+        background: #000;
+    }
+
+    #MFLRoadScore span:after,
+    #MFLHomeScore span:after {
+        background: #555;
+    }
+
+    #MFLRoadScore span a:after,
+    #MFLHomeScore span a:after,
+    #MFLRoadScore span a:before,
+    #MFLHomeScore span a:before {
+        border-color: #222;
+        background: #555;
+    }
+
+    #MFLRoadScore,
+    #MFLHomeScore {
+        border-color: #333;
+    }
+
+    #MFLRoadTeamRecord,
+    #MFLHomeTeamRecord {
+        color: #ddd;
+        border-color: #333;
+        background: #000000;
+        background: -moz-linear-gradient(top, #000000 0%, #333333 50%, #000000 100%);
+        background: -webkit-linear-gradient(top, #000000 0%, #333333 50%, #000000 100%);
+        background: linear-gradient(to bottom, #000000 0%, #333333 50%, #000000 100%);
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#000000', endColorstr='#000000', GradientType=0);
+    }
+
+    #MFLRoadScore span a,
+    #MFLHomeScore span a {
+        color: $accent-color;
+    }
+
+    .MFLMainScoreboard td.MFLScoreboardTitle {
+        color: #ddd;
+        border-color: #333;
+        background: #000000;
+        background: -moz-linear-gradient(top, #000000 0%, #333333 50%, #000000 100%);
+        background: -webkit-linear-gradient(top, #000000 0%, #333333 50%, #000000 100%);
+        background: linear-gradient(to bottom, #000000 0%, #333333 50%, #000000 100%);
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#000000', endColorstr='#000000', GradientType=0);
+    }
+
+    #MFLRoadPlayers,
+    #MFLRoadYTP,
+    #MFLRoadPMR,
+    #MFLHomePlayers,
+    #MFLHomeYTP,
+    #MFLHomePMR {
+        color: #ddd;
+        border-color: #222;
+        background: #333333;
+        background: -moz-linear-gradient(top, #333333 1%, #666666 50%, #333333 99%);
+        background: -webkit-linear-gradient(top, #333333 1%, #666666 50%, #333333 99%);
+        background: linear-gradient(to bottom, #333333 1%, #666666 50%, #333333 99%);
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#333333', endColorstr='#333333', GradientType=0);
+    }
+
+    .rowGameOver {
+        background: rgba(0, 0, 0, .5);
+    }
+
+    .CurrentlyPlaying {
+        background: rgba(218, 165, 62, .2);
+    }
+
+    .MFLTeamLineup td.oppRankGreatMatchup {
+        background: #04B404;
+        color: #000;
+    }
+
+    .MFLScoreboardLineups td.oppRankGoodMatchup {
+        background: #01DF01;
+        color: #000;
+    }
+
+    .MFLScoreboardLineups td.oppRankAvgMatchup {
+        background: #FFFF00;
+        color: #000;
+    }
+
+    .MFLScoreboardLineups td.oppRankPoorMatchup {
+        background: #FF8000;
+        color: #000;
+    }
+
+    .MFLScoreboardLineups td.oppRankBadMatchup {
+        background: #FF0000;
+        color: #000;
+    }
+
+    #scoreboardTooltip:after {
+        border-top-color: #555 !important;
+    }
+
+    #scoreboardTooltip.top:after {
+        border-bottom-color: #555 !important;
+    }
+
+    #scoreboardTooltip table td {
+        border: 1px solid #111;
+    }
+
+    #scoreboardTooltip {
+        background-color: #000 !important;
+        border: 2px solid #000;
+    }
+
+    #MFLScoreboardContainer .report {
+        background-color: #000 !important;
+        border-bottom: 0;
+        border-width: 2px;
+    }
+
+    #scoreboardTooltip table {
+        border-spacing: 1px !important;
+    }
+
+    #scoreboardTooltip td table td {
+        border: 0;
+    }
+
+    .MFLMainScoreboard .nflicon,
+    .MFLGameLinks .nflicon {
+        background: none;
+        border: 0;
+    }
+}

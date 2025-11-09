@@ -21,6 +21,7 @@
     padding: 15px;
     border-radius: 4px;
     padding-top: 44px;
+    background-color: $report-bg;
   }
   td.two_column_layout th {
     padding-left: 18px;
@@ -28,6 +29,7 @@
     font-size: 18px;
     position: relative;
     top: 40px;
+    color: $caption-color;
   }
   td.two_column_layout {
     margin-top: -40px;

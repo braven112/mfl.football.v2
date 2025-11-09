@@ -1,6 +1,7 @@
 .draftcta {
     overflow: hidden !important;
     border-left: 8px solid;
+    border-left-color: $accent-color;
 }
 
 .cta_button {
@@ -40,6 +41,7 @@
 .standingscta {
     overflow: hidden !important;
     border-left: 8px solid;
+    border-left-color: $accent-color;
     .cta_button {
         font-size: 14px;
         @media (min-width: 1200px) {font-size: 18px;} 

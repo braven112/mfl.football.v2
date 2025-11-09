@@ -192,7 +192,26 @@ span.reportnavigation {
 table#drop td, table#add {
   cursor: pointer;
 }
-
+.utility-nav {
+  background-color: $secondary-menu-bg-color;
+  svg {
+    fill: $secondary-menu-icon-color;
+  }
+  .svg-text {
+    color: $secondary-menu-text-color;
+    b,
+    a:link,
+    a:visited {
+      color: $secondary-menu-text-color;
+    }
+    .commish-link {
+      border-left-color: $secondary-menu-text-color;
+    }
+  }
+  a:hover [class^="icon"] {
+    fill: $secondary-menu-link-color;
+  }
+}
 .utility-nav {
   margin-bottom: 24px;
   padding: 4px 8px;
@@ -200,6 +219,7 @@ table#drop td, table#add {
   width: 100%;
   text-align: center;
   box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+
   .utility-nav--button {
     display: inline-block;
     padding: 6px 0 6px 0;
@@ -244,6 +264,7 @@ textarea#MSG {
   color: white;
   width: 100%;
   margin: 14px 0;
+  background-color: var(--code-bg-color, #333);
 }
 
 #body_options_35 {
@@ -275,3 +296,170 @@ span#chat_audio_clip {
 }
 //remove mfl ads
 div[id*="usmg_ad"]{display:none} 
+
+body {
+  font-family: $body-font;
+  color: $primary-text-color;
+}
+
+td a,
+td a:link,
+td a:active,
+td a:visited,
+td a:focus {
+  font-family: $body-font;
+}
+
+a,
+a:link,
+a:active,
+a:visited,
+a:focus,
+th,
+th a,
+th a:link,
+th a:active,
+th a:visited,
+th a:focus,
+h1,
+td h1 a:link,
+td h1 a:active,
+td h1 a:visited,
+td h1 a:focus,
+h2,
+td h2 a:link,
+td h2 a:active,
+td h2 a:visited,
+td h2 a:focus,
+h3,
+td h3 a,
+td h3 a:link,
+td h3 a:active,
+td h3 a:visited,
+td h3 a:focus,
+h4,
+td h4 a,
+td h4 a:link,
+td h4 a:active,
+td h4 a:visited,
+td h4 a:focus,
+input[type="button"],
+input[type="submit"],
+.myfantasyleague_tabmenu,
+.myfantasyleague_menu,
+caption,
+caption a,
+caption a:link,
+caption a:active,
+caption a:visited,
+caption a:focus,
+.welcome,
+.welcome a,
+.welcome a:link,
+.welcome a:active,
+.welcome a:visited,
+.welcome a:focus,
+#MFLPlayerPopupLinks .popreport td a,
+#owner_activity td.franchisename,
+.myfantasyleague_tabmenu #homepagetabs li a {
+  font-family: $body-font;
+}
+
+a:link,
+a:visited {
+  color: $link-color;
+}
+
+.container-footer {
+  background-color: $primary-color;
+
+  a,
+  .defending-champ {
+    color: $white;
+  }
+
+  ul li {
+    color: $white;
+    font-family: $headline-font;
+  }
+}
+
+h2 {
+  color: $secondary-color;
+}
+
+.pagebody {
+  background-color: $pagebody-bg;
+}
+
+.homepagemessage:first-child {
+  padding-left: 0;
+}
+
+.homepagemessage th {
+  color: $alert-warning-text;
+  background-color: $alert-warning-bg;
+  border: 1px solid $alert-warning-border;
+}
+
+table.homepagemessage td {
+  background-color: $alert-warning-bg;
+  color: $alert-warning-text;
+  border-color: $alert-warning-border;
+}
+
+caption,
+caption span {
+  font-family: 'Roboto Slab', serif;
+  color: $secondary-color;
+}
+
+th,
+th a:link,
+th a:visited {
+  color: $secondary-color;
+}
+
+span.reportnavigation {
+  border-color: $accent-color;
+  background-color: $accent-color;
+  color: $white;
+
+  a:link,
+  a:visited {
+    color: $white;
+  }
+}
+
+.report-wrapper {
+  background-color: $report-bg;
+}
+
+.report {
+  border-bottom-color: $lightgray;
+}
+
+.report .oddtablerow {
+  background-color: $oddtablerow;
+}
+
+.report .eventablerow {
+  background-color: $eventablerow;
+}
+
+.mb svg.icon-chevron-right {
+  fill: $primary-color;
+}
+
+.newposition td,
+.newposition th {
+  border-top-color: $lightgray2;
+}
+
+span#add_name_field_id {
+  color: $add-color;
+}
+
+span#drop_name_field_id {
+  color: $drop-color;
+}

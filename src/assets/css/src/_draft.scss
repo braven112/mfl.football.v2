@@ -437,3 +437,61 @@
 .tabs_scroll .mobile-wrap .report .oddtablerow {
     box-shadow: none;
 }
+
+#custom_draftroom {
+    #draft_countdown_timer:before {
+        color: $primary-color;
+    }
+    #draft-controller,
+    #draft-edit a {
+        color: $drop-color;
+    }
+    #draft-edit a:hover {
+        color: $primary-color;
+    }
+    .fa-pause-circle,
+    .fa-stop-circle,
+    .fa-step-forward,
+    .fa-play-circle {
+        color: #375a77;
+    }
+    .fa-pause-circle:hover,
+    .fa-stop-circle:hover {
+        color: $drop-color;
+    }
+    .fa-step-forward:hover,
+    .fa-play-circle:hover {
+        color: $add-color;
+    }
+    #make_pick {
+        .owner-away {
+            background: $eventablerow;
+        }
+        .eventablerow {
+            background: none;
+        }
+        i {
+            color: $primary-color;
+            &:hover {
+                color: lighten($primary-color, 5%);
+            }
+        }
+    }
+    .moohighlight {
+        background-color: $alert-danger-bg !important;
+        &.done {
+            background-color: transparent !important;
+        }
+    }
+    #draft_player_link {
+        color: $primary-color;
+    }
+    #player-profile {
+        th {
+            background: $eventablerow;
+        }
+        #draft_player_photo {
+            border: 2px solid $primary-color;
+        }
+    }
+}

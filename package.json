@@ -1,14 +1,15 @@
 {
   "private": true,
   "scripts": {
-    "sass:build": "sass src/assets/css/src/base-styles.scss src/assets/css/main.css --no-source-map --style=expanded",
-    "sass:watch": "sass --watch src/assets/css/src/base-styles.scss:src/assets/css/main.css --no-source-map --style=expanded",
-  "build:themes": "node ./scripts/build-themes.js && cp -R src/assets/css/dist public/assets/css/dist",
-  "postcss:watch": "postcss src/assets/css/main.css -o public/assets/css/main.css --watch & postcss src/assets/css/main.css -o src/assets/css/dist/main.css --watch",
+    "sass:build": "sass src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded",
+    "sass:watch": "sass --watch src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded",
+  "build:themes": "node ./scripts/build-themes.js",
+  "postcss:build": "postcss \"public/assets/css/dist/**/*.css\" --dir public/assets/css/dist",
+  "postcss:watch": "postcss \"public/assets/css/dist/**/*.css\" --dir public/assets/css/dist --watch",
   "dev:css": "pnpm run sass:watch & pnpm run postcss:watch",
   "dev": "pnpm run dev:css & astro dev",
   "start": "astro dev",
-  "build:css": "pnpm run sass:build && postcss src/assets/css/main.css -o public/assets/css/main.css && postcss src/assets/css/main.css -o src/assets/css/dist/main.css",
+  "build:css": "pnpm run sass:build && pnpm run postcss:build",
   "build": "pnpm run build:css && astro build",
     "preview": "astro preview",
     "astro": "astro"

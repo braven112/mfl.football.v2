@@ -1,0 +1,126 @@
+ /* Green CTA */
+  .btn-standings{
+    background:#fff;        /* green */
+    color:#2e8743;                 /* white text */
+    border:1px solid #e3e3e3;
+    border-top-color: #fff;
+    padding:.2rem 2rem .4rem;       /* extra padding */
+    font-size:1rem;             /* 1rem text */
+    border-radius:0 0 6px 6px;
+    cursor:pointer;
+    transition:background-color .2s ease, box-shadow .2s ease;
+    margin: -24px auto 1rem;
+    display: block;
+    position:relative;
+    z-index: 1;
+  }
+
+.btn-standings:hover{ background: linear-gradient(0deg, #f2f2f2 0%, #ffffff 100%);}
+.btn-standings:active{ background:#eeeeee; }
+
+/* Make motion feel anchored, not from UL corner */
+.desktop-standings-wrapper .mobile-wrap{
+  will-change: transform, opacity;
+  transform-origin: top center;
+}
+
+/* Newly appearing items: fade/scale in place (no translate) */
+.mfl-appearing{
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.mfl-appearing.mfl-in{
+  opacity: 1;
+  transform: scale(1);
+}
+
+#body_home #standings .ficonname,
+#body_standings #standings .ficonname,
+#body_home #standings .fname,
+#body_standings #standings .fname,
+#body_home #standings .h2ht,
+#body_standings #standings .h2ht,
+#body_home #standings .h2hwlt,
+#body_standings #standings .h2hwlt,
+#body_home #standings .divw,
+#body_standings #standings .divw,
+#body_home #standings .divl,
+#body_standings #standings .divl,
+#body_home #standings .divt,
+#body_standings #standings .divt,
+#body_home #standings .divpct,
+#body_standings #standings .divpct,
+#body_home #standings .divpf,
+#body_standings #standings .divpf,
+#body_home #standings .maxpf,
+#body_standings #standings .maxpf,
+#body_home #standings .minpf,
+#body_standings #standings .minpf,
+#body_home #standings .pa,
+#body_standings #standings .pa,
+#body_home #standings .maxpa,
+#body_standings #standings .maxpa,
+#body_home #standings .minpa,
+#body_standings #standings .minpa,
+#body_home #standings .pp,
+#body_standings #standings .pp,
+#body_home #standings .eff,
+#body_standings #standings .eff,
+#body_home #standings .bbidspent,
+#body_standings #standings .bbidspent,
+#body_home #standings .bbidbalance,
+#body_standings #standings .bbidbalance,
+#body_home #standings .nondivw,
+#body_standings #standings .nondivw,
+#body_home #standings .nondivl,
+#body_standings #standings .nondivl,
+#body_home #standings .nondivt,
+#body_standings #standings .nondivt,
+#body_home #standings .nondivwlt,
+#body_standings #standings .nondivwlt,
+#body_home #standings .nondivpct,
+#body_standings #standings .nondivpct,
+#body_home #standings .pf,
+#body_standings #standings .pf,
+#body_home #standings .pb,
+#body_standings #standings .pb,
+#body_home #standings .op,
+#body_standings #standings .op,
+#body_home #standings .dp,
+#body_standings #standings .dp,
+#body_home #standings .vp,
+#body_standings #standings .vp,
+#body_home #standings .ww,
+#body_standings #standings .ww,
+#body_home #standings .altpwr,
+#body_standings #standings .altpwr,
+#body_home #standings .acct,
+#body_standings #standings .acct,
+#body_home #standings .pwr,
+#body_standings #standings .pwr,
+#body_home #standings .\#a,
+#body_standings #standings .\#a,
+#body_home #standings .\#w,
+#body_standings #standings .\#w,
+#body_home #standings .eliminated, #body_standings #standings .eliminated { display: none;}
+.central .desktop-standings-wrapper .mobile-wrap:nth-child(2), .central .desktop-standings-wrapper .mobile-wrap:nth-child(1), .central .desktop-standings-wrapper .mobile-wrap:nth-child(4) {
+    display: none;
+}
+.northwest .desktop-standings-wrapper .mobile-wrap:nth-child(2), .northwest .desktop-standings-wrapper .mobile-wrap:nth-child(3), .northwest .desktop-standings-wrapper .mobile-wrap:nth-child(4) {
+    display: none;
+}
+.southwest .desktop-standings-wrapper .mobile-wrap:nth-child(1), .southwest .desktop-standings-wrapper .mobile-wrap:nth-child(3), .southwest .desktop-standings-wrapper .mobile-wrap:nth-child(4) {
+    display: none;
+}
+.east .desktop-standings-wrapper .mobile-wrap:nth-child(1), .east .desktop-standings-wrapper .mobile-wrap:nth-child(2), .east .desktop-standings-wrapper .mobile-wrap:nth-child(3) {
+    display: none;
+}
+
+#curr_auctions .btn-primary {display:none}
+.MFLGameLinks .MFLNFLLiveScore, .MFLGameLinks .MFLLiveScore, .MFLGameLinks .MFLLiveTeam {
+    white-space: nowrap;
+}
+.all_play_wlt {
+display:none;
+}

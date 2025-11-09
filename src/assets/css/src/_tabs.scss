@@ -9,6 +9,7 @@
      border-radius: 2px;
      box-shadow: 0px 0px 13px 1px rgba(38, 62, 104, 0.2) inset;
      border-spacing:0;
+     border-color: $border-color;
 }
 .tabbed-reports li {
      margin:0;
@@ -22,10 +23,17 @@
      transition: none;
      line-height:25px;
      font-weight: bold;
+     color: $white;
+     background-color: $accent-color;
+     border-left-color: $accent-color;
+     border-right-color: $accent-color;
 }
 
-.tabbed-reports li:hover { 
-     background: none repeat scroll 0px 0px;
+.tabbed-reports li:hover,
+.tabbed-reports li.active,
+.tabbed-reports li.current { 
+     background-color: $dark-accent-color;
+     color: $white;
 } 
 
 .tabbed-reports li:last-of-type {

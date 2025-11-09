@@ -17,3 +17,16 @@
 }
 .constitution-wrapper .emphasize { font-style: italic; }
 .constitution-wrapper {font-size:1.2em; display:flexbox;}
+
+.constitution-wrapper h2 {
+  color: $primary-color;
+  border-bottom-color: $lightgray;
+}
+
+.constitution-wrapper td.secondround {
+  background-color: $eventablerow;
+}
+
+.constitution-wrapper td.thirdround {
+  background-color: $oddtablerow;
+}
