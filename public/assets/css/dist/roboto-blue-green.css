@@ -4464,10 +4464,10 @@ table#standings th {
   white-space: nowrap;
 }
 #body_lineup .report input[type=checkbox] {
-  margin-right: 10px;
   position: relative;
   top: 2px;
-  scale: 1.25;
+  scale: 1.45;
+  margin: 0.5rem 1rem 0.5rem 0;
 }
 #body_lineup td[colspan="10"] {
   padding: 10px 0;
@@ -4508,7 +4508,8 @@ table#standings th {
   display: block;
   font-size: 1rem;
 }
-#body_lineup span.reportnavigation span, #body_lineup span.reportnavigation a {
+#body_lineup span.reportnavigation span,
+#body_lineup span.reportnavigation a {
   font-size: 1.2rem;
   padding-inline: 0.5rem;
 }
@@ -4529,6 +4530,9 @@ table#standings th {
 }
 #body_lineup span.reportnavigation {
   padding: 0;
+}
+#body_lineup caption.withfranchiseicon {
+  margin-bottom: -1rem;
 }
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */
