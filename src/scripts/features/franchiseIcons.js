@@ -3,7 +3,7 @@ export function fixFranchiseIcons() {
   const icons = document.querySelectorAll('img.franchiseicon');
 
   icons.forEach((img) => {
-    const newSrc = img.src.replace('_icon', '');
+    const newSrc = img.src.replace('/icons/', '/banners/');
 
     if (img.src !== newSrc) {
       const preload = new Image();
