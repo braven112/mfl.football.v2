@@ -10,7 +10,8 @@
   "dev": "pnpm run dev:css & astro dev",
   "start": "astro dev",
   "build:css": "pnpm run sass:build && pnpm run postcss:build",
-  "build": "pnpm run build:css && astro build",
+  "bundle:tools": "vite build --config scripts/league-tools.vite.config.mjs",
+  "build": "pnpm run build:css && astro build && pnpm run bundle:tools",
     "preview": "astro preview",
     "astro": "astro"
   },
