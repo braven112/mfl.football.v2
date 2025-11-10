@@ -2,8 +2,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
-    outDir: 'dist/league-tools',
+    outDir: 'public/assets/js/dist',
     emptyOutDir: false,
+    copyPublicDir: false,
     lib: {
       entry: './src/scripts/main.js',
       formats: ['iife'],
