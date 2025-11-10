@@ -2389,7 +2389,7 @@ a:hover [class^=icon] {
   color: #3c9950;
 }
 input[type=button], input[type=submit] {
-  padding: 14px 30px;
+  padding: 0.75rem 2.5rem;
   margin-bottom: 10px;
   border: 2px solid;
   margin-top: 10px;
@@ -2397,7 +2397,7 @@ input[type=button], input[type=submit] {
   font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 8rem;
 }
 @media (max-width: 991px) {
   input[type=button], input[type=submit] {
@@ -2437,8 +2437,8 @@ input#chat_text_field {
   margin-left: 10px;
 }
 input[value="Now!"], form.reportform input[type=submit] {
-  padding: 5px 30px;
-  margin-left: 6px;
+  padding: 0.75rem 2rem;
+  margin-left: 0.5rem;
 }
 .btn-primary a, .btn-primary a:link, .btn-primary a:visited {
   border-radius: 5px;
@@ -2482,6 +2482,9 @@ select {
   margin: 0;
   position: relative;
   top: 3px;
+}
+input[type=checkbox] {
+  scale: 1.45;
 }
 input[type=button],
 input[type=submit] {
@@ -3612,6 +3615,7 @@ th {
   text-align: left;
   padding: 4px 8px;
   background-color: transparent;
+  vertical-align: bottom;
 }
 #body_home #power_rank .total_points, #body_home #power_rank .total_potential_points, #body_home #power_rank .efficiency, #body_home #power_rank .bench_points, #body_home #power_rank .maxpf, #body_home #power_rank .minpf, #body_home #power_rank .coulda_won, #body_home #power_rank .woulda_lost, #body_home #power_rank .power_rank, #body_home #power_rank .alt_power_rank {
   display: none;
@@ -4466,7 +4470,6 @@ table#standings th {
 #body_lineup .report input[type=checkbox] {
   position: relative;
   top: 2px;
-  scale: 1.45;
   margin: 0.5rem 1rem 0.5rem 0;
 }
 #body_lineup td[colspan="10"] {
@@ -4551,6 +4554,14 @@ table#standings th {
   margin-bottom: 0.5rem;
   display: inline-block;
 }
+#body_lineup input[type=submit] {
+  padding: 1rem 4rem 1rem 5rem;
+  border-radius: 8rem;
+}
+#body_lineup #lineup .form_buttons:before {
+  left: 4rem;
+  color: white;
+}
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */
 /**************************************/
@@ -4566,35 +4577,34 @@ table#standings th {
 #lineup .reportnavigation {
   clear: both;
 }
-#lineup #startertable .oddtablerow th,
-#lineup #startertable .eventablerow th,
-#lineup #benchtable .oddtablerow th,
-#lineup #benchtable .eventablerow th {
-  display: none;
-}
-#lineup .report .playerrow:hover,
 #lineup .report .playerrow:hover {
   cursor: pointer;
 }
 #lineup .report .postitle {
   text-transform: uppercase;
 }
-#lineup #benchtable .sheader,
-#lineup #startertable .sheader {
+#lineup .report .offstartern {
+  position: absolute;
+  right: 10px;
+}
+#lineup #startertable .sheader,
+#lineup #benchtable .sheader {
   position: relative;
   width: 100%;
   display: inline-table;
 }
-#lineup #benchtable .sheader th,
-#lineup #startertable .sheader th {
+#lineup #startertable .sheader th,
+#lineup #benchtable .sheader th {
   height: 22px;
   line-height: 22px;
   font-weight: 400;
   font-size: 12px;
 }
-#lineup .report .offstartern {
-  position: absolute;
-  right: 10px;
+#lineup #startertable .oddtablerow th,
+#lineup #startertable .eventablerow th,
+#lineup #benchtable .oddtablerow th,
+#lineup #benchtable .eventablerow th {
+  display: none;
 }
 #lineup #startertable tr.playerrow,
 #lineup #benchtable tr.playerrow {
@@ -4605,9 +4615,6 @@ table#standings th {
   box-shadow: none;
   display: block;
 }
-#lineup .row_empty {
-  height: 56px;
-}
 #lineup #startertable tr.playerrow td,
 #lineup #benchtable tr.playerrow td {
   padding: 0;
@@ -4615,6 +4622,192 @@ table#standings th {
   background: none;
   border: 0;
   box-shadow: none;
+}
+#lineup #startertable tr.playerrow td.pphoto,
+#lineup #benchtable tr.playerrow td.pphoto {
+  border-radius: 50%;
+  width: 51px;
+  max-width: 51px;
+  height: 51px;
+  overflow: hidden;
+  text-align: center;
+  position: absolute;
+  left: 1px;
+  top: 2px;
+}
+#lineup #startertable tr.playerrow td.player,
+#lineup #benchtable tr.playerrow td.player {
+  position: absolute;
+  left: 60px;
+  top: 2px;
+  border: 0;
+  box-shadow: none;
+  z-index: 1;
+}
+#lineup #startertable tr.playerrow td.weekly-opp,
+#lineup #benchtable tr.playerrow td.weekly-opp {
+  position: absolute;
+  left: 65px;
+  top: 21px;
+  border: 0;
+  box-shadow: none;
+  font-size: 12px;
+}
+#lineup #startertable tr.playerrow td.weekly-opp b,
+#lineup #benchtable tr.playerrow td.weekly-opp b {
+  font-weight: 400;
+  font-style: italic;
+}
+#lineup #startertable tr.playerrow td.weekly-opp b:before,
+#lineup #benchtable tr.playerrow td.weekly-opp b:before {
+  content: "Player on ";
+}
+#lineup #startertable tr.playerrow td.weekly-opp b:after,
+#lineup #benchtable tr.playerrow td.weekly-opp b:after {
+  content: " this week !";
+}
+#lineup #startertable tr.playerrow td.inj,
+#lineup #benchtable tr.playerrow td.inj {
+  position: absolute;
+  left: 40px;
+  top: 36px;
+  border: 0;
+  box-shadow: none;
+}
+#lineup #startertable tr.playerrow td.inj b,
+#lineup #benchtable tr.playerrow td.inj b {
+  font-size: 10px;
+  font-weight: 400;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  display: block;
+}
+#lineup #startertable tr.playerrow td.proj-pts,
+#lineup #benchtable tr.playerrow td.proj-pts {
+  position: absolute;
+  left: 70px;
+  top: 37px;
+  border: 0;
+  box-shadow: none;
+  text-align: center;
+  font-size: 12px !important;
+}
+#lineup #startertable tr.playerrow td.proj-pts:before,
+#lineup #benchtable tr.playerrow td.proj-pts:before {
+  content: "Proj Pts: ";
+}
+#lineup #startertable tr.playerrow td.bye,
+#lineup #benchtable tr.playerrow td.bye {
+  display: none;
+}
+#lineup #startertable tr.playerrow td.ytd-pts,
+#lineup #startertable tr.playerrow td.avg-pts,
+#lineup #startertable tr.playerrow td.rush-rank,
+#lineup #startertable tr.playerrow td.pass-rank,
+#lineup #benchtable tr.playerrow td.ytd-pts,
+#lineup #benchtable tr.playerrow td.avg-pts,
+#lineup #benchtable tr.playerrow td.rush-rank,
+#lineup #benchtable tr.playerrow td.pass-rank {
+  border: 0;
+  box-shadow: none;
+  width: 20px;
+  text-align: center;
+}
+#lineup #startertable tr.playerrow td.ytd-pts,
+#lineup #benchtable tr.playerrow td.ytd-pts {
+  position: absolute;
+  right: 120px;
+  top: 18px;
+  width: 45px;
+}
+#lineup #startertable tr.playerrow td.avg-pts,
+#lineup #benchtable tr.playerrow td.avg-pts {
+  position: absolute;
+  right: 180px;
+  top: 18px;
+  width: 45px;
+}
+#lineup #startertable tr.playerrow td.rush-rank,
+#lineup #benchtable tr.playerrow td.rush-rank {
+  position: absolute;
+  right: 40px;
+  top: 18px;
+}
+#lineup #startertable tr.playerrow td.rush-rank a,
+#lineup #benchtable tr.playerrow td.rush-rank a {
+  text-decoration: none;
+}
+#lineup #startertable tr.playerrow td.pass-rank,
+#lineup #benchtable tr.playerrow td.pass-rank {
+  position: absolute;
+  right: 75px;
+  top: 18px;
+}
+#lineup #startertable tr.playerrow td.pass-rank a,
+#lineup #benchtable tr.playerrow td.pass-rank a {
+  text-decoration: none;
+}
+#lineup #startertable tr.playerrow td.ytd-pts a,
+#lineup #benchtable tr.playerrow td.ytd-pts a {
+  text-decoration: none;
+}
+#lineup #startertable tr.theader td.player,
+#lineup #benchtable tr.theader td.player {
+  position: absolute;
+  left: 1px;
+  top: 0;
+  border: 0;
+  box-shadow: none;
+}
+#lineup #startertable tr.theader td.ytd-pts,
+#lineup #startertable tr.theader td.avg-pts,
+#lineup #benchtable tr.theader td.ytd-pts,
+#lineup #benchtable tr.theader td.avg-pts {
+  position: absolute;
+  border: 0;
+  box-shadow: none;
+  width: 45px;
+  text-align: center;
+  top: 0;
+}
+#lineup #startertable tr.theader td.ytd-pts,
+#lineup #benchtable tr.theader td.ytd-pts {
+  right: 120px;
+}
+#lineup #startertable tr.theader td.avg-pts,
+#lineup #benchtable tr.theader td.avg-pts {
+  right: 180px;
+}
+#lineup #startertable tr.theader td.rank,
+#lineup #benchtable tr.theader td.rank {
+  position: absolute;
+  right: 40px;
+  top: 0;
+  border: 0;
+  box-shadow: none;
+  width: 60px;
+  text-align: center;
+}
+#lineup #startertable .headshot,
+#lineup #benchtable .headshot {
+  height: 57px;
+  width: 42px;
+  margin-top: -2px;
+}
+#lineup #startertable tr.def_row .headshot,
+#lineup #benchtable tr.def_row .headshot {
+  height: 100%;
+  margin: 0;
+  width: auto;
+}
+#lineup #startertable p.form_buttons,
+#lineup #benchtable p.form_buttons {
+  color: white;
+}
+#lineup .row_empty {
+  height: 56px;
 }
 #lineup {
   /* Hide table on submit lineup submission page when error lineup occures */
@@ -5026,10 +5219,6 @@ table#standings th {
   content: "\f0e2";
   z-index: 1;
   font-size: 16px;
-}
-#lineup p.form_buttons,
-#lineup #go-back.form_buttons {
-  margin-left: -16px;
 }
 #lineup p.form_buttons.default-btn {
   margin-left: 16px;

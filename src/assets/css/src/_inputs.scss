@@ -1,5 +1,5 @@
 input[type="button"], input[type="submit"] {
-  padding: 14px 30px;
+  padding: .75rem 2.5rem;
   margin-bottom: 10px;
   border: 2px solid;
   margin-top: 10px;
@@ -7,7 +7,7 @@ input[type="button"], input[type="submit"] {
   font-weight: $headline-font-weight;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 8rem;
   @media (max-width: 991px) {
     width: 100%;
   }
@@ -48,8 +48,8 @@ input#chat_text_field {
 }
 
 input[value="Now!"],form.reportform input[type="submit"] {
-  padding: 5px 30px;
-  margin-left: 6px;
+  padding: .75rem 2rem;
+    margin-left: .5rem;
 }
 //button on current auction page
 .btn-primary a, .btn-primary a:link, .btn-primary a:visited {
@@ -98,7 +98,9 @@ select {
     top: 3px;
   }
 }
-
+input[type="checkbox"] {
+    scale: 1.45;
+}
 input[type="button"],
 input[type="submit"] {
   background-color: $accent-color;
