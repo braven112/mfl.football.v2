@@ -1,8 +1,17 @@
 // Fix Franchise Icons - removes "_icon" from image URLs and preloads replacements
-export function fixFranchiseIcons() {
-  const icons = document.querySelectorAll('img.franchiseicon');
+export function fixFranchiseIcons(scope = document, options = {}) {
+  if (!scope) return;
+  const icons = scope.querySelectorAll('img.franchiseicon');
+  const applyStyles = (img) => {
+    if (options.imageStyles) {
+      Object.entries(options.imageStyles).forEach(([prop, value]) => {
+        img.style[prop] = value;
+      });
+    }
+  };
 
   icons.forEach((img) => {
+    applyStyles(img);
     const newSrc = img.src.replace('/icons/', '/banners/');
 
     if (img.src !== newSrc) {
