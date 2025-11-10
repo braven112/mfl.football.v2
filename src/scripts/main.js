@@ -1,6 +1,6 @@
 import { fixFranchiseIcons } from './features/franchiseIcons.js';
 
-const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls'];
+const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop'];
 
 document.addEventListener('DOMContentLoaded', () => {
   const bodyId = document.body?.id;
