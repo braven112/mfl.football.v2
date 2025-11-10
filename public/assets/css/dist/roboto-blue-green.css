@@ -4458,6 +4458,19 @@ table#standings th {
   font-family: "Vend Sans";
   color: #1c497c;
 }
+#body_standings .franchiseicon {
+  max-width: 300px;
+  padding-inline: 0;
+  padding-block: 0.75rem;
+}
+@media (min-width: 750px) {
+  #body_standings .franchiseicon {
+    max-width: 450px;
+  }
+}
+#body_standings .th {
+  white-space: nowrap;
+}
 #body_lineup .report td {
   white-space: nowrap;
 }
