@@ -97,3 +97,17 @@ table#standings th {
     color: $primary-color;
   }
 }
+// insert a media query here to handle smaller screens
+#body_standings .franchiseicon {
+    max-width:300px;
+    padding-inline:0;
+    padding-block: .75rem
+}
+@media (min-width: 750px) {
+  #body_standings .franchiseicon {
+    max-width:450px;
+  }
+}
+#body_standings .th {
+    white-space: nowrap;
+}
