@@ -1,4 +1,7 @@
 #body_lineup {
+    .report td {
+        white-space: nowrap;
+    }
     .report tr th:first-child {
         display: none;
     }
@@ -8,7 +11,8 @@
     .report input[type="checkbox"] {
         margin-right: 10px;
         position: relative;
-        top: 3px;
+        top: 2px;
+        scale: 1.25;
     }
     td[colspan="10"] {
         padding: 10px 0;
@@ -39,6 +43,43 @@
             width: auto;
         }
     }
+span.reportnavigation {
+    white-space: nowrap;
+    overflow-x:scroll;
+}
+
+span.reportnavigation .reportnavigationheader {
+    display: block;
+    font-size: 1rem;
+}
+
+span.reportnavigation span, span.reportnavigation a {
+    font-size: 1.2rem;
+    padding-inline: .5rem
+}
+
+span.reportnavigation a {
+    font-size: .95rem
+}
+
+.report th {
+    font-size: .75rem;
+    vertical-align: bottom;
+    padding-inline: 5px;
+}
+
+.report th.points {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.report td.points {
+    border-right: 1px solid $lightgray;
+}
+span.reportnavigation {
+    padding: 0;
+}
+
 }
 
 

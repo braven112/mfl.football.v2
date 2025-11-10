@@ -4454,6 +4454,9 @@ table#standings th {
   font-family: "Vend Sans";
   color: #1c497c;
 }
+#body_lineup .report td {
+  white-space: nowrap;
+}
 #body_lineup .report tr th:first-child {
   display: none;
 }
@@ -4463,7 +4466,8 @@ table#standings th {
 #body_lineup .report input[type=checkbox] {
   margin-right: 10px;
   position: relative;
-  top: 3px;
+  top: 2px;
+  scale: 1.25;
 }
 #body_lineup td[colspan="10"] {
   padding: 10px 0;
@@ -4495,6 +4499,36 @@ table#standings th {
   #body_lineup input[type=button] {
     width: auto;
   }
+}
+#body_lineup span.reportnavigation {
+  white-space: nowrap;
+  overflow-x: scroll;
+}
+#body_lineup span.reportnavigation .reportnavigationheader {
+  display: block;
+  font-size: 1rem;
+}
+#body_lineup span.reportnavigation span, #body_lineup span.reportnavigation a {
+  font-size: 1.2rem;
+  padding-inline: 0.5rem;
+}
+#body_lineup span.reportnavigation a {
+  font-size: 0.95rem;
+}
+#body_lineup .report th {
+  font-size: 0.75rem;
+  vertical-align: bottom;
+  padding-inline: 5px;
+}
+#body_lineup .report th.points {
+  font-weight: 700;
+  white-space: nowrap;
+}
+#body_lineup .report td.points {
+  border-right: 1px solid #ddd;
+}
+#body_lineup span.reportnavigation {
+  padding: 0;
 }
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */

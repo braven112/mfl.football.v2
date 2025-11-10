@@ -1,6 +1,6 @@
 import { fixFranchiseIcons } from './features/franchiseIcons.js';
 
-const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop'];
+const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop', 'body_lineup'];
 const FRANCHISE_ICON_SCOPES = {
   body_options_207: [
     { selector: '.recap_preview_players' },
