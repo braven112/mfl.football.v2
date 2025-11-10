@@ -4506,7 +4506,7 @@ table#standings th {
 }
 #body_lineup span.reportnavigation .reportnavigationheader {
   display: block;
-  font-size: 1rem;
+  font-size: 1.5rem;
 }
 #body_lineup span.reportnavigation span,
 #body_lineup span.reportnavigation a {
@@ -4533,6 +4533,23 @@ table#standings th {
 }
 #body_lineup caption.withfranchiseicon {
   margin-bottom: -1rem;
+}
+#body_lineup .franchiseicon {
+  height: 75px;
+  min-width: 75px;
+}
+#body_lineup caption span {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+#body_lineup .reportnavigation a {
+  min-height: 11rem;
+}
+#body_lineup span.currentweek,
+#body_lineup select {
+  margin-bottom: 0.5rem;
+  display: inline-block;
 }
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */
