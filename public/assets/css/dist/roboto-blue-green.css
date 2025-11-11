@@ -4678,6 +4678,21 @@ table#standings th {
   left: 4rem;
   color: white;
 }
+#body_lineup span.reportnavigation:has(select) {
+  display: none;
+}
+#body_lineup #body_lineup table.report.nocaption:nth-of-type(1) td {
+  white-space: normal;
+}
+#body_lineup #body_lineup .report .report td:has(a[href]) {
+  display: table-cell;
+}
+#body_lineup table.report.nocaption:nth-of-type(1) td {
+  display: none;
+}
+#body_lineup table.report.nocaption:nth-of-type(1) td:has(a) {
+  display: block;
+}
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */
 /**************************************/

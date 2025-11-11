@@ -3,11 +3,9 @@
 .homepagecolumn .homepagemodule h3 {
   margin: 0 0 0 -1px;
 }
-
 .btn-primary td {
   padding: 0 0 24px;
 }
-
 #curr_auctions .btn-primary a {
   border-radius: 5px 5px 5px 5px;
   position: relative;
@@ -19,12 +17,10 @@
   padding: 15px;
   min-height: 48px;
 }
-
 #curr_auctions .btn-primary td {
   padding-top: 0px;
   padding-bottom: 36px;
 }
-
 #body_options_43 td[colspan="8"] div {
   width: 100% !important;
 }
@@ -36,12 +32,10 @@
     max-width: 304px;
   }
 }
-
 #curr_auctions .btn-primary a {
   background-color: #3c9950;
   color: #fff;
 }
-
 @media only screen and (min-width: 992px) {
   #body_options_43 table.report.nocaption td:nth-child(4),
   #body_options_43 table.report.nocaption td:nth-child(5),
@@ -119,20 +113,16 @@
   color: #cd2122;
   transition: opacity 0.3s;
 }
-
 #curr_auctions .warning {
   font-weight: bold;
 }
-
 #curr_auctions td {
   font-size: 0.75rem;
   text-wrap: pretty;
 }
-
 #curr_auctions td:nth-child(4) {
   font-size: 0.5rem;
 }
-
 @media only screen and (min-width: 992px) {
   #curr_auctions td,
   #curr_auctions td:nth-child(4) {
@@ -167,38 +157,30 @@
 #body_add_drop form[action=add_drop] > table tr:first-child td[valign=top] {
   width: 50%;
 }
-
 #add tr.highlight,
 #add tr:hover {
   background-color: green;
 }
-
 #drop tr.highlight,
 #drop tr:hover {
   background-color: red;
 }
-
 #add_name_field_id {
   color: green;
 }
-
 #drop_name_field_id {
   color: red;
 }
-
 #add .highlight,
 #drop .highlight {
   color: #fff;
 }
-
 #add .highlight {
   background-color: green;
 }
-
 #drop .highlight {
   background-color: red;
 }
-
 .alert {
   padding: 10px 14px;
   margin-bottom: 1rem;
@@ -206,7 +188,6 @@
   border-radius: 4px;
   display: block;
 }
-
 .homepagemessage {
   border: none;
   width: 100%;
@@ -214,11 +195,9 @@
   padding: 0;
   margin: 0 auto 24px;
 }
-
 .homepagemessage:nth-of-type(2n) {
   margin-top: -12px;
 }
-
 .homepagemessage th {
   font-style: normal;
   font-weight: 700;
@@ -229,14 +208,12 @@
   position: relative;
   top: 2px;
 }
-
 table.homepagemessage td {
   padding: 16px;
   border: 1px solid;
   border-radius: 0 0 5px 5px;
   border-top: 0px;
 }
-
 .reportnavigation.alert-warning,
 .alert-warning,
 .reportnavigation.alert-warning a:link,
@@ -247,7 +224,6 @@ table.homepagemessage td {
   border-color: #faf2cc !important;
   color: #8a6d3b !important;
 }
-
 .reportnavigation.alert-info,
 .alert-info,
 .reportnavigation.alert-info a:link,
@@ -258,7 +234,6 @@ table.homepagemessage td {
   border-color: #bcdff1 !important;
   color: #31708f !important;
 }
-
 .reportnavigation.alert-success,
 .alert-success,
 .reportnavigation.alert-success a:link,
@@ -269,23 +244,19 @@ table.homepagemessage td {
   border-color: #d0e9c6 !important;
   color: #3c763d !important;
 }
-
 .homepagemessage th {
   color: #8a6d3b !important;
   background-color: #fcf8e3 !important;
   border: 1px solid #faf2cc !important;
 }
-
 .homepagemessage td {
   background-color: #fcf8e3 !important;
   color: #8a6d3b !important;
   border-color: #faf2cc !important;
 }
-
 .homepagemessage a {
   color: rgb(102.2741116751, 80.7817258883, 43.7258883249) !important;
 }
-
 #body_commissioner_setup .oddtablerow {
   background-color: transparent;
 }
@@ -333,7 +304,6 @@ table.homepagemessage td {
     right: -2px;
   }
 }
-
 @media (max-width: 540px) {
   .hidden-calendar {
     display: none !important;
@@ -342,27 +312,22 @@ table.homepagemessage td {
 .homepagecolumn #monthly_calendar {
   width: 100%;
 }
-
 #monthly_calendar td,
 #monthly_calendar th {
   border: 1px solid;
   padding: 12px;
 }
-
 #monthly_calendar td {
   height: 10em;
 }
-
 #monthly_calendar td a {
   text-decoration: none;
 }
-
 #monthly_calendar td.today {
   height: 12em;
   border: 2px solid;
   box-shadow: inset 0px -2px 15px 5px rgba(0, 0, 0, 0.1);
 }
-
 #monthly_calendar ul li {
   font-size: 95%;
   list-style-type: none;
@@ -372,16 +337,13 @@ table.homepagemessage td {
   border-top: 1px solid;
   padding-top: 12px;
 }
-
 #monthly_calendar ul li:first-child {
   border: none;
   padding-top: 18px;
 }
-
 #monthly_calendar td.today .calendarday {
   border-bottom: 1px solid;
 }
-
 #monthly_calendar td .calendarday {
   float: none;
   text-align: center;
@@ -394,16 +356,13 @@ table.homepagemessage td {
   padding: 7px;
   margin-left: -12px;
 }
-
 #monthly_calendar td,
 #monthly_calendar th {
   border-color: rgb(240.55, 240.55, 240.55);
 }
-
 #monthly_calendar .eventablerow {
   background-color: #fff;
 }
-
 #monthly_calendar td.today {
   background-color: #2e8743;
   color: #fff;
@@ -418,21 +377,17 @@ table.homepagemessage td {
 #monthly_calendar td.today a:visited {
   color: #fff;
 }
-
 #monthly_calendar ul li {
   border-top: 1px solid rgb(240.55, 240.55, 240.55);
 }
-
 #monthly_calendar ul li.calendar_event_trade {
   border-bottom-color: rgb(240.55, 240.55, 240.55);
 }
-
 #monthly_calendar td .calendarday {
   border-bottom-color: rgb(240.55, 240.55, 240.55);
   border-left-color: rgb(240.55, 240.55, 240.55);
   background-color: #eee;
 }
-
 #monthly_calendar td.today .calendarday {
   border-color: rgb(47.2961325967, 138.8038674033, 68.8878453039);
   background-color: #2e8743;
@@ -444,52 +399,42 @@ table.homepagemessage td {
 #monthly_calendar td.today .calendarday a:visited {
   color: #fff;
 }
-
 .constitution-wrapper h2 {
   text-align: left;
   margin: 0 0 12px 0;
   border-bottom: 4px solid;
   padding-bottom: 3px;
 }
-
 .constitution-wrapper ul li {
   margin-left: 0;
 }
-
 .constitution-wrapper ul {
   margin-top: 0;
   margin-bottom: 0;
   padding-left: 20px;
 }
-
 .constitution-wrapper .emphasize {
   font-style: italic;
 }
-
 .constitution-wrapper {
   font-size: 1.2em;
   display: flexbox;
 }
-
 .constitution-wrapper h2 {
   color: #1c497c;
   border-bottom-color: #ddd;
 }
-
 .constitution-wrapper td.secondround {
   background-color: #ececec;
 }
-
 .constitution-wrapper td.thirdround {
   background-color: #fff;
 }
-
 .draftcta {
   overflow: hidden !important;
   border-left: 8px solid;
   border-left-color: #3c9950;
 }
-
 .cta_button {
   display: block;
   padding: 6px 0px 6px;
@@ -517,7 +462,6 @@ table.homepagemessage td {
 .cta_button .cta-hide {
   display: none;
 }
-
 .standingscta {
   overflow: hidden !important;
   border-left: 8px solid;
@@ -549,11 +493,9 @@ table.homepagemessage td {
     margin-right: 2%;
   }
 }
-
 body {
   font-size: 14px;
 }
-
 @media (max-width: 767px) {
   body #container {
     width: 100%;
@@ -562,27 +504,22 @@ body {
 .feed_item {
   display: none;
 }
-
 .feed_item:has(a[href^="https://theleague.us"]) {
   padding: 10px 18px;
   display: block;
 }
-
 .feed_item_title {
   margin-bottom: 6px;
   font-weight: 700;
   font-size: 16px;
 }
-
 .feed_item_title a {
   text-decoration: none;
 }
-
 .feed_item_description {
   margin-bottom: 6px;
   font-size: 14px;
 }
-
 .feed_item:nth-child(odd) {
   box-shadow: inset 0px -1px 0px 0px rgba(0, 0, 0, 0.05);
   border-left: 1px solid;
@@ -590,7 +527,6 @@ body {
   border: 1px solid;
   padding-block: 8px;
 }
-
 #body_options_52 .report-wrapper table table td input[type=button] {
   width: 100%;
 }
@@ -659,7 +595,6 @@ body {
 #body_options_52 .reportform {
   width: 1090px;
 }
-
 #body_options_129 select {
   font-size: 0.9em;
 }
@@ -670,7 +605,6 @@ body {
 #body_options_129 input[type=submit] {
   padding: 14px 20px;
 }
-
 /*   FORMATTING BELOW
 ======================= */
 #custom_draftroom .myfantasyleague_tabmenu {
@@ -1032,11 +966,9 @@ body {
     width: 49.2063274384%;
   }
 }
-
 .tabs_scroll .mobile-wrap .report .oddtablerow {
   box-shadow: none;
 }
-
 #custom_draftroom #draft_countdown_timer:before {
   color: #1c497c;
 }
@@ -1088,7 +1020,6 @@ body {
 #custom_draftroom #player-profile #draft_player_photo {
   border: 2px solid #1c497c;
 }
-
 #options_113 .report td {
   padding: 1px;
 }
@@ -1142,12 +1073,10 @@ body {
   color: #000;
   display: block;
 }
-
 /*hides default MFL footer*/
 .pagefooter {
   display: none;
 }
-
 .container-footer {
   min-height: 16em;
   padding: 24px 0;
@@ -1178,11 +1107,9 @@ body {
   margin-top: 14px;
   display: block;
 }
-
 [class*=col-] {
   transition: all 0.25s ease;
 }
-
 .mobile-scroll-wrapper {
   margin-bottom: 24px;
 }
@@ -1193,7 +1120,6 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 }
-
 /*behave like a two column bootstrap layout*/
 td.two_column_layout {
   width: 100%;
@@ -1206,7 +1132,6 @@ td.two_column_layout {
 td.two_column_layout {
   float: left;
 }
-
 @media (min-width: 992px) {
   td.two_column_layout {
     width: 50%;
@@ -1218,7 +1143,6 @@ td.two_column_layout {
 td.two_column_layout table {
   width: 100%;
 }
-
 table.two_column_layout {
   width: 100%;
 }
@@ -1228,7 +1152,6 @@ table.two_column_layout {
     margin-right: -15px;
   }
 }
-
 /*@media (max-width: 767px) {
 table.two_column_layout {
     margin-left: 0px;
@@ -1238,18 +1161,13 @@ table.two_column_layout {
 .section {
   margin-bottom: 24px;
 }
-
 /*//bootstrap grid*/
-@-ms-viewport {
-  width: device-width;
-}
 .visible-xs,
 .visible-sm,
 .visible-md,
 .visible-lg {
   display: none !important;
 }
-
 .visible-xs-block,
 .visible-xs-inline,
 .visible-xs-inline-block,
@@ -1264,7 +1182,6 @@ table.two_column_layout {
 .visible-lg-inline-block {
   display: none !important;
 }
-
 @media (max-width: 767px) {
   .visible-xs {
     display: block !important;
@@ -1408,7 +1325,6 @@ table.two_column_layout {
 .visible-print {
   display: none !important;
 }
-
 @media print {
   .visible-print {
     display: block !important;
@@ -1427,7 +1343,6 @@ table.two_column_layout {
 .visible-print-block {
   display: none !important;
 }
-
 @media print {
   .visible-print-block {
     display: block !important;
@@ -1436,7 +1351,6 @@ table.two_column_layout {
 .visible-print-inline {
   display: none !important;
 }
-
 @media print {
   .visible-print-inline {
     display: inline !important;
@@ -1445,7 +1359,6 @@ table.two_column_layout {
 .visible-print-inline-block {
   display: none !important;
 }
-
 @media print {
   .visible-print-inline-block {
     display: inline-block !important;
@@ -1462,7 +1375,6 @@ table.two_column_layout {
   padding-left: 15px;
   padding-right: 15px;
 }
-
 @media (min-width: 768px) {
   .container {
     width: 750px;
@@ -1484,12 +1396,10 @@ table.two_column_layout {
   padding-left: 15px;
   padding-right: 15px;
 }
-
 .row {
   margin-left: -15px;
   margin-right: -15px;
 }
-
 .col,
 .col-xs-1,
 .col-sm-1,
@@ -1544,7 +1454,6 @@ table.two_column_layout {
   padding-left: 15px;
   padding-right: 15px;
 }
-
 .col,
 .col-xs-1,
 .col-xs-2,
@@ -1560,211 +1469,159 @@ table.two_column_layout {
 .col-xs-12 {
   float: left;
 }
-
 .col-xs-12 {
   width: 100%;
 }
-
 .col-xs-11 {
   width: 91.66666667%;
 }
-
 .col-xs-10 {
   width: 83.33333333%;
 }
-
 .col-xs-9 {
   width: 75%;
 }
-
 .col-xs-8 {
   width: 66.66666667%;
 }
-
 .col-xs-7 {
   width: 58.33333333%;
 }
-
 .col-xs-6 {
   width: 50%;
 }
-
 .col-xs-5 {
   width: 41.66666667%;
 }
-
 .col-xs-4 {
   width: 33.33333333%;
 }
-
 .col-xs-3 {
   width: 25%;
 }
-
 .col-xs-2 {
   width: 16.66666667%;
 }
-
 .col-xs-1 {
   width: 8.33333333%;
 }
-
 .col-xs-pull-12 {
   right: 100%;
 }
-
 .col-xs-pull-11 {
   right: 91.66666667%;
 }
-
 .col-xs-pull-10 {
   right: 83.33333333%;
 }
-
 .col-xs-pull-9 {
   right: 75%;
 }
-
 .col-xs-pull-8 {
   right: 66.66666667%;
 }
-
 .col-xs-pull-7 {
   right: 58.33333333%;
 }
-
 .col-xs-pull-6 {
   right: 50%;
 }
-
 .col-xs-pull-5 {
   right: 41.66666667%;
 }
-
 .col-xs-pull-4 {
   right: 33.33333333%;
 }
-
 .col-xs-pull-3 {
   right: 25%;
 }
-
 .col-xs-pull-2 {
   right: 16.66666667%;
 }
-
 .col-xs-pull-1 {
   right: 8.33333333%;
 }
-
 .col-xs-pull-0 {
   right: auto;
 }
-
 .col-xs-push-12 {
   left: 100%;
 }
-
 .col-xs-push-11 {
   left: 91.66666667%;
 }
-
 .col-xs-push-10 {
   left: 83.33333333%;
 }
-
 .col-xs-push-9 {
   left: 75%;
 }
-
 .col-xs-push-8 {
   left: 66.66666667%;
 }
-
 .col-xs-push-7 {
   left: 58.33333333%;
 }
-
 .col-xs-push-6 {
   left: 50%;
 }
-
 .col-xs-push-5 {
   left: 41.66666667%;
 }
-
 .col-xs-push-4 {
   left: 33.33333333%;
 }
-
 .col-xs-push-3 {
   left: 25%;
 }
-
 .col-xs-push-2 {
   left: 16.66666667%;
 }
-
 .col-xs-push-1 {
   left: 8.33333333%;
 }
-
 .col-xs-push-0 {
   left: auto;
 }
-
 .col-xs-offset-12 {
   margin-left: 100%;
 }
-
 .col-xs-offset-11 {
   margin-left: 91.66666667%;
 }
-
 .col-xs-offset-10 {
   margin-left: 83.33333333%;
 }
-
 .col-xs-offset-9 {
   margin-left: 75%;
 }
-
 .col-xs-offset-8 {
   margin-left: 66.66666667%;
 }
-
 .col-xs-offset-7 {
   margin-left: 58.33333333%;
 }
-
 .col-xs-offset-6 {
   margin-left: 50%;
 }
-
 .col-xs-offset-5 {
   margin-left: 41.66666667%;
 }
-
 .col-xs-offset-4 {
   margin-left: 33.33333333%;
 }
-
 .col-xs-offset-3 {
   margin-left: 25%;
 }
-
 .col-xs-offset-2 {
   margin-left: 16.66666667%;
 }
-
 .col-xs-offset-1 {
   margin-left: 8.33333333%;
 }
-
 .col-xs-offset-0 {
   margin-left: 0%;
 }
-
 @media (min-width: 768px) {
   .col,
   .col-sm-1,
@@ -2287,70 +2144,55 @@ table.two_column_layout {
   content: " ";
   display: table;
 }
-
 .clearfix:after,
 .container:after,
 .container-fluid:after,
 .row:after {
   clear: both;
 }
-
 .center-block {
   display: block;
   margin-left: auto;
   margin-right: auto;
 }
-
 .pull-right {
   float: right !important;
 }
-
 .pull-left {
   float: left !important;
 }
-
 *,
 *:before,
 *:after {
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-
 .pageheader {
   display: none;
 }
-
 .pagetitle {
   display: none;
 }
-
 .brandlogo {
   display: none;
 }
-
 .container-header {
   padding: 20px 0;
   margin-bottom: 24px;
   box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
 }
-
 .leaguelogo, .franchiselogo, .standingslogo {
   max-width: 100%;
 }
-
 .league_logo svg {
   width: 50px;
   height: 53px;
   max-width: 100%;
   display: block;
 }
-
 .league_logo img {
   max-height: 70px;
   margin-bottom: 12px;
 }
-
 @media (min-width: 767px) {
   .league_logo img {
     max-height: 70px;
@@ -2389,7 +2231,6 @@ table.two_column_layout {
 .league_logo .st7 {
   display: none;
 }
-
 .leaguename {
   float: left;
   font-size: 32px;
@@ -2403,7 +2244,6 @@ table.two_column_layout {
 .leaguename .leaguename--dotus {
   font-size: 18px;
 }
-
 @media (min-width: 767px) {
   .leaguename {
     font-size: 60px;
@@ -2466,11 +2306,9 @@ table.two_column_layout {
     font-size: 14px;
   }
 }
-
 .nav_buttons img {
   max-width: 100%;
 }
-
 @media (max-width: 767px) {
   .nav_wrapper {
     max-width: 100%;
@@ -2503,7 +2341,6 @@ table.two_column_layout {
   padding: 0 15px 0 0;
   margin-bottom: 12px;
 }
-
 @media (min-width: 768px) and (max-width: 991px) {
   .nav_button--button {
     display: inline-block;
@@ -2542,24 +2379,19 @@ table.two_column_layout {
 .nav_button--button:first-child {
   margin-left: 0;
 }
-
 .nav_buttons .svg-text {
   font-size: 10px;
   text-align: center;
 }
-
 .nav_buttons a {
   text-decoration: none;
 }
-
 .loginbutton {
   cursor: pointer;
 }
-
 .welcome small {
   display: none;
 }
-
 .welcome {
   transition: all 0.5s ease;
   vertical-align: top;
@@ -2570,7 +2402,6 @@ table.two_column_layout {
   text-align: center;
   top: -5px;
 }
-
 .active.welcome {
   display: block;
   transition: all 0.5s ease;
@@ -2583,7 +2414,6 @@ table.two_column_layout {
   box-shadow: 0px 0px 5px 4px rgba(0, 0, 0, 0.38);
   z-index: 999;
 }
-
 @media (max-width: 850px) {
   .active.welcome {
     top: 48px;
@@ -2592,33 +2422,26 @@ table.two_column_layout {
 .container-header {
   background-color: #fff;
 }
-
 .st1 {
   display: inline;
   fill: #33373a;
 }
-
 .st2 {
   fill: #3c9950;
 }
-
 .st3 {
   fill: #1c497c;
 }
-
 .st4 {
   display: none;
   fill: #1c497c;
 }
-
 .st5 {
   fill: #ddd;
 }
-
 .st6 {
   fill: #fff;
 }
-
 .leaguename {
   font-family: "Vend Sans";
   color: #3c9950;
@@ -2627,80 +2450,64 @@ table.two_column_layout {
 .leaguename .leaguename--dotus {
   color: #1c497c;
 }
-
 span.leaguename--the,
 span.leaguename--dotus {
   color: #1c497c;
 }
-
 .nav_buttons .svg-text {
   color: #1c497c;
 }
-
 .welcome,
 .active.welcome {
   background: #1d4b7e;
   color: #fff;
 }
-
 .welcome a:link,
 .welcome a:visited {
   color: #fff;
 }
-
 [class^=icon] {
   width: 38px;
   height: 38px;
   margin: 5px 15px;
 }
-
 svg.icon-file-text {
   padding: 3px;
 }
-
 svg.icon-ambulance-2 {
   padding: 3px;
   position: relative;
   right: 3px;
 }
-
 svg.icon-standings {
   padding: 3px;
 }
-
 svg.icon-user-plus {
   padding: 3px;
   position: relative;
   left: 2px;
 }
-
 svg.icon-users {
   padding: 3px;
 }
-
 svg.icon-commenting {
   padding: 1px;
 }
-
 svg.icon-banknote {
   transform: rotate(25deg);
   padding: 1px;
 }
-
 svg.icon-trophy {
   padding: 1px;
   position: relative;
   top: 4px;
 }
-
 [class^=icon] {
   fill: #1c497c;
 }
-
 a:hover [class^=icon] {
   fill: #33629b;
 }
-
 #body_options_18 .dropplayer {
   color: #ddd;
   opacity: 0.9;
@@ -2709,7 +2516,6 @@ a:hover [class^=icon] {
   opacity: 1;
   color: #3c9950;
 }
-
 input[type=button], input[type=submit] {
   padding: 0.75rem 2.5rem;
   margin-bottom: 10px;
@@ -2726,17 +2532,14 @@ input[type=button], input[type=submit] {
     width: 100%;
   }
 }
-
 #league_chat input[type=button] {
   width: 100%;
 }
-
 input#chat_text_field {
   width: 100%;
   padding: 8px;
   border: 1px solid;
 }
-
 #player_search input[type=text] {
   width: 100%;
 }
@@ -2758,16 +2561,13 @@ input#chat_text_field {
     padding: 8px 11px;
   }
 }
-
 #body_options_101 input[type=submit] {
   margin-left: 10px;
 }
-
 input[value="Now!"], form.reportform input[type=submit] {
   padding: 0.75rem 2rem;
   margin-left: 0.5rem;
 }
-
 .btn-primary a, .btn-primary a:link, .btn-primary a:visited {
   border-radius: 5px;
   padding: 14px 30px;
@@ -2779,18 +2579,15 @@ input[value="Now!"], form.reportform input[type=submit] {
   text-align: center;
   text-decoration: none;
 }
-
 input[type=password], input[type=text] {
   padding: 4px;
   font-size: 1.1em;
   min-width: 100px;
 }
-
 select {
   padding: 4px 5px 5px;
   font-size: 1.1em;
 }
-
 /*//messageboard cta*/
 @media (max-width: 767px) {
   .mb {
@@ -2814,43 +2611,35 @@ select {
   position: relative;
   top: 3px;
 }
-
 input[type=checkbox] {
   scale: 1.45;
 }
-
 input[type=button],
 input[type=submit] {
   background-color: #3c9950;
   border-color: #3c9950;
 }
-
 input[type=button]:hover,
 input[type=submit]:hover {
   background-color: rgb(45.6338028169, 116.3661971831, 60.8450704225);
   border-color: rgb(45.6338028169, 116.3661971831, 60.8450704225);
 }
-
 input#chat_text_field {
   border-color: #ddd;
 }
-
 form.reportform input[type=submit] {
   background: #3c9950;
   color: #fff;
 }
-
 .btn-primary a,
 .btn-primary a:link,
 .btn-primary a:visited {
   background-color: #3c9950;
   color: #fff;
 }
-
 .btn-primary a:hover {
   background-color: rgb(45.6338028169, 116.3661971831, 60.8450704225);
 }
-
 #body_live_scoring_summary .pagebody {
   margin-right: auto;
   margin-left: auto;
@@ -2881,7 +2670,6 @@ form.reportform input[type=submit] {
   padding: 10px 10px;
   text-align: left;
 }
-
 #body_live_scoring_summary table.report .report,
 #body_live_scoring_summary table.scoresummary .report {
   background-color: #fff;
@@ -2889,12 +2677,10 @@ form.reportform input[type=submit] {
 #body_live_scoring_summary table.scoresummary .report .oddtablerow {
   background-color: transparent;
 }
-
 #body_ajax_ls table#roster_away, table#roster_home {
   margin-right: 3px;
   width: 100%;
 }
-
 @media (max-width: 560px) {
   div#scoreboardTooltip {
     left: 0 !important;
@@ -2911,16 +2697,13 @@ div#scoreboardTooltip {
 div#scoreboardTooltip td[rel=scoreboardTooltip] {
   cursor: pointer !important;
 }
-
 td.MFLPlayerProjections, td.MFLPlayerPoints {
   cursor: pointer !important;
 }
-
 #MFLTestParameters table#homepagecolumns {
   padding: 5px;
   padding: 0.313rem;
 }
-
 #MFLScoreboardOverlay {
   display: none;
   height: 100%;
@@ -2931,7 +2714,6 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   width: 100%;
   z-index: 99999;
 }
-
 #MFLScoreboardContainer {
   display: none;
   left: 50% !important;
@@ -2945,17 +2727,14 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   height: 250px;
   height: 15.625rem;
 }
-
 #MFLScoreboardLoading {
   display: block;
   padding-top: 10px;
   padding-top: 0.625rem;
 }
-
 #MFLScoreboardContainer .report {
   height: 100%;
 }
-
 .top_sb_container .MFLWeeklyNavigation.mobile-hide {
   display: none;
 }
@@ -2974,7 +2753,6 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
     margin-bottom: 0;
   }
 }
-
 #outerMFLScoreboardDiv {
   margin-bottom: 24px;
   border-radius: 4px;
@@ -2987,7 +2765,6 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
     -webkit-overflow-scrolling: touch;
   }
 }
-
 .MFLGameLinks {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   padding: 6px;
@@ -3017,7 +2794,6 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   font-size: 10px;
   font-family: "Vend Sans";
 }
-
 #MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
   text-align: center;
   font-size: 20px;
@@ -3025,7 +2801,6 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   line-height: 75px;
   line-height: 4.688rem;
 }
-
 #MFLFantasyMatchups, #MFLNFLMatchups, #MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
   min-height: 87px;
   width: 100%;
@@ -3033,23 +2808,19 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   padding: 0;
   -webkit-overflow-scrolling: touch;
 }
-
 .MFLLiveClock {
   height: 26px;
 }
-
 .MFLPaceScore {
   font-family: "Vend Sans";
   opacity: 0.75;
 }
-
 @media (min-width: 1200px) {
   td#myTopTableHolder {
     margin: 0 -21px;
     display: block;
   }
 }
-
 .MFLMainScoreboard {
   border-collapse: collapse;
   display: block;
@@ -3088,7 +2859,6 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   display: block;
   padding: 6px 8px;
 }
-
 td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
   width: 25%;
   font-weight: 300;
@@ -3170,7 +2940,6 @@ td#myTopTableHolder td#MFLCenterTop .awayteam {
 td#myTopTableHolder td#MFLCenterTop .awayteam {
   font-size: 10px;
 }
-
 @media (max-width: 513px) {
   td.MFLPlayerGame, td.MFLGameClock, td.sos {
     font-size: 10px;
@@ -3186,19 +2955,15 @@ td.MFLPlayerGame span {
   display: inline-block;
   text-align: center;
 }
-
 td#myBottomTableHolder {
   padding: 0;
 }
-
 td#MFLScoreboardRoadLineup {
   padding: 0;
 }
-
 td#MFLScoreboardHomeLineup {
   padding: 0;
 }
-
 td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
   float: left;
   width: 100%;
@@ -3210,7 +2975,6 @@ td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
     width: 555px;
   }
 }
-
 @media only screen and (max-width: 640px) {
   #outerMFLScoreboardDiv .mobile-view {
     width: 100% !important;
@@ -3271,29 +3035,24 @@ td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
 div#scoreboardTooltip {
   background-color: #fff;
 }
-
 #MFLPlayerPopupClose {
   background: #3c9950;
 }
 #MFLPlayerPopupClose:hover {
   background: rgb(45.6338028169, 116.3661971831, 60.8450704225);
 }
-
 #MFLFantasyMatchupsUpdate,
 #MFLNFLMatchupsUpdate,
 .MFLNFLLiveClock,
 .MFLLiveClock {
   color: #333333;
 }
-
 #MFLScoreboardOverlay {
   background-color: #000;
 }
-
 .MFLPlayerStatsPopup.report td.MFLPlayerName {
   background-color: #fff;
 }
-
 .MFLGameLinks {
   background-color: #f9f9f9;
 }
@@ -3304,11 +3063,9 @@ div#scoreboardTooltip {
   background-color: #f9f9f9;
   border-top-color: #3c9950;
 }
-
 .MFLOuterTable .report td {
   padding: 6px 6px;
 }
-
 @media (min-width: 513px) {
   .MFLMainScoreboard {
     background-color: #f9f9f9;
@@ -3321,11 +3078,9 @@ div#scoreboardTooltip {
   background-color: #fff;
   box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
 }
-
 td#myTopTableHolder td#MFLCenterTop {
   color: #1c497c;
 }
-
 #login table[align=center] table[align=center] b,
 #login table[align=center] table[align=center] p {
   display: none;
@@ -3336,56 +3091,46 @@ td#myTopTableHolder td#MFLCenterTop {
 #login .report span.alert.alert-info {
   margin-top: 12px;
 }
-
 #board_show .ava {
   width: auto;
   height: auto;
   max-width: 300px;
   max-height: 100px;
 }
-
 body {
   font-family: "Vend Sans";
   color: #333333;
   background: #fff;
 }
-
 a:link,
 a:visited {
   color: #1c497c;
 }
-
 .feed_item:nth-child(odd) {
   background-color: #fff;
   border-color: #eee;
 }
-
 .feed_item:nth-child(even) {
   background-color: #ececec;
   border-color: #eee;
 }
-
 /*   MFL RESPONSIVE MENU MOBILE STYLE
 ======================================= */
 .myfantasyleague_menu {
   border-bottom: 4px solid;
 }
-
 .myfantasyleague_menu li:hover > a {
   background-image: none;
   text-decoration: none;
   box-shadow: none;
 }
-
 .myfantasyleague_menu ul li ul {
   border-top: 4px solid;
   /*darker border*/
 }
-
 .myfantasyleague_menu {
   font-size: 12px;
 }
-
 @media only screen and (max-width: 920px) {
   .pagebody {
     padding: 30px 0px;
@@ -3421,7 +3166,6 @@ a:visited {
     top: 20px;
     margin-left: -9px;
     margin-top: -9px;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
   }
   .myfantasyleague_menu > label .burger {
@@ -3434,7 +3178,6 @@ a:visited {
     top: 29px;
     margin-left: -9px;
     margin-top: -9px;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
   }
   .myfantasyleague_menu > label .double-burger {
@@ -3447,7 +3190,6 @@ a:visited {
     top: 29px;
     margin-left: -9px;
     margin-top: -9px;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
   }
   .myfantasyleague_menu > label .bottom-bun {
@@ -3460,7 +3202,6 @@ a:visited {
     top: 38px;
     margin-left: -9px;
     margin-top: -9px;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
   }
   .myfantasyleague_menu input:checked ~ label .top-bun {
@@ -3501,7 +3242,6 @@ a:visited {
     top: 50%;
     margin-left: -8px;
     margin-top: -1px;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
     transform: rotate(45deg);
   }
@@ -3515,7 +3255,6 @@ a:visited {
     top: 50%;
     margin-left: 2px;
     margin-top: -5px;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
     transform: rotate(45deg);
   }
@@ -3538,7 +3277,6 @@ a:visited {
     position: static;
     max-height: 0;
     overflow: hidden;
-    -webkit-transition: 0.25s;
     transition: 0.25s;
     box-shadow: none;
   }
@@ -3657,40 +3395,32 @@ a:visited {
 .myfantasyleague_menu li.mfl-icon {
   display: none;
 }
-
 .myfantasyleague_menu li {
   list-style-image: none;
 }
-
 .myfantasyleague_menu {
   background: #1c497c;
   border-bottom-color: rgb(23.3026315789, 60.7532894737, 103.1973684211);
 }
-
 .myfantasyleague_menu,
 .myfantasyleague_menu ul,
 .myfantasyleague_menu ul li ul,
 .myfantasyleague_menu ul ul li {
   background: #1c497c;
 }
-
 .myfantasyleague_menu ul ul li a,
 .myfantasyleague_menu ul ul li.has-sub a {
   border-color: rgb(23.3026315789, 60.7532894737, 103.1973684211);
 }
-
 .myfantasyleague_menu li:hover > a {
   background-color: #1c497c;
 }
-
 .myfantasyleague_menu ul li ul {
   border-top-color: rgb(23.3026315789, 60.7532894737, 103.1973684211);
 }
-
 .myfantasyleague_menu ul li ul li:hover > a {
   background-color: rgb(23.3026315789, 60.7532894737, 103.1973684211);
 }
-
 @media only screen and (max-width: 920px) {
   .myfantasyleague_menu {
     background: #1c497c;
@@ -3732,18 +3462,15 @@ a:visited {
 #hsubmenu {
   margin-bottom: 24px;
 }
-
 /*   MFL RESPONSIVE TABS
 =========================== */
 .myfantasyleague_tabmenu {
   clear: both;
   font-family: "Vend Sans";
 }
-
 .myfantasyleague_tabmenu {
   background: transparent;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li {
   border-radius: 4px 4px 0 0;
   margin-right: 5px;
@@ -3754,22 +3481,18 @@ a:visited {
   border-top: 1px solid;
   border-right: 1px solid;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li a {
   border-right: 0;
   text-decoration: none;
   padding: 9px 15px;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li:hover {
   box-shadow: none;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li:hover a {
   color: #FFF;
   text-decoration: none;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li.currenttab,
 .myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
   border-radius: 4px 4px 0 0;
@@ -3777,7 +3500,6 @@ a:visited {
   padding: 0;
   box-shadow: none;
 }
-
 /*   MFL RESPONSIVE TABS MOBILE STYLE
 ======================================= */
 @media only screen and (max-width: 767px) {
@@ -3910,11 +3632,9 @@ a:visited {
     box-shadow: none;
   }
   .myfantasyleague_tabmenu input:checked ~ label span:before {
-    -webkit-transform: rotate(360deg);
     transform: rotate(360deg);
   }
   .myfantasyleague_tabmenu input:checked ~ label span:after {
-    -webkit-transform: rotate(270deg);
     transform: rotate(270deg);
   }
   .myfantasyleague_tabmenu input:checked ~ ul {
@@ -3927,35 +3647,28 @@ a:visited {
 .myfantasyleague_tabmenu {
   font-family: "Vend Sans";
 }
-
 .myfantasyleague_tabmenu ul#homepagetabs {
   border-bottom-color: #1c497c;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li {
   border-right-color: #1c497c;
   border-left-color: #1c497c;
   border-top-color: #1c497c;
   background-color: #3c9950;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li a {
   color: #fff;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li:hover {
   background: rgb(27.5302631579, 71.7753289474, 121.9197368421);
 }
-
 .myfantasyleague_tabmenu #homepagetabs li:hover a {
   color: #fff;
 }
-
 .myfantasyleague_tabmenu #homepagetabs li.currenttab,
 .myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
   background: #1c497c;
 }
-
 @media only screen and (max-width: 767px) {
   .myfantasyleague_tabmenu > label span {
     background: #fff;
@@ -3982,55 +3695,45 @@ body {
   margin-top: 0;
   overflow-x: hidden;
 }
-
 span#mfladdons {
   margin-bottom: 24px;
   display: block;
 }
-
 h3 {
   margin-bottom: 12px;
 }
-
 h3 {
   font-size: 15px;
   text-align: left;
   margin-left: 5px;
 }
-
 /*main mfl wrapper*/
 .pagebody {
   width: 100%;
   padding: 0;
   overflow: auto;
 }
-
 /*act like a bootstrap row*/
 .row {
   margin-left: -15px;
   margin-right: -15px;
   clear: both;
 }
-
 /*bootstrap column*/
 .homepagetabcontent {
   padding: 0 0px;
 }
-
 .homepagecolumn {
   padding: 0 0 24px;
 }
-
 .homepagecolumn .homepagemodule, .homepagecolumn .homepagemodule caption {
   width: 100%;
 }
-
 caption, caption span {
   font-weight: 700;
   text-align: left;
   font-size: 24px;
 }
-
 caption {
   padding-left: 8px;
   margin-bottom: 12px;
@@ -4038,7 +3741,6 @@ caption {
 caption img {
   margin-left: -4px;
 }
-
 th {
   font-style: normal;
   font-weight: 300;
@@ -4047,25 +3749,21 @@ th {
   background-color: transparent;
   vertical-align: bottom;
 }
-
 #body_home #power_rank .total_points, #body_home #power_rank .total_potential_points, #body_home #power_rank .efficiency, #body_home #power_rank .bench_points, #body_home #power_rank .maxpf, #body_home #power_rank .minpf, #body_home #power_rank .coulda_won, #body_home #power_rank .woulda_lost, #body_home #power_rank .power_rank, #body_home #power_rank .alt_power_rank {
   display: none;
 }
 #body_home #power_rank th[colspan="11"], #body_home #power_rank th[colspan="4"] {
   display: none;
 }
-
 span.reportnavigation {
   border: 1px solid;
   border-radius: 5px;
   margin-bottom: 12px;
 }
-
 /*reports*/
 .mobile-wrap {
   overflow: initial !important;
 }
-
 .report-wrapper, #lineup-form {
   margin-bottom: 24px;
   border-radius: 4px;
@@ -4078,31 +3776,25 @@ span.reportnavigation {
     -webkit-overflow-scrolling: touch;
   }
 }
-
 .report {
   width: 100%;
   border-collapse: collapse;
   border-bottom: 0px solid;
   margin-bottom: 12px;
 }
-
 .report td {
   padding: 6px 8px;
   text-align: left;
 }
-
 .report h3 {
   text-align: left;
 }
-
 .report .oddtablerow {
   box-shadow: inset 0px -1px 0px 0px rgba(0, 0, 0, 0.05);
 }
-
 #message_board_summary iframe {
   width: 100%;
 }
-
 @media (max-width: 767px) {
   #message_board_summary iframe {
     width: 100%;
@@ -4113,40 +3805,32 @@ span.reportnavigation {
 .report .newposition td {
   padding-top: 10px;
 }
-
 .newposition td, .newposition th {
   border-top: 4px solid;
 }
-
 /* margin-top: 12px; */
 .newposition td a {
   margin-top: 12px;
 }
-
 /*add drop*/
 #body_add_drop form table table caption {
   padding-left: 0;
 }
-
 #body_add_drop form > table caption {
   padding-left: 8px;
 }
-
 #body_add_drop table table div {
   width: 100% !important;
   padding: 5px;
   border-radius: 5px;
   margin-bottom: 12px;
 }
-
 #body_add_drop table table {
   width: 100% !important;
 }
-
 table#drop td, table#add {
   cursor: pointer;
 }
-
 .utility-nav {
   background-color: #2e8743;
 }
@@ -4167,7 +3851,6 @@ table#drop td, table#add {
 .utility-nav a:hover [class^=icon] {
   fill: #fff;
 }
-
 .utility-nav {
   margin-bottom: 24px;
   padding: 4px 8px;
@@ -4216,18 +3899,15 @@ table#drop td, table#add {
   border-left: 1px solid;
   padding-left: 5px;
 }
-
 textarea#MSG {
   color: white;
   width: 100%;
   margin: 14px 0;
   background-color: var(--code-bg-color, #333);
 }
-
 #body_options_35 .alert {
   margin-top: 12px;
 }
-
 #league_chat caption img {
   margin-left: 6px;
 }
@@ -4243,20 +3923,16 @@ textarea#MSG {
   border-bottom: 1px solid;
   transition: all 0.1s ease;
 }
-
 span#chat_audio_clip {
   display: none;
 }
-
 div[id*=usmg_ad] {
   display: none;
 }
-
 body {
   font-family: "Vend Sans";
   color: #333333;
 }
-
 td a,
 td a:link,
 td a:active,
@@ -4264,7 +3940,6 @@ td a:visited,
 td a:focus {
   font-family: "Vend Sans";
 }
-
 a,
 a:link,
 a:active,
@@ -4319,12 +3994,10 @@ caption a:focus,
 .myfantasyleague_tabmenu #homepagetabs li a {
   font-family: "Vend Sans";
 }
-
 a:link,
 a:visited {
   color: #1c497c;
 }
-
 .container-footer {
   background-color: #1c497c;
 }
@@ -4336,43 +4009,35 @@ a:visited {
   color: #fff;
   font-family: "Vend Sans";
 }
-
 h2 {
   color: #1d4b7e;
 }
-
 .pagebody {
   background-color: #f9f9f9;
 }
-
 .homepagemessage:first-child {
   padding-left: 0;
 }
-
 .homepagemessage th {
   color: #8a6d3b;
   background-color: #fcf8e3;
   border: 1px solid #faf2cc;
 }
-
 table.homepagemessage td {
   background-color: #fcf8e3;
   color: #8a6d3b;
   border-color: #faf2cc;
 }
-
 caption,
 caption span {
   font-family: "Vend Sans";
   color: #1d4b7e;
 }
-
 th,
 th a:link,
 th a:visited {
   color: #1d4b7e;
 }
-
 span.reportnavigation {
   border-color: #3c9950;
   background-color: #3c9950;
@@ -4382,40 +4047,31 @@ span.reportnavigation a:link,
 span.reportnavigation a:visited {
   color: #fff;
 }
-
 .report-wrapper {
   background-color: #fff;
 }
-
 .report {
   border-bottom-color: #ddd;
 }
-
 .report .oddtablerow {
   background-color: #fff;
 }
-
 .report .eventablerow {
   background-color: #ececec;
 }
-
 .mb svg.icon-chevron-right {
   fill: #1c497c;
 }
-
 .newposition td,
 .newposition th {
   border-top-color: #ccc;
 }
-
 span#add_name_field_id {
   color: green;
 }
-
 span#drop_name_field_id {
   color: red;
 }
-
 #body_view_news_article .report td, #body_view_news_article .report th {
   padding-left: 0;
   padding-right: 0;
@@ -4423,15 +4079,12 @@ span#drop_name_field_id {
 #body_view_news_article caption {
   padding-left: 0;
 }
-
 body#body_view_news_article .oddtablerow td:nth-child(2) {
   display: none;
 }
-
 body#body_news_articles td[rowspan="100"] {
   display: none;
 }
-
 #body_options_50 .alert,
 #body_options_197 .alert,
 #body_options_70 .alert,
@@ -4457,7 +4110,6 @@ body#body_news_articles td[rowspan="100"] {
 #body_options_214 .report td {
   padding: 12px 12px;
 }
-
 #body_player .container > table[cellpadding="1"] {
   margin-left: -15px;
   margin-right: -15px;
@@ -4474,7 +4126,6 @@ body#body_news_articles td[rowspan="100"] {
     float: left;
   }
 }
-
 .playoffbracket.report td {
   font-size: 0.8em;
 }
@@ -4500,15 +4151,12 @@ body#body_news_articles td[rowspan="100"] {
   background-color: #eee;
   border-color: #ddd;
 }
-
 body#body_options_101 .report td {
   white-space: nowrap;
 }
-
 #single_roster .withfranchiseicon {
   display: none;
 }
-
 @media (min-width: 992px) {
   #single_roster td.two_column_layout {
     width: 100%;
@@ -4519,37 +4167,29 @@ body#body_options_101 .report td {
   font-size: 12px;
   margin-top: 5px;
 }
-
 .text-align-left.icon-header {
   margin-top: -24px;
 }
-
 #contractOuterDiv {
   width: 100%;
 }
-
 #contractOuterDiv .report {
   width: 100%;
 }
-
 #contractOuterDiv td {
   white-space: nowrap;
 }
-
 #contractOuterDiv th {
   text-align: center;
 }
-
 #contractHeader {
   font-size: 32px;
   text-align: center;
   font-weight: 700;
 }
-
 .contractReport {
   margin-top: 24px;
 }
-
 @media (min-width: 640px) {
   .contractDropdown {
     float: right;
@@ -4568,7 +4208,6 @@ body#body_options_101 .report td {
     margin-bottom: 0;
   }
 }
-
 .contractReport img {
   max-width: 100%;
 }
@@ -4578,42 +4217,33 @@ body#body_options_101 .report td {
     display: block;
   }
 }
-
 .subtotals {
   background-color: #ddd;
   padding: 15px 5px 5px;
 }
-
 .text-align-center {
   text-align: center !important;
 }
-
 .font-weight-normal {
   font-weight: normal !important;
 }
-
 .text-align-right {
   text-align: right !important;
 }
-
 .text-align-left {
   text-align: left !important;
 }
-
 .rfaStatus {
   font-style: italic;
 }
-
 .rfaFutureContract {
   font-style: italic;
 }
-
 .report .ufaStatus {
   font-style: italic;
   font-weight: 300;
   text-align: center;
 }
-
 .contractStatus {
   font-size: 8pt;
   color: white;
@@ -4622,15 +4252,12 @@ body#body_options_101 .report td {
   padding: 0px 3px;
   vertical-align: top;
 }
-
 .auditionStatus {
   font-style: italic;
 }
-
 .contractHomeButton {
   float: right;
 }
-
 .contractHomeButton a:link,
 .contractHomeButton a:hover,
 .contractHomeButton a:visited,
@@ -4642,7 +4269,6 @@ body#body_options_101 .report td {
   border-radius: 4px;
   cursor: pointer;
 }
-
 .team-nav {
   margin: 12px 0;
   padding: 4px 8px;
@@ -4685,7 +4311,6 @@ body#body_options_101 .report td {
 .team-nav svg.icon-user-md {
   padding: 1px;
 }
-
 #contractReportContainer {
   width: 100%;
 }
@@ -4833,28 +4458,22 @@ body#body_options_101 .report td {
 #contractReportContainer .team-nav svg.icon-user-md {
   padding: 1px;
 }
-
 .subtotals {
   background-color: #ddd;
 }
-
 .rfaStatus {
   color: green;
   font-style: italic;
 }
-
 .rfaFutureContract {
   color: green;
 }
-
 .report .ufaStatus {
   color: red;
 }
-
 .contractStatus {
   background-color: rgb(252.45, 0, 0);
 }
-
 .team-nav {
   background-color: #3c9950;
 }
@@ -4871,71 +4490,57 @@ body#body_options_101 .report td {
 .team-nav .team-nav--button .svg-text a:visited {
   color: #fff;
 }
-
 ::-webkit-scrollbar {
   width: 14px;
   height: 14px;
 }
-
 ::-webkit-scrollbar-button {
   width: 0px;
   height: 0px;
 }
-
 ::-webkit-scrollbar-thumb {
   border: 0px none;
   border-radius: 3px;
   background: #2e8743;
   border-color: #f9f9f9;
 }
-
 ::-webkit-scrollbar-track {
   border: 0px none;
   border-radius: 0px;
   background: #f9f9f9;
   border-color: #f9f9f9;
 }
-
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:active {
   background: rgb(52.4806629834, 154.0193370166, 76.4392265193);
 }
-
 ::-webkit-scrollbar-track:hover,
 ::-webkit-scrollbar-track:active {
   background: #f9f9f9;
 }
-
 table#standings th {
   padding-top: 12px;
 }
-
 .standings-nav {
   display: none;
 }
-
 .franchiseicon {
   max-width: 100%;
   min-width: 75px;
   height: auto;
 }
-
 .homepagemodule.report .divwlt {
   display: none;
 }
-
 .homepagemodule.report .strk {
   display: none;
 }
-
 #standings .homepagemodule.report th, #brief_standings .homepagemodule.report th {
   white-space: nowrap;
 }
-
 .homepagecolumn #standings h3, .homepagecolumn #brief_standings h3, .homepagecolumn .homepagemodule caption {
   padding-top: inherit;
   padding-bottom: inherit;
@@ -4943,12 +4548,10 @@ table#standings th {
   text-align: left;
   font-size: 24px;
 }
-
 /*Standings*/
 .homepagecolumn #brief_standings h3, .homepagecolumn #standings h3 {
   border-bottom: 4px solid;
 }
-
 #body_standings caption, #body_standings h3 {
   padding-top: inherit;
   padding-bottom: inherit;
@@ -4966,19 +4569,15 @@ table#standings th {
 #body_standings .franchiseicon {
   min-width: 128px;
 }
-
 .homepagecolumn td#division00, .homepagecolumn td#division01, .homepagecolumn td#division02, .homepagecolumn td#division03, .homepagecolumn td#division04, .homepagecolumn td#division05, .homepagecolumn td#division06, .homepagecolumn td#division07 {
   padding: 6px 8px 2px;
 }
-
 .homepagecolumn #standings caption, .homepagecolumn #brief_standings caption {
   display: none;
 }
-
 .nodivisions #standings caption, .nodivisions .homepagecolumn #brief_standings caption {
   display: block;
 }
-
 .homepagecolumn #standings h3,
 .homepagecolumn #brief_standings h3,
 .homepagecolumn .homepagemodule caption {
@@ -4986,26 +4585,22 @@ table#standings th {
   font-family: "Vend Sans";
   color: #1c497c;
 }
-
 .homepagecolumn #brief_standings h3,
 .homepagecolumn #standings h3 {
   color: #1c497c;
   border-bottom-color: #ddd;
 }
-
 #body_standings caption,
 #body_standings h3 {
   background-color: transparent;
   font-family: "Vend Sans";
   color: #1c497c;
 }
-
 #body_standings .franchiseicon {
   max-width: 300px;
   padding-inline: 0;
   padding-block: 0.75rem;
 }
-
 @media (min-width: 750px) {
   #body_standings .franchiseicon {
     max-width: 450px;
@@ -5014,7 +4609,6 @@ table#standings th {
 #body_standings .th {
   white-space: nowrap;
 }
-
 #body_lineup .report td {
   white-space: nowrap;
 }
@@ -5119,7 +4713,21 @@ table#standings th {
   left: 4rem;
   color: white;
 }
-
+#body_lineup span.reportnavigation:has(select) {
+  display: none;
+}
+#body_lineup #body_lineup table.report.nocaption:nth-of-type(1) td {
+  white-space: normal;
+}
+#body_lineup #body_lineup .report .report td:has(a[href]) {
+  display: table-cell;
+}
+#body_lineup table.report.nocaption:nth-of-type(1) td {
+  display: none;
+}
+#body_lineup table.report.nocaption:nth-of-type(1) td:has(a) {
+  display: block;
+}
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */
 /**************************************/
@@ -5939,7 +5547,6 @@ table#standings th {
 #lineup td.inj b {
   padding: 0 4.5px;
 }
-
 #body_lineup .reportnavigation {
   color: #1c497c;
 }
@@ -5947,13 +5554,11 @@ table#standings th {
 #body_lineup .reportnavigation a:visited {
   color: #1c497c;
 }
-
 table.report {
   width: 100%;
   overflow-x: auto;
   -ms-overflow-style: -ms-autohiding-scrollbar;
 }
-
 @media only screen and (min-width: 48.001em) {
   table.report {
     overflow-x: hidden;
@@ -5977,7 +5582,6 @@ table.report {
   border-spacing: 0;
   border-color: #ddd;
 }
-
 .tabbed-reports li {
   margin: 0;
   padding: 4px 8px;
@@ -5995,26 +5599,22 @@ table.report {
   border-left-color: #3c9950;
   border-right-color: #3c9950;
 }
-
 .tabbed-reports li:hover,
 .tabbed-reports li.active,
 .tabbed-reports li.current {
   background-color: rgb(45.6338028169, 116.3661971831, 60.8450704225);
   color: #fff;
 }
-
 .tabbed-reports li:last-of-type {
   border-right: 0;
   border-top-right-radius: 2px;
   border-bottom-right-radius: 2px;
 }
-
 .tabbed-reports li:first-of-type {
   border-left: 0;
   border-top-left-radius: 2px;
   border-bottom-left-radius: 2px;
 }
-
 .reports-content .report {
   width: 100%;
   border: 0;
@@ -6022,17 +5622,14 @@ table.report {
   box-shadow: 0px 0px 0px 0px inset;
   padding-bottom: 0 !important;
 }
-
 .reports-content .report caption {
   display: none;
 }
-
 .reports-content .franchiseicon {
   width: 220px;
   max-width: 220px;
   height: auto;
 }
-
 @media (min-width: 768px) {
   #body_top .container.page-wrapper, #body_options_08 .container.page-wrapper {
     width: 750px;
@@ -6090,7 +5687,6 @@ table.report {
 #body_top tr.oddtablerow.myfranchise a, #body_options_08 tr.oddtablerow.myfranchise a {
   color: #2c501e;
 }
-
 @media (max-width: 360px) {
   #transactions {
     font-size: 9px;
@@ -6127,7 +5723,6 @@ table.report {
 #transactions .report .transactiontype {
   padding-left: 0;
 }
-
 /* Green CTA */
 .btn-standings {
   background: #fff; /* green */
@@ -6144,33 +5739,27 @@ table.report {
   position: relative;
   z-index: 1;
 }
-
 .btn-standings:hover {
   background: linear-gradient(0deg, #f2f2f2 0%, #ffffff 100%);
 }
-
 .btn-standings:active {
   background: #eeeeee;
 }
-
 /* Make motion feel anchored, not from UL corner */
 .desktop-standings-wrapper .mobile-wrap {
   will-change: transform, opacity;
   transform-origin: top center;
 }
-
 /* Newly appearing items: fade/scale in place (no translate) */
 .mfl-appearing {
   opacity: 0;
   transform: scale(0.98);
   transition: opacity 220ms ease, transform 220ms ease;
 }
-
 .mfl-appearing.mfl-in {
   opacity: 1;
   transform: scale(1);
 }
-
 #body_home #standings .ficonname,
 #body_standings #standings .ficonname,
 #body_home #standings .fname,
@@ -6242,47 +5831,36 @@ table.report {
 #body_home #standings .eliminated, #body_standings #standings .eliminated {
   display: none;
 }
-
 .central .desktop-standings-wrapper .mobile-wrap:nth-child(2), .central .desktop-standings-wrapper .mobile-wrap:nth-child(1), .central .desktop-standings-wrapper .mobile-wrap:nth-child(4) {
   display: none;
 }
-
 .northwest .desktop-standings-wrapper .mobile-wrap:nth-child(2), .northwest .desktop-standings-wrapper .mobile-wrap:nth-child(3), .northwest .desktop-standings-wrapper .mobile-wrap:nth-child(4) {
   display: none;
 }
-
 .southwest .desktop-standings-wrapper .mobile-wrap:nth-child(1), .southwest .desktop-standings-wrapper .mobile-wrap:nth-child(3), .southwest .desktop-standings-wrapper .mobile-wrap:nth-child(4) {
   display: none;
 }
-
 .east .desktop-standings-wrapper .mobile-wrap:nth-child(1), .east .desktop-standings-wrapper .mobile-wrap:nth-child(2), .east .desktop-standings-wrapper .mobile-wrap:nth-child(3) {
   display: none;
 }
-
 #curr_auctions .btn-primary {
   display: none;
 }
-
 .MFLGameLinks .MFLNFLLiveScore, .MFLGameLinks .MFLLiveScore, .MFLGameLinks .MFLLiveTeam {
   white-space: nowrap;
 }
-
 .all_play_wlt {
   display: none;
 }
-
 .prePlayoffs {
   display: none;
 }
-
 .playoffs {
   display: none;
 }
-
 .regularSeason .prePlayoffs {
   display: inline-block;
 }
-
 .playoffSeason .playoffs {
   display: inline-block;
 }

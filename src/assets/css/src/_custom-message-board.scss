@@ -9,6 +9,7 @@ body #container {
 }
 // Hide all ads and items by default
 .feed_item {display:none}
+
 // Show only the links to our forum
 .feed_item:has(a[href^="https://theleague.us"]){
     padding: 10px 18px;
