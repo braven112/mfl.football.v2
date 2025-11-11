@@ -35,3 +35,104 @@
   background-color: $accent-color;
   color: $white;
 }
+
+@media only screen and (min-width: 992px) {
+  #body_options_43 table.report.nocaption td:nth-child(4),
+  #body_options_43 table.report.nocaption td:nth-child(5),
+  #body_options_43 table.report.nocaption td:nth-child(6) {
+    font-size: 11px;
+    max-width: 75px;
+  }
+
+  #body_options_43 table.report.nocaption td:nth-child(1) {
+    white-space: nowrap;
+    font-size: 110%;
+  }
+  #body_options_43 .reportform {
+    margin-bottom: 18px;
+  }
+
+  #body_options_43 table.report.nocaption th:nth-child(2) {
+    text-align: right;
+    padding: 0 12px;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  #body_options_43 table.report.nocaption td:nth-child(2) {
+    text-align: right;
+    padding: 0 12px;
+    font-size: 120%;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  #body_options_43 table.report.nocaption th:nth-child(3) {
+    text-align: center;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  #body_options_43 table.report.nocaption td:nth-child(3) {
+    text-align: right;
+    padding-top: 12px;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  #body_options_43 .franchiseicon {
+    width: 160px;
+    margin: -5px 6px 0px 0;
+    float: left;
+  }
+
+  #body_options_43 table.report.nocaption th:nth-child(6),
+  #body_options_43 table.report.nocaption td:nth-child(6) {
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  #body_options_43 table.report.nocaption th:nth-child(7) {
+    text-align: center;
+  }
+
+  #body_options_43 input[type="password"],
+  #body_options_43 input[type="text"] {
+    padding: 10px;
+    min-width: 100%;
+  }
+  #body_options_43 tr.oddtablerow.auction-warning,
+  #body_options_43 tr.eventablerow.auction-warning {
+    background-color: #f8d7da;
+    font-weight: bold;
+    color: #cd2122;
+    transition: opacity 0.3s;
+  }
+
+  #body_options_43 tr.oddtablerow.auction-warning .warning,
+  #body_options_43 tr.eventablerow.auction-warning .warning {
+    font-weight: bold;
+  }
+
+  #body_options_43 tr.oddtablerow.auction-warning a {
+    color: #cd2122;
+  }
+  #body_options_43 tr.oddtablerow.auction-warning a,
+  #body_options_43 tr.eventablerow.auction-warning a {
+    color: #cd2122;
+  }
+}
+#curr_auctions tr.oddtablerow.auction-warning,
+#curr_auctions tr.eventablerow.auction-warning {
+  background-color: #f8d7da;
+  font-weight: bold;
+  color: #cd2122;
+  transition: opacity 0.3s;
+}
+#curr_auctions .warning {
+  font-weight: bold;
+}
+#curr_auctions td {
+  font-size: 0.75rem;
+  text-wrap: pretty;
+}
+#curr_auctions td:nth-child(4) {
+  font-size: 0.5rem;
+}
+@media only screen and (min-width: 992px) {
+  #curr_auctions td,
+  #curr_auctions td:nth-child(4) {
+    font-size: 0.85rem;
+  }
+}

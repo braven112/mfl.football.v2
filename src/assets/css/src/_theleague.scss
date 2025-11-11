@@ -124,3 +124,16 @@
 .all_play_wlt {
 display:none;
 }
+
+.prePlayoffs {
+display: none;
+}
+.playoffs {
+display:none;
+}
+.regularSeason .prePlayoffs {
+display: inline-block;
+}
+.playoffSeason .playoffs {
+display:inline-block;
+}
