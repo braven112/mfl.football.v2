@@ -112,15 +112,13 @@
     color: white;
 }
 //remove instructions
-span.reportnavigation:has(select) {
+span.reportnavigation:has(select), span.reportnavigation:has(br) {
     display: none;
-}
-#body_lineup table.report.nocaption:nth-of-type(1) td {
-    white-space: normal;
 }
 
 #body_lineup .report .report td:has(a[href]) {
   display: table-cell;
+
 }
 
 table.report.nocaption:nth-of-type(1) td {
@@ -129,6 +127,7 @@ table.report.nocaption:nth-of-type(1) td {
 
 table.report.nocaption:nth-of-type(1) td:has(a){
   display: block;
+  white-space: normal;
 }
 }
 

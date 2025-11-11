@@ -1,7 +1,8 @@
+////////////////////////Scrollbar/////////////////////////////////
 
 ::-webkit-scrollbar {
   width: 14px;
-  height: 14px;
+  height: 7px;
 }
 ::-webkit-scrollbar-button {
   width: 0px;
@@ -10,7 +11,7 @@
 ::-webkit-scrollbar-thumb {
   border: 0px none;
   border-radius: 3px;
-  background: $button-bg-color;
+  background: $scrollbar-bg-color;
   border-color: $pagebody-bg;
 }
 
@@ -26,7 +27,7 @@
 
 ::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:active {
-  background: $button-bg-color-hover;
+  background: $scrollbar-bg-hover-color;
 }
 
 ::-webkit-scrollbar-track:hover,

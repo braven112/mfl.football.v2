@@ -2697,7 +2697,8 @@ div#scoreboardTooltip {
 div#scoreboardTooltip td[rel=scoreboardTooltip] {
   cursor: pointer !important;
 }
-td.MFLPlayerProjections, td.MFLPlayerPoints {
+td.MFLPlayerProjections,
+td.MFLPlayerPoints {
   cursor: pointer !important;
 }
 #MFLTestParameters table#homepagecolumns {
@@ -2775,7 +2776,8 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   margin-right: 6px;
   border-radius: 4px;
 }
-.MFLGameLinks .matchupLolite, .MFLGameLinks .matchupHilite {
+.MFLGameLinks .matchupLolite,
+.MFLGameLinks .matchupHilite {
   padding: 0;
 }
 .MFLGameLinks td.MFLLiveTeam {
@@ -2785,7 +2787,9 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
 .MFLGameLinks .MFLNFLGameTable .nflicon {
   max-width: 30px;
 }
-.MFLGameLinks .MFLNFLLiveScore, .MFLGameLinks .MFLLiveScore, .MFLGameLinks .MFLLiveTeam {
+.MFLGameLinks .MFLNFLLiveScore,
+.MFLGameLinks .MFLLiveScore,
+.MFLGameLinks .MFLLiveTeam {
   font-weight: 700;
   font-family: "Vend Sans";
 }
@@ -2794,14 +2798,18 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
   font-size: 10px;
   font-family: "Vend Sans";
 }
-#MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
+#MFLFantasyMatchupsUpdate,
+#MFLNFLMatchupsUpdate {
   text-align: center;
   font-size: 20px;
   font-size: 1.25rem;
   line-height: 75px;
   line-height: 4.688rem;
 }
-#MFLFantasyMatchups, #MFLNFLMatchups, #MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
+#MFLFantasyMatchups,
+#MFLNFLMatchups,
+#MFLFantasyMatchupsUpdate,
+#MFLNFLMatchupsUpdate {
   min-height: 87px;
   width: 100%;
   overflow: auto;
@@ -2834,32 +2842,41 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
 .MFLMainScoreboard {
   max-width: 100%;
 }
-.MFLMainScoreboard #MFLRoadScore, .MFLMainScoreboard #MFLHomeScore {
+.MFLMainScoreboard #MFLRoadScore,
+.MFLMainScoreboard #MFLHomeScore {
   padding: 2px;
 }
-.MFLMainScoreboard #MFLRoadScore > div, .MFLMainScoreboard #MFLHomeScore > div {
+.MFLMainScoreboard #MFLRoadScore > div,
+.MFLMainScoreboard #MFLHomeScore > div {
   font-weight: 300;
 }
-.MFLMainScoreboard #MFLRoadScore > div a, .MFLMainScoreboard #MFLHomeScore > div a {
+.MFLMainScoreboard #MFLRoadScore > div a,
+.MFLMainScoreboard #MFLHomeScore > div a {
   font-family: "Vend Sans";
 }
-.MFLMainScoreboard #MFLRoadScore > div, .MFLMainScoreboard #MFLHomeScore > div {
+.MFLMainScoreboard #MFLRoadScore > div,
+.MFLMainScoreboard #MFLHomeScore > div {
   text-align: center;
 }
-.MFLMainScoreboard #MFLRoadScore > div a, .MFLMainScoreboard #MFLHomeScore > div a {
-  font-size: 16px;
+.MFLMainScoreboard #MFLRoadScore > div a,
+.MFLMainScoreboard #MFLHomeScore > div a {
+  font-size: 2.25rem;
+  font-weight: 700;
 }
 @media (min-width: 513px) {
-  .MFLMainScoreboard #MFLRoadScore > div a, .MFLMainScoreboard #MFLHomeScore > div a {
+  .MFLMainScoreboard #MFLRoadScore > div a,
+  .MFLMainScoreboard #MFLHomeScore > div a {
     font-size: 48px;
   }
 }
-.MFLMainScoreboard #MFLRoadScore > div, .MFLMainScoreboard #MFLHomeScore > div {
+.MFLMainScoreboard #MFLRoadScore > div,
+.MFLMainScoreboard #MFLHomeScore > div {
   border-radius: 4px;
   display: block;
   padding: 6px 8px;
 }
-td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
+td#myTopTableHolder td#MFLRoadTeamName,
+td#myTopTableHolder td#MFLHomeTeamName {
   width: 25%;
   font-weight: 300;
   font-family: "Vend Sans";
@@ -2868,41 +2885,42 @@ td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
   padding: 0;
 }
 @media (min-width: 641px) {
-  td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
-    min-width: 150px;
+  td#myTopTableHolder td#MFLRoadTeamName,
+  td#myTopTableHolder td#MFLHomeTeamName {
+    min-width: 160px;
   }
 }
 @media (min-width: 992px) {
-  td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
+  td#myTopTableHolder td#MFLRoadTeamName,
+  td#myTopTableHolder td#MFLHomeTeamName {
     min-width: 215px;
   }
 }
 @media (min-width: 992px) {
-  td#myTopTableHolder td#MFLRoadTeamName, td#myTopTableHolder td#MFLHomeTeamName {
+  td#myTopTableHolder td#MFLRoadTeamName,
+  td#myTopTableHolder td#MFLHomeTeamName {
     min-width: 270px;
   }
 }
-td#myTopTableHolder td#MFLRoadTeamName img, td#myTopTableHolder td#MFLHomeTeamName img {
+td#myTopTableHolder td#MFLRoadTeamName img,
+td#myTopTableHolder td#MFLHomeTeamName img {
   max-width: 100%;
 }
-td#myTopTableHolder #MFLRoadTeamRecord, td#myTopTableHolder #MFLHomeTeamRecord {
+td#myTopTableHolder #MFLRoadTeamRecord,
+td#myTopTableHolder #MFLHomeTeamRecord {
   font-weight: 300;
   font-family: "Vend Sans";
   font-size: 12px;
   opacity: 0.8;
   padding: 2px 3px 12px;
   display: none;
+  text-align: center;
 }
 @media (min-width: 513px) {
-  td#myTopTableHolder #MFLRoadTeamRecord, td#myTopTableHolder #MFLHomeTeamRecord {
+  td#myTopTableHolder #MFLRoadTeamRecord,
+  td#myTopTableHolder #MFLHomeTeamRecord {
     display: table-cell;
   }
-}
-td#myTopTableHolder #MFLHomeTeamRecord {
-  text-align: right;
-}
-td#myTopTableHolder #MFLRoadTeamRecord {
-  text-align: left;
 }
 td#myTopTableHolder td#MFLCenterTop {
   width: 50%;
@@ -2921,7 +2939,7 @@ td#myTopTableHolder td#MFLCenterTop .hometeam {
 }
 @media (min-width: 992px) {
   td#myTopTableHolder td#MFLCenterTop .hometeam {
-    bottom: 60%;
+    bottom: 9%;
   }
 }
 td#myTopTableHolder td#MFLCenterTop .hometeam {
@@ -2934,14 +2952,16 @@ td#myTopTableHolder td#MFLCenterTop .awayteam {
 }
 @media (min-width: 992px) {
   td#myTopTableHolder td#MFLCenterTop .awayteam {
-    bottom: 60%;
+    bottom: 9%;
   }
 }
 td#myTopTableHolder td#MFLCenterTop .awayteam {
   font-size: 10px;
 }
 @media (max-width: 513px) {
-  td.MFLPlayerGame, td.MFLGameClock, td.sos {
+  td.MFLPlayerGame,
+  td.MFLGameClock,
+  td.sos {
     font-size: 10px;
     font-size: 0.688rem;
   }
@@ -2964,12 +2984,14 @@ td#MFLScoreboardRoadLineup {
 td#MFLScoreboardHomeLineup {
   padding: 0;
 }
-td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
+td#MFLScoreboardRoadLineup,
+td#MFLScoreboardHomeLineup {
   float: left;
   width: 100%;
 }
 @media only screen and (min-width: 1200px) {
-  td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
+  td#MFLScoreboardRoadLineup,
+  td#MFLScoreboardHomeLineup {
     float: none;
     padding: 10px 6px;
     width: 555px;
@@ -2979,7 +3001,8 @@ td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
   #outerMFLScoreboardDiv .mobile-view {
     width: 100% !important;
   }
-  #MFLScoreboardHomeLineup, #MFLScoreboardRoadLineup {
+  #MFLScoreboardHomeLineup,
+  #MFLScoreboardRoadLineup {
     margin-top: 5px;
     margin-top: 0.313rem;
   }
@@ -2992,13 +3015,22 @@ td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
   .desktop-hide-table {
     display: table;
   }
-  #MFLCenterTop, .MFLMainScoreboard td.MFLScoreboardTitle, #MFLRoadPlayers, #MFLRoadYTP, #MFLRoadPMR, #MFLHomePlayers, #MFLHomeYTP, #MFLHomePMR {
+  #MFLCenterTop,
+  .MFLMainScoreboard td.MFLScoreboardTitle,
+  #MFLRoadPlayers,
+  #MFLRoadYTP,
+  #MFLRoadPMR,
+  #MFLHomePlayers,
+  #MFLHomeYTP,
+  #MFLHomePMR {
     display: none;
   }
-  #MFLRoadScore > div:nth-child(1) > span:nth-child(1), #MFLHomeScore > div:nth-child(1) > span:nth-child(1) {
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(1),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(1) {
     display: table-cell;
   }
-  #MFLRoadScore > div:nth-child(1) > span:nth-child(2), #MFLHomeScore > div:nth-child(1) > span:nth-child(2) {
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(2),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(2) {
     display: table-cell;
   }
   .MFLScoreboardLineups tr.lineupHeaderRow th {
@@ -3009,25 +3041,30 @@ td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
   }
 }
 @media only screen and (max-width: 44.25em) {
-  #MFLRoadScore > div:nth-child(1) > span:nth-child(1), #MFLHomeScore > div:nth-child(1) > span:nth-child(1) {
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(1),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(1) {
     display: none;
   }
 }
 @media only screen and (max-width: 38.25em) {
-  #MFLRoadScore > div:nth-child(1) > span:nth-child(2), #MFLHomeScore > div:nth-child(1) > span:nth-child(2) {
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(2),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(2) {
     display: none;
   }
-  #MFLRoadTeamName, #MFLHomeTeamName {
+  #MFLRoadTeamName,
+  #MFLHomeTeamName {
     font-size: 20px;
     font-size: 1.25rem;
   }
-  #MFLRoadScore span a, #MFLHomeScore span a {
+  #MFLRoadScore span a,
+  #MFLHomeScore span a {
     font-size: 30px;
     font-size: 1.875rem;
   }
 }
 @media only screen and (max-width: 32.25em) {
-  #MFLRoadTeamName, #MFLHomeTeamName {
+  #MFLRoadTeamName,
+  #MFLHomeTeamName {
     font-size: 16px;
     font-size: 1rem;
   }
@@ -3077,9 +3114,50 @@ div#scoreboardTooltip {
   color: #1c497c;
   background-color: #fff;
   box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+  padding-inline: 1rem;
+}
+@media (min-width: 500px) {
+  .MFLMainScoreboard #MFLRoadScore > div {
+    margin-right: 1rem;
+  }
+  .MFLMainScoreboard #MFLHomeScore > div {
+    margin-left: 1rem;
+  }
 }
 td#myTopTableHolder td#MFLCenterTop {
   color: #1c497c;
+  font-weight: 700;
+  font-size: 2.25rem;
+}
+.MFLGameClock,
+th.MFLGameClock {
+  font-size: 0.65rem;
+}
+th.gamestime {
+  visibility: hidden;
+}
+.MFLPlayerName {
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+.MFLPlayerGame.mobile-hide {
+  min-width: 85px;
+}
+.report .pointTotalRow th {
+  font-weight: 700;
+  font-size: 1.1rem;
+  background-color: #eee;
+  border-top: 1px solid #ccc;
+  border-bottom: 4px solid #ddd;
+}
+.report .pointTotalRow:has([class^=showBench]) th {
+  font-weight: 300;
+  font-size: 0.8rem;
+  background-color: white;
+  border: none;
+}
+.pointTotalProj {
+  color: #999;
 }
 #login table[align=center] table[align=center] b,
 #login table[align=center] table[align=center] p {
@@ -4492,7 +4570,7 @@ body#body_options_101 .report td {
 }
 ::-webkit-scrollbar {
   width: 14px;
-  height: 14px;
+  height: 7px;
 }
 ::-webkit-scrollbar-button {
   width: 0px;
@@ -4501,7 +4579,7 @@ body#body_options_101 .report td {
 ::-webkit-scrollbar-thumb {
   border: 0px none;
   border-radius: 3px;
-  background: #2e8743;
+  background: #ddd;
   border-color: #f9f9f9;
 }
 ::-webkit-scrollbar-track {
@@ -4515,7 +4593,7 @@ body#body_options_101 .report td {
 }
 ::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:active {
-  background: rgb(52.4806629834, 154.0193370166, 76.4392265193);
+  background: rgb(233.75, 233.75, 233.75);
 }
 ::-webkit-scrollbar-track:hover,
 ::-webkit-scrollbar-track:active {
@@ -4713,11 +4791,8 @@ table#standings th {
   left: 4rem;
   color: white;
 }
-#body_lineup span.reportnavigation:has(select) {
+#body_lineup span.reportnavigation:has(select), #body_lineup span.reportnavigation:has(br) {
   display: none;
-}
-#body_lineup #body_lineup table.report.nocaption:nth-of-type(1) td {
-  white-space: normal;
 }
 #body_lineup #body_lineup .report .report td:has(a[href]) {
   display: table-cell;
@@ -4727,6 +4802,7 @@ table#standings th {
 }
 #body_lineup table.report.nocaption:nth-of-type(1) td:has(a) {
   display: block;
+  white-space: normal;
 }
 /**************************************/
 /* NO NEED TO EDIT BELOW LAYOUT STYLE */

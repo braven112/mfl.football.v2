@@ -35,131 +35,133 @@
 //         cursor: help
 //     }
 // }
-    @media (max-width: 560px) {
-div#scoreboardTooltip {
+@media (max-width: 560px) {
+  div#scoreboardTooltip {
     left: 0 !important;
     width: 100%;
     max-width: 100% !important;
-}
+  }
 }
 div#scoreboardTooltip {
-    position: absolute;
-    padding: 12px 18px;
-    box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    td[rel="scoreboardTooltip"] {
-        cursor: pointer !important;
-    }
-}
-td.MFLPlayerProjections, td.MFLPlayerPoints {
+  position: absolute;
+  padding: 12px 18px;
+  box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  td[rel="scoreboardTooltip"] {
     cursor: pointer !important;
+  }
+}
+td.MFLPlayerProjections,
+td.MFLPlayerPoints {
+  cursor: pointer !important;
 }
 
 #MFLTestParameters table#homepagecolumns {
-    padding: 5px;
-    padding: .313rem
+  padding: 5px;
+  padding: 0.313rem;
 }
 
 #MFLScoreboardOverlay {
-    display: none;
-    height: 100%;
-    left: 0;
-    opacity: .7;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 99999;
+  display: none;
+  height: 100%;
+  left: 0;
+  opacity: 0.7;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 99999;
 }
 
 #MFLScoreboardContainer {
-    display: none;
-    left: 50%!important;
-    overflow: hidden;
-    position: fixed!important;
-    top: 50%!important;
-    z-index: 99999;
-    width: 100%;
-    max-width: 500px;
-    max-width: 31.25rem;
-    height: 250px;
-    height: 15.625rem
+  display: none;
+  left: 50% !important;
+  overflow: hidden;
+  position: fixed !important;
+  top: 50% !important;
+  z-index: 99999;
+  width: 100%;
+  max-width: 500px;
+  max-width: 31.25rem;
+  height: 250px;
+  height: 15.625rem;
 }
 
 #MFLScoreboardLoading {
-    display: block;
-    padding-top: 10px;
-    padding-top: .625rem
+  display: block;
+  padding-top: 10px;
+  padding-top: 0.625rem;
 }
 
 #MFLScoreboardContainer .report {
-    height: 100%
+  height: 100%;
 }
-
 
 //Weekly Navigation
 .top_sb_container {
+  .MFLWeeklyNavigation.mobile-hide {
+    //only show the mobile version on desktop as well.
+    display: none;
+  }
 
-    .MFLWeeklyNavigation.mobile-hide {
-        //only show the mobile version on desktop as well.
-        display: none;
-    }
+  h3#scoreboardHeader {
+    float: left;
+    margin-bottom: 18px;
+  }
 
-    h3#scoreboardHeader {
-        float: left;
-        margin-bottom: 18px;
+  #myNavigationHolder {
+    float: left;
+    margin-bottom: 12px;
+    @media (min-width: 513px) {
+      float: right;
+      margin-top: -6px;
+      margin-bottom: 0;
     }
-
-    #myNavigationHolder {
-        float: left;
-        margin-bottom: 12px;
-        @media (min-width: 513px) {
-            float: right;
-            margin-top: -6px;
-            margin-bottom: 0;
-        }
-    }
+  }
 }
 
 #outerMFLScoreboardDiv {
-    margin-bottom: 24px;
-    border-radius: 4px;
-    padding: 24px 12px;
-    box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
-    @media (max-width: 991px) {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
+  margin-bottom: 24px;
+  border-radius: 4px;
+  padding: 24px 12px;
+  box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+  @media (max-width: 991px) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .MFLGameLinks {
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 6px;
-    .MFLGameTable {
-        border-collapse: collapse;
-        box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
-        margin-right: 6px;
-        border-radius: 4px;
-    }
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  .MFLGameTable {
+    border-collapse: collapse;
+    box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+    margin-right: 6px;
+    border-radius: 4px;
+  }
 
-    .matchupLolite, .matchupHilite {
-        padding: 0;
-    }
-    td.MFLLiveTeam {
-        min-width: 180px;
-        font-size: 13px;
-    }
-    .MFLNFLGameTable .nflicon {
-        max-width: 30px;
-    }
-    .MFLNFLLiveScore, .MFLLiveScore, .MFLLiveTeam {
-        font-weight: $headline-font-weight;
-        font-family: $headline-font;
-    }
-    .MFLLiveClock {
-        border-top: 1px solid;
-        font-size: 10px;
-        font-family: $headline-font;
-    }
+  .matchupLolite,
+  .matchupHilite {
+    padding: 0;
+  }
+  td.MFLLiveTeam {
+    min-width: 180px;
+    font-size: 13px;
+  }
+  .MFLNFLGameTable .nflicon {
+    max-width: 30px;
+  }
+  .MFLNFLLiveScore,
+  .MFLLiveScore,
+  .MFLLiveTeam {
+    font-weight: $headline-font-weight;
+    font-family: $headline-font;
+  }
+  .MFLLiveClock {
+    border-top: 1px solid;
+    font-size: 10px;
+    font-family: $headline-font;
+  }
 }
 
 // .MFLScoreboardLineups .desktop-hide-caption, .desktop-hide-table {
@@ -172,175 +174,179 @@ td.MFLPlayerProjections, td.MFLPlayerPoints {
 //     min-height: 70px;
 //     min-height: 4.375rem
 // }
-#MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
-    text-align: center;
-    font-size: 20px;
-    font-size: 1.25rem;
-    line-height: 75px;
-    line-height: 4.688rem
+#MFLFantasyMatchupsUpdate,
+#MFLNFLMatchupsUpdate {
+  text-align: center;
+  font-size: 20px;
+  font-size: 1.25rem;
+  line-height: 75px;
+  line-height: 4.688rem;
 }
 
-
-
-#MFLFantasyMatchups, #MFLNFLMatchups, #MFLFantasyMatchupsUpdate, #MFLNFLMatchupsUpdate {
-    min-height: 87px;
-    width: 100%;
-    overflow: auto;
-    padding: 0;
-    -webkit-overflow-scrolling: touch
+#MFLFantasyMatchups,
+#MFLNFLMatchups,
+#MFLFantasyMatchupsUpdate,
+#MFLNFLMatchupsUpdate {
+  min-height: 87px;
+  width: 100%;
+  overflow: auto;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
 }
 .MFLLiveClock {
-    height: 26px;
+  height: 26px;
 }
 .MFLPaceScore {
-    font-family: $headline-font;
-    opacity: 0.75;
+  font-family: $headline-font;
+  opacity: 0.75;
 }
 
 td#myTopTableHolder {
-    @media (min-width: 1200px) {
-        margin: 0 -21px;
-        display: block;
-    }
+  @media (min-width: 1200px) {
+    margin: 0 -21px;
+    display: block;
+  }
 }
 
 .MFLMainScoreboard {
-    border-collapse: collapse;
-    display: block;
+  border-collapse: collapse;
+  display: block;
 
-    padding: 0px;
+  padding: 0px;
+  @media (min-width: 513px) {
+    padding: 30px;
+  }
+  max-width: 100%;
+
+  #MFLRoadScore,
+  #MFLHomeScore {
+    padding: 2px;
+  }
+  #MFLRoadScore > div,
+  #MFLHomeScore > div {
+    font-weight: $body-font-weight;
+    a {
+      font-family: $headline-font;
+    }
+    text-align: center;
+    a {
+      font-size: 2.25rem;
+      font-weight: $headline-font-weight;
+    }
     @media (min-width: 513px) {
-        padding: 30px;
+      a {
+        font-size: 48px;
+      }
     }
-    max-width: 100%;
 
-    #MFLRoadScore, #MFLHomeScore {
-        padding: 2px;
-    }
-    #MFLRoadScore>div, #MFLHomeScore>div {
-        font-weight: $body-font-weight;
-        a {
-            font-family: $headline-font;
-        }
-        text-align: center;
-        a {
-            font-size: 16px;
-        }
-        @media (min-width: 513px) {
-            a {
-                font-size: 48px;
-            }
-        }
-
-        border-radius: 4px;
-        display: block;
-        padding: 6px 8px;
-    }
+    border-radius: 4px;
+    display: block;
+    padding: 6px 8px;
+  }
 }
 
 td#myTopTableHolder {
-    td#MFLRoadTeamName, td#MFLHomeTeamName {
-        width: 25%;
-        font-weight: $body-font-weight;
-        font-family: $headline-font;
-        text-align: center;
-        font-size: 16px;
-        padding: 0;
-        @media (min-width: 641px) {
-            min-width: 150px
-        }
-        @media (min-width: 992px) {
-            min-width: 215px
-        }
-        @media (min-width: 992px) {
-            min-width: 270px
-        }
-        img {
-            max-width: 100%;
-        }
+  td#MFLRoadTeamName,
+  td#MFLHomeTeamName {
+    width: 25%;
+    font-weight: $body-font-weight;
+    font-family: $headline-font;
+    text-align: center;
+    font-size: 16px;
+    padding: 0;
+    @media (min-width: 641px) {
+      min-width: 160px;
     }
-    #MFLRoadTeamRecord, #MFLHomeTeamRecord {
-        font-weight: $body-font-weight;
-        font-family: $headline-font;
-        font-size: 12px;
-        opacity: .8;
-        padding: 2px 3px 12px;
-        display: none;
-        @media (min-width: 513px) {
-            display: table-cell;
-        }
+    @media (min-width: 992px) {
+      min-width: 215px;
     }
-    #MFLHomeTeamRecord {
-        text-align: right;
+    @media (min-width: 992px) {
+      min-width: 270px;
     }
-    #MFLRoadTeamRecord {
-        text-align: left;
+    img {
+      max-width: 100%;
     }
-    td#MFLCenterTop {
-        width: 50%;
-        font-size: 16px;
-        text-align: center;
-        padding-top: 2px;
-        font-weight: $body-font-weight;
-        font-family: $headline-font;
-        position: relative;
-        vertical-align: top;
-        .hometeam {
-            position: absolute;
-            right: 2%;
-            bottom: 2%;
-            @media (min-width: 992px) {
-            bottom: 60%;
-          }
-            font-size: 10px;
-        }
-        .awayteam {
-            position: absolute;
-            left: 2%;
-            bottom: 2%;
-            @media (min-width: 992px) {
-            bottom: 60%;
-          }
-            font-size: 10px;
-        }
+  }
+  #MFLRoadTeamRecord,
+  #MFLHomeTeamRecord {
+    font-weight: $body-font-weight;
+    font-family: $headline-font;
+    font-size: 12px;
+    opacity: 0.8;
+    padding: 2px 3px 12px;
+    display: none;
+    text-align: center;
+    @media (min-width: 513px) {
+      display: table-cell;
     }
+  }
+  td#MFLCenterTop {
+    width: 50%;
+    font-size: 16px;
+    text-align: center;
+    padding-top: 2px;
+    font-weight: $body-font-weight;
+    font-family: $headline-font;
+    position: relative;
+    vertical-align: top;
+    .hometeam {
+      position: absolute;
+      right: 2%;
+      bottom: 2%;
+      @media (min-width: 992px) {
+        bottom: 9%;
+      }
+      font-size: 10px;
+    }
+    .awayteam {
+      position: absolute;
+      left: 2%;
+      bottom: 2%;
+      @media (min-width: 992px) {
+        bottom: 9%;
+      }
+      font-size: 10px;
+    }
+  }
 }
 
 @media (max-width: 513px) {
-    td.MFLPlayerGame, td.MFLGameClock, td.sos {
-        font-size: 10px;
-        font-size: .688rem
-    }
-    th.gamestime {
-        font-size: 10px;
-        visibility: hidden;
-    }
+  td.MFLPlayerGame,
+  td.MFLGameClock,
+  td.sos {
+    font-size: 10px;
+    font-size: 0.688rem;
+  }
+  th.gamestime {
+    font-size: 10px;
+    visibility: hidden;
+  }
 }
 td.MFLPlayerGame span {
-    min-width: 50px;
-    display: inline-block;
-    text-align: center;
+  min-width: 50px;
+  display: inline-block;
+  text-align: center;
 }
 td#myBottomTableHolder {
-    padding: 0;
+  padding: 0;
 }
 td#MFLScoreboardRoadLineup {
-    padding: 0;
+  padding: 0;
 }
 td#MFLScoreboardHomeLineup {
-    padding: 0;
+  padding: 0;
 }
 
-td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
-    float: left;
-    width: 100%;
-    @media only screen and (min-width: 1200px) {
-      float: none;
-      padding: 10px 6px;
-      width: 555px;
-    }
+td#MFLScoreboardRoadLineup,
+td#MFLScoreboardHomeLineup {
+  float: left;
+  width: 100%;
+  @media only screen and (min-width: 1200px) {
+    float: none;
+    padding: 10px 6px;
+    width: 555px;
+  }
 }
-
 
 // @media only screen and (max-width: 66.500em) {
 //     #MFLRoadScore>div:nth-child(1)>span:nth-child(1), #MFLHomeScore>div:nth-child(1)>span:nth-child(1) {
@@ -357,122 +363,185 @@ td#MFLScoreboardRoadLineup, td#MFLScoreboardHomeLineup {
 //     }
 // }
 
-@media only screen and (max-width:640px) {
-    #outerMFLScoreboardDiv .mobile-view {
-        width: 100%!important
-    }
-    #MFLScoreboardHomeLineup, #MFLScoreboardRoadLineup {
-        margin-top: 5px;
-        margin-top: .313rem
-    }
-    #outerMFLScoreboardDiv .mobile-hide {
-        display: none
-    }
-    #outerMFLScoreboardDiv .desktop-hide-caption {
-        display: table-caption
-    }
-    .desktop-hide-table {
-        display: table
-    }
-    #MFLCenterTop, .MFLMainScoreboard td.MFLScoreboardTitle, #MFLRoadPlayers, #MFLRoadYTP, #MFLRoadPMR, #MFLHomePlayers, #MFLHomeYTP, #MFLHomePMR {
-        display: none
-    }
-    #MFLRoadScore>div:nth-child(1)>span:nth-child(1), #MFLHomeScore>div:nth-child(1)>span:nth-child(1) {
-        display: table-cell
-    }
-    #MFLRoadScore>div:nth-child(1)>span:nth-child(2), #MFLHomeScore>div:nth-child(1)>span:nth-child(2) {
-        display: table-cell
-    }
-    .MFLScoreboardLineups tr.lineupHeaderRow th {
-        width: 20%
-    }
-    .MFLScoreboardLineups tr.lineupHeaderRow th.lineupHeaderPlayer {
-        width: 60%
-    }
+@media only screen and (max-width: 640px) {
+  #outerMFLScoreboardDiv .mobile-view {
+    width: 100% !important;
+  }
+  #MFLScoreboardHomeLineup,
+  #MFLScoreboardRoadLineup {
+    margin-top: 5px;
+    margin-top: 0.313rem;
+  }
+  #outerMFLScoreboardDiv .mobile-hide {
+    display: none;
+  }
+  #outerMFLScoreboardDiv .desktop-hide-caption {
+    display: table-caption;
+  }
+  .desktop-hide-table {
+    display: table;
+  }
+  #MFLCenterTop,
+  .MFLMainScoreboard td.MFLScoreboardTitle,
+  #MFLRoadPlayers,
+  #MFLRoadYTP,
+  #MFLRoadPMR,
+  #MFLHomePlayers,
+  #MFLHomeYTP,
+  #MFLHomePMR {
+    display: none;
+  }
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(1),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(1) {
+    display: table-cell;
+  }
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(2),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(2) {
+    display: table-cell;
+  }
+  .MFLScoreboardLineups tr.lineupHeaderRow th {
+    width: 20%;
+  }
+  .MFLScoreboardLineups tr.lineupHeaderRow th.lineupHeaderPlayer {
+    width: 60%;
+  }
 }
 
-@media only screen and (max-width:44.250em) {
-    #MFLRoadScore>div:nth-child(1)>span:nth-child(1), #MFLHomeScore>div:nth-child(1)>span:nth-child(1) {
-        display: none
-    }
+@media only screen and (max-width: 44.25em) {
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(1),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(1) {
+    display: none;
+  }
 }
 
-@media only screen and (max-width:38.250em) {
-    #MFLRoadScore>div:nth-child(1)>span:nth-child(2), #MFLHomeScore>div:nth-child(1)>span:nth-child(2) {
-        display: none
-    }
-    #MFLRoadTeamName, #MFLHomeTeamName {
-        font-size: 20px;
-        font-size: 1.25rem
-    }
-    #MFLRoadScore span a, #MFLHomeScore span a {
-        font-size: 30px;
-        font-size: 1.875rem
-    }
+@media only screen and (max-width: 38.25em) {
+  #MFLRoadScore > div:nth-child(1) > span:nth-child(2),
+  #MFLHomeScore > div:nth-child(1) > span:nth-child(2) {
+    display: none;
+  }
+  #MFLRoadTeamName,
+  #MFLHomeTeamName {
+    font-size: 20px;
+    font-size: 1.25rem;
+  }
+  #MFLRoadScore span a,
+  #MFLHomeScore span a {
+    font-size: 30px;
+    font-size: 1.875rem;
+  }
 }
 
-@media only screen and (max-width:32.250em) {
-    #MFLRoadTeamName, #MFLHomeTeamName {
-        font-size: 16px;
-        font-size: 1rem
-    }
+@media only screen and (max-width: 32.25em) {
+  #MFLRoadTeamName,
+  #MFLHomeTeamName {
+    font-size: 16px;
+    font-size: 1rem;
+  }
 }
 
 div#scoreboardTooltip {
-    background-color: $report-bg;
+  background-color: $report-bg;
 }
 
 #MFLPlayerPopupClose {
-    background: $accent-color;
-    &:hover {
-        background: $dark-accent-color;
-    }
+  background: $accent-color;
+  &:hover {
+    background: $dark-accent-color;
+  }
 }
 
 #MFLFantasyMatchupsUpdate,
 #MFLNFLMatchupsUpdate,
 .MFLNFLLiveClock,
 .MFLLiveClock {
-    color: $primary-text-color;
+  color: $primary-text-color;
 }
 
 #MFLScoreboardOverlay {
-    background-color: #000;
+  background-color: #000;
 }
 
 .MFLPlayerStatsPopup.report td.MFLPlayerName {
-    background-color: $report-bg;
+  background-color: $report-bg;
 }
 
 .MFLGameLinks {
+  background-color: $pagebody-bg;
+  .MFLGameTable {
+    background-color: $report-bg;
+  }
+  .MFLLiveClock {
     background-color: $pagebody-bg;
-    .MFLGameTable {
-        background-color: $report-bg;
-    }
-    .MFLLiveClock {
-        background-color: $pagebody-bg;
-        border-top-color: $accent-color;
-    }
+    border-top-color: $accent-color;
+  }
 }
 
 .MFLOuterTable .report td {
-    padding: 6px 6px;
+  padding: 6px 6px;
 }
 
 .MFLMainScoreboard {
-	@media (min-width: 513px) {
-        background-color: $pagebody-bg;
-		border: 1px solid rgba(0,0,0,0.1);
+  @media (min-width: 513px) {
+    background-color: $pagebody-bg;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  #MFLRoadScore > div,
+  #MFLHomeScore > div {
+    color: $caption-color;
+    background-color: $report-bg;
+    box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+    padding-inline: 1rem;
+  }
+  @media (min-width: 500px) {
+    #MFLRoadScore > div {
+      margin-right: 1rem;
     }
-    
-    #MFLRoadScore > div,
     #MFLHomeScore > div {
-        color: $caption-color;
-        background-color: $report-bg;
-        box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+      margin-left: 1rem;
     }
+  }
 }
 
 td#myTopTableHolder td#MFLCenterTop {
-    color: $caption-color;
+  color: $caption-color;
+  font-weight: 700;
+  font-size: 2.25rem;
+}
+
+/// START Adjustments to scoreboard lineup table for better display
+.MFLGameClock,
+th.MFLGameClock {
+  font-size: 0.65rem;
+}
+
+th.gamestime {
+  visibility: hidden;
+}
+
+.MFLPlayerName {
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.MFLPlayerGame.mobile-hide {
+  min-width: 85px;
+}
+/// END Adjustments to scoreboard lineup table for better display
+///
+.report .pointTotalRow th {
+  font-weight: 700;
+  font-size: 1.1rem;
+  background-color: #eee;
+  border-top: 1px solid #ccc;
+  border-bottom: 4px solid #ddd;
+}
+.report .pointTotalRow:has([class^="showBench"]) th {
+  font-weight: 300;
+  font-size: 0.8rem;
+  background-color: white;
+  border: none;
+}
+.pointTotalProj {
+  color: $gray3;
 }

@@ -71,6 +71,10 @@ $button-bg-color:$accent-color;
 $button-bg-color-hover:lighten($button-bg-color, 5%);
 $button-link-color:$white;
 
+////////////////////////Scrollbar/////////////////////////////////
+$scrollbar-bg-color:$lightgray;;
+$scrollbar-bg-hover-color: lighten($scrollbar-bg-color, 5%);
+
 ////////////////////////Captions and Headlines /////////////////////////////////
 $caption-color:$primary-color;
 $headline-font-color: $caption-color;
