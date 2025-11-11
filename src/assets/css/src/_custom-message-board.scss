@@ -8,7 +8,6 @@ body #container {
     }
 }
 .feed_item {
-    margin-bottom: 12px;
     padding: 10px 18px;
 }
 .feed_item_title {
@@ -33,6 +32,6 @@ body #container {
     padding-block: 8px;
 }
 // Hide ads
-.feed_item:has(a[href=""]), .fee_item table {
+.feed_item:has(a[href=""]), .feed_item table {
   display: none;;
 }
