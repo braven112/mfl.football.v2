@@ -32,7 +32,7 @@ body #container {
     border: 1px solid;
     padding-block: 8px;
 }
-
-.feed_item:has(a[href=""]) {
+// Hide ads
+.feed_item:has(a[href=""]), .fee_item table {
   display: none;;
 }

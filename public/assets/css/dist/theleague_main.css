@@ -587,7 +587,7 @@ body {
   padding-block: 8px;
 }
 
-.feed_item:has(a[href=""]) {
+.feed_item:has(a[href=""]), .fee_item table {
   display: none;
 }
 
