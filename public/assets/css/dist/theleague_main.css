@@ -560,7 +560,12 @@ body {
   }
 }
 .feed_item {
+  display: none;
+}
+
+.feed_item:has(a[href^="https://theleague.us"]) {
   padding: 10px 18px;
+  display: block;
 }
 
 .feed_item_title {
@@ -584,10 +589,6 @@ body {
   border-right: 1px solid;
   border: 1px solid;
   padding-block: 8px;
-}
-
-.feed_item:has(a[href=""]), .feed_item table {
-  display: none;
 }
 
 #body_options_52 .report-wrapper table table td input[type=button] {
