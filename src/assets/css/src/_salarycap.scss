@@ -4,188 +4,22 @@
 
 #contractOuterDiv {
   width: 100%;
-}
 
-#contractOuterDiv .report {
-  width: 100%;
-}
+  .report {
+    width: 100%;
+  }
 
-#contractOuterDiv td {
-  white-space: nowrap;
-}
+  td {
+    white-space: nowrap;
+  }
 
-#contractOuterDiv th {
-  text-align: center;
-}
-
-#contractHeader {
-  font-size: 32px;
-  text-align: center;
-  font-weight: $headline-font-weight;
-}
-
-.contractReport {
-  margin-top: 24px;
-}
-
-@media (min-width: 640px) {
-  .contractDropdown {
-    float: right;
-    position: relative;
-    top: -5px;
+  th {
+    text-align: center;
   }
 }
-
-.contractDropdown .team-dropdown {
-  margin-bottom: 36px;
-  @media (min-width: 640px) {
-    border: none;
-    position: relative;
-    top: 26px;
-    margin-bottom: 0;
-  }
-}
-
-.contractReport img {
-  max-width: 100%;
-  @media (max-width: 639px) {
-    margin: 0 auto;
-    display: block;
-  }
-}
-
-.subtotals {
-  background-color: #ddd;
-  padding: 15px 5px 5px;
-}
-
-#contractReport {}
-
-#contractTable {}
-
-.text-align-center {
-  text-align: center !important;
-}
-
-.font-weight-normal {
-  font-weight: normal !important;
-}
-
-.text-align-right {
-  text-align: right !important;
-}
-
-.text-align-left {
-  text-align: left !important;
-}
-
-.rfaStatus {
-  font-style: italic;
-}
-
-.rfaFutureContract {
-  font-style: italic;
-}
-
-.report .ufaStatus {
-  font-style: italic;
-  font-weight: $body-font-weight;
-  text-align: center;
-}
-
-.contractStatus {
-  font-size: 8pt;
-  color: white;
-  font-weight: $body-font-weight;
-  margin-left: 4px;
-  padding: 0px 3px;
-  vertical-align: top;
-}
-
-.auditionStatus {
-  font-style: italic;
-}
-
-.contractHomeButton {
-  float: right;
-}
-
-.contractHomeButton a:link,
-.contractHomeButton a:hover,
-.contractHomeButton a:visited,
-.contractHomeButton a:active {
-  text-decoration: none;
-  padding: 4px;
-  margin: -1px;
-  border: 2px solid;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.team-nav {
-  margin: 12px 0;
-  padding: 4px 8px;
-  border-radius: 5px;
-  width: 100%;
-  text-align: center;
-  .team-nav--button {
-    display: inline-block;
-    padding: 6px 3px 6px 0;
-    border-radius: 8px;
-  }
-  .team-nav--button svg {
-    width: 20px;
-    height: 20px;
-    float: left;
-    margin: 0px 5px 0 0;
-  }
-  .team-nav--button .svg-text {
-    font-size: 12px;
-    display: inline-block;
-    margin-top: 4px;
-    margin-right: 10px;
-    font-weight:$secondary-menu-font-weight;
-  }
-  @media (min-width: 1200px) {
-    .team-nav .svg-text {
-      margin-right: 18px;
-    }
-  }
-  .team-nav--button .svg-text a:link,
-  .team-nav--button .svg-text a:visited {
-    text-decoration: none;
-  }
-  svg.icon-user-plus {
-    padding: 2px;
-    position: relative;
-    left: 1px;
-  }
-  svg.icon-user-md {
-    padding: 1px;
-  }
-}
-
 
 #contractReportContainer {
-    width: 100%;
-    .text-align-left.icon-header {
-  margin-top: -24px;
-}
-
-#contractOuterDiv {
   width: 100%;
-}
-
-#contractOuterDiv .report {
-  width: 100%;
-}
-
-#contractOuterDiv td {
-  white-space: nowrap;
-}
-
-#contractOuterDiv th {
-  text-align: center;
 }
 
 #contractHeader {
@@ -198,21 +32,22 @@
   margin-top: 24px;
 }
 
-@media (min-width: 640px) {
-  .contractDropdown {
+.contractDropdown {
+  @media (min-width: 640px) {
     float: right;
     position: relative;
     top: -5px;
   }
-}
 
-.contractDropdown .team-dropdown {
-  margin-bottom: 36px;
-  @media (min-width: 640px) {
-    border: none;
-    position: relative;
-    top: 26px;
-    margin-bottom: 0;
+  .team-dropdown {
+    margin-bottom: 36px;
+
+    @media (min-width: 640px) {
+      border: none;
+      position: relative;
+      top: 26px;
+      margin-bottom: 0;
+    }
   }
 }
 
@@ -225,155 +60,506 @@
 }
 
 .subtotals {
-  background-color: #ddd;
   padding: 15px 5px 5px;
-}
-
-#contractReport {}
-
-#contractTable {}
-
-.text-align-center {
-  text-align: center !important;
-}
-
-.font-weight-normal {
-  font-weight: normal !important;
-}
-
-.text-align-right {
-  text-align: right !important;
-}
-
-.text-align-left {
-  text-align: left !important;
-}
-
-.rfaStatus {
-  font-style: italic;
-}
-
-.rfaFutureContract {
-  font-style: italic;
-}
-
-.report .ufaStatus {
-  font-style: italic;
-  font-weight: $body-font-weight;
-  text-align: center;
-}
-
-.contractStatus {
-  font-size: 8pt;
-  color: white;
-  font-weight: $body-font-weight;
-  margin-left: 4px;
-  padding: 0px 3px;
-  vertical-align: top;
-}
-
-.auditionStatus {
-  font-style: italic;
-}
-
-.contractHomeButton {
-  float: right;
-}
-
-.contractHomeButton a:link,
-.contractHomeButton a:hover,
-.contractHomeButton a:visited,
-.contractHomeButton a:active {
-  text-decoration: none;
-  padding: 4px;
-  margin: -1px;
-  border: 2px solid;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.team-nav {
-  margin: 12px 0;
-  padding: 4px 8px;
-  border-radius: 5px;
-  width: 100%;
-  text-align: center;
-  .team-nav--button {
-    display: inline-block;
-    padding: 6px 3px 6px 0;
-    border-radius: 8px;
-  }
-  .team-nav--button svg {
-    width: 20px;
-    height: 20px;
-    float: left;
-    margin: 0px 5px 0 0;
-  }
-  .team-nav--button .svg-text {
-    font-size: 12px;
-    display: inline-block;
-    margin-top: 4px;
-    margin-right: 10px;
-    font-weight:$secondary-menu-font-weight;
-  }
-  @media (min-width: 1200px) {
-    .team-nav .svg-text {
-      margin-right: 18px;
-    }
-  }
-  .team-nav--button .svg-text a:link,
-  .team-nav--button .svg-text a:visited {
-    text-decoration: none;
-  }
-  svg.icon-user-plus {
-    padding: 2px;
-    position: relative;
-    left: 1px;
-  }
-  svg.icon-user-md {
-    padding: 1px;
-  }
-}
-}
-
-.subtotals {
   background-color: $lightgray;
 }
 
-.rfaStatus {
-  color: $add-color;
-  font-style: italic;
+#contractReport {}
+
+#contractTable {}
+
+.text-align-center {
+  text-align: center !important;
 }
 
+.font-weight-normal {
+  font-weight: normal !important;
+}
+
+.text-align-right {
+  text-align: right !important;
+}
+
+.text-align-left {
+  text-align: left !important;
+}
+
+.rfaStatus,
 .rfaFutureContract {
+  font-style: italic;
   color: $add-color;
 }
 
 .report .ufaStatus {
+  font-style: italic;
+  font-weight: $body-font-weight;
+  text-align: center;
   color: $drop-color;
 }
 
 .contractStatus {
+  font-size: 8pt;
+  color: white;
+  font-weight: $body-font-weight;
+  margin-left: 4px;
+  padding: 0px 3px;
+  vertical-align: top;
   background-color: darken($drop-color, 0.5);
 }
 
+.auditionStatus {
+  font-style: italic;
+}
+
+.contractHomeButton {
+  float: right;
+
+  a {
+    text-decoration: none;
+    padding: 4px;
+    margin: -1px;
+    border: 2px solid;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+}
+
 .team-nav {
+  margin: 12px 0;
+  padding: 4px 8px;
+  border-radius: 5px;
+  width: 100%;
+  text-align: center;
   background-color: $accent-color;
 
-  .team-nav--button svg {
-    fill: $white;
+  .team-nav--button {
+    display: inline-block;
+    padding: 6px 3px 6px 0;
+    border-radius: 8px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      float: left;
+      margin: 0 5px 0 0;
+      fill: $white;
+    }
+
+    &:hover svg {
+      fill: $white;
+    }
+
+    .svg-text {
+      font-size: 12px;
+      display: inline-block;
+      margin-top: 4px;
+      margin-right: 10px;
+      font-weight: $secondary-menu-font-weight;
+      color: $white;
+
+      a {
+        color: $white;
+        text-decoration: none;
+      }
+    }
   }
 
-  .team-nav--button a:hover svg {
-    fill: $white;
+  @media (min-width: 1200px) {
+    .svg-text {
+      margin-right: 18px;
+    }
   }
 
-  .team-nav--button .svg-text {
-    color: $white;
+  svg.icon-user-plus {
+    padding: 2px;
+    position: relative;
+    left: 1px;
   }
 
-  .team-nav--button .svg-text a:link,
-  .team-nav--button .svg-text a:visited {
-    color: $white;
+  svg.icon-user-md {
+    padding: 1px;
   }
+}
+
+@media (min-width: 768px) {
+  #contractReportContainer {
+    .team-nav {
+      margin: 12px 0;
+      padding: 4px 0 4px 18px;
+      text-align: left;
+      display: flex;
+      flex-direction: row-reverse;
+    }
+
+    .team-nav .team-nav--button.summary {
+      flex-grow: 1;
+      display: flex !important;
+      justify-content: flex-start;
+    }
+  }
+}
+
+td.contract-nfl.MIN img,
+td.contract-nfl.LAR img {
+  max-height: 28px;
+  margin: -4px 0;
+}
+
+td.contract-nfl.IND img,
+td.contract-nfl.DAL img,
+td.contract-nfl.TBB img,
+td.contract-nfl.NOS img,
+td.contract-nfl.LVR img,
+td.contract-nfl.ATL img {
+  max-height: 22px;
+  margin: -1px 0;
+}
+
+.report-wrapper {
+  overflow: auto;
+}
+
+.report {
+  .player {
+    padding-left: 12px;
+    border-left: none;
+    white-space: nowrap;
+  }
+
+  .contract-pos {
+    text-align: left;
+    padding: 6px 7px;
+    width: 37px;
+    max-width: 37px;
+  }
+
+  .contract-bye {
+    text-align: center;
+    padding: 6px;
+  }
+
+  .contract-nfl {
+    text-align: center;
+    padding: 6px 0 6px 6px;
+  }
+
+  .contract-nfl img {
+    max-height: 20px;
+  }
+
+  .contract-yrs {
+    text-align: center;
+    padding: 6px 14px;
+  }
+
+  .contract-ytd {
+    text-align: right;
+    border-right: 2px solid #ccc;
+    border-left: 2px solid #ccc;
+    padding: 6px 14px 6px 4px;
+  }
+
+  .deadmoney {
+    text-align: left;
+    padding: 6px 7px;
+  }
+}
+
+.ir svg.icon-user-md {
+  height: 15px;
+  width: 15px;
+  fill: white;
+  margin: 0;
+  position: relative;
+  top: 2px;
+}
+
+.practice_squad svg.icon-users {
+  height: 18px;
+  width: 18px;
+  fill: white;
+  margin: -2px 0 -4px -3px;
+  position: relative;
+  top: 0;
+}
+
+.activeroster svg.icon-helmet {
+  height: 18px;
+  width: 18px;
+  fill: white;
+  margin: -2px 4px -4px 0;
+  position: relative;
+  top: 0;
+  transform: scaleX(-1);
+}
+
+.js-hidden {
+  display: none !important;
+}
+
+a.caphit-toggle {
+  font-size: 90%;
+  font-weight: normal;
+}
+
+th {
+  a.caphit-toggle.active {
+    display: inline;
+  }
+
+  a.caphit-toggle {
+    color: white;
+    text-decoration: none;
+    display: none;
+  }
+}
+
+.caphit-toggle {
+  .icon-eye-slash,
+  .icon-eye {
+    fill: white;
+    width: 15px;
+    height: 15px;
+    position: relative;
+    top: 3px;
+    margin: 0;
+  }
+}
+
+a:hover {
+  .icon-eye-slash,
+  .icon-eye {
+    fill: white !important;
+  }
+}
+
+.leaguesummary .yrs {
+  text-align: center;
+  padding: 6px 14px;
+  max-width: 40px;
+}
+
+.th-description {
+  font-weight: normal;
+  font-size: 90%;
+}
+
+.capspace,
+.year {
+  border-right: 3px solid #2e8743;
+}
+
+th.contract-pos {
+  letter-spacing: -1.5px;
+}
+
+th.player {
+  text-align: left;
+}
+
+th.contract-yrs {
+  padding: 6px 7px;
+}
+
+.contract-ytd {
+  background-color: #0000000d;
+}
+
+th[colspan='11'] {
+  padding: 6px 7px;
+}
+
+.totaltablerow th:first-child {
+  text-align: right;
+}
+
+.activeroster th,
+.ir th,
+.deadmoney-row .deadmoney {
+  color: white;
+}
+
+.report caption {
+  margin-bottom: 0;
+}
+
+caption img.franchise_roster {
+  margin-bottom: 1rem;
+  max-width: 300px;
+}
+
+@media (min-width: 768px) {
+  caption img.franchise_roster {
+    margin-bottom: 1rem;
+    max-width: 500px;
+  }
+
+  .contractReportDropdownWrapper {
+    position: relative;
+  }
+
+  .franchise_roster {
+    width: 100%;
+    max-width: 700px;
+    height: auto;
+  }
+
+  span.subheadline {
+    padding: 0;
+    font-size: 15px;
+    margin-top: -15px;
+    color: #2e8743;
+    margin-bottom: 12px;
+  }
+
+  option {
+    font-family: 'Roboto Slab', sans-serif;
+    font-size: 0.9em;
+  }
+
+  #contractReportContainer .team-nav {
+    margin: 12px 0;
+    padding: 4px 0 4px 18px;
+    text-align: left;
+  }
+}
+
+@media (max-width: 767px) {
+  .contract-nfl {
+    font-size: 0;
+    padding: 0 !important;
+    border: none;
+  }
+}
+
+.salary_cap_row th,
+.squadTotals {
+  color: #1c497c;
+}
+
+tr.cap_room_available_row {
+  background-color: #2e8743;
+}
+
+tr.practice_squad,
+tr.activeroster,
+tr.ir,
+.deadmoney-row {
+  background-color: #2e8743;
+}
+
+tr.practice_squad th,
+tr.cap_room_available_row th,
+.total_salary_row th {
+  color: white;
+}
+
+.total_salary_row {
+  background-color: #1c497c;
+}
+
+img {
+  max-width: 100%;
+}
+
+th:nth-child(1) {
+  text-align: left;
+  padding: 6px 7px;
+}
+
+th {
+  text-align: right;
+  padding: 4px 14px;
+}
+
+tr > td,
+tr > th {
+  border-left: 1px solid #dedede6e;
+  border-bottom: 1px solid #dedede6e;
+}
+
+#contractReportWrapper {
+  th.year {
+    border-right: 1px solid #dedede6e;
+    text-align: center;
+  }
+
+  th[title='# of Contracts'] {
+    text-align: center;
+    border-left: 1px solid #dedede6e;
+    border-right: 1px solid #dedede6e;
+  }
+}
+
+.report td {
+  text-align: right;
+  padding: 6px 14px;
+}
+
+td.franchise_icons {
+  padding: 6px 4px;
+
+  img {
+    max-width: 150px;
+
+    @media (min-width: 768px) {
+      max-width: 200px;
+    }
+  }
+}
+
+.playerCount {
+  text-align: center;
+}
+
+td.player {
+  text-align: left;
+}
+
+tr > td:first-child,
+tr > th:first-child {
+  border-left: none;
+}
+
+div#contract_9999 table tr td:first-child {
+  text-align: left;
+  padding-left: 6px;
+}
+
+#contractReportContainer .report .ufaStatus {
+  text-align: right;
+}
+
+.total_contract_row {
+  display: none;
+}
+
+span.cuttrade {
+  font-size: 0.9em;
+  position: relative;
+  top: -2px;
+}
+
+input#cut9918 {
+  background-color: red;
+  color: red;
+  border-color: red;
+}
+
+.cuttradewrapper {
+  display: inline;
+}
+
+.tradewrapper {
+  padding-left: 5px;
+}
+
+.rosterSize {
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.summary-icon {
+  width: 150px;
+  height: auto;
 }
