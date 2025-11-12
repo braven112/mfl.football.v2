@@ -4668,6 +4668,10 @@ body#body_options_101 .report td {
 #contractReportWrapper .totaltablerow th:first-child {
   text-align: right;
 }
+#contractReportWrapper .total_salary_row th, #contractReportWrapper .cap_room_available_row th {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
 #contractReportWrapper .activeroster th,
 #contractReportWrapper .ir th,
 #contractReportWrapper .deadmoney-row .deadmoney {

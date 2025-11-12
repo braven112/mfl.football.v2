@@ -65,9 +65,11 @@
     background-color: $lightgray;
   }
 
-  #contractReport {}
+  #contractReport {
+  }
 
-  #contractTable {}
+  #contractTable {
+  }
 
   .text-align-center {
     text-align: center !important;
@@ -366,14 +368,18 @@
     background-color: #0000000d;
   }
 
-  th[colspan='11'] {
+  th[colspan="11"] {
     padding: 6px 7px;
   }
 
   .totaltablerow th:first-child {
     text-align: right;
   }
-
+  .total_salary_row th,
+  .cap_room_available_row th {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
   .activeroster th,
   .ir th,
   .deadmoney-row .deadmoney {
@@ -414,7 +420,7 @@
     }
 
     option {
-      font-family: 'Roboto Slab', sans-serif;
+      font-family: "Roboto Slab", sans-serif;
       font-size: 0.9em;
     }
 
@@ -484,7 +490,7 @@
     text-align: center;
   }
 
-  th[title='# of Contracts'] {
+  th[title="# of Contracts"] {
     text-align: center;
     border-left: 1px solid #dedede6e;
     border-right: 1px solid #dedede6e;
