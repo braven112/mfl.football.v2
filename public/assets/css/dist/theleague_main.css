@@ -4366,87 +4366,87 @@ body#body_options_101 .report td {
   font-size: 12px;
   margin-top: 5px;
 }
-.text-align-left.icon-header {
+#contractReportWrapper .text-align-left.icon-header {
   margin-top: -24px;
 }
-#contractOuterDiv {
+#contractReportWrapper #contractOuterDiv {
   width: 100%;
 }
-#contractOuterDiv .report {
+#contractReportWrapper #contractOuterDiv .report {
   width: 100%;
 }
-#contractOuterDiv td {
+#contractReportWrapper #contractOuterDiv td {
   white-space: nowrap;
 }
-#contractOuterDiv th {
+#contractReportWrapper #contractOuterDiv th {
   text-align: center;
 }
-#contractReportContainer {
+#contractReportWrapper #contractReportContainer {
   width: 100%;
 }
-#contractHeader {
+#contractReportWrapper #contractHeader {
   font-size: 32px;
   text-align: center;
   font-weight: 300;
 }
-.contractReport {
+#contractReportWrapper .contractReport {
   margin-top: 24px;
 }
 @media (min-width: 640px) {
-  .contractDropdown {
+  #contractReportWrapper .contractDropdown {
     float: right;
     position: relative;
     top: -5px;
   }
 }
-.contractDropdown .team-dropdown {
+#contractReportWrapper .contractDropdown .team-dropdown {
   margin-bottom: 36px;
 }
 @media (min-width: 640px) {
-  .contractDropdown .team-dropdown {
+  #contractReportWrapper .contractDropdown .team-dropdown {
     border: none;
     position: relative;
     top: 26px;
     margin-bottom: 0;
   }
 }
-.contractReport img {
+#contractReportWrapper .contractReport img {
   max-width: 100%;
 }
 @media (max-width: 639px) {
-  .contractReport img {
+  #contractReportWrapper .contractReport img {
     margin: 0 auto;
     display: block;
   }
 }
-.subtotals {
+#contractReportWrapper .subtotals {
   padding: 15px 5px 5px;
   background-color: #ddd;
 }
-.text-align-center {
+#contractReportWrapper .text-align-center {
   text-align: center !important;
 }
-.font-weight-normal {
+#contractReportWrapper .font-weight-normal {
   font-weight: normal !important;
 }
-.text-align-right {
+#contractReportWrapper .text-align-right {
   text-align: right !important;
 }
-.text-align-left {
+#contractReportWrapper .text-align-left {
   text-align: left !important;
 }
-.rfaStatus,
-.rfaFutureContract {
+#contractReportWrapper .rfaStatus,
+#contractReportWrapper .rfaFutureContract {
   font-style: italic;
   color: green;
 }
-.report .ufaStatus {
+#contractReportWrapper .report .ufaStatus {
   font-style: italic;
   font-weight: 300;
   text-align: center;
   color: red;
 }
-.contractStatus {
+#contractReportWrapper .contractStatus {
   font-size: 8pt;
   color: white;
   font-weight: 300;
@@ -4455,13 +4455,13 @@ body#body_options_101 .report td {
   vertical-align: top;
   background-color: rgb(252.45, 0, 0);
 }
-.auditionStatus {
+#contractReportWrapper .auditionStatus {
   font-style: italic;
 }
-.contractHomeButton {
+#contractReportWrapper .contractHomeButton {
   float: right;
 }
-.contractHomeButton a {
+#contractReportWrapper .contractHomeButton a {
   text-decoration: none;
   padding: 4px;
   margin: -1px;
@@ -4469,7 +4469,7 @@ body#body_options_101 .report td {
   border-radius: 4px;
   cursor: pointer;
 }
-.team-nav {
+#contractReportWrapper .team-nav {
   margin: 12px 0;
   padding: 4px 8px;
   border-radius: 5px;
@@ -4477,22 +4477,22 @@ body#body_options_101 .report td {
   text-align: center;
   background-color: #3c9950;
 }
-.team-nav .team-nav--button {
+#contractReportWrapper .team-nav .team-nav--button {
   display: inline-block;
   padding: 6px 3px 6px 0;
   border-radius: 8px;
 }
-.team-nav .team-nav--button svg {
+#contractReportWrapper .team-nav .team-nav--button svg {
   width: 20px;
   height: 20px;
   float: left;
   margin: 0 5px 0 0;
   fill: #fff;
 }
-.team-nav .team-nav--button:hover svg {
+#contractReportWrapper .team-nav .team-nav--button:hover svg {
   fill: #fff;
 }
-.team-nav .team-nav--button .svg-text {
+#contractReportWrapper .team-nav .team-nav--button .svg-text {
   font-size: 12px;
   display: inline-block;
   margin-top: 4px;
@@ -4500,91 +4500,91 @@ body#body_options_101 .report td {
   font-weight: normal;
   color: #fff;
 }
-.team-nav .team-nav--button .svg-text a {
+#contractReportWrapper .team-nav .team-nav--button .svg-text a {
   color: #fff;
   text-decoration: none;
 }
 @media (min-width: 1200px) {
-  .team-nav .svg-text {
+  #contractReportWrapper .team-nav .svg-text {
     margin-right: 18px;
   }
 }
-.team-nav svg.icon-user-plus {
+#contractReportWrapper .team-nav svg.icon-user-plus {
   padding: 2px;
   position: relative;
   left: 1px;
 }
-.team-nav svg.icon-user-md {
+#contractReportWrapper .team-nav svg.icon-user-md {
   padding: 1px;
 }
 @media (min-width: 768px) {
-  #contractReportContainer .team-nav {
+  #contractReportWrapper #contractReportContainer .team-nav {
     margin: 12px 0;
     padding: 4px 0 4px 18px;
     text-align: left;
     display: flex;
     flex-direction: row-reverse;
   }
-  #contractReportContainer .team-nav .team-nav--button.summary {
+  #contractReportWrapper #contractReportContainer .team-nav .team-nav--button.summary {
     flex-grow: 1;
     display: flex !important;
     justify-content: flex-start;
   }
 }
-td.contract-nfl.MIN img,
-td.contract-nfl.LAR img {
+#contractReportWrapper td.contract-nfl.MIN img,
+#contractReportWrapper td.contract-nfl.LAR img {
   max-height: 28px;
   margin: -4px 0;
 }
-td.contract-nfl.IND img,
-td.contract-nfl.DAL img,
-td.contract-nfl.TBB img,
-td.contract-nfl.NOS img,
-td.contract-nfl.LVR img,
-td.contract-nfl.ATL img {
+#contractReportWrapper td.contract-nfl.IND img,
+#contractReportWrapper td.contract-nfl.DAL img,
+#contractReportWrapper td.contract-nfl.TBB img,
+#contractReportWrapper td.contract-nfl.NOS img,
+#contractReportWrapper td.contract-nfl.LVR img,
+#contractReportWrapper td.contract-nfl.ATL img {
   max-height: 22px;
   margin: -1px 0;
 }
-.report-wrapper {
+#contractReportWrapper .report-wrapper {
   overflow: auto;
 }
-.report .player {
+#contractReportWrapper .report .player {
   padding-left: 12px;
   border-left: none;
   white-space: nowrap;
 }
-.report .contract-pos {
+#contractReportWrapper .report .contract-pos {
   text-align: left;
   padding: 6px 7px;
   width: 37px;
   max-width: 37px;
 }
-.report .contract-bye {
+#contractReportWrapper .report .contract-bye {
   text-align: center;
   padding: 6px;
 }
-.report .contract-nfl {
+#contractReportWrapper .report .contract-nfl {
   text-align: center;
   padding: 6px 0 6px 6px;
 }
-.report .contract-nfl img {
+#contractReportWrapper .report .contract-nfl img {
   max-height: 20px;
 }
-.report .contract-yrs {
+#contractReportWrapper .report .contract-yrs {
   text-align: center;
   padding: 6px 14px;
 }
-.report .contract-ytd {
+#contractReportWrapper .report .contract-ytd {
   text-align: right;
   border-right: 2px solid #ccc;
   border-left: 2px solid #ccc;
   padding: 6px 14px 6px 4px;
 }
-.report .deadmoney {
+#contractReportWrapper .report .deadmoney {
   text-align: left;
   padding: 6px 7px;
 }
-.ir svg.icon-user-md {
+#contractReportWrapper .ir svg.icon-user-md {
   height: 15px;
   width: 15px;
   fill: white;
@@ -4592,7 +4592,7 @@ td.contract-nfl.ATL img {
   position: relative;
   top: 2px;
 }
-.practice_squad svg.icon-users {
+#contractReportWrapper .practice_squad svg.icon-users {
   height: 18px;
   width: 18px;
   fill: white;
@@ -4600,7 +4600,7 @@ td.contract-nfl.ATL img {
   position: relative;
   top: 0;
 }
-.activeroster svg.icon-helmet {
+#contractReportWrapper .activeroster svg.icon-helmet {
   height: 18px;
   width: 18px;
   fill: white;
@@ -4609,23 +4609,23 @@ td.contract-nfl.ATL img {
   top: 0;
   transform: scaleX(-1);
 }
-.js-hidden {
+#contractReportWrapper .js-hidden {
   display: none !important;
 }
-a.caphit-toggle {
+#contractReportWrapper a.caphit-toggle {
   font-size: 90%;
   font-weight: normal;
 }
-th a.caphit-toggle.active {
+#contractReportWrapper th a.caphit-toggle.active {
   display: inline;
 }
-th a.caphit-toggle {
+#contractReportWrapper th a.caphit-toggle {
   color: white;
   text-decoration: none;
   display: none;
 }
-.caphit-toggle .icon-eye-slash,
-.caphit-toggle .icon-eye {
+#contractReportWrapper .caphit-toggle .icon-eye-slash,
+#contractReportWrapper .caphit-toggle .icon-eye {
   fill: white;
   width: 15px;
   height: 15px;
@@ -4633,124 +4633,124 @@ th a.caphit-toggle {
   top: 3px;
   margin: 0;
 }
-a:hover .icon-eye-slash,
-a:hover .icon-eye {
+#contractReportWrapper a:hover .icon-eye-slash,
+#contractReportWrapper a:hover .icon-eye {
   fill: white !important;
 }
-.leaguesummary .yrs {
+#contractReportWrapper .leaguesummary .yrs {
   text-align: center;
   padding: 6px 14px;
   max-width: 40px;
 }
-.th-description {
+#contractReportWrapper .th-description {
   font-weight: normal;
   font-size: 90%;
 }
-.capspace,
-.year {
+#contractReportWrapper .capspace,
+#contractReportWrapper .year {
   border-right: 3px solid #2e8743;
 }
-th.contract-pos {
+#contractReportWrapper th.contract-pos {
   letter-spacing: -1.5px;
 }
-th.player {
+#contractReportWrapper th.player {
   text-align: left;
 }
-th.contract-yrs {
+#contractReportWrapper th.contract-yrs {
   padding: 6px 7px;
 }
-.contract-ytd {
+#contractReportWrapper .contract-ytd {
   background-color: rgba(0, 0, 0, 0.0509803922);
 }
-th[colspan="11"] {
+#contractReportWrapper th[colspan="11"] {
   padding: 6px 7px;
 }
-.totaltablerow th:first-child {
+#contractReportWrapper .totaltablerow th:first-child {
   text-align: right;
 }
-.activeroster th,
-.ir th,
-.deadmoney-row .deadmoney {
+#contractReportWrapper .activeroster th,
+#contractReportWrapper .ir th,
+#contractReportWrapper .deadmoney-row .deadmoney {
   color: white;
 }
-.report caption {
+#contractReportWrapper .report caption {
   margin-bottom: 0;
 }
-caption img.franchise_roster {
+#contractReportWrapper caption img.franchise_roster {
   margin-bottom: 1rem;
   max-width: 300px;
 }
 @media (min-width: 768px) {
-  caption img.franchise_roster {
+  #contractReportWrapper caption img.franchise_roster {
     margin-bottom: 1rem;
     max-width: 500px;
   }
-  .contractReportDropdownWrapper {
+  #contractReportWrapper .contractReportDropdownWrapper {
     position: relative;
   }
-  .franchise_roster {
+  #contractReportWrapper .franchise_roster {
     width: 100%;
     max-width: 700px;
     height: auto;
   }
-  span.subheadline {
+  #contractReportWrapper span.subheadline {
     padding: 0;
     font-size: 15px;
     margin-top: -15px;
     color: #2e8743;
     margin-bottom: 12px;
   }
-  option {
+  #contractReportWrapper option {
     font-family: "Roboto Slab", sans-serif;
     font-size: 0.9em;
   }
-  #contractReportContainer .team-nav {
+  #contractReportWrapper #contractReportContainer .team-nav {
     margin: 12px 0;
     padding: 4px 0 4px 18px;
     text-align: left;
   }
 }
 @media (max-width: 767px) {
-  .contract-nfl {
+  #contractReportWrapper .contract-nfl {
     font-size: 0;
     padding: 0 !important;
     border: none;
   }
 }
-.salary_cap_row th,
-.squadTotals {
+#contractReportWrapper .salary_cap_row th,
+#contractReportWrapper .squadTotals {
   color: #1c497c;
 }
-tr.cap_room_available_row {
+#contractReportWrapper tr.cap_room_available_row {
   background-color: #2e8743;
 }
-tr.practice_squad,
-tr.activeroster,
-tr.ir,
-.deadmoney-row {
+#contractReportWrapper tr.practice_squad,
+#contractReportWrapper tr.activeroster,
+#contractReportWrapper tr.ir,
+#contractReportWrapper .deadmoney-row {
   background-color: #2e8743;
 }
-tr.practice_squad th,
-tr.cap_room_available_row th,
-.total_salary_row th {
+#contractReportWrapper tr.practice_squad th,
+#contractReportWrapper tr.cap_room_available_row th,
+#contractReportWrapper .total_salary_row th {
   color: white;
 }
-.total_salary_row {
+#contractReportWrapper .total_salary_row {
   background-color: #1c497c;
 }
-img {
+#contractReportWrapper img {
   max-width: 100%;
 }
-th:nth-child(1) {
+#contractReportWrapper th:nth-child(1) {
   text-align: left;
   padding: 6px 7px;
 }
-th {
+#contractReportWrapper th {
   text-align: right;
   padding: 4px 14px;
 }
-tr > td,
-tr > th {
+#contractReportWrapper tr > td,
+#contractReportWrapper tr > th {
   border-left: 1px solid rgba(222, 222, 222, 0.431372549);
   border-bottom: 1px solid rgba(222, 222, 222, 0.431372549);
 }
@@ -4763,62 +4763,62 @@ tr > th {
   border-left: 1px solid rgba(222, 222, 222, 0.431372549);
   border-right: 1px solid rgba(222, 222, 222, 0.431372549);
 }
-.report td {
+#contractReportWrapper .report td {
   text-align: right;
   padding: 6px 14px;
 }
-td.franchise_icons {
+#contractReportWrapper td.franchise_icons {
   padding: 6px 4px;
 }
-td.franchise_icons img {
+#contractReportWrapper td.franchise_icons img {
   max-width: 150px;
 }
 @media (min-width: 768px) {
-  td.franchise_icons img {
+  #contractReportWrapper td.franchise_icons img {
     max-width: 200px;
   }
 }
-.playerCount {
+#contractReportWrapper .playerCount {
   text-align: center;
 }
-td.player {
+#contractReportWrapper td.player {
   text-align: left;
 }
-tr > td:first-child,
-tr > th:first-child {
+#contractReportWrapper tr > td:first-child,
+#contractReportWrapper tr > th:first-child {
   border-left: none;
 }
-div#contract_9999 table tr td:first-child {
+#contractReportWrapper div#contract_9999 table tr td:first-child {
   text-align: left;
   padding-left: 6px;
 }
-#contractReportContainer .report .ufaStatus {
+#contractReportWrapper #contractReportContainer .report .ufaStatus {
   text-align: right;
 }
-.total_contract_row {
+#contractReportWrapper .total_contract_row {
   display: none;
 }
-span.cuttrade {
+#contractReportWrapper span.cuttrade {
   font-size: 0.9em;
   position: relative;
   top: -2px;
 }
-input#cut9918 {
+#contractReportWrapper input#cut9918 {
   background-color: red;
   color: red;
   border-color: red;
 }
-.cuttradewrapper {
+#contractReportWrapper .cuttradewrapper {
   display: inline;
 }
-.tradewrapper {
+#contractReportWrapper .tradewrapper {
   padding-left: 5px;
 }
-.rosterSize {
+#contractReportWrapper .rosterSize {
   font-size: 12px;
   font-weight: normal;
 }
-.summary-icon {
+#contractReportWrapper .summary-icon {
   width: 150px;
   height: auto;
 }
