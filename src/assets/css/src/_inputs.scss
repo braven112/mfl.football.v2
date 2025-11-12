@@ -7,7 +7,7 @@ input[type="button"], input[type="submit"] {
   font-weight: $headline-font-weight;
   text-transform: uppercase;
   cursor: pointer;
-  border-radius: 8rem;
+  border-radius: $border-radius-xl;
   @media (max-width: 991px) {
     width: 100%;
   }

@@ -3229,7 +3229,7 @@ td.MFLPlayerPoints {
 }
 .MFLMainScoreboard #MFLRoadScore > div,
 .MFLMainScoreboard #MFLHomeScore > div {
-  border-radius: 0.5rem;
+  border-radius: 8rem;
   display: block;
   padding: 6px 8px;
 }
@@ -3959,7 +3959,7 @@ a:visited {
 }
 
 .myfantasyleague_tabmenu #homepagetabs li {
-  border-radius: 4px 4px 0 0;
+  border-radius: 0.5rem 0.5rem 0 0;
   margin-right: 5px;
   border-right: 0;
   height: auto;
@@ -3986,7 +3986,7 @@ a:visited {
 
 .myfantasyleague_tabmenu #homepagetabs li.currenttab,
 .myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
-  border-radius: 4px 4px 0 0;
+  border-radius: 0.5rem 0.5rem 0 0;
   border-bottom: 0;
   padding: 0;
   box-shadow: none;
@@ -4393,7 +4393,7 @@ table#drop td, table#add {
 .utility-nav .utility-nav--button {
   display: inline-block;
   padding: 6px 0 6px 0;
-  border-radius: 8px;
+  border-radius: 0.5rem;
 }
 .utility-nav .utility-nav--button .loginbutton .svg-text {
   margin-right: 0;
@@ -4848,7 +4848,7 @@ body#body_options_101 .report td {
 #contractReportWrapper .team-nav .team-nav--button {
   display: inline-block;
   padding: 6px 3px 6px 0;
-  border-radius: 8px;
+  border-radius: 0.5rem;
 }
 #contractReportWrapper .team-nav .team-nav--button svg {
   width: 20px;
