@@ -1,28 +1,28 @@
 #body_live_scoring_summary {
-	.pagebody {
-  margin-right: auto;
-  margin-left: auto;
-  padding-left: 15px;
-  padding-right: 15px;
-}
-
-@media (min-width: 768px) {
   .pagebody {
-    width: 750px;
+    margin-right: auto;
+    margin-left: auto;
+    padding-left: 15px;
+    padding-right: 15px;
   }
-}
 
-@media (min-width: 992px) {
-  .pagebody {
-    width: 970px;
+  @media (min-width: 768px) {
+    .pagebody {
+      width: 750px;
+    }
   }
-}
 
-@media (min-width: 1200px) {
-  .pagebody {
-    width: 1170px;
+  @media (min-width: 992px) {
+    .pagebody {
+      width: 970px;
+    }
   }
-}
+
+  @media (min-width: 1200px) {
+    .pagebody {
+      width: 1170px;
+    }
+  }
   table.report .report {
     box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
     border-radius: 5px;
@@ -44,7 +44,138 @@
     background-color: transparent;
   }
 }
-#body_ajax_ls table#roster_away, table#roster_home {
-    margin-right: 3px;
+#body_ajax_ls table#roster_away,
+table#roster_home {
+  margin-right: 3px;
+  width: 100%;
+}
+
+#body_ajax_ls .ls_other_game {
+  border-color: $lightgray;
+  border-radius: 0.75rem;
+  margin: 0 0.35rem 0.5rem;
+  min-width: 185px;
+}
+#body_ajax_ls {
+  .report #roster_away td[align="right"],
+  .report #roster_home td[align="right"] {
+    text-align: right;
+    border-left: 1px solid $lightgray;
+  }
+  .ls_starters th:last-of-type,
+  .ls_nonstarters th:last-of-type {
+    text-align: right;
+    border-left: 1px solid $lightgray;
+    max-width: 70px;
+  }
+  table#marquee_away td {
+    text-align: right;
+  }
+
+  table#marquee_away,
+  table#marquee_home {
     width: 100%;
+  }
+
+  div#ficon_home {
+    text-align: right;
+  }
+
+  div#ficon_away {
+    text-align: left;
+  }
+
+  div.ls_team_points {
+    padding-right: 0;
+    padding-left: 0;
+    font-size: 1.5rem;
+    vertical-align: top;
+  }
+
+  div.ls_team_name {
+    font-size: 1.5rem;
+    min-height: 4rem;
+    max-width: 240px;
+    min-width: 180px;
+  }
+
+  table#marquee_home td,
+  table#marquee_away td {
+    vertical-align: top;
+  }
+  td.ls_marquee_value {
+    background-color: #eee;
+    border: 2px solid #ccc;
+    border-collapse: collapse;
+    border-top: 0;
+    padding: 0px;
+  }
+
+  tr#ls_row_playing_away td.ls_marquee_value,
+  tr#ls_row_playing_home td.ls_marquee_value {
+    border-top: 2px solid #ccc;
+  }
+
+  td.ls_marquee_label {
+    font-size: 0.9rem;
+    font-weight: 300;
+  }
+
+  table#marquee_away .ls_marquee_value,
+  table#marquee_home .ls_marquee_value {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  div#playing_away,
+  div#playing_home,
+  div#ytp_away,
+  div#ytp_home,
+  div#pmr_away,
+  div#pmr_home {
+    padding-block: 6px;
+    padding-inline: 10px;
+  }
+  .oddtablerow.ls_starters:has(b) td, .oddtablerow.ls_nonstarters:has(b) td {
+    font-weight: 700;
+    font-size: 1.1rem;
+    background-color: $primary-color;
+    border-top: 1px solid #ccc;
+    border-bottom: 4px solid $accent-color;
+    color: $white;
+    border-left: 0 !important;
+    height: 2rem;
+    border-right: none;
+    padding-right: 10px;
+  }
+
+  td.ls_player_stats {
+    height: 4rem;
+    vertical-align: top;
+  }
+
+  .ls_starters,
+  .ls_nonstarters {
+    vertical-align: text-bottom;
+  }
+
+  table#marquee_away,
+  table#marquee_home {
+    margin-bottom: 2rem;
+  }
+}
+
+#other_games td {
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 380px;
+  @media screen and (min-width: 768px) {
+    max-width: 800px;
+  }
+  @media screen and (min-width: 992px) {
+    max-width: 888px;
+  }
+  @media screen and (min-width: 1200px) {
+    max-width: 1096px;
+  }
 }

@@ -2642,9 +2642,130 @@ form.reportform input[type=submit] {
 #body_live_scoring_summary table.scoresummary .report .oddtablerow {
   background-color: transparent;
 }
-#body_ajax_ls table#roster_away, table#roster_home {
+#body_ajax_ls table#roster_away,
+table#roster_home {
   margin-right: 3px;
   width: 100%;
+}
+#body_ajax_ls .ls_other_game {
+  border-color: #ddd;
+  border-radius: 0.75rem;
+  margin: 0 0.35rem 0.5rem;
+  min-width: 185px;
+}
+#body_ajax_ls .report #roster_away td[align=right],
+#body_ajax_ls .report #roster_home td[align=right] {
+  text-align: right;
+  border-left: 1px solid #ddd;
+}
+#body_ajax_ls .ls_starters th:last-of-type,
+#body_ajax_ls .ls_nonstarters th:last-of-type {
+  text-align: right;
+  border-left: 1px solid #ddd;
+  max-width: 70px;
+}
+#body_ajax_ls table#marquee_away td {
+  text-align: right;
+}
+#body_ajax_ls table#marquee_away,
+#body_ajax_ls table#marquee_home {
+  width: 100%;
+}
+#body_ajax_ls div#ficon_home {
+  text-align: right;
+}
+#body_ajax_ls div#ficon_away {
+  text-align: left;
+}
+#body_ajax_ls div.ls_team_points {
+  padding-right: 0;
+  padding-left: 0;
+  font-size: 1.5rem;
+  vertical-align: top;
+}
+#body_ajax_ls div.ls_team_name {
+  font-size: 1.5rem;
+  min-height: 4rem;
+  max-width: 240px;
+  min-width: 180px;
+}
+#body_ajax_ls table#marquee_home td,
+#body_ajax_ls table#marquee_away td {
+  vertical-align: top;
+}
+#body_ajax_ls td.ls_marquee_value {
+  background-color: #eee;
+  border: 2px solid #ccc;
+  border-collapse: collapse;
+  border-top: 0;
+  padding: 0px;
+}
+#body_ajax_ls tr#ls_row_playing_away td.ls_marquee_value,
+#body_ajax_ls tr#ls_row_playing_home td.ls_marquee_value {
+  border-top: 2px solid #ccc;
+}
+#body_ajax_ls td.ls_marquee_label {
+  font-size: 0.9rem;
+  font-weight: 300;
+}
+#body_ajax_ls table#marquee_away .ls_marquee_value,
+#body_ajax_ls table#marquee_home .ls_marquee_value {
+  font-size: 1rem;
+  font-weight: 700;
+}
+#body_ajax_ls div#playing_away,
+#body_ajax_ls div#playing_home,
+#body_ajax_ls div#ytp_away,
+#body_ajax_ls div#ytp_home,
+#body_ajax_ls div#pmr_away,
+#body_ajax_ls div#pmr_home {
+  padding-block: 6px;
+  padding-inline: 10px;
+}
+#body_ajax_ls .oddtablerow.ls_starters:has(b) td, #body_ajax_ls .oddtablerow.ls_nonstarters:has(b) td {
+  font-weight: 700;
+  font-size: 1.1rem;
+  background-color: #1c497c;
+  border-top: 1px solid #ccc;
+  border-bottom: 4px solid #3c9950;
+  color: #fff;
+  border-left: 0 !important;
+  height: 2rem;
+  border-right: none;
+  padding-right: 10px;
+}
+#body_ajax_ls td.ls_player_stats {
+  height: 4rem;
+  vertical-align: top;
+}
+#body_ajax_ls .ls_starters,
+#body_ajax_ls .ls_nonstarters {
+  vertical-align: text-bottom;
+}
+#body_ajax_ls table#marquee_away,
+#body_ajax_ls table#marquee_home {
+  margin-bottom: 2rem;
+}
+#other_games td {
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 380px;
+}
+@media screen and (min-width: 768px) {
+  #other_games td {
+    max-width: 800px;
+  }
+}
+@media screen and (min-width: 992px) {
+  #other_games td {
+    max-width: 888px;
+  }
+}
+@media screen and (min-width: 1200px) {
+  #other_games td {
+    max-width: 1096px;
+  }
 }
 @media (max-width: 560px) {
   div#scoreboardTooltip {
