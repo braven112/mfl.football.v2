@@ -39,7 +39,7 @@
     display: block;
     width: 100%;
     height: 47px;
-    border-radius: 5px;
+    border-radius: $border-radius-default;
     position: absolute;
     right: 0;
     top: 0;
@@ -119,7 +119,7 @@
     position: absolute;
     right: 5px;
     top: 6px;
-    border-radius: 5px;
+    border-radius: $border-radius-default;
     transition: 0.25s;
   }
   .myfantasyleague_menu ul li ul li.has-sub label span {

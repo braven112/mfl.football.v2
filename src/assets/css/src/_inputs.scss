@@ -53,7 +53,7 @@ input[value="Now!"],form.reportform input[type="submit"] {
 }
 //button on current auction page
 .btn-primary a, .btn-primary a:link, .btn-primary a:visited {
-  border-radius: 5px;
+  border-radius: $border-radius-default;
   padding: 14px 30px;
   position: relative;
   top: 10px;

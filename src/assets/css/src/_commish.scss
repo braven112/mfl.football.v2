@@ -19,7 +19,7 @@
   table.two_column_layout ul {
     box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
     padding: 15px;
-    border-radius: 4px;
+    border-radius: $border-radius-default;
     padding-top: 44px;
     background-color: $report-bg;
   }

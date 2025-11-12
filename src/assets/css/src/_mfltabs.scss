@@ -10,7 +10,7 @@
   background: transparent;
 }
 .myfantasyleague_tabmenu #homepagetabs li {
-  border-radius: 4px 4px 0 0;
+  border-radius: $border-radius-default $border-radius-default 0 0;
   margin-right: 5px;
   border-right: 0;
   height: auto;
@@ -33,7 +33,7 @@
 }
 .myfantasyleague_tabmenu #homepagetabs li.currenttab,
 .myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
-  border-radius: 4px 4px 0 0;
+  border-radius: $border-radius-default $border-radius-default 0 0;
   border-bottom: 0;
   padding: 0;
   box-shadow: none;
@@ -85,7 +85,7 @@
     position: absolute;
     right: 5px;
     top: 6px;
-    border-radius: 5px;
+    border-radius: $border-radius-default;
 
   }
   
