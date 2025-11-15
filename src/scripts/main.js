@@ -3,21 +3,6 @@ import { fixPlayoffTableLabels } from './features/projected-playoff.js';
 
 const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop', 'body_lineup'];
 
-const MOBILE_FRANCHISE_ICON_EXCLUSIONS = ['body_standings'];
-
-const isMobileContext = () => {
-  if (typeof window === 'undefined') return false;
-  if (navigator?.userAgentData?.mobile) return true;
-  const ua = navigator?.userAgent || '';
-  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
-    return true;
-  }
-  if (window.matchMedia) {
-    return window.matchMedia('(max-width: 768px)').matches;
-  }
-  return typeof window.innerWidth === 'number' && window.innerWidth <= 768;
-};
-
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
   scope.querySelectorAll('img.franchiseicon').forEach(img => {
@@ -45,13 +30,8 @@ const FRANCHISE_ICON_SCOPES = {
 
 document.addEventListener('DOMContentLoaded', () => {
   const bodyId = document.body?.id;
-  const skipForMobile =
-    bodyId &&
-    MOBILE_FRANCHISE_ICON_EXCLUSIONS.includes(bodyId) &&
-    isMobileContext();
   const skipFranchiseIcons =
-    (bodyId && FRANCHISE_ICON_EXCLUSIONS.includes(bodyId)) ||
-    skipForMobile;
+    bodyId && FRANCHISE_ICON_EXCLUSIONS.includes(bodyId);
 
   const scopeConfigs = bodyId ? FRANCHISE_ICON_SCOPES[bodyId] : undefined;
 
