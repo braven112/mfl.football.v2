@@ -2685,7 +2685,7 @@ table#roster_home {
 }
 #body_ajax_ls div.ls_team_name {
   font-size: 1.5rem;
-  min-height: 4rem;
+  min-height: 4.5rem;
   max-width: 240px;
   min-width: 180px;
 }
@@ -2718,7 +2718,8 @@ table#roster_home {
 #body_ajax_ls div#ytp_away,
 #body_ajax_ls div#ytp_home,
 #body_ajax_ls div#pmr_away,
-#body_ajax_ls div#pmr_home {
+#body_ajax_ls div#pmr_home,
+#body_ajax_ls div#winprob_home {
   padding-block: 6px;
   padding-inline: 10px;
 }

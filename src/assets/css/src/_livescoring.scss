@@ -94,7 +94,7 @@ table#roster_home {
 
   div.ls_team_name {
     font-size: 1.5rem;
-    min-height: 4rem;
+    min-height: 4.5rem;
     max-width: 240px;
     min-width: 180px;
   }
@@ -131,7 +131,8 @@ table#roster_home {
   div#ytp_away,
   div#ytp_home,
   div#pmr_away,
-  div#pmr_home {
+  div#pmr_home,
+  div#winprob_home {
     padding-block: 6px;
     padding-inline: 10px;
   }
