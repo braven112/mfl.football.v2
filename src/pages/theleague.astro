@@ -114,6 +114,9 @@ for (const dirent of directories) {
     const meta = teamMetaMap.get(normalizedKey);
     const slug = meta?.slug || normalizedKey || baseName;
     const teamKey = slug.toLowerCase();
+    if (meta?.id && baseName === meta.id) {
+      continue;
+    }
 
     if (!teams.has(teamKey)) {
       teams.set(teamKey, {
@@ -162,10 +165,7 @@ const teamList = Array.from(teams.values()).map(team => {
 <Layout title="The League Asset Library">
   <main class="league-gallery">
     <header class="gallery-header">
-      <div>
-        <p>Every image placed under <code>public/assets/theleague</code> is listed here automatically. Update the files and this page will reflect them after the next build.</p>
-        <p>Absolute URLs use the domain from <code>src/data/theleague.config.json</code>. Set <code>assetDomain</code> to match your CDN or site origin.</p>
-      </div>
+      <h1>The League Asset Library</h1>
       {assetDomain && (<p class="current-domain">Current asset domain: <strong>{assetDomain}</strong></p>)}
     </header>
 
@@ -212,21 +212,28 @@ const teamList = Array.from(teams.values()).map(team => {
 </Layout>
 
 <style>
+  :root {
+    --gallery-content-bg: #eeeeee;
+  }
   .league-gallery {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
-    padding-bottom: 4rem;
+    gap: 1.5rem;
+    padding-bottom: 3rem;
   }
 
   .gallery-header {
-    background: var(--inverse-content-bg);
+    background: var(--gallery-content-bg, #1f2937);
     color: #fff;
-    padding: 1.5rem;
+    padding: 1rem 1.25rem;
     border-radius: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;
+  }
+
+  .gallery-header p {
+    margin: 0.25rem 0 0;
   }
 
   .current-domain {
@@ -236,7 +243,7 @@ const teamList = Array.from(teams.values()).map(team => {
 
   .team-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
     gap: 1.5rem;
   }
 
@@ -295,14 +302,12 @@ const teamList = Array.from(teams.values()).map(team => {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    background: var(--inverse-content-bg, #f9fafb);
+    background: var(--gallery-content-bg, #eeeeee);
   }
 
   .asset-card img {
     width: 100%;
     height: auto;
-    border-radius: 0.5rem;
-    background: #fff;
     object-fit: contain;
   }
 
@@ -334,13 +339,18 @@ const teamList = Array.from(teams.values()).map(team => {
   }
 
   input[type="text"] {
-    width: 100%;
     padding: 0.4rem 0.5rem;
     border-radius: 0.4rem;
     border: 1px solid var(--content-border-color, #d1d5db);
     font-family: var(--font-body, 'Inter', sans-serif);
     font-size: 0.85rem;
     background: #fff;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    word-break: break-all;
+    text-overflow: ellipsis;
   }
 
   input[type="text"]:focus {
