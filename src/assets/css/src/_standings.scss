@@ -93,6 +93,9 @@ table#standings th {
     font-family: $headline-font;
     color: $primary-color;
   }
+  th {
+    white-space: nowrap;
+  }
 }
 // insert a media query here to handle smaller screens
 #body_standings .franchiseicon {
@@ -100,6 +103,10 @@ table#standings th {
     padding-inline:0;
     padding-block: .75rem;
     @media screen and (min-width: 768px) {
+        max-width:300px;
+      
+    }
+        @media screen and (min-width: 1200px) {
         max-width:450px;
       
     }

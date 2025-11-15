@@ -4996,12 +4996,20 @@ table#standings th {
   font-family: "Vend Sans";
   color: #1c497c;
 }
+#body_standings th {
+  white-space: nowrap;
+}
 #body_standings .franchiseicon {
   max-width: 11rem;
   padding-inline: 0;
   padding-block: 0.75rem;
 }
 @media screen and (min-width: 768px) {
+  #body_standings .franchiseicon {
+    max-width: 300px;
+  }
+}
+@media screen and (min-width: 1200px) {
   #body_standings .franchiseicon {
     max-width: 450px;
   }
