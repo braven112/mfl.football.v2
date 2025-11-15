@@ -4236,6 +4236,10 @@ span#add_name_field_id {
 span#drop_name_field_id {
   color: red;
 }
+img.franchiseicon {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
 #body_view_news_article .report td, #body_view_news_article .report th {
   padding-left: 0;
   padding-right: 0;
