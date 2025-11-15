@@ -1,0 +1,363 @@
+---
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Layout from '../layouts/Layout.astro';
+import leagueConfig from '../data/theleague.config.json';
+
+export const prerender = true;
+
+type TeamConfig = {
+  franchiseId: string;
+  name: string;
+  icon: string;
+  banner: string;
+  groupMe?: string;
+  slug?: string;
+  aliases?: string[];
+};
+
+type TeamMetaEntry = TeamConfig & {
+  slug: string;
+  id: string;
+};
+
+type AssetEntry = {
+  type: string;
+  filename: string;
+  relativePath: string;
+  absoluteUrl: string;
+};
+
+type TeamEntry = {
+  key: string;
+  slug: string;
+  id?: string;
+  name: string;
+  assets: Record<string, AssetEntry[]>;
+};
+
+const fileSlug = (value: string) =>
+  value
+    ?.toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || '';
+
+const leagueAssetsDir = fileURLToPath(
+  new URL('../../public/assets/theleague', import.meta.url)
+);
+const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
+const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
+
+const buildTeamMeta = () => {
+  const map = new Map<string, TeamMetaEntry>();
+  (leagueConfig.teams || []).forEach((team: TeamConfig) => {
+    const computedSlug =
+      fileSlug(team.slug || '') ||
+      fileSlug(team.name) ||
+      team.franchiseId.toLowerCase();
+    const entry: TeamMetaEntry = {
+      ...team,
+      slug: computedSlug,
+      id: team.franchiseId,
+    };
+    const keys = [entry.slug, entry.id, ...(team.aliases ?? [])]
+      .filter(Boolean)
+      .map(key => fileSlug(key as string));
+    keys.forEach(key => {
+      if (key && !map.has(key)) {
+        map.set(key, entry);
+      }
+    });
+  });
+  return map;
+};
+
+const teamMetaMap = buildTeamMeta();
+
+const prettifySlug = (slug: string) =>
+  slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char: string) => char.toUpperCase());
+
+const allowedExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
+const teams = new Map<string, TeamEntry>();
+
+let directories: import('node:fs').Dirent[] = [];
+try {
+  directories = await fs.readdir(leagueAssetsDir, { withFileTypes: true });
+} catch (error) {
+  console.warn(`Unable to read directory ${leagueAssetsDir}:`, error);
+}
+
+for (const dirent of directories) {
+  if (!dirent.isDirectory()) continue;
+  const folder = dirent.name;
+  const folderPath = path.join(leagueAssetsDir, folder);
+  let files: string[] = [];
+  try {
+    files = await fs.readdir(folderPath);
+  } catch {
+    continue;
+  }
+
+  for (const file of files) {
+    const ext = path.extname(file).toLowerCase();
+    if (!allowedExtensions.has(ext)) continue;
+
+    const baseName = path.basename(file, ext);
+    const normalizedKey = fileSlug(baseName);
+    const meta = teamMetaMap.get(normalizedKey);
+    const slug = meta?.slug || normalizedKey || baseName;
+    const teamKey = slug.toLowerCase();
+
+    if (!teams.has(teamKey)) {
+      teams.set(teamKey, {
+        key: teamKey,
+        slug,
+        id: meta?.id,
+        name: meta?.name || prettifySlug(slug),
+        assets: {}
+      });
+    }
+
+    const team = teams.get(teamKey)!;
+    const relativePath = `/assets/theleague/${folder}/${file}`;
+    const absoluteUrl = assetDomain ? `${assetDomain}${relativePath}` : relativePath;
+
+    if (!team.assets[folder]) {
+      team.assets[folder] = [];
+    }
+
+    (team.assets[folder] as AssetEntry[]).push({
+      type: folder,
+      filename: file,
+      relativePath,
+      absoluteUrl
+    });
+  }
+}
+
+const teamList = Array.from(teams.values()).map(team => {
+  const sortedAssets = (Object.entries(team.assets) as [string, AssetEntry[]][])
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([folder, assets]) => {
+      const sortedGroup = [...assets].sort((a, b) =>
+        a.filename.localeCompare(b.filename)
+      );
+      return [folder, sortedGroup] as [string, AssetEntry[]];
+    });
+
+  return {
+    ...team,
+    assets: Object.fromEntries(sortedAssets)
+  };
+}).sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<Layout title="The League Asset Library">
+  <main class="league-gallery">
+    <header class="gallery-header">
+      <div>
+        <p>Every image placed under <code>public/assets/theleague</code> is listed here automatically. Update the files and this page will reflect them after the next build.</p>
+        <p>Absolute URLs use the domain from <code>src/data/theleague.config.json</code>. Set <code>assetDomain</code> to match your CDN or site origin.</p>
+      </div>
+      {assetDomain && (<p class="current-domain">Current asset domain: <strong>{assetDomain}</strong></p>)}
+    </header>
+
+    {teamList.length === 0 ? (
+      <p class="empty-state">No team assets found. Drop images into <code>public/assets/theleague</code> to populate this page.</p>
+    ) : (
+      <div class="team-grid">
+        {teamList.map((team) => (
+          <section class="team-card" id={team.slug}>
+            <div class="team-card__header">
+              <div>
+                <h2>{team.name}</h2>
+                {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
+              </div>
+              <p class="team-slug">Key: {team.slug}</p>
+            </div>
+
+            <div class="asset-groups">
+              {Object.entries(team.assets).map(([folder, entries]) => (
+                <div class="asset-group">
+                  <h3>{folder}</h3>
+                  <div class="asset-list">
+                    {entries.map((asset) => (
+                      <article class={`asset-card asset-card--${folder}`}>
+                        <img src={asset.relativePath} alt={`${team.name} ${folder}`} loading="lazy" />
+                        <div class="asset-meta">
+                          <p class="filename">{asset.filename}</p>
+                          <label>
+                            <span>URL</span>
+                            <input type="text" value={asset.absoluteUrl} readonly />
+                          </label>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .league-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding-bottom: 4rem;
+  }
+
+  .gallery-header {
+    background: var(--inverse-content-bg);
+    color: #fff;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .current-domain {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .team-card {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .team-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .team-card__header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .team-id,
+  .team-slug {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .asset-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .asset-group h3 {
+    margin: 0 0 0.5rem 0;
+    text-transform: capitalize;
+    font-size: 1rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .asset-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .asset-card {
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--inverse-content-bg, #f9fafb);
+  }
+
+  .asset-card img {
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    background: #fff;
+    object-fit: contain;
+  }
+
+  .asset-card--icons img {
+    width: 100px;
+    height: 100px;
+    align-self: center;
+    justify-self: center;
+    object-fit: contain;
+  }
+
+  .asset-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filename {
+    font-weight: 600;
+    margin: 0;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.85rem;
+    background: #fff;
+  }
+
+  input[type="text"]:focus {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    border-color: transparent;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  @media (max-width: 600px) {
+    .team-card__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
