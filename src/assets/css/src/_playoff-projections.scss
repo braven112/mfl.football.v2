@@ -1,0 +1,51 @@
+#playoffTable {
+  .playoff-report-modal-content {
+    background: #fff;
+    color: inherit;
+    border-radius: 2rem;
+    padding: 2rem;
+  }
+
+  .playoff-report-modal-header .close {
+    top: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .playoff-report-modal-header h2 {
+    color: inherit;
+  }
+
+  animatetop {
+    from {
+      scale: 0;
+      opacity: 0;
+    }
+    to {
+      scale: 1;
+      opacity: 1;
+    }
+  }
+  @keyframes animatetop {
+    from {
+      scale: 0;
+      opacity: 0;
+    }
+    to {
+      scale: 1;
+      opacity: 1;
+    }
+  }
+
+  .report td,
+  .report th {
+    text-align: right;
+  }
+  th {
+    text-align: right !important;
+  }
+  th.play_franchise,
+  th.playoffrank,
+  td:first-child {
+    text-align: left !important;
+  }
+}

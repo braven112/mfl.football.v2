@@ -4358,6 +4358,46 @@ body#body_news_articles td[rowspan="100"] {
   background-color: #eee;
   border-color: #ddd;
 }
+#playoffTable .playoff-report-modal-content {
+  background: #fff;
+  color: inherit;
+  border-radius: 2rem;
+  padding: 2rem;
+}
+#playoffTable .playoff-report-modal-header .close {
+  top: 1.5rem;
+  right: 1.5rem;
+}
+#playoffTable .playoff-report-modal-header h2 {
+  color: inherit;
+}
+#playoffTable animatetop from {
+  scale: 0;
+  opacity: 0;
+}
+#playoffTable animatetop to {
+  scale: 1;
+  opacity: 1;
+}
+@keyframes animatetop {
+  from {
+    scale: 0;
+    opacity: 0;
+  }
+  to {
+    scale: 1;
+    opacity: 1;
+  }
+}
+#playoffTable .report td, #playoffTable .report th {
+  text-align: right;
+}
+#playoffTable th {
+  text-align: right !important;
+}
+#playoffTable th.play_franchise, #playoffTable th.playoffrank, #playoffTable td:first-child {
+  text-align: left !important;
+}
 body#body_options_101 .report td {
   white-space: nowrap;
 }
