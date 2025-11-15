@@ -4510,6 +4510,7 @@ body#body_options_101 .report td {
   font-weight: 300;
   text-align: center;
   color: red;
+  border-right: 1px solid #ccc;
 }
 #contractReportWrapper .contractStatus {
   font-size: 8pt;
@@ -4780,13 +4781,6 @@ body#body_options_101 .report td {
     text-align: left;
   }
 }
-@media (max-width: 767px) {
-  #contractReportWrapper .contract-nfl {
-    font-size: 0;
-    padding: 0 !important;
-    border: none;
-  }
-}
 #contractReportWrapper .salary_cap_row th,
 #contractReportWrapper .squadTotals {
   color: #1c497c;
@@ -4892,6 +4886,37 @@ body#body_options_101 .report td {
 #contractReportWrapper .summary-icon {
   width: 150px;
   height: auto;
+}
+#contractReportWrapper table.homepagemodule.report tr:nth-child(1) th:not(th[rowspan="2"]) {
+  background: #eee;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+#contractReportWrapper th.year,
+#contractReportWrapper th[title="Cap Space"], #contractReportWrapper td.contractSalary, #contractReportWrapper th.contract-yrs {
+  border-right: 1px solid #ccc;
+}
+#contractReportWrapper table.homepagemodule.report tr td:nth-child(3),
+#contractReportWrapper table.homepagemodule.report tr td:nth-child(5),
+#contractReportWrapper table.homepagemodule.report tr td:nth-child(7),
+#contractReportWrapper table.homepagemodule.report tr td:nth-child(9) {
+  border-right: 1px solid #ccc;
+}
+#contractReportWrapper table.homepagemodule.report tr.activeroster th,
+#contractReportWrapper table.homepagemodule.report tr.ir th,
+#contractReportWrapper table.homepagemodule.report tr.practice_squad th {
+  background: #3c994f !important;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+#contractReportWrapper tr th {
+  vertical-align: middle;
+}
+#contractReportWrapper td.player {
+  border-right: inherit !important;
+}
+#contractReportWrapper tr th:last-of-type, #contractReportWrapper tr td:last-of-type {
+  border-right: 1px solid #eee !important;
 }
 ::-webkit-scrollbar {
   width: 14px;

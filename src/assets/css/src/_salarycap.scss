@@ -98,6 +98,7 @@
     font-weight: $body-font-weight;
     text-align: center;
     color: $drop-color;
+    border-right: 1px solid $lightgray2;
   }
 
   .contractStatus {
@@ -257,8 +258,8 @@
 
     .contract-ytd {
       text-align: right;
-      border-right: 2px solid #ccc;
-      border-left: 2px solid #ccc;
+      border-right: 2px solid $lightgray2;
+      border-left: 2px solid $lightgray2;
       padding: 6px 14px 6px 4px;
     }
 
@@ -431,13 +432,7 @@
     }
   }
 
-  @media (max-width: 767px) {
-    .contract-nfl {
-      font-size: 0;
-      padding: 0 !important;
-      border: none;
-    }
-  }
+
 
   .salary_cap_row th,
   .squadTotals {
@@ -569,4 +564,35 @@
     width: 150px;
     height: auto;
   }
+  table.homepagemodule.report tr:nth-child(1) th:not(th[rowspan="2"]) {
+    background: #eee;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  th.year,
+  th[title="Cap Space"], td.contractSalary, th.contract-yrs{
+    border-right: 1px solid $lightgray2;
+  }
+  table.homepagemodule.report tr td:nth-child(3),
+  table.homepagemodule.report tr td:nth-child(5),
+  table.homepagemodule.report tr td:nth-child(7),
+  table.homepagemodule.report tr td:nth-child(9) {
+    border-right: 1px solid $lightgray2;
+  }
+  table.homepagemodule.report tr.activeroster th,
+  table.homepagemodule.report tr.ir th,
+  table.homepagemodule.report tr.practice_squad th {
+    background: #3c994f !important;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  tr th {
+    vertical-align: middle;
+}
+td.player {
+    border-right: inherit !important;
+}
+tr th:last-of-type,tr td:last-of-type {
+  border-right: 1px solid $offwhite !important;
+}
 }
