@@ -56,9 +56,6 @@ table#standings th {
   td#division00, td#division01, td#division02, td#division03, td#division04, td#division05, td#division06, td#division07 {
     padding: 6px 0px 2px;
   }
-  .franchiseicon {
-    min-width: 128px;
-  }
 }
 
 .homepagecolumn td#division00, .homepagecolumn td#division01, .homepagecolumn td#division02, .homepagecolumn td#division03, .homepagecolumn td#division04, .homepagecolumn td#division05, .homepagecolumn td#division06, .homepagecolumn td#division07 {
@@ -99,15 +96,15 @@ table#standings th {
 }
 // insert a media query here to handle smaller screens
 #body_standings .franchiseicon {
-    max-width:300px;
+    max-width: 5rem;
     padding-inline:0;
-    padding-block: .75rem
+    padding-block: .75rem;
+    @media screen and (min-width: 768px) {
+        max-width:450px;
+      
+    }
 }
-@media (min-width: 750px) {
-  #body_standings .franchiseicon {
-    max-width:450px;
-  }
-}
+
 #body_standings .th {
     white-space: nowrap;
 }

@@ -4389,13 +4389,16 @@ body#body_news_articles td[rowspan="100"] {
     opacity: 1;
   }
 }
-#playoffTable .report td, #playoffTable .report th {
+#playoffTable .report td,
+#playoffTable .report th {
   text-align: right;
 }
 #playoffTable th {
   text-align: right !important;
 }
-#playoffTable th.play_franchise, #playoffTable th.playoffrank, #playoffTable td:first-child {
+#playoffTable th.play_franchise,
+#playoffTable th.playoffrank,
+#playoffTable td:first-child {
   text-align: left !important;
 }
 body#body_options_101 .report td {
@@ -4951,9 +4954,6 @@ table#standings th {
 #body_standings td#division00, #body_standings td#division01, #body_standings td#division02, #body_standings td#division03, #body_standings td#division04, #body_standings td#division05, #body_standings td#division06, #body_standings td#division07 {
   padding: 6px 0px 2px;
 }
-#body_standings .franchiseicon {
-  min-width: 128px;
-}
 .homepagecolumn td#division00, .homepagecolumn td#division01, .homepagecolumn td#division02, .homepagecolumn td#division03, .homepagecolumn td#division04, .homepagecolumn td#division05, .homepagecolumn td#division06, .homepagecolumn td#division07 {
   padding: 6px 8px 2px;
 }
@@ -4982,11 +4982,11 @@ table#standings th {
   color: #1c497c;
 }
 #body_standings .franchiseicon {
-  max-width: 300px;
+  max-width: 5rem;
   padding-inline: 0;
   padding-block: 0.75rem;
 }
-@media (min-width: 750px) {
+@media screen and (min-width: 768px) {
   #body_standings .franchiseicon {
     max-width: 450px;
   }
