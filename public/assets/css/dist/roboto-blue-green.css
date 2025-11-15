@@ -2719,11 +2719,13 @@ table#roster_home {
 #body_ajax_ls div#ytp_home,
 #body_ajax_ls div#pmr_away,
 #body_ajax_ls div#pmr_home,
-#body_ajax_ls div#winprob_home {
+#body_ajax_ls div#winprob_home,
+#body_ajax_ls divwinprob_away {
   padding-block: 6px;
   padding-inline: 10px;
 }
-#body_ajax_ls .oddtablerow.ls_starters:has(b) td, #body_ajax_ls .oddtablerow.ls_nonstarters:has(b) td {
+#body_ajax_ls .oddtablerow.ls_starters:has(b) td,
+#body_ajax_ls .oddtablerow.ls_nonstarters:has(b) td {
   font-weight: 700;
   font-size: 1.1rem;
   background-color: #1c497c;
@@ -2746,6 +2748,9 @@ table#roster_home {
 #body_ajax_ls table#marquee_away,
 #body_ajax_ls table#marquee_home {
   margin-bottom: 2rem;
+}
+#body_ajax_ls .franchiseicon {
+  opacity: 1;
 }
 #other_games td {
   white-space: nowrap;

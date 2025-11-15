@@ -132,11 +132,13 @@ table#roster_home {
   div#ytp_home,
   div#pmr_away,
   div#pmr_home,
-  div#winprob_home {
+  div#winprob_home,
+  divwinprob_away {
     padding-block: 6px;
     padding-inline: 10px;
   }
-  .oddtablerow.ls_starters:has(b) td, .oddtablerow.ls_nonstarters:has(b) td {
+  .oddtablerow.ls_starters:has(b) td,
+  .oddtablerow.ls_nonstarters:has(b) td {
     font-weight: 700;
     font-size: 1.1rem;
     background-color: $primary-color;
@@ -163,6 +165,9 @@ table#roster_home {
   table#marquee_home {
     margin-bottom: 2rem;
   }
+  .franchiseicon {
+    opacity: 1;
+}
 }
 
 #other_games td {
