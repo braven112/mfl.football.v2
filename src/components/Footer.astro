@@ -45,6 +45,7 @@
 	.footer-container {
 		width: 100%;
 		padding: 3rem 1.5rem 2rem;
+		box-sizing: border-box;
 	}
 
 	.footer-content {
@@ -117,11 +118,18 @@
 		.footer-content {
 			flex-direction: column;
 			text-align: center;
-		}
-
-		.footer-info {
 			align-items: center;
-			text-align: center;
-		}
+      gap: 1rem;
+   }
+
+   .footer-info {
+      align-items: center;
+      text-align: center;
+   }
+
+    .footer-links {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 	}
 </style>
