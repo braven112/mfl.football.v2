@@ -1,3 +1,5 @@
+@use "./globals" as *;
+
 #body_top, #body_options_08 {
   .container.page-wrapper {
     @media (min-width: 768px) {

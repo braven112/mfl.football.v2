@@ -1,3 +1,5 @@
+@use "./globals" as *;
+
 [class*=col-] {
   transition: all .25s ease;
 }

@@ -1,3 +1,5 @@
+@use "./globals" as *;
+
 #transactions {
   @media (max-width: 360px) {
     font-size: 9px;

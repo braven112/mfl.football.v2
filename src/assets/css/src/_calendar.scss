@@ -1,3 +1,5 @@
+@use "./globals" as *;
+
 @media (max-width: 540px) {
   .hidden-calendar {
     display: none !important;
