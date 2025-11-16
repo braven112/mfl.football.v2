@@ -1,9 +1,15 @@
 ---
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Layout from '../layouts/Layout.astro';
 import leagueConfig from '../data/theleague.config.json';
-import aggregatedAssets from '../data/theleague.assets.json';
 
-export const prerender = true;
+export const prerender = false;
+
+const leagueAssetsDir = path.resolve(
+  fileURLToPath(new URL('../../public/assets/theleague', import.meta.url))
+);
 
 type AssetEntry = {
   type: string;
@@ -17,32 +23,149 @@ type TeamEntry = {
   slug: string;
   id?: string;
   name: string;
+  division?: string;
   assets: Record<string, AssetEntry[]>;
 };
 
 const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
 const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
 
-const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
-  const assets = Object.fromEntries(
-    Object.entries(team.assets || {}).map(([folder, entries]) => [
-      folder,
-      entries.map(entry => ({
-        ...entry,
-        absoluteUrl: assetDomain
-          ? `${assetDomain}${entry.relativePath}`
-          : entry.relativePath
-      }))
-    ])
-  );
-  return {
-    key: team.key,
-    slug: team.slug,
-    id: team.id,
-    name: team.name,
-    assets,
+const formatBucketLabel = (bucket: string) =>
+  bucket === 'group-me'
+    ? 'Group Me'
+    : bucket
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, char => char.toUpperCase());
+
+const fileSlug = (value = '') =>
+  value
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const prettifySlug = (slug = '') =>
+  slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char: string) => char.toUpperCase());
+
+const allowedExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
+
+const buildTeamMeta = () => {
+  const map = new Map<string, {
+    slug: string;
+    id: string;
+    name: string;
+    division?: string;
+  }>();
+  (leagueConfig.teams || []).forEach(team => {
+    const slug =
+      fileSlug(team.slug || '') ||
+      fileSlug(team.name) ||
+      team.franchiseId.toLowerCase();
+    const entry = {
+      slug,
+      id: team.franchiseId,
+      name: team.name || prettifySlug(slug),
+      division: team.division,
+    };
+    const keys = [entry.slug, entry.id, ...(team.aliases ?? [])]
+      .filter(Boolean)
+      .map(key => fileSlug(key as string));
+    keys.forEach(key => {
+      if (key && !map.has(key)) {
+        map.set(key, entry);
+      }
+    });
+  });
+  return map;
+};
+
+const gatherTeamAssets = async () => {
+  const teamMeta = buildTeamMeta();
+  const teams = new Map<string, TeamEntry>();
+
+  const registerTeam = (slug: string, meta?: { id: string; name: string; division?: string }) => {
+    if (!teams.has(slug)) {
+      teams.set(slug, {
+        key: slug,
+        slug,
+        id: meta?.id,
+        name: meta?.name || prettifySlug(slug),
+        division: meta?.division,
+        assets: {}
+      });
+    }
+    return teams.get(slug)!;
   };
-});
+
+  let directories: import('node:fs').Dirent[] = [];
+  try {
+    directories = await fs.readdir(leagueAssetsDir, { withFileTypes: true });
+  } catch (error) {
+    console.warn('[theleague] Unable to read assets directory:', error);
+  }
+
+  for (const dirent of directories) {
+    if (!dirent.isDirectory()) continue;
+    const folder = dirent.name;
+    const folderPath = path.join(leagueAssetsDir, folder);
+    let files: string[] = [];
+    try {
+      files = await fs.readdir(folderPath);
+    } catch {
+      continue;
+    }
+
+    for (const file of files) {
+      const ext = path.extname(file).toLowerCase();
+      if (!allowedExtensions.has(ext)) continue;
+
+      const baseName = path.basename(file, ext);
+      const normalizedKey = fileSlug(baseName);
+      const meta = teamMeta.get(normalizedKey);
+      const slug = meta?.slug || normalizedKey || baseName;
+
+      if (meta?.id && baseName === meta.id) {
+        continue;
+      }
+
+      const team = registerTeam(slug, meta);
+      const relativePath = `/assets/theleague/${folder}/${file}`;
+      const absoluteUrl = assetDomain ? `${assetDomain}${relativePath}` : relativePath;
+
+      if (!team.assets[folder]) {
+        team.assets[folder] = [];
+      }
+
+      team.assets[folder]!.push({
+        type: folder,
+        filename: file,
+        relativePath,
+        absoluteUrl
+      });
+    }
+  }
+
+  return Array.from(teams.values()).map(team => {
+    const sortedAssets = Object.entries(team.assets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([folder, assets]) => ([
+        folder,
+        assets.sort((a, b) => a.filename.localeCompare(b.filename))
+      ]));
+
+    return {
+      ...team,
+      assets: Object.fromEntries(sortedAssets)
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+const teamList = await gatherTeamAssets();
 ---
 
 <Layout title="The League Asset Library">
@@ -54,43 +177,126 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     {teamList.length === 0 ? (
       <p class="empty-state">No team assets found. Drop images into <code>public/assets/theleague</code> to populate this page.</p>
     ) : (
-      <div class="team-grid">
-        {teamList.map((team) => (
-          <section class="team-card" id={team.slug}>
-            <div class="team-card__header">
-              <div>
-                <h2>{team.name}</h2>
-                {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
-              </div>
-              <p class="team-slug">Key: {team.slug}</p>
-            </div>
-
-            <div class="asset-groups">
-              {Object.entries(team.assets).map(([folder, entries]) => (
-                <div class="asset-group">
-                  <h3>{folder}</h3>
-                  <div class="asset-list">
-                    {entries.map((asset) => (
-                      <article class={`asset-card asset-card--${folder}`}>
-                        <img src={asset.relativePath} alt={`${team.name} ${folder}`} loading="lazy" />
-                        <div class="asset-meta">
-                          <p class="filename">{asset.filename}</p>
-                          <label>
-                            <span>URL</span>
-                            <input type="text" value={asset.absoluteUrl} readonly />
-                          </label>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
+      <>
+        <div class="gallery-controls">
+          <label>
+            <span>Sort by</span>
+            <select id="team-sort">
+              <option value="name">Team Name (A–Z)</option>
+              <option value="franchise">Franchise ID</option>
+              <option value="division">Division</option>
+            </select>
+          </label>
+        </div>
+        <div class="team-grid">
+          {teamList.map((team) => (
+            <section
+              class="team-card"
+              id={team.slug}
+              data-name={team.name}
+              data-franchise-id={team.id || ''}
+              data-division={team.division || ''}
+            >
+              <div class="team-card__header">
+                <div>
+                  <h2>{team.name}</h2>
+                  {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
+                  {team.division && <p class="team-division">{team.division} Division</p>}
                 </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+              </div>
+
+              <div class="asset-groups">
+                {Object.entries(team.assets).map(([folder, entries]) => (
+                  <div class="asset-group">
+                    <h3>{formatBucketLabel(folder)}</h3>
+                    <div class="asset-list">
+                      {(entries as AssetEntry[]).map((asset) => (
+                        <article class={`asset-card asset-card--${folder}`}>
+                          <img src={asset.relativePath} alt={`${team.name} ${folder}`} loading="lazy" />
+                          <div class="asset-meta">
+                            <p class="filename">{asset.filename}</p>
+                            <p class="asset-dimensions">Loading size…</p>
+                            <label>
+                              <span>URL</span>
+                              <input type="text" value={asset.absoluteUrl} readonly />
+                            </label>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </>
     )}
   </main>
+
+  {teamList.length > 0 && (
+    <script is:inline>
+      (() => {
+        const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
+        const select = document.querySelector('#team-sort');
+        const grid = document.querySelector('.team-grid');
+        if (!select || !grid) return;
+        const baseCards = Array.from(grid.children);
+
+        const sorters = {
+          name: (cards) =>
+            [...cards].sort((a, b) =>
+              (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' })
+            ),
+          franchise: (cards) =>
+            [...cards].sort((a, b) =>
+              (a.dataset.franchiseId || '').localeCompare(b.dataset.franchiseId || '')
+            ),
+          division: (cards) =>
+            [...cards].sort((a, b) => {
+              const divA = divisionOrder.indexOf(a.dataset.division || '');
+              const divB = divisionOrder.indexOf(b.dataset.division || '');
+              if (divA !== divB) return divA - divB;
+              return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+            }),
+        };
+
+        const applySort = (key) => {
+          const sorter = sorters[key] || sorters.name;
+          const sortedCards = sorter(baseCards);
+          grid.replaceChildren(...sortedCards);
+        };
+
+        const updateDimensions = (img) => {
+          const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+          if (!meta) return;
+          if (img.naturalWidth && img.naturalHeight) {
+            meta.textContent = `${img.naturalWidth} × ${img.naturalHeight}px`;
+          } else {
+            meta.textContent = 'Size unavailable';
+          }
+        };
+
+        const initDimensions = () => {
+          document.querySelectorAll('.asset-card img').forEach((img) => {
+            if (img.complete && img.naturalWidth) {
+              updateDimensions(img);
+            } else {
+              img.addEventListener('load', () => updateDimensions(img), { once: true });
+              img.addEventListener('error', () => {
+                const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+                if (meta) meta.textContent = 'Failed to load';
+              }, { once: true });
+            }
+          });
+        };
+
+        applySort(select.value);
+        select.addEventListener('change', (event) => applySort(event.target.value));
+        initDimensions();
+      })();
+    </script>
+  )}
 </Layout>
 
 <style>
@@ -126,6 +332,29 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     font-weight: 600;
   }
 
+  .gallery-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .gallery-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .gallery-controls select {
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    font-size: 0.95rem;
+    background: #fff;
+  }
+
   .team-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -159,6 +388,14 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     margin: 0;
     font-size: 0.9rem;
     color: var(--muted-text-color, #6b7280);
+  }
+
+  .team-division {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-link-hover-text-color, #b45309);
   }
 
   .asset-groups {
@@ -213,6 +450,12 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   .filename {
     font-weight: 600;
     margin: 0;
+  }
+
+  .asset-dimensions {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted-text-color, #6b7280);
   }
 
   label {

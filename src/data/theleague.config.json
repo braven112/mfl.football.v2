@@ -4,6 +4,11 @@
     {
       "franchiseId": "0001",
       "name": "Pacific Pigskins",
+      "aliases": [
+        "Pigskins",
+        "Skins"     
+      ],
+      "division": "Northwest",
       "icon": "/assets/theleague/icons/pigskins.png",
       "banner": "/assets/theleague/banners/pigskins.png",
       "groupMe": "/assets/theleague/group-me/pigskins.png"
@@ -11,6 +16,11 @@
     {
       "franchiseId": "0002",
       "name": "Da Dangsters",
+      "division": "Northwest",
+      "aliases": [
+        "Dangsters",
+        "DD"     
+      ],
       "icon": "/assets/theleague/icons/da_dangsters.png",
       "banner": "/assets/theleague/banners/da_dangsters.png",
       "groupMe": "/assets/theleague/group-me/da_dangsters.png"
@@ -18,6 +28,11 @@
     {
       "franchiseId": "0003",
       "name": "Maverick",
+      "division": "Central",
+      "aliases": [
+        "Mavs",
+        "Mavericks"     
+      ],
       "icon": "/assets/theleague/icons/maverick.png",
       "banner": "/assets/theleague/banners/maverick.png",
       "groupMe": "/assets/theleague/group-me/maverick.png"
@@ -25,6 +40,11 @@
     {
       "franchiseId": "0004",
       "name": "Heavy Chevy",
+      "division": "Southwest",
+      "aliases": [
+        "Heavy",
+        "Chevy"     
+      ],
       "icon": "/assets/theleague/icons/heavy_chevy.png",
       "banner": "/assets/theleague/banners/heavy_chevy.png",
       "groupMe": "/assets/theleague/group-me/heavy_chevy.png"
@@ -32,20 +52,23 @@
     {
       "franchiseId": "0005",
       "name": "The Mariachi Ninjas",
+      "division": "Central",
+      "aliases": [
+        "Ninjas",
+        "Mariachi Ninjas"     
+      ],
       "icon": "/assets/theleague/icons/ninjas.png",
       "banner": "/assets/theleague/banners/ninjas.png",
       "groupMe": "/assets/theleague/group-me/ninjas.png"
     },
     {
       "franchiseId": "0006",
-      "name": "Dark Magicians",
-      "icon": "/assets/theleague/icons/dark_magicians.png",
-      "banner": "/assets/theleague/banners/dark_magicians.png",
-      "groupMe": "/assets/theleague/group-me/dark_magicians.png"
-    },
-    {
-      "franchiseId": "0006",
       "name": "Music City Mafia",
+      "aliases": [
+        "Music City",
+        "Mafia"     
+      ],
+      "division": "Central",
       "icon": "/assets/theleague/icons/music_city.png",
       "banner": "/assets/theleague/banners/music_city.png",
       "groupMe": "/assets/theleague/group-me/music_city.png"
@@ -53,6 +76,7 @@
     {
       "franchiseId": "0007",
       "name": "Fire Ready Aim",
+      "division": "East",
       "icon": "/assets/theleague/icons/fire_ready_aim.png",
       "banner": "/assets/theleague/banners/fire_ready_aim.png",
       "groupMe": "/assets/theleague/group-me/fire_ready_aim.png"
@@ -60,13 +84,18 @@
     {
       "franchiseId": "0008",
       "name": "Bring The Pain",
+      "division": "Central",
       "icon": "/assets/theleague/icons/bring_the_pain.png",
       "banner": "/assets/theleague/banners/bring_the_pain.png",
       "groupMe": "/assets/theleague/group-me/bring_the_pain.png"
     },
     {
       "franchiseId": "0009",
-      "name": "Wabbits",
+      "name": "Wascawy Wabbits",
+      "aliases": [
+        "Wabbits"     
+      ],
+      "division": "East",
       "icon": "/assets/theleague/icons/wabbits.png",
       "banner": "/assets/theleague/banners/wabbits.png",
       "groupMe": "/assets/theleague/group-me/wabbits.png"
@@ -74,16 +103,23 @@
     {
       "franchiseId": "0010",
       "name": "Computer Jocks",
+      "division": "Northwest",
+      "aliases": [
+        "Jocks"
+      ],
       "icon": "/assets/theleague/icons/computer_jocks.png",
       "banner": "/assets/theleague/banners/computer_jocks.png",
       "groupMe": "/assets/theleague/group-me/computer_jocks.png"
     },
     {
       "franchiseId": "0011",
-      "name": "Midwestside",
+      "name": "Midwestside Connection",
+      "division": "Southwest",
       "aliases": [
         "midwest",
-        "midwestside"
+        "midwestside",
+        "mws",
+        "mwc"
       ],
       "icon": "/assets/theleague/icons/midwestside.png",
       "banner": "/assets/theleague/banners/midwestside.png",
@@ -92,6 +128,7 @@
     {
       "franchiseId": "0012",
       "name": "Vitside Mafia",
+      "division": "Northwest",
       "icon": "/assets/theleague/icons/vitside_mafia.png",
       "banner": "/assets/theleague/banners/vitside_mafia.png",
       "groupMe": "/assets/theleague/group-me/vitside_mafia.png"
@@ -99,6 +136,10 @@
     {
       "franchiseId": "0013",
       "name": "Gridiron Geeks",
+      "aliases": [
+        "Geeks"
+      ],
+      "division": "Southwest",
       "icon": "/assets/theleague/icons/geeks.png",
       "banner": "/assets/theleague/banners/geeks.png",
       "groupMe": "/assets/theleague/group-me/geeks.png"
@@ -106,13 +147,29 @@
     {
       "franchiseId": "0014",
       "name": "Cowboy Up",
+      "division": "Central",
       "icon": "/assets/theleague/icons/cowboy_up.png",
       "banner": "/assets/theleague/banners/cowboy_up.png",
       "groupMe": "/assets/theleague/group-me/cowboy_up.png"
     },
     {
+      "franchiseId": "0015",
+      "name": "Dark Magicians of Chaos",
+      "division": "East",
+      "aliases": [
+        "Dark Magicians"
+      ],
+      "icon": "/assets/theleague/icons/dark_magicians.png",
+      "banner": "/assets/theleague/banners/dark_magicians.png",
+      "groupMe": "/assets/theleague/group-me/dark_magicians.png"
+    },
+    {
       "franchiseId": "0016",
-      "name": "The Dream",
+      "name": "Running down the Dream",
+      "division": "East",
+      "aliases": [
+        "the_dream"
+      ],
       "icon": "/assets/theleague/icons/the_dream.png",
       "banner": "/assets/theleague/banners/the_dream.png",
       "groupMe": "/assets/theleague/group-me/the_dream.png"
