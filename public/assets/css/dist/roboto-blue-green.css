@@ -2873,8 +2873,15 @@ td.MFLPlayerPoints {
   padding: 0;
 }
 .MFLGameLinks td.MFLLiveTeam {
-  min-width: 180px;
-  font-size: 13px;
+  min-width: 110px;
+  font-size: 0.7rem;
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+.MFLGameLinks td.MFLLiveTeam img {
+  max-width: 3rem;
 }
 .MFLGameLinks .MFLNFLGameTable .nflicon {
   max-width: 30px;
