@@ -220,7 +220,7 @@ td#myTopTableHolder {
 
   #MFLRoadScore,
   #MFLHomeScore {
-    padding: 2px;
+    padding: 8px;
   }
   #MFLRoadScore > div,
   #MFLHomeScore > div {
@@ -276,7 +276,7 @@ td#myTopTableHolder {
     padding: 2px 3px 12px;
     display: none;
     text-align: center;
-    @media (min-width: 513px) {
+    @media (min-width: 320px) {
       display: table-cell;
     }
   }

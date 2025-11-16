@@ -2936,7 +2936,7 @@ td.MFLPlayerPoints {
 }
 .MFLMainScoreboard #MFLRoadScore,
 .MFLMainScoreboard #MFLHomeScore {
-  padding: 2px;
+  padding: 8px;
 }
 .MFLMainScoreboard #MFLRoadScore > div,
 .MFLMainScoreboard #MFLHomeScore > div {
@@ -3008,7 +3008,7 @@ td#myTopTableHolder #MFLHomeTeamRecord {
   display: none;
   text-align: center;
 }
-@media (min-width: 513px) {
+@media (min-width: 320px) {
   td#myTopTableHolder #MFLRoadTeamRecord,
   td#myTopTableHolder #MFLHomeTeamRecord {
     display: table-cell;
