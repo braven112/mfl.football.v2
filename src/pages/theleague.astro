@@ -10,6 +10,7 @@ type AssetEntry = {
   filename: string;
   relativePath: string;
   absoluteUrl: string;
+  extension?: string;
 };
 
 type TeamEntry = {
@@ -19,6 +20,7 @@ type TeamEntry = {
   name: string;
   division?: string;
   aliases?: string[];
+  psdAssets?: AssetEntry[];
   assets: Record<string, AssetEntry[]>;
 };
 
@@ -32,18 +34,28 @@ const formatBucketLabel = (bucket: string) =>
         .replace(/[-_]+/g, ' ')
         .replace(/\b\w/g, char => char.toUpperCase());
 
+const PSD_FOLDERS = ['psd', 'psds'];
+
 const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
-  const assets = Object.fromEntries(
+  const rawAssets = Object.fromEntries(
     Object.entries(team.assets || {}).map(([folder, entries]) => [
       folder,
       entries.map(entry => ({
         ...entry,
         absoluteUrl: assetDomain
           ? `${assetDomain}${entry.relativePath}`
-          : entry.relativePath
+          : entry.relativePath,
+        extension: entry.extension
       }))
     ])
   );
+  const psdAssets = PSD_FOLDERS.flatMap(folder => rawAssets[folder] as AssetEntry[] || []);
+  PSD_FOLDERS.forEach(folder => {
+    if (rawAssets[folder]) {
+      delete rawAssets[folder];
+    }
+  });
+  const assets = rawAssets;
   return {
     key: team.key,
     slug: team.slug,
@@ -51,6 +63,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     name: team.name,
     division: team.division,
     aliases: team.aliases,
+    psdAssets,
     assets,
   };
 });
@@ -87,10 +100,20 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
               data-aliases={(team.aliases || []).join(' ')}
             >
               <div class="team-card__header">
-                <div>
+                <div class="team-card__info">
                   <h2>{team.name}</h2>
                   {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
                   {team.division && <p class="team-division">{team.division} Division</p>}
+                  
+                  {team.psdAssets?.length ? (
+                    <div class="psd-links">
+                      {team.psdAssets.map(asset => (
+                        <a href={asset.absoluteUrl} target="_blank" rel="noopener noreferrer">
+                          {team.psdAssets!.length > 1 ? `Download PSD (${asset.filename})` : 'Download PSD'}
+                        </a>
+                      ))}
+                    </div>
+                  ) : "null"}
                 </div>
               </div>
 
@@ -276,6 +299,20 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     color: var(--accent-link-hover-text-color, #b45309);
   }
 
+  .psd-links {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .psd-links a {
+    font-size: 0.9rem;
+    color: var(--accent-link-hover-text-color, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
   .asset-groups {
     display: flex;
     flex-direction: column;
@@ -310,7 +347,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     height: auto;
     max-width: 100%;
     max-height: 100%;
-    align-self: center;
+    align-self: flex-start;
     object-fit: contain;
   }
 
@@ -320,6 +357,29 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     align-self: center;
     justify-self: center;
     object-fit: contain;
+  }
+
+  .asset-card--psd .psd-preview {
+    width: 100%;
+    padding: 1rem;
+    border: 1px dashed var(--content-border-color, #d1d5db);
+    border-radius: 0.5rem;
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--accent-link-hover-text-color, #2563eb);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .asset-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--accent-link-hover-text-color, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
   }
 
   .asset-meta {
