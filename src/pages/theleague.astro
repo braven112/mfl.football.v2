@@ -18,6 +18,7 @@ type TeamEntry = {
   id?: string;
   name: string;
   division?: string;
+  aliases?: string[];
   assets: Record<string, AssetEntry[]>;
 };
 
@@ -49,6 +50,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     id: team.id,
     name: team.name,
     division: team.division,
+    aliases: team.aliases,
     assets,
   };
 });
@@ -82,6 +84,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
               data-name={team.name}
               data-franchise-id={team.id || ''}
               data-division={team.division || ''}
+              data-aliases={(team.aliases || []).join(' ')}
             >
               <div class="team-card__header">
                 <div>
@@ -135,6 +138,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
               card.dataset.name,
               card.dataset.franchiseId,
               card.dataset.division,
+              card.dataset.aliases,
               card.id,
             ].join(' ').toLowerCase();
             const match = needle === '' || haystack.includes(needle);

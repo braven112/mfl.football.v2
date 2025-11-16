@@ -10,7 +10,7 @@ const leagueAssetsDir = path.join(publicDir, 'assets', 'theleague');
 const outputJsonPath = path.join(dataDir, 'theleague.assets.json');
 
 const aliasBuckets = ['icon', 'banner', 'groupMe'];
-const allowedExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
+const allowedExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.psd']);
 
 const fileSlug = (value = '') =>
   value
@@ -93,6 +93,7 @@ const aggregateAssets = async () => {
         id: meta?.id,
         name: meta?.name || prettifySlug(slug),
         division: meta?.division,
+        aliases: meta?.aliases || [],
         assets: {}
       });
     }
@@ -136,7 +137,8 @@ const aggregateAssets = async () => {
       team.assets[folder].push({
         type: folder,
         filename: file,
-        relativePath: `/assets/theleague/${folder}/${file}`
+        relativePath: `/assets/theleague/${folder}/${file}`,
+        extension: ext,
       });
     }
   }
