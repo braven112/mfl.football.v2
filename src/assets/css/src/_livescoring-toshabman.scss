@@ -1,5 +1,8 @@
 @use "./globals" as *;
 
+:root {
+  --custom-icon-size: 3rem;
+}
 // #scoreboardTooltip {
 //     position: absolute;
 //     z-index: 100;
@@ -150,16 +153,17 @@ td.MFLPlayerPoints {
     min-width: 110px;
     font-size: .7rem;
     display: grid;
-    grid-template-columns: 3rem 1fr;
+    grid-template-columns: var(--custom-icon-size) 1fr;
     align-items: center;
     gap: .5rem;
   }
   td.MFLLiveTeam img {
-    max-width: 3rem
+    max-width: var(--custom-icon-size)
   } 
   
   .MFLNFLGameTable .nflicon {
-    max-width: 30px;
+    max-width: 40px;
+    min-width: var(--custom-icon-size);
   }
   .MFLNFLLiveScore,
   .MFLLiveScore,
@@ -275,6 +279,7 @@ td#myTopTableHolder {
     }
     img {
       max-width: 100%;
+      min-width: var(--custom-icon-size);
     }
   }
   #MFLRoadTeamRecord,

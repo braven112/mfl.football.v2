@@ -2812,6 +2812,9 @@ table#roster_home {
     max-width: 1096px;
   }
 }
+:root {
+  --custom-icon-size: 3rem;
+}
 @media (max-width: 560px) {
   div#scoreboardTooltip {
     left: 0 !important;
@@ -2915,15 +2918,16 @@ td.MFLPlayerPoints {
   min-width: 110px;
   font-size: 0.7rem;
   display: grid;
-  grid-template-columns: 3rem 1fr;
+  grid-template-columns: var(--custom-icon-size) 1fr;
   align-items: center;
   gap: 0.5rem;
 }
 .MFLGameLinks td.MFLLiveTeam img {
-  max-width: 3rem;
+  max-width: var(--custom-icon-size);
 }
 .MFLGameLinks .MFLNFLGameTable .nflicon {
-  max-width: 30px;
+  max-width: 40px;
+  min-width: var(--custom-icon-size);
 }
 .MFLGameLinks .MFLNFLLiveScore,
 .MFLGameLinks .MFLLiveScore,
@@ -3043,6 +3047,7 @@ td#myTopTableHolder td#MFLHomeTeamName {
 td#myTopTableHolder td#MFLRoadTeamName img,
 td#myTopTableHolder td#MFLHomeTeamName img {
   max-width: 100%;
+  min-width: var(--custom-icon-size);
 }
 td#myTopTableHolder #MFLRoadTeamRecord,
 td#myTopTableHolder #MFLHomeTeamRecord {
