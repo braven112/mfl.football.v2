@@ -12,6 +12,15 @@ const watchPaths = [
 let runningProcess = null;
 let pending = false;
 
+const aliasExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
+const isAliasFile = (filePath) => {
+  const base = path.basename(filePath);
+  const ext = path.extname(base).toLowerCase();
+  if (!aliasExtensions.has(ext)) return false;
+  const name = path.basename(base, ext);
+  return /^\d{4}$/.test(name);
+};
+
 const runSync = () => {
   if (runningProcess) {
     pending = true;
@@ -37,6 +46,10 @@ const runSync = () => {
 const watcher = chokidar.watch(watchPaths, {
   ignoreInitial: true,
   persistent: true,
+  ignored: (watchedPath) => {
+    if (isAliasFile(watchedPath)) return true;
+    return watchedPath.endsWith('theleague.assets.json');
+  },
 });
 
 watcher.on('ready', () => {
