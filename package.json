@@ -14,8 +14,9 @@
     "bundle:tools": "vite build --config scripts/league-tools.vite.config.mjs",
     "build": "pnpm run build:css && astro build && pnpm run bundle:tools",
     "sync:theleague": "node ./scripts/sync-theleague-assets.mjs",
-    "predev": "pnpm run sync:theleague",
-    "prebuild": "pnpm run sync:theleague",
+    "update:salary-averages": "node ./scripts/update-salary-averages.mjs",
+    "predev": "pnpm run sync:theleague && pnpm run update:salary-averages",
+    "prebuild": "pnpm run sync:theleague && pnpm run update:salary-averages",
     "preview": "astro preview",
     "astro": "astro"
   },
