@@ -1,15 +1,9 @@
 ---
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import Layout from '../layouts/Layout.astro';
 import leagueConfig from '../data/theleague.config.json';
+import aggregatedAssets from '../data/theleague.assets.json';
 
-export const prerender = false;
-
-const leagueAssetsDir = path.resolve(
-  fileURLToPath(new URL('../../public/assets/theleague', import.meta.url))
-);
+export const prerender = true;
 
 type AssetEntry = {
   type: string;
@@ -37,135 +31,27 @@ const formatBucketLabel = (bucket: string) =>
         .replace(/[-_]+/g, ' ')
         .replace(/\b\w/g, char => char.toUpperCase());
 
-const fileSlug = (value = '') =>
-  value
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-const prettifySlug = (slug = '') =>
-  slug
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char: string) => char.toUpperCase());
-
-const allowedExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
-
-const buildTeamMeta = () => {
-  const map = new Map<string, {
-    slug: string;
-    id: string;
-    name: string;
-    division?: string;
-  }>();
-  (leagueConfig.teams || []).forEach(team => {
-    const slug =
-      fileSlug(team.slug || '') ||
-      fileSlug(team.name) ||
-      team.franchiseId.toLowerCase();
-    const entry = {
-      slug,
-      id: team.franchiseId,
-      name: team.name || prettifySlug(slug),
-      division: team.division,
-    };
-    const keys = [entry.slug, entry.id, ...(team.aliases ?? [])]
-      .filter(Boolean)
-      .map(key => fileSlug(key as string));
-    keys.forEach(key => {
-      if (key && !map.has(key)) {
-        map.set(key, entry);
-      }
-    });
-  });
-  return map;
-};
-
-const gatherTeamAssets = async () => {
-  const teamMeta = buildTeamMeta();
-  const teams = new Map<string, TeamEntry>();
-
-  const registerTeam = (slug: string, meta?: { id: string; name: string; division?: string }) => {
-    if (!teams.has(slug)) {
-      teams.set(slug, {
-        key: slug,
-        slug,
-        id: meta?.id,
-        name: meta?.name || prettifySlug(slug),
-        division: meta?.division,
-        assets: {}
-      });
-    }
-    return teams.get(slug)!;
+const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
+  const assets = Object.fromEntries(
+    Object.entries(team.assets || {}).map(([folder, entries]) => [
+      folder,
+      entries.map(entry => ({
+        ...entry,
+        absoluteUrl: assetDomain
+          ? `${assetDomain}${entry.relativePath}`
+          : entry.relativePath
+      }))
+    ])
+  );
+  return {
+    key: team.key,
+    slug: team.slug,
+    id: team.id,
+    name: team.name,
+    division: team.division,
+    assets,
   };
-
-  let directories: import('node:fs').Dirent[] = [];
-  try {
-    directories = await fs.readdir(leagueAssetsDir, { withFileTypes: true });
-  } catch (error) {
-    console.warn('[theleague] Unable to read assets directory:', error);
-  }
-
-  for (const dirent of directories) {
-    if (!dirent.isDirectory()) continue;
-    const folder = dirent.name;
-    const folderPath = path.join(leagueAssetsDir, folder);
-    let files: string[] = [];
-    try {
-      files = await fs.readdir(folderPath);
-    } catch {
-      continue;
-    }
-
-    for (const file of files) {
-      const ext = path.extname(file).toLowerCase();
-      if (!allowedExtensions.has(ext)) continue;
-
-      const baseName = path.basename(file, ext);
-      const normalizedKey = fileSlug(baseName);
-      const meta = teamMeta.get(normalizedKey);
-      const slug = meta?.slug || normalizedKey || baseName;
-
-      if (meta?.id && baseName === meta.id) {
-        continue;
-      }
-
-      const team = registerTeam(slug, meta);
-      const relativePath = `/assets/theleague/${folder}/${file}`;
-      const absoluteUrl = assetDomain ? `${assetDomain}${relativePath}` : relativePath;
-
-      if (!team.assets[folder]) {
-        team.assets[folder] = [];
-      }
-
-      team.assets[folder]!.push({
-        type: folder,
-        filename: file,
-        relativePath,
-        absoluteUrl
-      });
-    }
-  }
-
-  return Array.from(teams.values()).map(team => {
-    const sortedAssets = Object.entries(team.assets)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([folder, assets]) => ([
-        folder,
-        assets.sort((a, b) => a.filename.localeCompare(b.filename))
-      ]));
-
-    return {
-      ...team,
-      assets: Object.fromEntries(sortedAssets)
-    };
-  }).sort((a, b) => a.name.localeCompare(b.name));
-};
-
-const teamList = await gatherTeamAssets();
+});
 ---
 
 <Layout title="The League Asset Library">
@@ -203,6 +89,7 @@ const teamList = await gatherTeamAssets();
                   {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
                   {team.division && <p class="team-division">{team.division} Division</p>}
                 </div>
+                <p class="team-slug">Key: {team.slug}</p>
               </div>
 
               <div class="asset-groups">
