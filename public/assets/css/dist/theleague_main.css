@@ -5006,6 +5006,21 @@ table#standings th {
 #body_standings td#division00, #body_standings td#division01, #body_standings td#division02, #body_standings td#division03, #body_standings td#division04, #body_standings td#division05, #body_standings td#division06, #body_standings td#division07 {
   padding: 6px 0px 2px;
 }
+#body_standings .h2hw, #body_standings .h2hl, #body_standings .h2hpct {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding-inline: 0.5rem;
+}
+#body_standings .h2hw {
+  padding-left: 1.5rem;
+}
+#body_standings .gb {
+  padding-left: 0.8rem;
+}
+#body_standings .h2hpct {
+  border-right: 1px solid #ddd;
+  padding-right: 0.8rem;
+}
 .homepagecolumn td#division00, .homepagecolumn td#division01, .homepagecolumn td#division02, .homepagecolumn td#division03, .homepagecolumn td#division04, .homepagecolumn td#division05, .homepagecolumn td#division06, .homepagecolumn td#division07 {
   padding: 6px 8px 2px;
 }

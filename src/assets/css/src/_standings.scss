@@ -58,6 +58,19 @@ table#standings th {
   td#division00, td#division01, td#division02, td#division03, td#division04, td#division05, td#division06, td#division07 {
     padding: 6px 0px 2px;
   }
+  .h2hw, .h2hl, .h2hpct {
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding-inline: 0.5rem;
+}
+
+.h2hw {padding-left: 1.5rem}
+.gb {padding-left: .8rem}
+
+.h2hpct {
+    border-right: 1px solid #ddd;
+    padding-right: .8rem;
+}
 }
 
 .homepagecolumn td#division00, .homepagecolumn td#division01, .homepagecolumn td#division02, .homepagecolumn td#division03, .homepagecolumn td#division04, .homepagecolumn td#division05, .homepagecolumn td#division06, .homepagecolumn td#division07 {
