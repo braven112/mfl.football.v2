@@ -59,7 +59,6 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     <header class="gallery-header">
       <h1>The League Asset Library</h1>
     </header>
-
     {teamList.length === 0 ? (
       <p class="empty-state">No team assets found. Drop images into <code>public/assets/theleague</code> to populate this page.</p>
     ) : (
@@ -219,8 +218,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   }
 
   .gallery-controls {
-    display: flex;
-    justify-content: flex-end;
+    display: grid;
     align-items: center;
     gap: 0.5rem;
   }
