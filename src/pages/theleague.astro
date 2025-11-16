@@ -65,12 +65,13 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
       <>
         <div class="gallery-controls">
           <label>
-            <span>Sort by</span>
-            <select id="team-sort">
-              <option value="name">Team Name (A–Z)</option>
-              <option value="franchise">Franchise ID</option>
-              <option value="division">Division</option>
-            </select>
+            <span>Search teams</span>
+            <input
+              id="team-filter"
+              type="search"
+              placeholder="Search by name, ID, or division"
+              autocomplete="off"
+            />
           </label>
         </div>
         <div class="team-grid">
@@ -122,34 +123,23 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   {teamList.length > 0 && (
     <script is:inline>
       (() => {
-        const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
-        const select = document.querySelector('#team-sort');
+        const input = document.querySelector('#team-filter');
         const grid = document.querySelector('.team-grid');
-        if (!select || !grid) return;
-        const baseCards = Array.from(grid.children);
+        if (!input || !grid) return;
+        const cards = Array.from(grid.children);
 
-        const sorters = {
-          name: (cards) =>
-            [...cards].sort((a, b) =>
-              (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' })
-            ),
-          franchise: (cards) =>
-            [...cards].sort((a, b) =>
-              (a.dataset.franchiseId || '').localeCompare(b.dataset.franchiseId || '')
-            ),
-          division: (cards) =>
-            [...cards].sort((a, b) => {
-              const divA = divisionOrder.indexOf(a.dataset.division || '');
-              const divB = divisionOrder.indexOf(b.dataset.division || '');
-              if (divA !== divB) return divA - divB;
-              return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
-            }),
-        };
-
-        const applySort = (key) => {
-          const sorter = sorters[key] || sorters.name;
-          const sortedCards = sorter(baseCards);
-          grid.replaceChildren(...sortedCards);
+        const filterCards = (query) => {
+          const needle = query.trim().toLowerCase();
+          cards.forEach(card => {
+            const haystack = [
+              card.dataset.name,
+              card.dataset.franchiseId,
+              card.dataset.division,
+              card.id,
+            ].join(' ').toLowerCase();
+            const match = needle === '' || haystack.includes(needle);
+            card.style.display = match ? '' : 'none';
+          });
         };
 
         const updateDimensions = (img) => {
@@ -176,8 +166,8 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
           });
         };
 
-        applySort(select.value);
-        select.addEventListener('change', (event) => applySort(event.target.value));
+        filterCards(input.value);
+        input.addEventListener('input', (event) => filterCards(event.target.value));
         initDimensions();
       })();
     </script>
@@ -231,8 +221,8 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
     color: var(--muted-text-color, #6b7280);
   }
 
-  .gallery-controls select {
-    padding: 0.35rem 0.75rem;
+  .gallery-controls input[type="search"] {
+    padding: 0.4rem 0.75rem;
     border-radius: 0.5rem;
     border: 1px solid var(--content-border-color, #d1d5db);
     font-size: 0.95rem;
@@ -312,14 +302,17 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   }
 
   .asset-card img {
-    width: 100%;
+    width: auto;
     height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    align-self: center;
     object-fit: contain;
   }
 
   .asset-card--icons img {
-    width: 100px;
-    height: 100px;
+    width: min(100px, 100%);
+    height: auto;
     align-self: center;
     justify-self: center;
     object-fit: contain;
