@@ -1,7 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import salarySummary from '../data/mfl-salary-averages-2024.json';
 import leagueAssets from '../data/theleague.assets.json';
+
+const summaryModules = import.meta.glob(
+  '../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
 
 const positionLabels = [
   { key: 'QB', label: 'Quarterback' },
@@ -23,14 +27,39 @@ const formatValue = (value: number | undefined) =>
     ? currencyFormatter.format(value)
     : 'N/A';
 
-const summary = salarySummary.positions ?? {};
-const generatedAt = new Date(salarySummary.metadata?.generatedAt ?? '');
-const generatedLabel = Number.isNaN(generatedAt.getTime())
-  ? 'Unknown'
-  : generatedAt.toLocaleString('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath: string) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const summariesBySeason: Record<string, any> = {};
+Object.entries(summaryModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (season) summariesBySeason[season] = getModuleData(mod);
+});
+
+const seasonOptions = Object.keys(summariesBySeason).sort(
+  (a, b) => Number(b) - Number(a)
+);
+const defaultSeason = seasonOptions[0] ?? seasonOptions.at(-1) ?? '2024';
+const currentSummary =
+  summariesBySeason[defaultSeason] ??
+  (seasonOptions.length ? summariesBySeason[seasonOptions[0]] : {});
+
+const summary = currentSummary?.positions ?? {};
+const generatedAt = currentSummary?.metadata?.generatedAt
+  ? new Date(currentSummary.metadata.generatedAt)
+  : null;
+const generatedLabel =
+  generatedAt && !Number.isNaN(generatedAt.getTime())
+    ? generatedAt.toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : 'Unknown';
 
 const franchiseMeta = new Map(
   (leagueAssets.teams ?? []).map((team) => [
@@ -41,19 +70,47 @@ const franchiseMeta = new Map(
     },
   ])
 );
+
+const franchiseLookup = Object.fromEntries(
+  Array.from(franchiseMeta.entries()).map(([id, data]) => [id, data ?? {}])
+);
+
+const serializedConfig = JSON.stringify({
+  seasons: summariesBySeason,
+  seasonOptions,
+  defaultSeason,
+  franchiseMeta: franchiseLookup,
+});
 ---
 
 <Layout title="Salary Benchmarks">
   <section class="salary-report">
     <header class="salary-report__intro">
       <h1>Salary Benchmarks</h1>
+      {seasonOptions.length > 1 && (
+        <label class="season-toggle">
+          <span>Season:</span>
+          <select id="salarySeasonSelect">
+            {seasonOptions.map((season) => (
+              <option value={season} selected={season === defaultSeason}>
+                {season}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <p>
-        League {salarySummary.metadata?.leagueId ?? 'Unknown'} &middot; Season{' '}
-        {salarySummary.metadata?.season ?? 'Unknown'}{salarySummary.metadata?.week
-          ? ` &middot; Week ${salarySummary.metadata.week}`
+        League {currentSummary?.metadata?.leagueId ?? 'Unknown'} &middot; Season{' '}
+        <span id="salarySeasonLabel">
+          {currentSummary?.metadata?.season ?? defaultSeason}
+        </span>
+        {currentSummary?.metadata?.week
+          ? ` &middot; Week ${currentSummary.metadata.week}`
           : ''}
       </p>
-      <p class="salary-report__timestamp">Last Snapshot: {generatedLabel}</p>
+      <p class="salary-report__timestamp" id="salarySnapshotLabel">
+        Last Snapshot: {generatedLabel}
+      </p>
       <p>
         Franchise tag figures use the average of the top three salaries at a
         position, while contract extensions use the average of the top five.
@@ -71,14 +128,14 @@ const franchiseMeta = new Map(
                 <dl class="salary-card__figures">
                   <div>
                     <dt>Franchise Tag (Top 3)</dt>
-                    <dd>{formatValue(data.top3Average)}</dd>
+                    <dd data-franchise-average={key}>{formatValue(data.top3Average)}</dd>
                   </div>
                   <div>
                     <dt>Extension (Top 5)</dt>
-                    <dd>{formatValue(data.top5Average)}</dd>
+                    <dd data-extension-average={key}>{formatValue(data.top5Average)}</dd>
                   </div>
                 </dl>
-                <p class="salary-card__total">
+                <p class="salary-card__total" data-total={key}>
                   Tracked Players: {data.totalPlayers ?? 0}
                 </p>
 
@@ -90,7 +147,7 @@ const franchiseMeta = new Map(
                       <th scope="col">Salary</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody data-top-players={key}>
                     {(data.topPlayers ?? []).map((player) => {
                       const franchise = player?.franchiseId
                         ? franchiseMeta.get(player.franchiseId)
@@ -144,6 +201,21 @@ const franchiseMeta = new Map(
   .salary-report__timestamp {
     font-size: 0.95rem;
     color: #555;
+  }
+
+  .season-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .season-toggle select {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid #ccd3df;
+    border-radius: 0.5rem;
+    font-size: 1rem;
   }
 
   .salary-report__grid {
@@ -233,19 +305,16 @@ const franchiseMeta = new Map(
     border-bottom: none;
   }
 
-  .player-cell {
+  :global(.player-cell) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
 
-  .player-cell img {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+  :global(.player-cell img) {
+    width: 32px;
+    height: 32px;
     object-fit: cover;
-    border: 1px solid #ddd;
-    background: #fff;
   }
 
   .salary-card__empty {
@@ -260,3 +329,96 @@ const franchiseMeta = new Map(
     }
   }
 </style>
+
+<script
+  type="application/json"
+  id="salary-config"
+  set:html={serializedConfig}
+></script>
+
+<script type="module">
+  const summaryConfigEl = document.getElementById('salary-config');
+  if (summaryConfigEl) {
+    const { seasons = {}, defaultSeason, franchiseMeta = {} } = JSON.parse(
+      summaryConfigEl.textContent
+    );
+    const selectEl = document.getElementById('salarySeasonSelect');
+    const seasonLabel = document.getElementById('salarySeasonLabel');
+    const snapshotLabel = document.getElementById('salarySnapshotLabel');
+
+    const currencyFormatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    });
+
+    const formatCurrency = (value) => {
+      if (!Number.isFinite(value)) return 'N/A';
+      return currencyFormatter.format(Math.round(value));
+    };
+
+    const renderSeason = (seasonKey) => {
+      const summary = seasons?.[seasonKey];
+      if (!summary) return;
+      seasonLabel.textContent = summary?.metadata?.season ?? seasonKey;
+      const generatedAt = summary?.metadata?.generatedAt
+        ? new Date(summary.metadata.generatedAt)
+        : null;
+      snapshotLabel.textContent = `Last Snapshot: ${
+        generatedAt && !Number.isNaN(generatedAt.getTime())
+          ? generatedAt.toLocaleString('en-US', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })
+          : 'Unknown'
+      }`;
+
+      (summary?.positions
+        ? Object.entries(summary.positions)
+        : []
+      ).forEach(([position, data]) => {
+        const franCell = document.querySelector(
+          `[data-franchise-average="${position}"]`
+        );
+        const extCell = document.querySelector(
+          `[data-extension-average="${position}"]`
+        );
+        const totalEl = document.querySelector(`[data-total="${position}"]`);
+        const playersBody = document.querySelector(
+          `[data-top-players="${position}"]`
+        );
+
+        if (franCell) franCell.textContent = formatCurrency(data?.top3Average ?? 0);
+        if (extCell) extCell.textContent = formatCurrency(data?.top5Average ?? 0);
+        if (totalEl) totalEl.textContent = `Tracked Players: ${data?.totalPlayers ?? 0}`;
+        if (playersBody) {
+          const rows = (data?.topPlayers ?? [])
+            .map((player) => {
+              const franchise = player?.franchiseId
+                ? franchiseMeta[player.franchiseId]
+                : null;
+              const iconMarkup = franchise?.icon
+                ? `<img src="${franchise.icon}" alt="${franchise.name ?? 'Franchise'} icon" loading="lazy" />`
+                : '';
+              return `
+                <tr>
+                  <td class="player-cell">
+                    ${iconMarkup}
+                    <span>${player.name ?? ''}</span>
+                  </td>
+                  <td>${formatCurrency(player.salary)}</td>
+                </tr>`;
+            })
+            .join('');
+          playersBody.innerHTML =
+            rows || '<tr><td colspan="2" class="player-cell">No players tracked.</td></tr>';
+        }
+      });
+    };
+
+    renderSeason(defaultSeason);
+    selectEl?.addEventListener('change', (event) => {
+      renderSeason(event.target.value);
+    });
+  }
+</script>

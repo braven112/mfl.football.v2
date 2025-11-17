@@ -1,8 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import salarySummary from '../data/mfl-salary-averages-2024.json';
-import playerSalaries from '../data/mfl-player-salaries-2024.json';
 import leagueAssets from '../data/theleague.assets.json';
+
+const salarySummaryModules = import.meta.glob(
+  '../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
+const playerSalaryModules = import.meta.glob(
+  '../data/mfl-player-salaries-*.json',
+  { eager: true }
+);
 
 const extensionPositions = [
   { key: 'QB', label: 'Quarterback' },
@@ -13,14 +20,6 @@ const extensionPositions = [
 ];
 
 const salaryTabs = [2, 3, 4];
-const extensionSalaries = extensionPositions.reduce((acc, { key }) => {
-  acc[key] = salarySummary.positions?.[key]?.top5Average ?? 0;
-  return acc;
-}, {});
-const franchiseSalaries = extensionPositions.reduce((acc, { key }) => {
-  acc[key] = salarySummary.positions?.[key]?.top3Average ?? 0;
-  return acc;
-}, {});
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -52,46 +51,103 @@ const franchiseMetaMap = new Map(
   })
 );
 
-const playerChoices = (playerSalaries.players ?? []).map((player) => {
-  const contractYears =
-    Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) || 0;
-  const franchiseMeta =
-    franchiseMetaMap.get(player.franchiseId) ??
-    franchiseMetaMap.get(player.franchise_id) ?? {};
-  const teamName = franchiseMeta?.name || player.franchiseId || 'Free Agent';
-  const nflTeam =
-    (player.team ?? franchiseMeta?.nflTeam ?? franchiseMeta?.key ?? '').toUpperCase();
-  const icon = franchiseMeta?.icon || null;
-  const teamTokens = franchiseMeta?.tokens ?? [];
-  const label = `${player.name} (${player.position}) – ${teamName}`;
-  const searchBlob = [player.name, player.position, teamName, player.team, ...teamTokens]
-    .filter(Boolean)
-    .map((value) => value.toLowerCase())
-    .join(' ');
-  return {
-    id: player.id,
-    name: player.name,
-    position: player.position,
-    salary: player.salary,
-    franchiseId: player.franchiseId,
-    contractYears,
-    teamName,
-    nflTeam,
-    icon,
-    label,
-    teamTokens,
-    searchBlob,
-    points: player.points ?? 0,
-    draftYear: player.draftYear ?? null,
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const buildPlayerChoices = (playerData = {}) =>
+  (playerData.players ?? []).map((player) => {
+    const contractYears =
+      Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) || 0;
+    const franchiseMeta =
+      franchiseMetaMap.get(player.franchiseId) ??
+      franchiseMetaMap.get(player.franchise_id) ?? {};
+    const teamName = franchiseMeta?.name || player.franchiseId || 'Free Agent';
+    const nflTeam =
+      (player.team ?? franchiseMeta?.nflTeam ?? franchiseMeta?.key ?? '').toUpperCase();
+    const icon = franchiseMeta?.icon || null;
+    const teamTokens = franchiseMeta?.tokens ?? [];
+    const label = `${player.name} (${player.position}) – ${teamName}`;
+    const searchBlob = [player.name, player.position, teamName, player.team, ...teamTokens]
+      .filter(Boolean)
+      .map((value) => value.toLowerCase())
+      .join(' ');
+    return {
+      id: player.id,
+      name: player.name,
+      position: player.position,
+      salary: player.salary,
+      franchiseId: player.franchiseId,
+      contractYears,
+      teamName,
+      nflTeam,
+      icon,
+      label,
+      teamTokens,
+      searchBlob,
+      points: player.points ?? 0,
+      draftYear: player.draftYear ?? null,
+    };
+  });
+
+const salarySummaryBySeason = {};
+Object.entries(salarySummaryModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (season) salarySummaryBySeason[season] = getModuleData(mod);
+});
+
+const playerSalariesBySeason = {};
+Object.entries(playerSalaryModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (season) playerSalariesBySeason[season] = getModuleData(mod);
+});
+
+const seasonsPayload = {};
+const seasonOrder = Object.keys(playerSalariesBySeason)
+  .filter((season) => salarySummaryBySeason[season])
+  .sort((a, b) => Number(b) - Number(a));
+
+seasonOrder.forEach((season) => {
+  const summary = salarySummaryBySeason[season];
+  const playersData = playerSalariesBySeason[season];
+  if (!summary || !playersData) return;
+  const extensionSalariesBySeason = extensionPositions.reduce((acc, { key }) => {
+    acc[key] = summary.positions?.[key]?.top5Average ?? 0;
+    return acc;
+  }, {});
+  const franchiseSalariesBySeason = extensionPositions.reduce((acc, { key }) => {
+    acc[key] = summary.positions?.[key]?.top3Average ?? 0;
+    return acc;
+  }, {});
+  seasonsPayload[season] = {
+    extensionSalaries: extensionSalariesBySeason,
+    franchiseSalaries: franchiseSalariesBySeason,
+    players: buildPlayerChoices(playersData),
+    metadata: summary.metadata ?? { season },
   };
 });
 
+const defaultSeason = seasonOrder[0] ?? seasonOrder.at(-1) ?? '2024';
+const blankSalaries = extensionPositions.reduce((acc, { key }) => {
+  acc[key] = 0;
+  return acc;
+}, {});
+const initialSeasonData = seasonsPayload[defaultSeason] ?? {
+  extensionSalaries: blankSalaries,
+  franchiseSalaries: blankSalaries,
+  players: [],
+};
+
 const serializedConfig = JSON.stringify({
-  positionKeys: extensionPositions.map(({ key }) => key),
-  extensionSalaries,
-  franchiseSalaries,
   salaryTabs,
-  players: playerChoices,
+  seasons: seasonsPayload,
+  defaultSeason,
+  seasonOptions: seasonOrder,
+  positionKeys: extensionPositions.map(({ key }) => key),
 });
 ---
 
@@ -99,6 +155,17 @@ const serializedConfig = JSON.stringify({
   <section class="calculator">
     <div class="calculator__card" id="rookie-extension-calculator">
       <h1>Contract Tools</h1>
+
+      <div class="season-select">
+        <label class="field-label" for="seasonSelect">Season:</label>
+        <select id="seasonSelect" class="season-select__control">
+          {seasonOrder.map((season) => (
+            <option value={season} selected={season === defaultSeason}>
+              {season}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <label class="field-label">Contract Type:</label>
       <div class="toggle-switch toggle-switch--grid">
@@ -195,11 +262,13 @@ const serializedConfig = JSON.stringify({
               <th>Average Salary</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="extensionSalaryTable">
             {extensionPositions.map(({ key, label }) => (
-              <tr>
+              <tr data-position={key}>
                 <td>{label}</td>
-                <td>{currencyFormatter.format(extensionSalaries[key] ?? 0)}</td>
+                <td data-extension-position={key}>
+                  {currencyFormatter.format(initialSeasonData.extensionSalaries?.[key] ?? 0)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -215,11 +284,13 @@ const serializedConfig = JSON.stringify({
               <th>Average Salary</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="franchiseSalaryTable">
             {extensionPositions.map(({ key, label }) => (
-              <tr>
+              <tr data-position={key}>
                 <td>{label}</td>
-                <td>{currencyFormatter.format(franchiseSalaries[key] ?? 0)}</td>
+                <td data-franchise-position={key}>
+                  {currencyFormatter.format(initialSeasonData.franchiseSalaries?.[key] ?? 0)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -238,10 +309,6 @@ const serializedConfig = JSON.stringify({
   }
 
   .calculator__card {
-    padding: 2rem;
-    background: #fff;
-    border-radius: 1rem;
-    border: 1px solid #d7dce3;
     display: grid;
     gap: 1rem;
     align-self: flex-start;
@@ -257,6 +324,21 @@ const serializedConfig = JSON.stringify({
     font-size: 2.4rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+  }
+
+  .season-select {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .season-select__control {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid #ccd3df;
+    border-radius: 0.5rem;
+    background: #fff;
+    font-size: 1rem;
+    min-width: 120px;
   }
 
   .field-label {
@@ -767,6 +849,30 @@ const serializedConfig = JSON.stringify({
     button {
       width: 100%;
     }
+
+    .player-search-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      align-items: stretch;
+    }
+
+    .clear-input-btn {
+      position: static;
+      transform: none;
+      align-self: flex-end;
+      border: 1px solid #ccd3df;
+      border-radius: 999px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.85rem;
+      line-height: 1.2;
+      background: #fff;
+    }
+
+    .clear-input-btn:hover {
+      background: #eef2ff;
+    }
   }
 </style>
 
@@ -781,12 +887,59 @@ const serializedConfig = JSON.stringify({
     document.getElementById('calculator-config').textContent
   );
   const {
-    positionKeys,
-    extensionSalaries,
-    franchiseSalaries,
+    seasons = {},
+    defaultSeason,
+    seasonOptions = [],
     salaryTabs,
-    players,
+    positionKeys = [],
   } = config;
+
+  const createSeasonState = (seasonKey, data = {}) => {
+    const players = data.players ?? [];
+    const playerLookupByLabel = new Map(
+      players.map((player) => [player.label.toLowerCase(), player])
+    );
+    const playerLookupByName = new Map(
+      players.map((player) => [player.name.toLowerCase(), player])
+    );
+    const playerById = new Map(players.map((player) => [player.id, player]));
+
+    return {
+      key: seasonKey,
+      extensionSalaries: data.extensionSalaries ?? {},
+      franchiseSalaries: data.franchiseSalaries ?? {},
+      metadata: data.metadata ?? { season: seasonKey },
+      players,
+      playerLookupByLabel,
+      playerLookupByName,
+      playerById,
+    };
+  };
+
+  const seasonStates = new Map(
+    Object.entries(seasons).map(([seasonKey, data]) => [
+      seasonKey,
+      createSeasonState(seasonKey, data),
+    ])
+  );
+
+  const orderedSeasons =
+    seasonOptions?.length > 0
+      ? seasonOptions
+      : Array.from(seasonStates.keys());
+
+  let currentSeasonKey =
+    defaultSeason && seasonStates.has(defaultSeason)
+      ? defaultSeason
+      : orderedSeasons[0] ?? null;
+
+  if (currentSeasonKey && !seasonStates.has(currentSeasonKey)) {
+    seasonStates.set(currentSeasonKey, createSeasonState(currentSeasonKey));
+  }
+
+  let seasonState =
+    (currentSeasonKey && seasonStates.get(currentSeasonKey)) ??
+    createSeasonState(currentSeasonKey ?? 'default', {});
 
   const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -809,26 +962,20 @@ const serializedConfig = JSON.stringify({
     input.value = formatCurrency(parseCurrency(input.value));
   };
 
-
   document.addEventListener('DOMContentLoaded', () => {
-    const playerLookupByLabel = new Map(
-      players.map((player) => [player.label.toLowerCase(), player])
-    );
-    const playerLookupByName = new Map(
-      players.map((player) => [player.name.toLowerCase(), player])
-    );
-    const playerById = new Map(players.map((player) => [player.id, player]));
     const playerSearchInput = document.getElementById('playerSearch');
     const currentSalaryInput = document.getElementById('currentSalary');
     const selectedPlayerDisplay = document.getElementById('selectedPlayerDisplay');
     const playerSuggestions = document.getElementById('playerSuggestions');
-    const positionToggleGroup = document.getElementById('positionToggleGroup');
     const playerDetails = document.querySelector('.player-details');
     const manualOverridePanel = document.getElementById('manualSalaryPanel');
     const resultContainer = document.getElementById('result');
     const comparisonContainer = document.getElementById('comparisonContainer');
     const calculateBtn = document.getElementById('calculateBtn');
     const clearBtn = document.getElementById('clearPlayerBtn');
+    const seasonSelect = document.getElementById('seasonSelect');
+    const extensionTableBody = document.getElementById('extensionSalaryTable');
+    const franchiseTableBody = document.getElementById('franchiseSalaryTable');
 
     if (
       !playerSearchInput ||
@@ -841,7 +988,12 @@ const serializedConfig = JSON.stringify({
       return;
     }
 
+    if (seasonSelect && currentSeasonKey) {
+      seasonSelect.value = currentSeasonKey;
+    }
+
     const defaultResultMessage = resultContainer.innerHTML;
+    const defaultComparisonMessage = comparisonContainer.innerHTML;
     let selectedPlayer = null;
     let suppressManualSalaryUpdate = false;
 
@@ -854,15 +1006,15 @@ const serializedConfig = JSON.stringify({
 
     const getEligiblePlayers = () => {
       const type = document.querySelector('input[name="extType"]:checked').value;
-      let filtered = players;
+      let filtered = seasonState?.players ?? [];
       if (type === 'transition') {
-        filtered = players.filter((player) =>
+        filtered = filtered.filter((player) =>
           [2, 3, 4].includes(player.contractYears ?? 0)
         );
       } else if (type === 'franchise') {
-        filtered = players.filter((player) => (player.contractYears ?? 0) === 1);
+        filtered = filtered.filter((player) => (player.contractYears ?? 0) === 1);
       } else if (type === 'rookie') {
-        filtered = players.filter((player) => (player.draftYear ?? 0) >= 2026);
+        filtered = filtered.filter((player) => (player.draftYear ?? 0) >= 2026);
       }
       return sortPlayers(filtered);
     };
@@ -890,9 +1042,9 @@ const serializedConfig = JSON.stringify({
             <span class="player-suggestion__meta">
               <span>
                 <img
-                  src="https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${player.nflTeam ||
+                  src="https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${player.nflTeam ??
                     'FA'}.svg"
-                  alt="${player.nflTeam}"
+                  alt="${player.nflTeam ?? 'FA'}"
                   class="player-suggestion__nfl-icon"
                 />
               </span>
@@ -985,9 +1137,34 @@ const serializedConfig = JSON.stringify({
       }
     };
 
+    const updateReferenceTables = () => {
+      const extensionValues = seasonState?.extensionSalaries ?? {};
+      const franchiseValues = seasonState?.franchiseSalaries ?? {};
+      positionKeys.forEach((key) => {
+        const extCell = extensionTableBody?.querySelector(
+          `[data-extension-position="${key}"]`
+        );
+        if (extCell) {
+          extCell.textContent = formatCurrency(extensionValues[key] ?? 0);
+        }
+        const franCell = franchiseTableBody?.querySelector(
+          `[data-franchise-position="${key}"]`
+        );
+        if (franCell) {
+          franCell.textContent = formatCurrency(franchiseValues[key] ?? 0);
+        }
+      });
+    };
+
+    const resetComparison = () => {
+      comparisonContainer.innerHTML = defaultComparisonMessage;
+    };
+
     const getReferenceSalary = (position, type) => {
-      if (type === 'franchise') return franchiseSalaries[position] ?? 0;
-      return extensionSalaries[position] ?? 0;
+      if (type === 'franchise') {
+        return seasonState?.franchiseSalaries?.[position] ?? 0;
+      }
+      return seasonState?.extensionSalaries?.[position] ?? 0;
     };
 
     const calculateExtension = () => {
@@ -1072,6 +1249,7 @@ Reference: ${referenceLabel}`;
       const iconMarkup = franchiseIcon
         ? `<img src="${franchiseIcon}" alt="${selectedPlayer?.teamName ?? 'Team'}" class="salary-table__icon" />`
         : '<span class="salary-table__icon placeholder"></span>';
+      const seasonLabel = seasonState?.metadata?.season ?? currentSeasonKey ?? '';
 
       const buildTable = ({
         title,
@@ -1096,19 +1274,24 @@ Reference: ${referenceLabel}`;
             <tbody>
               ${
                 subtitle
-                  ? `<tr class="salary-table__subtitle"><td>${subtitle}</td></tr>`
+                  ? `<tr class="salary-table__subtitle"><td colspan="2">${subtitle}</td></tr>`
                   : ''
               }
               <tr>
+                <th>Player</th>
                 <td class="salary-table__player">${nflLogoMarkup} ${playerNameLabel}</td>
               </tr>
               <tr>
-               
+                <th>${salaryLabel}</th>
                 <td class="${salaryClass}">${salaryValue}</td>
               </tr>
               <tr>
-               
+                <th>Years</th>
                 <td>${yearsValue}</td>
+              </tr>
+              <tr>
+                <th>Position</th>
+                <td>${positionValue}</td>
               </tr>
             </tbody>
           </table>
@@ -1118,7 +1301,7 @@ Reference: ${referenceLabel}`;
         <div class="salary-comparison">
           ${buildTable({
             title: 'Current Deal',
-            subtitle: '2025',
+            subtitle: seasonLabel ? `Season ${seasonLabel}` : '',
             salaryLabel: 'Salary',
             salaryValue: formatCurrency(salary),
             yearsValue: currentYearsLabel,
@@ -1168,19 +1351,20 @@ Reference: ${referenceLabel}`;
         selectedPlayerDisplay.textContent = `Using salary for ${player.name} (${player.position})`;
         selectedPlayerDisplay.classList.remove('hidden');
         playerSearchInput.value = player.label;
-       	playerSuggestions.classList.add('hidden');
-       	playerSuggestions.innerHTML = '';
-       	selectPositionRadio(player.position);
+        playerSuggestions.classList.add('hidden');
+        playerSuggestions.innerHTML = '';
+        selectPositionRadio(player.position);
       } else {
         selectedPlayerDisplay.classList.add('hidden');
         selectedPlayerDisplay.textContent = '';
         resultContainer.innerHTML = defaultResultMessage;
-        comparisonContainer.innerHTML =
-          '<p class="comparison-placeholder">Select a player to view the current vs new contract summary.</p>';
+        resetComparison();
+        playerSuggestions.innerHTML = '';
+        playerSuggestions.classList.add('hidden');
       }
       updateSelectionUi();
       if (selectedPlayer) {
-       	calculateExtension();
+        calculateExtension();
       }
     };
 
@@ -1188,11 +1372,13 @@ Reference: ${referenceLabel}`;
       const key = playerSearchInput.value.trim();
       if (!key) {
         setSelectedPlayer(null);
-        playerSuggestions.innerHTML = '';
-        playerSuggestions.classList.add('hidden');
         return;
       }
       const normalized = key.toLowerCase();
+      const playerLookupByLabel =
+        seasonState?.playerLookupByLabel ?? new Map();
+      const playerLookupByName =
+        seasonState?.playerLookupByName ?? new Map();
       const player =
         playerLookupByLabel.get(normalized) ||
         playerLookupByName.get(normalized) ||
@@ -1259,18 +1445,46 @@ Reference: ${referenceLabel}`;
       radio.addEventListener('change', toggleExtensionLength);
     });
 
+    const handleYearsChange = () => {
+      const type = document.querySelector('input[name="extType"]:checked')?.value;
+      if (type === 'transition' && selectedPlayer) {
+        calculateExtension();
+      }
+    };
+
+    document.querySelectorAll('input[name="yearsRemaining"]').forEach((radio) => {
+      radio.addEventListener('change', handleYearsChange);
+    });
+
+    const handleSeasonChange = (seasonKey) => {
+      if (!seasonKey || !seasonStates.has(seasonKey) || seasonKey === currentSeasonKey) {
+        return;
+      }
+      currentSeasonKey = seasonKey;
+      seasonState = seasonStates.get(seasonKey);
+      playerSearchInput.value = '';
+      setSelectedPlayer(null);
+      updateReferenceTables();
+      updateSuggestions();
+    };
+
+    seasonSelect?.addEventListener('change', (event) => {
+      handleSeasonChange(event.target.value);
+    });
+
     calculateBtn.addEventListener('click', calculateExtension);
 
     playerSuggestions.addEventListener('mousedown', (event) => event.preventDefault());
     playerSuggestions.addEventListener('click', (event) => {
       const target = event.target.closest('[data-player-id]');
       if (!target) return;
-      const player = playerById.get(target.dataset.playerId);
+      const player = seasonState?.playerById?.get(target.dataset.playerId);
       if (player) {
         setSelectedPlayer(player);
       }
     });
 
+    updateReferenceTables();
     updateSuggestions();
     toggleExtensionLength();
   });

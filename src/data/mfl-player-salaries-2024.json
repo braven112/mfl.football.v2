@@ -2,13 +2,16 @@
   "metadata": {
     "leagueId": "13522",
     "season": "2024",
-    "week": null,
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
     "sources": {
-      "rosters": "https://api.myfantasyleague.com/2024/export?TYPE=rosters&L=13522&JSON=1",
+      "rosters": "https://api.myfantasyleague.com/2024/export?TYPE=rosters&L=13522&JSON=1&W=14",
       "players": "https://api.myfantasyleague.com/2024/export?TYPE=players&DETAILS=1",
       "weeklyResults": "https://api.myfantasyleague.com/2024/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
     },
-    "fetchedAt": "2025-11-17T04:42:59.191Z"
+    "fetchedAt": "2025-11-17T06:27:46.565Z"
   },
   "players": [
     {
@@ -19,7 +22,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 105.19,
+      "points": 106.79,
       "team": "NEP",
       "draftYear": 1970,
       "draftTeam": "NEP"
@@ -32,7 +35,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 185.5,
+      "points": 153.5,
       "team": "BUF",
       "draftYear": 2020,
       "draftTeam": "BUF"
@@ -45,7 +48,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 425.65,
+      "points": 373.35,
       "team": "PHI",
       "draftYear": 2018,
       "draftTeam": "NYG"
@@ -58,7 +61,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 226.3,
+      "points": 195.76,
       "team": "MIA",
       "draftYear": 2016,
       "draftTeam": "KCC"
@@ -71,7 +74,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 189.8,
+      "points": 134.4,
       "team": "KCC",
       "draftYear": 1970,
       "draftTeam": "KCC"
@@ -84,7 +87,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 142.1,
+      "points": 111,
       "team": "IND",
       "draftYear": 2020,
       "draftTeam": "IND"
@@ -97,7 +100,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 27.57,
+      "points": 24.87,
       "team": "CIN",
       "draftYear": 2021,
       "draftTeam": "CHI"
@@ -110,7 +113,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 324.78,
+      "points": 263.38,
       "team": "MIN",
       "draftYear": 2020,
       "draftTeam": "MIN"
@@ -123,7 +126,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 44.7,
+      "points": 40.66,
       "team": "MIN",
       "draftYear": 2022,
       "draftTeam": "MIN"
@@ -136,7 +139,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 73.6,
+      "points": 72.3,
       "team": "DAL",
       "draftYear": 2023,
       "draftTeam": "DAL"
@@ -149,7 +152,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 97.14,
+      "points": 46.28,
       "team": "NYG",
       "draftYear": 2019,
       "draftTeam": "DEN"
@@ -162,7 +165,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 82.1,
+      "points": 78,
       "team": "LAR",
       "draftYear": 2020,
       "draftTeam": "SEA"
@@ -175,7 +178,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 108,
+      "points": 88.7,
       "team": "BUF",
       "draftYear": 2024,
       "draftTeam": "BUF"
@@ -188,7 +191,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 44.5,
+      "points": 38.5,
       "team": "TBB",
       "draftYear": 2016,
       "draftTeam": "NYG"
@@ -201,7 +204,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 20.1,
+      "points": 7.1,
       "team": "DEN",
       "draftYear": 2020,
       "draftTeam": "NOS"
@@ -214,9 +217,22 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 352.38,
+      "points": 301,
       "team": "NYJ",
       "draftYear": 2005,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "16896",
+      "name": "Shrader, Spencer",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 16.2,
+      "team": "KCC",
+      "draftYear": 2024,
       "draftTeam": "FA"
     },
     {
@@ -227,7 +243,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 13.48,
+      "points": 10.76,
       "team": "NYG",
       "draftYear": 2023,
       "draftTeam": "FA"
@@ -240,7 +256,7 @@
       "franchiseId": "0001",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 17.92,
+      "points": 0,
       "team": "NYJ",
       "draftYear": 2011,
       "draftTeam": "BAL"
@@ -251,25 +267,12 @@
       "position": "TE",
       "salary": 425000,
       "franchiseId": "0001",
-      "status": "ROSTER",
+      "status": "INJURED_RESERVE",
       "contractYear": "1",
-      "points": 2.9,
+      "points": 0,
       "team": "LAR",
       "draftYear": 2016,
       "draftTeam": "RAM"
-    },
-    {
-      "id": "14592",
-      "name": "Zaccheaus, Olamide",
-      "position": "WR",
-      "salary": 425000,
-      "franchiseId": "0001",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 19.3,
-      "team": "WAS",
-      "draftYear": 2019,
-      "draftTeam": "FA"
     },
     {
       "id": "16080",
@@ -344,7 +347,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 252.6,
+      "points": 216.5,
       "team": "DAL",
       "draftYear": 2020,
       "draftTeam": "DAL"
@@ -357,7 +360,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 202.2,
+      "points": 163.1,
       "team": "TBB",
       "draftYear": 2019,
       "draftTeam": "FA"
@@ -370,7 +373,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 284.1,
+      "points": 231.1,
       "team": "ARI",
       "draftYear": 2022,
       "draftTeam": "ARI"
@@ -383,7 +386,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 126.1,
+      "points": 94.3,
       "team": "GBP",
       "draftYear": 2022,
       "draftTeam": "GBP"
@@ -396,7 +399,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 237.2,
+      "points": 209.8,
       "team": "NYJ",
       "draftYear": 2022,
       "draftTeam": "NYJ"
@@ -409,7 +412,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 262.2,
+      "points": 214.3,
       "team": "SFO",
       "draftYear": 2017,
       "draftTeam": "SFO"
@@ -422,7 +425,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 245.8,
+      "points": 210.4,
       "team": "CAR",
       "draftYear": 2021,
       "draftTeam": "CAR"
@@ -448,7 +451,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 240.8,
+      "points": 173.3,
       "team": "TBB",
       "draftYear": 2014,
       "draftTeam": "TBB"
@@ -461,7 +464,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 232.47,
+      "points": 212.87,
       "team": "GBP",
       "draftYear": 2023,
       "draftTeam": "GBP"
@@ -474,7 +477,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 73.2,
+      "points": 65.74,
       "team": "TBB",
       "draftYear": 2023,
       "draftTeam": "FA"
@@ -500,7 +503,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 250.54,
+      "points": 214.92,
       "team": "IND",
       "draftYear": 2023,
       "draftTeam": "IND"
@@ -513,7 +516,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 157,
+      "points": 95.6,
       "team": "ATL",
       "draftYear": 1970,
       "draftTeam": "ATL"
@@ -526,7 +529,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 166,
+      "points": 148,
       "team": "HOU",
       "draftYear": 1970,
       "draftTeam": "HOU"
@@ -539,7 +542,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 189.4,
+      "points": 159.6,
       "team": "DAL",
       "draftYear": 2020,
       "draftTeam": "FA"
@@ -552,7 +555,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 106.48,
+      "points": 87.18,
       "team": "IND",
       "draftYear": 2008,
       "draftTeam": "BAL"
@@ -565,7 +568,7 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 69.3,
+      "points": 59.6,
       "team": "CAR",
       "draftYear": 2021,
       "draftTeam": "CAR"
@@ -578,9 +581,35 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 92.5,
+      "points": 76.7,
       "team": "TEN",
       "draftYear": 2020,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "13315",
+      "name": "Saubert, Eric",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0002",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 3.1,
+      "team": "SFO",
+      "draftYear": 2017,
+      "draftTeam": "ATL"
+    },
+    {
+      "id": "15743",
+      "name": "McCormick, Sincere",
+      "position": "RB",
+      "salary": 500000,
+      "franchiseId": "0002",
+      "status": "ROSTER",
+      "contractYear": "3",
+      "points": 9.4,
+      "team": "LVR",
+      "draftYear": 2022,
       "draftTeam": "FA"
     },
     {
@@ -591,36 +620,10 @@
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 39,
+      "points": 4,
       "team": "ARI",
       "draftYear": 2023,
       "draftTeam": "NEP"
-    },
-    {
-      "id": "0507",
-      "name": "Browns, Cleveland",
-      "position": "Def",
-      "salary": 425000,
-      "franchiseId": "0002",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 118,
-      "team": "CLE",
-      "draftYear": 1970,
-      "draftTeam": "CLE"
-    },
-    {
-      "id": "15250",
-      "name": "Ehlinger, Sam",
-      "position": "QB",
-      "salary": 425000,
-      "franchiseId": "0002",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 0,
-      "team": "IND",
-      "draftYear": 2021,
-      "draftTeam": "IND"
     },
     {
       "id": "14079",
@@ -647,19 +650,6 @@
       "team": "CIN",
       "draftYear": 2021,
       "draftTeam": "CIN"
-    },
-    {
-      "id": "15743",
-      "name": "McCormick, Sincere",
-      "position": "RB",
-      "salary": 500000,
-      "franchiseId": "0002",
-      "status": "INJURED_RESERVE",
-      "contractYear": "3",
-      "points": 12.4,
-      "team": "LVR",
-      "draftYear": 2022,
-      "draftTeam": "FA"
     },
     {
       "id": "16594",
@@ -708,7 +698,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 194.9,
+      "points": 166.8,
       "team": "LVR",
       "draftYear": 2019,
       "draftTeam": "FA"
@@ -721,7 +711,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 157.5,
+      "points": 146.2,
       "team": "CHI",
       "draftYear": 2020,
       "draftTeam": "CHI"
@@ -734,7 +724,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 177.8,
+      "points": 156.6,
       "team": "IND",
       "draftYear": 2022,
       "draftTeam": "IND"
@@ -747,7 +737,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 182.52,
+      "points": 177.6,
       "team": "DET",
       "draftYear": 1970,
       "draftTeam": "DET"
@@ -760,7 +750,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 503.34,
+      "points": 396.44,
       "team": "TBB",
       "draftYear": 2018,
       "draftTeam": "CLE"
@@ -799,7 +789,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 249.1,
+      "points": 214.4,
       "team": "CLE",
       "draftYear": 2020,
       "draftTeam": "DEN"
@@ -812,7 +802,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 135.45,
+      "points": 130.23,
       "team": "IND",
       "draftYear": 1970,
       "draftTeam": "IND"
@@ -825,7 +815,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 115.42,
+      "points": 112.42,
       "team": "SFO",
       "draftYear": 1970,
       "draftTeam": "SFO"
@@ -838,7 +828,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 247.65,
+      "points": 211.8,
       "team": "MIN",
       "draftYear": 2017,
       "draftTeam": "GBP"
@@ -851,7 +841,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 257.6,
+      "points": 236.3,
       "team": "PIT",
       "draftYear": 2014,
       "draftTeam": "FA"
@@ -864,7 +854,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 174.1,
+      "points": 127.3,
       "team": "CHI",
       "draftYear": 2013,
       "draftTeam": "SDC"
@@ -877,7 +867,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 118.9,
+      "points": 111.7,
       "team": "CAR",
       "draftYear": 2024,
       "draftTeam": "CAR"
@@ -890,7 +880,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 8.6,
+      "points": 0,
       "team": "BAL",
       "draftYear": 2024,
       "draftTeam": "BAL"
@@ -903,7 +893,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 8.17,
+      "points": 3.72,
       "team": "BAL",
       "draftYear": 2024,
       "draftTeam": "BAL"
@@ -916,7 +906,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 63.33,
+      "points": 30.83,
       "team": "SFO",
       "draftYear": 2024,
       "draftTeam": "SFO"
@@ -929,7 +919,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 37,
+      "points": 27,
       "team": "HOU",
       "draftYear": 2022,
       "draftTeam": "HOU"
@@ -942,7 +932,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 51.7,
+      "points": 45.8,
       "team": "PIT",
       "draftYear": 2017,
       "draftTeam": "LAC"
@@ -955,7 +945,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 29.8,
+      "points": 24,
       "team": "DEN",
       "draftYear": 2024,
       "draftTeam": "DEN"
@@ -968,7 +958,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 233.8,
+      "points": 162.2,
       "team": "JAC",
       "draftYear": 2024,
       "draftTeam": "JAC"
@@ -981,7 +971,7 @@
       "franchiseId": "0003",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 13.6,
+      "points": 0,
       "team": "KCC",
       "draftYear": 2019,
       "draftTeam": "BAL"
@@ -1046,7 +1036,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 175.56,
+      "points": 174.76,
       "team": "PIT",
       "draftYear": 2021,
       "draftTeam": "CHI"
@@ -1059,7 +1049,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 163.42,
+      "points": 164.82,
       "team": "CHI",
       "draftYear": 1970,
       "draftTeam": "CHI"
@@ -1072,7 +1062,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 36.24,
+      "points": 27.6,
       "team": "NOS",
       "draftYear": 2018,
       "draftTeam": "DAL"
@@ -1085,7 +1075,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 209,
+      "points": 187.5,
       "team": "CHI",
       "draftYear": 2018,
       "draftTeam": "CAR"
@@ -1098,7 +1088,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 75.25,
+      "points": 53.6,
       "team": "LAC",
       "draftYear": 2018,
       "draftTeam": "FA"
@@ -1111,7 +1101,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 148,
+      "points": 137.9,
       "team": "CIN",
       "draftYear": 2018,
       "draftTeam": "MIA"
@@ -1124,7 +1114,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 171.9,
+      "points": 154.8,
       "team": "BAL",
       "draftYear": 2012,
       "draftTeam": "FA"
@@ -1137,7 +1127,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 114.7,
+      "points": 100.2,
       "team": "NEP",
       "draftYear": 2023,
       "draftTeam": "NEP"
@@ -1150,7 +1140,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 120.79,
+      "points": 101.97,
       "team": "BAL",
       "draftYear": 2019,
       "draftTeam": "BAL"
@@ -1163,7 +1153,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 206.42,
+      "points": 176.62,
       "team": "PIT",
       "draftYear": 2012,
       "draftTeam": "SEA"
@@ -1189,10 +1179,23 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 214.8,
+      "points": 203.6,
       "team": "SFO",
       "draftYear": 2020,
       "draftTeam": "SFO"
+    },
+    {
+      "id": "14208",
+      "name": "Johnson, Diontae",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0004",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 98.5,
+      "team": "BAL",
+      "draftYear": 2019,
+      "draftTeam": "PIT"
     },
     {
       "id": "14143",
@@ -1202,7 +1205,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 70.3,
+      "points": 59.9,
       "team": "BUF",
       "draftYear": 2019,
       "draftTeam": "BUF"
@@ -1215,7 +1218,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 94.2,
+      "points": 91.4,
       "team": "LAR",
       "draftYear": 2021,
       "draftTeam": "LAR"
@@ -1228,7 +1231,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 343.08,
+      "points": 304.38,
       "team": "CHI",
       "draftYear": 2024,
       "draftTeam": "CHI"
@@ -1241,7 +1244,7 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 45.4,
+      "points": 35,
       "team": "WAS",
       "draftYear": 2024,
       "draftTeam": "WAS"
@@ -1254,10 +1257,36 @@
       "franchiseId": "0004",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 8.75,
+      "points": 7.55,
       "team": "MIA",
       "draftYear": 2018,
       "draftTeam": "FA"
+    },
+    {
+      "id": "15730",
+      "name": "Goodson, Tyler",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0004",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 25.4,
+      "team": "IND",
+      "draftYear": 2022,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "15285",
+      "name": "Wallace, Tylan",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0004",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 9.33,
+      "team": "BAL",
+      "draftYear": 2021,
+      "draftTeam": "BAL"
     },
     {
       "id": "13354",
@@ -1265,25 +1294,12 @@
       "position": "PK",
       "salary": 792000,
       "franchiseId": "0004",
-      "status": "ROSTER",
+      "status": "INJURED_RESERVE",
       "contractYear": "3",
-      "points": 129.3,
+      "points": 118.9,
       "team": "KCC",
       "draftYear": 2017,
       "draftTeam": "CAR"
-    },
-    {
-      "id": "16188",
-      "name": "Johnston, Quentin",
-      "position": "WR",
-      "salary": 2035000,
-      "franchiseId": "0004",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 160.6,
-      "team": "LAC",
-      "draftYear": 2023,
-      "draftTeam": "LAC"
     },
     {
       "id": "13130",
@@ -1306,7 +1322,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 427.92,
+      "points": 391.28,
       "team": "PHI",
       "draftYear": 2020,
       "draftTeam": "PHI"
@@ -1319,7 +1335,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 193.6,
+      "points": 178.2,
       "team": "ATL",
       "draftYear": 2020,
       "draftTeam": "CHI"
@@ -1332,7 +1348,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 306.65,
+      "points": 244.45,
       "team": "BUF",
       "draftYear": 2022,
       "draftTeam": "BUF"
@@ -1345,7 +1361,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 185.5,
+      "points": 165.4,
       "team": "BUF",
       "draftYear": 2022,
       "draftTeam": "BUF"
@@ -1358,7 +1374,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 166.2,
+      "points": 125.6,
       "team": "PHI",
       "draftYear": 2017,
       "draftTeam": "CIN"
@@ -1371,7 +1387,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 116.29,
+      "points": 90.62,
       "team": "PIT",
       "draftYear": 2022,
       "draftTeam": "FA"
@@ -1384,7 +1400,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 265.85,
+      "points": 213.9,
       "team": "ARI",
       "draftYear": 2017,
       "draftTeam": "PIT"
@@ -1397,7 +1413,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 32.06,
+      "points": 30.5,
       "team": "NYG",
       "draftYear": 2023,
       "draftTeam": "NYG"
@@ -1410,7 +1426,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 92.85,
+      "points": 80.6,
       "team": "DEN",
       "draftYear": 2023,
       "draftTeam": "FA"
@@ -1423,7 +1439,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 233.61,
+      "points": 200.03,
       "team": "BUF",
       "draftYear": 1970,
       "draftTeam": "BUF"
@@ -1436,7 +1452,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 224.2,
+      "points": 187.1,
       "team": "KCC",
       "draftYear": 2013,
       "draftTeam": "KCC"
@@ -1449,7 +1465,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 116.1,
+      "points": 107,
       "team": "SEA",
       "draftYear": 2015,
       "draftTeam": "SEA"
@@ -1462,7 +1478,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 312.36,
+      "points": 287,
       "team": "LAR",
       "draftYear": 2009,
       "draftTeam": "DET"
@@ -1475,7 +1491,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 198.04,
+      "points": 156.4,
       "team": "PHI",
       "draftYear": 1970,
       "draftTeam": "PHI"
@@ -1488,7 +1504,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 183.16,
+      "points": 143.56,
       "team": "SFO",
       "draftYear": 2019,
       "draftTeam": "SFO"
@@ -1501,7 +1517,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 224.84,
+      "points": 173.44,
       "team": "LAC",
       "draftYear": 2024,
       "draftTeam": "LAC"
@@ -1514,7 +1530,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 48.12,
+      "points": 39.64,
       "team": "WAS",
       "draftYear": 2017,
       "draftTeam": "TBB"
@@ -1527,7 +1543,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 122.5,
+      "points": 89.44,
       "team": "LVR",
       "draftYear": 2023,
       "draftTeam": "LVR"
@@ -1540,7 +1556,7 @@
       "franchiseId": "0005",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 10.9,
+      "points": 3.4,
       "team": "LAC",
       "draftYear": 2024,
       "draftTeam": "LAC"
@@ -1644,7 +1660,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 113,
+      "points": 108.4,
       "team": "CLE",
       "draftYear": 2021,
       "draftTeam": "NYJ"
@@ -1657,7 +1673,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 361.5,
+      "points": 312.4,
       "team": "BAL",
       "draftYear": 2016,
       "draftTeam": "TEN"
@@ -1670,7 +1686,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 163.8,
+      "points": 140.3,
       "team": "BAL",
       "draftYear": 2022,
       "draftTeam": "BAL"
@@ -1683,7 +1699,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 232,
+      "points": 170.2,
       "team": "NYJ",
       "draftYear": 2014,
       "draftTeam": "GBP"
@@ -1696,7 +1712,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 84.4,
+      "points": 76.6,
       "team": "NOS",
       "draftYear": 2018,
       "draftTeam": "GBP"
@@ -1722,7 +1738,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 113.77,
+      "points": 58,
       "team": "TEN",
       "draftYear": 2023,
       "draftTeam": "TEN"
@@ -1748,7 +1764,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 120.26,
+      "points": 60.56,
       "team": "JAC",
       "draftYear": 2021,
       "draftTeam": "NEP"
@@ -1774,7 +1790,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 142.2,
+      "points": 121,
       "team": "CIN",
       "draftYear": 2023,
       "draftTeam": "CIN"
@@ -1787,7 +1803,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 211.1,
+      "points": 184.1,
       "team": "DEN",
       "draftYear": 2016,
       "draftTeam": "FA"
@@ -1800,7 +1816,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 99.33,
+      "points": 93.71,
       "team": "TEN",
       "draftYear": 1970,
       "draftTeam": "TEN"
@@ -1813,7 +1829,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 234.6,
+      "points": 218.4,
       "team": "LAC",
       "draftYear": 1970,
       "draftTeam": "FA"
@@ -1826,7 +1842,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 25.48,
+      "points": 12.36,
       "team": "LVR",
       "draftYear": 2022,
       "draftTeam": "ATL"
@@ -1865,7 +1881,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 588.26,
+      "points": 482.26,
       "team": "BAL",
       "draftYear": 2018,
       "draftTeam": "FA"
@@ -1878,7 +1894,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 193.3,
+      "points": 169,
       "team": "CHI",
       "draftYear": 2020,
       "draftTeam": "DET"
@@ -1891,7 +1907,7 @@
       "franchiseId": "0006",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 24,
+      "points": 9.3,
       "team": "TEN",
       "draftYear": 2023,
       "draftTeam": "TEN"
@@ -1917,10 +1933,23 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 281.43,
+      "points": 235.13,
       "team": "DET",
       "draftYear": 2021,
       "draftTeam": "DET"
+    },
+    {
+      "id": "12620",
+      "name": "Prescott, Dak",
+      "position": "QB",
+      "salary": 6080250,
+      "franchiseId": "0007",
+      "status": "ROSTER",
+      "contractYear": "2",
+      "points": 200.76,
+      "team": "DAL",
+      "draftYear": 2016,
+      "draftTeam": "FA"
     },
     {
       "id": "0523",
@@ -1930,7 +1959,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 226.6,
+      "points": 186.4,
       "team": "GBP",
       "draftYear": 1970,
       "draftTeam": "GBP"
@@ -1943,7 +1972,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 226.4,
+      "points": 205.2,
       "team": "ATL",
       "draftYear": 2022,
       "draftTeam": "ATL"
@@ -1956,7 +1985,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 192.15,
+      "points": 182.1,
       "team": "WAS",
       "draftYear": 2022,
       "draftTeam": "WAS"
@@ -1969,7 +1998,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 185.15,
+      "points": 166.8,
       "team": "TBB",
       "draftYear": 2022,
       "draftTeam": "TBB"
@@ -1982,10 +2011,23 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 172.16,
+      "points": 166.56,
       "team": "NOS",
       "draftYear": 1970,
       "draftTeam": "NOS"
+    },
+    {
+      "id": "13680",
+      "name": "Hurst, Hayden",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0007",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 23.8,
+      "team": "LAC",
+      "draftYear": 2018,
+      "draftTeam": "BAL"
     },
     {
       "id": "16186",
@@ -1995,7 +2037,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 177,
+      "points": 155.2,
       "team": "MIN",
       "draftYear": 2023,
       "draftTeam": "MIN"
@@ -2008,7 +2050,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 198.88,
+      "points": 153.8,
       "team": "CAR",
       "draftYear": 2023,
       "draftTeam": "CAR"
@@ -2021,7 +2063,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 63.3,
+      "points": 61.8,
       "team": "ARI",
       "draftYear": 2023,
       "draftTeam": "MIA"
@@ -2034,7 +2076,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 137.1,
+      "points": 118.3,
       "team": "HOU",
       "draftYear": 2018,
       "draftTeam": "DAL"
@@ -2047,7 +2089,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 230.2,
+      "points": 198.2,
       "team": "MIA",
       "draftYear": 2017,
       "draftTeam": "TEN"
@@ -2060,7 +2102,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 255.25,
+      "points": 241.05,
       "team": "HOU",
       "draftYear": 2017,
       "draftTeam": "CIN"
@@ -2073,7 +2115,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 77.79,
+      "points": 64.93,
       "team": "ARI",
       "draftYear": 2019,
       "draftTeam": "FA"
@@ -2086,7 +2128,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 158.8,
+      "points": 144,
       "team": "LVR",
       "draftYear": 2018,
       "draftTeam": "MIN"
@@ -2099,7 +2141,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 140.25,
+      "points": 134.15,
       "team": "ATL",
       "draftYear": 2018,
       "draftTeam": "FA"
@@ -2112,10 +2154,36 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 183.7,
+      "points": 167.3,
       "team": "DET",
       "draftYear": 2023,
       "draftTeam": "FA"
+    },
+    {
+      "id": "10313",
+      "name": "Dalton, Andy",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0007",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 103.52,
+      "team": "CAR",
+      "draftYear": 2011,
+      "draftTeam": "CIN"
+    },
+    {
+      "id": "15257",
+      "name": "Sermon, Trey",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0007",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 27.63,
+      "team": "IND",
+      "draftYear": 2021,
+      "draftTeam": "SFO"
     },
     {
       "id": "14778",
@@ -2125,7 +2193,7 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 276.9,
+      "points": 256.56,
       "team": "MIA",
       "draftYear": 2020,
       "draftTeam": "MIA"
@@ -2138,9 +2206,22 @@
       "franchiseId": "0007",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 123.9,
+      "points": 103.5,
       "team": "CAR",
       "draftYear": 2014,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "13980",
+      "name": "Badgley, Mike",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0007",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 0,
+      "team": "DET",
+      "draftYear": 2018,
       "draftTeam": "FA"
     },
     {
@@ -2157,16 +2238,16 @@
       "draftTeam": "ARI"
     },
     {
-      "id": "12620",
-      "name": "Prescott, Dak",
-      "position": "QB",
-      "salary": 6080250,
+      "id": "13632",
+      "name": "Lazard, Allen",
+      "position": "WR",
+      "salary": 425000,
       "franchiseId": "0007",
       "status": "INJURED_RESERVE",
-      "contractYear": "2",
-      "points": 200.76,
-      "team": "DAL",
-      "draftYear": 2016,
+      "contractYear": "1",
+      "points": 76.7,
+      "team": "NYJ",
+      "draftYear": 2018,
       "draftTeam": "FA"
     },
     {
@@ -2216,10 +2297,36 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 68.59,
+      "points": 52.84,
       "team": "PHI",
       "draftYear": 2021,
       "draftTeam": "PHI"
+    },
+    {
+      "id": "12175",
+      "name": "Cooper, Amari",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 118.1,
+      "team": "BUF",
+      "draftYear": 2015,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "0507",
+      "name": "Browns, Cleveland",
+      "position": "Def",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 108.6,
+      "team": "CLE",
+      "draftYear": 1970,
+      "draftTeam": "CLE"
     },
     {
       "id": "15799",
@@ -2229,7 +2336,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 121.2,
+      "points": 104.1,
       "team": "DAL",
       "draftYear": 2022,
       "draftTeam": "DAL"
@@ -2242,7 +2349,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 194.5,
+      "points": 160.1,
       "team": "TEN",
       "draftYear": 2018,
       "draftTeam": "ATL"
@@ -2255,7 +2362,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 143.51,
+      "points": 120.49,
       "team": "PIT",
       "draftYear": 2022,
       "draftTeam": "PIT"
@@ -2268,7 +2375,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 194.3,
+      "points": 143.5,
       "team": "DET",
       "draftYear": 2023,
       "draftTeam": "DET"
@@ -2281,7 +2388,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 333.6,
+      "points": 263.25,
       "team": "DET",
       "draftYear": 2023,
       "draftTeam": "DET"
@@ -2307,10 +2414,23 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 141.63,
+      "points": 119.63,
       "team": "IND",
       "draftYear": 2023,
       "draftTeam": "IND"
+    },
+    {
+      "id": "16444",
+      "name": "Grupe, Blake",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 159.9,
+      "team": "NOS",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "14073",
@@ -2320,10 +2440,36 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 303,
+      "points": 255.8,
       "team": "GBP",
       "draftYear": 2019,
       "draftTeam": "OAK"
+    },
+    {
+      "id": "16188",
+      "name": "Johnston, Quentin",
+      "position": "WR",
+      "salary": 2035000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 137,
+      "team": "LAC",
+      "draftYear": 2023,
+      "draftTeam": "LAC"
+    },
+    {
+      "id": "12785",
+      "name": "Robinson, Demarcus",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 127.1,
+      "team": "LAR",
+      "draftYear": 2016,
+      "draftTeam": "KCC"
     },
     {
       "id": "16149",
@@ -2333,7 +2479,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 192.08,
+      "points": 196.52,
       "team": "TEN",
       "draftYear": 2023,
       "draftTeam": "TEN"
@@ -2346,7 +2492,7 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 181,
+      "points": 108.62,
       "team": "DEN",
       "draftYear": 2024,
       "draftTeam": "DEN"
@@ -2359,49 +2505,36 @@
       "franchiseId": "0008",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 120.6,
+      "points": 83.6,
       "team": "MIA",
       "draftYear": 1970,
       "draftTeam": "MIA"
     },
     {
-      "id": "16628",
-      "name": "McMillan, Jalen",
+      "id": "13348",
+      "name": "Moore, David",
       "position": "WR",
-      "salary": 500000,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 41.9,
-      "team": "TBB",
-      "draftYear": 2024,
-      "draftTeam": "TBB"
-    },
-    {
-      "id": "11947",
-      "name": "McManus, Brandon",
-      "position": "PK",
       "salary": 425000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "2",
-      "points": 51.7,
-      "team": "GBP",
-      "draftYear": 2014,
-      "draftTeam": "FA"
+      "contractYear": "1",
+      "points": 16.92,
+      "team": "CAR",
+      "draftYear": 2017,
+      "draftTeam": "SEA"
     },
     {
-      "id": "16752",
-      "name": "Davis, Isaiah",
+      "id": "14852",
+      "name": "Gibson, Antonio",
       "position": "RB",
       "salary": 425000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5",
-      "points": 5.42,
-      "team": "NYJ",
-      "draftYear": 2024,
-      "draftTeam": "NYJ"
+      "contractYear": "1",
+      "points": 58.34,
+      "team": "NEP",
+      "draftYear": 2020,
+      "draftTeam": "WAS"
     },
     {
       "id": "16640",
@@ -2409,7 +2542,7 @@
       "position": "WR",
       "salary": 425000,
       "franchiseId": "0008",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 2.34,
       "team": "SFO",
@@ -2422,7 +2555,7 @@
       "position": "WR",
       "salary": 525000,
       "franchiseId": "0008",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 0,
       "team": "PIT",
@@ -2430,17 +2563,17 @@
       "draftTeam": "PIT"
     },
     {
-      "id": "16646",
-      "name": "Bell, Jaheim",
-      "position": "TE",
-      "salary": 425000,
+      "id": "16628",
+      "name": "McMillan, Jalen",
+      "position": "WR",
+      "salary": 500000,
       "franchiseId": "0008",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
-      "points": 0,
-      "team": "NEP",
+      "points": 7.2,
+      "team": "TBB",
       "draftYear": 2024,
-      "draftTeam": "NEP"
+      "draftTeam": "TBB"
     },
     {
       "id": "0531",
@@ -2450,7 +2583,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 127.24,
+      "points": 87.44,
       "team": "BAL",
       "draftYear": 1970,
       "draftTeam": "BAL"
@@ -2463,10 +2596,23 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 127.6,
+      "points": 120.05,
       "team": "DEN",
       "draftYear": 2021,
       "draftTeam": "DEN"
+    },
+    {
+      "id": "15329",
+      "name": "Pitts, Kyle",
+      "position": "TE",
+      "salary": 3327500,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "2",
+      "points": 129.3,
+      "team": "ATL",
+      "draftYear": 2021,
+      "draftTeam": "ATL"
     },
     {
       "id": "15789",
@@ -2476,7 +2622,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 107.9,
+      "points": 105.6,
       "team": "GBP",
       "draftYear": 2022,
       "draftTeam": "GBP"
@@ -2489,7 +2635,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 264.7,
+      "points": 198.8,
       "team": "IND",
       "draftYear": 2020,
       "draftTeam": "IND"
@@ -2502,7 +2648,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 181.8,
+      "points": 131.4,
       "team": "CIN",
       "draftYear": 2020,
       "draftTeam": "CIN"
@@ -2528,7 +2674,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 114,
+      "points": 104.1,
       "team": "BUF",
       "draftYear": 2023,
       "draftTeam": "BUF"
@@ -2541,10 +2687,36 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 506.9,
+      "points": 435.94,
       "team": "CIN",
       "draftYear": 2020,
       "draftTeam": "CIN"
+    },
+    {
+      "id": "14056",
+      "name": "Murray, Kyler",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 337.58,
+      "team": "ARI",
+      "draftYear": 2019,
+      "draftTeam": "ARI"
+    },
+    {
+      "id": "14071",
+      "name": "Montgomery, David",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 253.87,
+      "team": "DET",
+      "draftYear": 2019,
+      "draftTeam": "CHI"
     },
     {
       "id": "0528",
@@ -2554,7 +2726,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 137.99,
+      "points": 103.79,
       "team": "LAR",
       "draftYear": 1970,
       "draftTeam": "FA"
@@ -2567,7 +2739,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 364.1,
+      "points": 330,
       "team": "CIN",
       "draftYear": 2021,
       "draftTeam": "CIN"
@@ -2580,7 +2752,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 285.5,
+      "points": 250,
       "team": "LVR",
       "draftYear": 2024,
       "draftTeam": "LVR"
@@ -2593,7 +2765,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 63.8,
+      "points": 41,
       "team": "NEP",
       "draftYear": 2023,
       "draftTeam": "NEP"
@@ -2606,7 +2778,7 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 203.8,
+      "points": 185.3,
       "team": "ARI",
       "draftYear": 2024,
       "draftTeam": "ARI"
@@ -2619,62 +2791,10 @@
       "franchiseId": "0009",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 30,
+      "points": 6,
       "team": "MIN",
       "draftYear": 2024,
       "draftTeam": "MIN"
-    },
-    {
-      "id": "14803",
-      "name": "Edwards-Helaire, Clyde",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0009",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 3.5,
-      "team": "FA",
-      "draftYear": 2020,
-      "draftTeam": "KCC"
-    },
-    {
-      "id": "16168",
-      "name": "Abanikanda, Israel",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0009",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 0,
-      "team": "SFO",
-      "draftYear": 2023,
-      "draftTeam": "NYJ"
-    },
-    {
-      "id": "13113",
-      "name": "Watson, Deshaun",
-      "position": "QB",
-      "salary": 425000,
-      "franchiseId": "0009",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 135.26,
-      "team": "CLE",
-      "draftYear": 2017,
-      "draftTeam": "HOU"
-    },
-    {
-      "id": "13163",
-      "name": "Godwin, Chris",
-      "position": "WR",
-      "salary": 3575000,
-      "franchiseId": "0009",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 166.6,
-      "team": "TBB",
-      "draftYear": 2017,
-      "draftTeam": "TBB"
     },
     {
       "id": "16194",
@@ -2682,7 +2802,7 @@
       "position": "WR",
       "salary": 687500,
       "franchiseId": "0009",
-      "status": "ROSTER",
+      "status": "INJURED_RESERVE",
       "contractYear": "4",
       "points": 105.8,
       "team": "KCC",
@@ -2690,12 +2810,38 @@
       "draftTeam": "KCC"
     },
     {
+      "id": "13163",
+      "name": "Godwin, Chris",
+      "position": "WR",
+      "salary": 3575000,
+      "franchiseId": "0009",
+      "status": "INJURED_RESERVE",
+      "contractYear": "4",
+      "points": 166.6,
+      "team": "TBB",
+      "draftYear": 2017,
+      "draftTeam": "TBB"
+    },
+    {
+      "id": "13113",
+      "name": "Watson, Deshaun",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "INJURED_RESERVE",
+      "contractYear": "5",
+      "points": 135.26,
+      "team": "CLE",
+      "draftYear": 2017,
+      "draftTeam": "HOU"
+    },
+    {
       "id": "16633",
       "name": "Whittington, Jordan",
       "position": "WR",
       "salary": 425000,
       "franchiseId": "0009",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 0,
       "team": "LAR",
@@ -2710,7 +2856,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 77.14,
+      "points": 74.74,
       "team": "JAC",
       "draftYear": 1970,
       "draftTeam": "JAC"
@@ -2729,6 +2875,19 @@
       "draftTeam": "NYG"
     },
     {
+      "id": "13189",
+      "name": "Engram, Evan",
+      "position": "TE",
+      "salary": 3146000,
+      "franchiseId": "0010",
+      "status": "ROSTER",
+      "contractYear": "2",
+      "points": 102.1,
+      "team": "JAC",
+      "draftYear": 2017,
+      "draftTeam": "NYG"
+    },
+    {
       "id": "15337",
       "name": "Gray, Noah",
       "position": "TE",
@@ -2736,7 +2895,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 129.8,
+      "points": 117.7,
       "team": "KCC",
       "draftYear": 2021,
       "draftTeam": "KCC"
@@ -2749,7 +2908,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 31.8,
+      "points": 30.4,
       "team": "CLE",
       "draftYear": 2022,
       "draftTeam": "NEP"
@@ -2762,7 +2921,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 196.4,
+      "points": 161.7,
       "team": "DET",
       "draftYear": 2022,
       "draftTeam": "DET"
@@ -2775,7 +2934,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 12,
+      "points": 10.6,
       "team": "NYG",
       "draftYear": 2023,
       "draftTeam": "NYG"
@@ -2788,7 +2947,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 301.85,
+      "points": 265.3,
       "team": "ATL",
       "draftYear": 2023,
       "draftTeam": "ATL"
@@ -2801,7 +2960,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 313.42,
+      "points": 277.72,
       "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "HOU"
@@ -2814,7 +2973,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 68.95,
+      "points": 68.65,
       "team": "CHI",
       "draftYear": 2023,
       "draftTeam": "CHI"
@@ -2840,10 +2999,23 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 239.9,
+      "points": 210.4,
       "team": "NYG",
       "draftYear": 2024,
       "draftTeam": "NYG"
+    },
+    {
+      "id": "15972",
+      "name": "Mason, Jordan",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0010",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 162.82,
+      "team": "SFO",
+      "draftYear": 2022,
+      "draftTeam": "FA"
     },
     {
       "id": "8851",
@@ -2853,7 +3025,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 111.2,
+      "points": 108.2,
       "team": "TEN",
       "draftYear": 2007,
       "draftTeam": "DAL"
@@ -2866,7 +3038,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 112.45,
+      "points": 94.8,
       "team": "NYG",
       "draftYear": 2024,
       "draftTeam": "NYG"
@@ -2879,7 +3051,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 67.62,
+      "points": 52.32,
       "team": "JAC",
       "draftYear": 2023,
       "draftTeam": "JAC"
@@ -2892,7 +3064,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 70.9,
+      "points": 68.9,
       "team": "MIN",
       "draftYear": 2022,
       "draftTeam": "MIN"
@@ -2918,7 +3090,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 56,
+      "points": 35.2,
       "team": "CAR",
       "draftYear": 2024,
       "draftTeam": "FA"
@@ -2931,7 +3103,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 35.7,
+      "points": 33.6,
       "team": "LVR",
       "draftYear": 2023,
       "draftTeam": "LVR"
@@ -2944,7 +3116,7 @@
       "franchiseId": "0010",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 77.9,
+      "points": 70.2,
       "team": "KCC",
       "draftYear": 2022,
       "draftTeam": "KCC"
@@ -3015,32 +3187,6 @@
       "draftTeam": "FA"
     },
     {
-      "id": "15972",
-      "name": "Mason, Jordan",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0010",
-      "status": "INJURED_RESERVE",
-      "contractYear": "1",
-      "points": 162.82,
-      "team": "SFO",
-      "draftYear": 2022,
-      "draftTeam": "FA"
-    },
-    {
-      "id": "13189",
-      "name": "Engram, Evan",
-      "position": "TE",
-      "salary": 3146000,
-      "franchiseId": "0010",
-      "status": "INJURED_RESERVE",
-      "contractYear": "2",
-      "points": 102.1,
-      "team": "JAC",
-      "draftYear": 2017,
-      "draftTeam": "NYG"
-    },
-    {
       "id": "16580",
       "name": "Maye, Drake",
       "position": "QB",
@@ -3087,7 +3233,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 205.8,
+      "points": 148.2,
       "team": "PHI",
       "draftYear": 2021,
       "draftTeam": "PHI"
@@ -3100,7 +3246,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 158.1,
+      "points": 127,
       "team": "BAL",
       "draftYear": 2021,
       "draftTeam": "BAL"
@@ -3113,7 +3259,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 155.7,
+      "points": 124.6,
       "team": "NYG",
       "draftYear": 2022,
       "draftTeam": "NYG"
@@ -3126,7 +3272,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": -0.84,
+      "points": 0,
       "team": "SEA",
       "draftYear": 2022,
       "draftTeam": "WAS"
@@ -3139,7 +3285,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 151.62,
+      "points": 138.98,
       "team": "ARI",
       "draftYear": 1970,
       "draftTeam": "ARI"
@@ -3152,7 +3298,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 257.1,
+      "points": 215.5,
       "team": "DAL",
       "draftYear": 2023,
       "draftTeam": "FA"
@@ -3165,7 +3311,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 183.2,
+      "points": 161,
       "team": "GBP",
       "draftYear": 2023,
       "draftTeam": "GBP"
@@ -3178,7 +3324,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 131.1,
+      "points": 114.25,
       "team": "JAC",
       "draftYear": 2023,
       "draftTeam": "JAC"
@@ -3191,7 +3337,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 205.1,
+      "points": 182.1,
       "team": "SEA",
       "draftYear": 2023,
       "draftTeam": "SEA"
@@ -3204,7 +3350,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 54.9,
+      "points": 43,
       "team": "NEP",
       "draftYear": 2017,
       "draftTeam": "FA"
@@ -3217,7 +3363,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 204.8,
+      "points": 165.8,
       "team": "BAL",
       "draftYear": 2018,
       "draftTeam": "BAL"
@@ -3230,7 +3376,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 153,
+      "points": 139.8,
       "team": "NYG",
       "draftYear": 1970,
       "draftTeam": "NYG"
@@ -3243,7 +3389,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 147.23,
+      "points": 115.43,
       "team": "TBB",
       "draftYear": 1970,
       "draftTeam": "TBB"
@@ -3256,7 +3402,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 140.9,
+      "points": 124.8,
       "team": "CHI",
       "draftYear": 2014,
       "draftTeam": "FA"
@@ -3269,7 +3415,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 185.5,
+      "points": 165.1,
       "team": "NEP",
       "draftYear": 2016,
       "draftTeam": "SDC"
@@ -3282,7 +3428,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 214.5,
+      "points": 178.6,
       "team": "LAC",
       "draftYear": 2022,
       "draftTeam": "FA"
@@ -3295,7 +3441,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 200.8,
+      "points": 185.8,
       "team": "TEN",
       "draftYear": 2019,
       "draftTeam": "DAL"
@@ -3308,10 +3454,23 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 341.2,
+      "points": 301.08,
       "team": "SEA",
       "draftYear": 2013,
       "draftTeam": "NYJ"
+    },
+    {
+      "id": "16597",
+      "name": "Brooks, Jonathon",
+      "position": "RB",
+      "salary": 1000000,
+      "franchiseId": "0011",
+      "status": "ROSTER",
+      "contractYear": "5",
+      "points": 10.1,
+      "team": "CAR",
+      "draftYear": 2024,
+      "draftTeam": "CAR"
     },
     {
       "id": "13763",
@@ -3321,7 +3480,7 @@
       "franchiseId": "0011",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 108,
+      "points": 103.9,
       "team": "LAC",
       "draftYear": 2018,
       "draftTeam": "SEA"
@@ -3338,32 +3497,6 @@
       "team": "LVR",
       "draftYear": 2019,
       "draftTeam": "JAC"
-    },
-    {
-      "id": "14071",
-      "name": "Montgomery, David",
-      "position": "RB",
-      "salary": 425000,
-      "franchiseId": "0011",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 253.87,
-      "team": "DET",
-      "draftYear": 2019,
-      "draftTeam": "CHI"
-    },
-    {
-      "id": "16597",
-      "name": "Brooks, Jonathon",
-      "position": "RB",
-      "salary": 1000000,
-      "franchiseId": "0011",
-      "status": "INJURED_RESERVE",
-      "contractYear": "5",
-      "points": 10.1,
-      "team": "CAR",
-      "draftYear": 2024,
-      "draftTeam": "CAR"
     },
     {
       "id": "16604",
@@ -3399,7 +3532,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 202.45,
+      "points": 195.9,
       "team": "PIT",
       "draftYear": 2021,
       "draftTeam": "PIT"
@@ -3412,7 +3545,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 196.35,
+      "points": 176.05,
       "team": "NEP",
       "draftYear": 2021,
       "draftTeam": "NEP"
@@ -3425,7 +3558,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 205.62,
+      "points": 204.82,
       "team": "SEA",
       "draftYear": 1970,
       "draftTeam": "SEA"
@@ -3464,7 +3597,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 101.65,
+      "points": 94,
       "team": "ATL",
       "draftYear": 2022,
       "draftTeam": "ATL"
@@ -3477,7 +3610,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 526.34,
+      "points": 467.9,
       "team": "BUF",
       "draftYear": 2018,
       "draftTeam": "BUF"
@@ -3503,7 +3636,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 36.52,
+      "points": 31.19,
       "team": "TBB",
       "draftYear": 2023,
       "draftTeam": "TBB"
@@ -3516,7 +3649,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 175.5,
+      "points": 159.7,
       "team": "PIT",
       "draftYear": 2021,
       "draftTeam": "PIT"
@@ -3529,7 +3662,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 305.37,
+      "points": 274.52,
       "team": "LAR",
       "draftYear": 2022,
       "draftTeam": "LAR"
@@ -3542,7 +3675,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 90.8,
+      "points": 81.2,
       "team": "LAC",
       "draftYear": 2021,
       "draftTeam": "LAC"
@@ -3555,7 +3688,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 44.92,
+      "points": 40.92,
       "team": "CAR",
       "draftYear": 1970,
       "draftTeam": "CAR"
@@ -3568,7 +3701,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 101.5,
+      "points": 89,
       "team": "SEA",
       "draftYear": 2019,
       "draftTeam": "DEN"
@@ -3581,7 +3714,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 436.92,
+      "points": 394.74,
       "team": "MIN",
       "draftYear": 2018,
       "draftTeam": "NYJ"
@@ -3594,7 +3727,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 177.4,
+      "points": 159.8,
       "team": "SEA",
       "draftYear": 2014,
       "draftTeam": "FA"
@@ -3607,7 +3740,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 132.7,
+      "points": 119.2,
       "team": "LVR",
       "draftYear": 2019,
       "draftTeam": "MIN"
@@ -3633,7 +3766,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 62.4,
+      "points": 52.4,
       "team": "NEP",
       "draftYear": 2019,
       "draftTeam": "FA"
@@ -3646,7 +3779,7 @@
       "franchiseId": "0012",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 195,
+      "points": 177.5,
       "team": "SEA",
       "draftYear": 2019,
       "draftTeam": "SEA"
@@ -3711,7 +3844,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 253.79,
+      "points": 225.99,
       "team": "DEN",
       "draftYear": 1970,
       "draftTeam": "DEN"
@@ -3724,7 +3857,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 128.72,
+      "points": 83.92,
       "team": "CIN",
       "draftYear": 1970,
       "draftTeam": "CIN"
@@ -3737,7 +3870,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 324.46,
+      "points": 273.42,
       "team": "GBP",
       "draftYear": 2020,
       "draftTeam": "GBP"
@@ -3750,7 +3883,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 102.4,
+      "points": 87.4,
       "team": "NYG",
       "draftYear": 2019,
       "draftTeam": "NYG"
@@ -3763,7 +3896,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 169.2,
+      "points": 161.3,
       "team": "SEA",
       "draftYear": 2022,
       "draftTeam": "SEA"
@@ -3776,7 +3909,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 157.4,
+      "points": 153,
       "team": "TBB",
       "draftYear": 2022,
       "draftTeam": "TBB"
@@ -3789,10 +3922,23 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 212.9,
+      "points": 161.1,
       "team": "PHI",
       "draftYear": 2019,
       "draftTeam": "TEN"
+    },
+    {
+      "id": "11387",
+      "name": "Hopkins, Dustin",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 113.6,
+      "team": "CLE",
+      "draftYear": 2013,
+      "draftTeam": "BUF"
     },
     {
       "id": "16167",
@@ -3802,7 +3948,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 288.77,
+      "points": 248.62,
       "team": "MIA",
       "draftYear": 2023,
       "draftTeam": "MIA"
@@ -3815,7 +3961,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 98.7,
+      "points": 81.2,
       "team": "GBP",
       "draftYear": 2023,
       "draftTeam": "GBP"
@@ -3828,7 +3974,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 232.8,
+      "points": 215.3,
       "team": "HOU",
       "draftYear": 2016,
       "draftTeam": "FA"
@@ -3841,7 +3987,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 143.38,
+      "points": 125.54,
       "team": "LVR",
       "draftYear": 2023,
       "draftTeam": "LVR"
@@ -3854,10 +4000,23 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 345.7,
+      "points": 271.3,
       "team": "LAC",
       "draftYear": 2020,
       "draftTeam": "LAC"
+    },
+    {
+      "id": "14080",
+      "name": "Singletary, Devin",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 101.65,
+      "team": "NYG",
+      "draftYear": 2019,
+      "draftTeam": "BUF"
     },
     {
       "id": "14109",
@@ -3867,7 +4026,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 259.8,
+      "points": 221.5,
       "team": "WAS",
       "draftYear": 2019,
       "draftTeam": "WAS"
@@ -3880,10 +4039,36 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 149,
+      "points": 135.5,
       "team": "KCC",
       "draftYear": 2013,
       "draftTeam": "HOU"
+    },
+    {
+      "id": "16269",
+      "name": "Strange, Brenton",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 62.7,
+      "team": "JAC",
+      "draftYear": 2023,
+      "draftTeam": "JAC"
+    },
+    {
+      "id": "16432",
+      "name": "Wilson, Emanuel",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 33.55,
+      "team": "GBP",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "14138",
@@ -3893,7 +4078,7 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 89.4,
+      "points": 62.7,
       "team": "MIN",
       "draftYear": 2019,
       "draftTeam": "DET"
@@ -3906,23 +4091,10 @@
       "franchiseId": "0013",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 229,
+      "points": 196.4,
       "team": "HOU",
       "draftYear": 2021,
       "draftTeam": "HOU"
-    },
-    {
-      "id": "14059",
-      "name": "Jones, Daniel",
-      "position": "QB",
-      "salary": 425000,
-      "franchiseId": "0013",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 202,
-      "team": "MIN",
-      "draftYear": 2019,
-      "draftTeam": "NYG"
     },
     {
       "id": "16595",
@@ -3945,7 +4117,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 123.7,
+      "points": 111.75,
       "team": "JAC",
       "draftYear": 2021,
       "draftTeam": "JAC"
@@ -3958,7 +4130,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 85.67,
+      "points": 57.07,
       "team": "LVR",
       "draftYear": 1970,
       "draftTeam": "OAK"
@@ -3971,7 +4143,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 123,
+      "points": 93,
       "team": "TEN",
       "draftYear": 2022,
       "draftTeam": "TEN"
@@ -3984,7 +4156,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 96.42,
+      "points": 95.26,
       "team": "GBP",
       "draftYear": 2022,
       "draftTeam": "TEN"
@@ -3997,7 +4169,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 143.65,
+      "points": 144.43,
       "team": "NYJ",
       "draftYear": 1970,
       "draftTeam": "NYJ"
@@ -4010,7 +4182,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 128.6,
+      "points": 118.3,
       "team": "ARI",
       "draftYear": 2023,
       "draftTeam": "ARI"
@@ -4023,7 +4195,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 386.36,
+      "points": 328.66,
       "team": "KCC",
       "draftYear": 2017,
       "draftTeam": "KCC"
@@ -4049,7 +4221,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 194.8,
+      "points": 167.4,
       "team": "WAS",
       "draftYear": 2013,
       "draftTeam": "PHI"
@@ -4075,7 +4247,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 45.95,
+      "points": 36.4,
       "team": "WAS",
       "draftYear": 2023,
       "draftTeam": "WAS"
@@ -4101,7 +4273,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 175.4,
+      "points": 168.1,
       "team": "LAR",
       "draftYear": 2017,
       "draftTeam": "LAR"
@@ -4114,7 +4286,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 36.45,
+      "points": 35.45,
       "team": "LAR",
       "draftYear": 2024,
       "draftTeam": "LAR"
@@ -4127,7 +4299,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 19.72,
+      "points": 13.93,
       "team": "NOS",
       "draftYear": 2017,
       "draftTeam": "GBP"
@@ -4140,7 +4312,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 57,
+      "points": 47.7,
       "team": "SEA",
       "draftYear": 2024,
       "draftTeam": "SEA"
@@ -4166,7 +4338,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 6.56,
+      "points": 4.51,
       "team": "HOU",
       "draftYear": 2017,
       "draftTeam": "FA"
@@ -4179,7 +4351,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 85.2,
+      "points": 66.6,
       "team": "LAR",
       "draftYear": 2024,
       "draftTeam": "LAR"
@@ -4192,7 +4364,7 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 66.11,
+      "points": 33.95,
       "team": "LVR",
       "draftYear": 2015,
       "draftTeam": "DET"
@@ -4205,23 +4377,10 @@
       "franchiseId": "0014",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 103.8,
+      "points": 90.6,
       "team": "JAC",
       "draftYear": 2024,
       "draftTeam": "JAC"
-    },
-    {
-      "id": "16601",
-      "name": "Shipley, Will",
-      "position": "RB",
-      "salary": 475000,
-      "franchiseId": "0014",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 3.87,
-      "team": "PHI",
-      "draftYear": 2024,
-      "draftTeam": "PHI"
     },
     {
       "id": "14840",
@@ -4263,6 +4422,32 @@
       "draftTeam": "FA"
     },
     {
+      "id": "16601",
+      "name": "Shipley, Will",
+      "position": "RB",
+      "salary": 475000,
+      "franchiseId": "0014",
+      "status": "TAXI_SQUAD",
+      "contractYear": "5",
+      "points": 3.87,
+      "team": "PHI",
+      "draftYear": 2024,
+      "draftTeam": "PHI"
+    },
+    {
+      "id": "13832",
+      "name": "Sanders, Jason",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 149.3,
+      "team": "MIA",
+      "draftYear": 2018,
+      "draftTeam": "MIA"
+    },
+    {
       "id": "14861",
       "name": "Johnson, Juwan",
       "position": "TE",
@@ -4270,10 +4455,36 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 128,
+      "points": 107.5,
       "team": "NOS",
       "draftYear": 2020,
       "draftTeam": "FA"
+    },
+    {
+      "id": "12677",
+      "name": "Hooper, Austin",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 104.4,
+      "team": "NEP",
+      "draftYear": 2016,
+      "draftTeam": "ATL"
+    },
+    {
+      "id": "0524",
+      "name": "Vikings, Minnesota",
+      "position": "Def",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 242.2,
+      "team": "MIN",
+      "draftYear": 1970,
+      "draftTeam": "MIN"
     },
     {
       "id": "15717",
@@ -4283,7 +4494,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 29.5,
+      "points": 26.45,
       "team": "HOU",
       "draftYear": 2022,
       "draftTeam": "HOU"
@@ -4296,7 +4507,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 153.77,
+      "points": 108.26,
       "team": "CLE",
       "draftYear": 2022,
       "draftTeam": "CLE"
@@ -4309,7 +4520,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 215.9,
+      "points": 183.7,
       "team": "DEN",
       "draftYear": 2018,
       "draftTeam": "DEN"
@@ -4322,7 +4533,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 209,
+      "points": 183.8,
       "team": "BAL",
       "draftYear": 2023,
       "draftTeam": "BAL"
@@ -4335,7 +4546,7 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 138.47,
+      "points": 112.86,
       "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "HOU"
@@ -4348,101 +4559,10 @@
       "franchiseId": "0015",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 447.88,
+      "points": 333.66,
       "team": "DET",
       "draftYear": 2016,
       "draftTeam": "RAM"
-    },
-    {
-      "id": "10700",
-      "name": "Cousins, Kirk",
-      "position": "QB",
-      "salary": 2392500,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 257.26,
-      "team": "ATL",
-      "draftYear": 2012,
-      "draftTeam": "WAS"
-    },
-    {
-      "id": "16189",
-      "name": "Mims, Marvin",
-      "position": "WR",
-      "salary": 632500,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 134.95,
-      "team": "DEN",
-      "draftYear": 2023,
-      "draftTeam": "DEN"
-    },
-    {
-      "id": "13132",
-      "name": "Kamara, Alvin",
-      "position": "RB",
-      "salary": 5000000,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "3",
-      "points": 301.4,
-      "team": "NOS",
-      "draftYear": 2017,
-      "draftTeam": "NOS"
-    },
-    {
-      "id": "0520",
-      "name": "Commanders, Washington",
-      "position": "Def",
-      "salary": 425000,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 117.66,
-      "team": "WAS",
-      "draftYear": 1970,
-      "draftTeam": "WAS"
-    },
-    {
-      "id": "16211",
-      "name": "Nacua, Puka",
-      "position": "WR",
-      "salary": 522500,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 188.1,
-      "team": "LAR",
-      "draftYear": 2023,
-      "draftTeam": "LAR"
-    },
-    {
-      "id": "16616",
-      "name": "Odunze, Rome",
-      "position": "WR",
-      "salary": 2600000,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 122,
-      "team": "CHI",
-      "draftYear": 2024,
-      "draftTeam": "CHI"
-    },
-    {
-      "id": "16581",
-      "name": "Daniels, Jayden",
-      "position": "QB",
-      "salary": 1100000,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "5",
-      "points": 508.9,
-      "team": "WAS",
-      "draftYear": 2024,
-      "draftTeam": "WAS"
     },
     {
       "id": "13172",
@@ -4458,17 +4578,56 @@
       "draftTeam": "DAL"
     },
     {
-      "id": "16623",
-      "name": "Rice, Brenden",
-      "position": "WR",
-      "salary": 475000,
+      "id": "10700",
+      "name": "Cousins, Kirk",
+      "position": "QB",
+      "salary": 2392500,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "5",
-      "points": 0,
-      "team": "LAC",
-      "draftYear": 2024,
-      "draftTeam": "LAC"
+      "contractYear": "2",
+      "points": 248.78,
+      "team": "ATL",
+      "draftYear": 2012,
+      "draftTeam": "WAS"
+    },
+    {
+      "id": "14799",
+      "name": "Akers, Cam",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 72.18,
+      "team": "MIN",
+      "draftYear": 2020,
+      "draftTeam": "LAR"
+    },
+    {
+      "id": "16189",
+      "name": "Mims, Marvin",
+      "position": "WR",
+      "salary": 632500,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 93.03,
+      "team": "DEN",
+      "draftYear": 2023,
+      "draftTeam": "DEN"
+    },
+    {
+      "id": "13132",
+      "name": "Kamara, Alvin",
+      "position": "RB",
+      "salary": 5000000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "3",
+      "points": 287.4,
+      "team": "NOS",
+      "draftYear": 2017,
+      "draftTeam": "NOS"
     },
     {
       "id": "13674",
@@ -4484,17 +4643,95 @@
       "draftTeam": "PHI"
     },
     {
-      "id": "15329",
-      "name": "Pitts, Kyle",
-      "position": "TE",
-      "salary": 3327500,
+      "id": "0520",
+      "name": "Commanders, Washington",
+      "position": "Def",
+      "salary": 425000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "2",
-      "points": 145.4,
-      "team": "ATL",
-      "draftYear": 2021,
-      "draftTeam": "ATL"
+      "contractYear": "5",
+      "points": 101.26,
+      "team": "WAS",
+      "draftYear": 1970,
+      "draftTeam": "WAS"
+    },
+    {
+      "id": "13138",
+      "name": "Hunt, Kareem",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 112.6,
+      "team": "KCC",
+      "draftYear": 2017,
+      "draftTeam": "KCC"
+    },
+    {
+      "id": "15804",
+      "name": "Calcaterra, Grant",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 28.9,
+      "team": "PHI",
+      "draftYear": 2022,
+      "draftTeam": "PHI"
+    },
+    {
+      "id": "16211",
+      "name": "Nacua, Puka",
+      "position": "WR",
+      "salary": 522500,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "4",
+      "points": 146.3,
+      "team": "LAR",
+      "draftYear": 2023,
+      "draftTeam": "LAR"
+    },
+    {
+      "id": "13157",
+      "name": "Samuel, Curtis",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 35.2,
+      "team": "BUF",
+      "draftYear": 2017,
+      "draftTeam": "CAR"
+    },
+    {
+      "id": "16616",
+      "name": "Odunze, Rome",
+      "position": "WR",
+      "salary": 2600000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "5",
+      "points": 107.4,
+      "team": "CHI",
+      "draftYear": 2024,
+      "draftTeam": "CHI"
+    },
+    {
+      "id": "16623",
+      "name": "Rice, Brenden",
+      "position": "WR",
+      "salary": 475000,
+      "franchiseId": "0015",
+      "status": "INJURED_RESERVE",
+      "contractYear": "5",
+      "points": 0,
+      "team": "LAC",
+      "draftYear": 2024,
+      "draftTeam": "LAC"
     },
     {
       "id": "16626",
@@ -4523,6 +4760,19 @@
       "draftTeam": "WAS"
     },
     {
+      "id": "16581",
+      "name": "Daniels, Jayden",
+      "position": "QB",
+      "salary": 1100000,
+      "franchiseId": "0015",
+      "status": "TAXI_SQUAD",
+      "contractYear": "5",
+      "points": 399.06,
+      "team": "WAS",
+      "draftYear": 2024,
+      "draftTeam": "WAS"
+    },
+    {
       "id": "14244",
       "name": "Gay, Matt",
       "position": "PK",
@@ -4530,7 +4780,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 143.5,
+      "points": 116.6,
       "team": "IND",
       "draftYear": 2019,
       "draftTeam": "TBB"
@@ -4543,7 +4793,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 29.14,
+      "points": 0.1,
       "team": "PHI",
       "draftYear": 2022,
       "draftTeam": "PIT"
@@ -4556,7 +4806,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 229.9,
+      "points": 194.3,
       "team": "NYJ",
       "draftYear": 2022,
       "draftTeam": "NYJ"
@@ -4569,7 +4819,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 367.1,
+      "points": 301.72,
       "team": "SFO",
       "draftYear": 2022,
       "draftTeam": "SFO"
@@ -4582,7 +4832,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 235.6,
+      "points": 197.6,
       "team": "SEA",
       "draftYear": 2023,
       "draftTeam": "SEA"
@@ -4595,7 +4845,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 157.3,
+      "points": 138.3,
       "team": "SFO",
       "draftYear": 2023,
       "draftTeam": "SFO"
@@ -4608,10 +4858,23 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 254.4,
+      "points": 208.6,
       "team": "CIN",
       "draftYear": 2023,
       "draftTeam": "CIN"
+    },
+    {
+      "id": "16216",
+      "name": "Washington, Darnell",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 54.2,
+      "team": "PIT",
+      "draftYear": 2023,
+      "draftTeam": "PIT"
     },
     {
       "id": "0510",
@@ -4621,7 +4884,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 228.4,
+      "points": 223.2,
       "team": "PIT",
       "draftYear": 1970,
       "draftTeam": "PIT"
@@ -4634,7 +4897,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "1",
-      "points": 63.64,
+      "points": 53.29,
       "team": "MIA",
       "draftYear": 2015,
       "draftTeam": "FA"
@@ -4647,10 +4910,23 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 143.65,
+      "points": 119.85,
       "team": "DAL",
       "draftYear": 1970,
       "draftTeam": "DAL"
+    },
+    {
+      "id": "13675",
+      "name": "Conklin, Tyler",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 104.8,
+      "team": "NYJ",
+      "draftYear": 2018,
+      "draftTeam": "MIN"
     },
     {
       "id": "13192",
@@ -4660,7 +4936,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "2",
-      "points": 183.1,
+      "points": 168.5,
       "team": "CLE",
       "draftYear": 2017,
       "draftTeam": "CLE"
@@ -4673,7 +4949,7 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "5",
-      "points": 229.44,
+      "points": 181.69,
       "team": "TBB",
       "draftYear": 2024,
       "draftTeam": "TBB"
@@ -4686,10 +4962,75 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "3",
-      "points": 145.4,
+      "points": 118.3,
       "team": "DAL",
       "draftYear": 2022,
       "draftTeam": "DAL"
+    },
+    {
+      "id": "13610",
+      "name": "Chubb, Nick",
+      "position": "RB",
+      "salary": 6050000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "2",
+      "points": 68.45,
+      "team": "CLE",
+      "draftYear": 2018,
+      "draftTeam": "CLE"
+    },
+    {
+      "id": "12616",
+      "name": "Brissett, Jacoby",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 65.46,
+      "team": "NEP",
+      "draftYear": 2016,
+      "draftTeam": "NEP"
+    },
+    {
+      "id": "15981",
+      "name": "Turpin, KaVontae",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 31.81,
+      "team": "DAL",
+      "draftYear": 2022,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "13124",
+      "name": "Rush, Cooper",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 61.78,
+      "team": "DAL",
+      "draftYear": 2017,
+      "draftTeam": "FA"
+    },
+    {
+      "id": "11674",
+      "name": "Cooks, Brandin",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 62.5,
+      "team": "DAL",
+      "draftYear": 2014,
+      "draftTeam": "NOS"
     },
     {
       "id": "16171",
@@ -4699,10 +5040,49 @@
       "franchiseId": "0016",
       "status": "ROSTER",
       "contractYear": "4",
-      "points": 30.63,
+      "points": 17.16,
       "team": "NOS",
       "draftYear": 2023,
       "draftTeam": "NOS"
+    },
+    {
+      "id": "16215",
+      "name": "Musgrave, Luke",
+      "position": "TE",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 10.1,
+      "team": "GBP",
+      "draftYear": 2023,
+      "draftTeam": "GBP"
+    },
+    {
+      "id": "14798",
+      "name": "Moss, Zack",
+      "position": "RB",
+      "salary": 4000000,
+      "franchiseId": "0016",
+      "status": "INJURED_RESERVE",
+      "contractYear": "2",
+      "points": 99.15,
+      "team": "CIN",
+      "draftYear": 2020,
+      "draftTeam": "BUF"
+    },
+    {
+      "id": "14845",
+      "name": "Davis, Gabriel",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 60.2,
+      "team": "JAC",
+      "draftYear": 2020,
+      "draftTeam": "BUF"
     },
     {
       "id": "16688",
@@ -4710,9 +5090,9 @@
       "position": "RB",
       "salary": 450000,
       "franchiseId": "0016",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
-      "points": 10.9,
+      "points": 0,
       "team": "SFO",
       "draftYear": 2024,
       "draftTeam": "SFO"
@@ -4723,38 +5103,12 @@
       "position": "WR",
       "salary": 2000000,
       "franchiseId": "0016",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 31,
       "team": "KCC",
       "draftYear": 2024,
       "draftTeam": "KCC"
-    },
-    {
-      "id": "13610",
-      "name": "Chubb, Nick",
-      "position": "RB",
-      "salary": 6050000,
-      "franchiseId": "0016",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 70.55,
-      "team": "CLE",
-      "draftYear": 2018,
-      "draftTeam": "CLE"
-    },
-    {
-      "id": "14798",
-      "name": "Moss, Zack",
-      "position": "RB",
-      "salary": 4000000,
-      "franchiseId": "0016",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 99.15,
-      "team": "CIN",
-      "draftYear": 2020,
-      "draftTeam": "BUF"
     }
   ]
 }

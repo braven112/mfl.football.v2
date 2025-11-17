@@ -10,13 +10,15 @@ const env = process.env;
 const season = env.MFL_SEASON ?? '2024';
 const leagueId = env.MFL_LEAGUE_ID ?? '13522';
 const apiBase = env.MFL_API_BASE ?? 'https://api.myfantasyleague.com';
-const week = env.MFL_WEEK;
+const configuredWeek = env.MFL_WEEK;
 const username = env.MFL_USERNAME;
 const password = env.MFL_PASSWORD;
 const apiKey = env.MFL_API_KEY;
+const freezeWeek = Number.parseInt(env.MFL_FREEZE_WEEK ?? '14', 10);
 const outputRaw = path.join(dataDir, `mfl-player-salaries-${season}.json`);
 const outputSummary = path.join(dataDir, `mfl-salary-averages-${season}.json`);
 const historyDir = path.join(dataDir, 'salary-history', season);
+const seasonStateFile = path.join(dataDir, 'mfl-season-state.json');
 
 const ensureArray = (value) => {
   if (!value) return [];
@@ -40,7 +42,10 @@ const buildUrl = (type, params = {}, options = {}) => {
   url.searchParams.set('TYPE', type);
   url.searchParams.set('JSON', '1');
   if (leagueId) url.searchParams.set('L', leagueId);
-  if (week && options.includeWeek) url.searchParams.set('W', week);
+  const forcedWeek = options.forceWeek ?? null;
+  const includeWeek = options.includeWeek ?? false;
+  const weekToUse = forcedWeek ?? (includeWeek ? configuredWeek : null);
+  if (weekToUse) url.searchParams.set('W', weekToUse);
   if (username) url.searchParams.set('USERNAME', username);
   if (password) url.searchParams.set('PASSWORD', password);
   if (apiKey) url.searchParams.set('APIKEY', apiKey);
@@ -170,13 +175,15 @@ const writeJson = async (filePath, data) => {
 
 const timestampSlug = () => new Date().toISOString().replace(/[:]/g, '-');
 
-const buildPlayerPoints = (weeklyPayload) => {
+const buildPlayerPoints = (weeklyPayload, maxWeek = null) => {
   const totals = new Map();
   const weeklyResults = ensureArray(
     weeklyPayload?.allWeeklyResults?.weeklyResults ??
       weeklyPayload?.weeklyResults
   );
   weeklyResults.forEach((entry) => {
+    const weekNumber = Number.parseInt(entry?.week ?? entry?.weekNumber ?? entry?.W ?? 0, 10) || 0;
+    if (maxWeek && weekNumber > maxWeek) return;
     ensureArray(entry?.matchup).forEach((matchup) => {
       ensureArray(matchup?.franchise).forEach((franchise) => {
         ensureArray(franchise?.player).forEach((player) => {
@@ -196,6 +203,30 @@ const cacheDir =
   env.MFL_CACHE_DIR ??
   path.join(os.homedir(), '.cache', 'mfl-football', dataDirName);
 const stampFile = path.join(cacheDir, 'last-fetch.json');
+const readSeasonState = async () => {
+  try {
+    const raw = await fs.readFile(seasonStateFile, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const writeSeasonState = async (state) => {
+  await fs.mkdir(path.dirname(seasonStateFile), { recursive: true });
+  await fs.writeFile(seasonStateFile, JSON.stringify(state, null, 2));
+};
+
+const detectLatestWeek = (weeklyPayload) => {
+  const weeklyResults = ensureArray(
+    weeklyPayload?.allWeeklyResults?.weeklyResults ??
+      weeklyPayload?.weeklyResults
+  );
+  return weeklyResults.reduce((max, entry) => {
+    const value = Number.parseInt(entry?.week ?? entry?.weekNumber ?? entry?.W ?? 0, 10) || 0;
+    return Math.max(max, value);
+  }, 0);
+};
 
 const hasRecentFetch = async () => {
   try {
@@ -231,12 +262,75 @@ const run = async () => {
     return;
   }
 
-  console.log(
-    `[salary-averages] Fetching rosters for league ${leagueId} (${season}${
-      week ? `, week ${week}` : ''
-    })...`
-  );
-  const rosterPayload = await fetchExport('rosters', {}, { includeWeek: true });
+  console.log('[salary-averages] Fetching cumulative player scoring...');
+  let weeklyResultsPayload = null;
+  try {
+    weeklyResultsPayload = await fetchExport(
+      'weeklyResults',
+      { W: 'YTD' },
+      { includeWeek: false }
+    );
+  } catch (error) {
+    console.warn('[salary-averages] Unable to fetch weekly results:', error.message);
+  }
+
+  const detectedWeek = weeklyResultsPayload ? detectLatestWeek(weeklyResultsPayload) : 0;
+  const state = (await readSeasonState()) ?? {};
+  const stateIsCurrentSeason = state?.season === season;
+  let lockedWeek = stateIsCurrentSeason ? state?.frozenWeek ?? null : null;
+  let effectiveWeek = lockedWeek ?? (freezeWeek && detectedWeek >= freezeWeek ? freezeWeek : detectedWeek);
+  if (!Number.isFinite(effectiveWeek) || effectiveWeek <= 0) effectiveWeek = null;
+
+  if (!lockedWeek && freezeWeek && detectedWeek >= freezeWeek) {
+    lockedWeek = freezeWeek;
+    effectiveWeek = freezeWeek;
+    await writeSeasonState({
+      season,
+      frozenWeek: freezeWeek,
+      frozenAt: new Date().toISOString(),
+    });
+    console.log(`[salary-averages] Week ${freezeWeek} reached. Freezing data for remainder of season.`);
+  } else if (lockedWeek) {
+    console.log(`[salary-averages] Using frozen week ${lockedWeek} from season state.`);
+  }
+
+  const fetchRostersWithFallback = async (week) => {
+    const weekLabel = week ? `, week ${week}` : '';
+    console.log(
+      `[salary-averages] Fetching rosters for league ${leagueId} (${season}${weekLabel})...`
+    );
+    try {
+      return {
+        payload: await fetchExport('rosters', {}, {
+          includeWeek: true,
+          forceWeek: week ?? undefined,
+        }),
+        week,
+      };
+    } catch (error) {
+      const message = error?.message ?? String(error);
+      const match = message.match(/upcoming week\s*\((\d+)\)/i);
+      if (match) {
+        const upcomingWeek = Number.parseInt(match[1], 10);
+        const fallbackWeek = Number.isFinite(upcomingWeek)
+          ? Math.max(Math.min(upcomingWeek - 1, week ?? upcomingWeek - 1), 1)
+          : null;
+        if (fallbackWeek && (!week || week !== fallbackWeek)) {
+          console.warn(
+            `[salary-averages] Requested week ${week ?? 'latest'} unavailable, retrying with week ${fallbackWeek}.`
+          );
+          return fetchRostersWithFallback(fallbackWeek);
+        }
+      }
+      throw error;
+    }
+  };
+
+  const { payload: rosterPayload, week: resolvedRosterWeek } =
+    await fetchRostersWithFallback(effectiveWeek);
+  if (resolvedRosterWeek && resolvedRosterWeek !== effectiveWeek) {
+    effectiveWeek = resolvedRosterWeek;
+  }
   const rosterPlayers = new Set();
   ensureArray(rosterPayload?.rosters?.franchise).forEach((franchise) => {
     ensureArray(franchise?.player).forEach((player) => {
@@ -255,21 +349,15 @@ const run = async () => {
     Array.from(rosterPlayers)
   );
 
-  console.log('[salary-averages] Fetching cumulative player scoring...');
   let playerPointsMap = new Map();
-  let weeklyResultsPayload = null;
-  try {
-    weeklyResultsPayload = await fetchExport(
-      'weeklyResults',
-      { W: 'YTD' },
-      { includeWeek: false }
+  if (weeklyResultsPayload) {
+    playerPointsMap = buildPlayerPoints(
+      weeklyResultsPayload,
+      effectiveWeek ?? detectedWeek ?? null
     );
-    playerPointsMap = buildPlayerPoints(weeklyResultsPayload);
     console.log(
-      `[salary-averages] Aggregated points for ${playerPointsMap.size} players.`
+      `[salary-averages] Aggregated points for ${playerPointsMap.size} players through week ${effectiveWeek ?? detectedWeek ?? 'latest'}.`
     );
-  } catch (error) {
-    console.warn('[salary-averages] Unable to fetch player points:', error.message);
   }
 
   const players = normalizePlayers(rosterPayload, playerMeta, playerPointsMap);
@@ -278,20 +366,25 @@ const run = async () => {
     throw new Error('No player salaries found in the combined API responses.');
   }
 
-  await writeJson(outputRaw, {
-    metadata: {
-      leagueId,
-      season,
-      week: week ?? null,
-      sources: {
-        rosters: `${apiBase}/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1${
-          week ? `&W=${week}` : ''
-        }`,
-        players: `${apiBase}/${season}/export?TYPE=players&DETAILS=1`,
-        weeklyResults: `${apiBase}/${season}/export?TYPE=weeklyResults&L=${leagueId}&W=YTD&JSON=1`,
-      },
-      fetchedAt: new Date().toISOString(),
+  const metadata = {
+    leagueId,
+    season,
+    week: effectiveWeek ?? configuredWeek ?? null,
+    detectedWeek,
+    freezeWeek,
+    frozenWeek: lockedWeek ?? null,
+    sources: {
+      rosters: `${apiBase}/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1${
+        effectiveWeek ? `&W=${effectiveWeek}` : configuredWeek ? `&W=${configuredWeek}` : ''
+      }`,
+      players: `${apiBase}/${season}/export?TYPE=players&DETAILS=1`,
+      weeklyResults: `${apiBase}/${season}/export?TYPE=weeklyResults&L=${leagueId}&W=YTD&JSON=1`,
     },
+    fetchedAt: new Date().toISOString(),
+  };
+
+  await writeJson(outputRaw, {
+    metadata,
     players,
   });
   console.log(
@@ -303,9 +396,7 @@ const run = async () => {
 
   const summary = {
     metadata: {
-      leagueId,
-      season,
-      week: week ?? null,
+      ...metadata,
       description:
         'Top salary averages calculated for franchise tag (top 3) and extension (top 5).',
       generatedAt: new Date().toISOString(),
