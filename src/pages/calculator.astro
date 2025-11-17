@@ -551,6 +551,7 @@ const serializedConfig = JSON.stringify({
 
   .salary-comparison-wrapper {
     margin-bottom: 1rem;
+    container-type: inline-size;
   }
 
   .comparison-placeholder {
@@ -563,13 +564,19 @@ const serializedConfig = JSON.stringify({
     margin: 0;
   }
 
-  .salary-comparison {
+  :global(.salary-comparison) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1rem;
   }
 
-  .salary-table {
+  @container (max-width: 560px) {
+    :global(.salary-comparison) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  :global(.salary-table) {
     border: 1px solid #d7dce3;
     border-radius: 1rem;
     background: #fff;
@@ -577,12 +584,12 @@ const serializedConfig = JSON.stringify({
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   }
 
-  .salary-table__icon-wrapper {
+  :global(.salary-table__icon-wrapper) {
     text-align: center;
     margin-bottom: 0.75rem;
   }
 
-  .salary-table__icon {
+  :global(.salary-table__icon) {
     width: 54px;
     height: 54px;
     border-radius: 0.85rem;
@@ -593,7 +600,7 @@ const serializedConfig = JSON.stringify({
     justify-content: center;
   }
 
-  .salary-table__icon.placeholder::after {
+  :global(.salary-table__icon.placeholder::after) {
     content: ' ';
     width: 32px;
     height: 32px;
@@ -601,12 +608,42 @@ const serializedConfig = JSON.stringify({
     border-radius: 0.5rem;
   }
 
-  .salary-table table {
+  :global(.salary-table__nfl-row) {
+    text-align: center;
+  }
+
+  :global(.salary-table__nfl-row td) {
+    padding-bottom: 0.35rem;
+  }
+
+  :global(.salary-table__nfl-logo) {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    display: inline-block;
+  }
+
+  :global(td.salary-table__player) {
+    text-align: left;
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  :global(td.salary-table__player img) {
+    max-width: 24px;
+    height: auto;
+    display: block;
+  }
+
+  :global(.salary-table table) {
     width: 100%;
     border-collapse: collapse;
   }
 
-  .salary-table caption {
+  :global(.salary-table caption) {
     caption-side: top;
     text-align: left;
     font-size: 0.95rem;
@@ -614,42 +651,41 @@ const serializedConfig = JSON.stringify({
     text-transform: uppercase;
     color: #0d3b78;
     margin-bottom: 0.25rem;
-    letter-spacing: 0.04em;
   }
 
-  .salary-table__subtitle {
+  :global(.salary-table__subtitle) {
     font-size: 0.85rem;
     color: #4b5563;
   }
 
-  .salary-table__subtitle td {
+  :global(.salary-table__subtitle td) {
     padding: 0.25rem 0 0.4rem;
   }
 
-  .salary-table tbody tr + tr {
+  :global(.salary-table tbody tr + tr) {
     border-top: 1px solid #eef1f6;
   }
 
-  .salary-table th,
-  .salary-table td {
+  :global(.salary-table th),
+  :global(.salary-table td) {
     padding: 0.45rem 0;
     font-size: 0.95rem;
   }
 
-  .salary-table th {
+  :global(.salary-table th) {
     text-align: left;
     font-weight: 600;
     color: #1f2937;
   }
 
-  .salary-table td {
-    text-align: right;
+  :global(.salary-table td) {
+    text-align: left;
     font-weight: 600;
     color: #0f172a;
     font-variant-numeric: tabular-nums;
   }
 
-  .salary-table__value--new {
+  :global(.salary-table__value--new) {
     color: #0f5132;
   }
 
@@ -1021,10 +1057,6 @@ const serializedConfig = JSON.stringify({
       const currentYearsLabel =
         baseContractYears > 0 ? `${baseContractYears} year(s)` : 'Manual Entry';
       const newYearsLabel = `${totalYears} year(s)`;
-      const teamLabel = selectedPlayer?.teamName
-        ? `${selectedPlayer.teamName} (${selectedPlayer.nflTeam || 'FA'})`
-        : 'Manual';
-
       const bbcode = `[b]${playerNameLabel}[/b]
 [b]${label}[/b]
 Position: ${position}
@@ -1033,10 +1065,12 @@ New Salary: ${formatCurrency(newSalary)}
 Total Contract Length: ${totalYears} years
 Reference: ${referenceLabel}`;
 
-      const teamIcon = selectedPlayer?.icon ?? null;
-
-      const iconMarkup = teamIcon
-        ? `<img src="${teamIcon}" alt="${selectedPlayer?.teamName ?? 'Team'}" class="salary-table__icon" />`
+      const nflTeamCode = (selectedPlayer?.nflTeam || 'FA').toUpperCase();
+      const nflLogoUrl = `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${nflTeamCode}.svg`;
+      const nflLogoMarkup = `<img src="${nflLogoUrl}" alt="${nflTeamCode}" class="salary-table__nfl-logo" />`;
+      const franchiseIcon = selectedPlayer?.icon ?? null;
+      const iconMarkup = franchiseIcon
+        ? `<img src="${franchiseIcon}" alt="${selectedPlayer?.teamName ?? 'Team'}" class="salary-table__icon" />`
         : '<span class="salary-table__icon placeholder"></span>';
 
       const buildTable = ({
@@ -1047,35 +1081,34 @@ Reference: ${referenceLabel}`;
         salaryClass = '',
         yearsValue,
         positionValue,
-        showIcon = false,
+        showFranchiseIcon = false,
       }) => `
         <div class="salary-table">
           <div class="salary-table__icon-wrapper">
-            ${showIcon ? iconMarkup : '<span class="salary-table__icon placeholder"></span>'}
+            ${
+              showFranchiseIcon
+                ? iconMarkup
+                : '<span class="salary-table__icon placeholder"></span>'
+            }
           </div>
           <table>
             <caption>${title}</caption>
             <tbody>
               ${
                 subtitle
-                  ? `<tr class="salary-table__subtitle"><td colspan="2">${subtitle}</td></tr>`
+                  ? `<tr class="salary-table__subtitle"><td>${subtitle}</td></tr>`
                   : ''
               }
               <tr>
-                <th>Player</th>
-                <td>${playerNameLabel}</td>
+                <td class="salary-table__player">${nflLogoMarkup} ${playerNameLabel}</td>
               </tr>
               <tr>
-                <th>${salaryLabel}</th>
+               
                 <td class="${salaryClass}">${salaryValue}</td>
               </tr>
               <tr>
-                <th>Years</th>
+               
                 <td>${yearsValue}</td>
-              </tr>
-              <tr>
-                <th>Position</th>
-                <td>${positionValue}</td>
               </tr>
             </tbody>
           </table>
@@ -1085,12 +1118,12 @@ Reference: ${referenceLabel}`;
         <div class="salary-comparison">
           ${buildTable({
             title: 'Current Deal',
-            subtitle: teamLabel,
+            subtitle: '2025',
             salaryLabel: 'Salary',
             salaryValue: formatCurrency(salary),
             yearsValue: currentYearsLabel,
             positionValue: selectedPlayer?.position ?? position,
-            showIcon: true,
+            showFranchiseIcon: true,
           })}
           ${buildTable({
             title: 'New Deal',
@@ -1100,7 +1133,7 @@ Reference: ${referenceLabel}`;
             salaryClass: 'salary-table__value--new',
             yearsValue: newYearsLabel,
             positionValue: selectedPlayer?.position ?? position,
-            showIcon: true,
+            showFranchiseIcon: true,
           })}
         </div>`;
 
