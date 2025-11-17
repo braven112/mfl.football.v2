@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import os from 'node:os';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
@@ -96,13 +97,16 @@ const fetchPlayerMeta = async (playerIds) => {
         id,
         name: normalizeName(player),
         position: player?.position,
+        team: player?.team?.toUpperCase?.() ?? null,
+        draftYear: player?.draft_year ? Number.parseInt(player.draft_year, 10) : null,
+        draftTeam: player?.draft_team ?? null,
       });
     });
   });
   return { meta, rawPayloads: results };
 };
 
-const normalizePlayers = (rosterPayload, playerMetaMap) => {
+const normalizePlayers = (rosterPayload, playerMetaMap, pointsMap = new Map()) => {
   const franchises = ensureArray(rosterPayload?.rosters?.franchise);
   const normalized = [];
 
@@ -120,6 +124,10 @@ const normalizePlayers = (rosterPayload, playerMetaMap) => {
         franchiseId,
         status: player?.status,
         contractYear: player?.contractYear,
+        points: Math.round((pointsMap.get(meta.id) ?? 0) * 100) / 100,
+        team: meta.team,
+        draftYear: meta.draftYear,
+        draftTeam: meta.draftTeam,
       });
     });
   });
@@ -162,7 +170,67 @@ const writeJson = async (filePath, data) => {
 
 const timestampSlug = () => new Date().toISOString().replace(/[:]/g, '-');
 
+const buildPlayerPoints = (weeklyPayload) => {
+  const totals = new Map();
+  const weeklyResults = ensureArray(
+    weeklyPayload?.allWeeklyResults?.weeklyResults ??
+      weeklyPayload?.weeklyResults
+  );
+  weeklyResults.forEach((entry) => {
+    ensureArray(entry?.matchup).forEach((matchup) => {
+      ensureArray(matchup?.franchise).forEach((franchise) => {
+        ensureArray(franchise?.player).forEach((player) => {
+          const id = player?.id;
+          const score = Number.parseFloat(player?.score ?? 0);
+          if (!id || Number.isNaN(score)) return;
+          totals.set(id, (totals.get(id) ?? 0) + score);
+        });
+      });
+    });
+  });
+  return totals;
+};
+
+const dataDirName = `mfl-salary-cache-${leagueId}-${season}`;
+const cacheDir =
+  env.MFL_CACHE_DIR ??
+  path.join(os.homedir(), '.cache', 'mfl-football', dataDirName);
+const stampFile = path.join(cacheDir, 'last-fetch.json');
+
+const hasRecentFetch = async () => {
+  try {
+    const raw = await fs.readFile(stampFile, 'utf8');
+    const { fetchedAt } = JSON.parse(raw);
+    if (!fetchedAt) return false;
+    const last = new Date(fetchedAt);
+    const now = new Date();
+    return (
+      last.getUTCFullYear() === now.getUTCFullYear() &&
+      last.getUTCMonth() === now.getUTCMonth() &&
+      last.getUTCDate() === now.getUTCDate()
+    );
+  } catch {
+    return false;
+  }
+};
+
+const writeFetchStamp = async () => {
+  await fs.mkdir(cacheDir, { recursive: true });
+  await fs.writeFile(
+    stampFile,
+    JSON.stringify({ fetchedAt: new Date().toISOString() }, null, 2)
+  );
+};
+
 const run = async () => {
+  const isFresh = await hasRecentFetch();
+  if (isFresh) {
+    console.log(
+      '[salary-averages] Data already fetched today. Skipping API refresh.'
+    );
+    return;
+  }
+
   console.log(
     `[salary-averages] Fetching rosters for league ${leagueId} (${season}${
       week ? `, week ${week}` : ''
@@ -187,7 +255,24 @@ const run = async () => {
     Array.from(rosterPlayers)
   );
 
-  const players = normalizePlayers(rosterPayload, playerMeta);
+  console.log('[salary-averages] Fetching cumulative player scoring...');
+  let playerPointsMap = new Map();
+  let weeklyResultsPayload = null;
+  try {
+    weeklyResultsPayload = await fetchExport(
+      'weeklyResults',
+      { W: 'YTD' },
+      { includeWeek: false }
+    );
+    playerPointsMap = buildPlayerPoints(weeklyResultsPayload);
+    console.log(
+      `[salary-averages] Aggregated points for ${playerPointsMap.size} players.`
+    );
+  } catch (error) {
+    console.warn('[salary-averages] Unable to fetch player points:', error.message);
+  }
+
+  const players = normalizePlayers(rosterPayload, playerMeta, playerPointsMap);
 
   if (!players.length) {
     throw new Error('No player salaries found in the combined API responses.');
@@ -203,6 +288,7 @@ const run = async () => {
           week ? `&W=${week}` : ''
         }`,
         players: `${apiBase}/${season}/export?TYPE=players&DETAILS=1`,
+        weeklyResults: `${apiBase}/${season}/export?TYPE=weeklyResults&L=${leagueId}&W=YTD&JSON=1`,
       },
       fetchedAt: new Date().toISOString(),
     },
@@ -241,6 +327,7 @@ const run = async () => {
     snapshot,
     rosters: rosterPayload,
     players: playerPayloads,
+    weeklyResults: weeklyResultsPayload,
   });
   await writeJson(historySummary, { snapshot, ...summary });
   console.log(
@@ -256,3 +343,5 @@ run().catch((error) => {
   console.error(error.message);
   process.exitCode = 1;
 });
+
+writeFetchStamp().catch(() => {});

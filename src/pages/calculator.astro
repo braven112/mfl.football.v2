@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import salarySummary from '../data/mfl-salary-averages-2024.json';
+import playerSalaries from '../data/mfl-player-salaries-2024.json';
+import leagueAssets from '../data/theleague.assets.json';
 
 const extensionPositions = [
   { key: 'QB', label: 'Quarterback' },
@@ -26,11 +28,70 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 });
 
+const franchiseMetaMap = new Map(
+  (leagueAssets.teams ?? []).map((team) => {
+    const aliases = team.aliases ?? [];
+    const tokens = [
+      team.name,
+      team.slug,
+      team.key,
+      team.id,
+      ...aliases,
+    ]
+      .filter(Boolean)
+      .map((value) => value.toLowerCase());
+
+    return [
+      team.id,
+      {
+        name: team.name,
+        icon: team.assets?.icons?.[0]?.relativePath,
+        tokens,
+      },
+    ];
+  })
+);
+
+const playerChoices = (playerSalaries.players ?? []).map((player) => {
+  const contractYears =
+    Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) || 0;
+  const franchiseMeta =
+    franchiseMetaMap.get(player.franchiseId) ??
+    franchiseMetaMap.get(player.franchise_id) ?? {};
+  const teamName = franchiseMeta?.name || player.franchiseId || 'Free Agent';
+  const nflTeam =
+    (player.team ?? franchiseMeta?.nflTeam ?? franchiseMeta?.key ?? '').toUpperCase();
+  const icon = franchiseMeta?.icon || null;
+  const teamTokens = franchiseMeta?.tokens ?? [];
+  const label = `${player.name} (${player.position}) – ${teamName}`;
+  const searchBlob = [player.name, player.position, teamName, player.team, ...teamTokens]
+    .filter(Boolean)
+    .map((value) => value.toLowerCase())
+    .join(' ');
+  return {
+    id: player.id,
+    name: player.name,
+    position: player.position,
+    salary: player.salary,
+    franchiseId: player.franchiseId,
+    contractYears,
+    teamName,
+    nflTeam,
+    icon,
+    label,
+    teamTokens,
+    searchBlob,
+    points: player.points ?? 0,
+    draftYear: player.draftYear ?? null,
+  };
+});
+
 const serializedConfig = JSON.stringify({
   positionKeys: extensionPositions.map(({ key }) => key),
   extensionSalaries,
   franchiseSalaries,
   salaryTabs,
+  players: playerChoices,
 });
 ---
 
@@ -41,35 +102,70 @@ const serializedConfig = JSON.stringify({
 
       <label class="field-label">Contract Type:</label>
       <div class="toggle-switch toggle-switch--grid">
-        <input type="radio" id="franExt" name="extType" value="franchise" />
+        <input type="radio" id="franExt" name="extType" value="franchise" checked />
         <label for="franExt">Franchise Tag</label>
         <input type="radio" id="transExt" name="extType" value="transition" />
         <label for="transExt">Veteran Extension</label>
-        <input type="radio" id="rookieExt" name="extType" value="rookie" checked />
+        <input type="radio" id="rookieExt" name="extType" value="rookie" />
         <label for="rookieExt">Rookie Extension</label>
       </div>
 
-      <label class="field-label" for="currentSalary">Current Salary:</label>
-      <input type="text" id="currentSalary" class="currency-input" value="$1,500,000" placeholder="$0" inputmode="decimal" />
-
-      <label class="field-label">Position:</label>
-      <div class="toggle-switch toggle-switch--compact">
-        {extensionPositions.map(({ key }) => (
-          <>
-            <input type="radio" id={`pos${key}`} name="position" value={key} checked={key === 'QB'} />
-            <label for={`pos${key}`}>{key}</label>
-          </>
-        ))}
+      <div class="player-field-header">
+        <label class="field-label" for="playerSearch">Find Player:</label>
       </div>
+      <div class="player-search-wrapper">
+        <input
+          type="text"
+          id="playerSearch"
+          class="player-search"
+          placeholder="Start typing a name or team..."
+          autocomplete="off"
+        />
+        <button type="button" class="clear-input-btn" id="clearPlayerBtn" aria-label="Clear search">×</button>
+        <div class="player-suggestions hidden" id="playerSuggestions"></div>
+      </div>
+      <div class="player-details hidden">
+        <p class="field-hint">
+          Selecting a player auto-fills the salary below. Manual overrides are available if needed.
+        </p>
+        <p class="selected-player hidden" id="selectedPlayerDisplay"></p>
 
-      <label class="field-label">Years Remaining:</label>
-      <div class="toggle-switch toggle-switch--compact">
-        {salaryTabs.map((years) => (
-          <>
-            <input type="radio" id={`yr${years}`} name="yearsRemaining" value={years} checked={years === 3} />
-            <label for={`yr${years}`}>{years}</label>
-          </>
-        ))}
+        <details class="manual-salary" id="manualSalaryPanel">
+          <summary>Need to override the salary?</summary>
+          <div class="manual-salary__body">
+            <label class="field-label" for="currentSalary">Enter Salary Manually:</label>
+            <input
+              type="text"
+              id="currentSalary"
+              class="currency-input"
+              value="$1,500,000"
+              placeholder="$0"
+              inputmode="decimal"
+            />
+
+            <label class="field-label override-label">Position:</label>
+            <div class="toggle-switch toggle-switch--compact" id="positionToggleGroup">
+              {extensionPositions.map(({ key }) => (
+                <>
+                  <input type="radio" id={`pos${key}`} name="position" value={key} checked={key === 'QB'} />
+                  <label for={`pos${key}`}>{key}</label>
+                </>
+              ))}
+            </div>
+
+            <label class="field-label override-label">Years Remaining:</label>
+            <div class="toggle-switch toggle-switch--compact" id="yearsContainer">
+              {salaryTabs.map((years) => (
+                <>
+                  <input type="radio" id={`yr${years}`} name="yearsRemaining" value={years} checked={years === 3} />
+                  <label for={`yr${years}`}>{years}</label>
+                </>
+              ))}
+            </div>
+
+            <button type="button" id="calculateBtn" class="recalculate-btn">Recalculate</button>
+          </div>
+        </details>
       </div>
 
       <div id="extensionLengthContainer">
@@ -82,7 +178,9 @@ const serializedConfig = JSON.stringify({
         </div>
       </div>
 
-      <button type="button" id="calculateBtn">Calculate</button>
+      <div id="comparisonContainer" class="salary-comparison-wrapper">
+        <p class="comparison-placeholder">Select a player to view the current vs new contract summary.</p>
+      </div>
       <div class="result" id="result">Use the calculator above, then generate your message here.</div>
     </div>
 
@@ -137,7 +235,6 @@ const serializedConfig = JSON.stringify({
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
     gap: 1.5rem;
-    background: #e7ebef;
   }
 
   .calculator__card {
@@ -145,7 +242,6 @@ const serializedConfig = JSON.stringify({
     background: #fff;
     border-radius: 1rem;
     border: 1px solid #d7dce3;
-    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12);
     display: grid;
     gap: 1rem;
     align-self: flex-start;
@@ -175,6 +271,205 @@ const serializedConfig = JSON.stringify({
     font-size: 1.15rem;
   }
 
+  .player-search {
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #ccd3df;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .player-search::placeholder {
+    color: #9ca3af;
+  }
+
+  .player-search-wrapper {
+    position: relative;
+  }
+
+  .clear-input-btn {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .clear-input-btn:hover {
+    color: #0d3b78;
+    background: rgba(13, 59, 120, 0.08);
+    border-radius: 0.35rem;
+  }
+
+  .player-details {
+    display: block;
+  }
+
+  .player-details.hidden {
+    display: none;
+  }
+
+  .player-suggestions {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.75rem;
+    box-shadow: 0 12px 25px rgba(15, 23, 42, 0.12);
+    max-height: 235px;
+    overflow: hidden;
+    z-index: 5;
+  }
+
+  .player-suggestion {
+    display: flex;
+    align-items: center;
+        gap: 0.75rem;
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+  }
+  :global(.player-suggestion) {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    width: 100%;
+    align-items: center;
+    justify-items: start;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+    box-shadow: none;
+    border: 1px solid #ddd;
+    border-top: 0;
+  }
+
+  :global(.player-suggestion:last-child) {
+    border-bottom: none;
+  }
+
+  :global(.player-suggestion:hover) {
+    background: #f3f4f6;
+  }
+
+  :global(.player-suggestion__icon) {
+    width: 32px;
+    height: 32px;
+    border-radius: 12px;
+    object-fit: cover;
+  }
+
+  :global(.player-suggestion__details) {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  :global(.player-suggestion__name) {
+    font-weight: 600;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.player-suggestion__meta) {
+    color: #475569;
+    font-weight: 500;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  :global(.player-suggestion__meta span) {
+    white-space: nowrap;
+  }
+
+  :global(.player-suggestion__nfl-icon) {
+    width: 1rem;
+    height: 1rem;
+    object-fit: contain;
+  }
+
+  :global(.player-suggestion.empty) {
+    justify-content: flex-start;
+    color: #6b7280;
+    font-size: 0.9rem;
+    white-space: normal;
+    text-align: left;
+    grid-template-columns: 1fr;
+  }
+
+  .field-hint {
+    margin: 0.2rem 0 0.35rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+  }
+
+  .player-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .ghost-btn {
+    background: transparent;
+    color: #0d3b78;
+    border: none;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .ghost-btn:hover {
+    background: rgba(13, 59, 120, 0.08);
+  }
+
+  .selected-player {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .manual-salary {
+    border: 1px solid #d7dce3;
+    border-radius: 0.65rem;
+    padding: 0.5rem 0.85rem;
+    background: #f8fafc;
+  }
+
+  .manual-salary summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #0d3b78;
+    outline: none;
+  }
+
+  .manual-salary__body {
+    margin-top: 0.65rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+
   .toggle-switch {
     display: flex;
     border-radius: 1.6rem;
@@ -201,7 +496,7 @@ const serializedConfig = JSON.stringify({
   .toggle-switch input:checked + label {
     background: #238047;
     color: #fff;
-    box-shadow: 0 10px 20px rgba(34, 197, 94, 0.25);
+    box-shadow: 0 1px 2px rgba(34, 197, 94, 0.25);
   }
 
   .toggle-switch--compact label {
@@ -221,15 +516,8 @@ const serializedConfig = JSON.stringify({
     font-size: 1rem;
   }
 
-  button:hover {
-    background: #1f6d39;
-  }
-
-  button:active {
-    transform: translateY(1px);
-  }
-
-  #calculateBtn {
+  .recalculate-btn {
+    margin-top: 0.75rem;
     width: 100%;
   }
 
@@ -254,6 +542,115 @@ const serializedConfig = JSON.stringify({
     border-radius: 0.35rem;
     margin-top: 0.5rem;
     white-space: pre-wrap;
+  }
+
+  .result-player {
+    font-weight: 600;
+    color: #0d3b78;
+  }
+
+  .salary-comparison-wrapper {
+    margin-bottom: 1rem;
+  }
+
+  .comparison-placeholder {
+    padding: 0.85rem 1rem;
+    border: 1px dashed #cbd5f5;
+    border-radius: 0.75rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    margin: 0;
+  }
+
+  .salary-comparison {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .salary-table {
+    border: 1px solid #d7dce3;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 1rem 1.25rem 1.15rem;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  .salary-table__icon-wrapper {
+    text-align: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .salary-table__icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 0.85rem;
+    object-fit: cover;
+    background: #e5e7eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .salary-table__icon.placeholder::after {
+    content: ' ';
+    width: 32px;
+    height: 32px;
+    background: rgba(148, 163, 184, 0.45);
+    border-radius: 0.5rem;
+  }
+
+  .salary-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .salary-table caption {
+    caption-side: top;
+    text-align: left;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #0d3b78;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.04em;
+  }
+
+  .salary-table__subtitle {
+    font-size: 0.85rem;
+    color: #4b5563;
+  }
+
+  .salary-table__subtitle td {
+    padding: 0.25rem 0 0.4rem;
+  }
+
+  .salary-table tbody tr + tr {
+    border-top: 1px solid #eef1f6;
+  }
+
+  .salary-table th,
+  .salary-table td {
+    padding: 0.45rem 0;
+    font-size: 0.95rem;
+  }
+
+  .salary-table th {
+    text-align: left;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .salary-table td {
+    text-align: right;
+    font-weight: 600;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .salary-table__value--new {
+    color: #0f5132;
   }
 
   .salary-reference {
@@ -344,12 +741,16 @@ const serializedConfig = JSON.stringify({
 ></script>
 
 <script type="module">
+  const config = JSON.parse(
+    document.getElementById('calculator-config').textContent
+  );
   const {
     positionKeys,
     extensionSalaries,
     franchiseSalaries,
     salaryTabs,
-  } = JSON.parse(document.getElementById('calculator-config').textContent);
+    players,
+  } = config;
 
   const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -372,77 +773,472 @@ const serializedConfig = JSON.stringify({
     input.value = formatCurrency(parseCurrency(input.value));
   };
 
-  const toggleExtensionLength = () => {
-    const container = document.getElementById('extensionLengthContainer');
-    const type = document.querySelector('input[name="extType"]:checked').value;
-    const shouldShow = type === 'transition';
-    container.classList.toggle('hidden', !shouldShow);
-    if (type === 'rookie') {
-      document.getElementById('ext2').checked = true;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const playerLookupByLabel = new Map(
+      players.map((player) => [player.label.toLowerCase(), player])
+    );
+    const playerLookupByName = new Map(
+      players.map((player) => [player.name.toLowerCase(), player])
+    );
+    const playerById = new Map(players.map((player) => [player.id, player]));
+    const playerSearchInput = document.getElementById('playerSearch');
+    const currentSalaryInput = document.getElementById('currentSalary');
+    const selectedPlayerDisplay = document.getElementById('selectedPlayerDisplay');
+    const playerSuggestions = document.getElementById('playerSuggestions');
+    const positionToggleGroup = document.getElementById('positionToggleGroup');
+    const playerDetails = document.querySelector('.player-details');
+    const manualOverridePanel = document.getElementById('manualSalaryPanel');
+    const resultContainer = document.getElementById('result');
+    const comparisonContainer = document.getElementById('comparisonContainer');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const clearBtn = document.getElementById('clearPlayerBtn');
+
+    if (
+      !playerSearchInput ||
+      !currentSalaryInput ||
+      !playerSuggestions ||
+      !resultContainer ||
+      !comparisonContainer ||
+      !calculateBtn
+    ) {
+      return;
     }
-  };
 
-  const getReferenceSalary = (position, type) => {
-    if (type === 'franchise') return franchiseSalaries[position] ?? 0;
-    return extensionSalaries[position] ?? 0;
-  };
+    const defaultResultMessage = resultContainer.innerHTML;
+    let selectedPlayer = null;
+    let suppressManualSalaryUpdate = false;
 
-  const calculateExtension = () => {
-    const salary = parseCurrency(document.getElementById('currentSalary').value);
-    const yearsRemaining = Number(document.querySelector('input[name="yearsRemaining"]:checked').value);
-    const position = document.querySelector('input[name="position"]:checked').value;
-    const extensionType = document.querySelector('input[name="extType"]:checked').value;
-    const extensionLength =
-      extensionType === 'rookie'
-        ? 2
-        : extensionType === 'franchise'
-          ? 1
-          : Number(document.querySelector('input[name="extensionLength"]:checked').value);
-    const avgSalary = getReferenceSalary(position, extensionType);
+    const sortPlayers = (list) =>
+      [...list].sort(
+        (a, b) =>
+          (b.points ?? 0) - (a.points ?? 0) ||
+          a.name.localeCompare(b.name)
+      );
 
-    const totalExtensionValue = avgSalary * extensionLength;
-    const totalYears = yearsRemaining + extensionLength;
-    const newSalary = Math.round(salary + totalExtensionValue / totalYears);
-    const label =
-      extensionType === 'franchise'
-        ? 'Franchise Tag'
-        : extensionType === 'rookie'
-          ? 'Rookie Extension'
-          : 'Transition Extension';
-    const bbcode = `[b]${label}[/b]
+    const getEligiblePlayers = () => {
+      const type = document.querySelector('input[name="extType"]:checked').value;
+      let filtered = players;
+      if (type === 'transition') {
+        filtered = players.filter((player) =>
+          [2, 3, 4].includes(player.contractYears ?? 0)
+        );
+      } else if (type === 'franchise') {
+        filtered = players.filter((player) => (player.contractYears ?? 0) === 1);
+      } else if (type === 'rookie') {
+        filtered = players.filter((player) => (player.draftYear ?? 0) >= 2026);
+      }
+      return sortPlayers(filtered);
+    };
+
+    const updateSelectionUi = () => {
+      if (selectedPlayer) {
+        playerDetails?.classList.remove('hidden');
+      } else {
+        playerDetails?.classList.add('hidden');
+      }
+    };
+
+    const buildSuggestionMarkup = (playersToRender) =>
+      playersToRender
+        .map(
+          (player) => `
+        <button class="player-suggestion" type="button" data-player-id="${player.id}">
+          ${
+            player.icon
+              ? `<img src="${player.icon}" alt="${player.teamName}" class="player-suggestion__icon" />`
+              : '<div class="player-suggestion__icon"></div>'
+          }
+          <div class="player-suggestion__details">
+            <span class="player-suggestion__name">${player.name} (${player.position})</span>
+            <span class="player-suggestion__meta">
+              <span>
+                <img
+                  src="https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${player.nflTeam ||
+                    'FA'}.svg"
+                  alt="${player.nflTeam}"
+                  class="player-suggestion__nfl-icon"
+                />
+              </span>
+              <span>
+                ${formatCurrency(player.salary)} • ${player.contractYears ?? 0} yr${
+                  (player.contractYears ?? 0) === 1 ? '' : 's'
+                }
+              </span>
+            </span>
+          </div>
+        </button>`
+        )
+        .join('');
+
+    const updateSuggestions = () => {
+      const eligiblePlayers = getEligiblePlayers();
+      const query = playerSearchInput.value.trim().toLowerCase();
+      const currentType = document.querySelector(
+        'input[name="extType"]:checked'
+      ).value;
+      const normalizedSelected = selectedPlayer?.label?.toLowerCase();
+
+      let matches = eligiblePlayers;
+      let teamSpecific = false;
+
+      if (query) {
+        if (
+          normalizedSelected &&
+          normalizedSelected.startsWith(query) &&
+          selectedPlayer
+        ) {
+          matches = eligiblePlayers.filter(
+            (player) => player.id === selectedPlayer.id
+          );
+          if (!matches.length) {
+            matches = [selectedPlayer];
+          }
+        } else if (currentType !== 'rookie') {
+          const teamMatches = eligiblePlayers.filter((player) =>
+            (player.teamTokens ?? []).some((token) => token.includes(query))
+          );
+          if (teamMatches.length) {
+            matches = teamMatches;
+            teamSpecific = true;
+          } else {
+            matches = eligiblePlayers.filter((player) =>
+              player.searchBlob.includes(query)
+            );
+          }
+        } else {
+          matches = eligiblePlayers.filter((player) =>
+            player.searchBlob.includes(query)
+          );
+        }
+      }
+
+      const limit = query
+        ? teamSpecific
+          ? matches.length
+          : 30
+        : currentType === 'rookie'
+          ? 30
+          : 12;
+      matches = matches.slice(0, limit);
+
+      if (!matches.length) {
+        const message =
+          currentType === 'rookie'
+            ? 'Only players drafted by their original team in 2026 and beyond are available.'
+            : 'No eligible players';
+        playerSuggestions.innerHTML = `<div class="player-suggestion empty" type="button">${message}</div>`;
+        playerSuggestions.classList.remove('hidden');
+        return eligiblePlayers;
+      }
+
+      playerSuggestions.innerHTML = buildSuggestionMarkup(matches);
+      if (matches.length) {
+        playerSuggestions.classList.remove('hidden');
+      } else {
+        playerSuggestions.classList.add('hidden');
+      }
+      return eligiblePlayers;
+    };
+
+    const selectPositionRadio = (position) => {
+      if (!position) return;
+      const radio = document.getElementById(`pos${position}`);
+      if (radio) {
+        radio.checked = true;
+      }
+    };
+
+    const getReferenceSalary = (position, type) => {
+      if (type === 'franchise') return franchiseSalaries[position] ?? 0;
+      return extensionSalaries[position] ?? 0;
+    };
+
+    const calculateExtension = () => {
+      const salary = parseCurrency(currentSalaryInput.value);
+      const selectedYearsInput = Number(
+        document.querySelector('input[name="yearsRemaining"]:checked')?.value ?? 0
+      );
+      let yearsRemaining = selectedYearsInput;
+      const position = document.querySelector('input[name="position"]:checked').value;
+      const extensionType = document.querySelector('input[name="extType"]:checked').value;
+      const manualOverrideActive = manualOverridePanel?.open ?? false;
+      const extensionLength =
+        extensionType === 'rookie'
+          ? 2
+          : extensionType === 'franchise'
+            ? 1
+            : Number(document.querySelector('input[name="extensionLength"]:checked').value);
+      let avgSalary = getReferenceSalary(position, extensionType);
+      let referenceLabel = 'Top Average';
+
+      if (extensionType === 'transition') {
+        if (manualOverrideActive || !selectedPlayer) {
+          yearsRemaining = selectedYearsInput || yearsRemaining || 2;
+        } else {
+          yearsRemaining = selectedPlayer?.contractYears ?? yearsRemaining ?? 0;
+          if (!yearsRemaining) {
+            yearsRemaining = 2;
+          }
+        }
+      } else if (extensionType === 'rookie') {
+        yearsRemaining = selectedYearsInput || yearsRemaining || 3;
+      }
+
+      if (extensionType === 'franchise') {
+        const increaseSalary = salary * 1.2;
+        const appliedSalary = Math.max(increaseSalary, avgSalary);
+        avgSalary = appliedSalary;
+        referenceLabel =
+          appliedSalary === increaseSalary ? '20% Increase' : 'Top Average';
+      }
+
+      let newSalary = 0;
+      let totalYears = extensionLength;
+      if (extensionType === 'franchise') {
+        totalYears = 1;
+        newSalary = Math.round(avgSalary);
+      } else {
+        const totalExtensionValue = avgSalary * extensionLength;
+        const baseYears = yearsRemaining;
+        totalYears = baseYears + extensionLength;
+        newSalary = Math.round(
+          salary + totalExtensionValue / Math.max(totalYears, 1)
+        );
+      }
+      const label =
+        extensionType === 'franchise'
+          ? 'Franchise Tag'
+          : extensionType === 'rookie'
+            ? 'Rookie Extension'
+            : 'Transition Extension';
+      const playerNameLabel = selectedPlayer?.name
+        ? `${selectedPlayer.name} (${selectedPlayer.position})`
+        : 'Player';
+
+      const baseContractYears =
+        selectedPlayer?.contractYears ?? selectedYearsInput ?? 0;
+      const currentYearsLabel =
+        baseContractYears > 0 ? `${baseContractYears} year(s)` : 'Manual Entry';
+      const newYearsLabel = `${totalYears} year(s)`;
+      const teamLabel = selectedPlayer?.teamName
+        ? `${selectedPlayer.teamName} (${selectedPlayer.nflTeam || 'FA'})`
+        : 'Manual';
+
+      const bbcode = `[b]${playerNameLabel}[/b]
+[b]${label}[/b]
 Position: ${position}
 Term: ${extensionLength} year(s)
 New Salary: ${formatCurrency(newSalary)}
-Total Contract Length: ${totalYears} years`;
+Total Contract Length: ${totalYears} years
+Reference: ${referenceLabel}`;
 
-    const result = document.getElementById('result');
-    result.innerHTML = `
-      <strong>Results:</strong><br/>
-      New Salary: ${formatCurrency(newSalary)}<br/>
-      Total Contract Length: ${totalYears} years<br/>
-      Reference Salary Used: ${formatCurrency(avgSalary)}
-      <div class="bbcode" id="bbcodeOutput">${bbcode}</div>
-      <button type="button" id="copyBtn">Copy Message Board Post</button>
-    `;
+      const teamIcon = selectedPlayer?.icon ?? null;
 
-    document.getElementById('copyBtn').addEventListener('click', () => {
-      navigator.clipboard
-        .writeText(bbcode)
-        .then(() => alert('BBCode copied!'))
-        .catch(() => alert('Unable to copy BBCode.'));
-    });
-  };
+      const iconMarkup = teamIcon
+        ? `<img src="${teamIcon}" alt="${selectedPlayer?.teamName ?? 'Team'}" class="salary-table__icon" />`
+        : '<span class="salary-table__icon placeholder"></span>';
 
-  document.addEventListener('DOMContentLoaded', () => {
-    toggleExtensionLength();
+      const buildTable = ({
+        title,
+        subtitle,
+        salaryLabel,
+        salaryValue,
+        salaryClass = '',
+        yearsValue,
+        positionValue,
+        showIcon = false,
+      }) => `
+        <div class="salary-table">
+          <div class="salary-table__icon-wrapper">
+            ${showIcon ? iconMarkup : '<span class="salary-table__icon placeholder"></span>'}
+          </div>
+          <table>
+            <caption>${title}</caption>
+            <tbody>
+              ${
+                subtitle
+                  ? `<tr class="salary-table__subtitle"><td colspan="2">${subtitle}</td></tr>`
+                  : ''
+              }
+              <tr>
+                <th>Player</th>
+                <td>${playerNameLabel}</td>
+              </tr>
+              <tr>
+                <th>${salaryLabel}</th>
+                <td class="${salaryClass}">${salaryValue}</td>
+              </tr>
+              <tr>
+                <th>Years</th>
+                <td>${yearsValue}</td>
+              </tr>
+              <tr>
+                <th>Position</th>
+                <td>${positionValue}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>`;
+
+      comparisonContainer.innerHTML = `
+        <div class="salary-comparison">
+          ${buildTable({
+            title: 'Current Deal',
+            subtitle: teamLabel,
+            salaryLabel: 'Salary',
+            salaryValue: formatCurrency(salary),
+            yearsValue: currentYearsLabel,
+            positionValue: selectedPlayer?.position ?? position,
+            showIcon: true,
+          })}
+          ${buildTable({
+            title: 'New Deal',
+            subtitle: `${label} (${referenceLabel})`,
+            salaryLabel: 'New Salary',
+            salaryValue: formatCurrency(newSalary),
+            salaryClass: 'salary-table__value--new',
+            yearsValue: newYearsLabel,
+            positionValue: selectedPlayer?.position ?? position,
+            showIcon: true,
+          })}
+        </div>`;
+
+      resultContainer.innerHTML = `
+        <strong>Results:</strong><br/>
+        <span class="result-player">${playerNameLabel}</span><br/>
+        New Salary: ${formatCurrency(newSalary)}<br/>
+        Total Contract Length: ${totalYears} years<br/>
+        Reference Salary Used: ${formatCurrency(avgSalary)} (${referenceLabel})
+        <div class="bbcode" id="bbcodeOutput">${bbcode}</div>
+        <button type="button" id="copyBtn">Copy Message Board Post</button>
+      `;
+
+      resultContainer
+        .querySelector('#copyBtn')
+        ?.addEventListener('click', () => {
+          navigator.clipboard
+            .writeText(bbcode)
+            .then(() => alert('BBCode copied!'))
+            .catch(() => alert('Unable to copy BBCode.'));
+        });
+    };
+
+    const setSelectedPlayer = (player) => {
+      selectedPlayer = player;
+      if (player) {
+        suppressManualSalaryUpdate = true;
+        currentSalaryInput.value = formatCurrency(player.salary);
+        setTimeout(() => {
+          suppressManualSalaryUpdate = false;
+        }, 0);
+        selectedPlayerDisplay.textContent = `Using salary for ${player.name} (${player.position})`;
+        selectedPlayerDisplay.classList.remove('hidden');
+        playerSearchInput.value = player.label;
+       	playerSuggestions.classList.add('hidden');
+       	playerSuggestions.innerHTML = '';
+       	selectPositionRadio(player.position);
+      } else {
+        selectedPlayerDisplay.classList.add('hidden');
+        selectedPlayerDisplay.textContent = '';
+        resultContainer.innerHTML = defaultResultMessage;
+        comparisonContainer.innerHTML =
+          '<p class="comparison-placeholder">Select a player to view the current vs new contract summary.</p>';
+      }
+      updateSelectionUi();
+      if (selectedPlayer) {
+       	calculateExtension();
+      }
+    };
+
+    const handlePlayerSelection = () => {
+      const key = playerSearchInput.value.trim();
+      if (!key) {
+        setSelectedPlayer(null);
+        playerSuggestions.innerHTML = '';
+        playerSuggestions.classList.add('hidden');
+        return;
+      }
+      const normalized = key.toLowerCase();
+      const player =
+        playerLookupByLabel.get(normalized) ||
+        playerLookupByName.get(normalized) ||
+        null;
+      setSelectedPlayer(player);
+    };
+
+    const toggleExtensionLength = () => {
+      const container = document.getElementById('extensionLengthContainer');
+      const type = document.querySelector('input[name="extType"]:checked').value;
+      const showExtensionLength = type === 'transition';
+      container.classList.toggle('hidden', !showExtensionLength);
+      if (type === 'rookie') {
+        document.getElementById('ext2').checked = true;
+      }
+      const eligiblePlayers = updateSuggestions();
+      if (
+        selectedPlayer &&
+        !eligiblePlayers.some((player) => player.label === selectedPlayer.label)
+      ) {
+        setSelectedPlayer(null);
+        playerSearchInput.value = '';
+      }
+      updateSelectionUi();
+    };
+
     document.querySelectorAll('.currency-input').forEach((input) => {
       input.addEventListener('blur', () => formatInput(input));
+    });
+
+    playerSearchInput.addEventListener('change', handlePlayerSelection);
+    playerSearchInput.addEventListener('blur', () => {
+      handlePlayerSelection();
+      setTimeout(() => playerSuggestions.classList.add('hidden'), 120);
+    });
+    playerSearchInput.addEventListener('focus', () => {
+      playerSearchInput.select();
+      updateSuggestions();
+    });
+    playerSearchInput.addEventListener('input', () => {
+      updateSuggestions();
+      const currentValue = playerSearchInput.value.trim();
+      if (!currentValue) {
+        setSelectedPlayer(null);
+      } else if (selectedPlayer && currentValue !== selectedPlayer.label) {
+        setSelectedPlayer(null);
+      }
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      playerSearchInput.value = '';
+      setSelectedPlayer(null);
+      playerSearchInput.focus();
+      updateSuggestions();
+    });
+
+    currentSalaryInput.addEventListener('input', () => {
+      if (suppressManualSalaryUpdate) return;
+      setSelectedPlayer(null);
+      playerSearchInput.value = '';
     });
 
     document.querySelectorAll('input[name="extType"]').forEach((radio) => {
       radio.addEventListener('change', toggleExtensionLength);
     });
 
-    document.getElementById('calculateBtn').addEventListener('click', calculateExtension);
+    calculateBtn.addEventListener('click', calculateExtension);
+
+    playerSuggestions.addEventListener('mousedown', (event) => event.preventDefault());
+    playerSuggestions.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-player-id]');
+      if (!target) return;
+      const player = playerById.get(target.dataset.playerId);
+      if (player) {
+        setSelectedPlayer(player);
+      }
+    });
+
+    updateSuggestions();
+    toggleExtensionLength();
   });
 </script>

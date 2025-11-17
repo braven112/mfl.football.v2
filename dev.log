@@ -1,0 +1,111 @@
+
+> @ predev /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run sync:theleague && pnpm run update:salary-averages
+
+
+> @ sync:theleague /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> node ./scripts/sync-theleague-assets.mjs
+
+[sync-theleague] Created/updated 47 franchise aliases.
+[sync-theleague] Aggregated 16 teams into theleague.assets.json.
+
+> @ update:salary-averages /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> node ./scripts/update-salary-averages.mjs
+
+[salary-averages] Fetching rosters for league 13522 (2024)...
+[salary-averages] Fetching metadata for 365 players...
+[salary-averages] Fetching cumulative player scoring...
+[salary-averages] Aggregated points for 421 players.
+[salary-averages] Saved 365 player salaries -> src/data/mfl-player-salaries-2024.json
+[salary-averages] Saved per-position averages -> src/data/mfl-salary-averages-2024.json
+[salary-averages] Archived history snapshots -> src/data/salary-history/2024
+
+> @ dev /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run dev:css & pnpm run dev:theleague-watch & astro dev
+
+
+> @ dev:theleague-watch /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> node ./scripts/watch-theleague-assets.mjs
+
+
+> @ dev:css /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run sass:watch & pnpm run postcss:watch
+
+[watch-theleague] watching for asset changes...
+
+> @ postcss:watch /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> postcss "public/assets/css/dist/**/*.css" --dir public/assets/css/dist --watch
+
+
+> @ sass:watch /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> sass --watch src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded
+
+Sass is watching for changes. Press Ctrl-C to stop.
+
+18:39:37 [WARN] Unsupported file type /Users/brandon.shields@alaskaair.com/mfl.football.v2/src/pages/calculator.astro.bak found. Prefix filename with an underscore (`_`) to ignore.
+18:39:37 [types] Generated 0ms
+18:39:37 [content] Syncing content
+18:39:37 [content] Synced content
+18:39:37 [vite] Port 4321 is in use, trying another one...
+
+ astro  v5.15.3 ready in 211 ms
+
+┃ Local    http://localhost:4322/
+┃ Network  use --host to expose
+
+18:39:37 watching for file changes...
+
+> @ predev /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run sync:theleague && pnpm run update:salary-averages
+
+
+> @ sync:theleague /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> node ./scripts/sync-theleague-assets.mjs
+
+[sync-theleague] Created/updated 47 franchise aliases.
+[sync-theleague] Aggregated 16 teams into theleague.assets.json.
+
+> @ update:salary-averages /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> node ./scripts/update-salary-averages.mjs
+
+[salary-averages] Fetching rosters for league 13522 (2024)...
+[salary-averages] Fetching metadata for 365 players...
+[salary-averages] Fetching cumulative player scoring...
+[salary-averages] Aggregated points for 421 players.
+[salary-averages] Saved 365 player salaries -> src/data/mfl-player-salaries-2024.json
+[salary-averages] Saved per-position averages -> src/data/mfl-salary-averages-2024.json
+[salary-averages] Archived history snapshots -> src/data/salary-history/2024
+
+> @ dev /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run dev:css & pnpm run dev:theleague-watch & astro dev
+
+
+> @ dev:theleague-watch /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> node ./scripts/watch-theleague-assets.mjs
+
+
+> @ dev:css /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run sass:watch & pnpm run postcss:watch
+
+
+> @ postcss:watch /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> postcss "public/assets/css/dist/**/*.css" --dir public/assets/css/dist --watch
+
+
+> @ sass:watch /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> sass --watch src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded
+
+[watch-theleague] watching for asset changes...
+Sass is watching for changes. Press Ctrl-C to stop.
+
+19:23:53 [types] Generated 2ms
+19:23:53 [content] Syncing content
+19:23:53 [content] Synced content
+19:23:53 [vite] Port 4321 is in use, trying another one...
+
+ astro  v5.15.3 ready in 335 ms
+
+┃ Local    http://localhost:4322/
+┃ Network  use --host to expose
+
+19:23:53 watching for file changes...

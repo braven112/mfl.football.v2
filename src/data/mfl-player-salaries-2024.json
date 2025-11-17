@@ -5,9 +5,10 @@
     "week": null,
     "sources": {
       "rosters": "https://api.myfantasyleague.com/2024/export?TYPE=rosters&L=13522&JSON=1",
-      "players": "https://api.myfantasyleague.com/2024/export?TYPE=players&DETAILS=1"
+      "players": "https://api.myfantasyleague.com/2024/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2024/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
     },
-    "fetchedAt": "2025-11-16T23:04:19.587Z"
+    "fetchedAt": "2025-11-17T04:30:32.194Z"
   },
   "players": [
     {
@@ -17,7 +18,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 105.19,
+      "team": "NEP",
+      "draftYear": 1970,
+      "draftTeam": "NEP"
     },
     {
       "id": "14983",
@@ -26,7 +31,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 185.5,
+      "team": "BUF",
+      "draftYear": 2020,
+      "draftTeam": "BUF"
     },
     {
       "id": "13604",
@@ -35,7 +44,11 @@
       "salary": 7603708,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 425.65,
+      "team": "PHI",
+      "draftYear": 2018,
+      "draftTeam": "NYG"
     },
     {
       "id": "12801",
@@ -44,7 +57,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 226.3,
+      "team": "MIA",
+      "draftYear": 2016,
+      "draftTeam": "KCC"
     },
     {
       "id": "0512",
@@ -53,7 +70,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 189.8,
+      "team": "KCC",
+      "draftYear": 1970,
+      "draftTeam": "KCC"
     },
     {
       "id": "14842",
@@ -62,7 +83,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 142.1,
+      "team": "IND",
+      "draftYear": 2020,
+      "draftTeam": "IND"
     },
     {
       "id": "15271",
@@ -71,7 +96,11 @@
       "salary": 632225,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 27.57,
+      "team": "CIN",
+      "draftYear": 2021,
+      "draftTeam": "CHI"
     },
     {
       "id": "14836",
@@ -80,7 +109,11 @@
       "salary": 1793522.5,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 324.78,
+      "team": "MIN",
+      "draftYear": 2020,
+      "draftTeam": "MIN"
     },
     {
       "id": "15723",
@@ -89,7 +122,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 44.7,
+      "team": "MIN",
+      "draftYear": 2022,
+      "draftTeam": "MIN"
     },
     {
       "id": "16221",
@@ -98,7 +135,11 @@
       "salary": 700000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 73.6,
+      "team": "DAL",
+      "draftYear": 2023,
+      "draftTeam": "DAL"
     },
     {
       "id": "14057",
@@ -107,7 +148,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 97.14,
+      "team": "NYG",
+      "draftYear": 2019,
+      "draftTeam": "DEN"
     },
     {
       "id": "14871",
@@ -116,7 +161,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 82.1,
+      "team": "LAR",
+      "draftYear": 2020,
+      "draftTeam": "SEA"
     },
     {
       "id": "16617",
@@ -125,7 +174,11 @@
       "salary": 1350000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 108,
+      "team": "BUF",
+      "draftYear": 2024,
+      "draftTeam": "BUF"
     },
     {
       "id": "12658",
@@ -134,7 +187,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 44.5,
+      "team": "TBB",
+      "draftYear": 2016,
+      "draftTeam": "NYG"
     },
     {
       "id": "14870",
@@ -143,7 +200,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 20.1,
+      "team": "DEN",
+      "draftYear": 2020,
+      "draftTeam": "NOS"
     },
     {
       "id": "7836",
@@ -152,7 +213,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 352.38,
+      "team": "NYJ",
+      "draftYear": 2005,
+      "draftTeam": "FA"
     },
     {
       "id": "16441",
@@ -161,7 +226,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 13.48,
+      "team": "NYG",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "10413",
@@ -170,7 +239,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 17.92,
+      "team": "NYJ",
+      "draftYear": 2011,
+      "draftTeam": "BAL"
     },
     {
       "id": "12678",
@@ -179,7 +252,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 2.9,
+      "team": "LAR",
+      "draftYear": 2016,
+      "draftTeam": "RAM"
     },
     {
       "id": "14592",
@@ -188,7 +265,11 @@
       "salary": 425000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 19.3,
+      "team": "WAS",
+      "draftYear": 2019,
+      "draftTeam": "FA"
     },
     {
       "id": "16080",
@@ -197,7 +278,11 @@
       "salary": 467500,
       "franchiseId": "0001",
       "status": "INJURED_RESERVE",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 115.71,
+      "team": "NOS",
+      "draftYear": 2022,
+      "draftTeam": "FA"
     },
     {
       "id": "14800",
@@ -206,7 +291,11 @@
       "salary": 450000,
       "franchiseId": "0001",
       "status": "INJURED_RESERVE",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 191.15,
+      "team": "LAC",
+      "draftYear": 2020,
+      "draftTeam": "BAL"
     },
     {
       "id": "16632",
@@ -215,7 +304,11 @@
       "salary": 800000,
       "franchiseId": "0001",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "CIN",
+      "draftYear": 2024,
+      "draftTeam": "CIN"
     },
     {
       "id": "16610",
@@ -224,7 +317,11 @@
       "salary": 475000,
       "franchiseId": "0001",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "MIA",
+      "draftYear": 2024,
+      "draftTeam": "MIA"
     },
     {
       "id": "16642",
@@ -233,7 +330,11 @@
       "salary": 475000,
       "franchiseId": "0001",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "HOU",
+      "draftYear": 2024,
+      "draftTeam": "HOU"
     },
     {
       "id": "14832",
@@ -242,7 +343,11 @@
       "salary": 4245890,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 252.6,
+      "team": "DAL",
+      "draftYear": 2020,
+      "draftTeam": "DAL"
     },
     {
       "id": "14717",
@@ -251,7 +356,11 @@
       "salary": 514250,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 202.2,
+      "team": "TBB",
+      "draftYear": 2019,
+      "draftTeam": "FA"
     },
     {
       "id": "15794",
@@ -260,7 +369,11 @@
       "salary": 726000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 284.1,
+      "team": "ARI",
+      "draftYear": 2022,
+      "draftTeam": "ARI"
     },
     {
       "id": "15779",
@@ -269,7 +382,11 @@
       "salary": 574750,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 126.1,
+      "team": "GBP",
+      "draftYear": 2022,
+      "draftTeam": "GBP"
     },
     {
       "id": "15708",
@@ -278,7 +395,11 @@
       "salary": 4114000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 237.2,
+      "team": "NYJ",
+      "draftYear": 2022,
+      "draftTeam": "NYJ"
     },
     {
       "id": "13299",
@@ -287,7 +408,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 262.2,
+      "team": "SFO",
+      "draftYear": 2017,
+      "draftTeam": "SFO"
     },
     {
       "id": "15261",
@@ -296,7 +421,11 @@
       "salary": 467500,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 245.8,
+      "team": "CAR",
+      "draftYear": 2021,
+      "draftTeam": "CAR"
     },
     {
       "id": "11644",
@@ -305,7 +434,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 260.56,
+      "team": "NOS",
+      "draftYear": 2014,
+      "draftTeam": "FA"
     },
     {
       "id": "11671",
@@ -314,7 +447,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 240.8,
+      "team": "TBB",
+      "draftYear": 2014,
+      "draftTeam": "TBB"
     },
     {
       "id": "16184",
@@ -323,7 +460,11 @@
       "salary": 605000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 232.47,
+      "team": "GBP",
+      "draftYear": 2023,
+      "draftTeam": "GBP"
     },
     {
       "id": "16166",
@@ -332,7 +473,11 @@
       "salary": 495000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 73.2,
+      "team": "TBB",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "16191",
@@ -341,7 +486,11 @@
       "salary": 577500,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 68.3,
+      "team": "CLE",
+      "draftYear": 2023,
+      "draftTeam": "CLE"
     },
     {
       "id": "16152",
@@ -350,7 +499,11 @@
       "salary": 1100000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 250.54,
+      "team": "IND",
+      "draftYear": 2023,
+      "draftTeam": "IND"
     },
     {
       "id": "0526",
@@ -359,7 +512,11 @@
       "salary": 500000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 157,
+      "team": "ATL",
+      "draftYear": 1970,
+      "draftTeam": "ATL"
     },
     {
       "id": "0532",
@@ -368,7 +525,11 @@
       "salary": 800000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 166,
+      "team": "HOU",
+      "draftYear": 1970,
+      "draftTeam": "HOU"
     },
     {
       "id": "14823",
@@ -377,7 +538,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 189.4,
+      "team": "DAL",
+      "draftYear": 2020,
+      "draftTeam": "FA"
     },
     {
       "id": "9064",
@@ -386,7 +551,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 106.48,
+      "team": "IND",
+      "draftYear": 2008,
+      "draftTeam": "BAL"
     },
     {
       "id": "15332",
@@ -395,7 +564,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 69.3,
+      "team": "CAR",
+      "draftYear": 2021,
+      "draftTeam": "CAR"
     },
     {
       "id": "15109",
@@ -404,7 +577,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 92.5,
+      "team": "TEN",
+      "draftYear": 2020,
+      "draftTeam": "FA"
     },
     {
       "id": "16292",
@@ -413,7 +590,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 39,
+      "team": "ARI",
+      "draftYear": 2023,
+      "draftTeam": "NEP"
     },
     {
       "id": "0507",
@@ -422,7 +603,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 118,
+      "team": "CLE",
+      "draftYear": 1970,
+      "draftTeam": "CLE"
     },
     {
       "id": "15250",
@@ -431,7 +616,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 0,
+      "team": "IND",
+      "draftYear": 2021,
+      "draftTeam": "IND"
     },
     {
       "id": "14079",
@@ -440,7 +629,11 @@
       "salary": 425000,
       "franchiseId": "0002",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 50.32,
+      "team": "CAR",
+      "draftYear": 2019,
+      "draftTeam": "PHI"
     },
     {
       "id": "15368",
@@ -449,7 +642,11 @@
       "salary": 565675,
       "franchiseId": "0002",
       "status": "INJURED_RESERVE",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 140.1,
+      "team": "CIN",
+      "draftYear": 2021,
+      "draftTeam": "CIN"
     },
     {
       "id": "15743",
@@ -458,7 +655,11 @@
       "salary": 500000,
       "franchiseId": "0002",
       "status": "INJURED_RESERVE",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 12.4,
+      "team": "LVR",
+      "draftYear": 2022,
+      "draftTeam": "FA"
     },
     {
       "id": "16594",
@@ -467,7 +668,11 @@
       "salary": 750000,
       "franchiseId": "0002",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "ARI",
+      "draftYear": 2024,
+      "draftTeam": "ARI"
     },
     {
       "id": "16637",
@@ -476,7 +681,11 @@
       "salary": 525000,
       "franchiseId": "0002",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "NEP",
+      "draftYear": 2024,
+      "draftTeam": "NEP"
     },
     {
       "id": "16596",
@@ -485,7 +694,11 @@
       "salary": 450000,
       "franchiseId": "0002",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "NYJ",
+      "draftYear": 2024,
+      "draftTeam": "NYJ"
     },
     {
       "id": "14127",
@@ -494,7 +707,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 194.9,
+      "team": "LVR",
+      "draftYear": 2019,
+      "draftTeam": "FA"
     },
     {
       "id": "14867",
@@ -503,7 +720,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 157.5,
+      "team": "CHI",
+      "draftYear": 2020,
+      "draftTeam": "CHI"
     },
     {
       "id": "15768",
@@ -512,7 +733,11 @@
       "salary": 968000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 177.8,
+      "team": "IND",
+      "draftYear": 2022,
+      "draftTeam": "IND"
     },
     {
       "id": "0522",
@@ -521,7 +746,11 @@
       "salary": 660000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 182.52,
+      "team": "DET",
+      "draftYear": 1970,
+      "draftTeam": "DET"
     },
     {
       "id": "13590",
@@ -530,7 +759,11 @@
       "salary": 3492500,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 503.34,
+      "team": "TBB",
+      "draftYear": 2018,
+      "draftTeam": "CLE"
     },
     {
       "id": "16219",
@@ -539,7 +772,11 @@
       "salary": 990000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 9.9,
+      "team": "LAR",
+      "draftYear": 2023,
+      "draftTeam": "LAR"
     },
     {
       "id": "16220",
@@ -548,7 +785,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 8.6,
+      "team": "IND",
+      "draftYear": 2023,
+      "draftTeam": "IND"
     },
     {
       "id": "14833",
@@ -557,7 +798,11 @@
       "salary": 1500000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 249.1,
+      "team": "CLE",
+      "draftYear": 2020,
+      "draftTeam": "DEN"
     },
     {
       "id": "0502",
@@ -566,7 +811,11 @@
       "salary": 600000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 135.45,
+      "team": "IND",
+      "draftYear": 1970,
+      "draftTeam": "IND"
     },
     {
       "id": "0530",
@@ -575,7 +824,11 @@
       "salary": 1200000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 115.42,
+      "team": "SFO",
+      "draftYear": 1970,
+      "draftTeam": "SFO"
     },
     {
       "id": "13319",
@@ -584,7 +837,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 247.65,
+      "team": "MIN",
+      "draftYear": 2017,
+      "draftTeam": "GBP"
     },
     {
       "id": "11936",
@@ -593,7 +850,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 257.6,
+      "team": "PIT",
+      "draftYear": 2014,
+      "draftTeam": "FA"
     },
     {
       "id": "11222",
@@ -602,7 +863,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 174.1,
+      "team": "CHI",
+      "draftYear": 2013,
+      "draftTeam": "SDC"
     },
     {
       "id": "16639",
@@ -611,7 +876,11 @@
       "salary": 1000000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 118.9,
+      "team": "CAR",
+      "draftYear": 2024,
+      "draftTeam": "CAR"
     },
     {
       "id": "16621",
@@ -620,7 +889,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 8.6,
+      "team": "BAL",
+      "draftYear": 2024,
+      "draftTeam": "BAL"
     },
     {
       "id": "16746",
@@ -629,7 +902,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 8.17,
+      "team": "BAL",
+      "draftYear": 2024,
+      "draftTeam": "BAL"
     },
     {
       "id": "16622",
@@ -638,7 +915,11 @@
       "salary": 900000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 63.33,
+      "team": "SFO",
+      "draftYear": 2024,
+      "draftTeam": "SFO"
     },
     {
       "id": "15759",
@@ -647,7 +928,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 37,
+      "team": "HOU",
+      "draftYear": 2022,
+      "draftTeam": "HOU"
     },
     {
       "id": "13154",
@@ -656,7 +941,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 51.7,
+      "team": "PIT",
+      "draftYear": 2017,
+      "draftTeam": "LAC"
     },
     {
       "id": "16619",
@@ -665,7 +954,11 @@
       "salary": 625000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 29.8,
+      "team": "DEN",
+      "draftYear": 2024,
+      "draftTeam": "DEN"
     },
     {
       "id": "16618",
@@ -674,7 +967,11 @@
       "salary": 1675000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 233.8,
+      "team": "JAC",
+      "draftYear": 2024,
+      "draftTeam": "JAC"
     },
     {
       "id": "14105",
@@ -683,7 +980,11 @@
       "salary": 425000,
       "franchiseId": "0003",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 13.6,
+      "team": "KCC",
+      "draftYear": 2019,
+      "draftTeam": "BAL"
     },
     {
       "id": "16751",
@@ -692,7 +993,11 @@
       "salary": 525000,
       "franchiseId": "0003",
       "status": "INJURED_RESERVE",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 22.3,
+      "team": "NOS",
+      "draftYear": 2024,
+      "draftTeam": "NOS"
     },
     {
       "id": "16583",
@@ -701,7 +1006,11 @@
       "salary": 475000,
       "franchiseId": "0003",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "ATL",
+      "draftYear": 2024,
+      "draftTeam": "ATL"
     },
     {
       "id": "16636",
@@ -710,7 +1019,11 @@
       "salary": 525000,
       "franchiseId": "0003",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "NYJ",
+      "draftYear": 2024,
+      "draftTeam": "NYJ"
     },
     {
       "id": "16631",
@@ -719,7 +1032,11 @@
       "salary": 700000,
       "franchiseId": "0003",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 30.4,
+      "team": "NEP",
+      "draftYear": 2024,
+      "draftTeam": "NEP"
     },
     {
       "id": "15238",
@@ -728,7 +1045,11 @@
       "salary": 2528900,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 175.56,
+      "team": "PIT",
+      "draftYear": 2021,
+      "draftTeam": "CHI"
     },
     {
       "id": "0521",
@@ -737,7 +1058,11 @@
       "salary": 726000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 163.42,
+      "team": "CHI",
+      "draftYear": 1970,
+      "draftTeam": "CHI"
     },
     {
       "id": "13652",
@@ -746,7 +1071,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 36.24,
+      "team": "NOS",
+      "draftYear": 2018,
+      "draftTeam": "DAL"
     },
     {
       "id": "13635",
@@ -755,7 +1084,11 @@
       "salary": 6600000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 209,
+      "team": "CHI",
+      "draftYear": 2018,
+      "draftTeam": "CAR"
     },
     {
       "id": "13850",
@@ -764,7 +1097,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 75.25,
+      "team": "LAC",
+      "draftYear": 2018,
+      "draftTeam": "FA"
     },
     {
       "id": "13672",
@@ -773,7 +1110,11 @@
       "salary": 1045000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 148,
+      "team": "CIN",
+      "draftYear": 2018,
+      "draftTeam": "MIA"
     },
     {
       "id": "10976",
@@ -782,7 +1123,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 171.9,
+      "team": "BAL",
+      "draftYear": 2012,
+      "draftTeam": "FA"
     },
     {
       "id": "16342",
@@ -791,7 +1136,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 114.7,
+      "team": "NEP",
+      "draftYear": 2023,
+      "draftTeam": "NEP"
     },
     {
       "id": "14086",
@@ -800,7 +1149,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 120.79,
+      "team": "BAL",
+      "draftYear": 2019,
+      "draftTeam": "BAL"
     },
     {
       "id": "10703",
@@ -809,7 +1162,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 206.42,
+      "team": "PIT",
+      "draftYear": 2012,
+      "draftTeam": "SEA"
     },
     {
       "id": "13776",
@@ -818,7 +1175,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 53,
+      "team": "KCC",
+      "draftYear": 2018,
+      "draftTeam": "TBB"
     },
     {
       "id": "14860",
@@ -827,7 +1188,11 @@
       "salary": 450000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 214.8,
+      "team": "SFO",
+      "draftYear": 2020,
+      "draftTeam": "SFO"
     },
     {
       "id": "14143",
@@ -836,7 +1201,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 70.3,
+      "team": "BUF",
+      "draftYear": 2019,
+      "draftTeam": "BUF"
     },
     {
       "id": "15301",
@@ -845,7 +1214,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 94.2,
+      "team": "LAR",
+      "draftYear": 2021,
+      "draftTeam": "LAR"
     },
     {
       "id": "16579",
@@ -854,7 +1227,11 @@
       "salary": 2300000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 343.08,
+      "team": "CHI",
+      "draftYear": 2024,
+      "draftTeam": "CHI"
     },
     {
       "id": "16635",
@@ -863,7 +1240,11 @@
       "salary": 500000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 45.4,
+      "team": "WAS",
+      "draftYear": 2024,
+      "draftTeam": "WAS"
     },
     {
       "id": "14017",
@@ -872,7 +1253,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 8.75,
+      "team": "MIA",
+      "draftYear": 2018,
+      "draftTeam": "FA"
     },
     {
       "id": "13354",
@@ -881,7 +1266,11 @@
       "salary": 792000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 129.3,
+      "team": "KCC",
+      "draftYear": 2017,
+      "draftTeam": "CAR"
     },
     {
       "id": "16188",
@@ -890,7 +1279,11 @@
       "salary": 2035000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 160.6,
+      "team": "LAC",
+      "draftYear": 2023,
+      "draftTeam": "LAC"
     },
     {
       "id": "13130",
@@ -899,7 +1292,11 @@
       "salary": 425000,
       "franchiseId": "0004",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 31.55,
+      "team": "SFO",
+      "draftYear": 2017,
+      "draftTeam": "CAR"
     },
     {
       "id": "14783",
@@ -908,7 +1305,11 @@
       "salary": 695447.5,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 427.92,
+      "team": "PHI",
+      "draftYear": 2020,
+      "draftTeam": "PHI"
     },
     {
       "id": "14974",
@@ -917,7 +1318,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 193.6,
+      "team": "ATL",
+      "draftYear": 2020,
+      "draftTeam": "CHI"
     },
     {
       "id": "15715",
@@ -926,7 +1331,11 @@
       "salary": 1331000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 306.65,
+      "team": "BUF",
+      "draftYear": 2022,
+      "draftTeam": "BUF"
     },
     {
       "id": "15761",
@@ -935,7 +1344,11 @@
       "salary": 635250,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 185.5,
+      "team": "BUF",
+      "draftYear": 2022,
+      "draftTeam": "BUF"
     },
     {
       "id": "13303",
@@ -944,7 +1357,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 166.2,
+      "team": "PHI",
+      "draftYear": 2017,
+      "draftTeam": "CIN"
     },
     {
       "id": "15742",
@@ -953,7 +1370,11 @@
       "salary": 467500,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 116.29,
+      "team": "PIT",
+      "draftYear": 2022,
+      "draftTeam": "FA"
     },
     {
       "id": "13146",
@@ -962,7 +1383,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 265.85,
+      "team": "ARI",
+      "draftYear": 2017,
+      "draftTeam": "PIT"
     },
     {
       "id": "16173",
@@ -971,7 +1396,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 32.06,
+      "team": "NYG",
+      "draftYear": 2023,
+      "draftTeam": "NYG"
     },
     {
       "id": "16390",
@@ -980,7 +1409,11 @@
       "salary": 962500,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 92.85,
+      "team": "DEN",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "0501",
@@ -989,7 +1422,11 @@
       "salary": 950000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 233.61,
+      "team": "BUF",
+      "draftYear": 1970,
+      "draftTeam": "BUF"
     },
     {
       "id": "11244",
@@ -998,7 +1435,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 224.2,
+      "team": "KCC",
+      "draftYear": 2013,
+      "draftTeam": "KCC"
     },
     {
       "id": "12187",
@@ -1007,7 +1448,11 @@
       "salary": 1250000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 116.1,
+      "team": "SEA",
+      "draftYear": 2015,
+      "draftTeam": "SEA"
     },
     {
       "id": "9431",
@@ -1016,7 +1461,11 @@
       "salary": 3200000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 312.36,
+      "team": "LAR",
+      "draftYear": 2009,
+      "draftTeam": "DET"
     },
     {
       "id": "0518",
@@ -1025,7 +1474,11 @@
       "salary": 1225000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 198.04,
+      "team": "PHI",
+      "draftYear": 1970,
+      "draftTeam": "PHI"
     },
     {
       "id": "14136",
@@ -1034,7 +1487,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 183.16,
+      "team": "SFO",
+      "draftYear": 2019,
+      "draftTeam": "SFO"
     },
     {
       "id": "16627",
@@ -1043,7 +1500,11 @@
       "salary": 1550000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 224.84,
+      "team": "LAC",
+      "draftYear": 2024,
+      "draftTeam": "LAC"
     },
     {
       "id": "13143",
@@ -1052,7 +1513,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 48.12,
+      "team": "WAS",
+      "draftYear": 2017,
+      "draftTeam": "TBB"
     },
     {
       "id": "16159",
@@ -1061,7 +1526,11 @@
       "salary": 467500,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 122.5,
+      "team": "LVR",
+      "draftYear": 2023,
+      "draftTeam": "LVR"
     },
     {
       "id": "16757",
@@ -1070,7 +1539,11 @@
       "salary": 475000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 10.9,
+      "team": "LAC",
+      "draftYear": 2024,
+      "draftTeam": "LAC"
     },
     {
       "id": "16645",
@@ -1079,7 +1552,11 @@
       "salary": 675000,
       "franchiseId": "0005",
       "status": "INJURED_RESERVE",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 15.6,
+      "team": "CIN",
+      "draftYear": 2024,
+      "draftTeam": "CIN"
     },
     {
       "id": "14258",
@@ -1088,7 +1565,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 107.3,
+      "team": "WAS",
+      "draftYear": 2019,
+      "draftTeam": "CLE"
     },
     {
       "id": "13066",
@@ -1097,7 +1578,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 6.75,
+      "team": "DET",
+      "draftYear": 2016,
+      "draftTeam": "FA"
     },
     {
       "id": "16613",
@@ -1106,7 +1591,11 @@
       "salary": 800000,
       "franchiseId": "0005",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "LVR",
+      "draftYear": 2024,
+      "draftTeam": "LVR"
     },
     {
       "id": "16684",
@@ -1115,7 +1604,11 @@
       "salary": 475000,
       "franchiseId": "0005",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 1.3,
+      "team": "MIA",
+      "draftYear": 2024,
+      "draftTeam": "MIA"
     },
     {
       "id": "16612",
@@ -1124,7 +1617,11 @@
       "salary": 425000,
       "franchiseId": "0005",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 28.78,
+      "team": "KCC",
+      "draftYear": 2024,
+      "draftTeam": "FA"
     },
     {
       "id": "15237",
@@ -1133,7 +1630,11 @@
       "salary": 1331000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 205.44,
+      "team": "JAC",
+      "draftYear": 2021,
+      "draftTeam": "JAC"
     },
     {
       "id": "15288",
@@ -1142,7 +1643,11 @@
       "salary": 1430825,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 113,
+      "team": "CLE",
+      "draftYear": 2021,
+      "draftTeam": "NYJ"
     },
     {
       "id": "12626",
@@ -1151,7 +1656,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 361.5,
+      "team": "BAL",
+      "draftYear": 2016,
+      "draftTeam": "TEN"
     },
     {
       "id": "15798",
@@ -1160,7 +1669,11 @@
       "salary": 544500,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 163.8,
+      "team": "BAL",
+      "draftYear": 2022,
+      "draftTeam": "BAL"
     },
     {
       "id": "11675",
@@ -1169,7 +1682,11 @@
       "salary": 7700000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 232,
+      "team": "NYJ",
+      "draftYear": 2014,
+      "draftTeam": "GBP"
     },
     {
       "id": "13793",
@@ -1178,7 +1695,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 84.4,
+      "team": "NOS",
+      "draftYear": 2018,
+      "draftTeam": "GBP"
     },
     {
       "id": "14141",
@@ -1187,7 +1708,11 @@
       "salary": 695750,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 0,
+      "team": "HOU",
+      "draftYear": 2019,
+      "draftTeam": "MIN"
     },
     {
       "id": "16165",
@@ -1196,7 +1721,11 @@
       "salary": 770000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 113.77,
+      "team": "TEN",
+      "draftYear": 2023,
+      "draftTeam": "TEN"
     },
     {
       "id": "16176",
@@ -1205,7 +1734,11 @@
       "salary": 522500,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 9.75,
+      "team": "DAL",
+      "draftYear": 2023,
+      "draftTeam": "DAL"
     },
     {
       "id": "15241",
@@ -1214,7 +1747,11 @@
       "salary": 698775,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 120.26,
+      "team": "JAC",
+      "draftYear": 2021,
+      "draftTeam": "NEP"
     },
     {
       "id": "14807",
@@ -1223,7 +1760,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 0,
+      "team": "TEN",
+      "draftYear": 2020,
+      "draftTeam": "LAC"
     },
     {
       "id": "16207",
@@ -1232,7 +1773,11 @@
       "salary": 467500,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 142.2,
+      "team": "CIN",
+      "draftYear": 2023,
+      "draftTeam": "CIN"
     },
     {
       "id": "12956",
@@ -1241,7 +1786,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 211.1,
+      "team": "DEN",
+      "draftYear": 2016,
+      "draftTeam": "FA"
     },
     {
       "id": "0508",
@@ -1250,7 +1799,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 99.33,
+      "team": "TEN",
+      "draftYear": 1970,
+      "draftTeam": "TEN"
     },
     {
       "id": "0514",
@@ -1259,7 +1812,11 @@
       "salary": 726000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 234.6,
+      "team": "LAC",
+      "draftYear": 1970,
+      "draftTeam": "FA"
     },
     {
       "id": "15697",
@@ -1268,7 +1825,11 @@
       "salary": 574750,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 25.48,
+      "team": "LVR",
+      "draftYear": 2022,
+      "draftTeam": "ATL"
     },
     {
       "id": "15330",
@@ -1277,7 +1838,11 @@
       "salary": 467500,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 5.4,
+      "team": "HOU",
+      "draftYear": 2021,
+      "draftTeam": "HOU"
     },
     {
       "id": "11647",
@@ -1286,7 +1851,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 0,
+      "team": "FA",
+      "draftYear": 2014,
+      "draftTeam": "ARI"
     },
     {
       "id": "13593",
@@ -1295,7 +1864,11 @@
       "salary": 5775000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 588.26,
+      "team": "BAL",
+      "draftYear": 2018,
+      "draftTeam": "FA"
     },
     {
       "id": "14797",
@@ -1304,7 +1877,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 193.3,
+      "team": "CHI",
+      "draftYear": 2020,
+      "draftTeam": "DET"
     },
     {
       "id": "16312",
@@ -1313,7 +1890,11 @@
       "salary": 425000,
       "franchiseId": "0006",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 24,
+      "team": "TEN",
+      "draftYear": 2023,
+      "draftTeam": "TEN"
     },
     {
       "id": "16586",
@@ -1322,7 +1903,11 @@
       "salary": 450000,
       "franchiseId": "0006",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "NOS",
+      "draftYear": 2024,
+      "draftTeam": "NOS"
     },
     {
       "id": "15287",
@@ -1331,7 +1916,11 @@
       "salary": 1331000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 281.43,
+      "team": "DET",
+      "draftYear": 2021,
+      "draftTeam": "DET"
     },
     {
       "id": "0523",
@@ -1340,7 +1929,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 226.6,
+      "team": "GBP",
+      "draftYear": 1970,
+      "draftTeam": "GBP"
     },
     {
       "id": "15751",
@@ -1349,7 +1942,11 @@
       "salary": 3146000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 226.4,
+      "team": "ATL",
+      "draftYear": 2022,
+      "draftTeam": "ATL"
     },
     {
       "id": "15716",
@@ -1358,7 +1955,11 @@
       "salary": 635250,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 192.15,
+      "team": "WAS",
+      "draftYear": 2022,
+      "draftTeam": "WAS"
     },
     {
       "id": "15721",
@@ -1367,7 +1968,11 @@
       "salary": 877250,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 185.15,
+      "team": "TBB",
+      "draftYear": 2022,
+      "draftTeam": "TBB"
     },
     {
       "id": "0529",
@@ -1376,7 +1981,11 @@
       "salary": 632500,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 172.16,
+      "team": "NOS",
+      "draftYear": 1970,
+      "draftTeam": "NOS"
     },
     {
       "id": "16186",
@@ -1385,7 +1994,11 @@
       "salary": 2860000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 177,
+      "team": "MIN",
+      "draftYear": 2023,
+      "draftTeam": "MIN"
     },
     {
       "id": "16148",
@@ -1394,7 +2007,11 @@
       "salary": 962500,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 198.88,
+      "team": "CAR",
+      "draftYear": 2023,
+      "draftTeam": "CAR"
     },
     {
       "id": "16333",
@@ -1403,7 +2020,11 @@
       "salary": 495000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 63.3,
+      "team": "ARI",
+      "draftYear": 2023,
+      "draftTeam": "MIA"
     },
     {
       "id": "13772",
@@ -1412,7 +2033,11 @@
       "salary": 6500000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 137.1,
+      "team": "HOU",
+      "draftYear": 2018,
+      "draftTeam": "DAL"
     },
     {
       "id": "13193",
@@ -1421,7 +2046,11 @@
       "salary": 750000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 230.2,
+      "team": "MIA",
+      "draftYear": 2017,
+      "draftTeam": "TEN"
     },
     {
       "id": "13131",
@@ -1430,7 +2059,11 @@
       "salary": 5325000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 255.25,
+      "team": "HOU",
+      "draftYear": 2017,
+      "draftTeam": "CIN"
     },
     {
       "id": "14108",
@@ -1439,7 +2072,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 77.79,
+      "team": "ARI",
+      "draftYear": 2019,
+      "draftTeam": "FA"
     },
     {
       "id": "13718",
@@ -1448,7 +2085,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 158.8,
+      "team": "LVR",
+      "draftYear": 2018,
+      "draftTeam": "MIN"
     },
     {
       "id": "13641",
@@ -1457,7 +2098,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 140.25,
+      "team": "ATL",
+      "draftYear": 2018,
+      "draftTeam": "FA"
     },
     {
       "id": "16846",
@@ -1466,7 +2111,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 183.7,
+      "team": "DET",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "14778",
@@ -1475,7 +2124,11 @@
       "salary": 1024870,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 276.9,
+      "team": "MIA",
+      "draftYear": 2020,
+      "draftTeam": "MIA"
     },
     {
       "id": "11938",
@@ -1484,7 +2137,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 123.9,
+      "team": "CAR",
+      "draftYear": 2014,
+      "draftTeam": "FA"
     },
     {
       "id": "15283",
@@ -1493,7 +2150,11 @@
       "salary": 425000,
       "franchiseId": "0007",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 0,
+      "team": "ATL",
+      "draftYear": 2021,
+      "draftTeam": "ARI"
     },
     {
       "id": "12620",
@@ -1502,7 +2163,11 @@
       "salary": 6080250,
       "franchiseId": "0007",
       "status": "INJURED_RESERVE",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 200.76,
+      "team": "DAL",
+      "draftYear": 2016,
+      "draftTeam": "FA"
     },
     {
       "id": "16778",
@@ -1511,7 +2176,11 @@
       "salary": 475000,
       "franchiseId": "0007",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "DAL",
+      "draftYear": 2024,
+      "draftTeam": "DAL"
     },
     {
       "id": "16625",
@@ -1520,7 +2189,11 @@
       "salary": 725000,
       "franchiseId": "0007",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "PHI",
+      "draftYear": 2024,
+      "draftTeam": "PHI"
     },
     {
       "id": "16648",
@@ -1529,7 +2202,11 @@
       "salary": 475000,
       "franchiseId": "0007",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 3.4,
+      "team": "KCC",
+      "draftYear": 2024,
+      "draftTeam": "KCC"
     },
     {
       "id": "15255",
@@ -1538,7 +2215,11 @@
       "salary": 632225,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 68.59,
+      "team": "PHI",
+      "draftYear": 2021,
+      "draftTeam": "PHI"
     },
     {
       "id": "15799",
@@ -1547,7 +2228,11 @@
       "salary": 514250,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 121.2,
+      "team": "DAL",
+      "draftYear": 2022,
+      "draftTeam": "DAL"
     },
     {
       "id": "13629",
@@ -1556,7 +2241,11 @@
       "salary": 1210000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 194.5,
+      "team": "TEN",
+      "draftYear": 2018,
+      "draftTeam": "ATL"
     },
     {
       "id": "15777",
@@ -1565,7 +2254,11 @@
       "salary": 574750,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 143.51,
+      "team": "PIT",
+      "draftYear": 2022,
+      "draftTeam": "PIT"
     },
     {
       "id": "16214",
@@ -1574,7 +2267,11 @@
       "salary": 715000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 194.3,
+      "team": "DET",
+      "draftYear": 2023,
+      "draftTeam": "DET"
     },
     {
       "id": "16162",
@@ -1583,7 +2280,11 @@
       "salary": 3410000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 333.6,
+      "team": "DET",
+      "draftYear": 2023,
+      "draftTeam": "DET"
     },
     {
       "id": "15797",
@@ -1592,7 +2293,11 @@
       "salary": 574750,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 15.6,
+      "team": "NYG",
+      "draftYear": 2022,
+      "draftTeam": "DEN"
     },
     {
       "id": "16187",
@@ -1601,7 +2306,11 @@
       "salary": 577500,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 141.63,
+      "team": "IND",
+      "draftYear": 2023,
+      "draftTeam": "IND"
     },
     {
       "id": "14073",
@@ -1610,7 +2319,11 @@
       "salary": 9025000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 303,
+      "team": "GBP",
+      "draftYear": 2019,
+      "draftTeam": "OAK"
     },
     {
       "id": "16149",
@@ -1619,7 +2332,11 @@
       "salary": 522500,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 192.08,
+      "team": "TEN",
+      "draftYear": 2023,
+      "draftTeam": "TEN"
     },
     {
       "id": "16582",
@@ -1628,7 +2345,11 @@
       "salary": 800000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 181,
+      "team": "DEN",
+      "draftYear": 2024,
+      "draftTeam": "DEN"
     },
     {
       "id": "0503",
@@ -1637,7 +2358,11 @@
       "salary": 675000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 120.6,
+      "team": "MIA",
+      "draftYear": 1970,
+      "draftTeam": "MIA"
     },
     {
       "id": "16628",
@@ -1646,7 +2371,11 @@
       "salary": 500000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 41.9,
+      "team": "TBB",
+      "draftYear": 2024,
+      "draftTeam": "TBB"
     },
     {
       "id": "11947",
@@ -1655,7 +2384,11 @@
       "salary": 425000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 51.7,
+      "team": "GBP",
+      "draftYear": 2014,
+      "draftTeam": "FA"
     },
     {
       "id": "16752",
@@ -1664,7 +2397,11 @@
       "salary": 425000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 5.42,
+      "team": "NYJ",
+      "draftYear": 2024,
+      "draftTeam": "NYJ"
     },
     {
       "id": "16640",
@@ -1673,7 +2410,11 @@
       "salary": 425000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 2.34,
+      "team": "SFO",
+      "draftYear": 2024,
+      "draftTeam": "SFO"
     },
     {
       "id": "16629",
@@ -1682,7 +2423,11 @@
       "salary": 525000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "PIT",
+      "draftYear": 2024,
+      "draftTeam": "PIT"
     },
     {
       "id": "16646",
@@ -1691,7 +2436,11 @@
       "salary": 425000,
       "franchiseId": "0008",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "NEP",
+      "draftYear": 2024,
+      "draftTeam": "NEP"
     },
     {
       "id": "0531",
@@ -1700,7 +2449,11 @@
       "salary": 565675,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 127.24,
+      "team": "BAL",
+      "draftYear": 1970,
+      "draftTeam": "BAL"
     },
     {
       "id": "15256",
@@ -1709,7 +2462,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 127.6,
+      "team": "DEN",
+      "draftYear": 2021,
+      "draftTeam": "DEN"
     },
     {
       "id": "15789",
@@ -1718,7 +2475,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 107.9,
+      "team": "GBP",
+      "draftYear": 2022,
+      "draftTeam": "GBP"
     },
     {
       "id": "14802",
@@ -1727,7 +2488,11 @@
       "salary": 4538710,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 264.7,
+      "team": "IND",
+      "draftYear": 2020,
+      "draftTeam": "IND"
     },
     {
       "id": "14835",
@@ -1736,7 +2501,11 @@
       "salary": 1171280,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 181.8,
+      "team": "CIN",
+      "draftYear": 2020,
+      "draftTeam": "CIN"
     },
     {
       "id": "15284",
@@ -1745,7 +2514,11 @@
       "salary": 2462350,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 147.7,
+      "team": "MIA",
+      "draftYear": 2021,
+      "draftTeam": "MIA"
     },
     {
       "id": "16213",
@@ -1754,7 +2527,11 @@
       "salary": 852500,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 114,
+      "team": "BUF",
+      "draftYear": 2023,
+      "draftTeam": "BUF"
     },
     {
       "id": "14777",
@@ -1763,7 +2540,11 @@
       "salary": 988267.5,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 506.9,
+      "team": "CIN",
+      "draftYear": 2020,
+      "draftTeam": "CIN"
     },
     {
       "id": "0528",
@@ -1772,7 +2553,11 @@
       "salary": 500000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 137.99,
+      "team": "LAR",
+      "draftYear": 1970,
+      "draftTeam": "FA"
     },
     {
       "id": "15281",
@@ -1781,7 +2566,11 @@
       "salary": 3061300,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 364.1,
+      "team": "CIN",
+      "draftYear": 2021,
+      "draftTeam": "CIN"
     },
     {
       "id": "16641",
@@ -1790,7 +2579,11 @@
       "salary": 1250000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 285.5,
+      "team": "LVR",
+      "draftYear": 2024,
+      "draftTeam": "LVR"
     },
     {
       "id": "16193",
@@ -1799,7 +2592,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 63.8,
+      "team": "NEP",
+      "draftYear": 2023,
+      "draftTeam": "NEP"
     },
     {
       "id": "16614",
@@ -1808,7 +2605,11 @@
       "salary": 3500000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 203.8,
+      "team": "ARI",
+      "draftYear": 2024,
+      "draftTeam": "ARI"
     },
     {
       "id": "16681",
@@ -1817,7 +2618,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 30,
+      "team": "MIN",
+      "draftYear": 2024,
+      "draftTeam": "MIN"
     },
     {
       "id": "14803",
@@ -1826,7 +2631,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 3.5,
+      "team": "FA",
+      "draftYear": 2020,
+      "draftTeam": "KCC"
     },
     {
       "id": "16168",
@@ -1835,7 +2644,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "SFO",
+      "draftYear": 2023,
+      "draftTeam": "NYJ"
     },
     {
       "id": "13113",
@@ -1844,7 +2657,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 135.26,
+      "team": "CLE",
+      "draftYear": 2017,
+      "draftTeam": "HOU"
     },
     {
       "id": "13163",
@@ -1853,7 +2670,11 @@
       "salary": 3575000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 166.6,
+      "team": "TBB",
+      "draftYear": 2017,
+      "draftTeam": "TBB"
     },
     {
       "id": "16194",
@@ -1862,7 +2683,11 @@
       "salary": 687500,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 105.8,
+      "team": "KCC",
+      "draftYear": 2023,
+      "draftTeam": "KCC"
     },
     {
       "id": "16633",
@@ -1871,7 +2696,11 @@
       "salary": 425000,
       "franchiseId": "0009",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "LAR",
+      "draftYear": 2024,
+      "draftTeam": "LAR"
     },
     {
       "id": "0509",
@@ -1880,7 +2709,11 @@
       "salary": 1031525,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 77.14,
+      "team": "JAC",
+      "draftYear": 1970,
+      "draftTeam": "JAC"
     },
     {
       "id": "15289",
@@ -1889,7 +2722,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": -0.78,
+      "team": "FA",
+      "draftYear": 2021,
+      "draftTeam": "NYG"
     },
     {
       "id": "15337",
@@ -1898,7 +2735,11 @@
       "salary": 514250,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 129.8,
+      "team": "KCC",
+      "draftYear": 2021,
+      "draftTeam": "KCC"
     },
     {
       "id": "15733",
@@ -1907,7 +2748,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 31.8,
+      "team": "CLE",
+      "draftYear": 2022,
+      "draftTeam": "NEP"
     },
     {
       "id": "15756",
@@ -1916,7 +2761,11 @@
       "salary": 1633500,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 196.4,
+      "team": "DET",
+      "draftYear": 2022,
+      "draftTeam": "DET"
     },
     {
       "id": "16183",
@@ -1925,7 +2774,11 @@
       "salary": 605000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 12,
+      "team": "NYG",
+      "draftYear": 2023,
+      "draftTeam": "NYG"
     },
     {
       "id": "16161",
@@ -1934,7 +2787,11 @@
       "salary": 3740000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 301.85,
+      "team": "ATL",
+      "draftYear": 2023,
+      "draftTeam": "ATL"
     },
     {
       "id": "16150",
@@ -1943,7 +2800,11 @@
       "salary": 742500,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 313.42,
+      "team": "HOU",
+      "draftYear": 2023,
+      "draftTeam": "HOU"
     },
     {
       "id": "16175",
@@ -1952,7 +2813,11 @@
       "salary": 880000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 68.95,
+      "team": "CHI",
+      "draftYear": 2023,
+      "draftTeam": "CHI"
     },
     {
       "id": "16196",
@@ -1961,7 +2826,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 0,
+      "team": "DEN",
+      "draftYear": 2023,
+      "draftTeam": "NOS"
     },
     {
       "id": "16615",
@@ -1970,7 +2839,11 @@
       "salary": 3200000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 239.9,
+      "team": "NYG",
+      "draftYear": 2024,
+      "draftTeam": "NYG"
     },
     {
       "id": "8851",
@@ -1979,7 +2852,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 111.2,
+      "team": "TEN",
+      "draftYear": 2007,
+      "draftTeam": "DAL"
     },
     {
       "id": "16747",
@@ -1988,7 +2865,11 @@
       "salary": 450000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 112.45,
+      "team": "NYG",
+      "draftYear": 2024,
+      "draftTeam": "NYG"
     },
     {
       "id": "16192",
@@ -1997,7 +2878,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 67.62,
+      "team": "JAC",
+      "draftYear": 2023,
+      "draftTeam": "JAC"
     },
     {
       "id": "15786",
@@ -2006,7 +2891,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 70.9,
+      "team": "MIN",
+      "draftYear": 2022,
+      "draftTeam": "MIN"
     },
     {
       "id": "16178",
@@ -2015,7 +2904,11 @@
       "salary": 2025000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 3.27,
+      "team": "BAL",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "16809",
@@ -2024,7 +2917,11 @@
       "salary": 475000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 56,
+      "team": "CAR",
+      "draftYear": 2024,
+      "draftTeam": "FA"
     },
     {
       "id": "16212",
@@ -2033,7 +2930,11 @@
       "salary": 660000,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 35.7,
+      "team": "LVR",
+      "draftYear": 2023,
+      "draftTeam": "LVR"
     },
     {
       "id": "15749",
@@ -2042,7 +2943,11 @@
       "salary": 786500,
       "franchiseId": "0010",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 77.9,
+      "team": "KCC",
+      "draftYear": 2022,
+      "draftTeam": "KCC"
     },
     {
       "id": "15263",
@@ -2051,7 +2956,11 @@
       "salary": 632225,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 0,
+      "team": "SFO",
+      "draftYear": 2021,
+      "draftTeam": "SFO"
     },
     {
       "id": "8930",
@@ -2060,7 +2969,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 68.6,
+      "team": "ARI",
+      "draftYear": 2006,
+      "draftTeam": "FA"
     },
     {
       "id": "15752",
@@ -2069,7 +2982,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 8.33,
+      "team": "TEN",
+      "draftYear": 2022,
+      "draftTeam": "TEN"
     },
     {
       "id": "13633",
@@ -2078,7 +2995,11 @@
       "salary": 2000000,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 73.2,
+      "team": "JAC",
+      "draftYear": 2018,
+      "draftTeam": "ARI"
     },
     {
       "id": "13404",
@@ -2087,7 +3008,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 153.17,
+      "team": "WAS",
+      "draftYear": 2017,
+      "draftTeam": "FA"
     },
     {
       "id": "15972",
@@ -2096,7 +3021,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 162.82,
+      "team": "SFO",
+      "draftYear": 2022,
+      "draftTeam": "FA"
     },
     {
       "id": "13189",
@@ -2105,7 +3034,11 @@
       "salary": 3146000,
       "franchiseId": "0010",
       "status": "INJURED_RESERVE",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 102.1,
+      "team": "JAC",
+      "draftYear": 2017,
+      "draftTeam": "NYG"
     },
     {
       "id": "16580",
@@ -2114,7 +3047,11 @@
       "salary": 525000,
       "franchiseId": "0010",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 36.36,
+      "team": "NEP",
+      "draftYear": 2024,
+      "draftTeam": "NEP"
     },
     {
       "id": "16678",
@@ -2123,7 +3060,11 @@
       "salary": 425000,
       "franchiseId": "0010",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 4.4,
+      "team": "DET",
+      "draftYear": 2024,
+      "draftTeam": "DET"
     },
     {
       "id": "16643",
@@ -2132,7 +3073,11 @@
       "salary": 475000,
       "franchiseId": "0010",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 8.8,
+      "team": "CAR",
+      "draftYear": 2024,
+      "draftTeam": "CAR"
     },
     {
       "id": "15282",
@@ -2141,7 +3086,11 @@
       "salary": 1863400,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 205.8,
+      "team": "PHI",
+      "draftYear": 2021,
+      "draftTeam": "PHI"
     },
     {
       "id": "15293",
@@ -2150,7 +3099,11 @@
       "salary": 1197900,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 158.1,
+      "team": "BAL",
+      "draftYear": 2021,
+      "draftTeam": "BAL"
     },
     {
       "id": "15757",
@@ -2159,7 +3112,11 @@
       "salary": 635250,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 155.7,
+      "team": "NYG",
+      "draftYear": 2022,
+      "draftTeam": "NYG"
     },
     {
       "id": "15693",
@@ -2168,7 +3125,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": -0.84,
+      "team": "SEA",
+      "draftYear": 2022,
+      "draftTeam": "WAS"
     },
     {
       "id": "0519",
@@ -2177,7 +3138,11 @@
       "salary": 467500,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 151.62,
+      "team": "ARI",
+      "draftYear": 1970,
+      "draftTeam": "ARI"
     },
     {
       "id": "16414",
@@ -2186,7 +3151,11 @@
       "salary": 467500,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 257.1,
+      "team": "DAL",
+      "draftYear": 2023,
+      "draftTeam": "FA"
     },
     {
       "id": "16222",
@@ -2195,7 +3164,11 @@
       "salary": 495000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 183.2,
+      "team": "GBP",
+      "draftYear": 2023,
+      "draftTeam": "GBP"
     },
     {
       "id": "16164",
@@ -2204,7 +3177,11 @@
       "salary": 632500,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 131.1,
+      "team": "JAC",
+      "draftYear": 2023,
+      "draftTeam": "JAC"
     },
     {
       "id": "16169",
@@ -2213,7 +3190,11 @@
       "salary": 1760000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 205.1,
+      "team": "SEA",
+      "draftYear": 2023,
+      "draftTeam": "SEA"
     },
     {
       "id": "13418",
@@ -2222,7 +3203,11 @@
       "salary": 565675,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 54.9,
+      "team": "NEP",
+      "draftYear": 2017,
+      "draftTeam": "FA"
     },
     {
       "id": "13671",
@@ -2231,7 +3216,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 204.8,
+      "team": "BAL",
+      "draftYear": 2018,
+      "draftTeam": "BAL"
     },
     {
       "id": "0517",
@@ -2240,7 +3229,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 153,
+      "team": "NYG",
+      "draftYear": 1970,
+      "draftTeam": "NYG"
     },
     {
       "id": "0525",
@@ -2249,7 +3242,11 @@
       "salary": 600000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 147.23,
+      "team": "TBB",
+      "draftYear": 1970,
+      "draftTeam": "TBB"
     },
     {
       "id": "11945",
@@ -2258,7 +3255,11 @@
       "salary": 500000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 140.9,
+      "team": "CHI",
+      "draftYear": 2014,
+      "draftTeam": "FA"
     },
     {
       "id": "12676",
@@ -2267,7 +3268,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 185.5,
+      "team": "NEP",
+      "draftYear": 2016,
+      "draftTeam": "SDC"
     },
     {
       "id": "15979",
@@ -2276,7 +3281,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 214.5,
+      "team": "LAC",
+      "draftYear": 2022,
+      "draftTeam": "FA"
     },
     {
       "id": "14085",
@@ -2285,7 +3294,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 200.8,
+      "team": "TEN",
+      "draftYear": 2019,
+      "draftTeam": "DAL"
     },
     {
       "id": "11150",
@@ -2294,7 +3307,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 341.2,
+      "team": "SEA",
+      "draftYear": 2013,
+      "draftTeam": "NYJ"
     },
     {
       "id": "13763",
@@ -2303,7 +3320,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 108,
+      "team": "LAC",
+      "draftYear": 2018,
+      "draftTeam": "SEA"
     },
     {
       "id": "14067",
@@ -2312,7 +3333,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 158,
+      "team": "LVR",
+      "draftYear": 2019,
+      "draftTeam": "JAC"
     },
     {
       "id": "14071",
@@ -2321,7 +3346,11 @@
       "salary": 425000,
       "franchiseId": "0011",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 253.87,
+      "team": "DET",
+      "draftYear": 2019,
+      "draftTeam": "CHI"
     },
     {
       "id": "16597",
@@ -2330,7 +3359,11 @@
       "salary": 1000000,
       "franchiseId": "0011",
       "status": "INJURED_RESERVE",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 10.1,
+      "team": "CAR",
+      "draftYear": 2024,
+      "draftTeam": "CAR"
     },
     {
       "id": "16604",
@@ -2339,7 +3372,11 @@
       "salary": 475000,
       "franchiseId": "0011",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "GBP",
+      "draftYear": 2024,
+      "draftTeam": "GBP"
     },
     {
       "id": "16649",
@@ -2348,7 +3385,11 @@
       "salary": 450000,
       "franchiseId": "0011",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "NYG",
+      "draftYear": 2024,
+      "draftTeam": "NYG"
     },
     {
       "id": "15254",
@@ -2357,7 +3398,11 @@
       "salary": 3460600,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 202.45,
+      "team": "PIT",
+      "draftYear": 2021,
+      "draftTeam": "PIT"
     },
     {
       "id": "15259",
@@ -2366,7 +3411,11 @@
       "salary": 665500,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 196.35,
+      "team": "NEP",
+      "draftYear": 2021,
+      "draftTeam": "NEP"
     },
     {
       "id": "0515",
@@ -2375,7 +3424,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 205.62,
+      "team": "SEA",
+      "draftYear": 1970,
+      "draftTeam": "SEA"
     },
     {
       "id": "15754",
@@ -2384,7 +3437,11 @@
       "salary": 2026750,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 91.2,
+      "team": "NOS",
+      "draftYear": 2022,
+      "draftTeam": "NOS"
     },
     {
       "id": "15762",
@@ -2393,7 +3450,11 @@
       "salary": 1300750,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 165.4,
+      "team": "PIT",
+      "draftYear": 2022,
+      "draftTeam": "PIT"
     },
     {
       "id": "15712",
@@ -2402,7 +3463,11 @@
       "salary": 968000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 101.65,
+      "team": "ATL",
+      "draftYear": 2022,
+      "draftTeam": "ATL"
     },
     {
       "id": "13589",
@@ -2411,7 +3476,11 @@
       "salary": 10972500,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 526.34,
+      "team": "BUF",
+      "draftYear": 2018,
+      "draftTeam": "BUF"
     },
     {
       "id": "15714",
@@ -2420,7 +3489,11 @@
       "salary": 695750,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 35.85,
+      "team": "LVR",
+      "draftYear": 2022,
+      "draftTeam": "LVR"
     },
     {
       "id": "16199",
@@ -2429,7 +3502,11 @@
       "salary": 467500,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 36.52,
+      "team": "TBB",
+      "draftYear": 2023,
+      "draftTeam": "TBB"
     },
     {
       "id": "15331",
@@ -2438,7 +3515,11 @@
       "salary": 798600,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 175.5,
+      "team": "PIT",
+      "draftYear": 2021,
+      "draftTeam": "PIT"
     },
     {
       "id": "15710",
@@ -2447,7 +3528,11 @@
       "salary": 544500,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 305.37,
+      "team": "LAR",
+      "draftYear": 2022,
+      "draftTeam": "LAR"
     },
     {
       "id": "15319",
@@ -2456,7 +3541,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 90.8,
+      "team": "LAC",
+      "draftYear": 2021,
+      "draftTeam": "LAC"
     },
     {
       "id": "0527",
@@ -2465,7 +3554,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 44.92,
+      "team": "CAR",
+      "draftYear": 1970,
+      "draftTeam": "CAR"
     },
     {
       "id": "14137",
@@ -2474,7 +3567,11 @@
       "salary": 1000000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 101.5,
+      "team": "SEA",
+      "draftYear": 2019,
+      "draftTeam": "DEN"
     },
     {
       "id": "13592",
@@ -2483,7 +3580,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 436.92,
+      "team": "MIN",
+      "draftYear": 2018,
+      "draftTeam": "NYJ"
     },
     {
       "id": "12437",
@@ -2492,7 +3593,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 177.4,
+      "team": "SEA",
+      "draftYear": 2014,
+      "draftTeam": "FA"
     },
     {
       "id": "14223",
@@ -2501,7 +3606,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 132.7,
+      "team": "LVR",
+      "draftYear": 2019,
+      "draftTeam": "MIN"
     },
     {
       "id": "14209",
@@ -2510,7 +3619,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 19.2,
+      "team": "MIN",
+      "draftYear": 2019,
+      "draftTeam": "JAC"
     },
     {
       "id": "14600",
@@ -2519,7 +3632,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 62.4,
+      "team": "NEP",
+      "draftYear": 2019,
+      "draftTeam": "FA"
     },
     {
       "id": "14102",
@@ -2528,7 +3645,11 @@
       "salary": 5640355,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 195,
+      "team": "SEA",
+      "draftYear": 2019,
+      "draftTeam": "SEA"
     },
     {
       "id": "16584",
@@ -2537,7 +3658,11 @@
       "salary": 750000,
       "franchiseId": "0012",
       "status": "INJURED_RESERVE",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "MIN",
+      "draftYear": 2024,
+      "draftTeam": "MIN"
     },
     {
       "id": "12186",
@@ -2546,7 +3671,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "INJURED_RESERVE",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 137.94,
+      "team": "HOU",
+      "draftYear": 2015,
+      "draftTeam": "MIN"
     },
     {
       "id": "16603",
@@ -2555,7 +3684,11 @@
       "salary": 475000,
       "franchiseId": "0012",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "BUF",
+      "draftYear": 2024,
+      "draftTeam": "BUF"
     },
     {
       "id": "16788",
@@ -2564,7 +3697,11 @@
       "salary": 425000,
       "franchiseId": "0012",
       "status": "TAXI_SQUAD",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 0,
+      "team": "DEN",
+      "draftYear": 2024,
+      "draftTeam": "DEN"
     },
     {
       "id": "0511",
@@ -2573,7 +3710,11 @@
       "salary": 1187932,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 253.79,
+      "team": "DEN",
+      "draftYear": 1970,
+      "draftTeam": "DEN"
     },
     {
       "id": "0506",
@@ -2582,7 +3723,11 @@
       "salary": 565675,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 128.72,
+      "team": "CIN",
+      "draftYear": 1970,
+      "draftTeam": "CIN"
     },
     {
       "id": "14782",
@@ -2591,7 +3736,11 @@
       "salary": 514250,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 324.46,
+      "team": "GBP",
+      "draftYear": 2020,
+      "draftTeam": "GBP"
     },
     {
       "id": "14122",
@@ -2600,7 +3749,11 @@
       "salary": 574750,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 102.4,
+      "team": "NYG",
+      "draftYear": 2019,
+      "draftTeam": "NYG"
     },
     {
       "id": "15711",
@@ -2609,7 +3762,11 @@
       "salary": 3146000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 169.2,
+      "team": "SEA",
+      "draftYear": 2022,
+      "draftTeam": "SEA"
     },
     {
       "id": "15802",
@@ -2618,7 +3775,11 @@
       "salary": 544500,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 157.4,
+      "team": "TBB",
+      "draftYear": 2022,
+      "draftTeam": "TBB"
     },
     {
       "id": "14104",
@@ -2627,7 +3788,11 @@
       "salary": 425000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 212.9,
+      "team": "PHI",
+      "draftYear": 2019,
+      "draftTeam": "TEN"
     },
     {
       "id": "16167",
@@ -2636,7 +3801,11 @@
       "salary": 935000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 288.77,
+      "team": "MIA",
+      "draftYear": 2023,
+      "draftTeam": "MIA"
     },
     {
       "id": "16195",
@@ -2645,7 +3814,11 @@
       "salary": 495000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 98.7,
+      "team": "GBP",
+      "draftYear": 2023,
+      "draftTeam": "GBP"
     },
     {
       "id": "12860",
@@ -2654,7 +3827,11 @@
       "salary": 467500,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 232.8,
+      "team": "HOU",
+      "draftYear": 2016,
+      "draftTeam": "FA"
     },
     {
       "id": "16287",
@@ -2663,7 +3840,11 @@
       "salary": 467500,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 143.38,
+      "team": "LVR",
+      "draftYear": 2023,
+      "draftTeam": "LVR"
     },
     {
       "id": "14779",
@@ -2672,7 +3853,11 @@
       "salary": 841857.5,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 345.7,
+      "team": "LAC",
+      "draftYear": 2020,
+      "draftTeam": "LAC"
     },
     {
       "id": "14109",
@@ -2681,7 +3866,11 @@
       "salary": 425000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 259.8,
+      "team": "WAS",
+      "draftYear": 2019,
+      "draftTeam": "WAS"
     },
     {
       "id": "11232",
@@ -2690,7 +3879,11 @@
       "salary": 425000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 149,
+      "team": "KCC",
+      "draftYear": 2013,
+      "draftTeam": "HOU"
     },
     {
       "id": "14138",
@@ -2699,7 +3892,11 @@
       "salary": 5400000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 89.4,
+      "team": "MIN",
+      "draftYear": 2019,
+      "draftTeam": "DET"
     },
     {
       "id": "15290",
@@ -2708,7 +3905,11 @@
       "salary": 698775,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 229,
+      "team": "HOU",
+      "draftYear": 2021,
+      "draftTeam": "HOU"
     },
     {
       "id": "14059",
@@ -2717,7 +3918,11 @@
       "salary": 425000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 202,
+      "team": "MIN",
+      "draftYear": 2019,
+      "draftTeam": "NYG"
     },
     {
       "id": "16595",
@@ -2726,7 +3931,11 @@
       "salary": 450000,
       "franchiseId": "0013",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 7.15,
+      "team": "DEN",
+      "draftYear": 2024,
+      "draftTeam": "DEN"
     },
     {
       "id": "15253",
@@ -2735,7 +3944,11 @@
       "salary": 4126100,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 123.7,
+      "team": "JAC",
+      "draftYear": 2021,
+      "draftTeam": "JAC"
     },
     {
       "id": "0513",
@@ -2744,7 +3957,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 85.67,
+      "team": "LVR",
+      "draftYear": 1970,
+      "draftTeam": "OAK"
     },
     {
       "id": "15889",
@@ -2753,7 +3970,11 @@
       "salary": 544500,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 123,
+      "team": "TEN",
+      "draftYear": 2022,
+      "draftTeam": "TEN"
     },
     {
       "id": "15694",
@@ -2762,7 +3983,11 @@
       "salary": 574750,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 96.42,
+      "team": "GBP",
+      "draftYear": 2022,
+      "draftTeam": "TEN"
     },
     {
       "id": "0505",
@@ -2771,7 +3996,11 @@
       "salary": 687500,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 143.65,
+      "team": "NYJ",
+      "draftYear": 1970,
+      "draftTeam": "NYJ"
     },
     {
       "id": "16206",
@@ -2780,7 +4009,11 @@
       "salary": 522500,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 128.6,
+      "team": "ARI",
+      "draftYear": 2023,
+      "draftTeam": "ARI"
     },
     {
       "id": "13116",
@@ -2789,7 +4022,11 @@
       "salary": 11258720,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 386.36,
+      "team": "KCC",
+      "draftYear": 2017,
+      "draftTeam": "KCC"
     },
     {
       "id": "12140",
@@ -2798,7 +4035,11 @@
       "salary": 1127500,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 198.98,
+      "team": "CLE",
+      "draftYear": 2015,
+      "draftTeam": "TBB"
     },
     {
       "id": "11247",
@@ -2807,7 +4048,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 194.8,
+      "team": "WAS",
+      "draftYear": 2013,
+      "draftTeam": "PHI"
     },
     {
       "id": "16153",
@@ -2816,7 +4061,11 @@
       "salary": 495000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 0,
+      "team": "LAR",
+      "draftYear": 2023,
+      "draftTeam": "LAR"
     },
     {
       "id": "16174",
@@ -2825,7 +4074,11 @@
       "salary": 467500,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 45.95,
+      "team": "WAS",
+      "draftYear": 2023,
+      "draftTeam": "WAS"
     },
     {
       "id": "16151",
@@ -2834,7 +4087,11 @@
       "salary": 522500,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 2.68,
+      "team": "DET",
+      "draftYear": 2023,
+      "draftTeam": "DET"
     },
     {
       "id": "13164",
@@ -2843,7 +4100,11 @@
       "salary": 4500000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 175.4,
+      "team": "LAR",
+      "draftYear": 2017,
+      "draftTeam": "LAR"
     },
     {
       "id": "16593",
@@ -2852,7 +4113,11 @@
       "salary": 475000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 36.45,
+      "team": "LAR",
+      "draftYear": 2024,
+      "draftTeam": "LAR"
     },
     {
       "id": "13139",
@@ -2861,7 +4126,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 19.72,
+      "team": "NOS",
+      "draftYear": 2017,
+      "draftTeam": "GBP"
     },
     {
       "id": "16723",
@@ -2870,7 +4139,11 @@
       "salary": 450000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 57,
+      "team": "SEA",
+      "draftYear": 2024,
+      "draftTeam": "SEA"
     },
     {
       "id": "11679",
@@ -2879,7 +4152,11 @@
       "salary": 825000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 11.4,
+      "team": "FA",
+      "draftYear": 2014,
+      "draftTeam": "NYG"
     },
     {
       "id": "13148",
@@ -2888,7 +4165,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 6.56,
+      "team": "HOU",
+      "draftYear": 2017,
+      "draftTeam": "FA"
     },
     {
       "id": "16775",
@@ -2897,7 +4178,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 85.2,
+      "team": "LAR",
+      "draftYear": 2024,
+      "draftTeam": "LAR"
     },
     {
       "id": "12155",
@@ -2906,7 +4191,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 66.11,
+      "team": "LVR",
+      "draftYear": 2015,
+      "draftTeam": "DET"
     },
     {
       "id": "16680",
@@ -2915,7 +4204,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 103.8,
+      "team": "JAC",
+      "draftYear": 2024,
+      "draftTeam": "JAC"
     },
     {
       "id": "16601",
@@ -2924,7 +4217,11 @@
       "salary": 475000,
       "franchiseId": "0014",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 3.87,
+      "team": "PHI",
+      "draftYear": 2024,
+      "draftTeam": "PHI"
     },
     {
       "id": "14840",
@@ -2933,7 +4230,11 @@
       "salary": 1775000,
       "franchiseId": "0014",
       "status": "INJURED_RESERVE",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 67.3,
+      "team": "SFO",
+      "draftYear": 2020,
+      "draftTeam": "SFO"
     },
     {
       "id": "15795",
@@ -2942,7 +4243,11 @@
       "salary": 544500,
       "franchiseId": "0014",
       "status": "INJURED_RESERVE",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 33.7,
+      "team": "BAL",
+      "draftYear": 2022,
+      "draftTeam": "BAL"
     },
     {
       "id": "16808",
@@ -2951,7 +4256,11 @@
       "salary": 425000,
       "franchiseId": "0014",
       "status": "TAXI_SQUAD",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 0,
+      "team": "FA",
+      "draftYear": 2024,
+      "draftTeam": "FA"
     },
     {
       "id": "14861",
@@ -2960,7 +4269,11 @@
       "salary": 565675,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 128,
+      "team": "NOS",
+      "draftYear": 2020,
+      "draftTeam": "FA"
     },
     {
       "id": "15717",
@@ -2969,7 +4282,11 @@
       "salary": 425000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 29.5,
+      "team": "HOU",
+      "draftYear": 2022,
+      "draftTeam": "HOU"
     },
     {
       "id": "15713",
@@ -2978,7 +4295,11 @@
       "salary": 514250,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 153.77,
+      "team": "CLE",
+      "draftYear": 2022,
+      "draftTeam": "CLE"
     },
     {
       "id": "13630",
@@ -2987,7 +4308,11 @@
       "salary": 425000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 215.9,
+      "team": "DEN",
+      "draftYear": 2018,
+      "draftTeam": "DEN"
     },
     {
       "id": "16190",
@@ -2996,7 +4321,11 @@
       "salary": 2530000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 209,
+      "team": "BAL",
+      "draftYear": 2023,
+      "draftTeam": "BAL"
     },
     {
       "id": "16204",
@@ -3005,7 +4334,11 @@
       "salary": 550000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 138.47,
+      "team": "HOU",
+      "draftYear": 2023,
+      "draftTeam": "HOU"
     },
     {
       "id": "12611",
@@ -3014,7 +4347,11 @@
       "salary": 3860907,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 447.88,
+      "team": "DET",
+      "draftYear": 2016,
+      "draftTeam": "RAM"
     },
     {
       "id": "10700",
@@ -3023,7 +4360,11 @@
       "salary": 2392500,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 257.26,
+      "team": "ATL",
+      "draftYear": 2012,
+      "draftTeam": "WAS"
     },
     {
       "id": "16189",
@@ -3032,7 +4373,11 @@
       "salary": 632500,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 134.95,
+      "team": "DEN",
+      "draftYear": 2023,
+      "draftTeam": "DEN"
     },
     {
       "id": "13132",
@@ -3041,7 +4386,11 @@
       "salary": 5000000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 301.4,
+      "team": "NOS",
+      "draftYear": 2017,
+      "draftTeam": "NOS"
     },
     {
       "id": "0520",
@@ -3050,7 +4399,11 @@
       "salary": 425000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 117.66,
+      "team": "WAS",
+      "draftYear": 1970,
+      "draftTeam": "WAS"
     },
     {
       "id": "16211",
@@ -3059,7 +4412,11 @@
       "salary": 522500,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 188.1,
+      "team": "LAR",
+      "draftYear": 2023,
+      "draftTeam": "LAR"
     },
     {
       "id": "16616",
@@ -3068,7 +4425,11 @@
       "salary": 2600000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 122,
+      "team": "CHI",
+      "draftYear": 2024,
+      "draftTeam": "CHI"
     },
     {
       "id": "16581",
@@ -3077,7 +4438,11 @@
       "salary": 1100000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 508.9,
+      "team": "WAS",
+      "draftYear": 2024,
+      "draftTeam": "WAS"
     },
     {
       "id": "13172",
@@ -3086,7 +4451,11 @@
       "salary": 467500,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 84.5,
+      "team": "WAS",
+      "draftYear": 2017,
+      "draftTeam": "DAL"
     },
     {
       "id": "16623",
@@ -3095,7 +4464,11 @@
       "salary": 475000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "LAC",
+      "draftYear": 2024,
+      "draftTeam": "LAC"
     },
     {
       "id": "13674",
@@ -3104,7 +4477,11 @@
       "salary": 425000,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 147.5,
+      "team": "PHI",
+      "draftYear": 2018,
+      "draftTeam": "PHI"
     },
     {
       "id": "15329",
@@ -3113,7 +4490,11 @@
       "salary": 3327500,
       "franchiseId": "0015",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 145.4,
+      "team": "ATL",
+      "draftYear": 2021,
+      "draftTeam": "ATL"
     },
     {
       "id": "16626",
@@ -3122,7 +4503,11 @@
       "salary": 600000,
       "franchiseId": "0015",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "IND",
+      "draftYear": 2024,
+      "draftTeam": "IND"
     },
     {
       "id": "16644",
@@ -3131,7 +4516,11 @@
       "salary": 500000,
       "franchiseId": "0015",
       "status": "TAXI_SQUAD",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 0,
+      "team": "WAS",
+      "draftYear": 2024,
+      "draftTeam": "WAS"
     },
     {
       "id": "14244",
@@ -3140,7 +4529,11 @@
       "salary": 632225,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 143.5,
+      "team": "IND",
+      "draftYear": 2019,
+      "draftTeam": "TBB"
     },
     {
       "id": "15692",
@@ -3149,7 +4542,11 @@
       "salary": 635250,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 29.14,
+      "team": "PHI",
+      "draftYear": 2022,
+      "draftTeam": "PIT"
     },
     {
       "id": "15753",
@@ -3158,7 +4555,11 @@
       "salary": 2238500,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 229.9,
+      "team": "NYJ",
+      "draftYear": 2022,
+      "draftTeam": "NYJ"
     },
     {
       "id": "15698",
@@ -3167,7 +4568,11 @@
       "salary": 2227500,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 367.1,
+      "team": "SFO",
+      "draftYear": 2022,
+      "draftTeam": "SFO"
     },
     {
       "id": "16185",
@@ -3176,7 +4581,11 @@
       "salary": 3190000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 235.6,
+      "team": "SEA",
+      "draftYear": 2023,
+      "draftTeam": "SEA"
     },
     {
       "id": "16286",
@@ -3185,7 +4594,11 @@
       "salary": 467500,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 157.3,
+      "team": "SFO",
+      "draftYear": 2023,
+      "draftTeam": "SFO"
     },
     {
       "id": "16181",
@@ -3194,7 +4607,11 @@
       "salary": 522500,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 254.4,
+      "team": "CIN",
+      "draftYear": 2023,
+      "draftTeam": "CIN"
     },
     {
       "id": "0510",
@@ -3203,7 +4620,11 @@
       "salary": 775000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 228.4,
+      "team": "PIT",
+      "draftYear": 1970,
+      "draftTeam": "PIT"
     },
     {
       "id": "12447",
@@ -3212,7 +4633,11 @@
       "salary": 425000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "1"
+      "contractYear": "1",
+      "points": 63.64,
+      "team": "MIA",
+      "draftYear": 2015,
+      "draftTeam": "FA"
     },
     {
       "id": "0516",
@@ -3221,7 +4646,11 @@
       "salary": 825000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 143.65,
+      "team": "DAL",
+      "draftYear": 1970,
+      "draftTeam": "DAL"
     },
     {
       "id": "13192",
@@ -3230,7 +4659,11 @@
       "salary": 565675,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 183.1,
+      "team": "CLE",
+      "draftYear": 2017,
+      "draftTeam": "CLE"
     },
     {
       "id": "16598",
@@ -3239,7 +4672,11 @@
       "salary": 450000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 229.44,
+      "team": "TBB",
+      "draftYear": 2024,
+      "draftTeam": "TBB"
     },
     {
       "id": "15788",
@@ -3248,7 +4685,11 @@
       "salary": 786500,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "3"
+      "contractYear": "3",
+      "points": 145.4,
+      "team": "DAL",
+      "draftYear": 2022,
+      "draftTeam": "DAL"
     },
     {
       "id": "16171",
@@ -3257,7 +4698,11 @@
       "salary": 990000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "4"
+      "contractYear": "4",
+      "points": 30.63,
+      "team": "NOS",
+      "draftYear": 2023,
+      "draftTeam": "NOS"
     },
     {
       "id": "16688",
@@ -3266,7 +4711,11 @@
       "salary": 450000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 10.9,
+      "team": "SFO",
+      "draftYear": 2024,
+      "draftTeam": "SFO"
     },
     {
       "id": "16620",
@@ -3275,7 +4724,11 @@
       "salary": 2000000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "5"
+      "contractYear": "5",
+      "points": 31,
+      "team": "KCC",
+      "draftYear": 2024,
+      "draftTeam": "KCC"
     },
     {
       "id": "13610",
@@ -3284,7 +4737,11 @@
       "salary": 6050000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 70.55,
+      "team": "CLE",
+      "draftYear": 2018,
+      "draftTeam": "CLE"
     },
     {
       "id": "14798",
@@ -3293,7 +4750,11 @@
       "salary": 4000000,
       "franchiseId": "0016",
       "status": "ROSTER",
-      "contractYear": "2"
+      "contractYear": "2",
+      "points": 99.15,
+      "team": "CIN",
+      "draftYear": 2020,
+      "draftTeam": "BUF"
     }
   ]
 }
