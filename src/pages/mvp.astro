@@ -37,8 +37,42 @@ const franchiseLookup = new Map(
   ])
 );
 
-const overallCandidates = [];
-const positionBuckets = new Map(positionLabels.map(({ key }) => [key, []]));
+/** @type {Array<{
+  season: string,
+  id: string,
+  name: string,
+  position: string,
+  salary: number,
+  points: number,
+  efficiency: number,
+  franchiseId?: string,
+  team?: string,
+  positionLabel?: string
+}>} */
+const overallCandidates: Array<{
+  season: string,
+  id: string,
+  name: string,
+  position: string,
+  salary: number,
+  points: number,
+  efficiency: number,
+  franchiseId?: string,
+  team?: string,
+  positionLabel?: string
+}> = [];
+const positionBuckets = new Map<string, Array<{
+  season: string,
+  id: string,
+  name: string,
+  position: string,
+  salary: number,
+  points: number,
+  efficiency: number,
+  franchiseId?: string,
+  team?: string,
+  positionLabel?: string
+}>>(positionLabels.map(({ key }) => [key, []]));
 Object.entries(playerModules).forEach(([path, mod]) => {
   const season = extractSeason(path);
   if (!season) return;
@@ -120,9 +154,7 @@ const getNflLogo = (team) => {
     </header>
     <div class="mvp-grid">
       {overallCandidates.length ? (
-        overallCandidates
-          .sort((a, b) => Number(b.season) - Number(a.season))
-          .map((player) => {
+        overallCandidates.map((player) => {
           const franchise = player.franchiseId
             ? franchiseLookup.get(player.franchiseId)
             : null;
@@ -139,17 +171,17 @@ const getNflLogo = (team) => {
                   />
                 )}
                 <h2>{player.name}</h2>
-                <p class="mvp-meta">
-                  {nflLogo && (
-                    <img
-                      src={nflLogo}
-                      alt={`${player.team ?? 'FA'} logo`}
-                      class="nfl-icon"
-                      loading="lazy"
-                    />
-                  )}
-                  <span>{player.position}</span>
-                </p>
+                        <p class="mvp-meta">
+                          {nflLogo && (
+                            <img
+                              src={nflLogo}
+                              alt={`${player.team ?? 'FA'} logo`}
+                              class="nfl-icon"
+                              loading="lazy"
+                            />
+                          )}
+                          <span>{player.position}</span>
+                        </p>
               </header>
               <dl>
                 <div>

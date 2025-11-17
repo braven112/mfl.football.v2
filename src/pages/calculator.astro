@@ -197,9 +197,16 @@ const serializedConfig = JSON.stringify({
         </p>
         <p class="selected-player hidden" id="selectedPlayerDisplay"></p>
 
-        <details class="manual-salary" id="manualSalaryPanel">
-          <summary>Need to override the salary?</summary>
-          <div class="manual-salary__body">
+        <div class="manual-salary" id="manualSalaryPanel">
+          <button
+            type="button"
+            class="manual-salary__toggle"
+            id="manualSalaryToggle"
+            aria-expanded="false"
+          >
+            Need to override the salary?
+          </button>
+          <div class="manual-salary__body hidden" id="manualSalaryBody">
             <label class="field-label" for="currentSalary">Enter Salary Manually:</label>
             <input
               type="text"
@@ -232,7 +239,7 @@ const serializedConfig = JSON.stringify({
 
             <button type="button" id="calculateBtn" class="recalculate-btn">Recalculate</button>
           </div>
-        </details>
+        </div>
       </div>
 
       <div id="extensionLengthContainer">
@@ -542,11 +549,15 @@ const serializedConfig = JSON.stringify({
     background: #f8fafc;
   }
 
-  .manual-salary summary {
-    cursor: pointer;
+  .manual-salary__toggle {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
     font-weight: 600;
     color: #0d3b78;
-    outline: none;
+    cursor: pointer;
+    padding: 0;
   }
 
   .manual-salary__body {
@@ -597,7 +608,6 @@ const serializedConfig = JSON.stringify({
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    letter-spacing: 0.03em;
     font-size: 1rem;
   }
 
@@ -1002,6 +1012,8 @@ const serializedConfig = JSON.stringify({
     const playerSuggestions = document.getElementById('playerSuggestions');
     const playerDetails = document.querySelector('.player-details');
     const manualOverridePanel = document.getElementById('manualSalaryPanel');
+    const manualOverrideToggle = document.getElementById('manualSalaryToggle');
+    const manualOverrideBody = document.getElementById('manualSalaryBody');
     const resultContainer = document.getElementById('result');
     const comparisonContainer = document.getElementById('comparisonContainer');
     const calculateBtn = document.getElementById('calculateBtn');
@@ -1031,6 +1043,13 @@ const serializedConfig = JSON.stringify({
     const defaultComparisonMessage = comparisonContainer.innerHTML;
     let selectedPlayer = null;
     let suppressManualSalaryUpdate = false;
+    let manualOverrideOpen = false;
+
+    manualOverrideToggle?.addEventListener('click', () => {
+      manualOverrideOpen = !manualOverrideOpen;
+      manualOverrideBody?.classList.toggle('hidden', !manualOverrideOpen);
+      manualOverrideToggle?.setAttribute('aria-expanded', String(manualOverrideOpen));
+    });
 
     const sortPlayers = (list) =>
       [...list].sort(
@@ -1218,7 +1237,7 @@ const serializedConfig = JSON.stringify({
       let yearsRemaining = selectedYearsInput;
       const position = document.querySelector('input[name="position"]:checked').value;
       const extensionType = document.querySelector('input[name="extType"]:checked').value;
-      const manualOverrideActive = manualOverridePanel?.open ?? false;
+      const manualOverrideActive = manualOverrideOpen;
       const extensionLength =
         extensionType === 'rookie'
           ? 2
@@ -1480,8 +1499,10 @@ Reference: ${referenceLabel}`;
 
     currentSalaryInput.addEventListener('input', () => {
       if (suppressManualSalaryUpdate) return;
-      setSelectedPlayer(null);
-      playerSearchInput.value = '';
+      if (!manualOverrideOpen) {
+        setSelectedPlayer(null);
+        playerSearchInput.value = '';
+      }
     });
 
     document.querySelectorAll('input[name="extType"]').forEach((radio) => {
