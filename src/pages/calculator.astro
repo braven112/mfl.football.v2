@@ -248,12 +248,12 @@ const serializedConfig = JSON.stringify({
       <div id="comparisonContainer" class="salary-comparison-wrapper">
         <p class="comparison-placeholder">Select a player to view the current vs new contract summary.</p>
       </div>
-      <div class="result" id="result">Use the calculator above, then generate your message here.</div>
+      <code class="result" id="result">Use the calculator above, then generate your message here.</code>
     </div>
 
     <section class="salary-reference">
       <div class="salary-reference__panel">
-        <h2>Extension Salaries<br />(Top 5)</h2>
+        <h2>Extension Salaries<div class="salary-reference__subheading">(Top 5)</div></h2>
         <p>Used for rookie and veteran extensions.</p>
         <table>
           <thead>
@@ -273,9 +273,12 @@ const serializedConfig = JSON.stringify({
             ))}
           </tbody>
         </table>
+        <p class="salary-reference__disclaimer" id="extensionsDisclaimer">
+          Current season values are estimates until the Week 14 snapshot is captured.
+        </p>
       </div>
       <div class="salary-reference__panel">
-        <h2>Franchise Tag Salaries<br />(Top 3)</h2>
+        <h2>Franchise Tag Salaries<div class="salary-reference__subheading">(Top 3)</div></h2>
         <p>Franchise tags are locked to one-year deals.</p>
         <table>
           <thead>
@@ -295,6 +298,9 @@ const serializedConfig = JSON.stringify({
             ))}
           </tbody>
         </table>
+        <p class="salary-reference__disclaimer" id="franchiseDisclaimer">
+          Current season values are estimates until the Week 14 snapshot is captured.
+        </p>
       </div>
     </section>
   </section>
@@ -316,14 +322,11 @@ const serializedConfig = JSON.stringify({
 
   .calculator__card h1 {
     margin: 0;
-    text-align: center;
-    background: #0d3b78;
-    color: #fff;
+
     padding: 0.85rem;
-    border-radius: 0.75rem;
+    padding-left: 0;
     font-size: 2.4rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
   }
 
   .season-select {
@@ -607,13 +610,26 @@ const serializedConfig = JSON.stringify({
     display: none !important;
   }
 
-  .result {
-    padding: 0.75rem;
+  :global(.result) {
+    padding: 1rem;
     border: 1px solid #d7dce3;
-    border-radius: 0.35rem;
+    border-radius: 1rem;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
-    font-size: 0.95rem;
-    background: #fff;
+    font-size: .75rem;
+    background: rgb(63 65 62);
+    color: #ddd;
+
+  }
+  :global(.result button) {
+    background: #eee;
+    color: #222;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.6rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-top: 1rem;
   }
 
   .bbcode {
@@ -788,13 +804,26 @@ const serializedConfig = JSON.stringify({
 
   .salary-reference__panel h2 {
     margin: 0 0 0.3rem;
+    font-size: 1rem;
   }
-
+.salary-reference__subheading {
+    font-size: 1rem;
+    color: #666;
+    font-weight: 300;
+    margin-block: 0.25rem;
+}
   .salary-reference__panel p {
     margin: 0 0 0.75rem;
     color: #555;
     font-size: 0.9rem;
   }
+
+   .salary-reference__panel .salary-reference__disclaimer{
+    margin-top: 1rem;
+    font-size: .75rem;
+    color: #999;
+}
+
 
   .salary-reference table {
     width: 100%;
@@ -806,8 +835,11 @@ const serializedConfig = JSON.stringify({
   .salary-reference td {
     padding: 0.35rem 0;
     border-bottom: 1px solid #eee;
+    text-align: left;
   }
-
+.salary-reference th:last-child {
+   text-align: right;
+}
   .salary-reference td:last-child {
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -873,6 +905,7 @@ const serializedConfig = JSON.stringify({
     .clear-input-btn:hover {
       background: #eef2ff;
     }
+
   }
 </style>
 
@@ -976,6 +1009,8 @@ const serializedConfig = JSON.stringify({
     const seasonSelect = document.getElementById('seasonSelect');
     const extensionTableBody = document.getElementById('extensionSalaryTable');
     const franchiseTableBody = document.getElementById('franchiseSalaryTable');
+    const extensionDisclaimer = document.getElementById('extensionsDisclaimer');
+    const franchiseDisclaimer = document.getElementById('franchiseDisclaimer');
 
     if (
       !playerSearchInput ||
@@ -1137,6 +1172,10 @@ const serializedConfig = JSON.stringify({
       }
     };
 
+    const latestSeasonKey =
+      Array.from(seasonStates.keys())
+        .sort((a, b) => Number(b) - Number(a))[0] ?? currentSeasonKey;
+
     const updateReferenceTables = () => {
       const extensionValues = seasonState?.extensionSalaries ?? {};
       const franchiseValues = seasonState?.franchiseSalaries ?? {};
@@ -1154,6 +1193,10 @@ const serializedConfig = JSON.stringify({
           franCell.textContent = formatCurrency(franchiseValues[key] ?? 0);
         }
       });
+
+      const showDisclaimer = currentSeasonKey === latestSeasonKey;
+      extensionDisclaimer?.classList.toggle('hidden', !showDisclaimer);
+      franchiseDisclaimer?.classList.toggle('hidden', !showDisclaimer);
     };
 
     const resetComparison = () => {
@@ -1274,23 +1317,23 @@ Reference: ${referenceLabel}`;
             <tbody>
               ${
                 subtitle
-                  ? `<tr class="salary-table__subtitle"><td colspan="2">${subtitle}</td></tr>`
+                  ? `<tr class="salary-table__subtitle"><td>${subtitle}</td></tr>`
                   : ''
               }
               <tr>
-                <th>Player</th>
+                
                 <td class="salary-table__player">${nflLogoMarkup} ${playerNameLabel}</td>
               </tr>
               <tr>
-                <th>${salaryLabel}</th>
+               
                 <td class="${salaryClass}">${salaryValue}</td>
               </tr>
               <tr>
-                <th>Years</th>
+              
                 <td>${yearsValue}</td>
               </tr>
               <tr>
-                <th>Position</th>
+              
                 <td>${positionValue}</td>
               </tr>
             </tbody>
