@@ -107,7 +107,7 @@ Object.entries(playerSalaryModules).forEach(([path, mod]) => {
 });
 
 const seasonsPayload = {};
-const seasonOrder = Object.keys(playerSalariesBySeason)
+let seasonOrder = Object.keys(playerSalariesBySeason)
   .filter((season) => salarySummaryBySeason[season])
   .sort((a, b) => Number(b) - Number(a));
 
@@ -131,7 +131,80 @@ seasonOrder.forEach((season) => {
   };
 });
 
-const defaultSeason = seasonOrder[0] ?? seasonOrder.at(-1) ?? '2024';
+const latestActualSeason = seasonOrder[0] ?? null;
+
+const PROJECTION_GROWTH_RATE = 0.1;
+const MAX_PROJECTED_SEASON = 2029;
+
+const baseProjectionSeason = latestActualSeason;
+const projectedSeasons = [];
+if (baseProjectionSeason && seasonsPayload[baseProjectionSeason]) {
+  const baseYear = Number(baseProjectionSeason);
+  const baseSeasonData = seasonsPayload[baseProjectionSeason];
+  const basePlayers = baseSeasonData.players ?? [];
+
+  for (
+    let targetYear = baseYear + 1;
+    targetYear <= MAX_PROJECTED_SEASON;
+    targetYear++
+  ) {
+    const yearsAhead = targetYear - baseYear;
+    const multiplier = Number(
+      Math.pow(1 + PROJECTION_GROWTH_RATE, yearsAhead).toFixed(6)
+    );
+
+    const projectedPlayers = basePlayers
+      .map((player) => {
+        const nextContractYears = Math.max(
+          (player.contractYears ?? 0) - yearsAhead,
+          0
+        );
+        if (nextContractYears <= 0) return null;
+        const projectedSalary = Math.round((player.salary ?? 0) * multiplier);
+        return {
+          ...player,
+          salary: projectedSalary,
+          contractYears: nextContractYears,
+          projectedFromSeason: baseProjectionSeason,
+          projectedYearsAhead: yearsAhead,
+        };
+      })
+      .filter(Boolean);
+
+    if (!projectedPlayers.length) break;
+
+    const scaleSalaries = (source = {}) => {
+      const scaled = {};
+      extensionPositions.forEach(({ key }) => {
+        const value = source[key] ?? 0;
+        scaled[key] = Math.round(value * multiplier);
+      });
+      return scaled;
+    };
+
+    const projectedSeasonKey = String(targetYear);
+    seasonsPayload[projectedSeasonKey] = {
+      extensionSalaries: scaleSalaries(baseSeasonData.extensionSalaries ?? {}),
+      franchiseSalaries: scaleSalaries(baseSeasonData.franchiseSalaries ?? {}),
+      players: projectedPlayers,
+      metadata: {
+        season: projectedSeasonKey,
+        projected: true,
+        baseSeason: baseProjectionSeason,
+        yearsAhead,
+      },
+    };
+    projectedSeasons.push(projectedSeasonKey);
+  }
+}
+
+if (projectedSeasons.length) {
+  seasonOrder = [...seasonOrder, ...projectedSeasons].sort(
+    (a, b) => Number(b) - Number(a)
+  );
+}
+
+const defaultSeason = latestActualSeason ?? seasonOrder.at(-1) ?? '2024';
 const blankSalaries = extensionPositions.reduce((acc, { key }) => {
   acc[key] = 0;
   return acc;
@@ -148,6 +221,7 @@ const serializedConfig = JSON.stringify({
   defaultSeason,
   seasonOptions: seasonOrder,
   positionKeys: extensionPositions.map(({ key }) => key),
+  latestActualSeason,
 });
 ---
 
@@ -159,12 +233,17 @@ const serializedConfig = JSON.stringify({
       <div class="season-select">
         <label class="field-label" for="seasonSelect">Season:</label>
         <select id="seasonSelect" class="season-select__control">
-          {seasonOrder.map((season) => (
-            <option value={season} selected={season === defaultSeason}>
-              {season}
-            </option>
-          ))}
+          {seasonOrder.map((season) => {
+            const seasonMeta = seasonsPayload[season]?.metadata ?? {};
+            const label = seasonMeta.projected ? `${season}*` : season;
+            return (
+              <option value={season} selected={season === defaultSeason}>
+                {label}
+              </option>
+            );
+          })}
         </select>
+        <span class="season-select__hint">* Projected values (10% annual growth)</span>
       </div>
 
       <label class="field-label">Contract Type:</label>
@@ -340,6 +419,7 @@ const serializedConfig = JSON.stringify({
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .season-select__control {
@@ -349,6 +429,11 @@ const serializedConfig = JSON.stringify({
     background: #fff;
     font-size: 1rem;
     min-width: 120px;
+  }
+
+  .season-select__hint {
+    font-size: 0.85rem;
+    color: #6b7280;
   }
 
   .field-label {
@@ -935,6 +1020,7 @@ const serializedConfig = JSON.stringify({
     seasonOptions = [],
     salaryTabs,
     positionKeys = [],
+    latestActualSeason,
   } = config;
 
   const createSeasonState = (seasonKey, data = {}) => {
@@ -1191,10 +1277,6 @@ const serializedConfig = JSON.stringify({
       }
     };
 
-    const latestSeasonKey =
-      Array.from(seasonStates.keys())
-        .sort((a, b) => Number(b) - Number(a))[0] ?? currentSeasonKey;
-
     const updateReferenceTables = () => {
       const extensionValues = seasonState?.extensionSalaries ?? {};
       const franchiseValues = seasonState?.franchiseSalaries ?? {};
@@ -1213,7 +1295,12 @@ const serializedConfig = JSON.stringify({
         }
       });
 
-      const showDisclaimer = currentSeasonKey === latestSeasonKey;
+      const fallbackLatest =
+        Array.from(seasonStates.keys())
+          .sort((a, b) => Number(b) - Number(a))[0] ?? currentSeasonKey;
+      const showDisclaimer = latestActualSeason
+        ? currentSeasonKey === latestActualSeason
+        : currentSeasonKey === fallbackLatest;
       extensionDisclaimer?.classList.toggle('hidden', !showDisclaimer);
       franchiseDisclaimer?.classList.toggle('hidden', !showDisclaimer);
     };
