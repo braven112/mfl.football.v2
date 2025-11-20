@@ -1,2 +1,16 @@
 @forward "color-helpers";
 @forward "variables";
+
+:root {
+  --color-bg-base: #ffffff;
+  --color-bg-subtle: #f7f8fb;
+
+  --color-bg-practice: #f0f7ff;
+  --color-bg-practice-alt: #e0efff;
+
+  --color-bg-injured: #fff5f5;
+  --color-bg-injured-alt: #ffe8e8;
+
+  --color-border-practice: #bfdbfe;
+  --color-border-injured: #fecaca;
+}

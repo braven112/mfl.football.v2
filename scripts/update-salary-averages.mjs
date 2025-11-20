@@ -253,7 +253,17 @@ const writeFetchStamp = async () => {
   );
 };
 
+const shouldSkipFetch =
+  typeof env.SKIP_SALARY_FETCH === 'string' &&
+  ['1', 'true', 'yes'].includes(env.SKIP_SALARY_FETCH.toLowerCase());
+
 const run = async () => {
+  if (shouldSkipFetch) {
+    console.log(
+      '[salary-averages] SKIP_SALARY_FETCH set. Skipping salary update script.'
+    );
+    return;
+  }
   const isFresh = await hasRecentFetch();
   if (isFresh) {
     console.log(

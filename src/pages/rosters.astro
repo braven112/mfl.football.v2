@@ -1,0 +1,1455 @@
+---
+import Layout from '../layouts/Layout.astro';
+import leagueAssets from '../data/theleague.assets.json';
+
+const SALARY_CAP = 45_000_000;
+
+const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
+  eager: true,
+});
+
+const ROSTER_LIMIT = 28;
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const parseNumber = (value) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+
+const formatCapSpaceDisplay = (value = 0) => {
+  if (!Number.isFinite(value)) return currencyFormatter.format(0);
+  if (value >= 1_000_000) {
+    const millions = value / 1_000_000;
+    const compact = millions >= 10 ? millions.toFixed(0) : millions.toFixed(1);
+    return `$${compact} million`;
+  }
+  return currencyFormatter.format(value);
+};
+
+const teamsList = (leagueAssets.teams ?? [])
+  .map((team) => ({
+    id: team.id,
+    name: team.name,
+    division: team.division ?? '',
+    icon: team.assets?.icons?.[0]?.relativePath ?? '',
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+const teamLookup = Object.fromEntries(teamsList.map((team) => [team.id, team]));
+
+const DEFAULT_HEADSHOT_URL =
+  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+const getPlayerImageUrl = (playerId) =>
+  playerId
+    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+    : DEFAULT_HEADSHOT_URL;
+
+const getNflLogoUrl = (teamCode) =>
+  teamCode
+    ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
+    : '';
+
+const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
+const rosterColumnOptions = [
+  { key: 'pos', label: 'Pos' },
+  { key: 'player', label: 'Player' },
+  { key: 'bye', label: 'Bye' },
+  { key: 'years', label: 'Yrs' },
+  ...SALARY_YEARS.map((year, index) => ({
+    key: `year${index + 1}`,
+    label: String(year),
+  })),
+];
+
+const nflByeWeeks = {
+  ARI: null,
+  ATL: null,
+  BAL: null,
+  BUF: null,
+  CAR: null,
+  CHI: null,
+  CIN: null,
+  CLE: null,
+  DAL: null,
+  DEN: null,
+  DET: null,
+  GB: null,
+  HOU: null,
+  IND: null,
+  JAC: null,
+  KC: null,
+  LV: null,
+  LAC: null,
+  LAR: null,
+  MIA: null,
+  MIN: null,
+  NE: null,
+  NO: null,
+  NYG: null,
+  NYJ: null,
+  PHI: null,
+  PIT: null,
+  SEA: null,
+  SF: null,
+  TB: null,
+  TEN: null,
+  WAS: null,
+};
+const getPositionRank = (pos) => {
+  if (!pos) return positionOrder.length;
+  const rank = positionOrder.indexOf(pos.toUpperCase());
+  return rank === -1 ? positionOrder.length : rank;
+};
+
+const sortByPosition = (list) =>
+  list.slice().sort((a, b) => {
+    const diff = getPositionRank(a.position) - getPositionRank(b.position);
+    if (diff !== 0) return diff;
+    return parseNumber(b.salary) - parseNumber(a.salary);
+  });
+
+const normalizeStatus = (status = 'ROSTER') => {
+  const normalized = status.toUpperCase();
+  if (normalized.includes('TAXI')) return 'PRACTICE';
+  if (normalized.includes('INJURED') || normalized === 'IR') return 'INJURED';
+  return 'ACTIVE';
+};
+
+const annotatePositionDividers = (rows = []) => {
+  const normalized = rows.map((player, index) => {
+    const prevPosition =
+      index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
+    const current = (player.position ?? '').toUpperCase();
+    const showDivider = index > 0 && current !== prevPosition;
+    return {
+      ...player,
+      positionDivider: showDivider,
+      _positionGroup: current,
+    };
+  });
+
+  return normalized.map((player, index) => {
+    const next = normalized[index + 1];
+    const isEndDivider =
+      !!next && (next._positionGroup ?? '') !== (player._positionGroup ?? '');
+    return {
+      ...player,
+      positionDividerEnd: isEndDivider,
+    };
+  });
+};
+
+const annotateTierDividers = (rows = []) => {
+  let lastTag = null;
+  return rows.map((player) => {
+    const currentTag = player.displayTag ?? 'active';
+    const divider =
+      lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
+    lastTag = currentTag;
+    return {
+      ...player,
+      tierDivider: divider,
+    };
+  });
+};
+
+const annotateActiveStriping = (rows = []) => {
+  let activeIndex = 0;
+  return rows.map((player) => {
+    if ((player.displayTag ?? 'active') === 'active') {
+      const striped = activeIndex % 2 === 1;
+      activeIndex += 1;
+      return { ...player, activeStripe: striped };
+    }
+    return { ...player, activeStripe: false };
+  });
+};
+
+const buildDisplayRows = (teamData) => {
+  const mapPlayers = (players = [], displayTag = 'active') =>
+    sortByPosition(players).map((player) => ({
+      ...player,
+      displayTag,
+      byeWeek: player.byeWeek ?? nflByeWeeks[player.nflTeam ?? ''] ?? null,
+    }));
+
+  const combined = [
+    ...mapPlayers(teamData.players ?? [], 'active'),
+    ...mapPlayers(teamData.practiceSquad ?? [], 'practice'),
+    ...mapPlayers(teamData.injuredReserve ?? [], 'injured'),
+  ];
+
+  const withDividers = annotateTierDividers(annotatePositionDividers(combined));
+  return annotateActiveStriping(withDividers);
+};
+
+const buildSeasonPayload = (season, rawData) => {
+  const players = (rawData?.players ?? []).map((player) => {
+    const salary = parseNumber(player.salary);
+    const contractYears =
+      Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) ||
+      0;
+    const franchiseId = player.franchiseId ?? 'FA';
+    const totalRemaining = salary * Math.max(contractYears || 1, 1);
+    const seasonYear = Number.parseInt(season, 10) || new Date().getFullYear();
+    const contractType =
+      player.contractType ??
+      (player.status && player.status !== 'ROSTER'
+        ? player.status
+        : player.draftYear && seasonYear - Number(player.draftYear) <= 2
+          ? 'Rookie'
+          : 'Standard');
+    const nflTeam = (player.team ?? '').toUpperCase();
+
+    return {
+      id: player.id,
+      name: player.name,
+      position: player.position ?? 'N/A',
+      salary,
+      contractYears,
+      totalRemaining,
+      franchiseId,
+      status: player.status ?? 'ROSTER',
+      contractType,
+      points: parseNumber(player.points),
+      nflTeam,
+      draftYear: player.draftYear ?? null,
+      headshot: getPlayerImageUrl(player.id),
+      nflLogo: getNflLogoUrl(nflTeam),
+      rosterSlot: normalizeStatus(player.status),
+      byeWeek: nflByeWeeks[nflTeam] ?? null,
+    };
+  });
+
+  const grouped = {};
+  players.forEach((player) => {
+    const key = player.franchiseId || 'FA';
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+    grouped[key].push(player);
+  });
+
+  const teams = {};
+
+  Object.entries(grouped).forEach(([teamId, teamPlayers]) => {
+    const buckets: { ACTIVE: typeof players; PRACTICE: typeof players; INJURED: typeof players } = {
+      ACTIVE: [],
+      PRACTICE: [],
+      INJURED: [],
+    };
+    (Array.isArray(teamPlayers) ? teamPlayers : []).forEach((player) => {
+      if (player.rosterSlot === 'PRACTICE') {
+        buckets.PRACTICE.push(player);
+      } else if (player.rosterSlot === 'INJURED') {
+        buckets.INJURED.push(player);
+      } else {
+        buckets.ACTIVE.push(player);
+      }
+    });
+    const activeSorted = sortByPosition(buckets.ACTIVE);
+    const practiceSorted = sortByPosition(buckets.PRACTICE);
+    const injuredSorted = sortByPosition(buckets.INJURED);
+    const totalSalary = activeSorted.reduce(
+      (sum, player) => sum + parseNumber(player.salary),
+      0
+    );
+    teams[teamId] = {
+      players: activeSorted,
+      practiceSquad: practiceSorted,
+      injuredReserve: injuredSorted,
+      totals: {
+        totalSalary,
+        rosterCount: activeSorted.length,
+        openSpots: Math.max(ROSTER_LIMIT - activeSorted.length, 0),
+        practiceCount: practiceSorted.length,
+        injuredCount: injuredSorted.length,
+      },
+    };
+  });
+
+  return {
+    metadata: rawData?.metadata ?? { season },
+    teams,
+  };
+};
+
+const rostersBySeason = {};
+Object.entries(rosterModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+  rostersBySeason[season] = buildSeasonPayload(season, getModuleData(mod));
+});
+
+const seasonOptions = Object.keys(rostersBySeason).sort(
+  (a, b) => Number(b) - Number(a)
+);
+const defaultSeason = seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
+const defaultTeamId =
+  teamsList[0]?.id ??
+  (Object.keys(rostersBySeason[defaultSeason]?.teams ?? {})[0] ?? 'FA');
+
+const initialSeasonData = rostersBySeason[defaultSeason] ?? { teams: {} };
+const initialTeamData =
+  initialSeasonData.teams?.[defaultTeamId] ?? {
+    players: [],
+    practiceSquad: [],
+    injuredReserve: [],
+    totals: {
+      totalSalary: 0,
+      rosterCount: 0,
+      openSpots: ROSTER_LIMIT,
+      practiceCount: 0,
+      injuredCount: 0,
+    },
+  };
+
+const calculateYearTotals = (rows: Array<{ contractYears: number; salary?: number }> = []) =>
+  SALARY_YEARS.map((_, index) =>
+    rows.reduce(
+      (sum, player) =>
+        sum + (player.contractYears > index ? parseNumber(player.salary ?? 0) : 0),
+      0
+    )
+  );
+
+const initialRosterRows = buildDisplayRows(initialTeamData);
+const initialYearTotals = calculateYearTotals(initialRosterRows);
+const initialCapCharge = initialYearTotals[0] ?? 0;
+
+const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
+
+const serializedConfig = JSON.stringify({
+  seasons: rostersBySeason,
+  seasonOptions,
+  defaultSeason,
+  defaultTeamId,
+  teams: teamLookup,
+  rosterLimit: ROSTER_LIMIT,
+  positionOrder,
+  columnOptions: rosterColumnOptions,
+  salaryYears: SALARY_YEARS,
+  byeWeeks: nflByeWeeks,
+  capLimit: SALARY_CAP,
+});
+---
+
+<Layout title="Team Rosters">
+  <section class="roster-page">
+    <header class="roster-page__header">
+      <div>
+        <p class="eyebrow">Contracts &amp; Cap</p>
+        <h1>Team Rosters</h1>
+        <p>Review every contract, cap hit, and future salary commitment across the league.</p>
+      </div>
+      <div class="roster-page__actions">
+        <a class="btn" href="/calculator">Open Extension Calculator</a>
+        <button class="btn btn-secondary" type="button" disabled>
+          Add Contract Years
+        </button>
+      </div>
+    </header>
+
+    <div class="roster-controls">
+      <label>
+        Season
+        <select id="rosterSeasonSelect">
+          {seasonOptions.map((season) => (
+            <option value={season} selected={season === defaultSeason}>
+              {season}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Team
+        <select id="rosterTeamSelect">
+          {teamsList.map((team) => (
+            <option value={team.id} selected={team.id === defaultTeamId}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+
+    <div class="team-card" id="teamIdentity">
+      {teamLookup[defaultTeamId]?.icon && (
+        <img
+          src={teamLookup[defaultTeamId]?.icon}
+          alt={`${teamLookup[defaultTeamId]?.name ?? 'Team'} icon`}
+        />
+      )}
+      <div>
+        <p class="team-card__label">Active Roster</p>
+        <h2 id="teamName">
+          {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
+        </h2>
+        <p id="teamMeta">
+          {teamLookup[defaultTeamId]?.division
+            ? `${teamLookup[defaultTeamId]?.division} Division`
+            : 'Independent'}
+        </p>
+      </div>
+    </div>
+
+    <div class="roster-summary" id="rosterSummary">
+      <article>
+        <p>Cap Space</p>
+        <strong id="summaryCap">
+          {formatCapSpaceDisplay(Math.max(SALARY_CAP - initialCapCharge, 0))}
+        </strong>
+      </article>
+      <article>
+        <p>Players Signed</p>
+        <strong id="summaryPlayers">
+          {initialTeamData.totals?.rosterCount ?? 0}
+        </strong>
+      </article>
+      <article>
+        <p>Open Roster Spots</p>
+        <strong id="summaryOpen">
+          {initialTeamData.totals?.openSpots ?? ROSTER_LIMIT}
+        </strong>
+      </article>
+      <article>
+        <p>Practice Squad</p>
+        <strong id="practiceCount">
+          {initialTeamData.totals?.practiceCount ?? 0}
+        </strong>
+      </article>
+      <article>
+        <p>Injured Reserve</p>
+        <strong id="injuredCount">
+          {initialTeamData.totals?.injuredCount ?? 0}
+        </strong>
+      </article>
+    </div>
+
+    <div class="roster-table-card">
+      <div class="roster-table-card__header">
+        <div>
+          <h3>Roster Overview</h3>
+          <p id="rosterMetadata">
+            Season {initialSeasonData?.metadata?.season ?? defaultSeason}
+          </p>
+        </div>
+        <span id="rosterCountLabel">
+          {(initialTeamData.totals?.rosterCount ?? 0).toString()} Players
+        </span>
+      </div>
+      <div class="column-controls" id="columnControls">
+        <span>Columns:</span>
+        {rosterColumnOptions.map(({ key, label }) => (
+          <label>
+            <input
+              type="checkbox"
+              data-column-toggle={key}
+              checked
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      <div class="roster-table-wrapper">
+        <table class="roster-table" data-hidden-columns="">
+          <thead>
+            <tr>
+              <th scope="col" data-column="pos">Pos</th>
+              <th scope="col" data-column="player">Player</th>
+              <th scope="col" data-column="bye">Bye</th>
+              <th scope="col" data-column="years">Yrs</th>
+              {SALARY_YEARS.map((year, index) => (
+                <th scope="col" data-column={`year${index + 1}`}>{year}</th>
+              ))}
+            </tr>
+          </thead>
+          <tfoot>
+            <tr class="roster-totals">
+              <td data-column="pos"></td>
+              <td data-column="player" class="roster-totals__label">Total Salary</td>
+              <td data-column="bye"></td>
+              <td data-column="years"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
+                  {formatCurrency(initialYearTotals[index] ?? 0)}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+          <tbody id="rosterTableBody">
+          {initialRosterRows.length ? (
+            initialRosterRows.map((player) => (
+              <tr
+                data-player-id={player.id}
+                class={`roster-row roster-row--${player.displayTag ?? 'active'}${player.positionDivider ? ' roster-row--position-divider' : ''}${player.positionDividerEnd ? ' roster-row--position-divider-end' : ''}${player.tierDivider ? ' roster-row--tier-divider' : ''}${player.activeStripe ? ' roster-row--active-alt' : ''}`}
+              >
+                <td data-label="Pos" data-column="pos">{player.position}</td>
+                <td data-label="Player" data-column="player">
+                  <div class="player-cell">
+                    <div class={`player-cell__avatar${(player.position ?? '').toUpperCase() === 'DEF' ? ' player-cell__avatar--def' : ''}`}>
+                      <img
+                        src={
+                          (player.position ?? '').toUpperCase() === 'DEF' && player.nflLogo
+                            ? player.nflLogo
+                            : player.headshot ?? DEFAULT_HEADSHOT_URL
+                        }
+                        alt={`${player.name} headshot`}
+                        loading="lazy"
+                        decoding="async"
+                        onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                      />
+                    </div>
+                    <div>
+                      <strong>{player.name}</strong>
+                      <div class="player-meta">
+                        {player.nflLogo && (
+                          <img
+                            src={player.nflLogo}
+                            alt={`${player.nflTeam ?? 'FA'} logo`}
+                            class="player-meta__logo"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                        <span>{player.nflTeam || 'FA'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Bye" data-column="bye">{player.byeWeek ?? '—'}</td>
+                <td data-label="Yrs" data-column="years">{player.contractYears || 0}</td>
+                {SALARY_YEARS.map((year, index) => {
+                  const isUfa = !(player.contractYears > index);
+                  return (
+                    <td
+                      data-label={year}
+                      data-column={`year${index + 1}`}
+                      class={`salary-cell${isUfa ? ' salary-cell--ufa' : ''}`}
+                    >
+                      {isUfa ? 'UFA' : formatCurrency(player.salary ?? 0)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colspan={4 + SALARY_YEARS.length} class="roster-empty">
+                This franchise has no players recorded for this season snapshot.
+              </td>
+            </tr>
+          )}
+          </tbody>
+        </table>
+      </div>
+      <div class="roster-legend">
+        <span>
+          <span class="legend-swatch legend-swatch--active"></span>
+          Active Roster
+        </span>
+        <span>
+          <span class="legend-swatch legend-swatch--practice"></span>
+          Practice Squad
+        </span>
+        <span>
+          <span class="legend-swatch legend-swatch--injured"></span>
+          Injured Reserve
+        </span>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .roster-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+  }
+
+  .roster-page__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .roster-page__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 1.4rem;
+    border-radius: 999px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+  }
+
+  .btn-secondary {
+    background: #e5e7eb;
+    color: #111827;
+    cursor: not-allowed;
+  }
+
+  .roster-controls {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .roster-controls label {
+    font-weight: 600;
+    color: #475569;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .roster-controls select {
+    min-width: 180px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    font-size: 1rem;
+  }
+
+  .team-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  }
+
+  .team-card img {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    object-fit: cover;
+  }
+
+  .team-card__label {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .team-card h2 {
+    margin: 0;
+    font-size: 1.6rem;
+  }
+
+  .team-card p {
+    margin: 0;
+    color: #64748b;
+  }
+
+  .roster-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+
+  .roster-summary article {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .roster-summary p {
+    margin: 0;
+    color: #6b7280;
+  }
+
+  .roster-summary strong {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: clamp(1.1rem, 4vw, 1.6rem);
+    line-height: 1.2;
+  }
+
+  .roster-table-card {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  }
+
+  .roster-table-card--sub {
+    padding: 0.75rem;
+  }
+
+  .roster-table-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .roster-table-card__header h3 {
+    margin: 0;
+  }
+
+  #rosterCountLabel {
+    font-weight: 600;
+    color: #2563eb;
+    background: #dbeafe;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+  }
+
+  .column-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: #475569;
+  }
+
+  .column-controls span {
+    font-weight: 600;
+  }
+
+  .column-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #f1f5f9;
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    font-weight: 600;
+  }
+
+  .column-controls input {
+    accent-color: #2563eb;
+  }
+
+  .roster-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .roster-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+  }
+
+  .roster-table--compact {
+    min-width: auto;
+  }
+
+  .roster-table--compact th,
+  .roster-table--compact td {
+    font-size: 0.85rem;
+  }
+
+  .roster-table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .roster-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+
+  :global(.roster-table th[data-column='pos']),
+  :global(.roster-table td[data-column='pos']) {
+    padding-left: .75rem;
+    text-align: left;
+  }
+
+:global(.roster-table th[data-column='player']) {
+  text-align: left;
+}
+
+:global(.roster-table th[data-column='bye']),
+:global(.roster-table th[data-column='years']) {
+  text-align: left;
+}
+
+:global(.roster-table th[data-column='bye']),
+:global(.roster-table td[data-column='bye']),
+:global(.roster-table th[data-column='years']),
+:global(.roster-table td[data-column='years']) {
+  width: 60px;
+  text-align: center;
+}
+
+  :global(.roster-table td[data-column^='year']) {
+    font-size: 0.75rem;
+    text-align: right;
+    padding-right: 0.5rem;
+  }
+
+  :global(.roster-table th[data-column^='year']) {
+    text-align: right;
+    padding-right: 0.5rem;
+  }
+
+  :global(.salary-cell) {
+    text-align: right;
+    padding-right: 0.5rem;
+  }
+
+  :global(.salary-cell--ufa) {
+    text-align: center;
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  .roster-table tfoot td {
+    border-top: 2px solid #e2e8f0;
+    border-bottom: none;
+    font-weight: 600;
+    background: #f8fafc;
+  }
+
+  .roster-totals__label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    color: #475569;
+  }
+
+  :global(.player-meta) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  :global(.player-meta__logo) {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+
+
+  :global(.roster-table[data-hidden-columns~='pos'] th[data-column='pos']),
+  :global(.roster-table[data-hidden-columns~='pos'] td[data-column='pos']),
+  :global(.roster-table[data-hidden-columns~='player'] th[data-column='player']),
+  :global(.roster-table[data-hidden-columns~='player'] td[data-column='player']),
+  :global(.roster-table[data-hidden-columns~='bye'] th[data-column='bye']),
+  :global(.roster-table[data-hidden-columns~='bye'] td[data-column='bye']),
+  :global(.roster-table[data-hidden-columns~='years'] th[data-column='years']),
+  :global(.roster-table[data-hidden-columns~='years'] td[data-column='years']),
+  :global(.roster-table[data-hidden-columns~='year1'] th[data-column='year1']),
+  :global(.roster-table[data-hidden-columns~='year1'] td[data-column='year1']),
+  :global(.roster-table[data-hidden-columns~='year2'] th[data-column='year2']),
+  :global(.roster-table[data-hidden-columns~='year2'] td[data-column='year2']),
+  :global(.roster-table[data-hidden-columns~='year3'] th[data-column='year3']),
+  :global(.roster-table[data-hidden-columns~='year3'] td[data-column='year3']),
+  :global(.roster-table[data-hidden-columns~='year4'] th[data-column='year4']),
+  :global(.roster-table[data-hidden-columns~='year4'] td[data-column='year4']),
+  :global(.roster-table[data-hidden-columns~='year5'] th[data-column='year5']),
+  :global(.roster-table[data-hidden-columns~='year5'] td[data-column='year5']),
+  :global(.roster-table[data-hidden-columns~='year6'] th[data-column='year6']),
+  :global(.roster-table[data-hidden-columns~='year6'] td[data-column='year6']) {
+    display: none;
+  }
+
+  :global(.player-cell) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  :global(.player-cell__avatar) {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  :global(.player-cell__avatar img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  :global(.player-cell__avatar--def img) {
+    object-fit: contain;
+  }
+
+  :global(.player-cell__nfl-icon) {
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    object-fit: contain;
+  }
+
+  :global(.player-cell__meta) {
+    display: block;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  :global(.pill) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.9rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1e3a8a;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 0.35rem;
+  }
+
+  :global(.contract-years) {
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .timeline-header {
+    text-align: right;
+  }
+
+  .timeline-header div {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(70px, 1fr));
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  :global(.timeline-row) {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(70px, 1fr));
+    gap: 0.35rem;
+  }
+
+  :global(.roster-empty) {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+  }
+
+  :global(.roster-row) {
+    border-left: 4px solid transparent;
+    transition: background 0.15s ease;
+  }
+
+  :global(.roster-row--active) {
+    border-left-color: #16a34a;
+    background: var(--color-bg-base, #fff);
+  }
+
+  :global(.roster-row--active-alt) {
+    background: var(--color-bg-subtle, #f7f8fb);
+  }
+
+  :global(.roster-row--practice) {
+    border-left-color: #2563eb;
+    background: var(--color-bg-practice, #f0f7ff);
+  }
+
+  :global(.roster-row--practice:nth-of-type(even)) {
+    background: var(--color-bg-practice-alt, #e0efff);
+  }
+
+  :global(.roster-row--injured) {
+    border-left-color: #dc2626;
+    background: var(--color-bg-injured, #fff5f5);
+  }
+
+  :global(.roster-row--injured:nth-of-type(even)) {
+    background: var(--color-bg-injured-alt, #ffe8e8);
+  }
+
+  :global(.roster-row--position-divider) {
+    border-top: 2px solid #e2e8f0;
+  }
+
+  :global(.roster-row--active.roster-row--position-divider td) {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  :global(.roster-row--active.roster-row--position-divider-end td) {
+    padding-bottom: 0.5rem;
+  }
+  :global(.roster-row--practice.roster-row--position-divider-end td) {
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--color-border-practice, #bfdbfe);
+  }
+  :global(.roster-row--injured.roster-row--position-divider-end td) {
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--color-border-injured, #fecaca);
+  }
+
+  :global(.roster-row--tier-divider td) {
+    padding-top: 0.75rem;
+  }
+
+  :global(.roster-row--practice.roster-row--tier-divider td) {
+    border-top: 3px solid var(--color-border-practice, #bfdbfe);
+  }
+
+  :global(.roster-row--injured.roster-row--tier-divider td) {
+    border-top: 3px solid var(--color-border-injured, #fecaca);
+  }
+
+  .roster-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.85rem;
+    font-size: 0.9rem;
+    color: #475569;
+  }
+
+  .legend-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    margin-right: 0.35rem;
+  }
+
+  .legend-swatch--active {
+    background: #16a34a;
+  }
+
+  .legend-swatch--practice {
+    background: #2563eb;
+  }
+
+  .legend-swatch--injured {
+    background: #dc2626;
+  }
+
+
+  @media (max-width: 900px) {
+    .roster-table {
+      min-width: 720px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .roster-table th,
+    .roster-table td {
+      font-size: 0.85rem;
+    }
+  }
+</style>
+
+<script
+  type="application/json"
+  id="roster-config"
+  set:html={serializedConfig}
+></script>
+
+<script type="module">
+  const config = JSON.parse(
+    document.getElementById('roster-config').textContent
+  );
+
+  const initRosterPage = () => {
+    const {
+      seasons = {},
+      defaultSeason,
+      defaultTeamId,
+      teams = {},
+      rosterLimit,
+      positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
+      columnOptions = [],
+      salaryYears = [],
+      byeWeeks = {},
+      capLimit = 45_000_000,
+    } = config;
+
+    const formatCurrency = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    });
+
+    const formatCapSpaceText = (value = 0) => {
+      if (!Number.isFinite(value)) return formatCurrency.format(0);
+      if (value >= 1_000_000) {
+        const millions = value / 1_000_000;
+        const compact = millions >= 10 ? millions.toFixed(0) : millions.toFixed(1);
+        return `$${compact} million`;
+      }
+      return formatCurrency.format(value);
+    };
+
+    const DEFAULT_HEADSHOT_URL =
+      'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+    const buildPlayerImageUrl = (playerId) =>
+      playerId
+        ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+        : DEFAULT_HEADSHOT_URL;
+
+    const buildNflLogoUrl = (teamCode) =>
+      teamCode
+        ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
+        : '';
+
+    const seasonSelect = document.getElementById('rosterSeasonSelect');
+    const teamSelect = document.getElementById('rosterTeamSelect');
+    const summaryCap = document.getElementById('summaryCap');
+    const summaryPlayers = document.getElementById('summaryPlayers');
+    const summaryOpen = document.getElementById('summaryOpen');
+    const summaryPractice = document.getElementById('practiceCount');
+    const summaryInjured = document.getElementById('injuredCount');
+    const teamName = document.getElementById('teamName');
+    const teamMeta = document.getElementById('teamMeta');
+    const teamIdentity = document.getElementById('teamIdentity');
+    const rosterTable = document.querySelector('.roster-table');
+    const rosterTableBody = document.getElementById('rosterTableBody');
+    const rosterMetadata = document.getElementById('rosterMetadata');
+    const rosterCountLabel = document.getElementById('rosterCountLabel');
+    const columnToggles = document.querySelectorAll('[data-column-toggle]');
+    const yearTotalCells = salaryYears.map((_, index) =>
+      document.getElementById(`yearTotal${index + 1}`)
+    );
+
+    let currentSeason = defaultSeason;
+    let currentTeam = defaultTeamId;
+    const hiddenColumns = new Set();
+
+    const formatCountLabel = (count) => `${count} Players`;
+
+    const getPositionRank = (pos = '') => {
+      const normalized = pos.toUpperCase();
+      const index = positionOrder.indexOf(normalized);
+      return index === -1 ? positionOrder.length : index;
+    };
+
+    const sortByPosition = (list = []) =>
+      list.slice().sort((a, b) => {
+        const diff = getPositionRank(a.position ?? '') - getPositionRank(b.position ?? '');
+        if (diff !== 0) return diff;
+        return (b.salary ?? 0) - (a.salary ?? 0);
+      });
+
+    const enrichPlayer = (player = {}, tag = 'active') => {
+      const nflTeam = (player.nflTeam ?? player.team ?? '').toUpperCase();
+      return {
+        ...player,
+        displayTag: tag,
+        nflTeam,
+        headshot: player.headshot ?? buildPlayerImageUrl(player.id),
+        nflLogo: player.nflLogo ?? buildNflLogoUrl(nflTeam),
+        contractYears:
+          Number.parseInt(player.contractYears ?? player.contractYear ?? 0, 10) || 0,
+        salary: Number(player.salary ?? 0) || 0,
+        byeWeek: player.byeWeek ?? byeWeeks[nflTeam] ?? null,
+      };
+    };
+
+    const annotatePositionDividers = (rows = []) => {
+      const normalized = rows.map((player, index) => {
+        const prevPosition =
+          index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
+        const current = (player.position ?? '').toUpperCase();
+        const divider = index > 0 && current !== prevPosition;
+        return { ...player, positionDivider: divider, _positionGroup: current };
+      });
+
+      return normalized.map((player, index) => {
+        const next = normalized[index + 1];
+        const positionDividerEnd =
+          !next || (next?._positionGroup ?? '') !== (player._positionGroup ?? '');
+        return { ...player, positionDividerEnd };
+      });
+    };
+
+    const annotateTierDividers = (rows = []) => {
+      let lastTag = null;
+      return rows.map((player) => {
+        const currentTag = player.displayTag ?? 'active';
+        const tierDivider =
+          lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
+        lastTag = currentTag;
+        return { ...player, tierDivider };
+      });
+    };
+
+    const annotateActiveStriping = (rows = []) => {
+      let activeIndex = 0;
+      return rows.map((player) => {
+        if ((player.displayTag ?? 'active') === 'active') {
+          const striped = activeIndex % 2 === 1;
+          activeIndex += 1;
+          return { ...player, activeStripe: striped };
+        }
+        return { ...player, activeStripe: false };
+      });
+    };
+
+    const buildDisplayRows = (teamData = {}) => {
+      const combined = [
+        ...sortByPosition(teamData.players ?? []).map((player) =>
+          enrichPlayer(player, 'active')
+        ),
+        ...sortByPosition(teamData.practiceSquad ?? []).map((player) =>
+          enrichPlayer(player, 'practice')
+        ),
+        ...sortByPosition(teamData.injuredReserve ?? []).map((player) =>
+          enrichPlayer(player, 'injured')
+        ),
+      ];
+      return annotateActiveStriping(
+        annotateTierDividers(annotatePositionDividers(combined))
+      );
+    };
+
+    const getTeamData = () => {
+      const seasonData = seasons[currentSeason];
+      const teamData =
+        seasonData?.teams?.[currentTeam] ?? {
+          players: [],
+          practiceSquad: [],
+          injuredReserve: [],
+          totals: {
+            totalSalary: 0,
+            rosterCount: 0,
+            openSpots: rosterLimit,
+            practiceCount: 0,
+            injuredCount: 0,
+          },
+        };
+      return { seasonData, teamData };
+    };
+
+    const renderSummary = (capCharge = 0, totals = {}) => {
+      const capSpace = Math.max((capLimit ?? 0) - capCharge, 0);
+      summaryCap.textContent = formatCapSpaceText(capSpace);
+      summaryPlayers.textContent = totals.rosterCount ?? 0;
+      summaryOpen.textContent = totals.openSpots ?? rosterLimit;
+      if (summaryPractice) {
+        summaryPractice.textContent = totals.practiceCount ?? 0;
+      }
+      if (summaryInjured) {
+        summaryInjured.textContent = totals.injuredCount ?? 0;
+      }
+      rosterCountLabel.textContent = formatCountLabel(totals.rosterCount ?? 0);
+    };
+
+    const renderTeamIdentity = () => {
+      const meta = teams[currentTeam];
+      let img = teamIdentity.querySelector('img');
+      if (meta?.icon) {
+        if (!img) {
+          img = document.createElement('img');
+          teamIdentity.prepend(img);
+        }
+        img.src = meta.icon;
+        img.alt = `${meta?.name ?? 'Franchise'} icon`;
+      } else if (img) {
+        img.remove();
+      }
+      teamName.textContent = meta?.name ?? 'Franchise';
+      teamMeta.textContent = meta?.division
+        ? `${meta.division} Division`
+        : 'Independent';
+    };
+
+    const renderTableRows = (rows = []) => {
+      if (!rosterTableBody) return;
+      if (!rows.length) {
+        rosterTableBody.innerHTML = `<tr><td colspan="${4 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
+        return;
+      }
+
+      rosterTableBody.innerHTML = rows
+        .map((player) => {
+          const useDefenseLogo =
+            (player.position ?? '').toUpperCase() === 'DEF' && player.nflLogo;
+          const avatarSrc = useDefenseLogo
+            ? player.nflLogo
+            : player.headshot ?? buildPlayerImageUrl(player.id);
+
+          const salaryCells = salaryYears
+            .map((year, index) => {
+              const columnKey = `year${index + 1}`;
+              const isUfa = !(player.contractYears > index);
+              const value = isUfa
+                ? 'UFA'
+                : formatCurrency.format(player.salary ?? 0);
+              const cellClass = `salary-cell${isUfa ? ' salary-cell--ufa' : ''}`;
+              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}</td>`;
+            })
+            .join('');
+
+          const rowClasses = [
+            'roster-row',
+            `roster-row--${player.displayTag ?? 'active'}`,
+          ];
+          if (player.positionDivider) {
+            rowClasses.push('roster-row--position-divider');
+          }
+          if (player.positionDividerEnd) {
+            rowClasses.push('roster-row--position-divider-end');
+          }
+          if (player.tierDivider) {
+            rowClasses.push('roster-row--tier-divider');
+          }
+          if (player.activeStripe) {
+            rowClasses.push('roster-row--active-alt');
+          }
+
+          return `<tr data-player-id="${player.id}" class="${rowClasses.join(' ')}">
+            <td data-label="Pos" data-column="pos">${player.position ?? '—'}</td>
+            <td data-label="Player" data-column="player">
+              <div class="player-cell">
+                <div class="player-cell__avatar${useDefenseLogo ? ' player-cell__avatar--def' : ''}">
+                  <img src="${avatarSrc}" alt="${player.name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${player.name}</strong>
+                  <div class="player-meta">
+                    ${
+                      player.nflLogo
+                        ? `<img src="${player.nflLogo}" alt="${player.nflTeam || 'FA'} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
+                        : ''
+                    }
+                    <span>${player.nflTeam || 'FA'}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td data-label="Bye" data-column="bye">${player.byeWeek ?? '—'}</td>
+            <td data-label="Yrs" data-column="years">${player.contractYears || 0}</td>
+            ${salaryCells}
+          </tr>`;
+        })
+        .join('');
+    };
+
+    const updateYearTotals = (rows = []) => {
+      const totals = salaryYears.map((_, index) =>
+        rows.reduce(
+          (sum, player) =>
+            sum + (player.contractYears > index ? Number(player.salary ?? 0) : 0),
+          0
+        )
+      );
+      yearTotalCells.forEach((cell, index) => {
+        if (cell) {
+          cell.textContent = formatCurrency.format(totals[index] ?? 0);
+        }
+      });
+      return totals;
+    };
+
+    const applyHiddenColumns = () => {
+      if (!rosterTable) return;
+      rosterTable.dataset.hiddenColumns = Array.from(hiddenColumns).join(' ');
+    };
+
+    const updateView = () => {
+      const { seasonData, teamData } = getTeamData();
+      const rows = buildDisplayRows(teamData);
+      const yearTotals = updateYearTotals(rows);
+      const capCharge = yearTotals?.[0] ?? 0;
+      renderSummary(capCharge, teamData.totals ?? {});
+      renderTeamIdentity();
+      renderTableRows(rows);
+
+      rosterMetadata.textContent = `Season ${
+        seasonData?.metadata?.season ?? currentSeason
+      }`;
+      rosterCountLabel.textContent = formatCountLabel(rows.length ?? 0);
+    };
+
+    columnToggles.forEach((toggle) => {
+      toggle.addEventListener('change', (event) => {
+        const key = toggle.getAttribute('data-column-toggle');
+        if (!key) return;
+        if (event.target.checked) {
+          hiddenColumns.delete(key);
+        } else {
+          hiddenColumns.add(key);
+        }
+        applyHiddenColumns();
+      });
+    });
+
+    seasonSelect?.addEventListener('change', (event) => {
+      currentSeason = event.target.value;
+      updateView();
+    });
+
+    teamSelect?.addEventListener('change', (event) => {
+      currentTeam = event.target.value;
+      updateView();
+    });
+
+    applyHiddenColumns();
+    updateView();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRosterPage);
+  } else {
+    initRosterPage();
+  }
+</script>
