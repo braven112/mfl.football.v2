@@ -567,7 +567,8 @@ const serializedConfig = JSON.stringify({
       </label>
     </div>
 
-    <div class="team-card" id="teamIdentity">
+    <div class="roster-table-card">
+    <div class="team-card roster-card" id="teamIdentity">
       {teamLookup[defaultTeamId]?.icon && (
         <img
           src={teamLookup[defaultTeamId]?.icon}
@@ -586,91 +587,6 @@ const serializedConfig = JSON.stringify({
         </p>
       </div>
     </div>
-
-    <div class="chart-grid">
-      <div class="chart-card">
-        <div class="chart-card__header">
-          <h3>Cap Allocation</h3>
-          <p class="chart-card__sub">Current season cap usage by bucket</p>
-        </div>
-        <div class="chart-card__body">
-          <div class="donut" id="capDonut"></div>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card__header">
-          <h3>Roster Composition</h3>
-          <p class="chart-card__sub">Active vs IR vs Practice vs Open slots</p>
-        </div>
-        <div class="chart-card__body">
-          <div class="donut" id="rosterDonut"></div>
-        </div>
-      </div>
-    </div>
-    <div class="chart-card chart-card--sub">
-      <div class="chart-card__header">
-        <h3>Cap Subtotals (Current Season)</h3>
-        <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
-      </div>
-      <div class="cap-subtotals">
-        <div class="cap-subtotals__row">
-          <span>
-            <span class="legend-dot legend-active"></span>
-            Active Roster <span id="countActive" class="cap-count"></span>
-          </span>
-          <strong id="subtotalActive">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span>
-            <span class="legend-dot legend-practice"></span>
-            Practice Squad <span id="countPractice" class="cap-count"></span>
-          </span>
-          <strong id="subtotalPractice">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span>
-            <span class="legend-dot legend-injured"></span>
-            Injured Reserve <span id="countInjured" class="cap-count"></span>
-          </span>
-          <strong id="subtotalInjured">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-dead"></span>Dead Money</span>
-          <strong id="subtotalDead">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
-          <strong id="subtotalCapSpace">$0</strong>
-        </div>
-      </div>
-    </div>
-    <div class="chart-metrics">
-      <article>
-        <p>Projected Cap Space (Next Year)</p>
-        <strong id="summaryCapNext">{formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}</strong>
-      </article>
-      <article>
-        <p>Players Signed Next Year</p>
-        <strong id="summaryPlayersNext">{initialPlayersNextYear}</strong>
-      </article>
-      <article>
-        <p>Last Contract Ends</p>
-        <strong id="summaryLastContract">{initialLastContractYear}</strong>
-      </article>
-    </div>
-
-    <div class="roster-table-card">
-      <div class="roster-table-card__header">
-        <div>
-          <h3>Roster Overview</h3>
-          <p id="rosterMetadata">
-            Season {initialSeasonData?.metadata?.season ?? defaultSeason}
-          </p>
-        </div>
-        <span id="rosterCountLabel">
-          {(initialTeamData.totals?.rosterCount ?? 0).toString()} Players
-        </span>
-      </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
           <thead>
@@ -799,6 +715,97 @@ const serializedConfig = JSON.stringify({
       </div>
     </div>
 
+    <div class="team-card" id="teamIdentity">
+      {teamLookup[defaultTeamId]?.icon && (
+        <img
+          src={teamLookup[defaultTeamId]?.icon}
+          alt={`${teamLookup[defaultTeamId]?.name ?? 'Team'} icon`}
+        />
+      )}
+      <div>
+        <h2 id="teamName">
+          {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
+        </h2>
+        <p id="teamMeta">
+          {teamLookup[defaultTeamId]?.division
+            ? `${teamLookup[defaultTeamId]?.division} Division`
+            : 'Independent'}
+        </p>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <h3>Cap Allocation</h3>
+          <p class="chart-card__sub">Current season cap usage by bucket</p>
+        </div>
+        <div class="chart-card__body">
+          <div class="donut" id="capDonut"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <h3>Roster Composition</h3>
+          <p class="chart-card__sub">Active vs IR vs Practice vs Open slots</p>
+        </div>
+        <div class="chart-card__body">
+          <div class="donut" id="rosterDonut"></div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card chart-card--sub">
+      <div class="chart-card__header">
+        <h3>Cap Subtotals (Current Season)</h3>
+        <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
+      </div>
+      <div class="cap-subtotals">
+        <div class="cap-subtotals__row">
+          <span>
+            <span class="legend-dot legend-active"></span>
+            Active Roster <span id="countActive" class="cap-count"></span>
+          </span>
+          <strong id="subtotalActive">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span>
+            <span class="legend-dot legend-practice"></span>
+            Practice Squad <span id="countPractice" class="cap-count"></span>
+          </span>
+          <strong id="subtotalPractice">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span>
+            <span class="legend-dot legend-injured"></span>
+            Injured Reserve <span id="countInjured" class="cap-count"></span>
+          </span>
+          <strong id="subtotalInjured">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-dead"></span>Dead Money</span>
+          <strong id="subtotalDead">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
+          <strong id="subtotalCapSpace">$0</strong>
+        </div>
+      </div>
+    </div>
+    <div class="chart-metrics">
+      <article>
+        <p>Projected Cap Space (Next Year)</p>
+        <strong id="summaryCapNext">{formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}</strong>
+      </article>
+      <article>
+        <p>Players Signed Next Year</p>
+        <strong id="summaryPlayersNext">{initialPlayersNextYear}</strong>
+      </article>
+      <article>
+        <p>Last Contract Ends</p>
+        <strong id="summaryLastContract">{initialLastContractYear}</strong>
+      </article>
+    </div>
+
     <div class="roster-table-card roster-table-card--sub">
       <div class="roster-table-card__header">
         <div>
@@ -818,7 +825,7 @@ const serializedConfig = JSON.stringify({
           </thead>
           <tbody id="deadMoneyTableBody">
             <tr>
-              <td colSpan={1 + SALARY_YEARS.length} class="roster-empty">
+              <td colspan={1 + SALARY_YEARS.length} class="roster-empty">
                 No cap hits recorded for this franchise.
               </td>
             </tr>
@@ -914,6 +921,10 @@ const serializedConfig = JSON.stringify({
     border-radius: 1rem;
     background: #fff;
     box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  }
+  .team-card.roster-card {
+    box-shadow: none;
+    border-radius: none;
   }
 
   .team-card img {
@@ -1884,7 +1895,7 @@ const serializedConfig = JSON.stringify({
           };
         });
       if (!adjustments.length) {
-        deadMoneyTableBody.innerHTML = `<tr><td colSpan="${1 + salaryYears.length}" class="roster-empty">No cap hits recorded for this franchise.</td></tr>`;
+        deadMoneyTableBody.innerHTML = `<tr><td colspan="${1 + salaryYears.length}" class="roster-empty">No cap hits recorded for this franchise.</td></tr>`;
         return;
       }
       const rowsHtml = adjustments
