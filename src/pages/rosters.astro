@@ -114,6 +114,15 @@ const CAP_INCLUSION = {
   PRACTICE: { current: 0.5, future: 1 },
   INJURED: { current: 1, future: 1 },
 };
+const POSITION_COLORS = {
+  QB: '#6366f1', // indigo
+  RB: '#f97316', // orange
+  WR: '#22c55e', // green
+  TE: '#14b8a6', // teal
+  PK: '#0ea5e9', // light blue
+  K: '#0ea5e9',
+  DEF: '#475569', // slate
+};
 const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
 const rosterColumnOptions = [
   { key: 'player', label: 'Player' },
@@ -565,6 +574,7 @@ const serializedConfig = JSON.stringify({
   rosterLimitOverride: initialRosterLimit,
   capInclusion: CAP_INCLUSION,
   deadMoneySources: DEAD_MONEY_SOURCES,
+  positionColors: POSITION_COLORS,
 });
 ---
 
@@ -608,7 +618,7 @@ const serializedConfig = JSON.stringify({
     </div>
 
     <div class="roster-table-card">
-    <div class="team-card roster-card" id="teamIdentity">
+    <div class="team-card roster-card" data-team-identity>
       {teamLookup[defaultTeamId]?.icon && (
         <img
           src={teamLookup[defaultTeamId]?.icon}
@@ -617,10 +627,10 @@ const serializedConfig = JSON.stringify({
       )}
       <div>
         <p class="team-card__label">Active Roster</p>
-        <h2 id="teamName">
+        <h2 data-team-name>
           {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
         </h2>
-        <p id="teamMeta">
+        <p data-team-meta>
           {teamLookup[defaultTeamId]?.division
             ? `${teamLookup[defaultTeamId]?.division} Division`
             : 'Independent'}
@@ -755,7 +765,7 @@ const serializedConfig = JSON.stringify({
       </div>
     </div>
 
-    <div class="team-card" id="teamIdentity">
+    <div class="team-card" data-team-identity>
       {teamLookup[defaultTeamId]?.icon && (
         <img
           src={teamLookup[defaultTeamId]?.icon}
@@ -763,10 +773,11 @@ const serializedConfig = JSON.stringify({
         />
       )}
       <div>
-        <h2 id="teamName">
+        <p class="team-card__label">Advanced Analytics</p>
+        <h2 data-team-name>
           {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
         </h2>
-        <p id="teamMeta">
+        <p data-team-meta>
           Advanced Analytics
         </p>
       </div>
@@ -789,6 +800,16 @@ const serializedConfig = JSON.stringify({
         </div>
         <div class="chart-card__body">
           <div class="donut" id="rosterDonut"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <h3>Position Allocation</h3>
+          <p class="chart-card__sub">Current season cap by position</p>
+        </div>
+        <div class="chart-card__body">
+          <div class="donut" id="posDonut"></div>
+          <div class="chart-legend" id="posLegend"></div>
         </div>
       </div>
     </div>
@@ -1151,10 +1172,23 @@ const serializedConfig = JSON.stringify({
     font-weight: 600;
   }
 
+  .chart-legend__label .legend-dot {
+    flex-shrink: 0;
+    margin-right: 0.1rem;
+  }
+
+  /* Ensure position allocation dots always render */
+  :global(#posLegend .legend-dot) {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+  }
+
   .chart-legend__swatch {
     width: 0.85rem;
     height: 0.85rem;
-    border-radius: 0.2rem;
+    border-radius: 999px;
     flex-shrink: 0;
   }
 
@@ -1659,6 +1693,7 @@ const serializedConfig = JSON.stringify({
       capInclusion = {},
       deadMoneySources = [],
       rosterLimitOverride,
+      positionColors = {},
     } = config;
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
@@ -1696,9 +1731,9 @@ const serializedConfig = JSON.stringify({
     const summaryOpen = document.getElementById('summaryOpen');
     const summaryPractice = document.getElementById('practiceCount');
     const summaryInjured = document.getElementById('injuredCount');
-    const teamName = document.getElementById('teamName');
-    const teamMeta = document.getElementById('teamMeta');
-    const teamIdentity = document.getElementById('teamIdentity');
+    const teamNames = document.querySelectorAll('[data-team-name]');
+    const teamMetas = document.querySelectorAll('[data-team-meta]');
+    const teamIdentityEls = document.querySelectorAll('[data-team-identity]');
     const rosterTable = document.querySelector('.roster-table');
     const rosterTableBody = document.getElementById('rosterTableBody');
     const rosterMetadata = document.getElementById('rosterMetadata');
@@ -1717,15 +1752,17 @@ const serializedConfig = JSON.stringify({
       document.getElementById(`dmTotal${index + 1}`)
     );
     const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
-    const capDonut = document.getElementById('capDonut');
-    const capLegend = null; // no longer needed in DOM
-    const rosterDonut = document.getElementById('rosterDonut');
-    const rosterLegend = null; // no longer needed in DOM
-    const subtotalActive = document.getElementById('subtotalActive');
-    const subtotalPractice = document.getElementById('subtotalPractice');
-    const subtotalInjured = document.getElementById('subtotalInjured');
-    const subtotalDead = document.getElementById('subtotalDead');
-    const countActive = document.getElementById('countActive');
+  const capDonut = document.getElementById('capDonut');
+  const capLegend = null; // no longer needed in DOM
+  const rosterDonut = document.getElementById('rosterDonut');
+  const rosterLegend = null; // no longer needed in DOM
+  const posDonut = document.getElementById('posDonut');
+  const posLegend = document.getElementById('posLegend');
+  const subtotalActive = document.getElementById('subtotalActive');
+  const subtotalPractice = document.getElementById('subtotalPractice');
+  const subtotalInjured = document.getElementById('subtotalInjured');
+  const subtotalDead = document.getElementById('subtotalDead');
+  const countActive = document.getElementById('countActive');
     const countPractice = document.getElementById('countPractice');
     const countInjured = document.getElementById('countInjured');
 
@@ -1986,22 +2023,29 @@ const serializedConfig = JSON.stringify({
 
     const renderTeamIdentity = (recordText = '') => {
       const meta = teams[currentTeam];
-      let img = teamIdentity.querySelector('img');
-      if (meta?.icon) {
-        if (!img) {
-          img = document.createElement('img');
-          teamIdentity.prepend(img);
+      teamIdentityEls.forEach((card) => {
+        let img = card.querySelector('img');
+        if (meta?.icon) {
+          if (!img) {
+            img = document.createElement('img');
+            card.prepend(img);
+          }
+          img.src = meta.icon;
+          img.alt = `${meta?.name ?? 'Franchise'} icon`;
+        } else if (img) {
+          img.remove();
         }
-        img.src = meta.icon;
-        img.alt = `${meta?.name ?? 'Franchise'} icon`;
-      } else if (img) {
-        img.remove();
-      }
-      teamName.textContent = meta?.name ?? 'Franchise';
+      });
+      teamNames.forEach((el) => {
+        el.textContent = meta?.name ?? 'Franchise';
+      });
       const bits = [];
       if (meta?.division) bits.push(`${meta.division} Division`);
       if (recordText) bits.push(recordText);
-      teamMeta.textContent = bits.join(' • ') || 'Independent';
+      const metaText = bits.join(' • ') || 'Independent';
+      teamMetas.forEach((el) => {
+        el.textContent = metaText;
+      });
     };
 
     const renderTableRows = (rows = []) => {
@@ -2131,6 +2175,22 @@ const serializedConfig = JSON.stringify({
         { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } }
       );
 
+    const calculatePositionCaps = (rows = []) =>
+      rows.reduce((totals, player) => {
+        if ((player.contractYears ?? 0) <= 0) return totals;
+        const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
+        const tag = tagRaw.includes('PRACTICE')
+          ? 'PRACTICE'
+          : tagRaw.includes('INJURED') || tagRaw === 'IR'
+            ? 'INJURED'
+            : 'ACTIVE';
+        const percent = getCapPercent(tag, true);
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        const salary = (Number(player.salary ?? 0) || 0) * percent;
+        totals[pos] = (totals[pos] ?? 0) + salary;
+        return totals;
+      }, {});
+
     const getSalaryAdjustments = (seasonData = {}) => {
       if (Array.isArray(seasonData.salaryAdjustments)) return seasonData.salaryAdjustments;
       if (adjustmentsBySeason[currentSeason]) return adjustmentsBySeason[currentSeason];
@@ -2213,6 +2273,25 @@ const serializedConfig = JSON.stringify({
       // legend removed (subtotals act as legend)
     };
 
+    const renderLegendList = (el, slices = []) => {
+      if (!el) return;
+      if (!slices.length) {
+        el.innerHTML = '';
+        return;
+      }
+      el.innerHTML = slices
+        .map(
+          (slice) => `<div class="chart-legend__item">
+            <span class="chart-legend__label">
+              <span class="legend-dot" style="background:${slice.color}"></span>
+              ${slice.label}
+            </span>
+            <span class="chart-legend__value">${formatCurrency.format(slice.value)}</span>
+          </div>`
+        )
+        .join('');
+    };
+
     const applyHiddenColumns = () => {
       if (!rosterTable) return;
       rosterTable.dataset.hiddenColumns = Array.from(hiddenColumns).join(' ');
@@ -2259,6 +2338,18 @@ const serializedConfig = JSON.stringify({
       renderTeamIdentity(teamData.record ?? '');
       renderTableRows(rows);
       renderDeadMoney(seasonData, currentTeam);
+
+      const positionCaps = calculatePositionCaps(rows);
+      const posEntries = Object.entries(positionCaps).sort((a, b) => b[1] - a[1]);
+      const posPalette = ['#a855f7', '#ec4899', '#facc15', '#c084fc'];
+      const posSlices = posEntries.map(([label, value], idx) => {
+        const upper = label.toUpperCase();
+        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
+        return { label, value, color };
+      });
+      const posTotal = posSlices.reduce((sum, s) => sum + s.value, 0);
+      buildDonut(posDonut, posSlices, posTotal);
+      renderLegendList(posLegend, posSlices);
 
       rosterMetadata.textContent = `Season ${
         seasonData?.metadata?.season ?? currentSeason
