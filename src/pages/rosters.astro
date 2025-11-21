@@ -614,15 +614,24 @@ const serializedConfig = JSON.stringify({
       </div>
       <div class="cap-subtotals">
         <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-active"></span>Active Roster</span>
+          <span>
+            <span class="legend-dot legend-active"></span>
+            Active Roster <span id="countActive" class="cap-count"></span>
+          </span>
           <strong id="subtotalActive">$0</strong>
         </div>
         <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-practice"></span>Practice Squad</span>
+          <span>
+            <span class="legend-dot legend-practice"></span>
+            Practice Squad <span id="countPractice" class="cap-count"></span>
+          </span>
           <strong id="subtotalPractice">$0</strong>
         </div>
         <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-injured"></span>Injured Reserve</span>
+          <span>
+            <span class="legend-dot legend-injured"></span>
+            Injured Reserve <span id="countInjured" class="cap-count"></span>
+          </span>
           <strong id="subtotalInjured">$0</strong>
         </div>
         <div class="cap-subtotals__row">
@@ -1015,6 +1024,13 @@ const serializedConfig = JSON.stringify({
 
   .cap-subtotals__row strong {
     font-size: 0.95rem;
+  }
+
+  .cap-count {
+    font-weight: 600;
+    margin-left: 0.35rem;
+    color: #475569;
+    font-size: 0.9rem;
   }
 
   .legend-dot {
@@ -1657,6 +1673,9 @@ const serializedConfig = JSON.stringify({
     const subtotalPractice = document.getElementById('subtotalPractice');
     const subtotalInjured = document.getElementById('subtotalInjured');
     const subtotalDead = document.getElementById('subtotalDead');
+    const countActive = document.getElementById('countActive');
+    const countPractice = document.getElementById('countPractice');
+    const countInjured = document.getElementById('countInjured');
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
@@ -2044,12 +2063,19 @@ const serializedConfig = JSON.stringify({
           const isCurrent = true;
           const percent = getCapPercent(tag, isCurrent);
           const salary = Number(player.salary ?? 0) || 0;
-          if (tag === 'PRACTICE') acc.practice += salary * percent;
-          else if (tag === 'INJURED') acc.injured += salary * percent;
-          else acc.active += salary * percent;
+          if (tag === 'PRACTICE') {
+            acc.practice += salary * percent;
+            acc.counts.practice += 1;
+          } else if (tag === 'INJURED') {
+            acc.injured += salary * percent;
+            acc.counts.injured += 1;
+          } else {
+            acc.active += salary * percent;
+            acc.counts.active += 1;
+          }
           return acc;
         },
-        { active: 0, practice: 0, injured: 0 }
+        { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } }
       );
 
     const getSalaryAdjustments = (seasonData = {}) => {
@@ -2065,6 +2091,9 @@ const serializedConfig = JSON.stringify({
       if (subtotalActive) subtotalActive.textContent = formatCurrency.format(caps.active);
       if (subtotalPractice) subtotalPractice.textContent = formatCurrency.format(caps.practice);
       if (subtotalInjured) subtotalInjured.textContent = formatCurrency.format(caps.injured);
+      if (countActive) countActive.textContent = `(${caps.counts?.active ?? 0})`;
+      if (countPractice) countPractice.textContent = `(${caps.counts?.practice ?? 0})`;
+      if (countInjured) countInjured.textContent = `(${caps.counts?.injured ?? 0})`;
       if (subtotalDead) subtotalDead.textContent = formatCurrency.format(deadMoneyCurrent);
       const subtotalCapSpace = document.getElementById('subtotalCapSpace');
       if (subtotalCapSpace)
