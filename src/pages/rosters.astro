@@ -252,7 +252,8 @@ const aggregateDeadMoney = (seasonData = {}, franchiseId) =>
     if (!franchiseId || adj.franchiseId !== franchiseId) return acc;
     const baseOffset = parseNumber(adj.yearOffset ?? adj.seasonOffset ?? 0);
     const salary = parseNumber(adj.salary) || parseNumber(adj.amount);
-    const yearsRemaining = adj.yearsRemaining ?? 1;
+    const yearsRemaining = adj.yearsRemaining;
+    const hasYearsRemaining = Number.isFinite(yearsRemaining);
 
     // Waiver penalty table: current 50%, future percentage based on years
     const futurePercentByYears = {
@@ -263,9 +264,9 @@ const aggregateDeadMoney = (seasonData = {}, franchiseId) =>
       5: 0.45,
     };
 
-    const currentPenalty = 0.5 * salary;
+    const currentPenalty = hasYearsRemaining ? 0.5 * salary : salary; // carryover hits 100% current year
     const futurePenalty =
-      futurePercentByYears[yearsRemaining] !== undefined
+      hasYearsRemaining && futurePercentByYears[yearsRemaining] !== undefined
         ? futurePercentByYears[yearsRemaining] * salary
         : 0;
 
@@ -468,13 +469,26 @@ const initialTeamData =
 const initialCapLimit = initialSeasonData?.metadata?.capLimit ?? SALARY_CAP;
 const initialRosterLimit = initialSeasonData?.metadata?.rosterLimit ?? ROSTER_LIMIT;
 
-const calculateYearTotals = (rows: Array<{ contractYears: number; salary?: number }> = []) =>
+const calculateYearTotals = (
+  rows: Array<{ contractYears: number; salary?: number; displayTag?: string; status?: string }> = []
+) =>
   SALARY_YEARS.map((_, index) =>
-    rows.reduce(
-      (sum, player) =>
-        sum + (player.contractYears > index ? parseNumber(player.salary ?? 0) : 0),
-      0
-    )
+    rows.reduce((sum, player) => {
+      if ((player.contractYears ?? 0) > index) {
+        const isCurrent = index === 0;
+        const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
+        const tag = tagRaw.includes('PRACTICE')
+          ? 'PRACTICE'
+          : tagRaw.includes('INJURED') || tagRaw === 'IR'
+            ? 'INJURED'
+            : 'ACTIVE';
+        const percent = getCapPercent(tag, isCurrent);
+        const baseSalary = parseNumber(player.salary ?? 0);
+        const salaryForYear = baseSalary; // use the explicit salary provided for that season
+        return sum + (salaryForYear * percent || 0);
+      }
+      return sum;
+    }, 0)
   );
 
 const initialRosterRows = buildDisplayRows(initialTeamData);
@@ -688,6 +702,42 @@ const serializedConfig = JSON.stringify({
                 </td>
               ))}
             </tr>
+            <tr class="roster-totals roster-totals--dead">
+              <td data-column="pos"></td>
+              <td data-column="player" class="roster-totals__label">Dead Money</td>
+              <td data-column="bye"></td>
+              <td data-column="years"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`}>
+                  {formatCurrency(initialDeadMoney[index] ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr class="roster-totals roster-totals--cap">
+              <td data-column="pos"></td>
+              <td data-column="player" class="roster-totals__label">Salary Cap</td>
+              <td data-column="bye"></td>
+              <td data-column="years"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`}>
+                  {formatCurrency(initialCapLimit)}
+                </td>
+              ))}
+            </tr>
+            <tr class="roster-totals roster-totals--space">
+              <td data-column="pos"></td>
+              <td data-column="player" class="roster-totals__label">Cap Space</td>
+              <td data-column="bye"></td>
+              <td data-column="years"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`}>
+                  {formatCurrency(
+                    (index === 0 ? initialCapLimit : initialCapLimit) -
+                      ((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))
+                  )}
+                </td>
+              ))}
+            </tr>
           </tfoot>
           <tbody id="rosterTableBody">
           {initialRosterRows.length ? (
@@ -782,7 +832,7 @@ const serializedConfig = JSON.stringify({
         <table class="roster-table roster-table--compact">
           <thead>
             <tr>
-              <th scope="col">Player/Adjustment</th>
+              <th scope="col" data-column="player" class="deadmoney-player-heading">Player/Adjustment</th>
               {SALARY_YEARS.map((year, index) => (
                 <th scope="col" data-column={`dm-year${index + 1}`}>{year}</th>
               ))}
@@ -1080,6 +1130,10 @@ const serializedConfig = JSON.stringify({
     font-weight: 600;
   }
 
+  .deadmoney-row td {
+    font-size: 0.75rem;
+  }
+
   .chart-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1181,6 +1235,7 @@ const serializedConfig = JSON.stringify({
     color: #94a3b8;
     padding: 0.5rem;
     border-bottom: 1px solid #e2e8f0;
+    text-align: right;
   }
 
   .roster-table td {
@@ -1195,13 +1250,31 @@ const serializedConfig = JSON.stringify({
     text-align: left;
   }
 
-:global(.roster-table th[data-column='player']) {
-  text-align: left;
+  :global(.roster-table th[data-column='player']) {
+    text-align: left;
+  }
+  :global(.roster-table td[data-column='player']) {
+    text-align: left !important;
+    padding-left: 0.75rem;
+  }
+
+  .deadmoney-player-heading {
+    text-align: left !important;
+  }
+
+  :global(.roster-table th[data-column='bye']),
+  :global(.roster-table th[data-column='years']) {
+    text-align: left;
+  }
+
+:global(.roster-table th.deadmoney-player-heading) {
+  text-align: left !important;
+  padding-left: 0.75rem;
 }
 
-:global(.roster-table th[data-column='bye']),
-:global(.roster-table th[data-column='years']) {
-  text-align: left;
+.deadmoney-player-cell {
+  text-align: left !important;
+  padding-left: 0.75rem;
 }
 
 :global(.roster-table th[data-column='bye']),
@@ -1246,6 +1319,20 @@ const serializedConfig = JSON.stringify({
     letter-spacing: 0.08em;
     font-size: 0.75rem;
     color: #475569;
+    text-align: left;
+    padding-left: 0.75rem;
+  }
+
+  .roster-totals,
+  .roster-totals td {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .roster-totals td[data-column='player'] {
+    text-align: right;
+    padding-left: 0;
   }
 
   :global(.player-meta) {
@@ -1289,6 +1376,8 @@ const serializedConfig = JSON.stringify({
 
   :global(.deadmoney-row td) {
     padding-block: 0.25rem;
+    font-size: 0.75rem;
+    text-align: right;
   }
 
   :global(.deadmoney-row) {
@@ -1579,6 +1668,15 @@ const serializedConfig = JSON.stringify({
     const yearTotalCells = salaryYears.map((_, index) =>
       document.getElementById(`yearTotal${index + 1}`)
     );
+    const capLimitCells = salaryYears.map((_, index) =>
+      document.getElementById(`capLimit${index + 1}`)
+    );
+    const capSpaceCells = salaryYears.map((_, index) =>
+      document.getElementById(`capSpaceTotal${index + 1}`)
+    );
+    const dmTotalCells = salaryYears.map((_, index) =>
+      document.getElementById(`dmTotal${index + 1}`)
+    );
     const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
     const capDonut = document.getElementById('capDonut');
     const capLegend = null; // no longer needed in DOM
@@ -1807,7 +1905,7 @@ const serializedConfig = JSON.stringify({
               if (yearIdx === adj.baseOffset) value = adj.currentPenalty;
               if (yearIdx === adj.baseOffset + 1 && adj.futurePenalty > 0)
                 value = adj.futurePenalty;
-              if (!value) return `<td data-column="dm-year${yearIdx + 1}"></td>`;
+              if (!value) return `<td data-column="dm-year${yearIdx + 1}" style="text-align:right"></td>`;
               return `<td data-column="dm-year${yearIdx + 1}" class="deadmoney-row__amount">${formatCurrency.format(
                 value
               )}</td>`;
@@ -1819,7 +1917,7 @@ const serializedConfig = JSON.stringify({
           const headshot = DEFAULT_HEADSHOT_URL;
           const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
           return `<tr class="${rowClasses.join(' ').trim()}">
-            <td>
+            <td data-column="player" class="deadmoney-player-cell">
               <div class="player-cell">
                 <div class="player-cell__avatar player-cell__avatar--dm">
                   <img src="${headshot}" alt="${name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
@@ -1935,18 +2033,17 @@ const serializedConfig = JSON.stringify({
         .join('');
     };
 
-    const updateYearTotals = (rows = []) => {
-      const totals = salaryYears.map((_, index) =>
-        rows.reduce(
-          (sum, player) =>
-            sum + (player.contractYears > index ? Number(player.salary ?? 0) : 0),
-          0
-        )
-      );
+    const updateYearTotals = (rows = [], deadMoney = []) => {
+      const totals = calculateCapCharges(rows);
+      const capThisYearBase = Number(getTeamData().seasonData?.metadata?.capLimit ?? capLimit) || 0;
       yearTotalCells.forEach((cell, index) => {
-        if (cell) {
-          cell.textContent = formatCurrency.format(totals[index] ?? 0);
-        }
+        if (cell) cell.textContent = formatCurrency.format(totals[index] ?? 0);
+        if (dmTotalCells[index]) dmTotalCells[index].textContent = formatCurrency.format(deadMoney[index] ?? 0);
+        if (capLimitCells[index]) capLimitCells[index].textContent = formatCurrency.format(capThisYearBase);
+        if (capSpaceCells[index])
+          capSpaceCells[index].textContent = formatCurrency.format(
+            capThisYearBase - ((totals[index] ?? 0) + (deadMoney[index] ?? 0))
+          );
       });
       return totals;
     };
@@ -1956,8 +2053,16 @@ const serializedConfig = JSON.stringify({
         rows.reduce((sum, player) => {
           if ((player.contractYears ?? 0) > index) {
             const isCurrent = index === 0;
-            const percent = getCapPercent(player.displayTag ?? 'ACTIVE', isCurrent);
-            return sum + (Number(player.salary ?? 0) * percent || 0);
+            const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
+            const tag = tagRaw.includes('PRACTICE')
+              ? 'PRACTICE'
+              : tagRaw.includes('INJURED') || tagRaw === 'IR'
+                ? 'INJURED'
+                : 'ACTIVE';
+            const percent = getCapPercent(tag, isCurrent);
+            const baseSalary = Number(player.salary ?? 0);
+            const salaryForYear = baseSalary; // explicit salary for the season
+            return sum + (salaryForYear * percent || 0);
           }
           return sum;
         }, 0)
@@ -2003,12 +2108,13 @@ const serializedConfig = JSON.stringify({
         adjustments.reduce((sum, adj) => {
           if (adj.franchiseId !== franchiseId) return sum;
           const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0);
-          const salary = Number(adj.salary) || Number(adj.amount) || 0;
-          const yearsRemaining = adj.yearsRemaining ?? 1;
-          const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
-          const currentPenalty = 0.5 * salary;
-          const futurePenalty =
-            (futurePercentByYears[yearsRemaining] ?? 0) * salary;
+      const salary = Number(adj.salary) || Number(adj.amount) || 0;
+      const yearsRemaining = adj.yearsRemaining;
+      const hasYearsRemaining = Number.isFinite(yearsRemaining);
+      const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+      const currentPenalty = hasYearsRemaining ? 0.5 * salary : salary; // carryover hits 100% current year
+      const futurePenalty =
+        hasYearsRemaining ? (futurePercentByYears[yearsRemaining] ?? 0) * salary : 0;
           let total = sum;
           if (idx === baseOffset) total += currentPenalty;
           if (idx === baseOffset + 1 && futurePenalty > 0) total += futurePenalty;
@@ -2064,9 +2170,9 @@ const serializedConfig = JSON.stringify({
     const updateView = () => {
       const { seasonData, teamData } = getTeamData();
       const rows = buildDisplayRows(teamData);
-      const yearTotals = updateYearTotals(rows);
-      const capCharges = calculateCapCharges(rows);
       const deadMoney = aggregateDeadMoney(seasonData, currentTeam);
+      const yearTotals = updateYearTotals(rows, deadMoney);
+      const capCharges = calculateCapCharges(rows);
       const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));
       const capCharge = capChargesWithDead?.[0] ?? 0;
       const nextYearCapCharge = capChargesWithDead?.[1] ?? 0;
