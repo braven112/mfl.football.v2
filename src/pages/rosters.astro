@@ -571,67 +571,27 @@ const serializedConfig = JSON.stringify({
       </div>
     </div>
 
-    <div class="roster-summary" id="rosterSummary">
-      <article>
-        <p>Cap Used</p>
-        <strong id="summaryCapUsed">
-          {formatCurrency(initialCapCharge)}
-        </strong>
-      </article>
-      <article>
-        <p>Cap Space</p>
-        <strong id="summaryCap">
-          {formatCapSpaceDisplay(Math.max(initialCapLimit - initialCapCharge, 0))}
-        </strong>
-      </article>
-      <article>
-        <p>Projected Cap Space (Next Year)</p>
-        <strong id="summaryCapNext">
-          {formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
-        </strong>
-      </article>
-      <article>
-        <p>Dead Money</p>
-        <strong id="summaryDeadMoney">
-          {formatCurrency(initialDeadMoney[0] ?? 0)}
-        </strong>
-      </article>
-      <article>
-        <p>Players Signed</p>
-        <strong id="summaryPlayers">
-          {initialTeamData.totals?.rosterCount ?? 0}
-        </strong>
-      </article>
-      <article>
-        <p>Open Roster Spots</p>
-        <strong id="summaryOpen">
-          {initialTeamData.totals?.openSpots ?? ROSTER_LIMIT}
-        </strong>
-      </article>
-      <article>
-        <p>Practice Squad</p>
-        <strong id="practiceCount">
-          {initialTeamData.totals?.practiceCount ?? 0}
-        </strong>
-      </article>
-      <article>
-        <p>Injured Reserve</p>
-        <strong id="injuredCount">
-          {initialTeamData.totals?.injuredCount ?? 0}
-        </strong>
-      </article>
-      <article>
-        <p>Contract Years</p>
-        <strong id="summaryContractYears">
-          {initialContractYearsTotal}
-        </strong>
-      </article>
-      <article>
-        <p>Longest Contract</p>
-        <strong id="summaryLongestContract">
-          {initialLongestContract} yrs
-        </strong>
-      </article>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <h3>Cap Allocation</h3>
+          <p class="chart-card__sub">Current season cap usage by bucket</p>
+        </div>
+        <div class="chart-card__body">
+          <div class="donut" id="capDonut"></div>
+          <div class="chart-legend" id="capLegend"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <h3>Roster Composition</h3>
+          <p class="chart-card__sub">Active vs IR vs Practice vs Open slots</p>
+        </div>
+        <div class="chart-card__body">
+          <div class="donut" id="rosterDonut"></div>
+          <div class="chart-legend" id="rosterLegend"></div>
+        </div>
+      </div>
     </div>
 
     <div class="roster-table-card">
@@ -943,6 +903,91 @@ const serializedConfig = JSON.stringify({
 
   .roster-table-card--sub {
     padding: 0.75rem;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .chart-card {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .chart-card__header h3 {
+    margin: 0;
+  }
+
+  .chart-card__sub {
+    margin: 0.15rem 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+  }
+
+  .chart-card__body {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .donut {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg);
+    position: relative;
+  }
+
+  .donut::after {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    background: #fff;
+    border-radius: 50%;
+  }
+
+  .chart-legend {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+  }
+
+  .chart-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    justify-content: space-between;
+  }
+
+  .chart-legend__label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #1f2937;
+    font-weight: 600;
+  }
+
+  .chart-legend__swatch {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  .chart-legend__value {
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
   }
 
   .roster-table-card__header {
@@ -1417,6 +1462,10 @@ const serializedConfig = JSON.stringify({
       document.getElementById(`yearTotal${index + 1}`)
     );
     const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
+    const capDonut = document.getElementById('capDonut');
+    const capLegend = document.getElementById('capLegend');
+    const rosterDonut = document.getElementById('rosterDonut');
+    const rosterLegend = document.getElementById('rosterLegend');
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
@@ -1541,30 +1590,46 @@ const serializedConfig = JSON.stringify({
       totals = {},
       deadMoney = 0,
       capLimitOverride = capLimit,
-      rosterLimitOverrideLocal = rosterLimitOverride ?? rosterLimit
+      rosterLimitOverrideLocal = rosterLimitOverride ?? rosterLimit,
+      bucketCaps = { active: 0, practice: 0, injured: 0 }
     ) => {
       const effectiveCap = capLimitOverride ?? capLimit ?? 0;
       const capSpace = Math.max(effectiveCap - capCharge, 0);
       const capSpaceNext = Math.max(effectiveCap - nextYearCapCharge, 0);
-      const practiceCount = totals.practiceCount ?? 0;
-      const injuredCount = totals.injuredCount ?? 0;
 
-      const capUsedEl = document.getElementById('summaryCapUsed');
-      if (capUsedEl) capUsedEl.textContent = formatCurrency.format(capCharge);
-      summaryCap.textContent = formatCapSpaceText(capSpace);
-      const summaryCapNext = document.getElementById('summaryCapNext');
-      if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
-      const summaryDeadMoney = document.getElementById('summaryDeadMoney');
-      if (summaryDeadMoney) summaryDeadMoney.textContent = formatCurrency.format(deadMoney);
-      summaryPlayers.textContent = totals.rosterCount ?? 0;
-      summaryOpen.textContent = totals.openSpots ?? rosterLimitOverrideLocal;
-      if (summaryPractice) summaryPractice.textContent = practiceCount;
-      if (summaryInjured) summaryInjured.textContent = injuredCount;
-      const contractYearsEl = document.getElementById('summaryContractYears');
-      if (contractYearsEl) contractYearsEl.textContent = contractYearsTotal;
-      const summaryLongestContractEl = document.getElementById('summaryLongestContract');
-      if (summaryLongestContractEl) summaryLongestContractEl.textContent = `${longestContract} yrs`;
-      rosterCountLabel.textContent = formatCountLabel(totals.rosterCount ?? 0);
+      if (capDonut && capLegend) {
+        const capSlices = [
+          { label: 'Active', value: bucketCaps.active, color: '#16a34a' },
+          { label: 'Practice', value: bucketCaps.practice, color: '#2563eb' },
+          { label: 'Injured', value: bucketCaps.injured, color: '#dc2626' },
+          { label: 'Dead Money', value: deadMoney, color: '#a16207' },
+          { label: 'Cap Space', value: capSpace, color: '#e2e8f0' },
+        ].filter((s) => s.value > 0);
+        buildDonut(capDonut, capSlices, capCharge + capSpace + deadMoney);
+        renderLegend(
+          capLegend,
+          capSlices.map((s) => ({ ...s, display: formatCurrency.format(s.value) }))
+        );
+      }
+
+      if (rosterDonut && rosterLegend) {
+        const activeCount = totals.rosterCount ?? 0;
+        const practiceCount = totals.practiceCount ?? 0;
+        const injuredCount = totals.injuredCount ?? 0;
+        const openActive = Math.max(22 - activeCount, 0);
+        const rosterSlices = [
+          { label: 'Active', value: activeCount, color: '#16a34a' },
+          { label: 'Practice', value: practiceCount, color: '#2563eb' },
+          { label: 'Injured', value: injuredCount, color: '#dc2626' },
+          { label: 'Open Spots', value: openActive, color: '#e2e8f0' },
+        ].filter((s) => s.value > 0);
+        const totalSlots = rosterSlices.reduce((s, r) => s + r.value, 0);
+        buildDonut(rosterDonut, rosterSlices, totalSlots);
+        renderLegend(
+          rosterLegend,
+          rosterSlices.map((s) => ({ ...s, display: `${s.value}` }))
+        );
+      }
     };
 
     const renderDeadMoney = (seasonData = {}, franchiseId) => {
@@ -1755,6 +1820,21 @@ const serializedConfig = JSON.stringify({
         }, 0)
       );
 
+    const calculateBucketCaps = (rows = []) =>
+      rows.reduce(
+        (acc, player) => {
+          const tag = (player.displayTag ?? 'active').toUpperCase();
+          const isCurrent = true;
+          const percent = getCapPercent(tag, isCurrent);
+          const salary = Number(player.salary ?? 0) || 0;
+          if (tag === 'PRACTICE') acc.practice += salary * percent;
+          else if (tag === 'INJURED') acc.injured += salary * percent;
+          else acc.active += salary * percent;
+          return acc;
+        },
+        { active: 0, practice: 0, injured: 0 }
+      );
+
     const aggregateDeadMoney = (seasonData = {}, franchiseId) => {
       const sources = Array.isArray(deadMoneySources) ? deadMoneySources : [];
       const adjustments = sources.flatMap((key) =>
@@ -1763,10 +1843,17 @@ const serializedConfig = JSON.stringify({
       return salaryYears.map((_, idx) =>
         adjustments.reduce((sum, adj) => {
           if (adj.franchiseId !== franchiseId) return sum;
-          const offset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0);
-          if (offset !== idx) return sum;
-          const amount = Number(adj.amount ?? 0) || 0;
-          return sum + amount;
+          const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0);
+          if (baseOffset !== idx) return sum;
+          const salary = Number(adj.salary) || Number(adj.amount) || 0;
+          const yearsRemaining = adj.yearsRemaining ?? 1;
+          const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+          const currentPenalty = 0.5 * salary;
+          const futurePenalty =
+            (futurePercentByYears[yearsRemaining] ?? 0) * salary;
+          let total = sum + currentPenalty;
+          if (idx === baseOffset + 1) total = sum + futurePenalty;
+          return total;
         }, 0)
       );
     };
@@ -1781,6 +1868,43 @@ const serializedConfig = JSON.stringify({
         0
       );
       return { contractYearsTotal, longestContract };
+    };
+
+    const buildDonut = (el, slices = [], total = 0) => {
+      if (!el || !total || total <= 0) {
+        if (el) el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+        return;
+      }
+      let start = 0;
+      const parts = slices
+        .filter((s) => s.value > 0)
+        .map((s) => {
+          const angle = (s.value / total) * 360;
+          const end = start + angle;
+          const gradient = `${s.color} ${start}deg ${end}deg`;
+          start = end;
+          return gradient;
+        });
+      if (!parts.length) {
+        el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+        return;
+      }
+      el.style.background = `conic-gradient(${parts.join(',')})`;
+    };
+
+    const renderLegend = (el, slices = []) => {
+      if (!el) return;
+      el.innerHTML = slices
+        .map(
+          (s) => `<div class="chart-legend__item">
+            <div class="chart-legend__label">
+              <span class="chart-legend__swatch" style="background:${s.color}"></span>
+              ${s.label}
+            </div>
+            <span class="chart-legend__value">${s.display}</span>
+          </div>`
+        )
+        .join('');
     };
 
     const applyHiddenColumns = () => {
@@ -1812,7 +1936,8 @@ const serializedConfig = JSON.stringify({
         teamData.totals ?? {},
         deadMoney[0] ?? 0,
         capLimitForSeason,
-        rosterLimitForSeason
+        rosterLimitForSeason,
+        calculateBucketCaps(rows)
       );
       renderTeamIdentity();
       renderTableRows(rows);
