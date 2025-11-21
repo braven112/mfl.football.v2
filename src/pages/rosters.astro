@@ -7,6 +7,15 @@ const SALARY_CAP = 45_000_000;
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
   eager: true,
 });
+const salaryAdjustmentFeeds = import.meta.glob(
+  '../data/mfl-feeds/*/salaryAdjustments.json',
+  {
+    eager: true,
+  }
+);
+const leagueFeeds = import.meta.glob('../data/mfl-feeds/*/league.json', {
+  eager: true,
+});
 
 const ROSTER_LIMIT = 28;
 const getModuleData = (mod) =>
@@ -16,6 +25,12 @@ const extractSeason = (filepath) => {
   const match = filepath.match(/(\d{4})\.json$/);
   return match ? match[1] : null;
 };
+
+const extractFeedSeason = (filepath) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
 
 const parseNumber = (value) => {
   if (typeof value === 'number') return value;
@@ -65,8 +80,38 @@ const getNflLogoUrl = (teamCode) =>
     ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
     : '';
 
+const parseAdjustmentMeta = (description = '') => {
+  const meta = {
+    name: '',
+    nflTeam: '',
+    salary: null,
+    yearsRemaining: null,
+  };
+  const nameMatch = description.match(/^Dropped\s+([^()]+)\s*\(/i);
+  if (nameMatch) {
+    meta.name = nameMatch[1].trim();
+    const parts = meta.name.split(' ');
+    const maybeTeam = parts[parts.length - 2];
+    if (maybeTeam && maybeTeam.length === 3) meta.nflTeam = maybeTeam.toUpperCase();
+  }
+  const salaryMatch = description.match(/Salary:\s*\$?([\d,\.]+)/i);
+  if (salaryMatch) {
+    const raw = salaryMatch[1].replace(/,/g, '');
+    meta.salary = Number(raw) || null;
+  }
+  const yearsMatch = description.match(/Years:\s*(\d+)/i);
+  if (yearsMatch) meta.yearsRemaining = parseInt(yearsMatch[1], 10);
+  return meta;
+};
+
 const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
+const CAP_INCLUSION = {
+  ACTIVE: { current: 1, future: 1 },
+  PRACTICE: { current: 0.5, future: 1 },
+  INJURED: { current: 0.5, future: 1 },
+};
+const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
 const rosterColumnOptions = [
   { key: 'pos', label: 'Pos' },
   { key: 'player', label: 'Player' },
@@ -182,6 +227,102 @@ const annotateActiveStriping = (rows = []) => {
   });
 };
 
+const getCapPercent = (tag = 'ACTIVE', isCurrent = true) => {
+  const normalized = tag.toUpperCase();
+  const map = CAP_INCLUSION[normalized] ?? { current: 1, future: 1 };
+  return isCurrent ? map.current ?? 1 : map.future ?? 1;
+};
+
+const calculateCapCharges = (rows = []) =>
+  SALARY_YEARS.map((_, index) =>
+    rows.reduce((sum, player) => {
+      if ((player.contractYears ?? 0) > index) {
+        const isCurrent = index === 0;
+        const percent = getCapPercent(player.displayTag ?? 'ACTIVE', isCurrent);
+        return sum + (parseNumber(player.salary) * percent || 0);
+      }
+      return sum;
+    }, 0)
+  );
+
+const aggregateDeadMoney = (seasonData = {}, franchiseId) =>
+  DEAD_MONEY_SOURCES.flatMap((key) =>
+    Array.isArray(seasonData[key]) ? seasonData[key] : []
+  ).reduce((acc, adj) => {
+    if (!franchiseId || adj.franchiseId !== franchiseId) return acc;
+    const baseOffset = parseNumber(adj.yearOffset ?? adj.seasonOffset ?? 0);
+    const salary = parseNumber(adj.salary) || parseNumber(adj.amount);
+    const yearsRemaining = adj.yearsRemaining ?? 1;
+
+    const futurePercentByYears = {
+      1: 0,
+      2: 0.15,
+      3: 0.25,
+      4: 0.35,
+      5: 0.45,
+    };
+
+    const currentPenalty = 0.5 * salary;
+    const futurePenalty =
+      futurePercentByYears[yearsRemaining] !== undefined
+        ? futurePercentByYears[yearsRemaining] * salary
+        : 0;
+
+    const addToOffset = (offsetIndex, amount) => {
+      if (!Number.isFinite(offsetIndex) || !Number.isFinite(amount)) return;
+      if (acc[offsetIndex] === undefined) acc[offsetIndex] = 0;
+      acc[offsetIndex] += amount;
+    };
+
+    addToOffset(baseOffset, currentPenalty);
+    if (futurePenalty > 0) addToOffset(baseOffset + 1, futurePenalty);
+
+    return acc;
+  }, Array(SALARY_YEARS.length).fill(0));
+
+const calculateContractYearsMeta = (rows = []) => {
+  const contractYearsTotal = rows.reduce(
+    (sum, player) => sum + Math.max(parseNumber(player.contractYears ?? 0), 0),
+    0
+  );
+  const longestContract = rows.reduce(
+    (max, player) => Math.max(max, parseNumber(player.contractYears ?? 0)),
+    0
+  );
+  return { contractYearsTotal, longestContract };
+};
+
+const feedSalaryAdjustmentsBySeason = {};
+Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.salaryAdjustments?.salaryAdjustment) return;
+  feedSalaryAdjustmentsBySeason[season] = data.salaryAdjustments.salaryAdjustment
+    .map((adj) => ({
+      franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
+      amount: parseNumber(adj.amount),
+      description: adj.description ?? '',
+      yearOffset: 0, // default to current season; can enhance if offset parsing desired
+      timestamp: adj.timestamp ?? null,
+      ...parseAdjustmentMeta(adj.description ?? ''),
+    }))
+    .filter((adj) => Number.isFinite(adj.amount));
+});
+
+const leagueMetaBySeason = {};
+Object.entries(leagueFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.league) return;
+  const league = data.league;
+  leagueMetaBySeason[season] = {
+    capLimit: parseNumber(league.salaryCapAmount) || SALARY_CAP,
+    rosterLimit: parseInt(league.rosterSize, 10) || ROSTER_LIMIT,
+    taxiPercent: parseNumber(league.includeTaxiWithSalary) / 100 || CAP_INCLUSION.PRACTICE.current,
+    irPercent: parseNumber(league.includeIRWithSalary) / 100 || CAP_INCLUSION.INJURED.current,
+  };
+});
+
 const buildDisplayRows = (teamData) => {
   const mapPlayers = (players = [], displayTag = 'active') =>
     sortByPosition(players).map((player) => ({
@@ -286,8 +427,13 @@ const buildSeasonPayload = (season, rawData) => {
   });
 
   return {
-    metadata: rawData?.metadata ?? { season },
+    metadata: {
+      capLimit: leagueMetaBySeason[season]?.capLimit ?? SALARY_CAP,
+      rosterLimit: leagueMetaBySeason[season]?.rosterLimit ?? ROSTER_LIMIT,
+      season,
+    },
     teams,
+    salaryAdjustments: feedSalaryAdjustmentsBySeason[season] ?? [],
   };
 };
 
@@ -320,6 +466,8 @@ const initialTeamData =
       injuredCount: 0,
     },
   };
+const initialCapLimit = initialSeasonData?.metadata?.capLimit ?? SALARY_CAP;
+const initialRosterLimit = initialSeasonData?.metadata?.rosterLimit ?? ROSTER_LIMIT;
 
 const calculateYearTotals = (rows: Array<{ contractYears: number; salary?: number }> = []) =>
   SALARY_YEARS.map((_, index) =>
@@ -332,7 +480,17 @@ const calculateYearTotals = (rows: Array<{ contractYears: number; salary?: numbe
 
 const initialRosterRows = buildDisplayRows(initialTeamData);
 const initialYearTotals = calculateYearTotals(initialRosterRows);
-const initialCapCharge = initialYearTotals[0] ?? 0;
+const initialCapCharges = calculateCapCharges(initialRosterRows);
+const initialDeadMoney = aggregateDeadMoney(initialSeasonData, defaultTeamId);
+const initialCapChargesWithDead = initialCapCharges.map(
+  (val, idx) => val + (initialDeadMoney[idx] ?? 0)
+);
+const initialCapCharge = initialCapChargesWithDead[0] ?? 0;
+const initialNextYearCapCharge = initialCapChargesWithDead[1] ?? 0;
+const {
+  contractYearsTotal: initialContractYearsTotal,
+  longestContract: initialLongestContract,
+} = calculateContractYearsMeta(initialRosterRows);
 
 const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
 
@@ -347,7 +505,10 @@ const serializedConfig = JSON.stringify({
   columnOptions: rosterColumnOptions,
   salaryYears: SALARY_YEARS,
   byeWeeks: nflByeWeeks,
-  capLimit: SALARY_CAP,
+  capLimit: initialCapLimit,
+  rosterLimitOverride: initialRosterLimit,
+  capInclusion: CAP_INCLUSION,
+  deadMoneySources: DEAD_MONEY_SOURCES,
 });
 ---
 
@@ -412,9 +573,27 @@ const serializedConfig = JSON.stringify({
 
     <div class="roster-summary" id="rosterSummary">
       <article>
+        <p>Cap Used</p>
+        <strong id="summaryCapUsed">
+          {formatCurrency(initialCapCharge)}
+        </strong>
+      </article>
+      <article>
         <p>Cap Space</p>
         <strong id="summaryCap">
-          {formatCapSpaceDisplay(Math.max(SALARY_CAP - initialCapCharge, 0))}
+          {formatCapSpaceDisplay(Math.max(initialCapLimit - initialCapCharge, 0))}
+        </strong>
+      </article>
+      <article>
+        <p>Projected Cap Space (Next Year)</p>
+        <strong id="summaryCapNext">
+          {formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
+        </strong>
+      </article>
+      <article>
+        <p>Dead Money</p>
+        <strong id="summaryDeadMoney">
+          {formatCurrency(initialDeadMoney[0] ?? 0)}
         </strong>
       </article>
       <article>
@@ -439,6 +618,18 @@ const serializedConfig = JSON.stringify({
         <p>Injured Reserve</p>
         <strong id="injuredCount">
           {initialTeamData.totals?.injuredCount ?? 0}
+        </strong>
+      </article>
+      <article>
+        <p>Contract Years</p>
+        <strong id="summaryContractYears">
+          {initialContractYearsTotal}
+        </strong>
+      </article>
+      <article>
+        <p>Longest Contract</p>
+        <strong id="summaryLongestContract">
+          {initialLongestContract} yrs
         </strong>
       </article>
     </div>
@@ -573,6 +764,34 @@ const serializedConfig = JSON.stringify({
           <span class="legend-swatch legend-swatch--injured"></span>
           Injured Reserve
         </span>
+      </div>
+    </div>
+
+    <div class="roster-table-card roster-table-card--sub">
+      <div class="roster-table-card__header">
+        <div>
+          <h3>Cap Hits / Dead Money</h3>
+          <p>Includes drops/buyouts for the selected franchise.</p>
+        </div>
+      </div>
+      <div class="roster-table-wrapper">
+        <table class="roster-table roster-table--compact">
+          <thead>
+            <tr>
+              <th scope="col">Player/Adjustment</th>
+              {SALARY_YEARS.map((year, index) => (
+                <th scope="col" data-column={`dm-year${index + 1}`}>{year}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody id="deadMoneyTableBody">
+            <tr>
+              <td colSpan={1 + SALARY_YEARS.length} class="roster-empty">
+                No cap hits recorded for this franchise.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -908,6 +1127,19 @@ const serializedConfig = JSON.stringify({
     display: none;
   }
 
+  :global(.deadmoney-row td) {
+    padding-block: 0.25rem;
+  }
+
+  :global(.deadmoney-row) {
+    border-left: 0;
+    background: var(--color-bg-base, #fff);
+  }
+
+  :global(.deadmoney-row--alt) {
+    background: var(--color-bg-subtle, #f7f8fb);
+  }
+
   :global(.player-cell) {
     display: flex;
     align-items: center;
@@ -934,6 +1166,14 @@ const serializedConfig = JSON.stringify({
 
   :global(.player-cell__avatar--def img) {
     object-fit: contain;
+  }
+
+  :global(.player-cell__avatar--dm) {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #c2410c;
+    font-weight: 700;
+    font-size: 0.75rem;
   }
 
   :global(.player-cell__nfl-icon) {
@@ -1083,6 +1323,10 @@ const serializedConfig = JSON.stringify({
     background: #dc2626;
   }
 
+  .deadmoney-row__amount {
+    text-align: right;
+  }
+
 
   @media (max-width: 900px) {
     .roster-table {
@@ -1121,6 +1365,9 @@ const serializedConfig = JSON.stringify({
       salaryYears = [],
       byeWeeks = {},
       capLimit = 45_000_000,
+      capInclusion = {},
+      deadMoneySources = [],
+      rosterLimitOverride,
     } = config;
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
@@ -1169,12 +1416,19 @@ const serializedConfig = JSON.stringify({
     const yearTotalCells = salaryYears.map((_, index) =>
       document.getElementById(`yearTotal${index + 1}`)
     );
+    const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
     const hiddenColumns = new Set();
 
     const formatCountLabel = (count) => `${count} Players`;
+
+    const getCapPercent = (tag = 'ACTIVE', isCurrent = true) => {
+      const normalized = String(tag).toUpperCase();
+      const map = capInclusion?.[normalized] ?? { current: 1, future: 1 };
+      return isCurrent ? map.current ?? 1 : map.future ?? 1;
+    };
 
     const getPositionRank = (pos = '') => {
       const normalized = pos.toUpperCase();
@@ -1279,18 +1533,107 @@ const serializedConfig = JSON.stringify({
       return { seasonData, teamData };
     };
 
-    const renderSummary = (capCharge = 0, totals = {}) => {
-      const capSpace = Math.max((capLimit ?? 0) - capCharge, 0);
+    const renderSummary = (
+      capCharge = 0,
+      nextYearCapCharge = 0,
+      contractYearsTotal = 0,
+      longestContract = 0,
+      totals = {},
+      deadMoney = 0,
+      capLimitOverride = capLimit,
+      rosterLimitOverrideLocal = rosterLimitOverride ?? rosterLimit
+    ) => {
+      const effectiveCap = capLimitOverride ?? capLimit ?? 0;
+      const capSpace = Math.max(effectiveCap - capCharge, 0);
+      const capSpaceNext = Math.max(effectiveCap - nextYearCapCharge, 0);
+      const practiceCount = totals.practiceCount ?? 0;
+      const injuredCount = totals.injuredCount ?? 0;
+
+      const capUsedEl = document.getElementById('summaryCapUsed');
+      if (capUsedEl) capUsedEl.textContent = formatCurrency.format(capCharge);
       summaryCap.textContent = formatCapSpaceText(capSpace);
+      const summaryCapNext = document.getElementById('summaryCapNext');
+      if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
+      const summaryDeadMoney = document.getElementById('summaryDeadMoney');
+      if (summaryDeadMoney) summaryDeadMoney.textContent = formatCurrency.format(deadMoney);
       summaryPlayers.textContent = totals.rosterCount ?? 0;
-      summaryOpen.textContent = totals.openSpots ?? rosterLimit;
-      if (summaryPractice) {
-        summaryPractice.textContent = totals.practiceCount ?? 0;
-      }
-      if (summaryInjured) {
-        summaryInjured.textContent = totals.injuredCount ?? 0;
-      }
+      summaryOpen.textContent = totals.openSpots ?? rosterLimitOverrideLocal;
+      if (summaryPractice) summaryPractice.textContent = practiceCount;
+      if (summaryInjured) summaryInjured.textContent = injuredCount;
+      const contractYearsEl = document.getElementById('summaryContractYears');
+      if (contractYearsEl) contractYearsEl.textContent = contractYearsTotal;
+      const summaryLongestContractEl = document.getElementById('summaryLongestContract');
+      if (summaryLongestContractEl) summaryLongestContractEl.textContent = `${longestContract} yrs`;
       rosterCountLabel.textContent = formatCountLabel(totals.rosterCount ?? 0);
+    };
+
+    const renderDeadMoney = (seasonData = {}, franchiseId) => {
+      if (!deadMoneyTableBody) return;
+      const adjustments = (seasonData.salaryAdjustments ?? [])
+        .filter((adj) => adj.franchiseId === franchiseId)
+        .map((adj, idx) => {
+          const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0) || 0;
+          const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+          const salary = Number(adj.salary) || Number(adj.amount) || 0;
+          const yearsRemaining = adj.yearsRemaining ?? 1;
+          const currentPenalty = 0.5 * salary;
+          const futurePenalty =
+            (futurePercentByYears[yearsRemaining] ?? 0) * salary;
+          return {
+            ...adj,
+            currentPenalty,
+            futurePenalty,
+            baseOffset,
+            rowClass: idx % 2 ? 'eventablerow' : 'oddtablerow',
+          };
+        });
+      if (!adjustments.length) {
+        deadMoneyTableBody.innerHTML = `<tr><td colSpan="${1 + salaryYears.length}" class="roster-empty">No cap hits recorded for this franchise.</td></tr>`;
+        return;
+      }
+      const rowsHtml = adjustments
+        .map((adj, idx) => {
+          const cells = salaryYears
+            .map((_, yearIdx) => {
+              let value = '';
+              if (yearIdx === adj.baseOffset) value = adj.currentPenalty;
+              if (yearIdx === adj.baseOffset + 1 && adj.futurePenalty > 0)
+                value = adj.futurePenalty;
+              if (!value) return `<td data-column="dm-year${yearIdx + 1}"></td>`;
+              return `<td data-column="dm-year${yearIdx + 1}" class="deadmoney-row__amount">${formatCurrency.format(
+                value
+              )}</td>`;
+            })
+            .join('');
+          const name = adj.name || adj.description || 'Adjustment';
+          const teamLabel = adj.nflTeam || 'FA';
+          const nflLogo = adj.nflTeam ? buildNflLogoUrl(adj.nflTeam) : '';
+          const headshot = DEFAULT_HEADSHOT_URL;
+          const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
+          return `<tr class="${rowClasses.join(' ').trim()}">
+            <td>
+              <div class="player-cell">
+                <div class="player-cell__avatar player-cell__avatar--dm">
+                  <img src="${headshot}" alt="${name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${name}</strong>
+                  <div class="player-meta">
+                    ${
+                      nflLogo
+                        ? `<img src="${nflLogo}" alt="${teamLabel} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
+                        : ''
+                    }
+                    <span>${teamLabel}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            ${cells}
+          </tr>`;
+        })
+        .join('');
+      deadMoneyTableBody.innerHTML = rowsHtml;
     };
 
     const renderTeamIdentity = () => {
@@ -1400,6 +1743,46 @@ const serializedConfig = JSON.stringify({
       return totals;
     };
 
+    const calculateCapCharges = (rows = []) =>
+      salaryYears.map((_, index) =>
+        rows.reduce((sum, player) => {
+          if ((player.contractYears ?? 0) > index) {
+            const isCurrent = index === 0;
+            const percent = getCapPercent(player.displayTag ?? 'ACTIVE', isCurrent);
+            return sum + (Number(player.salary ?? 0) * percent || 0);
+          }
+          return sum;
+        }, 0)
+      );
+
+    const aggregateDeadMoney = (seasonData = {}, franchiseId) => {
+      const sources = Array.isArray(deadMoneySources) ? deadMoneySources : [];
+      const adjustments = sources.flatMap((key) =>
+        Array.isArray(seasonData[key]) ? seasonData[key] : []
+      );
+      return salaryYears.map((_, idx) =>
+        adjustments.reduce((sum, adj) => {
+          if (adj.franchiseId !== franchiseId) return sum;
+          const offset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0);
+          if (offset !== idx) return sum;
+          const amount = Number(adj.amount ?? 0) || 0;
+          return sum + amount;
+        }, 0)
+      );
+    };
+
+    const calculateContractYearsMeta = (rows = []) => {
+      const contractYearsTotal = rows.reduce(
+        (sum, player) => sum + Math.max(Number(player.contractYears ?? 0) || 0, 0),
+        0
+      );
+      const longestContract = rows.reduce(
+        (max, player) => Math.max(max, Number(player.contractYears ?? 0) || 0),
+        0
+      );
+      return { contractYearsTotal, longestContract };
+    };
+
     const applyHiddenColumns = () => {
       if (!rosterTable) return;
       rosterTable.dataset.hiddenColumns = Array.from(hiddenColumns).join(' ');
@@ -1409,10 +1792,31 @@ const serializedConfig = JSON.stringify({
       const { seasonData, teamData } = getTeamData();
       const rows = buildDisplayRows(teamData);
       const yearTotals = updateYearTotals(rows);
-      const capCharge = yearTotals?.[0] ?? 0;
-      renderSummary(capCharge, teamData.totals ?? {});
+      const capCharges = calculateCapCharges(rows);
+      const deadMoney = aggregateDeadMoney(seasonData, currentTeam);
+      const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));
+      const capCharge = capChargesWithDead?.[0] ?? 0;
+      const nextYearCapCharge = capChargesWithDead?.[1] ?? 0;
+      const { contractYearsTotal, longestContract } = calculateContractYearsMeta(rows);
+      const capLimitForSeason = Number(
+        seasonData?.metadata?.capLimit ?? capLimit ?? 0
+      );
+      const rosterLimitForSeason = Number(
+        seasonData?.metadata?.rosterLimit ?? rosterLimitOverride ?? rosterLimit ?? 0
+      );
+      renderSummary(
+        capCharge,
+        nextYearCapCharge,
+        contractYearsTotal,
+        longestContract,
+        teamData.totals ?? {},
+        deadMoney[0] ?? 0,
+        capLimitForSeason,
+        rosterLimitForSeason
+      );
       renderTeamIdentity();
       renderTableRows(rows);
+      renderDeadMoney(seasonData, currentTeam);
 
       rosterMetadata.textContent = `Season ${
         seasonData?.metadata?.season ?? currentSeason
