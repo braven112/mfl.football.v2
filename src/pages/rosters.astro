@@ -16,6 +16,9 @@ const salaryAdjustmentFeeds = import.meta.glob(
 const leagueFeeds = import.meta.glob('../data/mfl-feeds/*/league.json', {
   eager: true,
 });
+const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
+  eager: true,
+});
 
 const ROSTER_LIMIT = 28;
 const getModuleData = (mod) =>
@@ -321,6 +324,41 @@ Object.entries(leagueFeeds).forEach(([path, mod]) => {
   };
 });
 
+const recordsBySeason = {};
+Object.entries(standingsFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const rows =
+    data?.leagueStandings?.franchise ??
+    data?.standings?.standing ??
+    data?.standings ??
+    [];
+  const list = Array.isArray(rows) ? rows : Object.values(rows ?? {});
+  if (!season || !list.length) return;
+  const toInt = (v) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const map = {};
+  list.forEach((row) => {
+    const id =
+      row.franchise_id ??
+      row.franchiseId ??
+      row.id ??
+      row.franchise ??
+      row.team ??
+      row.franchise_id1;
+    if (!id) return;
+    const wins =
+      toInt(row.h2hw ?? row.wins ?? row.w ?? row.h2h_w ?? row.h2hwins);
+    const losses =
+      toInt(row.h2hl ?? row.losses ?? row.l ?? row.h2h_l ?? row.h2hlosses);
+    const ties = toInt(row.h2ht ?? row.ties ?? row.t ?? row.h2h_t);
+    map[id] = `${wins}-${losses}-${ties}`;
+  });
+  recordsBySeason[season] = map;
+});
+
 const buildDisplayRows = (teamData) => {
   const mapPlayers = (players = [], displayTag = 'active') =>
     sortByPosition(players).map((player) => ({
@@ -414,6 +452,7 @@ const buildSeasonPayload = (season, rawData) => {
       players: activeSorted,
       practiceSquad: practiceSorted,
       injuredReserve: injuredSorted,
+      record: recordsBySeason[season]?.[teamId] ?? null,
       totals: {
         totalSalary,
         rosterCount: activeSorted.length,
@@ -456,6 +495,7 @@ const initialTeamData =
     players: [],
     practiceSquad: [],
     injuredReserve: [],
+    record: null,
     totals: {
       totalSalary: 0,
       rosterCount: 0,
@@ -727,9 +767,7 @@ const serializedConfig = JSON.stringify({
           {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
         </h2>
         <p id="teamMeta">
-          {teamLookup[defaultTeamId]?.division
-            ? `${teamLookup[defaultTeamId]?.division} Division`
-            : 'Independent'}
+          Advanced Analytics
         </p>
       </div>
     </div>
@@ -1946,7 +1984,7 @@ const serializedConfig = JSON.stringify({
       deadMoneyTableBody.innerHTML = rowsHtml;
     };
 
-    const renderTeamIdentity = () => {
+    const renderTeamIdentity = (recordText = '') => {
       const meta = teams[currentTeam];
       let img = teamIdentity.querySelector('img');
       if (meta?.icon) {
@@ -1960,9 +1998,10 @@ const serializedConfig = JSON.stringify({
         img.remove();
       }
       teamName.textContent = meta?.name ?? 'Franchise';
-      teamMeta.textContent = meta?.division
-        ? `${meta.division} Division`
-        : 'Independent';
+      const bits = [];
+      if (meta?.division) bits.push(`${meta.division} Division`);
+      if (recordText) bits.push(recordText);
+      teamMeta.textContent = bits.join(' • ') || 'Independent';
     };
 
     const renderTableRows = (rows = []) => {
@@ -2217,7 +2256,7 @@ const serializedConfig = JSON.stringify({
       );
       const bucketCapsCurrent = calculateBucketCaps(rows);
       setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
-      renderTeamIdentity();
+      renderTeamIdentity(teamData.record ?? '');
       renderTableRows(rows);
       renderDeadMoney(seasonData, currentTeam);
 

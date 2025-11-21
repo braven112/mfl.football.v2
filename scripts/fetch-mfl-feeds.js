@@ -81,6 +81,11 @@ const endpoints = [
     url: `${host}/${year}/export?TYPE=league&L=${leagueId}&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
+  {
+    key: 'standings',
+    url: `${host}/${year}/export?TYPE=standings&L=${leagueId}&W=${week}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
 ];
 
 const fetchText = async (url) => {
