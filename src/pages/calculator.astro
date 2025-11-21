@@ -59,13 +59,13 @@ const extractSeason = (filepath) => {
   return match ? match[1] : null;
 };
 
-const buildPlayerChoices = (playerData = {}) =>
-  (playerData.players ?? []).map((player) => {
+const buildPlayerChoices = (playerData: any = {}) =>
+  (playerData.players ?? []).map((player: any) => {
     const contractYears =
       Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) || 0;
-    const franchiseMeta =
-      franchiseMetaMap.get(player.franchiseId) ??
-      franchiseMetaMap.get(player.franchise_id) ?? {};
+    const franchiseMeta: any =
+      (franchiseMetaMap.get(player.franchiseId) as any) ??
+      (franchiseMetaMap.get(player.franchise_id) as any) ?? {};
     const teamName = franchiseMeta?.name || player.franchiseId || 'Free Agent';
     const nflTeam =
       (player.team ?? franchiseMeta?.nflTeam ?? franchiseMeta?.key ?? '').toUpperCase();
