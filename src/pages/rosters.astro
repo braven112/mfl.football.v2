@@ -1213,6 +1213,7 @@ const serializedConfig = JSON.stringify({
     vertical-align: middle;
   }
 
+
   :global(.roster-table th[data-column='player']) {
     text-align: left !important;
   }
@@ -1220,6 +1221,7 @@ const serializedConfig = JSON.stringify({
     text-align: left !important;
     padding-left: 0.75rem;
     padding-block: 0.25rem;
+    font-size: .9rem;
   }
 
   .deadmoney-player-heading {
@@ -1482,7 +1484,7 @@ const serializedConfig = JSON.stringify({
     border-top: 2px solid #e2e8f0;
   }
 
-  :global(.roster-row--active.roster-row--position-divider td) {
+  :global(.roster-row--active.roster-row--position-divider td), :global(.roster-table tbody tr:first-child td[data-column="player"])  {
     padding-top: 0.5rem;
   }
   :global(.roster-row--active.roster-row--position-divider-end td) {
@@ -1494,7 +1496,7 @@ const serializedConfig = JSON.stringify({
   }
   :global(.roster-row--injured.roster-row--position-divider-end td) {
     padding-bottom: 0.75rem;
-    border-bottom: 3px solid var(--color-border-injured, #fecaca);
+    
   }
 
   :global(.roster-row--tier-divider td) {
@@ -1503,10 +1505,12 @@ const serializedConfig = JSON.stringify({
 
   :global(.roster-row--practice.roster-row--tier-divider td) {
     border-top: 3px solid var(--color-border-practice, #bfdbfe);
+        padding-top: 0.5rem;
   }
 
   :global(.roster-row--injured.roster-row--tier-divider td) {
     border-top: 3px solid var(--color-border-injured, #fecaca);
+        padding-top: 0.5rem;
   }
 
   .roster-legend {
