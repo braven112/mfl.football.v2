@@ -105,7 +105,7 @@ const parseAdjustmentMeta = (description = '') => {
 };
 
 const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
-const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
+const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029];
 const CAP_INCLUSION = {
   ACTIVE: { current: 1, future: 1 },
   PRACTICE: { current: 0.5, future: 1 },
@@ -113,9 +113,7 @@ const CAP_INCLUSION = {
 };
 const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
 const rosterColumnOptions = [
-  { key: 'pos', label: 'Pos' },
   { key: 'player', label: 'Player' },
-  { key: 'bye', label: 'Bye' },
   { key: 'years', label: 'Yrs' },
   ...SALARY_YEARS.map((year, index) => ({
     key: `year${index + 1}`,
@@ -182,7 +180,7 @@ const annotatePositionDividers = (rows = []) => {
     const prevPosition =
       index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
     const current = (player.position ?? '').toUpperCase();
-    const showDivider = index > 0 && current !== prevPosition;
+    const showDivider = (index === 0) || (index > 0 && current !== prevPosition);
     return {
       ...player,
       positionDivider: showDivider,
@@ -681,9 +679,7 @@ const serializedConfig = JSON.stringify({
         <table class="roster-table" data-hidden-columns="">
           <thead>
             <tr>
-              <th scope="col" data-column="pos">Pos</th>
               <th scope="col" data-column="player">Player</th>
-              <th scope="col" data-column="bye">Bye</th>
               <th scope="col" data-column="years">Yrs</th>
               {SALARY_YEARS.map((year, index) => (
                 <th scope="col" data-column={`year${index + 1}`}>{year}</th>
@@ -692,9 +688,7 @@ const serializedConfig = JSON.stringify({
           </thead>
           <tfoot>
             <tr class="roster-totals">
-              <td data-column="pos"></td>
               <td data-column="player" class="roster-totals__label">Total Salary</td>
-              <td data-column="bye"></td>
               <td data-column="years"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
@@ -703,9 +697,7 @@ const serializedConfig = JSON.stringify({
               ))}
             </tr>
             <tr class="roster-totals roster-totals--dead">
-              <td data-column="pos"></td>
               <td data-column="player" class="roster-totals__label">Dead Money</td>
-              <td data-column="bye"></td>
               <td data-column="years"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`}>
@@ -714,9 +706,7 @@ const serializedConfig = JSON.stringify({
               ))}
             </tr>
             <tr class="roster-totals roster-totals--cap">
-              <td data-column="pos"></td>
               <td data-column="player" class="roster-totals__label">Salary Cap</td>
-              <td data-column="bye"></td>
               <td data-column="years"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`}>
@@ -725,9 +715,7 @@ const serializedConfig = JSON.stringify({
               ))}
             </tr>
             <tr class="roster-totals roster-totals--space">
-              <td data-column="pos"></td>
               <td data-column="player" class="roster-totals__label">Cap Space</td>
-              <td data-column="bye"></td>
               <td data-column="years"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`}>
@@ -746,16 +734,11 @@ const serializedConfig = JSON.stringify({
                 data-player-id={player.id}
                 class={`roster-row roster-row--${player.displayTag ?? 'active'}${player.positionDivider ? ' roster-row--position-divider' : ''}${player.positionDividerEnd ? ' roster-row--position-divider-end' : ''}${player.tierDivider ? ' roster-row--tier-divider' : ''}${player.activeStripe ? ' roster-row--active-alt' : ''}`}
               >
-                <td data-label="Pos" data-column="pos">{player.position}</td>
                 <td data-label="Player" data-column="player">
                   <div class="player-cell">
-                    <div class={`player-cell__avatar${(player.position ?? '').toUpperCase() === 'DEF' ? ' player-cell__avatar--def' : ''}`}>
+                    <div class="player-cell__avatar">
                       <img
-                        src={
-                          (player.position ?? '').toUpperCase() === 'DEF' && player.nflLogo
-                            ? player.nflLogo
-                            : player.headshot ?? DEFAULT_HEADSHOT_URL
-                        }
+                        src={player.headshot ?? DEFAULT_HEADSHOT_URL}
                         alt={`${player.name} headshot`}
                         loading="lazy"
                         decoding="async"
@@ -765,7 +748,7 @@ const serializedConfig = JSON.stringify({
                     <div>
                       <strong>{player.name}</strong>
                       <div class="player-meta">
-                        {player.nflLogo && (
+                        {player.position?.toUpperCase() !== 'DEF' && player.nflLogo && (
                           <img
                             src={player.nflLogo}
                             alt={`${player.nflTeam ?? 'FA'} logo`}
@@ -774,12 +757,11 @@ const serializedConfig = JSON.stringify({
                             decoding="async"
                           />
                         )}
-                        <span>{player.nflTeam || 'FA'}</span>
+                        {player.position && <span class="player-meta__pos">{player.position}</span>}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td data-label="Bye" data-column="bye">{player.byeWeek ?? '—'}</td>
                 <td data-label="Yrs" data-column="years">{player.contractYears || 0}</td>
                 {SALARY_YEARS.map((year, index) => {
                   const isUfa = !(player.contractYears > index);
@@ -797,7 +779,7 @@ const serializedConfig = JSON.stringify({
             ))
           ) : (
             <tr>
-              <td colspan={4 + SALARY_YEARS.length} class="roster-empty">
+              <td colspan={2 + SALARY_YEARS.length} class="roster-empty">
                 This franchise has no players recorded for this season snapshot.
               </td>
             </tr>
@@ -1244,27 +1226,17 @@ const serializedConfig = JSON.stringify({
     vertical-align: middle;
   }
 
-  :global(.roster-table th[data-column='pos']),
-  :global(.roster-table td[data-column='pos']) {
-    padding-left: .75rem;
-    text-align: left;
-  }
-
   :global(.roster-table th[data-column='player']) {
     text-align: left;
   }
   :global(.roster-table td[data-column='player']) {
     text-align: left !important;
     padding-left: 0.75rem;
+    padding-block: 0.25rem;
   }
 
   .deadmoney-player-heading {
     text-align: left !important;
-  }
-
-  :global(.roster-table th[data-column='bye']),
-  :global(.roster-table th[data-column='years']) {
-    text-align: left;
   }
 
 :global(.roster-table th.deadmoney-player-heading) {
@@ -1277,8 +1249,6 @@ const serializedConfig = JSON.stringify({
   padding-left: 0.75rem;
 }
 
-:global(.roster-table th[data-column='bye']),
-:global(.roster-table td[data-column='bye']),
 :global(.roster-table th[data-column='years']),
 :global(.roster-table td[data-column='years']) {
   width: 60px;
@@ -1291,10 +1261,10 @@ const serializedConfig = JSON.stringify({
     padding-right: 0.5rem;
   }
 
-  :global(.roster-table th[data-column^='year']) {
-    text-align: right;
-    padding-right: 0.5rem;
-  }
+:global(.roster-table th[data-column^='year']) {
+  text-align: right;
+  padding-right: 0.5rem;
+}
 
   :global(.salary-cell) {
     text-align: right;
@@ -1335,28 +1305,40 @@ const serializedConfig = JSON.stringify({
     padding-left: 0;
   }
 
-  :global(.player-meta) {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.85rem;
-    color: #6b7280;
+:global(.player-meta) {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+:global(.player-meta span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 100;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+:global(.player-meta__pos) {
+  font-weight: 300;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+:global(.player-meta__logo) {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  object-fit: contain;
   }
 
-  :global(.player-meta__logo) {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-    object-fit: contain;
-  }
 
-
-  :global(.roster-table[data-hidden-columns~='pos'] th[data-column='pos']),
-  :global(.roster-table[data-hidden-columns~='pos'] td[data-column='pos']),
   :global(.roster-table[data-hidden-columns~='player'] th[data-column='player']),
   :global(.roster-table[data-hidden-columns~='player'] td[data-column='player']),
-  :global(.roster-table[data-hidden-columns~='bye'] th[data-column='bye']),
-  :global(.roster-table[data-hidden-columns~='bye'] td[data-column='bye']),
   :global(.roster-table[data-hidden-columns~='years'] th[data-column='years']),
   :global(.roster-table[data-hidden-columns~='years'] td[data-column='years']),
   :global(.roster-table[data-hidden-columns~='year1'] th[data-column='year1']),
@@ -1368,9 +1350,7 @@ const serializedConfig = JSON.stringify({
   :global(.roster-table[data-hidden-columns~='year4'] th[data-column='year4']),
   :global(.roster-table[data-hidden-columns~='year4'] td[data-column='year4']),
   :global(.roster-table[data-hidden-columns~='year5'] th[data-column='year5']),
-  :global(.roster-table[data-hidden-columns~='year5'] td[data-column='year5']),
-  :global(.roster-table[data-hidden-columns~='year6'] th[data-column='year6']),
-  :global(.roster-table[data-hidden-columns~='year6'] td[data-column='year6']) {
+  :global(.roster-table[data-hidden-columns~='year5'] td[data-column='year5']) {
     display: none;
   }
 
@@ -1518,7 +1498,6 @@ const serializedConfig = JSON.stringify({
 
   :global(.roster-row--active.roster-row--position-divider td) {
     padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
   }
   :global(.roster-row--active.roster-row--position-divider-end td) {
     padding-bottom: 0.5rem;
@@ -1926,11 +1905,11 @@ const serializedConfig = JSON.stringify({
                   <strong>${name}</strong>
                   <div class="player-meta">
                     ${
-                      nflLogo
+                      adj.position && adj.position.toUpperCase() !== 'DEF' && nflLogo
                         ? `<img src="${nflLogo}" alt="${teamLabel} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
                         : ''
                     }
-                    <span>${teamLabel}</span>
+                    ${adj.position ? `<span class="player-meta__pos">${adj.position}</span>` : ''}
                   </div>
                 </div>
               </div>
@@ -2006,7 +1985,6 @@ const serializedConfig = JSON.stringify({
           }
 
           return `<tr data-player-id="${player.id}" class="${rowClasses.join(' ')}">
-            <td data-label="Pos" data-column="pos">${player.position ?? '—'}</td>
             <td data-label="Player" data-column="player">
               <div class="player-cell">
                 <div class="player-cell__avatar${useDefenseLogo ? ' player-cell__avatar--def' : ''}">
@@ -2020,12 +1998,11 @@ const serializedConfig = JSON.stringify({
                         ? `<img src="${player.nflLogo}" alt="${player.nflTeam || 'FA'} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
                         : ''
                     }
-                    <span>${player.nflTeam || 'FA'}</span>
+                    ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
                   </div>
                 </div>
               </div>
             </td>
-            <td data-label="Bye" data-column="bye">${player.byeWeek ?? '—'}</td>
             <td data-label="Yrs" data-column="years">${player.contractYears || 0}</td>
             ${salaryCells}
           </tr>`;
