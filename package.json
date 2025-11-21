@@ -13,6 +13,8 @@
     "build:css": "pnpm run sass:build && pnpm run postcss:build",
     "bundle:tools": "vite build --config scripts/league-tools.vite.config.mjs",
     "build": "pnpm run build:css && astro build && pnpm run bundle:tools",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "sync:theleague": "node ./scripts/sync-theleague-assets.mjs",
     "update:salary-averages": "node ./scripts/update-salary-averages.mjs",
     "predev": "pnpm run sync:theleague && pnpm run update:salary-averages",

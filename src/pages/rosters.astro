@@ -109,7 +109,7 @@ const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
 const CAP_INCLUSION = {
   ACTIVE: { current: 1, future: 1 },
   PRACTICE: { current: 0.5, future: 1 },
-  INJURED: { current: 0.5, future: 1 },
+  INJURED: { current: 1, future: 1 },
 };
 const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
 const rosterColumnOptions = [
@@ -254,6 +254,7 @@ const aggregateDeadMoney = (seasonData = {}, franchiseId) =>
     const salary = parseNumber(adj.salary) || parseNumber(adj.amount);
     const yearsRemaining = adj.yearsRemaining ?? 1;
 
+    // Waiver penalty table: current 50%, future percentage based on years
     const futurePercentByYears = {
       1: 0,
       2: 0.15,
@@ -268,14 +269,12 @@ const aggregateDeadMoney = (seasonData = {}, franchiseId) =>
         ? futurePercentByYears[yearsRemaining] * salary
         : 0;
 
-    const addToOffset = (offsetIndex, amount) => {
-      if (!Number.isFinite(offsetIndex) || !Number.isFinite(amount)) return;
-      if (acc[offsetIndex] === undefined) acc[offsetIndex] = 0;
-      acc[offsetIndex] += amount;
-    };
-
-    addToOffset(baseOffset, currentPenalty);
-    if (futurePenalty > 0) addToOffset(baseOffset + 1, futurePenalty);
+    if (acc[baseOffset] === undefined) acc[baseOffset] = 0;
+    acc[baseOffset] += currentPenalty;
+    if (futurePenalty > 0) {
+      if (acc[baseOffset + 1] === undefined) acc[baseOffset + 1] = 0;
+      acc[baseOffset + 1] += futurePenalty;
+    }
 
     return acc;
   }, Array(SALARY_YEARS.length).fill(0));
@@ -491,6 +490,8 @@ const {
   contractYearsTotal: initialContractYearsTotal,
   longestContract: initialLongestContract,
 } = calculateContractYearsMeta(initialRosterRows);
+const initialPlayersNextYear = initialRosterRows.filter((p) => (p.contractYears ?? 0) > 1).length;
+const initialLastContractYear = (parseInt(defaultSeason, 10) || SALARY_YEARS[0]) + (initialLongestContract || 0) - 1;
 
 const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
 
@@ -499,6 +500,9 @@ const serializedConfig = JSON.stringify({
   seasonOptions,
   defaultSeason,
   defaultTeamId,
+  initialSeasonData,
+  initialTeamData,
+  adjustmentsBySeason: feedSalaryAdjustmentsBySeason,
   teams: teamLookup,
   rosterLimit: ROSTER_LIMIT,
   positionOrder,
@@ -579,7 +583,6 @@ const serializedConfig = JSON.stringify({
         </div>
         <div class="chart-card__body">
           <div class="donut" id="capDonut"></div>
-          <div class="chart-legend" id="capLegend"></div>
         </div>
       </div>
       <div class="chart-card">
@@ -589,9 +592,50 @@ const serializedConfig = JSON.stringify({
         </div>
         <div class="chart-card__body">
           <div class="donut" id="rosterDonut"></div>
-          <div class="chart-legend" id="rosterLegend"></div>
         </div>
       </div>
+    </div>
+    <div class="chart-card chart-card--sub">
+      <div class="chart-card__header">
+        <h3>Cap Subtotals (Current Season)</h3>
+        <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
+      </div>
+      <div class="cap-subtotals">
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-active"></span>Active Roster</span>
+          <strong id="subtotalActive">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-practice"></span>Practice Squad</span>
+          <strong id="subtotalPractice">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-injured"></span>Injured Reserve</span>
+          <strong id="subtotalInjured">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-dead"></span>Dead Money</span>
+          <strong id="subtotalDead">$0</strong>
+        </div>
+        <div class="cap-subtotals__row">
+          <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
+          <strong id="subtotalCapSpace">$0</strong>
+        </div>
+      </div>
+    </div>
+    <div class="chart-metrics">
+      <article>
+        <p>Projected Cap Space (Next Year)</p>
+        <strong id="summaryCapNext">{formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}</strong>
+      </article>
+      <article>
+        <p>Players Signed Next Year</p>
+        <strong id="summaryPlayersNext">{initialPlayersNextYear}</strong>
+      </article>
+      <article>
+        <p>Last Contract Ends</p>
+        <strong id="summaryLastContract">{initialLastContractYear}</strong>
+      </article>
     </div>
 
     <div class="roster-table-card">
@@ -937,9 +981,51 @@ const serializedConfig = JSON.stringify({
     align-items: center;
   }
 
+  .cap-subtotals {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .cap-subtotals__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    color: #1f2937;
+  }
+
+  .cap-subtotals__row strong {
+    font-size: 0.95rem;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    margin-right: 0.35rem;
+  }
+
+  .legend-active {
+    background: #16a34a;
+  }
+  .legend-practice {
+    background: #2563eb;
+  }
+  .legend-injured {
+    background: #dc2626;
+  }
+  .legend-dead {
+    background: #4b5563;
+  }
+  .legend-capspace {
+    background: #22c55e;
+    opacity: 0.5;
+  }
+
   .donut {
-    width: 120px;
-    height: 120px;
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
     background: conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg);
     position: relative;
@@ -948,18 +1034,22 @@ const serializedConfig = JSON.stringify({
   .donut::after {
     content: '';
     position: absolute;
-    top: 18px;
-    left: 18px;
-    right: 18px;
-    bottom: 18px;
+    top: 22px;
+    left: 22px;
+    right: 22px;
+    bottom: 22px;
     background: #fff;
     border-radius: 50%;
   }
 
   .chart-legend {
-    display: grid;
+    display: grid !important;
     gap: 0.35rem;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+  }
+
+  .chart-card .chart-legend {
+    display: grid !important;
   }
 
   .chart-legend__item {
@@ -988,6 +1078,31 @@ const serializedConfig = JSON.stringify({
     color: #475569;
     font-size: 0.75rem;
     font-weight: 600;
+  }
+
+  .chart-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .chart-metrics article {
+    background: #fff;
+    border-radius: 0.85rem;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  }
+
+  .chart-metrics p {
+    margin: 0;
+    color: #64748b;
+  }
+
+  .chart-metrics strong {
+    margin-top: 0.25rem;
+    display: block;
+    font-size: 1rem;
   }
 
   .roster-table-card__header {
@@ -1403,6 +1518,9 @@ const serializedConfig = JSON.stringify({
       seasons = {},
       defaultSeason,
       defaultTeamId,
+      initialSeasonData: initialSeasonDataConfig,
+      initialTeamData: initialTeamDataConfig,
+      adjustmentsBySeason = {},
       teams = {},
       rosterLimit,
       positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
@@ -1463,9 +1581,13 @@ const serializedConfig = JSON.stringify({
     );
     const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
     const capDonut = document.getElementById('capDonut');
-    const capLegend = document.getElementById('capLegend');
+    const capLegend = null; // no longer needed in DOM
     const rosterDonut = document.getElementById('rosterDonut');
-    const rosterLegend = document.getElementById('rosterLegend');
+    const rosterLegend = null; // no longer needed in DOM
+    const subtotalActive = document.getElementById('subtotalActive');
+    const subtotalPractice = document.getElementById('subtotalPractice');
+    const subtotalInjured = document.getElementById('subtotalInjured');
+    const subtotalDead = document.getElementById('subtotalDead');
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
@@ -1564,10 +1686,18 @@ const serializedConfig = JSON.stringify({
       );
     };
 
+    const getSeasonData = () =>
+      seasons[currentSeason] ||
+      seasons[defaultSeason] ||
+      initialSeasonDataConfig ||
+      {};
+
     const getTeamData = () => {
-      const seasonData = seasons[currentSeason];
+      const seasonData = getSeasonData();
       const teamData =
-        seasonData?.teams?.[currentTeam] ?? {
+        seasonData?.teams?.[currentTeam] ||
+        seasonData?.teams?.[defaultTeamId] ||
+        initialTeamDataConfig || {
           players: [],
           practiceSquad: [],
           injuredReserve: [],
@@ -1591,28 +1721,27 @@ const serializedConfig = JSON.stringify({
       deadMoney = 0,
       capLimitOverride = capLimit,
       rosterLimitOverrideLocal = rosterLimitOverride ?? rosterLimit,
-      bucketCaps = { active: 0, practice: 0, injured: 0 }
+      bucketCaps = { active: 0, practice: 0, injured: 0 },
+      playersNextYear = 0,
+      lastContractYear = ''
     ) => {
       const effectiveCap = capLimitOverride ?? capLimit ?? 0;
       const capSpace = Math.max(effectiveCap - capCharge, 0);
       const capSpaceNext = Math.max(effectiveCap - nextYearCapCharge, 0);
 
-      if (capDonut && capLegend) {
+      if (capDonut) {
         const capSlices = [
           { label: 'Active', value: bucketCaps.active, color: '#16a34a' },
           { label: 'Practice', value: bucketCaps.practice, color: '#2563eb' },
           { label: 'Injured', value: bucketCaps.injured, color: '#dc2626' },
-          { label: 'Dead Money', value: deadMoney, color: '#a16207' },
-          { label: 'Cap Space', value: capSpace, color: '#e2e8f0' },
+          { label: 'Dead Money', value: deadMoney, color: '#4b5563' },
+          { label: 'Cap Space', value: capSpace, color: '#22c55e' },
         ].filter((s) => s.value > 0);
-        buildDonut(capDonut, capSlices, capCharge + capSpace + deadMoney);
-        renderLegend(
-          capLegend,
-          capSlices.map((s) => ({ ...s, display: formatCurrency.format(s.value) }))
-        );
+        const total = capSlices.reduce((s, c) => s + c.value, 0);
+        buildDonut(capDonut, capSlices, total);
       }
 
-      if (rosterDonut && rosterLegend) {
+      if (rosterDonut) {
         const activeCount = totals.rosterCount ?? 0;
         const practiceCount = totals.practiceCount ?? 0;
         const injuredCount = totals.injuredCount ?? 0;
@@ -1630,11 +1759,25 @@ const serializedConfig = JSON.stringify({
           rosterSlices.map((s) => ({ ...s, display: `${s.value}` }))
         );
       }
+
+      const summaryCapNext = document.getElementById('summaryCapNext');
+      if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
+      const summaryPlayersNext = document.getElementById('summaryPlayersNext');
+      if (summaryPlayersNext) summaryPlayersNext.textContent = playersNextYear;
+      const summaryLastContract = document.getElementById('summaryLastContract');
+      if (summaryLastContract) summaryLastContract.textContent = lastContractYear;
+
+      // legacy summary labels (if present)
+      if (summaryCap) summaryCap.textContent = formatCapSpaceText(capSpace);
+      if (summaryPlayers) summaryPlayers.textContent = totals.rosterCount ?? 0;
+      if (summaryOpen) summaryOpen.textContent = totals.openSpots ?? 0;
+      if (summaryPractice) summaryPractice.textContent = totals.practiceCount ?? 0;
+      if (summaryInjured) summaryInjured.textContent = totals.injuredCount ?? 0;
     };
 
     const renderDeadMoney = (seasonData = {}, franchiseId) => {
       if (!deadMoneyTableBody) return;
-      const adjustments = (seasonData.salaryAdjustments ?? [])
+      const adjustments = getSalaryAdjustments(seasonData)
         .filter((adj) => adj.franchiseId === franchiseId)
         .map((adj, idx) => {
           const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0) || 0;
@@ -1835,24 +1978,40 @@ const serializedConfig = JSON.stringify({
         { active: 0, practice: 0, injured: 0 }
       );
 
+    const getSalaryAdjustments = (seasonData = {}) => {
+      if (Array.isArray(seasonData.salaryAdjustments)) return seasonData.salaryAdjustments;
+      if (adjustmentsBySeason[currentSeason]) return adjustmentsBySeason[currentSeason];
+      if (adjustmentsBySeason[defaultSeason]) return adjustmentsBySeason[defaultSeason];
+      if (Array.isArray(initialSeasonDataConfig?.salaryAdjustments))
+        return initialSeasonDataConfig.salaryAdjustments;
+      return [];
+    };
+
+    const setCapSubtotals = (caps, deadMoneyCurrent, capSpaceCurrent) => {
+      if (subtotalActive) subtotalActive.textContent = formatCurrency.format(caps.active);
+      if (subtotalPractice) subtotalPractice.textContent = formatCurrency.format(caps.practice);
+      if (subtotalInjured) subtotalInjured.textContent = formatCurrency.format(caps.injured);
+      if (subtotalDead) subtotalDead.textContent = formatCurrency.format(deadMoneyCurrent);
+      const subtotalCapSpace = document.getElementById('subtotalCapSpace');
+      if (subtotalCapSpace)
+        subtotalCapSpace.textContent = formatCurrency.format(capSpaceCurrent ?? 0);
+    };
+
     const aggregateDeadMoney = (seasonData = {}, franchiseId) => {
-      const sources = Array.isArray(deadMoneySources) ? deadMoneySources : [];
-      const adjustments = sources.flatMap((key) =>
-        Array.isArray(seasonData[key]) ? seasonData[key] : []
-      );
+      const adjustments = getSalaryAdjustments(seasonData);
       return salaryYears.map((_, idx) =>
         adjustments.reduce((sum, adj) => {
           if (adj.franchiseId !== franchiseId) return sum;
           const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0);
-          if (baseOffset !== idx) return sum;
           const salary = Number(adj.salary) || Number(adj.amount) || 0;
           const yearsRemaining = adj.yearsRemaining ?? 1;
           const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
           const currentPenalty = 0.5 * salary;
           const futurePenalty =
             (futurePercentByYears[yearsRemaining] ?? 0) * salary;
-          let total = sum + currentPenalty;
-          if (idx === baseOffset + 1) total = sum + futurePenalty;
+          let total = sum;
+          if (idx === baseOffset) total += currentPenalty;
+          if (idx === baseOffset + 1 && futurePenalty > 0) total += futurePenalty;
           return total;
         }, 0)
       );
@@ -1871,8 +2030,9 @@ const serializedConfig = JSON.stringify({
     };
 
     const buildDonut = (el, slices = [], total = 0) => {
-      if (!el || !total || total <= 0) {
-        if (el) el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+      if (!el) return;
+      if (!total || total <= 0 || !slices.length) {
+        el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
         return;
       }
       let start = 0;
@@ -1893,18 +2053,7 @@ const serializedConfig = JSON.stringify({
     };
 
     const renderLegend = (el, slices = []) => {
-      if (!el) return;
-      el.innerHTML = slices
-        .map(
-          (s) => `<div class="chart-legend__item">
-            <div class="chart-legend__label">
-              <span class="chart-legend__swatch" style="background:${s.color}"></span>
-              ${s.label}
-            </div>
-            <span class="chart-legend__value">${s.display}</span>
-          </div>`
-        )
-        .join('');
+      // legend removed (subtotals act as legend)
     };
 
     const applyHiddenColumns = () => {
@@ -1928,17 +2077,28 @@ const serializedConfig = JSON.stringify({
       const rosterLimitForSeason = Number(
         seasonData?.metadata?.rosterLimit ?? rosterLimitOverride ?? rosterLimit ?? 0
       );
+      const deadMoneyCurrent = deadMoney[0] ?? 0;
+      const playersNextYear = rows.filter((p) => (p.contractYears ?? 0) > 1).length;
+      const lastContractYear =
+        (seasonData?.metadata?.season
+          ? Number(seasonData.metadata.season)
+          : Number(defaultSeason)) +
+        Math.max(longestContract - 1, 0);
       renderSummary(
         capCharge,
         nextYearCapCharge,
         contractYearsTotal,
         longestContract,
         teamData.totals ?? {},
-        deadMoney[0] ?? 0,
+        deadMoneyCurrent,
         capLimitForSeason,
         rosterLimitForSeason,
-        calculateBucketCaps(rows)
+        calculateBucketCaps(rows),
+        playersNextYear,
+        lastContractYear
       );
+      const bucketCapsCurrent = calculateBucketCaps(rows);
+      setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
       renderTeamIdentity();
       renderTableRows(rows);
       renderDeadMoney(seasonData, currentTeam);
