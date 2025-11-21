@@ -21,6 +21,8 @@ const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
 });
 
 const ROSTER_LIMIT = 28;
+const TARGET_ACTIVE_COUNT = 22;
+const RESERVE_FOR_ROOKIES = 5_000_000;
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -547,6 +549,19 @@ const initialCapChargesWithDead = initialCapCharges.map(
 );
 const initialCapCharge = initialCapChargesWithDead[0] ?? 0;
 const initialNextYearCapCharge = initialCapChargesWithDead[1] ?? 0;
+const initialActiveCount =
+  initialTeamData.players?.length ??
+  initialTeamData.totals?.rosterCount ??
+  0;
+const initialRemainingSlots2026 = Math.max(TARGET_ACTIVE_COUNT - initialActiveCount, 0);
+const initialCapSpace2026 =
+  (initialSeasonData?.metadata?.capLimit ?? initialCapLimit) -
+  (initialCapChargesWithDead[1] ?? 0) -
+  RESERVE_FOR_ROOKIES;
+const initialAvgPerPlayer2026 =
+  initialRemainingSlots2026 > 0
+    ? Math.max(initialCapSpace2026, 0) / initialRemainingSlots2026
+    : 0;
 const {
   contractYearsTotal: initialContractYearsTotal,
   longestContract: initialLongestContract,
@@ -575,6 +590,8 @@ const serializedConfig = JSON.stringify({
   capInclusion: CAP_INCLUSION,
   deadMoneySources: DEAD_MONEY_SOURCES,
   positionColors: POSITION_COLORS,
+  targetActiveCount: TARGET_ACTIVE_COUNT,
+  reserveForRookies: RESERVE_FOR_ROOKIES,
 });
 ---
 
@@ -850,21 +867,24 @@ const serializedConfig = JSON.stringify({
         </div>
       </div>
     </div>
+    <h3 class="chart-metrics__headline">2026 at a glance</h3>
     <div class="chart-metrics">
       <article>
         <p>Projected Cap Space (Next Year)</p>
         <strong id="summaryCapNext">{formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}</strong>
       </article>
       <article>
+        <p>Projected Avg per Player (2026)</p>
+        <strong id="summaryAvg2026">{formatCurrency(initialAvgPerPlayer2026)}</strong>
+        
+      </article>
+      <article>
         <p>Players Signed Next Year</p>
         <strong id="summaryPlayersNext">{initialPlayersNextYear}</strong>
       </article>
-      <article>
-        <p>Last Contract Ends</p>
-        <strong id="summaryLastContract">{initialLastContractYear}</strong>
-      </article>
+      
     </div>
-
+    <small class="chart-metrics__hint">Assumes {TARGET_ACTIVE_COUNT} active, saves {formatCurrency(RESERVE_FOR_ROOKIES)}</small>
     <div class="roster-table-card roster-table-card--sub">
       <div class="roster-table-card__header">
         <div>
@@ -1206,7 +1226,6 @@ const serializedConfig = JSON.stringify({
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 0.75rem;
-    margin-top: 1rem;
   }
 
   .chart-metrics article {
@@ -1225,6 +1244,15 @@ const serializedConfig = JSON.stringify({
     margin-top: 0.25rem;
     display: block;
     font-size: 1rem;
+  }
+
+  .chart-metrics__hint {
+    color: #6b7280;
+    font-size: 0.8rem;
+  }
+  .chart-metrics__headline {
+    margin: 0;
+    font-size: 1.25rem;
   }
 
   .roster-table-card__header {
@@ -1694,6 +1722,8 @@ const serializedConfig = JSON.stringify({
       deadMoneySources = [],
       rosterLimitOverride,
       positionColors = {},
+      targetActiveCount = 22,
+      reserveForRookies = 5_000_000,
     } = config;
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
@@ -1922,7 +1952,7 @@ const serializedConfig = JSON.stringify({
         const activeCount = totals.rosterCount ?? 0;
         const practiceCount = totals.practiceCount ?? 0;
         const injuredCount = totals.injuredCount ?? 0;
-        const openActive = Math.max(22 - activeCount, 0);
+        const openActive = Math.max(targetActiveCount - activeCount, 0);
         const rosterSlices = [
           { label: 'Active', value: activeCount, color: '#16a34a' },
           { label: 'Practice', value: practiceCount, color: '#2563eb' },
@@ -1941,7 +1971,8 @@ const serializedConfig = JSON.stringify({
       if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
       const summaryPlayersNext = document.getElementById('summaryPlayersNext');
       if (summaryPlayersNext) summaryPlayersNext.textContent = playersNextYear;
-      const summaryLastContract = document.getElementById('summaryLastContract');
+    const summaryLastContract = document.getElementById('summaryLastContract');
+    const summaryAvg2026 = document.getElementById('summaryAvg2026');
       if (summaryLastContract) summaryLastContract.textContent = lastContractYear;
 
       // legacy summary labels (if present)
@@ -2338,6 +2369,16 @@ const serializedConfig = JSON.stringify({
       renderTeamIdentity(teamData.record ?? '');
       renderTableRows(rows);
       renderDeadMoney(seasonData, currentTeam);
+
+      const activeCount = teamData.totals?.rosterCount ?? rows.filter((p) => (p.displayTag ?? 'active') === 'active').length;
+      const remainingSlots2026 = Math.max(targetActiveCount - activeCount, 0);
+      const capSpace2026 =
+        capLimitForSeason -
+        (capChargesWithDead?.[1] ?? 0) -
+        reserveForRookies;
+      const avgPerPlayer2026 =
+        remainingSlots2026 > 0 ? Math.max(capSpace2026, 0) / remainingSlots2026 : 0;
+      if (summaryAvg2026) summaryAvg2026.textContent = formatCurrency.format(avgPerPlayer2026);
 
       const positionCaps = calculatePositionCaps(rows);
       const posEntries = Object.entries(positionCaps).sort((a, b) => b[1] - a[1]);
