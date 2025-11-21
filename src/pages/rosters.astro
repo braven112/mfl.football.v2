@@ -662,19 +662,6 @@ const serializedConfig = JSON.stringify({
           {(initialTeamData.totals?.rosterCount ?? 0).toString()} Players
         </span>
       </div>
-      <div class="column-controls" id="columnControls">
-        <span>Columns:</span>
-        {rosterColumnOptions.map(({ key, label }) => (
-          <label>
-            <input
-              type="checkbox"
-              data-column-toggle={key}
-              checked
-            />
-            {label}
-          </label>
-        ))}
-      </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
           <thead>
@@ -1227,7 +1214,7 @@ const serializedConfig = JSON.stringify({
   }
 
   :global(.roster-table th[data-column='player']) {
-    text-align: left;
+    text-align: left !important;
   }
   :global(.roster-table td[data-column='player']) {
     text-align: left !important;
@@ -1302,7 +1289,6 @@ const serializedConfig = JSON.stringify({
 
   .roster-totals td[data-column='player'] {
     text-align: right;
-    padding-left: 0;
   }
 
 :global(.player-meta) {
