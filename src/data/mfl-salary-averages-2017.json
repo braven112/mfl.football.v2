@@ -11,9 +11,9 @@
       "players": "https://api.myfantasyleague.com/2017/export?TYPE=players&DETAILS=1",
       "weeklyResults": "https://api.myfantasyleague.com/2017/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
     },
-    "fetchedAt": "2025-11-17T07:18:54.867Z",
+    "fetchedAt": "2025-11-22T08:46:31.539Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2025-11-17T07:18:54.869Z"
+    "generatedAt": "2025-11-22T08:46:31.542Z"
   },
   "positions": {
     "RB": {
@@ -108,12 +108,6 @@
           "franchiseId": "0010"
         },
         {
-          "id": "7836",
-          "name": "Rodgers, Aaron",
-          "salary": 9350000,
-          "franchiseId": "0010"
-        },
-        {
           "id": "5848",
           "name": "Brady, Tom",
           "salary": 7500000,
@@ -125,7 +119,13 @@
           "salary": 5170000,
           "franchiseId": "0014"
         }
-      ]
+          ,{
+            "id": "4925",
+            "name": "Brees, Drew",
+            "salary": 4950000,
+            "franchiseId": "0004"
+          }
+        ]
     },
     "Def": {
       "totalPlayers": 22,
