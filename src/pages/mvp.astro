@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
 
 const playerModules = import.meta.glob(
@@ -143,7 +143,7 @@ const getNflLogo = (team) => {
 };
 ---
 
-<Layout title="MFL MVPs">
+<TheLeagueLayout title="MFL MVPs">
   <section class="mvp-history">
     <header>
       <h1>Salary-Adjusted MVP History</h1>
@@ -268,7 +268,7 @@ const getNflLogo = (team) => {
       })}
     </section>
   </section>
-</Layout>
+</TheLeagueLayout>
 
 <style>
   .mvp-history {

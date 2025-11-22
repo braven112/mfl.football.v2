@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 
 const summaryModules = import.meta.glob(
   '../data/mfl-salary-averages-*.json',
@@ -82,7 +82,7 @@ const serializedFranchiseChart = JSON.stringify(franchiseChartData);
 const serializedExtensionChart = JSON.stringify(extensionChartData);
 ---
 
-<Layout title="Franchise Tag History">
+<TheLeagueLayout title="Franchise Tag History">
   <section class="salary-history">
     <header>
       <h1>Salary Trends Over Time</h1>
@@ -119,7 +119,7 @@ const serializedExtensionChart = JSON.stringify(extensionChartData);
       <p>No salary history data found.</p>
     )}
   </section>
-</Layout>
+</TheLeagueLayout>
 
 <style>
   .salary-history {

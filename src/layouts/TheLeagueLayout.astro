@@ -1,0 +1,186 @@
+---
+import TheLeagueHeader from '../components/theleague/Header.astro';
+import Footer from '../components/Footer.astro';
+
+export interface Props {
+	title: string;
+	host?: string;
+	leagueId?: string;
+	year?: string | number;
+	staticHost?: string;
+}
+
+const { title, host, leagueId, year, staticHost } = Astro.props as Props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<title>{title}</title>
+	</head>
+	<body>
+		<TheLeagueHeader 
+			host={host}
+			leagueId={leagueId}
+			year={year}
+			staticHost={staticHost}
+		/>
+		<main>
+			<slot />
+		</main>
+		<Footer />
+	</body>
+</html>
+<style>
+	:root {
+		--font-size-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);
+		--font-size-lg: clamp(1.2rem, 0.7vw + 1.2rem, 1.5rem);
+		--font-size-xl: clamp(2.44rem, 2.38vw + 1.85rem, 3.75rem);
+
+		/* TheLeague Color Scheme - Custom branding */
+
+		--primary-color: #1c497c; /* The League Blue */
+		--secondary-color: #2e8743; /* The League Green */
+		--accent-color: #2e8743; /* Green accent */
+		--inverse-color: #ffffff;
+
+		--primary-page-bg: #f9f9f9; /* Light gray background */
+
+		--primary-content-bg-color: #ffffff;
+		--primary-content-border-color: #e2e8f0;
+		--primary-content-boxshadow-color: #1c497c28;
+		--primary-content-boxshadow-size: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+		--secondary-content-bg-color: #ffffff;
+		--secondary-content-border-color: #e2e8f0;
+		--secondary-content-boxshadow-color: #1c497c28;
+		--secondary-content-boxshadow-size: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+		--accent-content-bg-color: #f8fafc;
+		--accent-content-border-color: #1c497c35;
+		--accent-content-text-color: #1f2937;
+		--accent-content-boxshadow-color: #1c497c35;
+		--accent-content-boxshadow-size: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+		--inverse-content-bg: #1c497c;
+		--inverse-accent-bg: #2e8743;
+
+		--primary-link-default-text-color: #111111;
+		--primary-link-hover-text-color: #2e8743;
+		--primary-link-focus-text-color: #2e8743;
+
+		--inverse-link-default-text-color: #e2e8f0;
+		--inverse-link-hover-text-color: #2e8743;
+		--inverse-link-focus-text-color: #2e8743;
+
+		--accent-link-default-text-color: #2563eb;
+		--accent-link-hover-text-color: #b45309;
+		--accent-link-focus-text-color: #b45309;
+
+		--primary-btn-default-bg-color: #1c497c;
+		--primary-btn-hover-bg-color: #164066;
+		--primary-btn-focus-bg-color: #164066;
+
+		--primary-btn-detault-text-color: #ffffff;
+		--primary-btn-hover-text-color: #ffffff;
+		--primary-btn-focus-text-color: #ffffff;
+
+		--primary-btn-default-border-color: #1c497c;
+		--primary-btn-hover-border-color: #2e8743;
+		--primary-btn-focus-border-color: #2e8743;
+
+		--secondary-btn-default-bg-color: #2e8743;
+		--secondary-btn-hover-bg-color: #26743a;
+		--secondary-btn-focus-bg-color: #22663a;
+
+		--secondary-btn-default-border-color: #2e8743;
+		--secondary-btn-hover-border-color: #1c497c;
+		--secondary-btn-focus-border-color: #1c497c;
+		
+		--secondary-btn-detault-text-color: #ffffff;
+		--secondary-btn-hover-text-color: #ffffff;
+		--secondary-btn-focus-text-color: #ffffff;
+
+		--inverse-btn-default-bg-color: #e2e8f0;
+		--inverse-btn-hover-bg-color: #1c497c;
+		--inverse-btn-focus-bg-color: #1c497c;
+		
+		--inverse-btn-detault-text-color: #1f2937;
+		--inverse-btn-hover-text-color: #ffffff;
+		--inverse-btn-focus-text-color: #ffffff;
+
+		/* The League specific variables */
+		--muted-text-color: #6b7280;
+		--content-bg: #ffffff;
+		--content-border-color: #e2e2e2;
+		--gallery-content-bg: #eeeeee;
+	}
+
+	html {
+		font-family: 'Vend Sans', system-ui, sans-serif;
+		font-size: var(--font-size-base);
+		color: var(--primary-text-color);
+		background-color: var(--primary-page-bg);
+	}
+
+	body {
+		margin: 0;
+		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
+	}
+
+	:global(h1) {
+		font-size: var(--font-size-xl);
+		color: var(--primary-link-default-text-color);
+	}
+
+	:global(h2) {
+		font-size: var(--font-size-lg);
+		color: var(--primary-link-default-text-color);
+	}
+
+	:global(code) {
+		font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
+			Bitstream Vera Sans Mono, Courier New, monospace;
+		background: #f5f5f5;
+		padding: 0.125rem 0.25rem;
+		border-radius: 0.25rem;
+	}
+
+	:global(a) {
+		color: var(--primary-link-default-text-color);
+		text-decoration: none;
+	}
+
+	:global(a:hover) {
+		color: var(--primary-link-hover-text-color);
+		text-decoration: underline;
+	}
+	:global(a:focus) {
+		color: var(--primary-link-focus-text-color);
+		text-decoration: underline;
+	}
+	main {
+		flex: 1;
+	}
+	main {
+		margin-inline: auto;
+		margin-block: 0;
+		max-width: 1232px;
+		display: block;
+		padding: 1rem 1.5rem 5rem;
+	}
+	@media (max-width: 768px) {
+		main {
+			padding: 1rem 1rem 4rem;
+		}
+	}
+</style>

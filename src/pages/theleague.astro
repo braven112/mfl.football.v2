@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueConfig from '../data/theleague.config.json';
 import aggregatedAssets from '../data/theleague.assets.json';
 
@@ -69,7 +69,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
 });
 ---
 
-<Layout title="The League Asset Library">
+<TheLeagueLayout title="The League Asset Library">
   <main class="league-gallery">
     <header class="gallery-header">
       <h1>The League Asset Library</h1>
@@ -199,7 +199,7 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
       })();
     </script>
   )}
-</Layout>
+</TheLeagueLayout>
 
 <style>
   :root {

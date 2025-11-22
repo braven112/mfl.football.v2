@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
 
 const SALARY_CAP = 45_000_000;
@@ -595,7 +595,7 @@ const serializedConfig = JSON.stringify({
 });
 ---
 
-<Layout title="Team Rosters">
+<TheLeagueLayout title="Team Rosters">
   <section class="roster-page">
     <header class="roster-page__header">
       <div>
@@ -913,7 +913,7 @@ const serializedConfig = JSON.stringify({
       </div>
     </div>
   </section>
-</Layout>
+</TheLeagueLayout>
 
 <style>
   .roster-page {

@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
 
 const summaryModules = import.meta.glob(
@@ -83,7 +83,7 @@ const serializedConfig = JSON.stringify({
 });
 ---
 
-<Layout title="Salary Benchmarks">
+<TheLeagueLayout title="Salary Benchmarks">
   <section class="salary-report">
     <header class="salary-report__intro">
       <h1>Salary Benchmarks</h1>
@@ -181,7 +181,7 @@ const serializedConfig = JSON.stringify({
       })}
     </div>
   </section>
-</Layout>
+</TheLeagueLayout>
 
 <style>
   .salary-report {

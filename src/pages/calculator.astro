@@ -1,5 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
 
 const salarySummaryModules = import.meta.glob(
@@ -225,7 +225,7 @@ const serializedConfig = JSON.stringify({
 });
 ---
 
-<Layout title="Contract Tools">
+<TheLeagueLayout title="Contract Tools">
   <section class="calculator">
     <div class="calculator__card" id="rookie-extension-calculator">
       <h1>Contract Tools</h1>
@@ -390,7 +390,7 @@ const serializedConfig = JSON.stringify({
       </div>
     </section>
   </section>
-</Layout>
+</TheLeagueLayout>
 
 <style>
   .calculator {
