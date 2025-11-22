@@ -19,7 +19,7 @@
     "update:salary-averages": "node ./scripts/update-salary-averages.mjs",
     "predev": "pnpm run sync:theleague && pnpm run update:salary-averages",
     "prebuild": "pnpm run sync:theleague && pnpm run update:salary-averages",
-    "fetch:mfl": "node ./scripts/fetch-mfl-feeds.js",
+    "fetch:mfl": "node ./scripts/fetch-mfl-feeds.js && node ./scripts/update-salary-averages.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

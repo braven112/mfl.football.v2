@@ -7,7 +7,7 @@ const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
 
 const env = process.env;
-const season = env.MFL_SEASON ?? '2024';
+const season = env.MFL_SEASON ?? env.MFL_YEAR ?? '2024';
 const leagueId = env.MFL_LEAGUE_ID ?? '13522';
 const apiBase = env.MFL_API_BASE ?? 'https://api.myfantasyleague.com';
 const configuredWeek = env.MFL_WEEK;

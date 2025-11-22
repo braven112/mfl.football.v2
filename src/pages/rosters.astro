@@ -444,9 +444,9 @@ const buildSeasonPayload = (season, rawData) => {
       INJURED: [],
     };
     (Array.isArray(teamPlayers) ? teamPlayers : []).forEach((player) => {
-      if (player.rosterSlot === 'PRACTICE') {
+      if (player.status === 'TAXI_SQUAD') {
         buckets.PRACTICE.push(player);
-      } else if (player.rosterSlot === 'INJURED') {
+      } else if (player.status === 'INJURED_RESERVE') {
         buckets.INJURED.push(player);
       } else {
         buckets.ACTIVE.push(player);
@@ -455,10 +455,21 @@ const buildSeasonPayload = (season, rawData) => {
     const activeSorted = sortByPosition(buckets.ACTIVE);
     const practiceSorted = sortByPosition(buckets.PRACTICE);
     const injuredSorted = sortByPosition(buckets.INJURED);
-    const totalSalary = activeSorted.reduce(
+
+    // Calculate total salary: ACTIVE @ 100%, INJURED @ 100%, PRACTICE @ 50%
+    const activeSalary = activeSorted.reduce(
       (sum, player) => sum + parseNumber(player.salary),
       0
     );
+    const injuredSalary = injuredSorted.reduce(
+      (sum, player) => sum + parseNumber(player.salary),
+      0
+    );
+    const practiceSalary = practiceSorted.reduce(
+      (sum, player) => sum + parseNumber(player.salary) * 0.5,
+      0
+    );
+    const totalSalary = activeSalary + injuredSalary + practiceSalary;
     teams[teamId] = {
       players: activeSorted,
       practiceSquad: practiceSorted,
@@ -612,26 +623,27 @@ const serializedConfig = JSON.stringify({
     </header>
 
     <div class="roster-controls">
-      <label>
-        Season
-        <select id="rosterSeasonSelect">
-          {seasonOptions.map((season) => (
-            <option value={season} selected={season === defaultSeason}>
-              {season}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Team
-        <select id="rosterTeamSelect">
-          {teamsList.map((team) => (
-            <option value={team.id} selected={team.id === defaultTeamId}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div class="team-icon-nav">
+        {teamsList.map((team) => (
+          <button
+            class="team-icon-btn"
+            data-team-id={team.id}
+            data-active={team.id === defaultTeamId}
+            title={team.name}
+            aria-label={`View ${team.name} roster`}
+          >
+            {team.icon && (
+              <img
+                src={team.icon}
+                alt={`${team.name} icon`}
+                class="team-icon-img"
+              />
+            )}
+          </button>
+        ))}
+      </div>
+      <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
+      <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
     </div>
 
     <div class="roster-table-card">
@@ -971,25 +983,66 @@ const serializedConfig = JSON.stringify({
 
   .roster-controls {
     display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
   }
 
-  .roster-controls label {
-    font-weight: 600;
-    color: #475569;
+  .team-icon-nav {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    max-width: 100%;
   }
 
-  .roster-controls select {
-    min-width: 180px;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.75rem;
-    border: 1px solid #d1d5db;
+  .team-icon-btn {
+    width: 50px;
+    height: 50px;
+    padding: 0.25rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
     background: #fff;
-    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .team-icon-btn:hover {
+    border-color: var(--secondary-color, #2e8743);
+    transform: scale(1.1);
+  }
+
+  .team-icon-btn[data-active="true"] {
+    border-color: var(--primary-color, #1c497c);
+    background: #f0f9ff;
+    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+  }
+
+  .team-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  @media (max-width: 768px) {
+    .team-icon-btn {
+      width: 45px;
+      height: 45px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .team-icon-btn {
+      width: 40px;
+      height: 40px;
+    }
+
+    .team-icon-nav {
+      gap: 0.4rem;
+    }
   }
 
   .team-card {
@@ -1007,8 +1060,8 @@ const serializedConfig = JSON.stringify({
   }
 
   .team-card img {
-    width: 56px;
-    height: 56px;
+    width: 90px;
+    height: 90px;
     border-radius: 14px;
     object-fit: cover;
   }
@@ -2419,6 +2472,24 @@ const serializedConfig = JSON.stringify({
     teamSelect?.addEventListener('change', (event) => {
       currentTeam = event.target.value;
       updateView();
+    });
+
+    // Team icon navigation
+    const teamIconBtns = document.querySelectorAll('.team-icon-btn');
+    teamIconBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const teamId = btn.getAttribute('data-team-id');
+        if (!teamId) return;
+
+        // Update active state
+        teamIconBtns.forEach((b) => b.setAttribute('data-active', 'false'));
+        btn.setAttribute('data-active', 'true');
+
+        // Update hidden input and current team
+        if (teamSelect) teamSelect.value = teamId;
+        currentTeam = teamId;
+        updateView();
+      });
     });
 
     applyHiddenColumns();
