@@ -83,25 +83,19 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
       </div>
       <div class="col right">
         <!-- Hamburger Menu Button -->
-        <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu">
-          <svg class="icon-menu">
-            <use href="/icons.svg#icon-menu"></use>
-          </svg>
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu" aria-expanded="false">
+          <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+          </span>
         </button>
       </div>
     </div>
   </div>
-  
-  <!-- Navigation Menu -->
+
+  <!-- Simple Navigation Menu -->
   <nav class="nav-menu" id="nav-menu">
     <div class="nav-overlay" id="nav-overlay"></div>
     <div class="nav-content">
-      <button class="close-btn" id="close-btn" aria-label="Close menu">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
       <ul class="nav-links">
         <!-- TheLeague Pages -->
         <li class="nav-section-title">TheLeague Tools</li>
@@ -112,7 +106,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
         <li><a href="/calculator">Extension Calculator</a></li>
         <li><a href="/rosters">Roster Analysis</a></li>
         <li><hr></li>
-        
+
         <!-- MFL League Links -->
         <li class="nav-section-title">League Management</li>
         <li>
@@ -158,7 +152,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
           </a>
         </li>
         <li><hr></li>
-        
+
         <!-- External Links -->
         <li class="nav-section-title">Community</li>
         <li>
@@ -279,56 +273,111 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     text-transform: lowercase;
   }
 
+  /* Elegant Animated Hamburger Button */
   .hamburger-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     background: none;
-    border: 1px solid var(--primary-content-border-color, #e5e7eb);
-    border-radius: 8px;
+    border: none;
     cursor: pointer;
-    padding: 0;
-    transition: all 0.2s ease;
-    color: var(--primary-link-default-text-color, #111);
+    padding: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 998;
   }
 
-  .hamburger-btn:hover {
-    background: var(--accent-content-bg-color, #f8fafc);
-    border-color: var(--primary-link-hover-text-color, #b22222);
-    color: var(--primary-link-hover-text-color, #b22222);
+  .hamburger-box {
+    width: 24px;
+    height: 18px;
+    display: inline-block;
+    position: relative;
   }
 
-  .hamburger-btn svg {
-    width: 20px;
-    height: 20px;
-    fill: currentColor;
+  .hamburger-inner {
+    display: block;
+    top: 50%;
+    margin-top: -1px;
   }
 
+  .hamburger-inner,
+  .hamburger-inner::before,
+  .hamburger-inner::after {
+    width: 24px;
+    height: 2px;
+    background-color: var(--primary-color, #1c497c);
+    border-radius: 2px;
+    position: absolute;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hamburger-inner::before,
+  .hamburger-inner::after {
+    content: "";
+    display: block;
+  }
+
+  .hamburger-inner::before {
+    top: -7px;
+  }
+
+  .hamburger-inner::after {
+    bottom: -7px;
+  }
+
+  /* Hover state */
+  .hamburger-btn:hover .hamburger-inner,
+  .hamburger-btn:hover .hamburger-inner::before,
+  .hamburger-btn:hover .hamburger-inner::after {
+    background-color: var(--secondary-color, #2e8743);
+  }
+
+  /* Active state - Transform to X */
+  .hamburger-btn.active .hamburger-inner {
+    transform: rotate(45deg);
+  }
+
+  .hamburger-btn.active .hamburger-inner::before {
+    top: 0;
+    opacity: 0;
+  }
+
+  .hamburger-btn.active .hamburger-inner::after {
+    bottom: 0;
+    transform: rotate(-90deg);
+  }
+
+  .hamburger-btn.active:hover .hamburger-inner,
+  .hamburger-btn.active:hover .hamburger-inner::before,
+  .hamburger-btn.active:hover .hamburger-inner::after {
+    background-color: var(--primary-link-hover-text-color, #b22222);
+  }
+
+  /* Simple Navigation Menu */
   .nav-menu {
     position: fixed;
     top: 0;
     left: 0;
-    height: 100vh;
     width: 100%;
+    height: 100vh;
     z-index: 999;
-    visibility: hidden;
-    transition: visibility 0s 0.3s;
+    pointer-events: none;
   }
 
   .nav-menu.active {
-    visibility: visible;
-    transition: visibility 0s 0s;
+    pointer-events: auto;
   }
 
   .nav-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -338,93 +387,29 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   }
 
   .nav-content {
-    position: fixed;
+    position: absolute;
     top: 0;
     right: 0;
     height: 100%;
     width: 320px;
-    max-width: 90vw;
-    background: white;
-    padding: 2rem;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 85vw;
+    background: var(--primary-content-bg-color, #ffffff);
+    padding: 2rem 1.5rem;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
     transform: translateX(100%);
     transition: transform 0.3s ease;
     z-index: 1000;
     overflow-y: auto;
-    overflow-x: hidden;
-    /* Ensure smooth scrolling */
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e0 transparent;
-  }
-
-  /* Custom scrollbar for Webkit browsers */
-  .nav-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .nav-content::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .nav-content::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-  }
-
-  .nav-content::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
-  }
-
-  /* Add a subtle fade effect at the bottom to indicate scrollable content */
-  .nav-content::after {
-    content: '';
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 20px;
-    background: linear-gradient(to bottom, transparent 0%, white 100%);
-    pointer-events: none;
-    margin-top: -20px;
-    z-index: 1;
   }
 
   .nav-menu.active .nav-content {
     transform: translateX(0);
   }
 
-  .close-btn {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: none;
-    border: none;
-    color: black;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 0.25rem;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .close-btn:hover {
-    background: #f5f5f5;
-    color: #dc2626;
-  }
-
-  .close-btn svg {
-    width: 24px;
-    height: 24px;
-  }
-
   .nav-links {
     list-style: none;
-    padding: 0 0 2rem 0;
-    margin: 2rem 0 0 0;
-    /* Add some bottom padding to ensure scroll area is clear */
+    padding: 0;
+    margin: 0;
   }
 
   .nav-links li {
@@ -449,7 +434,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: black;
+    color: #333;
     text-decoration: none;
     font-size: 1rem;
     font-weight: 500;
@@ -474,15 +459,10 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     margin: 1rem 0;
   }
 
-
-
+  /* Responsive Styles */
   @media (max-width: 960px) {
     .theleague-header {
       padding-bottom: 1rem;
-    }
-
-    .nav-content {
-      width: 280px;
     }
   }
 
@@ -497,44 +477,37 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
 
     .nav-content {
       width: 100%;
-      padding: 1.5rem;
     }
   }
 </style>
 
 <script>
-  // Add interactivity to hamburger menu
+  // Simple hamburger menu
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const navMenu = document.getElementById('nav-menu');
   const navOverlay = document.getElementById('nav-overlay');
-  const closeBtn = document.getElementById('close-btn');
 
   function toggleMenu() {
-    navMenu?.classList.toggle('active');
-    document.body.style.overflow = navMenu?.classList.contains('active') ? 'hidden' : '';
+    const isActive = navMenu?.classList.toggle('active');
+    hamburgerBtn?.classList.toggle('active');
+    hamburgerBtn?.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    document.body.style.overflow = isActive ? 'hidden' : '';
   }
 
   function closeMenu() {
     navMenu?.classList.remove('active');
+    hamburgerBtn?.classList.remove('active');
+    hamburgerBtn?.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
   }
 
   hamburgerBtn?.addEventListener('click', toggleMenu);
   navOverlay?.addEventListener('click', closeMenu);
-  closeBtn?.addEventListener('click', closeMenu);
 
-  // Close menu on escape key
+  // Close on escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && navMenu?.classList.contains('active')) {
       closeMenu();
     }
   });
-
-  // Close menu on window resize (for responsive behavior)
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 768 && navMenu?.classList.contains('active')) {
-      closeMenu();
-    }
-  });
 </script>
-</style>

@@ -774,13 +774,29 @@ const serializedConfig = JSON.stringify({
                 <td data-label="Yrs" data-column="years">{player.contractYears || 0}</td>
                 {SALARY_YEARS.map((year, index) => {
                   const isUfa = !(player.contractYears > index);
+                  const isFirstYearUfa = isUfa && player.contractYears === index;
+                  const isFutureUfa = isUfa && player.contractYears < index;
+
+                  let displayValue;
+                  let cellClass = 'salary-cell';
+
+                  if (isFirstYearUfa) {
+                    displayValue = 'UFA';
+                    cellClass += ' salary-cell--ufa';
+                  } else if (isFutureUfa) {
+                    displayValue = '—';
+                    cellClass += ' salary-cell--future-ufa';
+                  } else {
+                    displayValue = formatCurrency(player.salary ?? 0);
+                  }
+
                   return (
                     <td
                       data-label={year}
                       data-column={`year${index + 1}`}
-                      class={`salary-cell${isUfa ? ' salary-cell--ufa' : ''}`}
+                      class={cellClass}
                     >
-                      {isUfa ? 'UFA' : formatCurrency(player.salary ?? 0)}
+                      {displayValue}
                     </td>
                   );
                 })}
@@ -1510,6 +1526,12 @@ const serializedConfig = JSON.stringify({
     font-weight: 600;
   }
 
+  :global(.salary-cell--future-ufa) {
+    text-align: center;
+    color: #9ca3af;
+    font-weight: 400;
+  }
+
   .roster-table tfoot td {
     border-top: 2px solid #e2e8f0;
     border-bottom: none;
@@ -2215,10 +2237,22 @@ const serializedConfig = JSON.stringify({
             .map((year, index) => {
               const columnKey = `year${index + 1}`;
               const isUfa = !(player.contractYears > index);
-              const value = isUfa
-                ? 'UFA'
-                : formatCurrency.format(player.salary ?? 0);
-              const cellClass = `salary-cell${isUfa ? ' salary-cell--ufa' : ''}`;
+              const isFirstYearUfa = isUfa && player.contractYears === index;
+              const isFutureUfa = isUfa && player.contractYears < index;
+
+              let value;
+              let cellClass = 'salary-cell';
+
+              if (isFirstYearUfa) {
+                value = 'UFA';
+                cellClass += ' salary-cell--ufa';
+              } else if (isFutureUfa) {
+                value = '—';
+                cellClass += ' salary-cell--future-ufa';
+              } else {
+                value = formatCurrency.format(player.salary ?? 0);
+              }
+
               return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}</td>`;
             })
             .join('');
