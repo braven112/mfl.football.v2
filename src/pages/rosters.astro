@@ -2,6 +2,9 @@
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
 import MetricCard from '../components/theleague/MetricCard.astro';
+import ChartCard from '../components/theleague/ChartCard.astro';
+import DonutChart from '../components/theleague/DonutChart.astro';
+import type { ChartSlice } from '../scripts/chart-utils';
 import {
   parseNumber,
   currencyFormatter,
@@ -514,6 +517,12 @@ const initialLastContractYear = (parseInt(defaultSeason, 10) || SALARY_YEARS[0])
 
 const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
 
+// Prepare initial chart data for SSR
+// Note: These are placeholder slices - actual data will be calculated client-side in updateView()
+const initialCapSlices: ChartSlice[] = [];
+const initialRosterSlices: ChartSlice[] = [];
+const initialPositionSlices: ChartSlice[] = [];
+
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
   seasonOptions,
@@ -765,34 +774,15 @@ const serializedConfig = JSON.stringify({
     </div>
 
     <div class="chart-grid">
-      <div class="chart-card">
-        <div class="chart-card__header">
-          <h3>Cap Allocation</h3>
-          <p class="chart-card__sub">Current season cap usage by bucket</p>
-        </div>
-        <div class="chart-card__body">
-          <div class="donut" id="capDonut"></div>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card__header">
-          <h3>Roster Composition</h3>
-          <p class="chart-card__sub">Active vs IR vs Practice vs Open slots</p>
-        </div>
-        <div class="chart-card__body">
-          <div class="donut" id="rosterDonut"></div>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-card__header">
-          <h3>Position Allocation</h3>
-          <p class="chart-card__sub">Current season cap by position</p>
-        </div>
-        <div class="chart-card__body">
-          <div class="donut" id="posDonut"></div>
-          <div class="chart-legend" id="posLegend"></div>
-        </div>
-      </div>
+      <ChartCard title="Cap Allocation" subtitle="Current season cap usage by bucket">
+        <DonutChart chartId="capDonut" slices={initialCapSlices} />
+      </ChartCard>
+      <ChartCard title="Roster Composition" subtitle="Active vs IR vs Practice vs Open slots">
+        <DonutChart chartId="rosterDonut" slices={initialRosterSlices} />
+      </ChartCard>
+      <ChartCard title="Position Allocation" subtitle="Current season cap by position">
+        <DonutChart chartId="posDonut" slices={initialPositionSlices} showLegend={true} />
+      </ChartCard>
     </div>
     <div class="chart-card chart-card--sub">
       <div class="chart-card__header">
@@ -1110,32 +1100,6 @@ const serializedConfig = JSON.stringify({
     gap: 1rem;
   }
 
-  .chart-card {
-    background: #fff;
-    border-radius: 1rem;
-    padding: 1rem;
-    box-shadow: var(--box-shadow-lg);
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .chart-card__header h3 {
-    margin: 0;
-  }
-
-  .chart-card__sub {
-    margin: 0.15rem 0 0;
-    color: #64748b;
-    font-size: 0.9rem;
-  }
-
-  .chart-card__body {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 1rem;
-    align-items: center;
-  }
-
   .cap-subtotals {
     display: grid;
     gap: 0.35rem;
@@ -1183,76 +1147,6 @@ const serializedConfig = JSON.stringify({
   .legend-capspace {
     background: #22c55e;
     opacity: 0.5;
-  }
-
-  .donut {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    background: conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg);
-    position: relative;
-  }
-
-  .donut::after {
-    content: '';
-    position: absolute;
-    top: 22px;
-    left: 22px;
-    right: 22px;
-    bottom: 22px;
-    background: #fff;
-    border-radius: 50%;
-  }
-
-  .chart-legend {
-    display: grid !important;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-  }
-
-  .chart-card .chart-legend {
-    display: grid !important;
-  }
-
-  .chart-legend__item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    justify-content: space-between;
-  }
-
-  .chart-legend__label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: #1f2937;
-    font-weight: 600;
-  }
-
-  .chart-legend__label .legend-dot {
-    flex-shrink: 0;
-    margin-right: 0.1rem;
-  }
-
-  /* Ensure position allocation dots always render */
-  :global(#posLegend .legend-dot) {
-    display: inline-block;
-    width: 0.75rem;
-    height: 0.75rem;
-    border-radius: 999px;
-  }
-
-  .chart-legend__swatch {
-    width: 0.85rem;
-    height: 0.85rem;
-    border-radius: 999px;
-    flex-shrink: 0;
-  }
-
-  .chart-legend__value {
-    color: #475569;
-    font-size: 0.75rem;
-    font-weight: 600;
   }
 
   .deadmoney-row td {

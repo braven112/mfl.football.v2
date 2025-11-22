@@ -1,0 +1,152 @@
+---
+/**
+ * DonutChart - Reusable donut/pie chart component
+ * Renders using CSS conic-gradient with optional legend
+ */
+
+import type { ChartSlice } from '../../scripts/chart-utils';
+
+export interface Props {
+  /** Array of chart slices to render */
+  slices: ChartSlice[];
+  /** Whether to show the legend */
+  showLegend?: boolean;
+  /** Chart diameter in pixels */
+  size?: number;
+  /** Unique ID for the chart element */
+  chartId: string;
+  /** Optional ID for the legend element */
+  legendId?: string;
+}
+
+const {
+  slices = [],
+  showLegend = false,
+  size = 150,
+  chartId,
+  legendId,
+} = Astro.props;
+
+// Generate unique IDs if not provided
+const actualLegendId = legendId ?? `${chartId}-legend`;
+
+// Serialize slices data to pass to client script
+const serializedSlices = JSON.stringify(slices);
+---
+
+<div class="donut-chart-container" data-chart-id={chartId}>
+  <div
+    class="donut"
+    id={chartId}
+    data-slices={serializedSlices}
+    style={`width: ${size}px; height: ${size}px;`}
+  ></div>
+  {showLegend && (
+    <div class="chart-legend" id={actualLegendId}></div>
+  )}
+</div>
+
+<script>
+  import { buildDonut, renderLegend, type ChartSlice } from '../../scripts/chart-utils';
+
+  // Find all donut charts and render them
+  document.querySelectorAll<HTMLElement>('.donut').forEach((donutEl) => {
+    const slicesJson = donutEl.dataset.slices;
+    if (!slicesJson) return;
+
+    try {
+      const slices: ChartSlice[] = JSON.parse(slicesJson);
+      const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+
+      // Render the donut chart
+      buildDonut(donutEl, slices, total);
+
+      // Render legend if it exists
+      const chartId = donutEl.id;
+      const legendEl = document.getElementById(`${chartId}-legend`);
+      if (legendEl) {
+        renderLegend(legendEl, slices);
+      }
+    } catch (error) {
+      console.error('Failed to render donut chart:', error);
+    }
+  });
+</script>
+
+<style>
+  .donut-chart-container {
+    display: contents;
+  }
+
+  .donut {
+    border-radius: 50%;
+    background: conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* Inner circle to create donut hole */
+  .donut::after {
+    content: '';
+    position: absolute;
+    top: 22px;
+    left: 22px;
+    right: 22px;
+    bottom: 22px;
+    background: var(--card-bg-color, #fff);
+    border-radius: 50%;
+  }
+
+  .chart-legend {
+    display: grid !important;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+  }
+
+  :global(.chart-legend__item) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    justify-content: space-between;
+  }
+
+  :global(.chart-legend__label) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-primary-color, #1f2937);
+    font-weight: 600;
+  }
+
+  :global(.chart-legend__label .legend-dot) {
+    flex-shrink: 0;
+    margin-right: 0.1rem;
+  }
+
+  :global(.legend-dot) {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+  }
+
+  :global(.chart-legend__value) {
+    color: var(--text-secondary-color, #475569);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 640px) {
+    .donut {
+      width: 120px !important;
+      height: 120px !important;
+    }
+
+    .donut::after {
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+    }
+  }
+</style>
