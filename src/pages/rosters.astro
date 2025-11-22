@@ -62,6 +62,8 @@ const formatCapSpaceDisplay = (value = 0) => {
   return currencyFormatter.format(value);
 };
 
+const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
+
 const teamsList = (leagueAssets.teams ?? [])
   .map((team) => ({
     id: team.id,
@@ -69,7 +71,18 @@ const teamsList = (leagueAssets.teams ?? [])
     division: team.division ?? '',
     icon: team.assets?.icons?.[0]?.relativePath ?? '',
   }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+  .sort((a, b) => {
+    // Sort by division order first
+    const divIndexA = divisionOrder.indexOf(a.division);
+    const divIndexB = divisionOrder.indexOf(b.division);
+
+    if (divIndexA !== divIndexB) {
+      return divIndexA - divIndexB;
+    }
+
+    // Within same division, sort alphabetically by name
+    return a.name.localeCompare(b.name);
+  });
 
 const teamLookup = Object.fromEntries(teamsList.map((team) => [team.id, team]));
 
@@ -564,20 +577,21 @@ const initialActiveCount =
   initialTeamData.players?.length ??
   initialTeamData.totals?.rosterCount ??
   0;
-const initialRemainingSlots2026 = Math.max(TARGET_ACTIVE_COUNT - initialActiveCount, 0);
-const initialCapSpace2026 =
-  (initialSeasonData?.metadata?.capLimit ?? initialCapLimit) -
-  (initialCapChargesWithDead[1] ?? 0) -
-  RESERVE_FOR_ROOKIES;
-const initialAvgPerPlayer2026 =
-  initialRemainingSlots2026 > 0
-    ? Math.max(initialCapSpace2026, 0) / initialRemainingSlots2026
-    : 0;
 const {
   contractYearsTotal: initialContractYearsTotal,
   longestContract: initialLongestContract,
 } = calculateContractYearsMeta(initialRosterRows);
 const initialPlayersNextYear = initialRosterRows.filter((p) => (p.contractYears ?? 0) > 1).length;
+const initialRemainingSlots2026 = Math.max(TARGET_ACTIVE_COUNT - initialPlayersNextYear, 1);
+const initialPlayersToCut2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT, 0);
+const initialPlayersToCutToSign2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT + 1, 0);
+const initialNeedsToCutToSign2026 = initialPlayersNextYear >= TARGET_ACTIVE_COUNT;
+const initialDeadMoney2026 = initialDeadMoney[1] ?? 0;
+const initialCapSpace2026 =
+  (initialSeasonData?.metadata?.capLimit ?? initialCapLimit) -
+  (initialCapChargesWithDead[1] ?? 0) -
+  RESERVE_FOR_ROOKIES;
+const initialAvgPerPlayer2026 = Math.max(initialCapSpace2026, 0) / initialRemainingSlots2026;
 const initialLastContractYear = (parseInt(defaultSeason, 10) || SALARY_YEARS[0]) + (initialLongestContract || 0) - 1;
 
 const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
@@ -612,35 +626,39 @@ const serializedConfig = JSON.stringify({
       <div>
         <p class="eyebrow">Contracts &amp; Cap</p>
         <h1>Team Rosters</h1>
-        <p>Review every contract, cap hit, and future salary commitment across the league.</p>
       </div>
-      <div class="roster-page__actions">
-        <a class="btn" href="/calculator">Open Extension Calculator</a>
-        <button class="btn btn-secondary" type="button" disabled>
-          Add Contract Years
-        </button>
-      </div>
+      
     </header>
 
     <div class="roster-controls">
       <div class="team-icon-nav">
-        {teamsList.map((team) => (
-          <button
-            class="team-icon-btn"
-            data-team-id={team.id}
-            data-active={team.id === defaultTeamId}
-            title={team.name}
-            aria-label={`View ${team.name} roster`}
-          >
-            {team.icon && (
-              <img
-                src={team.icon}
-                alt={`${team.name} icon`}
-                class="team-icon-img"
-              />
-            )}
-          </button>
-        ))}
+        {divisionOrder.map((division) => {
+          const divisionTeams = teamsList.filter(team => team.division === division);
+          return divisionTeams.length > 0 ? (
+            <div class="division-group">
+              <div class="division-label">{division}</div>
+              <div class="division-teams">
+                {divisionTeams.map((team) => (
+                  <button
+                    class="team-icon-btn"
+                    data-team-id={team.id}
+                    data-active={team.id === defaultTeamId}
+                    title={team.name}
+                    aria-label={`View ${team.name} roster`}
+                  >
+                    {team.icon && (
+                      <img
+                        src={team.icon}
+                        alt={`${team.name} icon`}
+                        class="team-icon-img"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })}
       </div>
       <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
       <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
@@ -882,21 +900,29 @@ const serializedConfig = JSON.stringify({
     <h3 class="chart-metrics__headline">2026 at a glance</h3>
     <div class="chart-metrics">
       <article>
-        <p>Projected Cap Space (Next Year)</p>
+        <p>Cap Space</p>
         <strong id="summaryCapNext">{formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}</strong>
       </article>
       <article>
-        <p>Projected Avg per Player (2026)</p>
-        <strong id="summaryAvg2026">{formatCurrency(initialAvgPerPlayer2026)}</strong>
-        
+        <p>Avg per Player*</p>
+        <strong id="summaryAvg2026">{formatCurrency(initialAvgPerPlayer2026)} × {initialRemainingSlots2026}</strong>
       </article>
       <article>
-        <p>Players Signed Next Year</p>
+        <p>Players Signed</p>
         <strong id="summaryPlayersNext">{initialPlayersNextYear}</strong>
+        {initialPlayersToCut2026 > 0 && (
+          <small class="needs-cut-hint error" id="needsToCutRoster2026">
+            Must cut {initialPlayersToCut2026} {initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown
+          </small>
+        )}
       </article>
-      
+      <article>
+        <p>Dead Money</p>
+        <strong id="summaryDeadMoney2026">{formatCurrency(initialDeadMoney2026)}</strong>
+      </article>
+
     </div>
-    <small class="chart-metrics__hint">Assumes {TARGET_ACTIVE_COUNT} active, saves {formatCurrency(RESERVE_FOR_ROOKIES)}</small>
+    <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
     <div class="roster-table-card roster-table-card--sub">
       <div class="roster-table-card__header">
         <div>
@@ -972,7 +998,7 @@ const serializedConfig = JSON.stringify({
 
   .btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+    box-shadow: var(--box-shadow-btn-hover);
   }
 
   .btn-secondary {
@@ -989,11 +1015,34 @@ const serializedConfig = JSON.stringify({
 
   .team-icon-nav {
     display: flex;
-    gap: 0.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     max-width: 100%;
+  }
+
+  .division-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .division-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+  }
+
+  .division-teams {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    align-items: center;
   }
 
   .team-icon-btn {
@@ -1018,7 +1067,7 @@ const serializedConfig = JSON.stringify({
   .team-icon-btn[data-active="true"] {
     border-color: var(--primary-color, #1c497c);
     background: #f0f9ff;
-    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+    box-shadow: var(--box-shadow-focus-ring);
   }
 
   .team-icon-img {
@@ -1052,7 +1101,7 @@ const serializedConfig = JSON.stringify({
     padding: 1.25rem;
     border-radius: 1rem;
     background: #fff;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--box-shadow-lg);
   }
   .team-card.roster-card {
     box-shadow: none;
@@ -1094,7 +1143,7 @@ const serializedConfig = JSON.stringify({
     background: #fff;
     border-radius: 1rem;
     padding: 1rem 1.25rem;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--box-shadow-md);
   }
 
   .roster-summary p {
@@ -1113,7 +1162,7 @@ const serializedConfig = JSON.stringify({
     background: #fff;
     border-radius: 1rem;
     padding: 1rem;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--box-shadow-lg);
   }
 
   .roster-table-card--sub {
@@ -1130,7 +1179,7 @@ const serializedConfig = JSON.stringify({
     background: #fff;
     border-radius: 1rem;
     padding: 1rem;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--box-shadow-lg);
     display: grid;
     gap: 0.75rem;
   }
@@ -1285,7 +1334,7 @@ const serializedConfig = JSON.stringify({
     background: #fff;
     border-radius: 0.85rem;
     padding: 0.75rem 1rem;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--box-shadow-sm);
   }
 
   .chart-metrics p {
@@ -1302,6 +1351,21 @@ const serializedConfig = JSON.stringify({
   .chart-metrics__hint {
     color: #6b7280;
     font-size: 0.8rem;
+  }
+
+  .needs-cut-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .needs-cut-hint.warning {
+    color: var(--warning-color, #f59e0b);
+  }
+
+  .needs-cut-hint.error {
+    color: var(--error-color, #dc2626);
   }
   .chart-metrics__headline {
     margin: 0;
@@ -2424,14 +2488,31 @@ const serializedConfig = JSON.stringify({
       renderDeadMoney(seasonData, currentTeam);
 
       const activeCount = teamData.totals?.rosterCount ?? rows.filter((p) => (p.displayTag ?? 'active') === 'active').length;
-      const remainingSlots2026 = Math.max(targetActiveCount - activeCount, 0);
+      const remainingSlots2026 = Math.max(targetActiveCount - playersNextYear, 1);
+      const playersToCut2026 = Math.max(playersNextYear - targetActiveCount, 0);
+      const playersToCutToSign2026 = Math.max(playersNextYear - targetActiveCount + 1, 0);
+      const needsToCutToSign2026 = playersNextYear >= targetActiveCount;
+      const deadMoney2026 = deadMoney[1] ?? 0;
       const capSpace2026 =
         capLimitForSeason -
         (capChargesWithDead?.[1] ?? 0) -
         reserveForRookies;
-      const avgPerPlayer2026 =
-        remainingSlots2026 > 0 ? Math.max(capSpace2026, 0) / remainingSlots2026 : 0;
-      if (summaryAvg2026) summaryAvg2026.textContent = formatCurrency.format(avgPerPlayer2026);
+      const avgPerPlayer2026 = Math.max(capSpace2026, 0) / remainingSlots2026;
+      if (summaryAvg2026) summaryAvg2026.textContent = `${formatCurrency.format(avgPerPlayer2026)} × ${remainingSlots2026}`;
+
+      const summaryDeadMoney2026 = document.getElementById('summaryDeadMoney2026');
+      if (summaryDeadMoney2026) summaryDeadMoney2026.textContent = formatCurrency.format(deadMoney2026);
+
+      const needsToCutRosterHint = document.getElementById('needsToCutRoster2026');
+      if (needsToCutRosterHint) {
+        if (playersToCut2026 > 0) {
+          const playerWord = playersToCut2026 === 1 ? 'player' : 'players';
+          needsToCutRosterHint.textContent = `Must cut ${playersToCut2026} ${playerWord} by cutdown`;
+          needsToCutRosterHint.style.display = 'block';
+        } else {
+          needsToCutRosterHint.style.display = 'none';
+        }
+      }
 
       const positionCaps = calculatePositionCaps(rows);
       const posEntries = Object.entries(positionCaps).sort((a, b) => b[1] - a[1]);

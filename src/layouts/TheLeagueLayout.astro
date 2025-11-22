@@ -17,7 +17,7 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -51,7 +51,7 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 		--accent-color: #2e8743; /* Green accent */
 		--inverse-color: #ffffff;
 
-		--primary-page-bg: #f9f9f9; /* Light gray background */
+		--primary-page-bg: #f1f1f1; /* Light gray background */
 
 		--primary-content-bg-color: #ffffff;
 		--primary-content-border-color: #e2e8f0;
@@ -121,6 +121,18 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 		--content-bg: #ffffff;
 		--content-border-color: #e2e2e2;
 		--gallery-content-bg: #eeeeee;
+
+		/* Status Colors */
+		--error-color: #dc2626;
+		--warning-color: #f59e0b;
+		--success-color: #10b981;
+
+		/* Box Shadow Variables */
+		--box-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+		--box-shadow-md: 0 1px 3px rgba(15, 23, 42, 0.08);
+		--box-shadow-lg: 0 2px 4px rgba(15, 23, 42, 0.08);
+		--box-shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
+		--box-shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.1);
 	}
 
 	html {
@@ -140,6 +152,7 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 	:global(h1) {
 		font-size: var(--font-size-xl);
 		color: var(--primary-link-default-text-color);
+		margin-block: .25rem;
 	}
 
 	:global(h2) {
