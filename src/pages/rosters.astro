@@ -1,8 +1,26 @@
 ---
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
-
-const SALARY_CAP = 45_000_000;
+import MetricCard from '../components/theleague/MetricCard.astro';
+import {
+  parseNumber,
+  currencyFormatter,
+  formatCapSpaceDisplay,
+  formatCurrency as formatCurrencyUtil,
+} from '../utils/formatters';
+import {
+  SALARY_CAP,
+  ROSTER_LIMIT,
+  TARGET_ACTIVE_COUNT,
+  RESERVE_FOR_ROOKIES,
+  SALARY_YEARS,
+  CAP_INCLUSION,
+  normalizeStatus,
+  getCapPercent,
+  calculateCapCharges,
+  aggregateDeadMoney,
+  calculateContractYearsMeta,
+} from '../utils/salary-calculations';
 
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -19,10 +37,6 @@ const leagueFeeds = import.meta.glob('../data/mfl-feeds/*/league.json', {
 const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
   eager: true,
 });
-
-const ROSTER_LIMIT = 28;
-const TARGET_ACTIVE_COUNT = 22;
-const RESERVE_FOR_ROOKIES = 5_000_000;
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -34,32 +48,6 @@ const extractSeason = (filepath) => {
 const extractFeedSeason = (filepath) => {
   const match = filepath.match(/mfl-feeds\/(\d{4})\//);
   return match ? match[1] : null;
-};
-
-
-const parseNumber = (value) => {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-};
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
-
-const formatCapSpaceDisplay = (value = 0) => {
-  if (!Number.isFinite(value)) return currencyFormatter.format(0);
-  if (value >= 1_000_000) {
-    const millions = value / 1_000_000;
-    const compact = millions >= 10 ? millions.toFixed(0) : millions.toFixed(1);
-    return `$${compact} million`;
-  }
-  return currencyFormatter.format(value);
 };
 
 const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
@@ -123,12 +111,6 @@ const parseAdjustmentMeta = (description = '') => {
 };
 
 const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
-const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029];
-const CAP_INCLUSION = {
-  ACTIVE: { current: 1, future: 1 },
-  PRACTICE: { current: 0.5, future: 1 },
-  INJURED: { current: 1, future: 1 },
-};
 const POSITION_COLORS = {
   QB: '#6366f1', // indigo
   RB: '#f97316', // orange
@@ -195,13 +177,6 @@ const sortByPosition = (list) =>
     return parseNumber(b.salary) - parseNumber(a.salary);
   });
 
-const normalizeStatus = (status = 'ROSTER') => {
-  const normalized = status.toUpperCase();
-  if (normalized.includes('TAXI')) return 'PRACTICE';
-  if (normalized.includes('INJURED') || normalized === 'IR') return 'INJURED';
-  return 'ACTIVE';
-};
-
 const annotatePositionDividers = (rows = []) => {
   const normalized = rows.map((player, index) => {
     const prevPosition =
@@ -252,69 +227,12 @@ const annotateActiveStriping = (rows = []) => {
   });
 };
 
-const getCapPercent = (tag = 'ACTIVE', isCurrent = true) => {
-  const normalized = tag.toUpperCase();
-  const map = CAP_INCLUSION[normalized] ?? { current: 1, future: 1 };
-  return isCurrent ? map.current ?? 1 : map.future ?? 1;
-};
-
-const calculateCapCharges = (rows = []) =>
-  SALARY_YEARS.map((_, index) =>
-    rows.reduce((sum, player) => {
-      if ((player.contractYears ?? 0) > index) {
-        const isCurrent = index === 0;
-        const percent = getCapPercent(player.displayTag ?? 'ACTIVE', isCurrent);
-        return sum + (parseNumber(player.salary) * percent || 0);
-      }
-      return sum;
-    }, 0)
-  );
-
-const aggregateDeadMoney = (seasonData = {}, franchiseId) =>
-  DEAD_MONEY_SOURCES.flatMap((key) =>
+// Wrapper for aggregateDeadMoney that accepts season data object
+const aggregateDeadMoneyFromSeasonData = (seasonData = {}, franchiseId) => {
+  const adjustments = DEAD_MONEY_SOURCES.flatMap((key) =>
     Array.isArray(seasonData[key]) ? seasonData[key] : []
-  ).reduce((acc, adj) => {
-    if (!franchiseId || adj.franchiseId !== franchiseId) return acc;
-    const baseOffset = parseNumber(adj.yearOffset ?? adj.seasonOffset ?? 0);
-    const salary = parseNumber(adj.salary) || parseNumber(adj.amount);
-    const yearsRemaining = adj.yearsRemaining;
-    const hasYearsRemaining = Number.isFinite(yearsRemaining);
-
-    // Waiver penalty table: current 50%, future percentage based on years
-    const futurePercentByYears = {
-      1: 0,
-      2: 0.15,
-      3: 0.25,
-      4: 0.35,
-      5: 0.45,
-    };
-
-    const currentPenalty = hasYearsRemaining ? 0.5 * salary : salary; // carryover hits 100% current year
-    const futurePenalty =
-      hasYearsRemaining && futurePercentByYears[yearsRemaining] !== undefined
-        ? futurePercentByYears[yearsRemaining] * salary
-        : 0;
-
-    if (acc[baseOffset] === undefined) acc[baseOffset] = 0;
-    acc[baseOffset] += currentPenalty;
-    if (futurePenalty > 0) {
-      if (acc[baseOffset + 1] === undefined) acc[baseOffset + 1] = 0;
-      acc[baseOffset + 1] += futurePenalty;
-    }
-
-    return acc;
-  }, Array(SALARY_YEARS.length).fill(0));
-
-const calculateContractYearsMeta = (rows = []) => {
-  const contractYearsTotal = rows.reduce(
-    (sum, player) => sum + Math.max(parseNumber(player.contractYears ?? 0), 0),
-    0
   );
-  const longestContract = rows.reduce(
-    (max, player) => Math.max(max, parseNumber(player.contractYears ?? 0)),
-    0
-  );
-  return { contractYearsTotal, longestContract };
+  return aggregateDeadMoney(adjustments, franchiseId);
 };
 
 const feedSalaryAdjustmentsBySeason = {};
@@ -567,7 +485,7 @@ const calculateYearTotals = (
 const initialRosterRows = buildDisplayRows(initialTeamData);
 const initialYearTotals = calculateYearTotals(initialRosterRows);
 const initialCapCharges = calculateCapCharges(initialRosterRows);
-const initialDeadMoney = aggregateDeadMoney(initialSeasonData, defaultTeamId);
+const initialDeadMoney = aggregateDeadMoneyFromSeasonData(initialSeasonData, defaultTeamId);
 const initialCapChargesWithDead = initialCapCharges.map(
   (val, idx) => val + (initialDeadMoney[idx] ?? 0)
 );
@@ -915,28 +833,29 @@ const serializedConfig = JSON.stringify({
     </div>
     <h3 class="chart-metrics__headline">2026 at a glance</h3>
     <div class="chart-metrics">
-      <article>
-        <p>Cap Space</p>
-        <strong id="summaryCapNext">{formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}</strong>
-      </article>
-      <article>
-        <p>Avg per Player*</p>
-        <strong id="summaryAvg2026">{formatCurrency(initialAvgPerPlayer2026)} × {initialRemainingSlots2026}</strong>
-      </article>
-      <article>
-        <p>Players Signed</p>
-        <strong id="summaryPlayersNext">{initialPlayersNextYear}</strong>
-        {initialPlayersToCut2026 > 0 && (
-          <small class="needs-cut-hint error" id="needsToCutRoster2026">
-            Must cut {initialPlayersToCut2026} {initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown
-          </small>
-        )}
-      </article>
-      <article>
-        <p>Dead Money</p>
-        <strong id="summaryDeadMoney2026">{formatCurrency(initialDeadMoney2026)}</strong>
-      </article>
-
+      <MetricCard
+        label="Cap Space"
+        value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
+        valueId="summaryCapNext"
+      />
+      <MetricCard
+        label="Avg per Player*"
+        value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
+        valueId="summaryAvg2026"
+      />
+      <MetricCard
+        label="Players Signed"
+        value={String(initialPlayersNextYear)}
+        valueId="summaryPlayersNext"
+        hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
+        hintVariant="error"
+        hintId="needsToCutRoster2026"
+      />
+      <MetricCard
+        label="Dead Money"
+        value={formatCurrency(initialDeadMoney2026)}
+        valueId="summaryDeadMoney2026"
+      />
     </div>
     <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
     <div class="roster-table-card roster-table-card--sub">
@@ -1346,43 +1265,11 @@ const serializedConfig = JSON.stringify({
     gap: 0.75rem;
   }
 
-  .chart-metrics article {
-    background: #fff;
-    border-radius: 0.85rem;
-    padding: 0.75rem 1rem;
-    box-shadow: var(--box-shadow-sm);
-  }
-
-  .chart-metrics p {
-    margin: 0;
-    color: #64748b;
-  }
-
-  .chart-metrics strong {
-    margin-top: 0.25rem;
-    display: block;
-    font-size: 1rem;
-  }
-
   .chart-metrics__hint {
     color: #6b7280;
     font-size: 0.8rem;
   }
 
-  .needs-cut-hint {
-    display: block;
-    margin-top: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .needs-cut-hint.warning {
-    color: var(--warning-color, #f59e0b);
-  }
-
-  .needs-cut-hint.error {
-    color: var(--error-color, #dc2626);
-  }
   .chart-metrics__headline {
     margin: 0;
     font-size: 1.25rem;
