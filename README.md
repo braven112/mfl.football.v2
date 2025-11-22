@@ -43,7 +43,7 @@ All commands are run from the root of the project, from a terminal:
 
 Use `pnpm run update:salary-averages` to pull the latest MyFantasyLeague rosters + player metadata and generate per-position averages for the top three (franchise tag) and top five (extension) salaries. This command runs automatically before `pnpm run dev` and `pnpm run build`, ensuring every local session captures the newest snapshot. The command accepts the following environment variables:
 
-- `MFL_SEASON` – defaults to `2024`
+- `MFL_SEASON` – defaults to `2025`
 - `MFL_LEAGUE_ID` – defaults to `13522`
 - `MFL_WEEK` – optional, request rosters “as of” a given week (e.g., `14`)
 - `MFL_API_BASE` – defaults to `https://api.myfantasyleague.com`
