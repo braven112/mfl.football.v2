@@ -848,6 +848,45 @@ const serializedConfig = JSON.stringify({
       </div>
       </div>
 
+      <!-- Cap Subtotals Card -->
+      <div class="chart-card chart-card--sub">
+        <div class="chart-card__header">
+          <h3>Cap Subtotals (Current Season)</h3>
+          <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
+        </div>
+        <div class="cap-subtotals">
+          <div class="cap-subtotals__row">
+            <span>
+              <span class="legend-dot legend-active"></span>
+              Active Roster <span id="countActive" class="cap-count"></span>
+            </span>
+            <strong id="subtotalActive">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span>
+              <span class="legend-dot legend-practice"></span>
+              Practice Squad <span id="countPractice" class="cap-count"></span>
+            </span>
+            <strong id="subtotalPractice">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span>
+              <span class="legend-dot legend-injured"></span>
+              Injured Reserve <span id="countInjured" class="cap-count"></span>
+            </span>
+            <strong id="subtotalInjured">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span><span class="legend-dot legend-dead"></span>Dead Money</span>
+            <strong id="subtotalDead">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
+            <strong id="subtotalCapSpace">$0</strong>
+          </div>
+        </div>
+      </div>
+
       <!-- Dead Money Table (moved to roster view) -->
       <div class="roster-table-card roster-table-card--sub">
         <div class="roster-table-card__header">
@@ -894,45 +933,6 @@ const serializedConfig = JSON.stringify({
           <ChartCard title="Position Allocation" subtitle="Current season cap by position">
             <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
           </ChartCard>
-        </div>
-
-        <!-- Cap Subtotals Card -->
-        <div class="chart-card chart-card--sub">
-          <div class="chart-card__header">
-            <h3>Cap Subtotals (Current Season)</h3>
-            <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
-          </div>
-          <div class="cap-subtotals">
-            <div class="cap-subtotals__row">
-              <span>
-                <span class="legend-dot legend-active"></span>
-                Active Roster <span id="countActive" class="cap-count"></span>
-              </span>
-              <strong id="subtotalActive">$0</strong>
-            </div>
-            <div class="cap-subtotals__row">
-              <span>
-                <span class="legend-dot legend-practice"></span>
-                Practice Squad <span id="countPractice" class="cap-count"></span>
-              </span>
-              <strong id="subtotalPractice">$0</strong>
-            </div>
-            <div class="cap-subtotals__row">
-              <span>
-                <span class="legend-dot legend-injured"></span>
-                Injured Reserve <span id="countInjured" class="cap-count"></span>
-              </span>
-              <strong id="subtotalInjured">$0</strong>
-            </div>
-            <div class="cap-subtotals__row">
-              <span><span class="legend-dot legend-dead"></span>Dead Money</span>
-              <strong id="subtotalDead">$0</strong>
-            </div>
-            <div class="cap-subtotals__row">
-              <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
-              <strong id="subtotalCapSpace">$0</strong>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1377,7 +1377,16 @@ const serializedConfig = JSON.stringify({
     padding: var(--padding-md);
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     display: grid;
-    gap: 0.75rem;
+    gap: 0.35rem;
+    align-content: start;
+    grid-template-rows: min-content;
+  }
+
+  .chart-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-self: start;
   }
 
   .chart-card__header h3 {
@@ -1440,8 +1449,7 @@ const serializedConfig = JSON.stringify({
     background: #4b5563;
   }
   .legend-capspace {
-    background: #22c55e;
-    opacity: 0.5;
+    background: #e2e8f0;
   }
 
   .deadmoney-row td {
@@ -3146,7 +3154,10 @@ const serializedConfig = JSON.stringify({
           const nflLogo = buildNflLogoUrl(player.nflTeam);
           const headshot = player.headshot || buildPlayerImageUrl(player.id);
           const position = player.position || 'UNK';
-          const salary = formatCurrency.format(player.salary || 0);
+          // All salaries increase by 10% per year (year 0 = current year)
+          const baseSalary = Number(player.salary || 0);
+          const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
+          const salary = formatCurrency.format(salaryForYear);
           return `
             <div class="players-team__player">
               <div class="player-cell">
@@ -3337,7 +3348,10 @@ const serializedConfig = JSON.stringify({
                   const yearSalary = action.salaryBreakdown[yearKey] ?? displaySalary;
                   value = formatCurrency.format(yearSalary ?? 0);
                 } else {
-                  value = formatCurrency.format(player.salary ?? 0);
+                  // Apply 10% annual escalation to all salaries
+                  const baseSalary = Number(player.salary ?? 0);
+                  const escalatedSalary = Math.round(baseSalary * Math.pow(1.1, index));
+                  value = formatCurrency.format(escalatedSalary);
                 }
               }
 
