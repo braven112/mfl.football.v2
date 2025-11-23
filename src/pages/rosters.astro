@@ -2429,13 +2429,22 @@ const serializedConfig = JSON.stringify({
     };
   };
 
-  const calculateVeteranExtension = (salary, contractYears, position, season, extensionYears) => {
+  const calculateVeteranExtension = (contractYears, position, season, extensionYears) => {
     const avgSalary = getReferenceSalary(position, 'extension', season);
-    const totalExtensionValue = avgSalary * extensionYears;
+    // Set the new salary to the extension salary for the position
+    const newSalary = Math.round(avgSalary);
     const totalYears = contractYears + extensionYears;
+
+    // Create salary breakdown for ALL years with 10% increases each year
+    const salaryBreakdown = {};
+    for (let i = 0; i < totalYears; i++) {
+      salaryBreakdown[`year${i}`] = Math.round(newSalary * Math.pow(1.1, i));
+    }
+
     return {
-      newSalary: Math.round(salary + totalExtensionValue / Math.max(totalYears, 1)),
-      newYears: totalYears
+      newSalary: newSalary,
+      newYears: totalYears,
+      salaryBreakdown: salaryBreakdown
     };
   };
 
@@ -2615,7 +2624,7 @@ const serializedConfig = JSON.stringify({
         // Remove previous veteran extension
         delete contractActions[currentVeteranExtension];
       }
-      result = calculateVeteranExtension(salary, years, position, currentSeason, extensionYears);
+      result = calculateVeteranExtension(years, position, currentSeason, extensionYears);
       currentVeteranExtension = id;
     } else if (actionType === 'cut') {
       const penalty = calculateCutPenalty(salary, years);
@@ -3178,9 +3187,12 @@ const serializedConfig = JSON.stringify({
                 cellClass += ' salary-cell--future-ufa';
               } else {
                 // Add simulated class if this player has a contract action applied
-                if (action && action.type === 'extension') {
+                if (action && action.type === 'extension' && action.salaryBreakdown) {
                   cellClass += ' salary-cell--simulated';
-                  value = formatCurrency.format(displaySalary ?? 0);
+                  // Use the salary breakdown from the extension for this year
+                  const yearKey = `year${index}`;
+                  const yearSalary = action.salaryBreakdown[yearKey] ?? displaySalary;
+                  value = formatCurrency.format(yearSalary ?? 0);
                 } else {
                   value = formatCurrency.format(player.salary ?? 0);
                 }
@@ -3334,7 +3346,14 @@ const serializedConfig = JSON.stringify({
                 : 'ACTIVE';
             const percent = getCapPercent(tag, isCurrent);
             const baseSalary = Number(player.salary ?? 0);
-            const salaryForYear = baseSalary; // explicit salary for the season
+
+            // If there's an extension, calculate salary for this year with 10% increases
+            let salaryForYear = baseSalary;
+            if (action && action.type === 'extension' && action.salaryBreakdown) {
+              const yearKey = `year${index}`;
+              salaryForYear = Number(action.salaryBreakdown[yearKey] ?? baseSalary);
+            }
+
             return sum + (salaryForYear * percent || 0);
           }
           return sum;
