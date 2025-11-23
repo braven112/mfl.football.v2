@@ -881,62 +881,84 @@ const serializedConfig = JSON.stringify({
 
     <!-- Analytics View -->
     <div class="view-container" data-view-content="analytics" style="display: none;">
-      <div class="chart-grid">
-      <ChartCard title="Cap Allocation" subtitle="Current season cap usage by bucket">
-        <DonutChart chartId="capDonut" slices={initialCapSlices} />
-      </ChartCard>
-      <ChartCard title="Roster Composition" subtitle="Active vs IR vs Practice vs Open slots">
-        <DonutChart chartId="rosterDonut" slices={initialRosterSlices} />
-      </ChartCard>
-      <ChartCard title="Position Allocation" subtitle="Current season cap by position">
-        <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
-      </ChartCard>
+      <!-- Cap Charts Section -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">Cap Analysis</h3>
+        <div class="chart-grid">
+          <ChartCard title="Cap Allocation" subtitle="Current season cap usage by bucket">
+            <DonutChart chartId="capDonut" slices={initialCapSlices} showLegend={true} />
+          </ChartCard>
+          <ChartCard title="Roster Composition" subtitle="Active vs IR vs Practice vs Open slots">
+            <DonutChart chartId="rosterDonut" slices={initialRosterSlices} showLegend={true} />
+          </ChartCard>
+          <ChartCard title="Position Allocation" subtitle="Current season cap by position">
+            <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+          </ChartCard>
+        </div>
+
+        <!-- Cap Subtotals Card -->
+        <div class="chart-card chart-card--sub">
+          <div class="chart-card__header">
+            <h3>Cap Subtotals (Current Season)</h3>
+            <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
+          </div>
+          <div class="cap-subtotals">
+            <div class="cap-subtotals__row">
+              <span>
+                <span class="legend-dot legend-active"></span>
+                Active Roster <span id="countActive" class="cap-count"></span>
+              </span>
+              <strong id="subtotalActive">$0</strong>
+            </div>
+            <div class="cap-subtotals__row">
+              <span>
+                <span class="legend-dot legend-practice"></span>
+                Practice Squad <span id="countPractice" class="cap-count"></span>
+              </span>
+              <strong id="subtotalPractice">$0</strong>
+            </div>
+            <div class="cap-subtotals__row">
+              <span>
+                <span class="legend-dot legend-injured"></span>
+                Injured Reserve <span id="countInjured" class="cap-count"></span>
+              </span>
+              <strong id="subtotalInjured">$0</strong>
+            </div>
+            <div class="cap-subtotals__row">
+              <span><span class="legend-dot legend-dead"></span>Dead Money</span>
+              <strong id="subtotalDead">$0</strong>
+            </div>
+            <div class="cap-subtotals__row">
+              <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
+              <strong id="subtotalCapSpace">$0</strong>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="chart-grid">
-      <ChartCard title="Age Distribution" subtitle="Roster composition by age bracket">
-        <AgeDistributionChart chartId="ageChart" slices={initialAgeDistributionSlices} />
-      </ChartCard>
-      <ChartCard title="Average Age by Position" subtitle="Years old by position group">
-        <BarChart chartId="posAgeBar" slices={initialPositionalAgeSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
-      </ChartCard>
-    </div>
+
+      <!-- Age Charts Section -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">Age Analysis</h3>
+        <div class="chart-grid">
+          <ChartCard title="Age Distribution" subtitle="Roster composition by age bracket">
+            <AgeDistributionChart chartId="ageChart" slices={initialAgeDistributionSlices} />
+          </ChartCard>
+          <ChartCard title="Average Age by Position" subtitle="Years old by position group">
+            <BarChart chartId="posAgeBar" slices={initialPositionalAgeSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+          </ChartCard>
+        </div>
+      </div>
+
+    <!-- Players by Team Report -->
     <div class="chart-card chart-card--sub">
       <div class="chart-card__header">
-        <h3>Cap Subtotals (Current Season)</h3>
-        <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
+        <h3>Players by NFL Team</h3>
+        <p class="chart-card__sub">Current roster distribution by NFL team</p>
       </div>
-      <div class="cap-subtotals">
-        <div class="cap-subtotals__row">
-          <span>
-            <span class="legend-dot legend-active"></span>
-            Active Roster <span id="countActive" class="cap-count"></span>
-          </span>
-          <strong id="subtotalActive">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span>
-            <span class="legend-dot legend-practice"></span>
-            Practice Squad <span id="countPractice" class="cap-count"></span>
-          </span>
-          <strong id="subtotalPractice">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span>
-            <span class="legend-dot legend-injured"></span>
-            Injured Reserve <span id="countInjured" class="cap-count"></span>
-          </span>
-          <strong id="subtotalInjured">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-dead"></span>Dead Money</span>
-          <strong id="subtotalDead">$0</strong>
-        </div>
-        <div class="cap-subtotals__row">
-          <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
-          <strong id="subtotalCapSpace">$0</strong>
-        </div>
-      </div>
+      <div id="playersbyTeamContainer"></div>
     </div>
+    <!-- End Players by Team Report -->
+
     </div>
     <!-- End Analytics View -->
 
@@ -2311,6 +2333,67 @@ const serializedConfig = JSON.stringify({
       width: 100%;
     }
   }
+
+  /* Players by Team Report */
+  .team-group {
+    margin-bottom: 2rem;
+  }
+
+  .team-group__name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .team-group__players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .players-team__player {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 4px;
+    gap: 1rem;
+  }
+
+  .players-team__player .player-cell {
+    flex: 1;
+  }
+
+  .players-team__salary {
+    font-weight: 600;
+    color: #111;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 640px) {
+    .team-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .team-group__name {
+      font-size: 0.875rem;
+    }
+
+    .players-team__player {
+      padding: 0.5rem;
+      gap: 0.75rem;
+    }
+
+    .players-team__salary {
+      font-size: 0.75rem;
+    }
+  }
 </style>
 
 <!-- Contract Action Modal -->
@@ -2835,12 +2918,13 @@ const serializedConfig = JSON.stringify({
     );
     const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
   const capDonut = document.getElementById('capDonut');
-  const capLegend = null; // no longer needed in DOM
+  const capLegend = document.getElementById('capDonut-legend');
   const rosterDonut = document.getElementById('rosterDonut');
-  const rosterLegend = null; // no longer needed in DOM
+  const rosterLegend = document.getElementById('rosterDonut-legend');
   const posBar = document.getElementById('posBar');
   const ageChart = document.getElementById('ageChart');
   const posAgeBar = document.getElementById('posAgeBar');
+  const playersbyTeamContainer = document.getElementById('playersbyTeamContainer');
   const subtotalActive = document.getElementById('subtotalActive');
   const subtotalPractice = document.getElementById('subtotalPractice');
   const subtotalInjured = document.getElementById('subtotalInjured');
@@ -2999,6 +3083,9 @@ const serializedConfig = JSON.stringify({
         ].filter((s) => s.value > 0);
         const total = capSlices.reduce((s, c) => s + c.value, 0);
         buildDonut(capDonut, capSlices, total);
+        if (capLegend) {
+          renderLegend(capLegend, capSlices);
+        }
       }
 
       if (rosterDonut) {
@@ -3014,10 +3101,10 @@ const serializedConfig = JSON.stringify({
         ].filter((s) => s.value > 0);
         const totalSlots = rosterSlices.reduce((s, r) => s + r.value, 0);
         buildDonut(rosterDonut, rosterSlices, totalSlots);
-        renderLegend(
-          rosterLegend,
-          rosterSlices.map((s) => ({ ...s, display: `${s.value}` }))
-        );
+        if (rosterLegend) {
+          const countFormatter = (v) => String(v);
+          renderLegend(rosterLegend, rosterSlices, countFormatter);
+        }
       }
 
       const summaryCapNext = document.getElementById('summaryCapNext');
@@ -3034,6 +3121,62 @@ const serializedConfig = JSON.stringify({
       if (summaryOpen) summaryOpen.textContent = totals.openSpots ?? 0;
       if (summaryPractice) summaryPractice.textContent = totals.practiceCount ?? 0;
       if (summaryInjured) summaryInjured.textContent = totals.injuredCount ?? 0;
+    };
+
+    const renderPlayersbyTeam = (playersData = []) => {
+      if (!playersbyTeamContainer) return;
+
+      // Group players by NFL team
+      const playersByTeam = {};
+      playersData.forEach((player) => {
+        const nflTeam = player.nflTeam || 'FA';
+        if (!playersByTeam[nflTeam]) {
+          playersByTeam[nflTeam] = [];
+        }
+        playersByTeam[nflTeam].push(player);
+      });
+
+      // Sort teams alphabetically
+      const sortedTeams = Object.keys(playersByTeam).sort();
+
+      // Build HTML
+      const teamsHtml = sortedTeams.map((team) => {
+        const teamPlayers = playersByTeam[team];
+        const playersHtml = teamPlayers.map((player) => {
+          const nflLogo = buildNflLogoUrl(player.nflTeam);
+          const headshot = player.headshot || buildPlayerImageUrl(player.id);
+          const position = player.position || 'UNK';
+          const salary = formatCurrency.format(player.salary || 0);
+          return `
+            <div class="players-team__player">
+              <div class="player-cell">
+                <div class="player-cell__avatar">
+                  <img src="${headshot}" alt="${player.name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${player.name}</strong>
+                  <div class="player-meta">
+                    <img src="${nflLogo}" alt="${player.nflTeam}" class="player-meta__logo" loading="lazy" />
+                    <span class="player-meta__pos">${position}</span>
+                  </div>
+                </div>
+              </div>
+              <span class="players-team__salary">${salary}</span>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="team-group">
+            <h4 class="team-group__name">${team}</h4>
+            <div class="team-group__players">
+              ${playersHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      playersbyTeamContainer.innerHTML = teamsHtml || '<p style="text-align: center; color: #999;">No players</p>';
     };
 
     const renderDeadMoney = (seasonData = {}, franchiseId) => {
@@ -3485,8 +3628,30 @@ const serializedConfig = JSON.stringify({
       el.style.background = `conic-gradient(${parts.join(',')})`;
     };
 
-    const renderLegend = (el, slices = []) => {
-      // legend removed (subtotals act as legend)
+    const renderLegend = (el, slices = [], formatter = null) => {
+      if (!el) return;
+      if (!slices.length) {
+        el.innerHTML = '';
+        return;
+      }
+
+      const formatValue = formatter ?? ((v) => formatCurrency.format(v));
+
+      const legendHTML = slices
+        .map(
+          (slice) => `
+          <div class="chart-legend__item">
+            <span class="chart-legend__label">
+              <span class="legend-dot" style="background:${slice.color}"></span>
+              ${slice.label}
+            </span>
+            <span class="chart-legend__value">${formatValue(slice.value)}</span>
+          </div>
+        `
+        )
+        .join('');
+
+      el.innerHTML = legendHTML;
     };
 
     const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null, minValue = undefined) => {
@@ -3807,6 +3972,9 @@ const serializedConfig = JSON.stringify({
       if (summaryAvgAge && teamAvgAge !== null) {
         summaryAvgAge.textContent = `${teamAvgAge} years`;
       }
+
+      // Render players by team report
+      renderPlayersbyTeam(rows);
 
       // Update franchise tag eligibility component
       // Collect ALL league players for ranking, but only show selected team's eligible players
