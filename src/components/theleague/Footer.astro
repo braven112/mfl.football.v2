@@ -19,12 +19,6 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 					{championBanner && (
 						<img src={championBanner} alt={`${championTeam?.name} - 2024 Champions`} />
 					)}
-					<div class="champion-info">
-						{championIcon && (
-							<img src={championIcon} alt={championTeam?.name} class="champion-icon" />
-						)}
-						<span class="champion-name">{championTeam?.name || 'Wascawy Wabbits'}</span>
-					</div>
 				</div>
 
 			</div>
