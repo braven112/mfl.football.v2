@@ -96,6 +96,12 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   <nav class="nav-menu" id="nav-menu">
     <div class="nav-overlay" id="nav-overlay"></div>
     <div class="nav-content">
+      <button class="nav-close-btn" id="nav-close-btn" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
       <ul class="nav-links">
         <!-- TheLeague Pages -->
         <li class="nav-section-title">TheLeague Tools</li>
@@ -185,13 +191,15 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
 
   .theleague-header .row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 1rem;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 
   .theleague-header .col.left {
-    flex: 1 1 280px;
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -201,6 +209,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
+    margin-left: auto;
   }
 
   .league-link {
@@ -461,6 +470,31 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     margin: 1rem 0;
   }
 
+  /* Close button */
+  .nav-close-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 2rem;
+    height: 2rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: var(--primary-color, #1c497c);
+    transition: color 0.2s ease;
+    z-index: 1001;
+  }
+
+  .nav-close-btn:hover {
+    color: var(--secondary-color, #2e8743);
+  }
+
+  .nav-close-btn svg {
+    width: 100%;
+    height: 100%;
+  }
+
   /* Responsive Styles */
   @media (max-width: 960px) {
     .theleague-header {
@@ -489,6 +523,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const navMenu = document.getElementById('nav-menu');
   const navOverlay = document.getElementById('nav-overlay');
+  const navCloseBtn = document.getElementById('nav-close-btn');
 
   function toggleMenu() {
     const isActive = navMenu?.classList.toggle('active');
@@ -506,6 +541,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
 
   hamburgerBtn?.addEventListener('click', toggleMenu);
   navOverlay?.addEventListener('click', closeMenu);
+  navCloseBtn?.addEventListener('click', closeMenu);
 
   // Close on escape key
   document.addEventListener('keydown', (e) => {

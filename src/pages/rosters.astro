@@ -571,6 +571,7 @@ const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
 const initialCapSlices: ChartSlice[] = [];
 const initialRosterSlices: ChartSlice[] = [];
 const initialPositionSlices: ChartSlice[] = [];
+const initialCapEfficiencySlices: ChartSlice[] = [];
 const initialAgeDistributionSlices: ChartSlice[] = [];
 const initialPositionalAgeSlices: ChartSlice[] = [];
 let initialAverageAge: number | null = null;
@@ -933,6 +934,9 @@ const serializedConfig = JSON.stringify({
           <ChartCard title="Position Allocation" subtitle="Current season cap by position">
             <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
           </ChartCard>
+          <ChartCard title="Cap Efficiency" subtitle="Cost per point by position">
+            <BarChart chartId="efficiencyBar" slices={initialCapEfficiencySlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+          </ChartCard>
         </div>
       </div>
 
@@ -1027,6 +1031,9 @@ const serializedConfig = JSON.stringify({
     gap: var(--padding-md);
     flex-wrap: wrap;
   }
+  .roster-page__header h2 {
+    margin-block: 0;
+  }
 
   .roster-page__actions {
     display: flex;
@@ -1062,54 +1069,44 @@ const serializedConfig = JSON.stringify({
   .roster-controls {
     display: flex;
     justify-content: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: .5rem;
   }
 
 
-.team-icon-nav  {
+.team-icon-nav {
   display: grid;
-  gap: var(--padding-lg);
-  
-  /* default: 1 column, 4 rows */
   grid-template-columns: 1fr;
+  gap: var(--padding-lg);
+  justify-content: center;
+  align-items: center;
+  background-color: var(--card-bg-color);
+  box-shadow: var(--box-shadow-md);
+  border-radius: 1rem;
+  padding: var(--padding-lg);
+  width: 100%;
+  margin: 0 auto;
 }
 
-/* 2 columns, 2 rows */
-@media (min-width: 600px) {
-  .team-icon-nav  {
+/* Tablet: 2x2 grid */
+@media (min-width: 768px) {
+  .team-icon-nav {
     grid-template-columns: repeat(2, 1fr);
   }
-  .division-group:nth-child(4) { order: 2; }
-
 }
 
-/* 4 columns, 1 row */
-@media (min-width: 1024px) {
-  .team-icon-nav  {
+/* Desktop: all in one row */
+@media (min-width: 1200px) {
+  .team-icon-nav {
     grid-template-columns: repeat(4, 1fr);
   }
-  .division-group:nth-child(3) { order: initial; }
 }
 
-
-    .team-icon-nav {
-      gap: var(--padding-xxl);
-    justify-content: center;
-    align-items: center;
-    background-color: var(--card-bg-color);
-    box-shadow: var(--box-shadow-md);
-    border-radius: 1rem;
-    padding: var(--padding-lg);
-    width: 100%;
-
-  }
-
-  .division-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: center;
-  }
+.division-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
 
   .division-label {
     font-size: 0.75rem;
@@ -1173,10 +1170,6 @@ const serializedConfig = JSON.stringify({
     .team-icon-btn {
       width: 40px;
       height: 40px;
-    }
-
-    .team-icon-nav {
-      gap: 0.4rem;
     }
   }
 
@@ -1365,8 +1358,15 @@ const serializedConfig = JSON.stringify({
 
   .chart-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--padding-md);
+    row-gap: var(--padding-lg);
+  }
+
+  @media (max-width: 768px) {
+    .chart-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   :global(.chart-card) {
@@ -1395,7 +1395,7 @@ const serializedConfig = JSON.stringify({
   }
 
   :global(.chart-card__sub) {
-    margin: 0.15rem 0 0;
+    margin: 0;
     color: var(--text-secondary-color, #64748b);
     font-size: 0.9rem;
   }
@@ -1476,7 +1476,6 @@ const serializedConfig = JSON.stringify({
     align-items: flex-start;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 1rem;
   }
 
   .roster-table-card__header h3 {
@@ -2416,6 +2415,7 @@ const serializedConfig = JSON.stringify({
   }
   .analytics-section__title + .analytics-section__sub {
     margin-top: -1rem;
+    margin-bottom: 0;
   }
   .analytics-section__sub{
     color: var(--text-secondary-color, #64748b);
@@ -2949,6 +2949,7 @@ const serializedConfig = JSON.stringify({
   const rosterDonut = document.getElementById('rosterDonut');
   const rosterLegend = document.getElementById('rosterDonut-legend');
   const posBar = document.getElementById('posBar');
+  const efficiencyBar = document.getElementById('efficiencyBar');
   const ageChart = document.getElementById('ageChart');
   const posAgeBar = document.getElementById('posAgeBar');
   const playersbyTeamContainer = document.getElementById('playersbyTeamContainer');
@@ -3587,6 +3588,28 @@ const serializedConfig = JSON.stringify({
         return totals;
       }, {});
 
+    const calculateCapEfficiency = (rows = []) => {
+      const efficiency = {};
+      rows.forEach((player) => {
+        if ((player.contractYears ?? 0) <= 0 || (player.points ?? 0) <= 0) return;
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        const salary = Number(player.salary ?? 0) || 0;
+        const points = Number(player.points ?? 0) || 0;
+
+        if (!efficiency[pos]) {
+          efficiency[pos] = { totalCost: 0, totalPoints: 0 };
+        }
+        efficiency[pos].totalCost += salary;
+        efficiency[pos].totalPoints += points;
+      });
+
+      const result = {};
+      Object.entries(efficiency).forEach(([pos, data]) => {
+        result[pos] = data.totalCost / data.totalPoints;
+      });
+      return result;
+    };
+
     const getSalaryAdjustments = (seasonData = {}) => {
       if (Array.isArray(seasonData.salaryAdjustments)) return seasonData.salaryAdjustments;
       if (adjustmentsBySeason[currentSeason]) return adjustmentsBySeason[currentSeason];
@@ -3969,6 +3992,19 @@ const serializedConfig = JSON.stringify({
       const posTotal = posSlices.reduce((sum, s) => sum + s.value, 0);
       const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
       buildBarChart(posBar, posSlices, positionOrder, posTotal);
+
+      // Cap efficiency calculations and rendering
+      const efficiencyCaps = calculateCapEfficiency(rows);
+      const efficiencySlices = Object.entries(efficiencyCaps).map(([label, value], idx) => {
+        const upper = label.toUpperCase();
+        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
+        return { label, value, color };
+      });
+      const maxEfficiency = efficiencySlices.length > 0 ? Math.max(...efficiencySlices.map(s => s.value)) : 0;
+      const efficiencyFormatter = (v) => `$${(v / 1000).toFixed(0)}k`;
+      if (efficiencyBar) {
+        buildBarChart(efficiencyBar, efficiencySlices, positionOrder, maxEfficiency, efficiencyFormatter);
+      }
 
       // Age-related calculations and rendering
       const ageDistribution = getAgeDistribution(rows);
