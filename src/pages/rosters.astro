@@ -93,15 +93,30 @@ const parseAdjustmentMeta = (description = '') => {
   const meta = {
     name: '',
     nflTeam: '',
+    position: '',
     salary: null,
     yearsRemaining: null,
   };
   const nameMatch = description.match(/^Dropped\s+([^()]+)\s*\(/i);
   if (nameMatch) {
-    meta.name = nameMatch[1].trim();
-    const parts = meta.name.split(' ');
+    const fullNamePart = nameMatch[1].trim();
+    const parts = fullNamePart.split(' ');
+
+    // Extract position (last part, like "QB", "WR", "RB")
+    const maybePosition = parts[parts.length - 1];
+    if (maybePosition && /^(QB|RB|WR|TE|PK|K|DEF|DET)$/i.test(maybePosition)) {
+      meta.position = maybePosition.toUpperCase();
+    }
+
+    // Extract NFL team (second to last part, like "NYG", "SFO")
     const maybeTeam = parts[parts.length - 2];
-    if (maybeTeam && maybeTeam.length === 3) meta.nflTeam = maybeTeam.toUpperCase();
+    if (maybeTeam && maybeTeam.length === 3) {
+      meta.nflTeam = maybeTeam.toUpperCase();
+    }
+
+    // Extract player name (everything before team and position)
+    const nameEndIndex = meta.position ? parts.length - 2 : (meta.nflTeam ? parts.length - 1 : parts.length);
+    meta.name = parts.slice(0, nameEndIndex).join(' ');
   }
   const salaryMatch = description.match(/Salary:\s*\$?([\d,\.]+)/i);
   if (salaryMatch) {
@@ -1029,12 +1044,11 @@ const serializedConfig = JSON.stringify({
   }
 
   .team-icon-btn:hover {
-    border-color: var(--secondary-color, #2e8743);
+    border-color: #eeeeee;
     transform: scale(1.1);
   }
 
   .team-icon-btn[data-active="true"] {
-    border-color: var(--primary-color, #1c497c);
     background: #f0f9ff;
     box-shadow: var(--box-shadow-focus-ring);
   }
@@ -1886,6 +1900,37 @@ const serializedConfig = JSON.stringify({
         ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
         : '';
 
+    // Create player name lookup across all seasons for dead money
+    const createPlayerLookup = () => {
+      const lookup = {};
+      Object.values(seasons).forEach(seasonData => {
+        if (seasonData?.teams) {
+          // Players are nested inside teams
+          Object.values(seasonData.teams).forEach(teamData => {
+            const allPlayers = [
+              ...(teamData.players || []),
+              ...(teamData.practiceSquad || []),
+              ...(teamData.injuredReserve || [])
+            ];
+            allPlayers.forEach(player => {
+              if (player.name && player.id) {
+                // Store by "Last, First" format
+                lookup[player.name.toLowerCase()] = player.id;
+              }
+            });
+          });
+        }
+      });
+      return lookup;
+    };
+
+    const playerLookup = createPlayerLookup();
+
+    const findPlayerId = (playerName) => {
+      if (!playerName) return null;
+      return playerLookup[playerName.toLowerCase()] || null;
+    };
+
     const seasonSelect = document.getElementById('rosterSeasonSelect');
     const teamSelect = document.getElementById('rosterTeamSelect');
     const summaryCap = document.getElementById('summaryCap');
@@ -2156,7 +2201,15 @@ const serializedConfig = JSON.stringify({
           const name = adj.name || adj.description || 'Adjustment';
           const teamLabel = adj.nflTeam || 'FA';
           const nflLogo = adj.nflTeam ? buildNflLogoUrl(adj.nflTeam) : '';
-          const headshot = DEFAULT_HEADSHOT_URL;
+          const playerId = findPlayerId(name);
+
+          // Use player headshot if available, otherwise use franchise team logo, finally fallback to default
+          let headshot = DEFAULT_HEADSHOT_URL;
+          if (playerId) {
+            headshot = buildPlayerImageUrl(playerId);
+          } else if (config.teams[franchiseId]?.icon) {
+            headshot = config.teams[franchiseId].icon;
+          }
           const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
           return `<tr class="${rowClasses.join(' ').trim()}">
             <td data-column="player" class="deadmoney-player-cell">
