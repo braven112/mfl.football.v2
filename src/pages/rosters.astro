@@ -3489,7 +3489,7 @@ const serializedConfig = JSON.stringify({
       // legend removed (subtotals act as legend)
     };
 
-    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null) => {
+    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null, minValue = undefined) => {
       if (!el) return;
       if (!total || total <= 0 || !slices.length) {
         el.innerHTML = '';
@@ -3513,7 +3513,17 @@ const serializedConfig = JSON.stringify({
       // Build bar HTML
       const barsHTML = orderedBars
         .map((slice) => {
-          const percentage = (slice.value / total) * 100;
+          let percentage;
+
+          // If minValue is provided (for age-based charts), calculate percentage within range
+          if (minValue !== undefined) {
+            const range = total - minValue;
+            percentage = range > 0 ? ((slice.value - minValue) / range) * 100 : 0;
+          } else {
+            // Standard percentage calculation
+            percentage = (slice.value / total) * 100;
+          }
+
           return `
             <div class="bar-item">
               <div class="bar-label">
@@ -3785,10 +3795,11 @@ const serializedConfig = JSON.stringify({
           };
         })
         .filter(s => s !== null);
-      const maxAge = Math.max(...posAgeSlices.map(s => s.value), 0) || 40;
+      const maxAge = 40;
+      const minAge = 20;
       const ageFormatter = (v) => `${v.toFixed(1)} years`;
       if (posAgeBar) {
-        buildBarChart(posAgeBar, posAgeSlices, positionOrder, maxAge, ageFormatter);
+        buildBarChart(posAgeBar, posAgeSlices, positionOrder, maxAge, ageFormatter, minAge);
       }
 
       const teamAvgAge = calculateAverageAge(rows);

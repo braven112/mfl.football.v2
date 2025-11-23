@@ -137,15 +137,17 @@ export function buildBarChart(
   element: HTMLElement | null,
   slices: ChartSlice[] = [],
   positionOrder: string[] = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
-  total?: number
+  maxValue?: number,
+  formatter?: (value: number) => string,
+  minValue?: number
 ): void {
   if (!element) return;
 
-  // Calculate total if not provided
-  const computedTotal = total ?? slices.reduce((sum, slice) => sum + slice.value, 0);
+  // Calculate maxValue if not provided
+  let computedMax = maxValue ?? slices.reduce((max, slice) => Math.max(max, slice.value), 0);
 
-  // Guard: invalid total or no slices
-  if (!computedTotal || computedTotal <= 0 || !slices.length) {
+  // Guard: invalid maxValue or no slices
+  if (!computedMax || computedMax <= 0 || !slices.length) {
     element.innerHTML = '';
     return;
   }
@@ -171,12 +173,24 @@ export function buildBarChart(
   // Build bar HTML
   const barsHTML = orderedBars
     .map((slice) => {
-      const percentage = (slice.value / computedTotal) * 100;
+      let percentage: number;
+
+      // If minValue is provided (for age-based charts), calculate percentage within range
+      if (minValue !== undefined) {
+        const range = computedMax - minValue;
+        percentage = range > 0 ? ((slice.value - minValue) / range) * 100 : 0;
+      } else {
+        // Standard percentage calculation
+        percentage = (slice.value / computedMax) * 100;
+      }
+
+      const displayValue = formatter ? formatter(slice.value) : defaultFormatter.format(slice.value);
+
       return `
         <div class="bar-item">
           <div class="bar-label">
             <span class="bar-label-position">${slice.label}</span>
-            <span class="bar-label-value">${defaultFormatter.format(slice.value)}</span>
+            <span class="bar-label-value">${displayValue}</span>
           </div>
           <div class="bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
         </div>
