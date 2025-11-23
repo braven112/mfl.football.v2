@@ -551,8 +551,7 @@ const serializedConfig = JSON.stringify({
   <section class="roster-page">
     <header class="roster-page__header">
       <div>
-        <p class="eyebrow">Contracts &amp; Cap</p>
-        <h1>Team Rosters</h1>
+        <h1>GM Central</h1>
       </div>
       
     </header>
@@ -600,7 +599,7 @@ const serializedConfig = JSON.stringify({
           />
         )}
         <div>
-          <p class="team-card__label" data-view-label>Active Roster</p>
+          <p class="team-card__label" data-view-label>Roster & Salary Cap</p>
           <h2 data-team-name>
             {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
           </h2>
@@ -1796,7 +1795,7 @@ const serializedConfig = JSON.stringify({
   let currentView = 'roster';
 
   const viewLabels = {
-    'roster': 'Active Roster',
+    'roster': 'Roster & Salary Cap',
     'analytics': 'Advanced Analytics'
   };
 
