@@ -50,16 +50,7 @@ const { title, subtitle, class: className } = Astro.props;
   }
 
   .chart-card__body {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  /* Single child: center it */
-  .chart-card__body:has(> :only-child) {
-    grid-template-columns: 1fr;
-    justify-items: center;
+    display: block;
   }
 
   @media (max-width: 640px) {
@@ -73,11 +64,6 @@ const { title, subtitle, class: className } = Astro.props;
 
     .chart-card__sub {
       font-size: 0.825rem;
-    }
-
-    .chart-card__body {
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
     }
   }
 </style>

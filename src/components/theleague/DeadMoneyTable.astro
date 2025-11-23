@@ -1,0 +1,166 @@
+---
+/**
+ * DeadMoneyTable - Display cap hits and dead money adjustments
+ * Shows salary adjustments (drops/buyouts) across multiple years
+ * Table body is dynamically populated by client-side JavaScript
+ */
+
+import { SALARY_YEARS } from '../../utils/salary-calculations';
+
+export interface Props {
+  /** Table ID for client-side updates */
+  tableBodyId?: string;
+  /** Additional CSS classes */
+  class?: string;
+}
+
+const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
+---
+
+<div class:list={['dead-money-table-wrapper', className]}>
+  <div class="dead-money-table-header">
+    <div>
+      <h3>Cap Hits / Dead Money</h3>
+      <p>Includes drops/buyouts for the selected franchise.</p>
+    </div>
+  </div>
+  <div class="roster-table-wrapper">
+    <table class="roster-table roster-table--compact">
+      <thead>
+        <tr>
+          <th scope="col" data-column="player" class="deadmoney-player-heading">
+            Player/Adjustment
+          </th>
+          {SALARY_YEARS.map((year, index) => (
+            <th scope="col" data-column={`dm-year${index + 1}`}>{year}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody id={tableBodyId}>
+        <tr>
+          <td colspan={1 + SALARY_YEARS.length} class="roster-empty">
+            No cap hits recorded for this franchise.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .dead-money-table-wrapper {
+    background: var(--card-bg-color, #ffffff);
+    border-radius: 12px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    overflow: hidden;
+  }
+
+  .dead-money-table-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .dead-money-table-header h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .dead-money-table-header p {
+    font-size: 0.875rem;
+    color: var(--text-secondary-color, #64748b);
+    margin: 0;
+  }
+
+  .roster-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .roster-table--compact {
+    font-size: 0.8125rem;
+  }
+
+  .roster-table th {
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--text-secondary-color, #64748b);
+    background: var(--table-header-bg, #f9fafb);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .roster-table th[data-column^='dm-year'] {
+    text-align: right;
+  }
+
+  .roster-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .roster-empty {
+    text-align: center !important;
+    color: var(--text-secondary-color, #64748b);
+    font-style: italic;
+    padding: 2rem 1rem !important;
+  }
+
+  .deadmoney-player-heading {
+    min-width: 200px;
+  }
+
+  :global(.deadmoney-row) {
+    background: var(--card-bg-color, #ffffff);
+  }
+
+  :global(.deadmoney-row--alt) {
+    background: var(--table-alt-bg, #f9fafb);
+  }
+
+  :global(.deadmoney-player-cell) {
+    min-width: 200px;
+  }
+
+  :global(.deadmoney-row__amount) {
+    text-align: right;
+    font-weight: 600;
+    color: var(--error-color, #dc2626);
+  }
+
+  :global(.player-cell__avatar--dm) {
+    opacity: 0.6;
+  }
+
+  @media (max-width: 768px) {
+    .dead-money-table-header {
+      padding: 1rem;
+    }
+
+    .dead-money-table-header h3 {
+      font-size: 1rem;
+    }
+
+    .roster-table th,
+    .roster-table td {
+      padding: 0.75rem 0.625rem;
+    }
+
+    .roster-table--compact {
+      font-size: 0.75rem;
+    }
+
+    .roster-table th {
+      font-size: 0.6875rem;
+    }
+  }
+</style>

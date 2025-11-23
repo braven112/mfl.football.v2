@@ -36,7 +36,7 @@ export const formatCurrency = (value: number): string => {
 
 /**
  * Format cap space in a compact display format
- * - Values >= $1M: "$X.X million" or "$XX million"
+ * - Values >= $1M: "$X.X million" (always 1 decimal for precision)
  * - Values < $1M: "$XXX,XXX"
  * @param value - Cap space amount
  * @returns Formatted cap space string
@@ -45,8 +45,7 @@ export const formatCapSpaceDisplay = (value = 0): string => {
   if (!Number.isFinite(value)) return currencyFormatter.format(0);
   if (value >= 1_000_000) {
     const millions = value / 1_000_000;
-    const compact = millions >= 10 ? millions.toFixed(0) : millions.toFixed(1);
-    return `$${compact} million`;
+    return `$${millions.toFixed(1)} million`;
   }
   return currencyFormatter.format(value);
 };

@@ -882,7 +882,7 @@ const serializedConfig = JSON.stringify({
   .roster-page {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: var(--padding-lg);
   }
 
   .eyebrow {
@@ -897,7 +897,7 @@ const serializedConfig = JSON.stringify({
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1rem;
+    gap: var(--padding-md);
     flex-wrap: wrap;
   }
 
@@ -940,11 +940,14 @@ const serializedConfig = JSON.stringify({
 
   .team-icon-nav {
     display: flex;
-    gap: 1rem;
+    gap: var(--padding-md);
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     max-width: 100%;
+    background-color: var(--card-bg-color);
+    box-shadow: var(--box-shadow-md);
+    border-radius: 5px;
   }
 
   .division-group {
@@ -1022,8 +1025,8 @@ const serializedConfig = JSON.stringify({
   .team-card {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.25rem;
+    gap: var(--padding-md);
+    padding: var(--padding-lg);
     border-radius: 1rem;
     background: #fff;
     box-shadow: var(--box-shadow-lg);
@@ -1061,13 +1064,13 @@ const serializedConfig = JSON.stringify({
   .roster-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 1rem;
+    gap: var(--padding-md);
   }
 
   .roster-summary article {
     background: #fff;
     border-radius: 1rem;
-    padding: 1rem 1.25rem;
+    padding: var(--padding-md) var(--padding-md) var(--padding-xl);
     box-shadow: var(--box-shadow-md);
   }
 
@@ -1086,18 +1089,40 @@ const serializedConfig = JSON.stringify({
   .roster-table-card {
     background: #fff;
     border-radius: 1rem;
-    padding: 1rem;
+    padding: var(--padding-md);
     box-shadow: var(--box-shadow-lg);
   }
 
   .roster-table-card--sub {
-    padding: 0.75rem;
+    padding: var(--padding-md);
   }
 
   .chart-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1rem;
+    gap: var(--padding-md);
+  }
+
+  .chart-card {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: var(--padding-md);
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .chart-card__header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .chart-card__sub {
+    margin: 0.15rem 0 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
   }
 
   .cap-subtotals {
@@ -1111,6 +1136,8 @@ const serializedConfig = JSON.stringify({
     justify-content: space-between;
     font-size: 0.95rem;
     color: #1f2937;
+    border-bottom: 1px solid #f7f7f7;
+    padding-bottom: var(--padding-xs);
   }
 
   .cap-subtotals__row strong {
@@ -1656,8 +1683,7 @@ const serializedConfig = JSON.stringify({
       if (!Number.isFinite(value)) return formatCurrency.format(0);
       if (value >= 1_000_000) {
         const millions = value / 1_000_000;
-        const compact = millions >= 10 ? millions.toFixed(0) : millions.toFixed(1);
-        return `$${compact} million`;
+        return `$${millions.toFixed(1)} million`;
       }
       return formatCurrency.format(value);
     };
@@ -1707,7 +1733,7 @@ const serializedConfig = JSON.stringify({
   const rosterDonut = document.getElementById('rosterDonut');
   const rosterLegend = null; // no longer needed in DOM
   const posDonut = document.getElementById('posDonut');
-  const posLegend = document.getElementById('posLegend');
+  const posLegend = document.getElementById('posDonut-legend');
   const subtotalActive = document.getElementById('subtotalActive');
   const subtotalPractice = document.getElementById('subtotalPractice');
   const subtotalInjured = document.getElementById('subtotalInjured');
@@ -2341,10 +2367,14 @@ const serializedConfig = JSON.stringify({
       buildDonut(posDonut, posSlices, posTotal);
       renderLegendList(posLegend, posSlices);
 
-      rosterMetadata.textContent = `Season ${
-        seasonData?.metadata?.season ?? currentSeason
-      }`;
-      rosterCountLabel.textContent = formatCountLabel(rows.length ?? 0);
+      if (rosterMetadata) {
+        rosterMetadata.textContent = `Season ${
+          seasonData?.metadata?.season ?? currentSeason
+        }`;
+      }
+      if (rosterCountLabel) {
+        rosterCountLabel.textContent = formatCountLabel(rows.length ?? 0);
+      }
     };
 
     columnToggles.forEach((toggle) => {
