@@ -2,6 +2,7 @@
 /**
  * FranchiseTagEligibility - Reusable component for displaying franchise tag eligible players
  * Shows players who are out of contract in 2026 and top 10 in points at their position
+ * Displays 2026 franchise tag value estimates based on league salary averages
  */
 
 import { currencyFormatter } from '../../utils/formatters';
@@ -20,6 +21,8 @@ export interface Props {
     nflLogo: string;
     contractYears: number;
   }>;
+  salaryAverages?: Record<string, { franchiseSalaries?: Record<string, number> }>;
+  season?: string;
   showTeamLogo?: boolean;
 }
 
@@ -35,7 +38,17 @@ const NFL_TEAM_NAMES: Record<string, string> = {
   SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
 };
 
-const { players = [], showTeamLogo = true } = Astro.props;
+const { players = [], salaryAverages = {}, season = '2025', showTeamLogo = true } = Astro.props;
+
+// Helper function to calculate franchise tag value
+const calculateFranchiseTag = (salary: number, position: string): number => {
+  const pos = position?.toUpperCase() || 'UNK';
+  const increasedSalary = salary * 1.2;
+  // Use the specified season, or fall back to 2025 if not available
+  const dataForSeason = salaryAverages[season] || salaryAverages['2025'];
+  const avgSalary = dataForSeason?.franchiseSalaries?.[pos] ?? 0;
+  return Math.round(Math.max(increasedSalary, avgSalary));
+};
 
 // Filter to only those out of contract in 2026 (contractYears === 1) AND top 10 at their position
 const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
@@ -60,13 +73,28 @@ playersByPosition.forEach((posPlayers, pos) => {
     });
 });
 
-// Now filter to eligible players (out of contract, positive points) who are top 10 at their position
+// Get top 3 salary rankings by position
+const salaryRankings = new Map<string, number>(); // player id -> salary rank at position
+playersByPosition.forEach((posPlayers, pos) => {
+  posPlayers
+    .sort((a, b) => (b.salary ?? 0) - (a.salary ?? 0))
+    .forEach((player, idx) => {
+      salaryRankings.set(player.id, idx + 1);
+    });
+});
+
+// Now filter to eligible players (out of contract, positive points) who are EITHER:
+// - Top 10 at their position by points, OR
+// - Top 3 at their position by salary
 const franchiseTagEligible: (typeof players[number] & { rank: number })[] = [];
 players.forEach((player) => {
   if (player.contractYears === 1 && (player.points ?? 0) > 0) {
-    const rank = playerRankings.get(player.id);
-    if (rank && rank <= 10) {
-      franchiseTagEligible.push({ ...player, rank, position: player.position?.toUpperCase() || 'UNK' });
+    const pointsRank = playerRankings.get(player.id);
+    const salaryRank = salaryRankings.get(player.id);
+
+    // Include if top 10 by points OR top 3 by salary
+    if ((pointsRank && pointsRank <= 10) || (salaryRank && salaryRank <= 3)) {
+      franchiseTagEligible.push({ ...player, rank: pointsRank || salaryRank || 0, position: player.position?.toUpperCase() || 'UNK' });
     }
   }
 });
@@ -110,7 +138,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 };
 ---
 
-<div class="franchise-tag-eligibility" data-all-players={JSON.stringify(players)}>
+<div class="franchise-tag-eligibility" data-all-players={JSON.stringify(players)} data-salary-averages={JSON.stringify(salaryAverages)} data-season={season}>
   {withRanks.length === 0 ? (
     <div class="no-results">
       <p>No players are currently eligible for the franchise tag and in the top 10 at their position in points score in 2025.</p>
@@ -121,9 +149,9 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         <thead>
           <tr>
             <th scope="col">Player</th>
-            <th scope="col">Pos</th>
             <th scope="col" class="align-right">Points</th>
             <th scope="col" class="align-right">2025 Salary</th>
+            <th scope="col" class="align-right">2026 Tag Value</th>
           </tr>
         </thead>
         <tbody>
@@ -146,26 +174,24 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
                   </div>
                   <div>
                     <strong>{displayName}</strong>
-                    {!isDefense && (
-                      <div class="player-meta">
-                        {player.nflTeam && player.nflTeam !== 'FA' && (
-                          <img
-                            src={player.nflLogo}
-                            alt={`${player.nflTeam} logo`}
-                            class="player-meta__logo"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        )}
-                        <span class="player-meta__team">{player.nflTeam || 'FA'}</span>
-                      </div>
-                    )}
+                    <div class="player-meta">
+                      {!isDefense && player.nflTeam && player.nflTeam !== 'FA' && (
+                        <img
+                          src={player.nflLogo}
+                          alt={`${player.nflTeam} logo`}
+                          class="player-meta__logo"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
+                      {player.position && <span class="player-meta__pos">{player.position}</span>}
+                    </div>
                   </div>
                 </div>
               </td>
-              <td data-label="Position" class="align-center">{player.position}</td>
               <td data-label="Points" class="align-right">{(player.points ?? 0).toFixed(2)}</td>
               <td data-label="2025 Salary" class="align-right">{currencyFormatter.format(player.salary)}</td>
+              <td data-label="2026 Tag Value" class="align-right">{currencyFormatter.format(calculateFranchiseTag(player.salary, player.position))}</td>
             </tr>
             );
           })}
@@ -192,10 +218,23 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
   const renderFranchiseTagTable = (containerEl) => {
     const allPlayersJson = containerEl.dataset.allPlayers;
     const currentTeam = containerEl.dataset.currentTeam;
+    const salaryAveragesJson = containerEl.dataset.salaryAverages || '{}';
+    const season = containerEl.dataset.season || '2025';
     if (!allPlayersJson) return;
 
     try {
       const allPlayers = JSON.parse(allPlayersJson);
+      const salaryAverages = JSON.parse(salaryAveragesJson);
+
+      // Helper function to calculate franchise tag value
+      const calculateFranchiseTag = (salary, position) => {
+        const pos = position?.toUpperCase() || 'UNK';
+        const increasedSalary = salary * 1.2;
+        // Use the specified season, or fall back to 2025 if not available
+        const dataForSeason = salaryAverages[season] || salaryAverages['2025'];
+        const avgSalary = dataForSeason?.franchiseSalaries?.[pos] ?? 0;
+        return Math.round(Math.max(increasedSalary, avgSalary));
+      };
 
       const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -219,16 +258,31 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
           });
       });
 
+      // Get top 3 salary rankings by position
+      const salaryRankings = new Map(); // player id -> salary rank at position
+      allPlayersByPosition.forEach((posPlayers, pos) => {
+        posPlayers
+          .sort((a, b) => (b.salary ?? 0) - (a.salary ?? 0))
+          .forEach((player, idx) => {
+            salaryRankings.set(player.id, idx + 1);
+          });
+      });
+
       // Filter to only the current team's players for display
       const teamPlayers = currentTeam ? allPlayers.filter(p => p.franchiseId === currentTeam) : allPlayers;
 
-      // Now filter to eligible players (out of contract, positive points) who are top 10 at their position league-wide
+      // Now filter to eligible players (out of contract, positive points) who are EITHER:
+      // - Top 10 at their position by points, OR
+      // - Top 3 at their position by salary
       const eligible: Array<typeof allPlayers[0] & { rank: number; position: string }> = [];
       teamPlayers.forEach((player) => {
         if (player.contractYears === 1 && (player.points ?? 0) > 0) {
-          const rank = playerRankings.get(player.id);
-          if (rank && rank <= 10) {
-            eligible.push({ ...player, rank, position: (player.position ?? 'UNK').toUpperCase() });
+          const pointsRank = playerRankings.get(player.id);
+          const salaryRank = salaryRankings.get(player.id);
+
+          // Include if top 10 by points OR top 3 by salary
+          if ((pointsRank && pointsRank <= 10) || (salaryRank && salaryRank <= 3)) {
+            eligible.push({ ...player, rank: pointsRank || salaryRank || 0, position: (player.position ?? 'UNK').toUpperCase() });
           }
         }
       });
@@ -254,9 +308,9 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
             <thead>
               <tr>
                 <th scope="col">Player</th>
-                <th scope="col">Pos</th>
                 <th scope="col" class="align-right">Points</th>
                 <th scope="col" class="align-right">2025 Salary</th>
+                <th scope="col" class="align-right">2026 Tag Value</th>
               </tr>
             </thead>
             <tbody>
@@ -288,18 +342,16 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
                 </div>
                 <div>
                   <strong>${displayName}</strong>
-                  ${!isDefense ? `
-                    <div class="player-meta">
-                      ${player.nflLogo ? `<img src="${player.nflLogo}" alt="${nflTeam} logo" class="player-meta__logo" loading="lazy" />` : ''}
-                      <span class="player-meta__team">${nflTeam}</span>
-                    </div>
-                  ` : ''}
+                  <div class="player-meta">
+                    ${!isDefense && player.nflLogo ? `<img src="${player.nflLogo}" alt="${nflTeam} logo" class="player-meta__logo" loading="lazy" />` : ''}
+                    ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
+                  </div>
                 </div>
               </div>
             </td>
-            <td data-label="Position" class="align-center">${player.position}</td>
             <td data-label="Points" class="align-right">${(player.points ?? 0).toFixed(2)}</td>
             <td data-label="2025 Salary" class="align-right">${currencyFormatter.format(player.salary)}</td>
+            <td data-label="2026 Tag Value" class="align-right">${currencyFormatter.format(calculateFranchiseTag(player.salary, player.position))}</td>
           </tr>
         `;
       });
@@ -335,7 +387,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
   });
 </script>
 
-<style>
+<style is:global>
   .franchise-tag-eligibility {
     width: 100%;
   }
@@ -384,8 +436,12 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     transition: background 0.2s ease;
   }
 
+  .eligibility-table tbody tr:nth-child(even) {
+    background: #f7f8fb;
+  }
+
   .eligibility-table tbody tr:hover {
-    background: #f8f9fa;
+    background: #eef1fb;
   }
 
   .eligibility-table td {
@@ -395,6 +451,13 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
   .eligibility-table td.align-right {
     text-align: right;
+    padding-right: 0.5rem;
+  }
+
+  .eligibility-table td[data-label="2025 Salary"],
+  .eligibility-table td[data-label="2026 Tag Value"] {
+    font-size: 0.85rem;
+    color: #555;
   }
 
   .eligibility-table td.align-center {
@@ -447,6 +510,16 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
   .player-meta__team {
     font-weight: 500;
+  }
+
+  .player-meta__pos {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
   }
 
   .franchise-cell {

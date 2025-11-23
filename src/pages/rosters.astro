@@ -480,6 +480,7 @@ Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
         WR: data.positions.WR?.top3Average ?? 0,
         TE: data.positions.TE?.top3Average ?? 0,
         PK: data.positions.PK?.top3Average ?? 0,
+        DEF: data.positions.Def?.top3Average ?? 0,
       },
     };
   }
@@ -676,6 +677,12 @@ const serializedConfig = JSON.stringify({
                 <line x1="6" y1="20" x2="6" y2="14"/>
               </svg>
               <span class="view-tab__label">Analytics</span>
+            </button>
+            <button class="view-tab" data-view="nextyear" data-active="false" aria-label="Next Year View" title="Next Year View">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
+                <path d="M8 7V3m8 4V3M3 11h18M5 7h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/>
+              </svg>
+              <span class="view-tab__label">Next Year</span>
             </button>
           </div>
         </div>
@@ -930,45 +937,50 @@ const serializedConfig = JSON.stringify({
         </div>
       </div>
     </div>
-    <h3 class="chart-metrics__headline">2026 at a glance</h3>
-    <div class="chart-metrics">
-      <MetricCard
-        label="Cap Space"
-        value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
-        valueId="summaryCapNext"
-      />
-      <MetricCard
-        label="Avg per Player*"
-        value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
-        valueId="summaryAvg2026"
-      />
-      <MetricCard
-        label="Players Signed"
-        value={String(initialPlayersNextYear)}
-        valueId="summaryPlayersNext"
-        hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
-        hintVariant="error"
-        hintId="needsToCutRoster2026"
-      />
-      <MetricCard
-        label="Dead Money"
-        value={formatCurrency(initialDeadMoney2026)}
-        valueId="summaryDeadMoney2026"
-      />
-      <MetricCard
-        label="Average Age"
-        value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
-        valueId="summaryAverageAge"
-      />
-    </div>
-    <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
-    <div class="chart-grid">
-      <ChartCard title="Franchise Tag Eligible (2026)" subtitle="Out of contract, top 10 in points at position" span="full">
-        <FranchiseTagEligibility players={initialAllPlayers} />
-      </ChartCard>
-    </div>
     </div>
     <!-- End Analytics View -->
+
+    <!-- Next Year View -->
+    <div class="view-container" data-view-content="nextyear" style="display: none;">
+      <h3 class="chart-metrics__headline">2026 at a glance</h3>
+      <div class="chart-metrics">
+        <MetricCard
+          label="Cap Space"
+          value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
+          valueId="summaryCapNext"
+        />
+        <MetricCard
+          label="Avg per Player*"
+          value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
+          valueId="summaryAvg2026"
+        />
+        <MetricCard
+          label="Players Signed"
+          value={String(initialPlayersNextYear)}
+          valueId="summaryPlayersNext"
+          hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
+          hintVariant="error"
+          hintId="needsToCutRoster2026"
+        />
+        <MetricCard
+          label="Dead Money"
+          value={formatCurrency(initialDeadMoney2026)}
+          valueId="summaryDeadMoney2026"
+        />
+        <MetricCard
+          label="Average Age"
+          value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
+          valueId="summaryAverageAge"
+        />
+      </div>
+      <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
+      <div class="chart-grid">
+        <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
+          <FranchiseTagEligibility players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+        </ChartCard>
+      </div>
+    </div>
+    <!-- End Next Year View -->
 
   </section>
 </TheLeagueLayout>
@@ -1329,7 +1341,6 @@ const serializedConfig = JSON.stringify({
     justify-content: flex-end;
     padding: 0 0 0.75rem 0;
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid #e2e8f0;
   }
 
   .chart-grid {
@@ -2370,7 +2381,8 @@ const serializedConfig = JSON.stringify({
 
   const viewLabels = {
     'roster': 'Roster & Salary Cap',
-    'analytics': 'Advanced Analytics'
+    'analytics': 'Advanced Analytics',
+    'nextyear': 'Next Year (2026)'
   };
 
   // Contract Actions State Management
