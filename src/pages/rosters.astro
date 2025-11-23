@@ -653,12 +653,6 @@ const serializedConfig = JSON.stringify({
           </p>
         </div>
         <div class="team-card__actions">
-          <button class="clear-all-tags-btn" id="clearAllTagsBtn" style="display: none;" title="Clear all contract actions">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-            Clear All Tags
-          </button>
           <div class="view-tabs">
             <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
@@ -682,6 +676,14 @@ const serializedConfig = JSON.stringify({
     <!-- Roster View -->
     <div class="view-container" data-view-content="roster">
       <div class="roster-table-card">
+        <div class="table-header-actions">
+          <button class="clear-all-tags-btn" id="clearAllTagsBtn" style="display: none;" title="Clear all contract actions">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            Clear All Tags
+          </button>
+        </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
           <thead>
@@ -1294,6 +1296,14 @@ const serializedConfig = JSON.stringify({
 
   .roster-table-card--sub {
     padding: var(--padding-md);
+  }
+
+  .table-header-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0 0.75rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
   }
 
   .chart-grid {
