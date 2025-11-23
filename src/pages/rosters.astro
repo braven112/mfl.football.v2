@@ -938,16 +938,43 @@ const serializedConfig = JSON.stringify({
     margin-bottom: 1.5rem;
   }
 
-  .team-icon-nav {
-    display: flex;
-    gap: var(--padding-md);
-    flex-wrap: wrap;
+
+.team-icon-nav  {
+  display: grid;
+  gap: var(--padding-lg);
+  
+  /* default: 1 column, 4 rows */
+  grid-template-columns: 1fr;
+}
+
+/* 2 columns, 2 rows */
+@media (min-width: 600px) {
+  .team-icon-nav  {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .division-group:nth-child(4) { order: 2; }
+
+}
+
+/* 4 columns, 1 row */
+@media (min-width: 1024px) {
+  .team-icon-nav  {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .division-group:nth-child(3) { order: initial; }
+}
+
+
+    .team-icon-nav {
+      gap: var(--padding-xxl);
     justify-content: center;
     align-items: center;
-    max-width: 100%;
     background-color: var(--card-bg-color);
     box-shadow: var(--box-shadow-md);
-    border-radius: 5px;
+    border-radius: 1rem;
+    padding: var(--padding-lg);
+    width: 100%;
+
   }
 
   .division-group {
@@ -968,9 +995,14 @@ const serializedConfig = JSON.stringify({
 
   .division-teams {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--padding-md);
     flex-wrap: nowrap;
     align-items: center;
+  }
+ @media (min-width: 1024px) {
+      .division-teams {
+        gap: var(--padding-sm);
+      }
   }
 
   .team-icon-btn {
