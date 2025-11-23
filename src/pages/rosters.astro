@@ -28,6 +28,9 @@ import {
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
   eager: true,
 });
+const salaryAveragesModules = import.meta.glob('../data/mfl-salary-averages-*.json', {
+  eager: true,
+});
 const salaryAdjustmentFeeds = import.meta.glob(
   '../data/mfl-feeds/*/salaryAdjustments.json',
   {
@@ -452,6 +455,32 @@ Object.entries(rosterModules).forEach(([path, mod]) => {
   rostersBySeason[season] = buildSeasonPayload(season, getModuleData(mod));
 });
 
+// Process salary averages for extension calculator
+const salaryAveragesBySeason = {};
+Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+  const data = getModuleData(mod);
+  if (data?.positions) {
+    salaryAveragesBySeason[season] = {
+      extensionSalaries: {
+        QB: data.positions.QB?.top5Average ?? 0,
+        RB: data.positions.RB?.top5Average ?? 0,
+        WR: data.positions.WR?.top5Average ?? 0,
+        TE: data.positions.TE?.top5Average ?? 0,
+        PK: data.positions.PK?.top5Average ?? 0,
+      },
+      franchiseSalaries: {
+        QB: data.positions.QB?.top3Average ?? 0,
+        RB: data.positions.RB?.top3Average ?? 0,
+        WR: data.positions.WR?.top3Average ?? 0,
+        TE: data.positions.TE?.top3Average ?? 0,
+        PK: data.positions.PK?.top3Average ?? 0,
+      },
+    };
+  }
+});
+
 const seasonOptions = Object.keys(rostersBySeason).sort(
   (a, b) => Number(b) - Number(a)
 );
@@ -546,6 +575,7 @@ const serializedConfig = JSON.stringify({
   initialSeasonData,
   initialTeamData,
   adjustmentsBySeason: feedSalaryAdjustmentsBySeason,
+  salaryAverages: salaryAveragesBySeason,
   teams: teamLookup,
   rosterLimit: ROSTER_LIMIT,
   positionOrder,
@@ -622,22 +652,30 @@ const serializedConfig = JSON.stringify({
             {teamLookup[defaultTeamId]?.division ?? 'Independent'}
           </p>
         </div>
-        <div class="view-tabs">
-          <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
-              <rect x="2" y="5" width="20" height="14" rx="2"/>
-              <line x1="2" y1="10" x2="22" y2="10"/>
+        <div class="team-card__actions">
+          <button class="clear-all-tags-btn" id="clearAllTagsBtn" style="display: none;" title="Clear all contract actions">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
-            <span class="view-tab__label">Roster</span>
+            Clear All Tags
           </button>
-          <button class="view-tab" data-view="analytics" data-active="false" aria-label="Analytics View" title="Analytics View">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
-              <line x1="18" y1="20" x2="18" y2="10"/>
-              <line x1="12" y1="20" x2="12" y2="4"/>
-              <line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
-            <span class="view-tab__label">Analytics</span>
-          </button>
+          <div class="view-tabs">
+            <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
+                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                <line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+              <span class="view-tab__label">Roster</span>
+            </button>
+            <button class="view-tab" data-view="analytics" data-active="false" aria-label="Analytics View" title="Analytics View">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+              <span class="view-tab__label">Analytics</span>
+            </button>
+          </div>
         </div>
     </div>
 
@@ -650,6 +688,7 @@ const serializedConfig = JSON.stringify({
             <tr>
               <th scope="col" data-column="player">Player</th>
               <th scope="col" data-column="years">Yrs</th>
+              <th scope="col" data-column="actions" class="actions-column">Actions</th>
               {SALARY_YEARS.map((year, index) => (
                 <th scope="col" data-column={`year${index + 1}`}>{year}</th>
               ))}
@@ -659,6 +698,7 @@ const serializedConfig = JSON.stringify({
             <tr class="roster-totals">
               <td data-column="player" class="roster-totals__label">Total Salary</td>
               <td data-column="years"></td>
+              <td data-column="actions"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
                   {formatCurrency(initialYearTotals[index] ?? 0)}
@@ -668,6 +708,7 @@ const serializedConfig = JSON.stringify({
             <tr class="roster-totals roster-totals--dead">
               <td data-column="player" class="roster-totals__label">Dead Money</td>
               <td data-column="years"></td>
+              <td data-column="actions"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`}>
                   {formatCurrency(initialDeadMoney[index] ?? 0)}
@@ -677,6 +718,7 @@ const serializedConfig = JSON.stringify({
             <tr class="roster-totals roster-totals--cap">
               <td data-column="player" class="roster-totals__label">Salary Cap</td>
               <td data-column="years"></td>
+              <td data-column="actions"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`}>
                   {formatCurrency(initialCapLimit)}
@@ -686,6 +728,7 @@ const serializedConfig = JSON.stringify({
             <tr class="roster-totals roster-totals--space">
               <td data-column="player" class="roster-totals__label">Cap Space</td>
               <td data-column="years"></td>
+              <td data-column="actions"></td>
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`}>
                   {formatCurrency(
@@ -756,7 +799,7 @@ const serializedConfig = JSON.stringify({
                       data-column={`year${index + 1}`}
                       class={cellClass}
                     >
-                      {displayValue}
+                      
                     </td>
                   );
                 })}
@@ -1246,7 +1289,7 @@ const serializedConfig = JSON.stringify({
     border-radius: 1rem;
     padding: var(--padding-md);
     box-shadow: var(--box-shadow-lg);
-    overflow-x: scroll;
+    overflow-x: auto;
   }
 
   .roster-table-card--sub {
@@ -1490,10 +1533,60 @@ const serializedConfig = JSON.stringify({
     font-weight: 600;
   }
 
+  :global(.ufa-cell-content) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+  }
+
+  :global(.ufa-action-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid #f59e0b;
+    background: white;
+    color: #f59e0b;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  :global(.ufa-action-btn:hover) {
+    background: #f59e0b;
+    color: white;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+  }
+
+  :global(.ufa-action-btn svg) {
+    width: 14px;
+    height: 14px;
+  }
+
   :global(.salary-cell--future-ufa) {
     text-align: center;
     color: #9ca3af;
     font-weight: 400;
+  }
+
+  :global(.salary-cell--simulated) {
+    color: #9ca3af !important;
+    font-style: italic;
+  }
+
+  :global(.actions-cell) {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.5rem;
+    width: 60px;
+  }
+
+  :global(.actions-column) {
+    width: 60px;
+    text-align: center;
   }
 
   .roster-table tfoot td {
@@ -1793,7 +1886,437 @@ const serializedConfig = JSON.stringify({
       font-size: 0.85rem;
     }
   }
+
+  /* Contract Action Modal */
+  :global(.contract-modal) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :global(.contract-modal__overlay) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+  }
+
+  :global(.contract-modal__content) {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  :global(.contract-modal__header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  :global(.contract-modal__title) {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
+  }
+
+  :global(.contract-modal__close) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  :global(.contract-modal__close:hover) {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+
+  :global(.contract-modal__body) {
+    padding: 1.5rem;
+  }
+
+  :global(.contract-modal__player-info) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  :global(.player-name-display) {
+    font-size: 1.125rem;
+    color: #1e293b;
+  }
+
+  :global(.player-position-display) {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
+  }
+
+  :global(.contract-modal__current-contract) {
+    margin-bottom: 1.5rem;
+  }
+
+  :global(.contract-modal__current-contract p) {
+    margin: 0.5rem 0;
+    color: #475569;
+    font-size: 0.9375rem;
+  }
+
+  :global(.contract-modal__actions) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :global(.contract-action-btn) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  :global(.contract-action-btn span) {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  :global(.contract-action-btn .action-description) {
+    font-size: 0.8125rem;
+    color: #64748b;
+    font-weight: 400;
+  }
+
+  :global(.contract-action-btn:hover) {
+    border-color: var(--primary-color);
+    background: #f8fafc;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.contract-action-btn--franchise:hover) {
+    border-color: #2563eb;
+  }
+
+  :global(.contract-action-btn--extension:hover) {
+    border-color: var(--secondary-color);
+  }
+
+  :global(.contract-action-btn--cut:hover) {
+    border-color: #dc2626;
+  }
+
+  :global(.contract-action-btn--trade:hover) {
+    border-color: #f59e0b;
+  }
+
+  :global(.contract-modal__extension-options) {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  :global(.contract-modal__extension-options h4) {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #1e293b;
+  }
+
+  :global(.extension-year-buttons) {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  :global(.extension-year-btn) {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  :global(.extension-year-btn:hover) {
+    border-color: var(--secondary-color);
+    background: #f0fdf4;
+  }
+
+  :global(.extension-year-btn.active) {
+    border-color: var(--secondary-color);
+    background: var(--secondary-color);
+    color: white;
+  }
+
+  :global(.extension-confirm-btn),
+  :global(.extension-cancel-btn) {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+  }
+
+  :global(.extension-confirm-btn) {
+    background: var(--secondary-color);
+    color: white;
+  }
+
+  :global(.extension-confirm-btn:hover) {
+    background: #26743a;
+    box-shadow: 0 2px 4px rgba(46, 135, 67, 0.3);
+  }
+
+  :global(.extension-cancel-btn) {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  :global(.extension-cancel-btn:hover) {
+    background: #e2e8f0;
+  }
+
+  @media (max-width: 640px) {
+    :global(.contract-modal__content) {
+      width: 95%;
+      max-height: 95vh;
+    }
+
+    :global(.contract-modal__header),
+    :global(.contract-modal__body) {
+      padding: 1rem;
+    }
+  }
+
+  /* Contract Action Visual Indicators */
+  :global(.roster-row--contract-action) {
+    background: #fef3c7 !important;
+    border-left: 3px solid #f59e0b !important;
+  }
+
+  :global(.roster-row--contract-action.roster-row--active-alt) {
+    background: #fde68a !important;
+  }
+
+  :global(.contract-action-badge) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    background: #f59e0b;
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  :global(.contract-action-badge--franchise) {
+    background: #2563eb;
+  }
+
+  :global(.contract-action-badge--extension) {
+    background: var(--secondary-color);
+  }
+
+  :global(.contract-action-badge--cut) {
+    background: #dc2626;
+  }
+
+  :global(.contract-action-badge--trade) {
+    background: #7c3aed;
+  }
+
+  /* Cut/Traded Players - 50% opacity */
+  :global(.roster-row--cut),
+  :global(.roster-row--trade) {
+    opacity: 0.5;
+    background: #f3f4f6 !important;
+  }
+
+  :global(.roster-row--cut.roster-row--active-alt),
+  :global(.roster-row--trade.roster-row--active-alt) {
+    background: #e5e7eb !important;
+  }
+
+  :global(.contract-action-remove) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin-left: 0.25rem;
+    border: none;
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  :global(.contract-action-remove:hover) {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Clear All Tags Button */
+  .team-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .clear-all-tags-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid #f59e0b;
+    background: white;
+    color: #f59e0b;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .clear-all-tags-btn:hover {
+    background: #f59e0b;
+    color: white;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+  }
+
+  .clear-all-tags-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @media (max-width: 960px) {
+    .team-card__actions {
+      gap: 0.75rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .team-card__actions {
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .clear-all-tags-btn {
+      order: -1;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .view-tabs {
+      width: 100%;
+    }
+  }
 </style>
+
+<!-- Contract Action Modal -->
+<div class="contract-modal" id="contract-modal" style="display: none;">
+  <div class="contract-modal__overlay"></div>
+  <div class="contract-modal__content">
+    <div class="contract-modal__header">
+      <h3 class="contract-modal__title">Manage Contract</h3>
+      <button class="contract-modal__close" title="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="contract-modal__body">
+      <div class="contract-modal__player-info">
+        <strong class="player-name-display"></strong>
+        <span class="player-position-display"></span>
+      </div>
+      <div class="contract-modal__current-contract">
+        <p><strong>Current Salary:</strong> <span class="current-salary-display"></span></p>
+        <p><strong>Years Remaining:</strong> <span class="current-years-display"></span></p>
+      </div>
+      <div class="contract-modal__actions">
+        <button class="contract-action-btn contract-action-btn--franchise" data-action="franchise">
+          <span>Franchise Tag</span>
+          <small class="action-description">1 year at higher of 120% or position average</small>
+        </button>
+        <button class="contract-action-btn contract-action-btn--extension" data-action="extension">
+          <span>Veteran Extension</span>
+          <small class="action-description">Extend contract 1-2 years</small>
+        </button>
+        <button class="contract-action-btn contract-action-btn--cut" data-action="cut">
+          <span>Cut Player</span>
+          <small class="action-description">50% cap hit + future penalties</small>
+        </button>
+        <button class="contract-action-btn contract-action-btn--trade" data-action="trade">
+          <span>Trade Player</span>
+          <small class="action-description">No cap penalty</small>
+        </button>
+      </div>
+      <div class="contract-modal__extension-options" style="display: none;">
+        <h4>Extension Length</h4>
+        <div class="extension-year-buttons">
+          <button class="extension-year-btn" data-years="1">1 Year</button>
+          <button class="extension-year-btn" data-years="2">2 Years</button>
+        </div>
+        <button class="extension-confirm-btn">Confirm Extension</button>
+        <button class="extension-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script
   type="application/json"
@@ -1812,6 +2335,77 @@ const serializedConfig = JSON.stringify({
   const viewLabels = {
     'roster': 'Roster & Salary Cap',
     'analytics': 'Advanced Analytics'
+  };
+
+  // Contract Actions State Management
+  const contractActions = {}; // { playerId: { type, newSalary, newYears, originalSalary, originalYears, ufaYear } }
+  const franchiseTagsByYear = {}; // Track franchise tags by year: { yearIndex: playerId }
+  let currentVeteranExtension = null; // Track which player has veteran extension
+  let currentSeason = config.defaultSeason; // Track current season for salary averages
+
+  // Helper functions for contract calculations
+  const formatCurrency = (value) => {
+    if (!Number.isFinite(value)) return '$0';
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    return formatter.format(Math.round(value));
+  };
+
+  const parseCurrency = (value) => {
+    if (!value) return 0;
+    const numeric = parseFloat(value.replace(/[^\d.-]/g, ''));
+    return Number.isNaN(numeric) ? 0 : numeric;
+  };
+
+  const getReferenceSalary = (position, type, season) => {
+    const averages = config.salaryAverages?.[season];
+    if (!averages) return 0;
+
+    if (type === 'franchise') {
+      return averages.franchiseSalaries?.[position] ?? 0;
+    }
+    return averages.extensionSalaries?.[position] ?? 0;
+  };
+
+  // Contract Action Calculations
+  const calculateFranchiseTag = (salary, position, season) => {
+    const increasedSalary = salary * 1.2;
+    const avgSalary = getReferenceSalary(position, 'franchise', season);
+    return {
+      newSalary: Math.round(Math.max(increasedSalary, avgSalary)),
+      newYears: 1
+    };
+  };
+
+  const calculateVeteranExtension = (salary, contractYears, position, season, extensionYears) => {
+    const avgSalary = getReferenceSalary(position, 'extension', season);
+    const totalExtensionValue = avgSalary * extensionYears;
+    const totalYears = contractYears + extensionYears;
+    return {
+      newSalary: Math.round(salary + totalExtensionValue / Math.max(totalYears, 1)),
+      newYears: totalYears
+    };
+  };
+
+  const calculateCutPenalty = (salary, contractYears) => {
+    const currentSeasonPenalty = salary * 0.5;
+    let futureSeasonPenalty = 0;
+
+    if (contractYears > 1) {
+      // Future penalty: 15% for 2 years, 25% for 3 years, 35% for 4 years, 45% for 5 years
+      const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+      futureSeasonPenalty = salary * (futurePercentByYears[contractYears] ?? 0);
+    }
+
+    return {
+      currentPenalty: currentSeasonPenalty,
+      futurePenalty: futureSeasonPenalty,
+      totalPenalty: currentSeasonPenalty + futureSeasonPenalty
+    };
   };
 
   const switchView = (viewName) => {
@@ -1848,6 +2442,230 @@ const serializedConfig = JSON.stringify({
     tab.addEventListener('click', () => {
       switchView(tab.dataset.view);
     });
+  });
+
+  // Modal Management
+  const modal = document.getElementById('contract-modal');
+  const modalOverlay = modal?.querySelector('.contract-modal__overlay');
+  const modalClose = modal?.querySelector('.contract-modal__close');
+  const playerNameDisplay = modal?.querySelector('.player-name-display');
+  const playerPositionDisplay = modal?.querySelector('.player-position-display');
+  const currentSalaryDisplay = modal?.querySelector('.current-salary-display');
+  const currentYearsDisplay = modal?.querySelector('.current-years-display');
+  const extensionOptions = modal?.querySelector('.contract-modal__extension-options');
+  const extensionYearButtons = modal?.querySelectorAll('.extension-year-btn');
+  const extensionConfirmBtn = modal?.querySelector('.extension-confirm-btn');
+  const extensionCancelBtn = modal?.querySelector('.extension-cancel-btn');
+
+  let selectedPlayer = null;
+  let selectedExtensionYears = 1;
+
+  const openModal = (playerData) => {
+    selectedPlayer = playerData;
+    if (!modal || !playerData) return;
+
+    // Populate modal with player data
+    if (playerNameDisplay) playerNameDisplay.textContent = playerData.name;
+    if (playerPositionDisplay) playerPositionDisplay.textContent = playerData.position;
+    if (currentSalaryDisplay) currentSalaryDisplay.textContent = formatCurrency(playerData.salary);
+    if (currentYearsDisplay) currentYearsDisplay.textContent = playerData.years;
+
+    // Reset extension options
+    if (extensionOptions) extensionOptions.style.display = 'none';
+    selectedExtensionYears = 1;
+    extensionYearButtons?.forEach(btn => btn.classList.remove('active'));
+    extensionYearButtons?.[0]?.classList.add('active');
+
+    // Show modal
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeModal = () => {
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    selectedPlayer = null;
+    if (extensionOptions) extensionOptions.style.display = 'none';
+  };
+
+  // Modal close handlers
+  modalClose?.addEventListener('click', closeModal);
+  modalOverlay?.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.style.display === 'flex') {
+      closeModal();
+    }
+  });
+
+  // Extension year selection
+  extensionYearButtons?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      extensionYearButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedExtensionYears = parseInt(btn.dataset.years || '1', 10);
+    });
+  });
+
+  // Extension cancel
+  extensionCancelBtn?.addEventListener('click', () => {
+    if (extensionOptions) extensionOptions.style.display = 'none';
+  });
+
+  // Contract action handlers
+  modal?.querySelectorAll('.contract-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (!action || !selectedPlayer) return;
+
+      if (action === 'extension') {
+        // Show extension year selection
+        if (extensionOptions) extensionOptions.style.display = 'block';
+      } else {
+        // Handle other actions immediately
+        applyContractAction(action);
+      }
+    });
+  });
+
+  // Extension confirm handler
+  extensionConfirmBtn?.addEventListener('click', () => {
+    applyContractAction('extension', selectedExtensionYears);
+  });
+
+  // Apply contract action
+  const applyContractAction = (actionType, extensionYears = 1) => {
+    console.log('applyContractAction called', { actionType, extensionYears, selectedPlayer });
+    if (!selectedPlayer) {
+      console.error('No selected player');
+      return;
+    }
+
+    const { id, name, position, salary, years } = selectedPlayer;
+    console.log('Player data:', { id, name, position, salary, years });
+
+    // Calculate which year the franchise tag applies (0-indexed)
+    // If player has 3 years, they're signed through index 2 (2027), so franchise tag is at index 3 (2028)
+    const franchiseYearIndex = years; // The year after their current contract
+    console.log('Franchise Year Index:', franchiseYearIndex);
+
+    let result = null;
+
+    // Check for conflicts with existing tags
+    if (actionType === 'franchise') {
+      // Check if there's already a franchise tag for this year
+      if (franchiseTagsByYear[franchiseYearIndex] && franchiseTagsByYear[franchiseYearIndex] !== id) {
+        // Remove previous franchise tag for this year
+        const previousPlayerId = franchiseTagsByYear[franchiseYearIndex];
+        delete contractActions[previousPlayerId];
+      }
+      result = calculateFranchiseTag(salary, position, currentSeason);
+      result.ufaYearIndex = franchiseYearIndex;
+      franchiseTagsByYear[franchiseYearIndex] = id;
+    } else if (actionType === 'extension') {
+      if (currentVeteranExtension && currentVeteranExtension !== id) {
+        // Remove previous veteran extension
+        delete contractActions[currentVeteranExtension];
+      }
+      result = calculateVeteranExtension(salary, years, position, currentSeason, extensionYears);
+      currentVeteranExtension = id;
+    } else if (actionType === 'cut') {
+      const penalty = calculateCutPenalty(salary, years);
+      result = {
+        type: 'cut',
+        currentPenalty: penalty.currentPenalty,
+        futurePenalty: penalty.futurePenalty,
+        totalPenalty: penalty.totalPenalty
+      };
+    } else if (actionType === 'trade') {
+      result = {
+        type: 'trade',
+        removed: true
+      };
+    }
+
+    console.log('Result calculated:', result);
+
+    if (result) {
+      contractActions[id] = {
+        type: actionType,
+        playerId: id,
+        playerName: name,
+        playerPosition: position,
+        originalSalary: salary,
+        originalYears: years,
+        ...result
+      };
+
+      console.log('Contract action stored:', contractActions[id]);
+      console.log('All contract actions:', contractActions);
+
+      // Close modal and recalculate
+      closeModal();
+      console.log('Calling recalculateRoster');
+      recalculateRoster();
+      updateClearAllButton();
+    } else {
+      console.error('No result calculated for action:', actionType);
+    }
+  };
+
+  // Recalculate roster with contract actions
+  const recalculateRoster = () => {
+    console.log('recalculateRoster called');
+    // Trigger a view update by simulating a team change
+    // This will call updateView which is defined later
+    const select = document.getElementById('rosterTeamSelect');
+    if (select) {
+      const event = new Event('change');
+      select.dispatchEvent(event);
+    } else {
+      console.error('teamSelect element not found');
+    }
+  };
+
+  // Remove contract action
+  const removeContractAction = (playerId) => {
+    if (contractActions[playerId]) {
+      const action = contractActions[playerId];
+
+      // Clear tag tracking
+      if (action.type === 'franchise' && action.ufaYearIndex !== undefined) {
+        delete franchiseTagsByYear[action.ufaYearIndex];
+      } else if (action.type === 'extension' && currentVeteranExtension === playerId) {
+        currentVeteranExtension = null;
+      }
+
+      delete contractActions[playerId];
+      recalculateRoster();
+      updateClearAllButton();
+    }
+  };
+
+  // Clear all contract actions
+  const clearAllContractActions = () => {
+    Object.keys(contractActions).forEach(key => delete contractActions[key]);
+    Object.keys(franchiseTagsByYear).forEach(key => delete franchiseTagsByYear[key]);
+    currentVeteranExtension = null;
+    recalculateRoster();
+    updateClearAllButton();
+  };
+
+  // Update clear all button visibility
+  const updateClearAllButton = () => {
+    const clearAllBtn = document.getElementById('clearAllTagsBtn');
+    if (clearAllBtn) {
+      const hasActions = Object.keys(contractActions).length > 0;
+      clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
+    }
+  };
+
+  // Clear all tags button event listener
+  const clearAllBtn = document.getElementById('clearAllTagsBtn');
+  clearAllBtn?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all contract actions?')) {
+      clearAllContractActions();
+    }
   });
 
   const initRosterPage = () => {
@@ -2267,12 +3085,22 @@ const serializedConfig = JSON.stringify({
     const renderTableRows = (rows = []) => {
       if (!rosterTableBody) return;
       if (!rows.length) {
-        rosterTableBody.innerHTML = `<tr><td colspan="${4 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
+        rosterTableBody.innerHTML = `<tr><td colspan="${5 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
         return;
       }
 
       rosterTableBody.innerHTML = rows
         .map((player) => {
+          // Apply contract action if exists
+          const action = contractActions[player.id];
+          let displaySalary = player.salary;
+          let displayYears = player.contractYears;
+
+          if (action) {
+            if (action.newSalary) displaySalary = action.newSalary;
+            if (action.newYears) displayYears = action.newYears;
+          }
+
           const useDefenseLogo =
             (player.position ?? '').toUpperCase() === 'DEF' && player.nflLogo;
           const avatarSrc = useDefenseLogo
@@ -2289,19 +3117,48 @@ const serializedConfig = JSON.stringify({
               let value;
               let cellClass = 'salary-cell';
 
-              if (isFirstYearUfa) {
+              // Check if this cell should show franchise tag salary
+              if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
+                value = formatCurrency.format(action.newSalary ?? 0);
+                cellClass += ' salary-cell--simulated';
+              } else if (isFirstYearUfa) {
                 value = 'UFA';
                 cellClass += ' salary-cell--ufa';
               } else if (isFutureUfa) {
                 value = '—';
                 cellClass += ' salary-cell--future-ufa';
               } else {
-                value = formatCurrency.format(player.salary ?? 0);
+                // Add simulated class if this player has a contract action applied
+                if (action && action.type === 'extension') {
+                  cellClass += ' salary-cell--simulated';
+                  value = formatCurrency.format(displaySalary ?? 0);
+                } else {
+                  value = formatCurrency.format(player.salary ?? 0);
+                }
               }
 
               return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}</td>`;
             })
             .join('');
+
+          // Add action button for all players
+          const actionsCell = `
+            <td data-label="Actions" data-column="actions" class="actions-cell">
+              <button
+                class="ufa-action-btn"
+                data-player-id="${player.id}"
+                data-player-name="${player.name}"
+                data-player-position="${player.position || ''}"
+                data-player-salary="${player.salary || 0}"
+                data-player-years="${player.contractYears || 1}"
+                title="Manage Contract"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </td>
+          `;
 
           const rowClasses = [
             'roster-row',
@@ -2320,6 +3177,19 @@ const serializedConfig = JSON.stringify({
             rowClasses.push('roster-row--active-alt');
           }
 
+          // Add contract action indicator
+          if (action) {
+            rowClasses.push('roster-row--contract-action');
+            rowClasses.push(`roster-row--${action.type}`);
+          }
+
+          const actionBadge = action ? `
+            <span class="contract-action-badge contract-action-badge--${action.type}">
+              ${action.type === 'franchise' ? 'Franchise Tag' : action.type === 'extension' ? 'Extension' : action.type}
+              <button class="contract-action-remove" data-player-id="${player.id}" title="Remove">×</button>
+            </span>
+          ` : '';
+
           return `<tr data-player-id="${player.id}" class="${rowClasses.join(' ')}">
             <td data-label="Player" data-column="player">
               <div class="player-cell">
@@ -2327,7 +3197,7 @@ const serializedConfig = JSON.stringify({
                   <img src="${avatarSrc}" alt="${player.name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
                 </div>
                 <div>
-                  <strong>${player.name}</strong>
+                  <strong>${player.name}${actionBadge}</strong>
                   <div class="player-meta">
                     ${
                       !useDefenseLogo && player.nflLogo
@@ -2339,11 +3209,46 @@ const serializedConfig = JSON.stringify({
                 </div>
               </div>
             </td>
-            <td data-label="Yrs" data-column="years">${player.contractYears || 0}</td>
+            <td data-label="Yrs" data-column="years">${displayYears || 0}</td>
+            ${actionsCell}
             ${salaryCells}
           </tr>`;
         })
         .join('');
+
+      // Add event listeners for UFA buttons and remove buttons
+      setTimeout(() => {
+        // UFA action buttons
+        document.querySelectorAll('.ufa-action-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerId = btn.dataset.playerId;
+            const playerName = btn.dataset.playerName;
+            const playerPosition = btn.dataset.playerPosition;
+            const playerSalary = parseFloat(btn.dataset.playerSalary || '0');
+            const playerYears = parseInt(btn.dataset.playerYears || '1', 10);
+
+            openModal({
+              id: playerId,
+              name: playerName,
+              position: playerPosition,
+              salary: playerSalary,
+              years: playerYears
+            });
+          });
+        });
+
+        // Remove contract action buttons
+        document.querySelectorAll('.contract-action-remove').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerId = btn.dataset.playerId;
+            if (playerId) {
+              removeContractAction(playerId);
+            }
+          });
+        });
+      }, 0);
     };
 
     const updateYearTotals = (rows = [], deadMoney = []) => {
@@ -2362,8 +3267,14 @@ const serializedConfig = JSON.stringify({
     };
 
     const calculateCapCharges = (rows = []) =>
-      salaryYears.map((_, index) =>
-        rows.reduce((sum, player) => {
+      salaryYears.map((_, index) => {
+        let total = rows.reduce((sum, player) => {
+          // Skip cut/traded players
+          const action = contractActions[player.id];
+          if (action && (action.type === 'cut' || action.type === 'trade')) {
+            return sum;
+          }
+
           if ((player.contractYears ?? 0) > index) {
             const isCurrent = index === 0;
             const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
@@ -2378,8 +3289,17 @@ const serializedConfig = JSON.stringify({
             return sum + (salaryForYear * percent || 0);
           }
           return sum;
-        }, 0)
-      );
+        }, 0);
+
+        // Add franchise tag salaries for this specific year
+        Object.values(contractActions).forEach(action => {
+          if (action.type === 'franchise' && action.ufaYearIndex === index) {
+            total += Number(action.newSalary ?? 0);
+          }
+        });
+
+        return total;
+      });
 
     const calculateBucketCaps = (rows = []) =>
       rows.reduce(
@@ -2526,9 +3446,46 @@ const serializedConfig = JSON.stringify({
     };
 
     const updateView = () => {
+      console.log('updateView called, contractActions:', contractActions);
       const { seasonData, teamData } = getTeamData();
-      const rows = buildDisplayRows(teamData);
-      const deadMoney = aggregateDeadMoney(seasonData, currentTeam);
+      let rows = buildDisplayRows(teamData);
+      console.log('Initial rows count:', rows.length);
+
+      // Apply contract actions to rows
+      rows = rows.map(player => {
+        const action = contractActions[player.id];
+        if (!action) return player;
+        console.log('Applying action to player:', player.id, action);
+
+        // Keep cut/traded players in the list (they'll be shown at 50% opacity)
+        // but don't modify their data
+        if (action.type === 'cut' || action.type === 'trade') {
+          return player;
+        }
+
+        // Apply salary/years changes (but not for franchise tags - those are shown in specific year columns)
+        if (action.type === 'franchise') {
+          // Don't modify player data for franchise tags
+          return player;
+        }
+
+        // For extensions, update salary and years
+        return {
+          ...player,
+          salary: action.newSalary ?? player.salary,
+          contractYears: action.newYears ?? player.contractYears
+        };
+      });
+
+      let deadMoney = aggregateDeadMoney(seasonData, currentTeam);
+
+      // Add dead money from contract actions (cuts)
+      Object.values(contractActions).forEach(action => {
+        if (action.type === 'cut') {
+          deadMoney[0] = (deadMoney[0] || 0) + (action.currentPenalty || 0);
+          deadMoney[1] = (deadMoney[1] || 0) + (action.futurePenalty || 0);
+        }
+      });
       const yearTotals = updateYearTotals(rows, deadMoney);
       const capCharges = calculateCapCharges(rows);
       const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));
