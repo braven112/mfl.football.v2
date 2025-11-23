@@ -950,13 +950,11 @@ const serializedConfig = JSON.stringify({
       </div>
 
     <!-- Players by Team Report -->
-    <div class="chart-card chart-card--sub">
-      <div class="chart-card__header">
-        <h3>Players by NFL Team</h3>
-        <p class="chart-card__sub">Current roster distribution by NFL team</p>
-      </div>
-      <div id="playersbyTeamContainer"></div>
+    <div class="analytics-section">
+      <h3 class="analytics-section__title">NFL Analysis</h3>
+      <p class="analytics-section__sub">Players on the same NFL team</p>
     </div>
+    <div id="playersbyTeamContainer" class="nfl-teams-grid"></div>
     <!-- End Players by Team Report -->
 
     </div>
@@ -1371,7 +1369,7 @@ const serializedConfig = JSON.stringify({
     gap: var(--padding-md);
   }
 
-  .chart-card {
+  :global(.chart-card) {
     background: var(--card-bg-color, #fff);
     border-radius: 1rem;
     padding: var(--padding-md);
@@ -1382,21 +1380,21 @@ const serializedConfig = JSON.stringify({
     grid-template-rows: min-content;
   }
 
-  .chart-card__header {
+  :global(.chart-card__header) {
     display: flex;
     flex-direction: column;
     gap: 0;
     align-self: start;
   }
 
-  .chart-card__header h3 {
+  :global(.chart-card__header h3) {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--text-primary-color, #111827);
   }
 
-  .chart-card__sub {
+  :global(.chart-card__sub) {
     margin: 0.15rem 0 0;
     color: var(--text-secondary-color, #64748b);
     font-size: 0.9rem;
@@ -2343,26 +2341,39 @@ const serializedConfig = JSON.stringify({
   }
 
   /* Players by Team Report */
-  .team-group {
+  :global(.nfl-teams-grid) {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--padding-md);
+  }
+
+  :global(.team-group) {
     margin-bottom: 2rem;
   }
 
-  .team-group__name {
+  :global(.team-group__name) {
     font-size: 1rem;
     font-weight: 600;
     color: #111;
-    margin: 0 0 1rem 0;
+    margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
-  .team-group__players {
+  :global(.team-group__logo) {
+    height: 2rem;
+    object-fit: contain;
+    align-self: flex-start;
+  }
+
+
+  :global(.team-group__players) {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
 
-  .players-team__player {
+  :global(.players-team__player) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2372,35 +2383,43 @@ const serializedConfig = JSON.stringify({
     gap: 1rem;
   }
 
-  .players-team__player .player-cell {
+  :global(.players-team__player .player-cell) {
     flex: 1;
   }
 
-  .players-team__salary {
+  :global(.players-team__salary) {
     font-weight: 600;
     color: #111;
     white-space: nowrap;
     flex-shrink: 0;
     font-size: 0.875rem;
+    text-align: right;
   }
 
   @media (max-width: 640px) {
-    .team-group {
+    :global(.team-group) {
       margin-bottom: 1.5rem;
     }
 
-    .team-group__name {
+    :global(.team-group__name) {
       font-size: 0.875rem;
     }
 
-    .players-team__player {
+    :global(.players-team__player) {
       padding: 0.5rem;
       gap: 0.75rem;
     }
 
-    .players-team__salary {
+    :global(.players-team__salary) {
       font-size: 0.75rem;
     }
+  }
+  .analytics-section__title + .analytics-section__sub {
+    margin-top: -1rem;
+  }
+  .analytics-section__sub{
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
   }
 </style>
 
@@ -3144,8 +3163,10 @@ const serializedConfig = JSON.stringify({
         playersByTeam[nflTeam].push(player);
       });
 
-      // Sort teams alphabetically
-      const sortedTeams = Object.keys(playersByTeam).sort();
+      // Sort teams alphabetically and filter to only teams with more than one player
+      const sortedTeams = Object.keys(playersByTeam)
+        .filter((team) => playersByTeam[team].length > 1)
+        .sort();
 
       // Build HTML
       const teamsHtml = sortedTeams.map((team) => {
@@ -3172,14 +3193,16 @@ const serializedConfig = JSON.stringify({
                   </div>
                 </div>
               </div>
-              <span class="players-team__salary">${salary}</span>
+              <div class="players-team__salary">${salary}</div>
             </div>
           `;
         }).join('');
 
         return `
-          <div class="team-group">
-            <h4 class="team-group__name">${team}</h4>
+          <div class="chart-card">
+            <div class="chart-card__header">
+              <img src="${buildNflLogoUrl(team)}" alt="${team}" class="team-group__logo" />
+            </div>
             <div class="team-group__players">
               ${playersHtml}
             </div>
