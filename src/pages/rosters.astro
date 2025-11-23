@@ -605,9 +605,7 @@ const serializedConfig = JSON.stringify({
             {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
           </h2>
           <p data-team-meta>
-            {teamLookup[defaultTeamId]?.division
-              ? `${teamLookup[defaultTeamId]?.division} Division`
-              : 'Independent'}
+            {teamLookup[defaultTeamId]?.division ?? 'Independent'}
           </p>
         </div>
         <div class="view-tabs">
@@ -1081,6 +1079,14 @@ const serializedConfig = JSON.stringify({
     border-radius: none;
   }
 
+  /* Mobile: Stack team card content */
+  @media (max-width: 768px) {
+    .team-card {
+      flex-wrap: wrap;
+      padding-bottom: var(--padding-xxl);/* Make room for tabs below */
+      justify-content: center;
+    }
+  }
 
   /* View Tabs */
   .view-tabs {
@@ -1090,6 +1096,18 @@ const serializedConfig = JSON.stringify({
     transform: translateY(-50%);
     display: flex;
     gap: 0.5rem;
+  }
+
+  /* Mobile: Stack tabs below team info */
+  @media (max-width: 768px) {
+    .view-tabs {
+      position: static;
+      transform: none;
+      width: 100%;
+      justify-content: center;
+      margin-top: var(--padding-md);
+      order: 3; /* Place tabs at the end */
+    }
   }
 
   .view-tab {
@@ -2185,7 +2203,7 @@ const serializedConfig = JSON.stringify({
         el.textContent = meta?.name ?? 'Franchise';
       });
       const bits = [];
-      if (meta?.division) bits.push(`${meta.division} Division`);
+      if (meta?.division) bits.push(meta.division);
       if (recordText) bits.push(recordText);
       const metaText = bits.join(' • ') || 'Independent';
       teamMetas.forEach((el) => {
