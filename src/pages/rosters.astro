@@ -5,6 +5,8 @@ import MetricCard from '../components/theleague/MetricCard.astro';
 import ChartCard from '../components/theleague/ChartCard.astro';
 import DonutChart from '../components/theleague/DonutChart.astro';
 import BarChart from '../components/theleague/BarChart.astro';
+import AgeDistributionChart from '../components/theleague/AgeDistributionChart.astro';
+import FranchiseTagEligibility from '../components/theleague/FranchiseTagEligibility.astro';
 import type { ChartSlice } from '../scripts/chart-utils';
 import {
   parseNumber,
@@ -376,6 +378,7 @@ const buildSeasonPayload = (season, rawData) => {
       nflLogo: getNflLogoUrl(nflTeam),
       rosterSlot: normalizeStatus(player.status),
       byeWeek: nflByeWeeks[nflTeam] ?? null,
+      birthdate: player.birthdate ?? null,
     };
   });
 
@@ -567,6 +570,10 @@ const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
 const initialCapSlices: ChartSlice[] = [];
 const initialRosterSlices: ChartSlice[] = [];
 const initialPositionSlices: ChartSlice[] = [];
+const initialAgeDistributionSlices: ChartSlice[] = [];
+const initialPositionalAgeSlices: ChartSlice[] = [];
+let initialAverageAge: number | null = null;
+const initialAllPlayers: any[] = [];
 
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
@@ -597,7 +604,7 @@ const serializedConfig = JSON.stringify({
   <section class="roster-page">
     <header class="roster-page__header">
       <div>
-        <h1>GM Central</h1>
+        <h2>GM Central</h2>
       </div>
       
     </header>
@@ -877,6 +884,14 @@ const serializedConfig = JSON.stringify({
       <ChartCard title="Position Allocation" subtitle="Current season cap by position">
         <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
       </ChartCard>
+      </div>
+      <div class="chart-grid">
+      <ChartCard title="Age Distribution" subtitle="Roster composition by age bracket">
+        <AgeDistributionChart chartId="ageChart" slices={initialAgeDistributionSlices} />
+      </ChartCard>
+      <ChartCard title="Average Age by Position" subtitle="Years old by position group">
+        <BarChart chartId="posAgeBar" slices={initialPositionalAgeSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+      </ChartCard>
     </div>
     <div class="chart-card chart-card--sub">
       <div class="chart-card__header">
@@ -940,8 +955,18 @@ const serializedConfig = JSON.stringify({
         value={formatCurrency(initialDeadMoney2026)}
         valueId="summaryDeadMoney2026"
       />
+      <MetricCard
+        label="Average Age"
+        value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
+        valueId="summaryAverageAge"
+      />
     </div>
     <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
+    <div class="chart-grid">
+      <ChartCard title="Franchise Tag Eligible (2026)" subtitle="Out of contract, top 10 in points at position" span="full">
+        <FranchiseTagEligibility players={initialAllPlayers} />
+      </ChartCard>
+    </div>
     </div>
     <!-- End Analytics View -->
 
@@ -2793,6 +2818,8 @@ const serializedConfig = JSON.stringify({
   const rosterDonut = document.getElementById('rosterDonut');
   const rosterLegend = null; // no longer needed in DOM
   const posBar = document.getElementById('posBar');
+  const ageChart = document.getElementById('ageChart');
+  const posAgeBar = document.getElementById('posAgeBar');
   const subtotalActive = document.getElementById('subtotalActive');
   const subtotalPractice = document.getElementById('subtotalPractice');
   const subtotalInjured = document.getElementById('subtotalInjured');
@@ -3431,7 +3458,7 @@ const serializedConfig = JSON.stringify({
       // legend removed (subtotals act as legend)
     };
 
-    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0) => {
+    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null) => {
       if (!el) return;
       if (!total || total <= 0 || !slices.length) {
         el.innerHTML = '';
@@ -3449,6 +3476,9 @@ const serializedConfig = JSON.stringify({
         .map((pos) => sliceMap.get(pos.toUpperCase()))
         .filter((slice) => slice !== undefined && slice.value > 0);
 
+      // Use provided formatter or default to currency formatter
+      const formatValue = formatter || ((v) => formatCurrency.format(v));
+
       // Build bar HTML
       const barsHTML = orderedBars
         .map((slice) => {
@@ -3457,7 +3487,7 @@ const serializedConfig = JSON.stringify({
             <div class="bar-item">
               <div class="bar-label">
                 <span class="bar-label-position">${slice.label}</span>
-                <span class="bar-label-value">${formatCurrency.format(slice.value)}</span>
+                <span class="bar-label-value">${formatValue(slice.value)}</span>
               </div>
               <div class="bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
             </div>
@@ -3466,6 +3496,113 @@ const serializedConfig = JSON.stringify({
         .join('');
 
       el.innerHTML = barsHTML;
+    };
+
+    const buildAgeDistributionChart = (el, slices = [], total = 0) => {
+      if (!el) return;
+      if (!total || total <= 0 || !slices.length) {
+        el.innerHTML = '';
+        return;
+      }
+
+      const barsHTML = slices
+        .map((slice) => {
+          const percentage = (slice.value / total) * 100;
+          return `
+            <div class="age-bar-item">
+              <div class="age-bar-label">
+                <span class="age-bar-label-range">${slice.label}</span>
+                <span class="age-bar-label-count">${slice.value} player${slice.value !== 1 ? 's' : ''}</span>
+              </div>
+              <div class="age-bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
+            </div>
+          `;
+        })
+        .join('');
+
+      el.innerHTML = barsHTML;
+    };
+
+    const calculateAge = (birthdate) => {
+      if (!birthdate) return null;
+      const birthDate = new Date(birthdate * 1000);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    const calculateAverageAge = (players = []) => {
+      const ages = players
+        .map((p) => calculateAge(p.birthdate))
+        .filter((age) => age !== null);
+      if (ages.length === 0) return null;
+      return Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
+    };
+
+    const calculateAverageAgeByPosition = (players = []) => {
+      const byPosition = new Map();
+      players.forEach((player) => {
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        const age = calculateAge(player.birthdate);
+        if (age !== null) {
+          if (!byPosition.has(pos)) {
+            byPosition.set(pos, []);
+          }
+          byPosition.get(pos).push(age);
+        }
+      });
+
+      const result = new Map();
+      byPosition.forEach((ages, position) => {
+        const avgAge = Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
+        result.set(position, { avgAge, count: ages.length });
+      });
+      return result;
+    };
+
+    const getAgeDistribution = (players = [], bucketSize = 5) => {
+      const ages = players
+        .map((p) => calculateAge(p.birthdate))
+        .filter((age) => age !== null);
+      if (ages.length === 0) {
+        return [];
+      }
+
+      const buckets = new Map();
+      ages.forEach((age) => {
+        const bucketStart = Math.floor(age / bucketSize) * bucketSize;
+        buckets.set(bucketStart, (buckets.get(bucketStart) ?? 0) + 1);
+      });
+
+      return Array.from(buckets.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([bucketStart, count]) => ({
+          range: `${bucketStart}-${bucketStart + bucketSize - 1}`,
+          count,
+          percentage: Math.round((count / ages.length) * 100),
+        }));
+    };
+
+    const getAgeDistributionColors = (count) => {
+      const colors = [
+        '#22c55e', // green (younger)
+        '#84cc16', // lime
+        '#eab308', // yellow
+        '#f97316', // orange
+        '#ef4444', // red (older)
+      ];
+      if (count <= colors.length) {
+        return colors.slice(0, count);
+      }
+      const result = [];
+      for (let i = 0; i < count; i++) {
+        result.push(colors[i % colors.length]);
+      }
+      return result;
     };
 
     const applyHiddenColumns = () => {
@@ -3589,6 +3726,80 @@ const serializedConfig = JSON.stringify({
       const posTotal = posSlices.reduce((sum, s) => sum + s.value, 0);
       const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
       buildBarChart(posBar, posSlices, positionOrder, posTotal);
+
+      // Age-related calculations and rendering
+      const ageDistribution = getAgeDistribution(rows);
+      const ageColors = getAgeDistributionColors(ageDistribution.length);
+      const ageDistributionSlices = ageDistribution.map((item, idx) => ({
+        label: item.range,
+        value: item.count,
+        color: ageColors[idx]
+      }));
+      const ageDistTotal = ageDistributionSlices.reduce((sum, s) => sum + s.value, 0);
+      if (ageChart) {
+        buildAgeDistributionChart(ageChart, ageDistributionSlices, ageDistTotal);
+      }
+
+      const avgAgeByPos = calculateAverageAgeByPosition(rows);
+      const posAgeSlices = positionOrder
+        .map(pos => {
+          const data = avgAgeByPos.get(pos);
+          if (!data) return null;
+          const upper = pos.toUpperCase();
+          const color = positionColors[upper] ?? '#999';
+          return {
+            label: pos,
+            value: data.avgAge,
+            color
+          };
+        })
+        .filter(s => s !== null);
+      const maxAge = Math.max(...posAgeSlices.map(s => s.value), 0) || 40;
+      const ageFormatter = (v) => `${v.toFixed(1)} years`;
+      if (posAgeBar) {
+        buildBarChart(posAgeBar, posAgeSlices, positionOrder, maxAge, ageFormatter);
+      }
+
+      const teamAvgAge = calculateAverageAge(rows);
+      const summaryAvgAge = document.getElementById('summaryAverageAge');
+      if (summaryAvgAge && teamAvgAge !== null) {
+        summaryAvgAge.textContent = `${teamAvgAge} years`;
+      }
+
+      // Update franchise tag eligibility component
+      // Collect ALL league players for ranking, but only show selected team's eligible players
+      const allLeaguePlayers = [];
+      if (seasonData && seasonData.teams) {
+        Object.values(seasonData.teams).forEach(team => {
+          const teamPlayers = [
+            ...(team.players || []),
+            ...(team.practiceSquad || []),
+            ...(team.injuredReserve || [])
+          ];
+          allLeaguePlayers.push(...teamPlayers);
+        });
+      }
+
+      // Include all league players for ranking purposes, but also mark which team they belong to
+      const allPlayersForTag = allLeaguePlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        position: p.position,
+        salary: p.salary,
+        points: p.points || 0,
+        franchiseId: p.franchiseId,
+        nflTeam: p.nflTeam,
+        headshot: p.headshot,
+        nflLogo: p.nflLogo,
+        contractYears: p.contractYears,
+      }));
+
+      const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');
+      if (franchiseTagEl) {
+        // Pass all league players for ranking, but filter to current team in component
+        franchiseTagEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
+        franchiseTagEl.dataset.currentTeam = currentTeam;
+      }
 
       if (rosterMetadata) {
         rosterMetadata.textContent = `Season ${

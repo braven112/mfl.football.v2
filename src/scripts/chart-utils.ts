@@ -186,3 +186,44 @@ export function buildBarChart(
 
   element.innerHTML = barsHTML;
 }
+
+/**
+ * Build an age distribution chart showing player count by age bracket
+ * @param element - DOM element to render the chart into
+ * @param slices - Array of chart slices (one per age bracket)
+ * @param total - Total number of players for percentage calculation
+ */
+export function buildAgeDistributionChart(
+  element: HTMLElement | null,
+  slices: ChartSlice[] = [],
+  total?: number
+): void {
+  if (!element) return;
+
+  // Calculate total if not provided
+  const computedTotal = total ?? slices.reduce((sum, slice) => sum + slice.value, 0);
+
+  // Guard: invalid total or no slices
+  if (!computedTotal || computedTotal <= 0 || !slices.length) {
+    element.innerHTML = '';
+    return;
+  }
+
+  // Build bar HTML
+  const barsHTML = slices
+    .map((slice) => {
+      const percentage = (slice.value / computedTotal) * 100;
+      return `
+        <div class="age-bar-item">
+          <div class="age-bar-label">
+            <span class="age-bar-label-range">${slice.label}</span>
+            <span class="age-bar-label-count">${slice.value} player${slice.value !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="age-bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
+        </div>
+      `;
+    })
+    .join('');
+
+  element.innerHTML = barsHTML;
+}

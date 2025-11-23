@@ -105,6 +105,7 @@ const fetchPlayerMeta = async (playerIds) => {
         team: player?.team?.toUpperCase?.() ?? null,
         draftYear: player?.draft_year ? Number.parseInt(player.draft_year, 10) : null,
         draftTeam: player?.draft_team ?? null,
+        birthdate: player?.birthdate ? Number.parseInt(player.birthdate, 10) : null,
       });
     });
   });
@@ -133,6 +134,7 @@ const normalizePlayers = (rosterPayload, playerMetaMap, pointsMap = new Map()) =
         team: meta.team,
         draftYear: meta.draftYear,
         draftTeam: meta.draftTeam,
+        birthdate: meta.birthdate,
       });
     });
   });

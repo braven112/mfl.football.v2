@@ -20,6 +20,7 @@ export interface RosterPlayer {
   nflTeam?: string;
   byeWeek?: number | null;
   status?: string;
+  birthdate?: number; // Unix timestamp in seconds (from MFL API)
   // Annotation fields added by processing functions
   positionDivider?: boolean;
   positionDividerEnd?: boolean;

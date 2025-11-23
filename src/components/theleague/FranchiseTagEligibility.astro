@@ -1,0 +1,485 @@
+---
+/**
+ * FranchiseTagEligibility - Reusable component for displaying franchise tag eligible players
+ * Shows players who are out of contract in 2026 and top 10 in points at their position
+ */
+
+import { currencyFormatter } from '../../utils/formatters';
+import leagueAssets from '../../data/theleague.assets.json';
+
+export interface Props {
+  players: Array<{
+    id: string;
+    name: string;
+    position: string;
+    salary: number;
+    points: number;
+    franchiseId: string;
+    nflTeam: string;
+    headshot: string;
+    nflLogo: string;
+    contractYears: number;
+  }>;
+  showTeamLogo?: boolean;
+}
+
+// NFL team code to full name mapping
+const NFL_TEAM_NAMES: Record<string, string> = {
+  ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
+  CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
+  DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
+  HOU: 'Houston', IND: 'Indianapolis', JAC: 'Jacksonville', KC: 'Kansas City',
+  LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
+  MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
+  NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
+  SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
+};
+
+const { players = [], showTeamLogo = true } = Astro.props;
+
+// Filter to only those out of contract in 2026 (contractYears === 1) AND top 10 at their position
+const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+
+// First, rank ALL players by position to establish proper league-wide rankings
+const playersByPosition = new Map<string, (typeof players)[number][]>();
+players.forEach((player) => {
+  const pos = player.position?.toUpperCase() || 'UNK';
+  if (!playersByPosition.has(pos)) {
+    playersByPosition.set(pos, []);
+  }
+  playersByPosition.get(pos)!.push(player);
+});
+
+// Sort each position by points and get rankings for ALL players
+const playerRankings = new Map<string, number>(); // player id -> rank at position
+playersByPosition.forEach((posPlayers, pos) => {
+  posPlayers
+    .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
+    .forEach((player, idx) => {
+      playerRankings.set(player.id, idx + 1);
+    });
+});
+
+// Now filter to eligible players (out of contract, positive points) who are top 10 at their position
+const franchiseTagEligible: (typeof players[number] & { rank: number })[] = [];
+players.forEach((player) => {
+  if (player.contractYears === 1 && (player.points ?? 0) > 0) {
+    const rank = playerRankings.get(player.id);
+    if (rank && rank <= 10) {
+      franchiseTagEligible.push({ ...player, rank, position: player.position?.toUpperCase() || 'UNK' });
+    }
+  }
+});
+
+// Sort by position order for display
+franchiseTagEligible.sort((a, b) => {
+  const posA = a.position?.toUpperCase() || 'UNK';
+  const posB = b.position?.toUpperCase() || 'UNK';
+  const posDiff = positionOrder.indexOf(posA) - positionOrder.indexOf(posB);
+  if (posDiff !== 0) return posDiff;
+  return (a.rank ?? 0) - (b.rank ?? 0);
+});
+
+const withRanks = franchiseTagEligible;
+
+const DEFAULT_HEADSHOT_URL = 'https://s.yimg.com/cv/apiv2/default/nfl/nophoto.png';
+
+const getTeamName = (franchiseId: string) => {
+  return leagueAssets.teams?.find?.((f) => f.id === franchiseId)?.name || franchiseId;
+};
+
+const getTeamLogo = (franchiseId: string) => {
+  const team = leagueAssets.teams?.find?.((f) => f.id === franchiseId);
+  // Assuming the logo is the first icon in the assets.icons array
+  return team?.assets?.icons?.[0]?.relativePath || '';
+};
+
+const getPlayerDisplayName = (player: typeof players[0]): string => {
+  if (player.position?.toUpperCase() === 'DEF') {
+    const teamName = NFL_TEAM_NAMES[player.nflTeam] || player.nflTeam;
+    return `${teamName} Defense`;
+  }
+  return player.name;
+};
+
+const getPlayerAvatarSrc = (player: typeof players[0]): string => {
+  if (player.position?.toUpperCase() === 'DEF') {
+    return player.nflLogo || '';
+  }
+  return player.headshot || '';
+};
+---
+
+<div class="franchise-tag-eligibility" data-all-players={JSON.stringify(players)}>
+  {withRanks.length === 0 ? (
+    <div class="no-results">
+      <p>No players are currently eligible for the franchise tag and in the top 10 at their position in points score in 2025.</p>
+    </div>
+  ) : (
+    <div class="table-wrapper">
+      <table class="eligibility-table">
+        <thead>
+          <tr>
+            <th scope="col">Player</th>
+            <th scope="col">Pos</th>
+            <th scope="col" class="align-right">Points</th>
+            <th scope="col" class="align-right">2025 Salary</th>
+          </tr>
+        </thead>
+        <tbody>
+          {withRanks.map((player) => {
+            const isDefense = player.position?.toUpperCase() === 'DEF';
+            const displayName = getPlayerDisplayName(player);
+            const avatarSrc = getPlayerAvatarSrc(player);
+            return (
+            <tr>
+              <td data-label="Player">
+                <div class="player-cell">
+                  <div class={`player-cell__avatar${isDefense ? ' player-cell__avatar--def' : ''}`}>
+                    <img
+                      src={avatarSrc}
+                      alt={`${displayName} logo`}
+                      loading="lazy"
+                      decoding="async"
+                      onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                    />
+                  </div>
+                  <div>
+                    <strong>{displayName}</strong>
+                    {!isDefense && (
+                      <div class="player-meta">
+                        {player.nflTeam && player.nflTeam !== 'FA' && (
+                          <img
+                            src={player.nflLogo}
+                            alt={`${player.nflTeam} logo`}
+                            class="player-meta__logo"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                        <span class="player-meta__team">{player.nflTeam || 'FA'}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </td>
+              <td data-label="Position" class="align-center">{player.position}</td>
+              <td data-label="Points" class="align-right">{(player.points ?? 0).toFixed(2)}</td>
+              <td data-label="2025 Salary" class="align-right">{currencyFormatter.format(player.salary)}</td>
+            </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
+<script>
+  // NFL team code to full name mapping
+  const NFL_TEAM_NAMES = {
+    ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
+    CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
+    DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
+    HOU: 'Houston', IND: 'Indianapolis', JAC: 'Jacksonville', KC: 'Kansas City',
+    LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
+    MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
+    NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
+    SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
+  };
+
+  // Re-render the franchise tag eligibility table when data changes
+  const renderFranchiseTagTable = (containerEl) => {
+    const allPlayersJson = containerEl.dataset.allPlayers;
+    const currentTeam = containerEl.dataset.currentTeam;
+    if (!allPlayersJson) return;
+
+    try {
+      const allPlayers = JSON.parse(allPlayersJson);
+
+      const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+
+      // Rank ALL league players by position to establish proper league-wide rankings
+      const allPlayersByPosition = new Map();
+      allPlayers.forEach((player) => {
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        if (!allPlayersByPosition.has(pos)) {
+          allPlayersByPosition.set(pos, []);
+        }
+        allPlayersByPosition.get(pos).push(player);
+      });
+
+      // Sort each position by points and get rankings for ALL league players
+      const playerRankings = new Map(); // player id -> rank at position
+      allPlayersByPosition.forEach((posPlayers, pos) => {
+        posPlayers
+          .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
+          .forEach((player, idx) => {
+            playerRankings.set(player.id, idx + 1);
+          });
+      });
+
+      // Filter to only the current team's players for display
+      const teamPlayers = currentTeam ? allPlayers.filter(p => p.franchiseId === currentTeam) : allPlayers;
+
+      // Now filter to eligible players (out of contract, positive points) who are top 10 at their position league-wide
+      const eligible: Array<typeof allPlayers[0] & { rank: number; position: string }> = [];
+      teamPlayers.forEach((player) => {
+        if (player.contractYears === 1 && (player.points ?? 0) > 0) {
+          const rank = playerRankings.get(player.id);
+          if (rank && rank <= 10) {
+            eligible.push({ ...player, rank, position: (player.position ?? 'UNK').toUpperCase() });
+          }
+        }
+      });
+
+      // Sort by position order for display
+      const withRanks = eligible.sort((a, b) => {
+        const posA = a.position?.toUpperCase() || 'UNK';
+        const posB = b.position?.toUpperCase() || 'UNK';
+        const posDiff = positionOrder.indexOf(posA) - positionOrder.indexOf(posB);
+        if (posDiff !== 0) return posDiff;
+        return (a.rank ?? 0) - (b.rank ?? 0);
+      });
+
+      if (withRanks.length === 0) {
+        containerEl.innerHTML = '<div class="no-results"><p>No players are currently eligible for the franchise tag and in the top 10 at their position in points score in 2025.</p></div>';
+        return;
+      }
+
+      // Build table HTML
+      let tableHtml = `
+        <div class="table-wrapper">
+          <table class="eligibility-table">
+            <thead>
+              <tr>
+                <th scope="col">Player</th>
+                <th scope="col">Pos</th>
+                <th scope="col" class="align-right">Points</th>
+                <th scope="col" class="align-right">2025 Salary</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      const currencyFormatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      });
+
+      const DEFAULT_HEADSHOT = 'https://s.yimg.com/cv/apiv2/default/nfl/nophoto.png';
+
+      withRanks.forEach((player) => {
+        const isDefense = (player.position ?? '').toUpperCase() === 'DEF';
+        const displayName = isDefense
+          ? `${NFL_TEAM_NAMES[player.nflTeam] || player.nflTeam} Defense`
+          : player.name;
+        const avatarSrc = isDefense ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
+        const nflTeam = player.nflTeam || 'FA';
+
+        tableHtml += `
+          <tr>
+            <td data-label="Player">
+              <div class="player-cell">
+                <div class="player-cell__avatar${isDefense ? ' player-cell__avatar--def' : ''}">
+                  <img src="${avatarSrc}" alt="${displayName} logo" loading="lazy"
+                       onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT}';" />
+                </div>
+                <div>
+                  <strong>${displayName}</strong>
+                  ${!isDefense ? `
+                    <div class="player-meta">
+                      ${player.nflLogo ? `<img src="${player.nflLogo}" alt="${nflTeam} logo" class="player-meta__logo" loading="lazy" />` : ''}
+                      <span class="player-meta__team">${nflTeam}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </td>
+            <td data-label="Position" class="align-center">${player.position}</td>
+            <td data-label="Points" class="align-right">${(player.points ?? 0).toFixed(2)}</td>
+            <td data-label="2025 Salary" class="align-right">${currencyFormatter.format(player.salary)}</td>
+          </tr>
+        `;
+      });
+
+      tableHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      containerEl.innerHTML = tableHtml;
+    } catch (error) {
+      console.error('Failed to render franchise tag eligibility:', error);
+    }
+  };
+
+  // Find and render all franchise tag eligibility containers
+  document.querySelectorAll('.franchise-tag-eligibility').forEach((el) => {
+    renderFranchiseTagTable(el);
+  });
+
+  // Watch for data updates
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && (mutation.attributeName === 'data-all-players' || mutation.attributeName === 'data-current-team')) {
+        renderFranchiseTagTable(mutation.target);
+      }
+    });
+  });
+
+  document.querySelectorAll('.franchise-tag-eligibility').forEach((el) => {
+    observer.observe(el, { attributes: true });
+  });
+</script>
+
+<style>
+  .franchise-tag-eligibility {
+    width: 100%;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 2rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .eligibility-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .eligibility-table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+  }
+
+  .eligibility-table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .eligibility-table th.align-right {
+    text-align: right;
+  }
+
+  .eligibility-table th.align-center {
+    text-align: center;
+  }
+
+  .eligibility-table tbody tr {
+    border-bottom: 1px solid #e9ecef;
+    transition: background 0.2s ease;
+  }
+
+  .eligibility-table tbody tr:hover {
+    background: #f8f9fa;
+  }
+
+  .eligibility-table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+  }
+
+  .eligibility-table td.align-right {
+    text-align: right;
+  }
+
+  .eligibility-table td.align-center {
+    text-align: center;
+  }
+
+  .player-cell {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .player-cell__avatar {
+    flex-shrink: 0;
+  }
+
+  .player-cell__avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .player-cell__avatar--def img {
+    border-radius: 4px;
+    object-fit: contain;
+    background: #f0f0f0;
+  }
+
+  .player-cell strong {
+    display: block;
+    margin-bottom: 0.15rem;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+  }
+
+  .player-meta {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #666;
+  }
+
+  .player-meta__logo {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+
+  .player-meta__team {
+    font-weight: 500;
+  }
+
+  .franchise-cell {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .franchise-logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .eligibility-table {
+      font-size: 0.8rem;
+    }
+
+    .eligibility-table th,
+    .eligibility-table td {
+      padding: 0.5rem;
+    }
+
+    .player-cell__avatar img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .franchise-logo {
+      width: 20px;
+      height: 20px;
+    }
+  }
+</style>
