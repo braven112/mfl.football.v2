@@ -1363,9 +1363,15 @@ const serializedConfig = JSON.stringify({
     row-gap: var(--padding-lg);
   }
 
+  /* Full width for single-child chart grids (like Franchise Tag Options) */
+  .chart-grid:has(> :only-child) {
+    grid-template-columns: 1fr;
+  }
+
   @media (max-width: 768px) {
     .chart-grid {
       grid-template-columns: 1fr;
+      overflow: auto;
     }
   }
 
@@ -2346,6 +2352,12 @@ const serializedConfig = JSON.stringify({
     gap: var(--padding-md);
   }
 
+  @media (max-width: 768px) {
+    :global(.nfl-teams-grid) {
+      grid-template-columns: 1fr;
+    }
+  }
+
   :global(.team-group) {
     margin-bottom: 2rem;
   }
@@ -2413,6 +2425,18 @@ const serializedConfig = JSON.stringify({
       font-size: 0.75rem;
     }
   }
+
+  :global(.franchise-tag-eligibility .table-wrapper) {
+    overflow: auto;
+  }
+
+  @media (max-width: 768px) {
+    :global(.eligibility-table th:nth-child(2)),
+    :global(.eligibility-table td:nth-child(2)) {
+      display: none;
+    }
+  }
+
   .analytics-section__title + .analytics-section__sub {
     margin-top: -1rem;
     margin-bottom: 0;
