@@ -4,6 +4,7 @@ import leagueAssets from '../data/theleague.assets.json';
 import MetricCard from '../components/theleague/MetricCard.astro';
 import ChartCard from '../components/theleague/ChartCard.astro';
 import DonutChart from '../components/theleague/DonutChart.astro';
+import BarChart from '../components/theleague/BarChart.astro';
 import type { ChartSlice } from '../scripts/chart-utils';
 import {
   parseNumber,
@@ -874,7 +875,7 @@ const serializedConfig = JSON.stringify({
         <DonutChart chartId="rosterDonut" slices={initialRosterSlices} />
       </ChartCard>
       <ChartCard title="Position Allocation" subtitle="Current season cap by position">
-        <DonutChart chartId="posDonut" slices={initialPositionSlices} showLegend={true} />
+        <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
       </ChartCard>
     </div>
     <div class="chart-card chart-card--sub">
@@ -2791,8 +2792,7 @@ const serializedConfig = JSON.stringify({
   const capLegend = null; // no longer needed in DOM
   const rosterDonut = document.getElementById('rosterDonut');
   const rosterLegend = null; // no longer needed in DOM
-  const posDonut = document.getElementById('posDonut');
-  const posLegend = document.getElementById('posDonut-legend');
+  const posBar = document.getElementById('posBar');
   const subtotalActive = document.getElementById('subtotalActive');
   const subtotalPractice = document.getElementById('subtotalPractice');
   const subtotalInjured = document.getElementById('subtotalInjured');
@@ -3431,23 +3431,41 @@ const serializedConfig = JSON.stringify({
       // legend removed (subtotals act as legend)
     };
 
-    const renderLegendList = (el, slices = []) => {
+    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0) => {
       if (!el) return;
-      if (!slices.length) {
+      if (!total || total <= 0 || !slices.length) {
         el.innerHTML = '';
         return;
       }
-      el.innerHTML = slices
-        .map(
-          (slice) => `<div class="chart-legend__item">
-            <span class="chart-legend__label">
-              <span class="legend-dot" style="background:${slice.color}"></span>
-              ${slice.label}
-            </span>
-            <span class="chart-legend__value">${formatCurrency.format(slice.value)}</span>
-          </div>`
-        )
+
+      // Create a map of position -> slice for quick lookup
+      const sliceMap = new Map();
+      slices.forEach((slice) => {
+        sliceMap.set(slice.label.toUpperCase(), slice);
+      });
+
+      // Build bars in the specified order, only including positions in positionOrder
+      const orderedBars = positionOrder
+        .map((pos) => sliceMap.get(pos.toUpperCase()))
+        .filter((slice) => slice !== undefined && slice.value > 0);
+
+      // Build bar HTML
+      const barsHTML = orderedBars
+        .map((slice) => {
+          const percentage = (slice.value / total) * 100;
+          return `
+            <div class="bar-item">
+              <div class="bar-label">
+                <span class="bar-label-position">${slice.label}</span>
+                <span class="bar-label-value">${formatCurrency.format(slice.value)}</span>
+              </div>
+              <div class="bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
+            </div>
+          `;
+        })
         .join('');
+
+      el.innerHTML = barsHTML;
     };
 
     const applyHiddenColumns = () => {
@@ -3562,16 +3580,15 @@ const serializedConfig = JSON.stringify({
       }
 
       const positionCaps = calculatePositionCaps(rows);
-      const posEntries = Object.entries(positionCaps).sort((a, b) => b[1] - a[1]);
       const posPalette = ['#a855f7', '#ec4899', '#facc15', '#c084fc'];
-      const posSlices = posEntries.map(([label, value], idx) => {
+      const posSlices = Object.entries(positionCaps).map(([label, value], idx) => {
         const upper = label.toUpperCase();
         const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
         return { label, value, color };
       });
       const posTotal = posSlices.reduce((sum, s) => sum + s.value, 0);
-      buildDonut(posDonut, posSlices, posTotal);
-      renderLegendList(posLegend, posSlices);
+      const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+      buildBarChart(posBar, posSlices, positionOrder, posTotal);
 
       if (rosterMetadata) {
         rosterMetadata.textContent = `Season ${

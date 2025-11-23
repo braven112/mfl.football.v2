@@ -125,3 +125,64 @@ export function renderChartWithLegend(
     renderLegend(legendElement, slices, formatter);
   }
 }
+
+/**
+ * Build a horizontal bar chart
+ * @param element - DOM element to render the chart into
+ * @param slices - Array of chart slices
+ * @param positionOrder - Order in which to display positions (e.g., ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'])
+ * @param total - Total value for percentage calculation
+ */
+export function buildBarChart(
+  element: HTMLElement | null,
+  slices: ChartSlice[] = [],
+  positionOrder: string[] = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
+  total?: number
+): void {
+  if (!element) return;
+
+  // Calculate total if not provided
+  const computedTotal = total ?? slices.reduce((sum, slice) => sum + slice.value, 0);
+
+  // Guard: invalid total or no slices
+  if (!computedTotal || computedTotal <= 0 || !slices.length) {
+    element.innerHTML = '';
+    return;
+  }
+
+  // Create a map of position -> slice for quick lookup
+  const sliceMap = new Map<string, ChartSlice>();
+  slices.forEach((slice) => {
+    sliceMap.set(slice.label.toUpperCase(), slice);
+  });
+
+  // Build bars in the specified order, only including positions in positionOrder
+  const orderedBars = positionOrder
+    .map((pos) => sliceMap.get(pos.toUpperCase()))
+    .filter((slice): slice is ChartSlice => slice !== undefined && slice.value > 0);
+
+  // Default currency formatter
+  const defaultFormatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  });
+
+  // Build bar HTML
+  const barsHTML = orderedBars
+    .map((slice) => {
+      const percentage = (slice.value / computedTotal) * 100;
+      return `
+        <div class="bar-item">
+          <div class="bar-label">
+            <span class="bar-label-position">${slice.label}</span>
+            <span class="bar-label-value">${defaultFormatter.format(slice.value)}</span>
+          </div>
+          <div class="bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
+        </div>
+      `;
+    })
+    .join('');
+
+  element.innerHTML = barsHTML;
+}
