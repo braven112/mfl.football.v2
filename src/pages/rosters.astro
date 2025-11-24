@@ -1086,6 +1086,14 @@ const serializedConfig = JSON.stringify({
     <div id="playersbyTeamContainer" class="nfl-teams-grid"></div>
     <!-- End Players by Team Report -->
 
+    <!-- Players by College Report -->
+    <div class="analytics-section">
+      <h3 class="analytics-section__title">College Analysis</h3>
+      <p class="analytics-section__sub">Players who played for the same college</p>
+    </div>
+    <div id="playersByCollegeContainer" class="nfl-teams-grid"></div>
+    <!-- End Players by College Report -->
+
     </div>
     <!-- End Analytics View -->
 
@@ -2502,6 +2510,18 @@ const serializedConfig = JSON.stringify({
     object-fit: contain;
     align-self: flex-start;
   }
+  :global(.team-group__logo--fallback) {
+    height: 2rem;
+    width: 2rem;
+    border-radius: 0.5rem;
+    background: #e2e8f0;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+  }
 
 
   :global(.team-group__players) {
@@ -3151,6 +3171,7 @@ const serializedConfig = JSON.stringify({
   const ageChart = document.getElementById('ageChart');
   const posAgeBar = document.getElementById('posAgeBar');
   const playersbyTeamContainer = document.getElementById('playersbyTeamContainer');
+  const playersByCollegeContainer = document.getElementById('playersByCollegeContainer');
   const subtotalActive = document.getElementById('subtotalActive');
   const subtotalPractice = document.getElementById('subtotalPractice');
   const subtotalInjured = document.getElementById('subtotalInjured');
@@ -3410,6 +3431,72 @@ const serializedConfig = JSON.stringify({
       }).join('');
 
       playersbyTeamContainer.innerHTML = teamsHtml || '<p style="text-align: center; color: #999;">No players</p>';
+    };
+
+    const renderPlayersByCollege = (playersData = []) => {
+      if (!playersByCollegeContainer) return;
+
+      const playersByCollege = {};
+      playersData.forEach((player) => {
+        const pos = (player.position || '').toUpperCase();
+        const college = (player.college || '').trim();
+        if (!college || college.toLowerCase() === 'unknown') return;
+        if (pos === 'DEF') return;
+        if (!playersByCollege[college]) {
+          playersByCollege[college] = [];
+        }
+        playersByCollege[college].push(player);
+      });
+
+      const sortedColleges = Object.keys(playersByCollege)
+        .filter((college) => college && playersByCollege[college].length > 1)
+        .sort((a, b) => a.localeCompare(b));
+
+      const collegesHtml = sortedColleges.map((college) => {
+        const collegePlayers = playersByCollege[college];
+        const playersHtml = collegePlayers.map((player) => {
+          const headshot = player.headshot || buildPlayerImageUrl(player.id);
+          const position = player.position || 'UNK';
+          const baseSalary = Number(player.salary || 0);
+          const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
+          const salary = formatCurrency.format(salaryForYear);
+          return `
+            <div class="players-team__player">
+              <div class="player-cell">
+                <div class="player-cell__avatar">
+                  <img src="${headshot}" alt="${player.name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${player.name}</strong>
+                  <div class="player-meta">
+                    <span class="player-meta__pos">${position}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="players-team__salary">${salary}</div>
+            </div>
+          `;
+        }).join('');
+
+        const logo = collegePlayers[0]?.collegeLogo;
+        const collegeLogoMarkup = logo
+          ? `<img src="${logo}" alt="${college}" class="team-group__logo" />`
+          : `<div class="team-group__logo team-group__logo--fallback">${college[0] ?? '?'}</div>`;
+
+        return `
+          <div class="chart-card">
+            <div class="chart-card__header">
+              ${collegeLogoMarkup}
+              <div class="chart-card__title">${college}</div>
+            </div>
+            <div class="team-group__players">
+              ${playersHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      playersByCollegeContainer.innerHTML = collegesHtml || '<p style="text-align: center; color: #999;">No players</p>';
     };
 
     const renderDeadMoney = (seasonData = {}, franchiseId) => {
@@ -4363,6 +4450,7 @@ const serializedConfig = JSON.stringify({
 
       // Render players by team report
       renderPlayersbyTeam(rows);
+      renderPlayersByCollege(rows);
 
       // Update franchise tag eligibility component
       // Collect ALL league players for ranking, but only show selected team's eligible players
