@@ -21,7 +21,8 @@ if (!leagueId) {
 }
 
 const year = process.env.MFL_YEAR || new Date().getFullYear().toString();
-const week = process.env.MFL_WEEK || 'YTD';
+// Only include a week param when explicitly provided; otherwise let MFL serve latest/YTD.
+const week = process.env.MFL_WEEK || null;
 const host = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 
 const outDir = path.join('src', 'data', 'mfl-feeds', year);
@@ -45,10 +46,12 @@ const isFreshToday = () => {
   }
 };
 
+const withWeek = (baseUrl) => (week ? `${baseUrl}&W=${week}` : baseUrl);
+
 const endpoints = [
   {
     key: 'rosters',
-    url: `${host}/${year}/export?TYPE=rosters&L=${leagueId}&W=${week}&JSON=1`,
+    url: withWeek(`${host}/${year}/export?TYPE=rosters&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
   {
@@ -68,7 +71,7 @@ const endpoints = [
   },
   {
     key: 'transactions',
-    url: `${host}/${year}/export?TYPE=transactions&L=${leagueId}&W=${week}&JSON=1`,
+    url: withWeek(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
   {
@@ -83,7 +86,7 @@ const endpoints = [
   },
   {
     key: 'standings',
-    url: `${host}/${year}/export?TYPE=standings&L=${leagueId}&W=${week}&JSON=1`,
+    url: withWeek(`${host}/${year}/export?TYPE=standings&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
 ];
