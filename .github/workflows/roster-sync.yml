@@ -25,11 +25,12 @@ jobs:
 
       - name: Sync rosters from MFL
         env:
-          MFL_LEAGUE_ID: ${{ secrets.MFL_LEAGUE_ID }}
-          MFL_YEAR: ${{ secrets.MFL_YEAR }}
-          MFL_SEASON: ${{ secrets.MFL_SEASON }}
-          MFL_WEEK: ${{ secrets.MFL_WEEK }}
-          MFL_HOST: ${{ secrets.MFL_HOST }}
+          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID }}
+          # Optional: use repository variables for non-secret config like year/season.
+          MFL_YEAR: ${{ vars.MFL_YEAR }}
+          MFL_SEASON: ${{ vars.MFL_SEASON }}
+          MFL_WEEK: ${{ vars.MFL_WEEK }}
+          MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
