@@ -308,11 +308,12 @@ const run = async () => {
   }
 
   const fetchRostersWithFallback = async (week) => {
-    const weekLabel = week ? `, week ${week}` : ', YTD';
+    const weekLabel = week ? `, week ${week}` : ', latest';
     console.log(
       `[salary-averages] Fetching rosters for league ${leagueId} (${season}${weekLabel})...`
     );
-    const weekParam = week ? { W: week } : { W: 'YTD' };
+    // Only include a week param when intentionally freezing; otherwise let MFL serve the latest/YTD.
+    const weekParam = week ? { W: week } : {};
     try {
       return {
         payload: await fetchExport('rosters', weekParam, {
@@ -399,7 +400,7 @@ const run = async () => {
     frozenWeek: lockedWeek ?? null,
     sources: {
       rosters: `${apiBase}/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1${
-        effectiveWeek ? `&W=${effectiveWeek}` : configuredWeek ? `&W=${configuredWeek}` : ''
+        effectiveWeek ? `&W=${effectiveWeek}` : ''
       }`,
       players: `${apiBase}/${season}/export?TYPE=players&DETAILS=1`,
       weeklyResults: `${apiBase}/${season}/export?TYPE=weeklyResults&L=${leagueId}&W=YTD&JSON=1`,
