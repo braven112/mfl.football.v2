@@ -46,12 +46,11 @@ export function getPlayerImageUrl(playerId?: string): string {
 /**
  * Get NFL team logo URL by team code
  * @param teamCode - 2-3 letter team code (e.g., 'SF', 'KC')
- * @returns URL to NFL team logo SVG
+ * @returns URL to NFL team logo SVG (served locally)
  */
 export function getNflLogoUrl(teamCode?: string): string {
-  return teamCode
-    ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
-    : '';
+  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+  return `/assets/nfl-logos/${teamCode}.svg`;
 }
 
 /**

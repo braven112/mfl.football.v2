@@ -18,8 +18,9 @@
     "test:watch": "vitest",
     "sync:theleague": "node ./scripts/sync-theleague-assets.mjs",
     "update:salary-averages": "node ./scripts/update-salary-averages.mjs",
+    "download:nfl-logos": "node ./scripts/download-nfl-logos.mjs",
     "predev": "pnpm run sync:theleague && pnpm run update:salary-averages",
-    "prebuild": "pnpm run sync:theleague && pnpm run update:salary-averages",
+    "prebuild": "pnpm run sync:theleague && pnpm run update:salary-averages && pnpm run download:nfl-logos",
     "fetch:mfl": "node ./scripts/fetch-mfl-feeds.mjs && node ./scripts/update-salary-averages.mjs",
     "preview": "astro preview",
     "astro": "astro"

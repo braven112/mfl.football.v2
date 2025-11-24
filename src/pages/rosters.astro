@@ -6,7 +6,7 @@ import ChartCard from '../components/theleague/ChartCard.astro';
 import DonutChart from '../components/theleague/DonutChart.astro';
 import BarChart from '../components/theleague/BarChart.astro';
 import AgeDistributionChart from '../components/theleague/AgeDistributionChart.astro';
-import FranchiseTagEligibility from '../components/theleague/FranchiseTagEligibility.astro';
+import FranchiseOptions from '../components/theleague/FranchiseOptions.astro';
 import type { ChartSlice } from '../scripts/chart-utils';
 import {
   parseNumber,
@@ -90,12 +90,48 @@ const getPlayerImageUrl = (playerId) =>
     ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
 
-const getNflLogoUrl = (teamCode) =>
-  teamCode
-    ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
-    : '';
+const getNflLogoUrl = (teamCode) => {
+  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+  return `/assets/nfl-logos/${teamCode}.svg`;
+};
 
 const parseAdjustmentMeta = (description = '') => {
+  // Normalize team codes from various formats to standard 2-letter codes
+  const normalizeTeamCode = (team) => {
+    const map = {
+      // AFC East
+      BUF: 'BUF', MIA: 'MIA', NE: 'NE', NEP: 'NE',
+      NYJ: 'NYJ',
+      // AFC North
+      BAL: 'BAL', CIN: 'CIN', CLE: 'CLE', CLV: 'CLE',
+      PIT: 'PIT',
+      // AFC South
+      HOU: 'HOU', IND: 'IND', JAX: 'JAX', JAC: 'JAX',
+      TEN: 'TEN',
+      // AFC West
+      DEN: 'DEN', KC: 'KC', KCC: 'KC',
+      LAC: 'LAC', SD: 'LAC',
+      LV: 'LV', LVR: 'LV', OAK: 'LV',
+      // NFC East
+      DAL: 'DAL', PHI: 'PHI', WAS: 'WAS', WSH: 'WAS',
+      NYG: 'NYG',
+      // NFC North
+      CHI: 'CHI', DET: 'DET', GB: 'GB', GBP: 'GB',
+      MIN: 'MIN',
+      // NFC South
+      ATL: 'ATL', CAR: 'CAR', NO: 'NO', NOR: 'NO', NOS: 'NO',
+      TB: 'TB', TBB: 'TB',
+      // NFC West
+      ARI: 'ARI', ARZ: 'ARI', LA: 'LAR', LAR: 'LAR', STL: 'LAR',
+      SF: 'SF', SFO: 'SF', SEA: 'SEA',
+      // Other
+      FA: 'FA',
+    };
+    if (!team) return '';
+    const upper = team.toString().toUpperCase();
+    return map[upper] ?? upper;
+  };
+
   const meta = {
     name: '',
     nflTeam: '',
@@ -114,10 +150,10 @@ const parseAdjustmentMeta = (description = '') => {
       meta.position = maybePosition.toUpperCase();
     }
 
-    // Extract NFL team (second to last part, like "NYG", "SFO")
+    // Extract NFL team (second to last part, like "NYG", "SFO", "TB", "SF")
     const maybeTeam = parts[parts.length - 2];
-    if (maybeTeam && maybeTeam.length === 3) {
-      meta.nflTeam = maybeTeam.toUpperCase();
+    if (maybeTeam && (maybeTeam.length === 2 || maybeTeam.length === 3)) {
+      meta.nflTeam = normalizeTeamCode(maybeTeam);
     }
 
     // Extract player name (everything before team and position)
@@ -360,6 +396,7 @@ const buildSeasonPayload = (season, rawData) => {
           ? 'Rookie'
           : 'Standard');
     const nflTeam = (player.team ?? '').toUpperCase();
+    const headshot = player.headshot ?? getPlayerImageUrl(player.id);
 
     return {
       id: player.id,
@@ -374,11 +411,11 @@ const buildSeasonPayload = (season, rawData) => {
       points: parseNumber(player.points),
       nflTeam,
       draftYear: player.draftYear ?? null,
-      headshot: getPlayerImageUrl(player.id),
       nflLogo: getNflLogoUrl(nflTeam),
       rosterSlot: normalizeStatus(player.status),
       byeWeek: nflByeWeeks[nflTeam] ?? null,
       birthdate: player.birthdate ?? null,
+      headshot,
     };
   });
 
@@ -1000,7 +1037,7 @@ const serializedConfig = JSON.stringify({
       <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
       <div class="chart-grid">
         <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
-          <FranchiseTagEligibility players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+          <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
         </ChartCard>
       </div>
     </div>
@@ -2675,6 +2712,21 @@ const serializedConfig = JSON.stringify({
     if (currentSalaryDisplay) currentSalaryDisplay.textContent = formatCurrency(playerData.salary);
     if (currentYearsDisplay) currentYearsDisplay.textContent = playerData.years;
 
+    // Show/hide contract action buttons based on eligibility
+    const contractYears = playerData.years ?? 0;
+    const franchiseTagBtn = modal?.querySelector('[data-action="franchise"]');
+    const extensionBtn = modal?.querySelector('[data-action="extension"]');
+
+    // Franchise tag: only eligible in last year of contract (contractYears === 1)
+    if (franchiseTagBtn) {
+      franchiseTagBtn.style.display = contractYears === 1 ? 'block' : 'none';
+    }
+
+    // Veteran extension: only eligible with 2+ years remaining
+    if (extensionBtn) {
+      extensionBtn.style.display = contractYears >= 2 ? 'block' : 'none';
+    }
+
     // Reset extension options
     if (extensionOptions) extensionOptions.style.display = 'none';
     selectedExtensionYears = 1;
@@ -2924,10 +2976,10 @@ const serializedConfig = JSON.stringify({
         ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
         : DEFAULT_HEADSHOT_URL;
 
-    const buildNflLogoUrl = (teamCode) =>
-      teamCode
-        ? `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${teamCode}.svg`
-        : '';
+    const buildNflLogoUrl = (teamCode) => {
+      if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+      return `/assets/nfl-logos/${teamCode}.svg`;
+    };
 
     // Create player name lookup across all seasons for dead money
     const createPlayerLookup = () => {

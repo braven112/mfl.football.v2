@@ -1,8 +1,9 @@
 ---
 /**
- * FranchiseTagEligibility - Reusable component for displaying franchise tag eligible players
- * Shows players who are out of contract in 2026 and top 10 in points at their position
+ * FranchiseOptions - Displays likely franchise tag options for consideration
+ * Shows players who are out of contract and top performers at their position
  * Displays 2026 franchise tag value estimates based on league salary averages
+ * This is a display component only - eligibility logic is determined elsewhere
  */
 
 import { currencyFormatter } from '../../utils/formatters';
@@ -21,7 +22,7 @@ export interface Props {
     nflLogo: string;
     contractYears: number;
   }>;
-  salaryAverages?: Record<string, { franchiseSalaries?: Record<string, number> }>;
+  salaryAverages?: Record<string, { positions?: Record<string, { top5Average?: number; top3Average?: number }> }>;
   season?: string;
   showTeamLogo?: boolean;
 }
@@ -41,13 +42,23 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 const { players = [], salaryAverages = {}, season = '2025', showTeamLogo = true } = Astro.props;
 
 // Helper function to calculate franchise tag value
+// Formula: max(currentSalary * 1.2, top3Average)
 const calculateFranchiseTag = (salary: number, position: string): number => {
   const pos = position?.toUpperCase() || 'UNK';
-  const increasedSalary = salary * 1.2;
   // Use the specified season, or fall back to 2025 if not available
   const dataForSeason = salaryAverages[season] || salaryAverages['2025'];
-  const avgSalary = dataForSeason?.franchiseSalaries?.[pos] ?? 0;
-  return Math.round(Math.max(increasedSalary, avgSalary));
+
+  // Get top 3 average for this position from positions
+  const top3Avg = dataForSeason?.positions?.[pos]?.top3Average ?? 0;
+
+  // Franchise tag is the higher of 1.2x current salary or top 3 average
+  const tagBased120 = Math.round(salary * 1.2);
+
+  if (top3Avg > 0) {
+    return Math.max(tagBased120, Math.round(top3Avg));
+  }
+
+  return tagBased120;
 };
 
 // Filter to only those out of contract in 2026 (contractYears === 1) AND top 10 at their position
@@ -227,13 +238,23 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
       const salaryAverages = JSON.parse(salaryAveragesJson);
 
       // Helper function to calculate franchise tag value
+      // Formula: max(currentSalary * 1.2, top3Average)
       const calculateFranchiseTag = (salary, position) => {
         const pos = position?.toUpperCase() || 'UNK';
-        const increasedSalary = salary * 1.2;
         // Use the specified season, or fall back to 2025 if not available
         const dataForSeason = salaryAverages[season] || salaryAverages['2025'];
-        const avgSalary = dataForSeason?.franchiseSalaries?.[pos] ?? 0;
-        return Math.round(Math.max(increasedSalary, avgSalary));
+
+        // Get top 3 average for this position from franchiseSalaries
+        const top3Avg = dataForSeason?.franchiseSalaries?.[pos] ?? 0;
+
+        // Franchise tag is the higher of 1.2x current salary or top 3 average
+        const tagBased120 = Math.round(salary * 1.2);
+
+        if (top3Avg > 0) {
+          return Math.max(tagBased120, Math.round(top3Avg));
+        }
+
+        return tagBased120;
       };
 
       const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
