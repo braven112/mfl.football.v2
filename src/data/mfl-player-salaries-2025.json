@@ -11,7 +11,7 @@
       "players": "https://api.myfantasyleague.com/2025/export?TYPE=players&DETAILS=1",
       "weeklyResults": "https://api.myfantasyleague.com/2025/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
     },
-    "fetchedAt": "2025-11-23T09:14:46.445Z"
+    "fetchedAt": "2025-11-24T05:34:17.767Z"
   },
   "players": [
     {
@@ -3151,20 +3151,6 @@
       "birthdate": 1073538000
     },
     {
-      "id": "13113",
-      "name": "Watson, Deshaun",
-      "position": "QB",
-      "salary": 467500,
-      "franchiseId": "0009",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 0,
-      "team": "CLE",
-      "draftYear": 2017,
-      "draftTeam": "HOU",
-      "birthdate": 811054800
-    },
-    {
       "id": "16451",
       "name": "Shavers, Tyrell",
       "position": "WR",
@@ -3205,6 +3191,20 @@
       "draftYear": 2024,
       "draftTeam": "GBP",
       "birthdate": 978670800
+    },
+    {
+      "id": "13113",
+      "name": "Watson, Deshaun",
+      "position": "QB",
+      "salary": 467500,
+      "franchiseId": "0009",
+      "status": "INJURED_RESERVE",
+      "contractYear": "4",
+      "points": 0,
+      "team": "CLE",
+      "draftYear": 2017,
+      "draftTeam": "HOU",
+      "birthdate": 811054800
     },
     {
       "id": "17134",
@@ -5335,20 +5335,6 @@
       "birthdate": 897109200
     },
     {
-      "id": "15753",
-      "name": "Wilson, Garrett",
-      "position": "WR",
-      "salary": 2462350,
-      "franchiseId": "0016",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 126.9,
-      "team": "NYJ",
-      "draftYear": 2022,
-      "draftTeam": "NYJ",
-      "birthdate": 964242000
-    },
-    {
       "id": "15698",
       "name": "Purdy, Brock",
       "position": "QB",
@@ -5615,6 +5601,20 @@
       "birthdate": 562482000
     },
     {
+      "id": "13289",
+      "name": "Hollins, Mack",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "NEP",
+      "draftYear": 2017,
+      "draftTeam": "PHI",
+      "birthdate": 748155600
+    },
+    {
       "id": "16171",
       "name": "Miller, Kendre",
       "position": "RB",
@@ -5627,6 +5627,20 @@
       "draftYear": 2023,
       "draftTeam": "NOS",
       "birthdate": 1023768000
+    },
+    {
+      "id": "15753",
+      "name": "Wilson, Garrett",
+      "position": "WR",
+      "salary": 2462350,
+      "franchiseId": "0016",
+      "status": "INJURED_RESERVE",
+      "contractYear": "2",
+      "points": 126.9,
+      "team": "NYJ",
+      "draftYear": 2022,
+      "draftTeam": "NYJ",
+      "birthdate": 964242000
     },
     {
       "id": "17047",
