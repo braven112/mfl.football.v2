@@ -2563,20 +2563,34 @@ const serializedConfig = JSON.stringify({
     };
   };
 
-  const calculateVeteranExtension = (contractYears, position, season, extensionYears) => {
+  const calculateVeteranExtension = (
+    contractYears,
+    position,
+    season,
+    extensionYears,
+    currentSalary
+  ) => {
+    const existingYears = Number(contractYears ?? 0) || 0;
+    const extYears = Number(extensionYears ?? 0) || 0;
     const avgSalary = getReferenceSalary(position, 'extension', season);
-    // Set the new salary to the extension salary for the position
-    const newSalary = Math.round(avgSalary);
-    const totalYears = contractYears + extensionYears;
 
-    // Create salary breakdown for ALL years with 10% increases each year
+    // Per rules: (top5 avg * extensionYears / (existing years + extensionYears)) + existing salary
+    const denominator = existingYears + extYears;
+    const proratedPortion =
+      denominator > 0 ? (avgSalary * extYears) / denominator : 0;
+    const baseSalary = Number(currentSalary ?? 0);
+    const newSalaryCurrent = Math.round(proratedPortion + baseSalary);
+
+    const totalYears = existingYears + extYears;
+
+    // Create salary breakdown for ALL years with 10% increases each year starting from newSalaryCurrent
     const salaryBreakdown = {};
     for (let i = 0; i < totalYears; i++) {
-      salaryBreakdown[`year${i}`] = Math.round(newSalary * Math.pow(1.1, i));
+      salaryBreakdown[`year${i}`] = Math.round(newSalaryCurrent * Math.pow(1.1, i));
     }
 
     return {
-      newSalary: newSalary,
+      newSalary: newSalaryCurrent,
       newYears: totalYears,
       salaryBreakdown: salaryBreakdown
     };
@@ -2758,7 +2772,13 @@ const serializedConfig = JSON.stringify({
         // Remove previous veteran extension
         delete contractActions[currentVeteranExtension];
       }
-      result = calculateVeteranExtension(years, position, currentSeason, extensionYears);
+      result = calculateVeteranExtension(
+        years,
+        position,
+        currentSeason,
+        extensionYears,
+        salary
+      );
       currentVeteranExtension = id;
     } else if (actionType === 'cut') {
       const penalty = calculateCutPenalty(salary, years);
