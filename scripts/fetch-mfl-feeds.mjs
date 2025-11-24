@@ -34,6 +34,7 @@ const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.c
 const outDir = path.join('src', 'data', 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });
 const metaFile = path.join(outDir, 'fetch.meta.json');
+const rosterHistoryDir = path.join(outDir, 'roster-history');
 const force = process.argv.includes('--force');
 
 const isFreshToday = () => {
@@ -111,6 +112,23 @@ const writeOut = (key, data) => {
     'utf8'
   );
   console.log(`Saved ${key} -> ${file}`);
+
+  // Archive a daily snapshot of rosters so weekly history is preserved.
+  if (key === 'rosters') {
+    const dateSlug = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const historyFile = path.join(rosterHistoryDir, `rosters-${dateSlug}.json`);
+    if (fs.existsSync(historyFile)) {
+      console.log(`Roster history already captured for ${dateSlug}; skipping archive.`);
+    } else {
+      fs.mkdirSync(rosterHistoryDir, { recursive: true });
+      fs.writeFileSync(
+        historyFile,
+        typeof data === 'string' ? data : JSON.stringify(data, null, 2),
+        'utf8'
+      );
+      console.log(`Archived rosters -> ${historyFile}`);
+    }
+  }
 };
 
 const run = async () => {
