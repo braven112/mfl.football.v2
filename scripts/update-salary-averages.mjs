@@ -7,14 +7,22 @@ const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
 
 const env = process.env;
-const season = env.MFL_SEASON ?? env.MFL_YEAR ?? '2025';
-const leagueId = env.MFL_LEAGUE_ID ?? '13522';
-const apiBase = env.MFL_API_BASE ?? 'https://api.myfantasyleague.com';
-const configuredWeek = env.MFL_WEEK;
-const username = env.MFL_USERNAME;
-const password = env.MFL_PASSWORD;
-const apiKey = env.MFL_API_KEY;
-const freezeWeek = Number.parseInt(env.MFL_FREEZE_WEEK ?? '14', 10);
+const getNonEmpty = (value) => {
+  if (value === undefined || value === null) return undefined;
+  const trimmed = String(value).trim();
+  return trimmed.length ? trimmed : undefined;
+};
+const season =
+  getNonEmpty(env.MFL_SEASON) ??
+  getNonEmpty(env.MFL_YEAR) ??
+  '2025';
+const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
+const apiBase = getNonEmpty(env.MFL_API_BASE) ?? 'https://api.myfantasyleague.com';
+const configuredWeek = getNonEmpty(env.MFL_WEEK);
+const username = getNonEmpty(env.MFL_USERNAME);
+const password = getNonEmpty(env.MFL_PASSWORD);
+const apiKey = getNonEmpty(env.MFL_API_KEY);
+const freezeWeek = Number.parseInt(getNonEmpty(env.MFL_FREEZE_WEEK) ?? '14', 10);
 const outputRaw = path.join(dataDir, `mfl-player-salaries-${season}.json`);
 const outputSummary = path.join(dataDir, `mfl-salary-averages-${season}.json`);
 const historyDir = path.join(dataDir, 'salary-history', season);
@@ -337,7 +345,8 @@ const run = async () => {
         }
       }
       try {
-        const cached = JSON.parse(await fs.readFile(cachedRostersFile, 'utf8'));
+        const cachedRaw = await fs.readFile(cachedRostersFile, 'utf8');
+        const cached = JSON.parse(cachedRaw);
         console.warn(
           `[salary-averages] Live roster fetch failed (${message}). Using cached rosters from ${path.relative(
             projectRoot,
@@ -345,14 +354,21 @@ const run = async () => {
           )}.`
         );
         return { payload: cached, week: week ?? null };
-      } catch (_cacheErr) {
-        throw error;
+      } catch (cacheErr) {
+        console.warn(
+          `[salary-averages] Live roster fetch failed (${message}) and no cached rosters available: ${cacheErr?.message ?? cacheErr}`
+        );
+        return { payload: null, week: week ?? null, error: message };
       }
     }
   };
 
   const { payload: rosterPayload, week: resolvedRosterWeek } =
     await fetchRostersWithFallback(effectiveWeek);
+  if (!rosterPayload) {
+    console.warn('[salary-averages] Skipping salary update because no roster payload was available.');
+    return;
+  }
   if (resolvedRosterWeek && resolvedRosterWeek !== effectiveWeek) {
     effectiveWeek = resolvedRosterWeek;
   }

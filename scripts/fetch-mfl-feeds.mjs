@@ -14,16 +14,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const leagueId = process.env.MFL_LEAGUE_ID;
+const getNonEmpty = (value) => {
+  if (value === undefined || value === null) return undefined;
+  const trimmed = String(value).trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
+const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID);
 if (!leagueId) {
   console.error('Missing MFL_LEAGUE_ID env var');
   process.exit(1);
 }
 
-const year = process.env.MFL_YEAR || new Date().getFullYear().toString();
+const year = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SEASON) || new Date().getFullYear().toString();
 // Only include a week param when explicitly provided; otherwise let MFL serve latest/YTD.
-const week = process.env.MFL_WEEK || null;
-const host = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
+const week = getNonEmpty(process.env.MFL_WEEK) || null;
+const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.com';
 
 const outDir = path.join('src', 'data', 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });
