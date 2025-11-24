@@ -11,7 +11,7 @@
       "players": "https://api.myfantasyleague.com/2025/export?TYPE=players&DETAILS=1",
       "weeklyResults": "https://api.myfantasyleague.com/2025/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
     },
-    "fetchedAt": "2025-11-24T06:56:55.108Z"
+    "fetchedAt": "2025-11-24T07:09:39.091Z"
   },
   "players": [
     {
@@ -295,20 +295,6 @@
       "birthdate": 960786000
     },
     {
-      "id": "14800",
-      "name": "Dobbins, J.K.",
-      "position": "RB",
-      "salary": 495000,
-      "franchiseId": "0001",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 150.25,
-      "team": "DEN",
-      "draftYear": 2020,
-      "draftTeam": "BAL",
-      "birthdate": 913870800
-    },
-    {
       "id": "14079",
       "name": "Sanders, Miles",
       "position": "RB",
@@ -321,6 +307,20 @@
       "draftYear": 2019,
       "draftTeam": "PHI",
       "birthdate": 862462800
+    },
+    {
+      "id": "14800",
+      "name": "Dobbins, J.K.",
+      "position": "RB",
+      "salary": 495000,
+      "franchiseId": "0001",
+      "status": "INJURED_RESERVE",
+      "contractYear": "2",
+      "points": 150.25,
+      "team": "DEN",
+      "draftYear": 2020,
+      "draftTeam": "BAL",
+      "birthdate": 913870800
     },
     {
       "id": "17033",
