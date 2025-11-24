@@ -1,5 +1,6 @@
 {
   "private": true,
+  "type": "module",
   "scripts": {
     "sass:build": "sass src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded",
     "sass:watch": "sass --watch src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded",
