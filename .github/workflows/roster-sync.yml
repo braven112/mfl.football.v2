@@ -34,7 +34,7 @@ jobs:
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: |
-          node ./scripts/fetch-mfl-feeds.js --force
+          node ./scripts/fetch-mfl-feeds.mjs --force
           node ./scripts/update-salary-averages.mjs
 
       - name: Commit and push updates

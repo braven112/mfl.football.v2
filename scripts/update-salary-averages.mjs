@@ -19,6 +19,7 @@ const outputRaw = path.join(dataDir, `mfl-player-salaries-${season}.json`);
 const outputSummary = path.join(dataDir, `mfl-salary-averages-${season}.json`);
 const historyDir = path.join(dataDir, 'salary-history', season);
 const seasonStateFile = path.join(dataDir, 'mfl-season-state.json');
+const cachedRostersFile = path.join(dataDir, 'mfl-feeds', season, 'rosters.json');
 
 const ensureArray = (value) => {
   if (!value) return [];
@@ -334,7 +335,18 @@ const run = async () => {
           return fetchRostersWithFallback(fallbackWeek);
         }
       }
-      throw error;
+      try {
+        const cached = JSON.parse(await fs.readFile(cachedRostersFile, 'utf8'));
+        console.warn(
+          `[salary-averages] Live roster fetch failed (${message}). Using cached rosters from ${path.relative(
+            projectRoot,
+            cachedRostersFile
+          )}.`
+        );
+        return { payload: cached, week: week ?? null };
+      } catch (_cacheErr) {
+        throw error;
+      }
     }
   };
 
