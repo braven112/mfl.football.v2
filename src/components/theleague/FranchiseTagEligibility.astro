@@ -132,9 +132,9 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 
 const getPlayerAvatarSrc = (player: typeof players[0]): string => {
   if (player.position?.toUpperCase() === 'DEF') {
-    return player.nflLogo || '';
+    return player.nflLogo || DEFAULT_HEADSHOT_URL;
   }
-  return player.headshot || '';
+  return player.headshot || DEFAULT_HEADSHOT_URL;
 };
 ---
 

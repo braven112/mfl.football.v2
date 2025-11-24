@@ -139,7 +139,7 @@ const formatPoints = (value) =>
   Number.isFinite(value) ? value.toFixed(1) : '0.0';
 const getNflLogo = (team) => {
   const code = (team ?? '').toUpperCase() || 'FA';
-  return `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${code}.svg`;
+  return `/assets/nfl-logos/${code}.svg`;
 };
 ---
 

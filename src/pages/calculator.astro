@@ -1183,8 +1183,7 @@ const serializedConfig = JSON.stringify({
             <span class="player-suggestion__meta">
               <span>
                 <img
-                  src="https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${player.nflTeam ??
-                    'FA'}.svg"
+                  src="/assets/nfl-logos/${player.nflTeam ?? 'FA'}.svg"
                   alt="${player.nflTeam ?? 'FA'}"
                   class="player-suggestion__nfl-icon"
                 />
@@ -1393,7 +1392,7 @@ Total Contract Length: ${totalYears} years
 Reference: ${referenceLabel}`;
 
       const nflTeamCode = (selectedPlayer?.nflTeam || 'FA').toUpperCase();
-      const nflLogoUrl = `https://www.mflscripts.com/ImageDirectory/script-images/nflTeamsvg_2/${nflTeamCode}.svg`;
+      const nflLogoUrl = `/assets/nfl-logos/${nflTeamCode}.svg`;
       const nflLogoMarkup = `<img src="${nflLogoUrl}" alt="${nflTeamCode}" class="salary-table__nfl-logo" />`;
       const franchiseIcon = selectedPlayer?.icon ?? null;
       const iconMarkup = franchiseIcon
