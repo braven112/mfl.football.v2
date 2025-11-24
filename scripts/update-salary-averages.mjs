@@ -307,15 +307,15 @@ const run = async () => {
   }
 
   const fetchRostersWithFallback = async (week) => {
-    const weekLabel = week ? `, week ${week}` : '';
+    const weekLabel = week ? `, week ${week}` : ', YTD';
     console.log(
       `[salary-averages] Fetching rosters for league ${leagueId} (${season}${weekLabel})...`
     );
+    const weekParam = week ? { W: week } : { W: 'YTD' };
     try {
       return {
-        payload: await fetchExport('rosters', {}, {
-          includeWeek: true,
-          forceWeek: week ?? undefined,
+        payload: await fetchExport('rosters', weekParam, {
+          includeWeek: false, // explicit week/YTD passed via params
         }),
         week,
       };
