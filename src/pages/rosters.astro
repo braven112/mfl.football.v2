@@ -3151,7 +3151,7 @@ const serializedConfig = JSON.stringify({
           { label: 'Practice', value: bucketCaps.practice, color: '#2563eb' },
           { label: 'Injured', value: bucketCaps.injured, color: '#dc2626' },
           { label: 'Dead Money', value: deadMoney, color: '#4b5563' },
-          { label: 'Cap Space', value: capSpace, color: '#22c55e' },
+          { label: 'Cap Space', value: capSpace, color: '#e2e8f0' },
         ].filter((s) => s.value > 0);
         const total = capSlices.reduce((s, c) => s + c.value, 0);
         buildDonut(capDonut, capSlices, total);
