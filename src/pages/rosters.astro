@@ -7,6 +7,9 @@ import DonutChart from '../components/theleague/DonutChart.astro';
 import BarChart from '../components/theleague/BarChart.astro';
 import AgeDistributionChart from '../components/theleague/AgeDistributionChart.astro';
 import FranchiseOptions from '../components/theleague/FranchiseOptions.astro';
+import PlayerDetailsModal from '../components/theleague/PlayerDetailsModal.astro';
+import PlayerInjuryModal from '../components/theleague/PlayerInjuryModal.astro';
+import collegeLogos from '../data/college-logos.json';
 import type { ChartSlice } from '../scripts/chart-utils';
 import {
   parseNumber,
@@ -93,6 +96,15 @@ const getPlayerImageUrl = (playerId) =>
 const getNflLogoUrl = (teamCode) => {
   if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
   return `/assets/nfl-logos/${teamCode}.svg`;
+};
+
+const collegeLogosNormalized = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
+);
+
+const getCollegeAssets = (collegeName?: string | null) => {
+  if (!collegeName) return null;
+  return collegeLogosNormalized[collegeName.toLowerCase()] ?? null;
 };
 
 const parseAdjustmentMeta = (description = '') => {
@@ -191,38 +203,38 @@ const rosterColumnOptions = [
 ];
 
 const nflByeWeeks = {
-  ARI: null,
-  ATL: null,
-  BAL: null,
-  BUF: null,
-  CAR: null,
-  CHI: null,
-  CIN: null,
-  CLE: null,
-  DAL: null,
-  DEN: null,
-  DET: null,
-  GB: null,
-  HOU: null,
-  IND: null,
-  JAC: null,
-  KC: null,
-  LV: null,
-  LAC: null,
-  LAR: null,
-  MIA: null,
-  MIN: null,
-  NE: null,
-  NO: null,
-  NYG: null,
-  NYJ: null,
-  PHI: null,
-  PIT: null,
-  SEA: null,
-  SF: null,
-  TB: null,
-  TEN: null,
-  WAS: null,
+  ARI: 8,
+  ATL: 5,
+  BAL: 7,
+  BUF: 7,
+  CAR: 14,
+  CHI: 5,
+  CIN: 10,
+  CLE: 9,
+  DAL: 10,
+  DEN: 12,
+  DET: 8,
+  GB: 5,
+  HOU: 6,
+  IND: 11,
+  JAC: 8,
+  KC: 10,
+  LV: 8,
+  LAC: 12,
+  LAR: 8,
+  MIA: 12,
+  MIN: 6,
+  NE: 14,
+  NO: 11,
+  NYG: 14,
+  NYJ: 9,
+  PHI: 9,
+  PIT: 5,
+  SEA: 8,
+  SF: 14,
+  TB: 9,
+  TEN: 10,
+  WAS: 12,
 };
 const getPositionRank = (pos) => {
   if (!pos) return positionOrder.length;
@@ -397,6 +409,8 @@ const buildSeasonPayload = (season, rawData) => {
           : 'Standard');
     const nflTeam = (player.team ?? '').toUpperCase();
     const headshot = player.headshot ?? getPlayerImageUrl(player.id);
+    const collegeName = player.sleeper?.college ?? player.college ?? null;
+    const collegeAssets = getCollegeAssets(collegeName);
 
     return {
       id: player.id,
@@ -416,6 +430,26 @@ const buildSeasonPayload = (season, rawData) => {
       byeWeek: nflByeWeeks[nflTeam] ?? null,
       birthdate: player.birthdate ?? null,
       headshot,
+      college: collegeName,
+      collegeLogo: collegeAssets?.logo ?? null,
+      collegeLogoDark: collegeAssets?.logoDark ?? null,
+      height: player.sleeper?.height ?? null,
+      weight: player.sleeper?.weight ?? null,
+      number: player.sleeper?.number ?? null,
+      experience: player.sleeper?.experience ?? null,
+      depthChartPosition: player.sleeper?.depthChartPosition ?? null,
+      depthChartOrder: player.sleeper?.depthChartOrder ?? null,
+      injuryStatus: player.sleeper?.injuryStatus ?? null,
+      injuryBodyPart: player.sleeper?.injuryBodyPart ?? null,
+      sleeperId: player.sleeper?.id ?? null,
+      sleeperFullName: player.sleeper?.fullName ?? null,
+      sleeperPosition: player.sleeper?.position ?? null,
+      fantasyPositions: player.sleeper?.fantasyPositions ?? null,
+      gsisId: player.sleeper?.gsisId ?? null,
+      sleeperAge: player.sleeper?.age ?? null,
+      sleeperStatus: player.sleeper?.status ?? null,
+      sleeperActive: player.sleeper?.active ?? null,
+      depthChartAhead: player.depthChartAhead ?? null,
     };
   });
 
@@ -636,6 +670,7 @@ const serializedConfig = JSON.stringify({
   positionColors: POSITION_COLORS,
   targetActiveCount: TARGET_ACTIVE_COUNT,
   reserveForRookies: RESERVE_FOR_ROOKIES,
+  collegeLogos: collegeLogosNormalized,
 });
 ---
 
@@ -813,7 +848,60 @@ const serializedConfig = JSON.stringify({
                       />
                     </div>
                     <div>
-                      <strong>{player.name}</strong>
+                      <strong
+                        class="roster-player-name"
+                        data-player-id={player.id}
+                        data-player-name={player.name}
+                        data-player-position={player.position}
+                        data-player-nfl-team={player.nflTeam}
+                        data-player-status={player.status}
+                        data-player-salary={player.salary}
+                        data-player-contract-years={player.contractYears}
+                        data-player-total-remaining={player.totalRemaining}
+                        data-player-contract-type={player.contractType}
+                        data-player-points={player.points}
+                        data-player-bye-week={player.byeWeek}
+                        data-player-draft-year={player.draftYear}
+                        data-player-birthdate={player.birthdate}
+                        data-player-franchise-id={player.franchiseId}
+                        data-player-roster-slot={player.rosterSlot}
+                        data-player-college={player.college}
+                        data-player-college-logo={player.collegeLogo}
+                        data-player-height={player.height}
+                        data-player-weight={player.weight}
+                        data-player-number={player.number}
+                        data-player-experience={player.experience}
+                        data-player-depth-position={player.depthChartPosition}
+                        data-player-depth-order={player.depthChartOrder}
+                        data-player-injury-status={player.injuryStatus}
+                        data-player-injury-body-part={player.injuryBodyPart}
+                        data-player-sleeper-id={player.sleeperId}
+                        data-player-sleeper-full-name={player.sleeperFullName}
+                        data-player-sleeper-position={player.sleeperPosition}
+                        data-player-fantasy-positions={player.fantasyPositions}
+                        data-player-gsis-id={player.gsisId}
+                        data-player-sleeper-age={player.sleeperAge}
+                        data-player-sleeper-status={player.sleeperStatus}
+                        data-player-sleeper-active={player.sleeperActive}
+                        data-player-depth-chart-ahead={player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}
+                        style="cursor: pointer;"
+                        title="Click to view full player details"
+                      >
+                        {player.name}
+                        {player.injuryStatus && (
+                          <button
+                            class="injury-indicator"
+                            data-player-id={player.id}
+                            data-player-name={player.name}
+                            data-injury-status={player.injuryStatus}
+                            data-injury-body-part={player.injuryBodyPart}
+                            title={`${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}`}
+                            style="cursor: pointer; background: none; color: #ef4444; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
+                          >
+                            ({player.injuryStatus.substring(0, 1)})
+                          </button>
+                        )}
+                      </strong>
                       <div class="player-meta">
                         {player.position?.toUpperCase() !== 'DEF' && player.nflLogo && (
                           <img
@@ -2484,6 +2572,12 @@ const serializedConfig = JSON.stringify({
   }
 </style>
 
+<!-- Player Details Modal -->
+<PlayerDetailsModal />
+
+<!-- Player Injury Modal -->
+<PlayerInjuryModal />
+
 <!-- Contract Action Modal -->
 <div class="contract-modal" id="contract-modal" style="display: none;">
   <div class="contract-modal__overlay"></div>
@@ -2945,6 +3039,7 @@ const serializedConfig = JSON.stringify({
       columnOptions = [],
       salaryYears = [],
       byeWeeks = {},
+      collegeLogos = {},
       capLimit = 45_000_000,
       capInclusion = {},
       deadMoneySources = [],
@@ -2979,6 +3074,12 @@ const serializedConfig = JSON.stringify({
     const buildNflLogoUrl = (teamCode) => {
       if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
       return `/assets/nfl-logos/${teamCode}.svg`;
+    };
+
+    const getCollegeAssets = (collegeName) => {
+      if (!collegeName) return null;
+      const entry = collegeLogos[collegeName.toLowerCase()];
+      return entry || null;
     };
 
     // Create player name lookup across all seasons for dead money
@@ -3535,7 +3636,59 @@ const serializedConfig = JSON.stringify({
                   <img src="${avatarSrc}" alt="${player.name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
                 </div>
                 <div>
-                  <strong>${player.name}${actionBadge}</strong>
+                  <strong
+                    class="roster-player-name"
+                    data-player-id="${player.id}"
+                    data-player-name="${player.name}"
+                    data-player-position="${player.position}"
+                    data-player-nfl-team="${player.nflTeam}"
+                    data-player-status="${player.status}"
+                    data-player-salary="${player.salary || 0}"
+                    data-player-contract-years="${player.contractYears || 1}"
+                    data-player-total-remaining="${player.totalRemaining || 0}"
+                    data-player-contract-type="${player.contractType}"
+                    data-player-points="${player.points || 0}"
+                    data-player-bye-week="${player.byeWeek || ''}"
+                    data-player-draft-year="${player.draftYear || ''}"
+                    data-player-birthdate="${player.birthdate || ''}"
+                    data-player-franchise-id="${player.franchiseId || ''}"
+                    data-player-roster-slot="${player.rosterSlot || ''}"
+                    data-player-college="${player.college || ''}"
+                    data-player-college-logo="${player.collegeLogo || ''}"
+                    data-player-height="${player.height || ''}"
+                    data-player-weight="${player.weight || ''}"
+                    data-player-number="${player.number || ''}"
+                    data-player-experience="${player.experience || ''}"
+                    data-player-depth-position="${player.depthChartPosition || ''}"
+                    data-player-depth-order="${player.depthChartOrder || ''}"
+                    data-player-injury-status="${player.injuryStatus || ''}"
+                    data-player-injury-body-part="${player.injuryBodyPart || ''}"
+                    data-player-sleeper-id="${player.sleeperId || ''}"
+                    data-player-sleeper-full-name="${player.sleeperFullName || ''}"
+                    data-player-sleeper-position="${player.sleeperPosition || ''}"
+                    data-player-fantasy-positions="${player.fantasyPositions || ''}"
+                    data-player-gsis-id="${player.gsisId || ''}"
+                    data-player-sleeper-age="${player.sleeperAge || ''}"
+                    data-player-sleeper-status="${player.sleeperStatus || ''}"
+                    data-player-sleeper-active="${player.sleeperActive || ''}"
+                    data-player-depth-chart-ahead="${player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}"
+                    style="cursor: pointer;"
+                    title="Click to view full player details"
+                  >${player.name}
+                  ${
+                    player.injuryStatus
+                      ? `<button
+                          class="injury-indicator"
+                          data-player-id="${player.id}"
+                          data-player-name="${player.name}"
+                          data-injury-status="${player.injuryStatus}"
+                          data-injury-body-part="${player.injuryBodyPart || ''}"
+                          title="${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}"
+                          style="cursor: pointer; background: none; color: #ef4444; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
+                        >(${player.injuryStatus.substring(0, 1)})</button>`
+                      : ''
+                  }
+                  </strong>${actionBadge}
                   <div class="player-meta">
                     ${
                       !useDefenseLogo && player.nflLogo
@@ -3573,6 +3726,71 @@ const serializedConfig = JSON.stringify({
               salary: playerSalary,
               years: playerYears
             });
+          });
+        });
+
+        // Player name clicks for details modal
+        document.querySelectorAll('.roster-player-name').forEach(nameEl => {
+          nameEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerData = {
+              id: nameEl.dataset.playerId,
+              name: nameEl.dataset.playerName,
+              position: nameEl.dataset.playerPosition,
+              nflTeam: nameEl.dataset.playerNflTeam,
+              status: nameEl.dataset.playerStatus,
+              salary: nameEl.dataset.playerSalary ? parseFloat(nameEl.dataset.playerSalary) : undefined,
+              contractYears: nameEl.dataset.playerContractYears ? parseInt(nameEl.dataset.playerContractYears, 10) : undefined,
+              totalRemaining: nameEl.dataset.playerTotalRemaining ? parseFloat(nameEl.dataset.playerTotalRemaining) : undefined,
+              contractType: nameEl.dataset.playerContractType,
+              points: nameEl.dataset.playerPoints ? parseFloat(nameEl.dataset.playerPoints) : undefined,
+              byeWeek: nameEl.dataset.playerByeWeek ? parseInt(nameEl.dataset.playerByeWeek, 10) : null,
+              draftYear: nameEl.dataset.playerDraftYear ? parseInt(nameEl.dataset.playerDraftYear, 10) : null,
+              birthdate: nameEl.dataset.playerBirthdate ? parseInt(nameEl.dataset.playerBirthdate, 10) : null,
+              franchiseId: nameEl.dataset.playerFranchiseId,
+              rosterSlot: nameEl.dataset.playerRosterSlot,
+              college: nameEl.dataset.playerCollege,
+              collegeLogo: nameEl.dataset.playerCollegeLogo,
+              height: nameEl.dataset.playerHeight,
+              weight: nameEl.dataset.playerWeight ? parseInt(nameEl.dataset.playerWeight, 10) : undefined,
+              number: nameEl.dataset.playerNumber ? parseInt(nameEl.dataset.playerNumber, 10) : undefined,
+              experience: nameEl.dataset.playerExperience ? parseInt(nameEl.dataset.playerExperience, 10) : undefined,
+              depthChartPosition: nameEl.dataset.playerDepthPosition,
+              depthChartOrder: nameEl.dataset.playerDepthOrder ? parseInt(nameEl.dataset.playerDepthOrder, 10) : undefined,
+              injuryStatus: nameEl.dataset.playerInjuryStatus,
+              injuryBodyPart: nameEl.dataset.playerInjuryBodyPart,
+              sleeperId: nameEl.dataset.playerSleeperId,
+              sleeperFullName: nameEl.dataset.playerSleeperFullName,
+              sleeperPosition: nameEl.dataset.playerSleeperPosition,
+              fantasyPositions: nameEl.dataset.playerFantasyPositions ? nameEl.dataset.playerFantasyPositions.split(',') : undefined,
+              gsisId: nameEl.dataset.playerGsisId,
+              sleeperAge: nameEl.dataset.playerSleeperAge ? parseInt(nameEl.dataset.playerSleeperAge, 10) : undefined,
+              sleeperStatus: nameEl.dataset.playerSleeperStatus,
+              sleeperActive: nameEl.dataset.playerSleeperActive,
+              depthChartAhead: nameEl.dataset.playerDepthChartAhead ? JSON.parse(atob(nameEl.dataset.playerDepthChartAhead)) : null,
+            };
+            if (window.openPlayerDetailsModal) {
+              window.openPlayerDetailsModal(playerData);
+            } else {
+              console.warn('openPlayerDetailsModal function not found');
+            }
+          });
+        });
+
+        // Injury indicator buttons
+        document.querySelectorAll('.injury-indicator').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const injuryData = {
+              name: btn.dataset.playerName,
+              injuryStatus: btn.dataset.injuryStatus,
+              injuryBodyPart: btn.dataset.injuryBodyPart,
+            };
+            if (window.openPlayerInjuryModal) {
+              window.openPlayerInjuryModal(injuryData);
+            } else {
+              console.warn('openPlayerInjuryModal function not found');
+            }
           });
         });
 

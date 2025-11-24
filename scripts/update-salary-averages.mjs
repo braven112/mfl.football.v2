@@ -434,6 +434,65 @@ const normalizePlayers = (
   return normalized.filter((player) => player.position);
 };
 
+const calculateDepthChartAhead = (players) => {
+  // Helper function to get base position (WR/LWR/RWR/SWR all map to WR)
+  const getBasePosition = (depthChartPosition) => {
+    if (!depthChartPosition) return null;
+    if (depthChartPosition.includes('WR')) return 'WR';
+    return depthChartPosition;
+  };
+
+  // Create a map of players by team and base position
+  const depthChartMap = new Map();
+
+  players.forEach((player) => {
+    if (!player.sleeper?.depthChartPosition || !player.team) return;
+
+    const basePosition = getBasePosition(player.sleeper.depthChartPosition);
+    const key = `${player.team}:${basePosition}`;
+    if (!depthChartMap.has(key)) {
+      depthChartMap.set(key, []);
+    }
+    depthChartMap.get(key).push(player);
+  });
+
+  // For each position group, sort by depth chart order and store players ahead
+  depthChartMap.forEach((playerList) => {
+    // Sort by depth chart order (1 = 1st string, 2 = 2nd string, etc.)
+    playerList.sort((a, b) => {
+      const orderA = a.sleeper?.depthChartOrder ?? Infinity;
+      const orderB = b.sleeper?.depthChartOrder ?? Infinity;
+      return orderA - orderB;
+    });
+  });
+
+  // Add depthChartAhead to each player
+  players.forEach((player) => {
+    if (!player.sleeper?.depthChartPosition || !player.team) {
+      player.depthChartAhead = null;
+      return;
+    }
+
+    const basePosition = getBasePosition(player.sleeper.depthChartPosition);
+    const key = `${player.team}:${basePosition}`;
+    const positionGroup = depthChartMap.get(key) || [];
+    const playerIndex = positionGroup.findIndex((p) => p.id === player.id);
+
+    if (playerIndex <= 0) {
+      // First string or not found
+      player.depthChartAhead = null;
+    } else {
+      // Get all players ahead (those with lower order numbers)
+      player.depthChartAhead = positionGroup
+        .slice(0, playerIndex)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+        }));
+    }
+  });
+};
+
 const summarizeByPosition = (players) => {
   const buckets = new Map();
   players.forEach((player) => {
@@ -712,6 +771,9 @@ const run = async () => {
   if (!players.length) {
     throw new Error('No player salaries found in the combined API responses.');
   }
+
+  // Calculate depth chart ahead for each player
+  calculateDepthChartAhead(players);
 
   const metadata = {
     leagueId,

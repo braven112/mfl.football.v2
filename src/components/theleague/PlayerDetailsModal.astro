@@ -1,0 +1,571 @@
+---
+/**
+ * PlayerDetailsModal - Displays comprehensive player information
+ * Shows all available unified player model data in an organized modal
+ */
+
+import { currencyFormatter } from '../../utils/formatters';
+
+export interface Props {
+  /** Additional CSS classes */
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+
+const formatDate = (timestamp: number | null | undefined): string => {
+  if (!timestamp) return 'N/A';
+  try {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return 'N/A';
+  }
+};
+
+const getPlayerAge = (timestamp: number | null | undefined): number | null => {
+  if (!timestamp) return null;
+  try {
+    const birthDate = new Date(timestamp * 1000);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  } catch {
+    return null;
+  }
+};
+
+const NFL_TEAM_NAMES: Record<string, string> = {
+  ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
+  CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
+  DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
+  HOU: 'Houston', IND: 'Indianapolis', JAC: 'Jacksonville', KC: 'Kansas City',
+  LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
+  MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
+  NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
+  SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
+};
+---
+
+<div class:list={['player-details-modal', className]}>
+  <div class="player-details-modal__overlay"></div>
+  <div class="player-details-modal__content">
+    <div class="player-details-modal__header">
+      <h3 id="player-details-title">Player Details</h3>
+      <button class="player-details-modal__close" aria-label="Close" title="Close (ESC)">
+        ×
+      </button>
+    </div>
+
+    <div class="player-details-modal__body">
+      <!-- Identity Section -->
+      <div class="player-details-section">
+        <h4 class="player-details-section__title">Identity</h4>
+        <div class="player-details-grid">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Name</span>
+            <span class="player-details-field__value" id="detail-name">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Position</span>
+            <span class="player-details-field__value" id="detail-position">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">NFL Team</span>
+            <img class="player-details-nfl-logo" id="detail-nfl-team-logo" src="" alt="NFL Team Logo" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Section -->
+      <div class="player-details-section">
+        <h4 class="player-details-section__title">Performance</h4>
+        <div class="player-details-grid">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Fantasy Points</span>
+            <span class="player-details-field__value" id="detail-points">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Bye Week</span>
+            <span class="player-details-field__value" id="detail-bye-week">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Background Section -->
+      <div class="player-details-section">
+        <h4 class="player-details-section__title">Background</h4>
+        <div class="player-details-grid">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Draft Year</span>
+            <span class="player-details-field__value" id="detail-draft-year">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">College</span>
+            <div class="player-details-field__value college-field">
+              <img class="college-logo" id="detail-college-logo" src="" alt="" />
+              <span id="detail-college">—</span>
+            </div>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Birthdate</span>
+            <span class="player-details-field__value" id="detail-birthdate">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Age</span>
+            <span class="player-details-field__value" id="detail-age">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Physical Attributes Section -->
+      <div class="player-details-section" id="section-physical-attributes">
+        <h4 class="player-details-section__title">Physical Attributes</h4>
+        <div class="player-details-grid">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Height</span>
+            <span class="player-details-field__value" id="detail-height">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Weight</span>
+            <span class="player-details-field__value" id="detail-weight">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Jersey Number</span>
+            <span class="player-details-field__value" id="detail-number">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- NFL Status Section -->
+      <div class="player-details-section" id="section-nfl-status">
+        <h4 class="player-details-section__title">NFL Status</h4>
+        <div class="player-details-grid">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Experience</span>
+            <span class="player-details-field__value" id="detail-experience">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Depth Chart Position</span>
+            <span class="player-details-field__value" id="detail-depth-position">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Depth Chart Order</span>
+            <span class="player-details-field__value" id="detail-depth-order">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Players Ahead</span>
+            <div class="player-details-field__value depth-chart-ahead" id="detail-depth-chart-ahead">Starter</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contract Section -->
+      <div class="player-details-section">
+        <h4 class="player-details-section__title">Contract</h4>
+        <div class="player-details-grid">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Current Salary</span>
+            <span class="player-details-field__value" id="detail-salary">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Contract Years</span>
+            <span class="player-details-field__value" id="detail-contract-years">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Total Remaining</span>
+            <span class="player-details-field__value" id="detail-total-remaining">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Contract Type</span>
+            <span class="player-details-field__value" id="detail-contract-type">—</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .player-details-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .player-details-modal.active {
+    display: flex;
+  }
+
+  .player-details-modal__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
+
+  .player-details-modal__content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .player-details-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+
+  .player-details-modal__header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111;
+  }
+
+  .player-details-modal__close {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .player-details-modal__close:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .player-details-modal__body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 1.5rem;
+  }
+
+  .player-details-section {
+    margin-bottom: 1.75rem;
+  }
+
+  .player-details-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .player-details-section__title {
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+  }
+
+  .player-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .player-details-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: flex-start;
+  }
+
+  .player-details-field__label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .player-details-field__value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    word-break: break-word;
+  }
+
+  .player-details-field__value--mono {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  .player-details-nfl-logo {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    text-align: left;
+  }
+
+  .depth-chart-ahead {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .depth-chart-ahead-item {
+    padding: 0.5rem 0;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+  }
+
+  .college-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .college-logo {
+    height: 32px;
+    width: auto;
+    max-width: 40px;
+    display: none;
+    object-fit: contain;
+  }
+
+  @media (max-width: 640px) {
+    .player-details-modal {
+      padding: 0.5rem;
+    }
+
+    .player-details-modal__content {
+      max-height: 90vh;
+    }
+
+    .player-details-modal__header {
+      padding: 1rem;
+    }
+
+    .player-details-modal__body {
+      padding: 1rem;
+    }
+
+    .player-details-grid {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    .player-details-section {
+      margin-bottom: 1.25rem;
+    }
+  }
+</style>
+
+<script>
+  function initPlayerDetailsModal() {
+    const modal = document.querySelector('.player-details-modal');
+    const overlay = document.querySelector('.player-details-modal__overlay');
+    const closeBtn = document.querySelector('.player-details-modal__close');
+
+    const closeModal = () => {
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+    if (overlay) {
+      overlay.addEventListener('click', closeModal);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+
+    window.openPlayerDetailsModal = function(playerData) {
+      const birthdateStr = playerData.birthdate
+        ? new Date(playerData.birthdate * 1000).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : 'N/A';
+
+      let ageStr = 'N/A';
+      if (playerData.birthdate) {
+        const birthDate = new Date(playerData.birthdate * 1000);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age >= 0) {
+          ageStr = age.toString();
+        }
+      }
+
+      const nflTeamNames = {
+        ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
+        CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
+        DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
+        HOU: 'Houston', IND: 'Indianapolis', JAC: 'Jacksonville', KC: 'Kansas City',
+        LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
+        MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
+        NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
+        SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
+      };
+
+      const setElementText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = value || 'N/A';
+        }
+      };
+
+      const setSectionVisibility = (id: string, visible: boolean) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.display = visible ? '' : 'none';
+        }
+      };
+
+      const formatCurrency = (value) => {
+        if (value === undefined || value === null) return 'N/A';
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0,
+        }).format(value);
+      };
+
+      const formatHeight = (inches: number | undefined | null) => {
+        if (!inches) return 'N/A';
+        const feet = Math.floor(inches / 12);
+        const remainingInches = inches % 12;
+        return `${feet}'${remainingInches}"`;
+      };
+
+      const formatPosition = (pos: string | undefined | null) => {
+        if (!pos) return 'N/A';
+        const upper = pos.toUpperCase();
+        if (upper === 'SWR') return 'WR (Slot)';
+        return upper;
+      };
+
+      const setNflTeamLogo = (teamCode: string | undefined) => {
+        const logoEl = document.getElementById('detail-nfl-team-logo') as HTMLImageElement | null;
+        if (logoEl) {
+          if (!teamCode || teamCode === 'FA') {
+            logoEl.src = '/assets/nfl-logos/NFL.svg';
+            logoEl.alt = 'Free Agent';
+          } else {
+            logoEl.src = `/assets/nfl-logos/${teamCode}.svg`;
+            logoEl.alt = nflTeamNames[teamCode] || teamCode;
+          }
+        }
+      };
+
+      const setCollege = (name: string | undefined, logoUrl: string | undefined) => {
+        setElementText('detail-college', name);
+        const logoEl = document.getElementById('detail-college-logo') as HTMLImageElement | null;
+        if (logoEl) {
+          if (logoUrl) {
+            logoEl.src = logoUrl;
+            logoEl.alt = name ? `${name} logo` : 'College logo';
+            logoEl.style.display = 'inline-block';
+          } else {
+            logoEl.src = '';
+            logoEl.alt = '';
+            logoEl.style.display = 'none';
+          }
+        }
+      };
+
+      const position = playerData.position;
+      const isDefense = position?.toUpperCase() === 'DEF';
+
+      setSectionVisibility('section-physical-attributes', !isDefense);
+      setSectionVisibility('section-nfl-status', !isDefense);
+
+      setElementText('detail-name', playerData.name);
+      setElementText('detail-position', formatPosition(position));
+      setNflTeamLogo(playerData.nflTeam);
+      setElementText('detail-salary', formatCurrency(playerData.salary));
+      setElementText('detail-contract-years', playerData.contractYears !== undefined ? playerData.contractYears : 'N/A');
+      setElementText('detail-total-remaining', formatCurrency(playerData.totalRemaining));
+      setElementText('detail-contract-type', playerData.contractType);
+      setElementText('detail-points', playerData.points !== undefined ? playerData.points.toFixed(2) : 'N/A');
+      setElementText('detail-bye-week', playerData.byeWeek !== null && playerData.byeWeek !== undefined ? 'Week ' + playerData.byeWeek : 'N/A');
+      setElementText('detail-draft-year', playerData.draftYear);
+      setCollege(playerData.college, playerData.collegeLogo);
+      setElementText('detail-birthdate', birthdateStr);
+      setElementText('detail-age', ageStr);
+      setElementText('detail-height', formatHeight(playerData.height));
+      setElementText('detail-weight', playerData.weight ? playerData.weight + ' lbs' : 'N/A');
+      setElementText('detail-number', playerData.number);
+      setElementText('detail-experience', playerData.experience !== undefined ? playerData.experience + ' years' : 'N/A');
+      setElementText('detail-depth-position', formatPosition(playerData.depthChartPosition));
+      setElementText('detail-depth-order', playerData.depthChartOrder);
+
+      // Handle depth chart ahead
+      const depthChartAheadEl = document.getElementById('detail-depth-chart-ahead');
+      if (depthChartAheadEl) {
+        if (playerData.depthChartAhead && Array.isArray(playerData.depthChartAhead) && playerData.depthChartAhead.length > 0) {
+          depthChartAheadEl.innerHTML = playerData.depthChartAhead
+            .map(p => `
+              <div class="depth-chart-ahead-item">
+                <span>${p.name}</span>
+              </div>
+            `)
+            .join('');
+        } else {
+          depthChartAheadEl.textContent = 'Starter';
+        }
+      }
+
+      if (modal) {
+        modal.classList.add('active');
+      }
+    };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPlayerDetailsModal);
+  } else {
+    initPlayerDetailsModal();
+  }
+</script>
