@@ -4465,8 +4465,8 @@ const serializedConfig = JSON.stringify({
         });
       }
 
-      // Render college report using all league players to avoid empty results per team
-      renderPlayersByCollege(allLeaguePlayers);
+      // Render college report using current team's roster only
+      renderPlayersByCollege(rows);
 
       // Include all league players for ranking purposes, but also mark which team they belong to
       const allPlayersForTag = allLeaguePlayers.map(p => ({
