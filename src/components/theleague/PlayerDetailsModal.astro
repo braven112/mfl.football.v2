@@ -157,11 +157,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
             <span class="player-details-field__value" id="detail-depth-position">—</span>
           </div>
           <div class="player-details-field">
-            <span class="player-details-field__label">Depth Chart Order</span>
-            <span class="player-details-field__value" id="detail-depth-order">—</span>
-          </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">Players Ahead</span>
+            <span class="player-details-field__label">Depth Chart</span>
             <div class="player-details-field__value depth-chart-ahead" id="detail-depth-chart-ahead">Starter</div>
           </div>
         </div>
@@ -289,7 +285,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
   .player-details-section__title {
     margin: 0 0 1rem 0;
     font-size: 0.95rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #475569;
@@ -310,7 +306,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 
   .player-details-field__label {
     font-size: 0.8rem;
-    font-weight: 500;
+    font-weight: 300;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.02em;
@@ -318,7 +314,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 
   .player-details-field__value {
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 300;
     color: #1a1a1a;
     word-break: break-word;
   }
@@ -346,6 +342,14 @@ const NFL_TEAM_NAMES: Record<string, string> = {
     padding: 0.5rem 0;
     font-size: 0.95rem;
     color: #1a1a1a;
+  }
+
+  .depth-chart-ahead-item--ahead {
+    font-weight: 300;
+  }
+
+  .depth-chart-ahead-item--current {
+    font-weight: 700;
   }
 
   .college-field {
@@ -539,19 +543,24 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       setElementText('detail-number', playerData.number);
       setElementText('detail-experience', playerData.experience !== undefined ? playerData.experience + ' years' : 'N/A');
       setElementText('detail-depth-position', formatPosition(playerData.depthChartPosition));
-      setElementText('detail-depth-order', playerData.depthChartOrder);
 
       // Handle depth chart ahead
       const depthChartAheadEl = document.getElementById('detail-depth-chart-ahead');
       if (depthChartAheadEl) {
         if (playerData.depthChartAhead && Array.isArray(playerData.depthChartAhead) && playerData.depthChartAhead.length > 0) {
-          depthChartAheadEl.innerHTML = playerData.depthChartAhead
-            .map(p => `
-              <div class="depth-chart-ahead-item">
-                <span>${p.name}</span>
+          const aheadHtml = playerData.depthChartAhead
+            .map((p, idx) => `
+              <div class="depth-chart-ahead-item depth-chart-ahead-item--ahead">
+                <span>${p.name || `Player ${idx + 1}`}</span>
               </div>
             `)
             .join('');
+          const currentHtml = `
+            <div class="depth-chart-ahead-item depth-chart-ahead-item--current">
+              <span>${playerData.name || 'Current Player'}</span>
+            </div>
+          `;
+          depthChartAheadEl.innerHTML = aheadHtml + currentHtml;
         } else {
           depthChartAheadEl.textContent = 'Starter';
         }
