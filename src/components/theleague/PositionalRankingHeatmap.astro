@@ -1,0 +1,227 @@
+---
+import type { TeamRanking } from '../../utils/league-comparison-utils';
+
+interface Props {
+  rankings: TeamRanking[];
+}
+
+const { rankings } = Astro.props;
+
+const positions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DEF', 'TOTAL'];
+
+const getRankColor = (rank: number | string) => {
+  if (typeof rank === 'string') return '#f0f0f0';
+
+  // Heat gradient: 1 (best) = green, 8 (middle) = yellow, 16 (worst) = red
+  if (rank <= 5) {
+    // Green shades
+    return 'hsl(120, 70%, 40%)';
+  } else if (rank <= 10) {
+    // Yellow shades
+    const intensity = (rank - 5) / 5;
+    return `hsl(${60 - intensity * 30}, 100%, ${50 + intensity * 5}%)`;
+  } else {
+    // Red shades
+    const intensity = (rank - 10) / 6;
+    return `hsl(${30 - intensity * 30}, 100%, ${45 + intensity * 5}%)`;
+  }
+};
+
+const getTextColor = (rank: number | string) => {
+  if (typeof rank === 'string') return '#999';
+  return rank <= 8 ? 'white' : '#333';
+};
+---
+
+<div class="heatmap-container">
+  <div class="heatmap-scroll">
+    <table class="heatmap-table">
+      <thead>
+        <tr>
+          <th class="team-column">Team</th>
+          {positions.map((pos) => <th class="position-header">{pos}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rankings.map((team) => (
+            <tr class="team-row">
+              <td class="team-cell">
+                <span class="team-name">{team.name}</span>
+              </td>
+              {positions.map((pos) => {
+                const rank = team[pos];
+                const bgColor = getRankColor(rank);
+                const textColor = getTextColor(rank);
+                return (
+                  <td
+                    class="rank-cell"
+                    style={{
+                      backgroundColor: bgColor,
+                      color: textColor,
+                    }}
+                  >
+                    {rank}
+                  </td>
+                );
+              })}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">Ranking Color Legend</div>
+    <div class="legend-scale">
+      <div class="legend-item">
+        <div class="legend-color" style={{ backgroundColor: 'hsl(120, 70%, 40%)' }} />
+        <span>1-5 (Excellent)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style={{ backgroundColor: 'hsl(60, 100%, 55%)' }} />
+        <span>6-10 (Good)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style={{ backgroundColor: 'hsl(30, 100%, 50%)' }} />
+        <span>11-16 (Weak)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .heatmap-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .heatmap-scroll {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .heatmap-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+  }
+
+  .heatmap-table thead {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+  }
+
+  .heatmap-table th {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .team-column {
+    text-align: left;
+    min-width: 180px;
+  }
+
+  .position-header {
+    min-width: 60px;
+  }
+
+  .team-row {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .team-row:hover {
+    background: #f8fafc;
+  }
+
+  .team-cell {
+    padding: 1rem 0.75rem;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  .team-name {
+    display: inline-block;
+    min-width: 160px;
+  }
+
+  .rank-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: default;
+    transition: opacity 0.2s;
+  }
+
+  .rank-cell:hover {
+    opacity: 0.9;
+  }
+
+  .legend {
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .legend-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #475569;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .legend-scale {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+
+  .legend-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+  }
+
+  @media (max-width: 768px) {
+    .heatmap-table th,
+    .heatmap-table td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .position-header {
+      min-width: 50px;
+    }
+
+    .team-column {
+      min-width: 120px;
+    }
+
+    .team-name {
+      min-width: 100px;
+    }
+  }
+</style>
