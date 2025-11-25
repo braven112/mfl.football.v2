@@ -3496,7 +3496,7 @@ const serializedConfig = JSON.stringify({
         `;
       }).join('');
 
-      playersByCollegeContainer.innerHTML = collegesHtml || '<p style="text-align: center; color: #999;">No players</p>';
+      playersByCollegeContainer.innerHTML = collegesHtml || '<p style="text-align: center; color: #999;">No colleges with multiple players.</p>';
     };
 
     const renderDeadMoney = (seasonData = {}, franchiseId) => {
@@ -4450,7 +4450,6 @@ const serializedConfig = JSON.stringify({
 
       // Render players by team report
       renderPlayersbyTeam(rows);
-      renderPlayersByCollege(rows);
 
       // Update franchise tag eligibility component
       // Collect ALL league players for ranking, but only show selected team's eligible players
@@ -4465,6 +4464,9 @@ const serializedConfig = JSON.stringify({
           allLeaguePlayers.push(...teamPlayers);
         });
       }
+
+      // Render college report using all league players to avoid empty results per team
+      renderPlayersByCollege(allLeaguePlayers);
 
       // Include all league players for ranking purposes, but also mark which team they belong to
       const allPlayersForTag = allLeaguePlayers.map(p => ({
