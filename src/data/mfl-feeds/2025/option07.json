@@ -27,7 +27,7 @@ var year = 2025;
 var xmlBaseURL = 'https://www49.myfantasyleague.com/fflnetdynamic2025/';
 var baseURLStatic = 'https://www49.myfantasyleague.com';
 var baseURLDynamic = 'https://www49.myfantasyleague.com';
-var currentServerTime = 1764082521;
+var currentServerTime = 1764083197;
 var completedWeek = 12;
 var liveScoringWeek = 12;
 var startWeek = 1;
@@ -1285,7 +1285,7 @@ td#division03 h3::after {
 <td class="week">9</td><td class="salary">$797,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
 <tr><th colspan="6">3 Total Players on IR</th></tr>
 <tr><th colspan="6">Taxi Squad</th></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17055');" title="Salary: $450,000, Years: 5, Tag: , Week 13: at Browns Sun 10:00 a.m. PT" class="position_rb">James, Jordan SFO RB</a> (R)  (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17055');" title="Salary: $450,000, Years: 5, Tag: , Week 13: at Browns Sun 10:00 a.m. PT" class="position_rb">James, Jordan SFO RB</a> (R) </td>
 <td class="points"> &dash; </td>
 <td class="week">14</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
 <tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17072');" title="Salary: $600,000, Years: 5, Tag: , Week 13: vs Raiders Sun 1:25 p.m. PT" class="position_wr">Harris, Tre LAC WR</a> (R) </td>
@@ -1830,7 +1830,7 @@ td#division03 h3::after {
 <tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12860');" title="Salary: $742,551, Years: 1, Tag: T, Week 13: at Colts Sun 10:00 a.m. PT" class="position_pk">Fairbairn, Ka'imi HOU PK</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=12860&amp;YEAR=2025">114.70</a></td>
 <td class="week">6</td><td class="salary">$742,551</td><td class="contractyear">1</td><td class="contractinfo">T</tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13719');" title="Salary: $425,000, Years: 1, Tag: , Week 13: at Browns Sun 10:00 a.m. PT" class="position_pk">Pineiro, Eddy SFO PK</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13719');" title="Salary: $425,000, Years: 1, Tag: , Week 13: at Browns Sun 10:00 a.m. PT" class="position_pk">Pineiro, Eddy SFO PK</a> (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=13719&amp;YEAR=2025">112.60</a></td>
 <td class="week">14</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
 <tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0506');" title="Salary: $622,242, Years: 1, Tag: , Week 13: at Ravens Thu 5:20 p.m. PT" class="position_def">Bengals, Cincinnati CIN Def</a></td>
@@ -2090,7 +2090,7 @@ td#division03 h3::after {
 <tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13289');" title="Salary: $425,000, Years: 1, Tag: , Week 13: vs Giants Mon 5:15 p.m. PT" class="position_wr">Hollins, Mack NEP WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=13289&amp;YEAR=2025">70.10</a></td>
 <td class="week">14</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14123');" title="Salary: $700,000, Years: 1, Tag: , Week 13: vs Rams Sun 10:00 a.m. PT" class="position_wr">Renfrow, Hunter CAR WR</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14123');" title="Salary: $700,000, Years: 1, Tag: , Week 13: vs Rams Sun 10:00 a.m. PT" class="position_wr">Renfrow, Hunter CAR WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14123&amp;YEAR=2025">28.79</a></td>
 <td class="week">14</td><td class="salary">$700,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
 <tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16185');" title="Salary: $3,509,000, Years: 3, Tag: , Week 13: vs Vikings Sun 1:05 p.m. PT" class="position_wr">Smith-Njigba, Jaxon SEA WR</a></td>
@@ -2259,7 +2259,7 @@ $('body').addClass('regularSeason')}
 
 </div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
 <tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
-<tr><td colspan="2" align="center">Page Generated Tue Nov 25 6:55:21 a.m. PT 2025</td></tr>
+<tr><td colspan="2" align="center">Page Generated Tue Nov 25 7:06:37 a.m. PT 2025</td></tr>
 <tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
  - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
 - <button id="pmLink">Privacy Manager</button>
