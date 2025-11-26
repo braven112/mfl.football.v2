@@ -234,3 +234,18 @@ export function calculatePickValue(pickNumber: number, roundNumber?: number): nu
 
   return values[pickNumber] || 50;
 }
+
+/**
+ * Get team logo path from theleague assets
+ */
+export function getTeamLogoPath(
+  franchiseId: string,
+  leagueAssets: Record<string, any>,
+  type: 'icons' | 'banners' | 'group-me' = 'icons'
+): string | null {
+  const team = leagueAssets.teams?.find((t: any) => t.id === franchiseId);
+  if (!team || !team.assets || !team.assets[type]) {
+    return null;
+  }
+  return team.assets[type][0]?.relativePath || null;
+}

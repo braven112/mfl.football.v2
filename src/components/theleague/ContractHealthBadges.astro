@@ -1,14 +1,16 @@
 ---
 import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
-import { getCapHealthStatus } from '../../utils/league-comparison-utils';
+import { getCapHealthStatus, getTeamLogoPath } from '../../utils/league-comparison-utils';
+import leagueAssets from '../../data/theleague.assets.json';
 import { currencyFormatter } from '../../utils/formatters';
 
 interface Props {
   metrics: FranchiseMetrics[];
   deadMoneyMap?: Map<string, number>;
+  franchiseCapHits?: Record<string, number>;
 }
 
-const { metrics, deadMoneyMap = new Map() } = Astro.props;
+const { metrics, deadMoneyMap = new Map(), franchiseCapHits = {} } = Astro.props;
 
 const SALARY_CAP = 45000000;
 
@@ -24,8 +26,10 @@ const getHealthBadge = (status: 'healthy' | 'mediocre' | 'disaster') => {
 };
 
 const sortedMetrics = [...metrics].sort((a, b) => {
-  const statusA = getCapHealthStatus(a.totalSalary, a.totalPoints, deadMoneyMap.get(a.franchiseId) || 0);
-  const statusB = getCapHealthStatus(b.totalSalary, b.totalPoints, deadMoneyMap.get(b.franchiseId) || 0);
+  const capHitA = franchiseCapHits[a.franchiseId] || 0;
+  const capHitB = franchiseCapHits[b.franchiseId] || 0;
+  const statusA = getCapHealthStatus(capHitA, a.totalPoints, 0);
+  const statusB = getCapHealthStatus(capHitB, b.totalPoints, 0);
   const statusOrder = { healthy: 0, mediocre: 1, disaster: 2 };
   return statusOrder[statusA] - statusOrder[statusB];
 });
@@ -35,17 +39,25 @@ const sortedMetrics = [...metrics].sort((a, b) => {
   <div class="badges-grid">
     {
       sortedMetrics.map((metric) => {
+        const totalCapHit = franchiseCapHits[metric.franchiseId] || 0;
         const deadMoney = deadMoneyMap.get(metric.franchiseId) || 0;
-        const status = getCapHealthStatus(metric.totalSalary, metric.totalPoints, deadMoney);
+        const status = getCapHealthStatus(totalCapHit, metric.totalPoints, 0);
         const badge = getHealthBadge(status);
-        const capUsagePercent = (metric.totalSalary / SALARY_CAP) * 100;
+        const capUsagePercent = (totalCapHit / SALARY_CAP) * 100;
         const deadMoneyPercent = (deadMoney / SALARY_CAP) * 100;
         const ppm = metric.totalSalary > 0 ? metric.totalPoints / (metric.totalSalary / 1000000) : 0;
 
+        const logoPath = getTeamLogoPath(metric.franchiseId, leagueAssets);
         return (
           <div class="health-card">
             <div class="card-header">
-              <h3 class="team-name">{metric.name}</h3>
+              <div class="team-logo-header">
+                {logoPath ? (
+                  <img src={logoPath} alt={metric.name} title={metric.name} />
+                ) : (
+                  <h3 class="team-name">{metric.name}</h3>
+                )}
+              </div>
               <div class="health-badge" style={{ backgroundColor: badge.color }}>
                 <span class="badge-emoji">{badge.emoji}</span>
                 <span class="badge-label">{badge.label}</span>
@@ -77,7 +89,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
               <div class="metric">
                 <div class="metric-label">Cap Remaining</div>
                 <div class="metric-value">
-                  {currencyFormatter.format(Math.max(0, SALARY_CAP - metric.totalSalary))}
+                  {currencyFormatter.format(Math.max(0, SALARY_CAP - totalCapHit))}
                 </div>
               </div>
 
@@ -136,6 +148,19 @@ const sortedMetrics = [...metrics].sort((a, b) => {
     align-items: flex-start;
     margin-bottom: 1rem;
     gap: 1rem;
+  }
+
+  .team-logo-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 50px;
+  }
+
+  .team-logo-header img {
+    max-width: 100%;
+    max-height: 60px;
+    object-fit: contain;
   }
 
   .team-name {

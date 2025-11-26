@@ -1,6 +1,6 @@
 ---
 import leagueAssets from '../../data/theleague.assets.json';
-import { calculatePickValue } from '../../utils/league-comparison-utils';
+import { calculatePickValue, getTeamLogoPath } from '../../utils/league-comparison-utils';
 
 // Sample draft capital data - in a real app, this would come from MFL draft tracker
 // Format: franchiseId -> array of picks with round, pick number, year, etc.
@@ -92,10 +92,17 @@ const picksByYear = (picks) => {
             // Calculate asset score (1-16, where 1 is best)
             const assetScore = index + 1;
 
+            const logoPath = getTeamLogoPath(team.franchiseId, leagueAssets);
             return (
               <tr class="team-row">
                 <td class="team-cell">
-                  <span class="team-name">{team.name}</span>
+                  <div class="team-logo-cell">
+                    {logoPath ? (
+                      <img src={logoPath} alt={team.name} title={team.name} />
+                    ) : (
+                      <span class="team-name">{team.name}</span>
+                    )}
+                  </div>
                 </td>
                 <td class="picks-cell">
                   {picks2025.map((p) => (
@@ -214,14 +221,28 @@ const picksByYear = (picks) => {
   }
 
   .team-cell {
-    padding: 1rem 0.75rem;
+    padding: 0.75rem;
     font-weight: 500;
     color: #1a1a1a;
-    min-width: 180px;
+    min-width: 140px;
+  }
+
+  .team-logo-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 50px;
+  }
+
+  .team-logo-cell img {
+    max-width: 100%;
+    max-height: 60px;
+    object-fit: contain;
   }
 
   .team-name {
     display: inline-block;
+    text-align: center;
   }
 
   .picks-cell {

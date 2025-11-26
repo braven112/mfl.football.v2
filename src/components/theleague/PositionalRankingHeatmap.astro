@@ -1,5 +1,7 @@
 ---
 import type { TeamRanking } from '../../utils/league-comparison-utils';
+import { getTeamLogoPath } from '../../utils/league-comparison-utils';
+import leagueAssets from '../../data/theleague.assets.json';
 
 interface Props {
   rankings: TeamRanking[];
@@ -44,29 +46,38 @@ const getTextColor = (rank: number | string) => {
       </thead>
       <tbody>
         {
-          rankings.map((team) => (
-            <tr class="team-row">
-              <td class="team-cell">
-                <span class="team-name">{team.name}</span>
-              </td>
-              {positions.map((pos) => {
-                const rank = team[pos];
-                const bgColor = getRankColor(rank);
-                const textColor = getTextColor(rank);
-                return (
-                  <td
-                    class="rank-cell"
-                    style={{
-                      backgroundColor: bgColor,
-                      color: textColor,
-                    }}
-                  >
-                    {rank}
-                  </td>
-                );
-              })}
-            </tr>
-          ))
+          rankings.map((team) => {
+            const logoPath = getTeamLogoPath(team.franchiseId, leagueAssets);
+            return (
+              <tr class="team-row">
+                <td class="team-cell">
+                  <div class="team-logo-cell">
+                    {logoPath ? (
+                      <img src={logoPath} alt={team.name} title={team.name} />
+                    ) : (
+                      <span class="team-name">{team.name}</span>
+                    )}
+                  </div>
+                </td>
+                {positions.map((pos) => {
+                  const rank = team[pos];
+                  const bgColor = getRankColor(rank);
+                  const textColor = getTextColor(rank);
+                  return (
+                    <td
+                      class="rank-cell"
+                      style={{
+                        backgroundColor: bgColor,
+                        color: textColor,
+                      }}
+                    >
+                      {rank}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })
         }
       </tbody>
     </table>
@@ -145,14 +156,29 @@ const getTextColor = (rank: number | string) => {
   }
 
   .team-cell {
-    padding: 1rem 0.75rem;
+    padding: 0.75rem;
     font-weight: 500;
     color: #1a1a1a;
+  }
+
+  .team-logo-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    min-width: 100px;
+  }
+
+  .team-logo-cell img {
+    max-width: 100%;
+    max-height: 70px;
+    object-fit: contain;
   }
 
   .team-name {
     display: inline-block;
     min-width: 160px;
+    text-align: center;
   }
 
   .rank-cell {

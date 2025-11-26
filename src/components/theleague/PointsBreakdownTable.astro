@@ -1,7 +1,8 @@
 ---
 import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
 import type { Player } from '../../utils/league-comparison-utils';
-import { calculateLuckScore } from '../../utils/league-comparison-utils';
+import { calculateLuckScore, getTeamLogoPath } from '../../utils/league-comparison-utils';
+import leagueAssets from '../../data/theleague.assets.json';
 
 interface Props {
   metrics: FranchiseMetrics[];
@@ -66,43 +67,52 @@ const getLuckLabel = (luck: number) => {
     </thead>
     <tbody>
       {
-        sortedStats.map((stat, index) => (
-          <tr class="team-row">
-            <td class="team-cell">
-              <span class="rank-badge">{index + 1}</span>
-              {stat.name}
-            </td>
-            <td class="numeric-cell">
-              <strong>{Math.round(stat.totalPoints)}</strong>
-            </td>
-            <td class="numeric-cell">{stat.weeklyAvg.toFixed(1)}</td>
-            <td class="numeric-cell">{stat.stdDev.toFixed(1)}</td>
-            <td class="consistency-cell">
-              <div class="consistency-bar">
+        sortedStats.map((stat, index) => {
+          const logoPath = getTeamLogoPath(stat.franchiseId, leagueAssets);
+          return (
+            <tr class="team-row">
+              <td class="team-cell">
+                <span class="rank-badge">{index + 1}</span>
+                <div class="team-logo-cell">
+                  {logoPath ? (
+                    <img src={logoPath} alt={stat.name} title={stat.name} />
+                  ) : (
+                    <span>{stat.name}</span>
+                  )}
+                </div>
+              </td>
+              <td class="numeric-cell">
+                <strong>{Math.round(stat.totalPoints)}</strong>
+              </td>
+              <td class="numeric-cell">{stat.weeklyAvg.toFixed(1)}</td>
+              <td class="numeric-cell">{stat.stdDev.toFixed(1)}</td>
+              <td class="consistency-cell">
+                <div class="consistency-bar">
+                  <div
+                    class="consistency-fill"
+                    style={{
+                      width: `${Math.min(100, (10 / stat.stdDev) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span class="consistency-label">
+                  {stat.stdDev < 8 ? 'High' : stat.stdDev < 12 ? 'Medium' : 'Low'}
+                </span>
+              </td>
+              <td class="luck-cell">
                 <div
-                  class="consistency-fill"
+                  class="luck-badge"
                   style={{
-                    width: `${Math.min(100, (10 / stat.stdDev) * 100)}%`,
+                    backgroundColor: getLuckColor(stat.luckScore),
                   }}
-                />
-              </div>
-              <span class="consistency-label">
-                {stat.stdDev < 8 ? 'High' : stat.stdDev < 12 ? 'Medium' : 'Low'}
-              </span>
-            </td>
-            <td class="luck-cell">
-              <div
-                class="luck-badge"
-                style={{
-                  backgroundColor: getLuckColor(stat.luckScore),
-                }}
-              >
-                <span class="luck-score">{stat.luckScore > 0 ? '+' : ''}{stat.luckScore.toFixed(2)}</span>
-                <span class="luck-label">{getLuckLabel(stat.luckScore)}</span>
-              </div>
-            </td>
-          </tr>
-        ))
+                >
+                  <span class="luck-score">{stat.luckScore > 0 ? '+' : ''}{stat.luckScore.toFixed(2)}</span>
+                  <span class="luck-label">{getLuckLabel(stat.luckScore)}</span>
+                </div>
+              </td>
+            </tr>
+        );
+        })
       }
     </tbody>
   </table>
@@ -185,6 +195,20 @@ const getLuckLabel = (luck: number) => {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  .team-logo-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 40px;
+    flex: 1;
+  }
+
+  .team-logo-cell img {
+    max-width: 100%;
+    max-height: 50px;
+    object-fit: contain;
   }
 
   .rank-badge {
