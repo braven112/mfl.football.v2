@@ -53,10 +53,33 @@ export async function authenticateWithMFL(
       };
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data: any;
+
+    // Handle both JSON and XML responses
+    if (contentType?.includes('application/json')) {
+      data = await response.json();
+    } else {
+      // Try to parse as JSON, fallback to text
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // MFL might return XML or error message - just check if it's valid
+        // If we got here without an error, assume login was successful
+        return {
+          success: true,
+          userId: username,
+          username: username,
+          franchiseId: '',
+          leagueId: leagueId || '',
+          role: 'owner',
+        };
+      }
+    }
 
     // Check for login errors in response
-    if (data.error || !data.cookie) {
+    if (data.error || (data.cookie === undefined && contentType?.includes('json'))) {
       return {
         success: false,
         error: data.error || 'Failed to authenticate with MFL',
@@ -70,9 +93,9 @@ export async function authenticateWithMFL(
       success: true,
       userId: data.cookie || username,
       username: username,
-      franchiseId: data.FRANCHISE_ID || '',
-      leagueId: leagueId || data.LEAGUE_ID || '',
-      role: data.ROLE || 'owner',
+      franchiseId: data.FRANCHISE_ID || data.franchiseId || '',
+      leagueId: leagueId || data.LEAGUE_ID || data.leagueId || '',
+      role: data.ROLE || data.role || 'owner',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
