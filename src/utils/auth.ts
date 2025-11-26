@@ -14,25 +14,43 @@ export interface AuthUser {
 
 /**
  * Get authenticated user from request
- * Checks multiple sources for authentication:
- * 1. Authorization header with Bearer token (future JWT implementation)
- * 2. X-Auth-User header with user context (message board or test)
- * 3. Query parameters (for testing/development)
- * 4. Cookies (for future session-based auth)
+ * Checks multiple sources for authentication (in priority order):
+ * 1. Session JWT from httpOnly cookie (primary auth method)
+ * 2. Authorization header with Bearer token
+ * 3. X-User-Context header (sent by message board or test harness)
+ * 4. X-Auth-User header (colon-delimited format for test)
  */
 export function getAuthUser(request: Request): AuthUser | null {
-  // Get headers from request
-  const authHeader = request.headers.get('authorization');
-  const userHeader = request.headers.get('x-auth-user');
-  const userContextHeader = request.headers.get('x-user-context');
+  // Import here to avoid circular dependencies
+  const { getSessionTokenFromCookie, validateSessionToken } = require('./session');
 
+  // Priority 1: Check for session JWT in cookies
+  const cookieHeader = request.headers.get('cookie');
+  const sessionToken = getSessionTokenFromCookie(cookieHeader);
+
+  if (sessionToken) {
+    const sessionData = validateSessionToken(sessionToken);
+    if (sessionData) {
+      return {
+        id: sessionData.userId,
+        name: sessionData.username,
+        franchiseId: sessionData.franchiseId,
+        leagueId: sessionData.leagueId,
+        role: sessionData.role,
+      };
+    }
+  }
+
+  // Priority 2: Check Authorization header with Bearer token
+  const authHeader = request.headers.get('authorization');
   // TODO: Implement JWT token validation from Authorization header
   // if (authHeader?.startsWith('Bearer ')) {
   //   const token = authHeader.substring(7);
   //   return validateJWT(token);
   // }
 
-  // Check for user context header (sent by message board or test harness)
+  // Priority 3: Check for user context header (sent by message board or test harness)
+  const userContextHeader = request.headers.get('x-user-context');
   if (userContextHeader) {
     try {
       const user = JSON.parse(userContextHeader) as AuthUser;
@@ -44,7 +62,8 @@ export function getAuthUser(request: Request): AuthUser | null {
     }
   }
 
-  // Check for X-Auth-User header with format: "id:franchiseId:leagueId:name:role"
+  // Priority 4: Check for X-Auth-User header with format: "id:franchiseId:leagueId:name:role"
+  const userHeader = request.headers.get('x-auth-user');
   if (userHeader) {
     const parts = userHeader.split(':');
     if (parts.length >= 3) {
@@ -57,9 +76,6 @@ export function getAuthUser(request: Request): AuthUser | null {
       };
     }
   }
-
-  // TODO: Check cookies for session-based auth
-  // const sessionCookie = request.headers.get('cookie')?.split(';').find(c => c.includes('__session'));
 
   return null;
 }

@@ -1,0 +1,56 @@
+---
+/**
+ * Login Page
+ * Handles user authentication with MFL credentials
+ */
+
+import Layout from '../layouts/Layout.astro';
+import LoginForm from '../components/LoginForm';
+
+// If user is already authenticated, redirect to theleague
+const authUser = Astro.request.headers.get('cookie')?.includes('session_token');
+if (authUser) {
+  return Astro.redirect('/theleague');
+}
+---
+
+<Layout title="Login - The League">
+  <main style="max-width: 500px; margin: 4rem auto; padding: 2rem;">
+    <div style="text-align: center; margin-bottom: 3rem;">
+      <h1>The League</h1>
+      <p style="color: #666; margin-top: 0.5rem;">Sign in with your MFL account</p>
+    </div>
+
+    <LoginForm client:load />
+
+    <p style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
+      Don't have an MFL account? <a href="https://www.myfantasyleague.com/" target="_blank" style="color: #0066cc; text-decoration: none;">Create one here</a>
+    </p>
+  </main>
+
+  <style>
+    main {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    a {
+      text-decoration: underline;
+    }
+
+    a:hover {
+      color: #0052a3 !important;
+    }
+  </style>
+</Layout>
