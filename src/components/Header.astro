@@ -492,7 +492,7 @@
 	}
 </style>
 
-<script>
+<script is:inline>
 	// Hamburger menu functionality
 	const hamburgerBtn = document.getElementById('hamburger-btn');
 	const navMenu = document.getElementById('nav-menu');
@@ -694,6 +694,8 @@
 		}
 	});
 
-	// Initialize auth status on page load
-	updateAuthStatus();
+	// Initialize auth status with a small delay to ensure DOM is ready
+	setTimeout(() => {
+		updateAuthStatus();
+	}, 0);
 </script>
