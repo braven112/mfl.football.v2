@@ -23,7 +23,14 @@ interface JWTPayload extends SessionData {
 
 // Get JWT secret from environment variable
 // CRITICAL: Must be consistent across all invocations
+let JWT_SECRET: string | null = null;
+
 function getJWTSecret(): string {
+  // Return cached secret if available
+  if (JWT_SECRET) {
+    return JWT_SECRET;
+  }
+
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
@@ -37,13 +44,13 @@ function getJWTSecret(): string {
 
     // In development, generate a random secret and warn
     console.warn('⚠️  JWT_SECRET not set - using random secret. This will invalidate sessions on restart!');
-    return randomBytes(32).toString('hex');
+    JWT_SECRET = randomBytes(32).toString('hex');
+  } else {
+    JWT_SECRET = secret;
   }
 
-  return secret;
+  return JWT_SECRET;
 }
-
-const JWT_SECRET = getJWTSecret();
 
 /**
  * Create a JWT token for session
@@ -70,7 +77,8 @@ export function createSessionToken(sessionData: Omit<SessionData, 'issuedAt' | '
   const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
 
-  const signature = createHmac('sha256', JWT_SECRET)
+  const secret = getJWTSecret();
+  const signature = createHmac('sha256', secret)
     .update(`${encodedHeader}.${encodedPayload}`)
     .digest('base64url');
 
@@ -91,7 +99,8 @@ export function validateSessionToken(token: string): SessionData | null {
     const [encodedHeader, encodedPayload, signature] = parts;
 
     // Verify signature
-    const expectedSignature = createHmac('sha256', JWT_SECRET)
+    const secret = getJWTSecret();
+    const expectedSignature = createHmac('sha256', secret)
       .update(`${encodedHeader}.${encodedPayload}`)
       .digest('base64url');
 
