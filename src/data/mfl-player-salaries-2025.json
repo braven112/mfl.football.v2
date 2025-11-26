@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-11-26T20:36:02.963Z"
+    "fetchedAt": "2025-11-26T20:44:50.984Z"
   },
   "players": [
     {
@@ -165,7 +165,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -200,10 +200,6 @@
         {
           "id": "16451",
           "name": "Shavers, Tyrell"
-        },
-        {
-          "id": "15288",
-          "name": "Moore, Elijah"
         }
       ]
     },
@@ -1471,7 +1467,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -1496,12 +1492,12 @@
       },
       "depthChartAhead": [
         {
-          "id": "15779",
-          "name": "Doubs, Romeo"
-        },
-        {
           "id": "15789",
           "name": "Watson, Christian"
+        },
+        {
+          "id": "15779",
+          "name": "Doubs, Romeo"
         },
         {
           "id": "16195",
@@ -1725,7 +1721,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -1748,7 +1744,12 @@
         "stSnapPct": 0.17,
         "pfrPlayerId": "DoubRo00"
       },
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15789",
+          "name": "Watson, Christian"
+        }
+      ]
     },
     {
       "id": "15708",
@@ -2506,12 +2507,12 @@
       },
       "depthChartAhead": [
         {
-          "id": "14860",
-          "name": "Jennings, Jauan"
-        },
-        {
           "id": "16622",
           "name": "Pearsall, Ricky"
+        },
+        {
+          "id": "14860",
+          "name": "Jennings, Jauan"
         }
       ]
     },
@@ -2853,7 +2854,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "PR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -3601,7 +3602,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -3624,12 +3625,7 @@
         "stSnapPct": 0,
         "pfrPlayerId": "PearRi00"
       },
-      "depthChartAhead": [
-        {
-          "id": "14860",
-          "name": "Jennings, Jauan"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15759",
@@ -4309,7 +4305,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -4332,12 +4328,7 @@
         "stSnapPct": 0,
         "pfrPlayerId": "WatsCh00"
       },
-      "depthChartAhead": [
-        {
-          "id": "15779",
-          "name": "Doubs, Romeo"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16751",
@@ -5310,7 +5301,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -5436,7 +5427,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -5463,6 +5454,10 @@
         {
           "id": "11244",
           "name": "Kelce, Travis"
+        },
+        {
+          "id": "16648",
+          "name": "Wiley, Jared"
         }
       ]
     },
@@ -7606,8 +7601,8 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
-        "depthChartOrder": 6,
+        "depthChartPosition": null,
+        "depthChartOrder": null,
         "fantasyPositions": [
           "WR"
         ],
@@ -7630,20 +7625,7 @@
         "stSnapPct": 0,
         "pfrPlayerId": "MoorEl00"
       },
-      "depthChartAhead": [
-        {
-          "id": "15761",
-          "name": "Shakir, Khalil"
-        },
-        {
-          "id": "15319",
-          "name": "Palmer, Joshua"
-        },
-        {
-          "id": "16451",
-          "name": "Shavers, Tyrell"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15798",
@@ -9628,7 +9610,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -9642,10 +9624,6 @@
         {
           "id": "11244",
           "name": "Kelce, Travis"
-        },
-        {
-          "id": "15337",
-          "name": "Gray, Noah"
         }
       ]
     },
@@ -13094,7 +13072,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -13157,7 +13135,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -13465,7 +13443,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -17386,12 +17364,12 @@
       },
       "depthChartAhead": [
         {
-          "id": "15779",
-          "name": "Doubs, Romeo"
-        },
-        {
           "id": "15789",
           "name": "Watson, Christian"
+        },
+        {
+          "id": "15779",
+          "name": "Doubs, Romeo"
         },
         {
           "id": "16195",
@@ -18116,12 +18094,12 @@
       },
       "depthChartAhead": [
         {
-          "id": "15779",
-          "name": "Doubs, Romeo"
-        },
-        {
           "id": "15789",
           "name": "Watson, Christian"
+        },
+        {
+          "id": "15779",
+          "name": "Doubs, Romeo"
         }
       ]
     },
@@ -18631,7 +18609,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "PR",
-        "depthChartOrder": 8,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -18810,8 +18788,8 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Ankle",
         "gsisId": null
       },
       "nflverse": {
@@ -18997,7 +18975,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -19020,7 +18998,12 @@
         "stSnapPct": 0,
         "pfrPlayerId": "JennJa00"
       },
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16622",
+          "name": "Pearsall, Ricky"
+        }
+      ]
     },
     {
       "id": "17063",
@@ -20615,12 +20598,12 @@
       "nflverse": null,
       "depthChartAhead": [
         {
-          "id": "14860",
-          "name": "Jennings, Jauan"
-        },
-        {
           "id": "16622",
           "name": "Pearsall, Ricky"
+        },
+        {
+          "id": "14860",
+          "name": "Jennings, Jauan"
         },
         {
           "id": "13418",
