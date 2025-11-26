@@ -3,7 +3,7 @@ import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../data/theleague.assets.json';
 import ChartCard from '../components/theleague/ChartCard.astro';
 import BarChart from '../components/theleague/BarChart.astro';
-import LeagueRosterStrengthChart from '../components/theleague/LeagueRosterStrengthChart.astro';
+import LeagueRosterStrengthChartFiltered from '../components/theleague/LeagueRosterStrengthChartFiltered.astro';
 import PositionalRankingHeatmap from '../components/theleague/PositionalRankingHeatmap.astro';
 import ContractHealthBadges from '../components/theleague/ContractHealthBadges.astro';
 import PointsBreakdownTable from '../components/theleague/PointsBreakdownTable.astro';
@@ -14,6 +14,7 @@ import {
   type FranchiseMetrics,
 } from '../utils/league-comparison-utils';
 import { parseNumber } from '../utils/formatters';
+import { calculateCapCharges, aggregateDeadMoney, SALARY_CAP } from '../utils/salary-calculations';
 
 // Load roster and salary data
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
@@ -92,32 +93,43 @@ salaryAdjustments.forEach((adj) => {
   }
 });
 
-// Process roster data to get players by franchise
-const playersByFranchise = new Map<string, any[]>();
-
-Object.entries(latestRoster).forEach(([franchiseId, franchiseData]: [string, any]) => {
-  const players = franchiseData.players || [];
-  playersByFranchise.set(franchiseId, players);
-});
-
-// Flatten all players into a single array for aggregation
-const allPlayers = Array.from(playersByFranchise.entries()).flatMap(([franchiseId, players]) =>
-  players.map((p) => ({
-    id: p.id,
-    name: p.name,
-    position: p.position,
-    salary: parseNumber(p.salary),
-    points: parseNumber(p.points),
-    franchiseId,
-    birthdate: p.birthdate,
-    contractYears: parseNumber(p.contractYears),
-    status: p.status,
-    nflTeam: p.nflTeam,
-  }))
-);
+// Get all players from the roster data
+// The data structure has a flat array of players with franchiseId
+const allPlayers = (latestRoster.players || []).map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  position: p.position,
+  salary: parseNumber(p.salary),
+  points: parseNumber(p.points),
+  franchiseId: p.franchiseId,
+  birthdate: p.birthdate,
+  contractYears: parseNumber(p.contractYear),
+  status: p.status,
+  nflTeam: p.team,
+}));
 
 // Aggregate by franchise
 const franchiseMetrics = aggregateByFranchise(allPlayers, teamLookup, deadMoneyMap);
+
+// Calculate actual cap hits per franchise (including status percentages)
+const franchiseCapHitsMap = new Map<string, number>();
+Object.keys(teamLookup).forEach((franchiseId) => {
+  const franchisePlayers = allPlayers.filter(p => p.franchiseId === franchiseId);
+  const capCharges = calculateCapCharges(franchisePlayers.map(p => ({
+    salary: p.salary,
+    contractYears: p.contractYears,
+    displayTag: p.status ? (p.status.includes('TAXI') ? 'PRACTICE' : (p.status.includes('INJURED') ? 'INJURED' : 'ACTIVE')) : 'ACTIVE'
+  })));
+  const currentYearCap = capCharges[0] || 0;
+  const deadMoney = deadMoneyMap.get(franchiseId) || 0;
+  franchiseCapHitsMap.set(franchiseId, currentYearCap + deadMoney);
+});
+
+// Convert Map to object for passing to Astro components
+const franchiseCapHits: Record<string, number> = {};
+franchiseCapHitsMap.forEach((value, key) => {
+  franchiseCapHits[key] = value;
+});
 
 // Rank franchises by position
 const positionalRankings = rankByPosition(franchiseMetrics);
@@ -137,7 +149,7 @@ const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalar
     <section class="comparison-section">
       <h2>Roster Strength by Position</h2>
       <p class="section-description">Total fantasy points contributed by position for each team</p>
-      <LeagueRosterStrengthChart metrics={franchiseMetrics} />
+      <LeagueRosterStrengthChartFiltered metrics={franchiseMetrics} />
     </section>
 
     <!-- Section 2: Positional Ranking Heatmap -->
@@ -156,6 +168,7 @@ const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalar
       <ContractHealthBadges
         metrics={franchiseMetrics}
         deadMoneyMap={deadMoneyMap}
+        franchiseCapHits={franchiseCapHits}
       />
     </section>
 

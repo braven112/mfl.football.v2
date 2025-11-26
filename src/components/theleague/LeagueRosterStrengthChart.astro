@@ -1,89 +1,97 @@
 ---
 import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
-import BarChart from './BarChart.astro';
-import type { ChartData } from '../../scripts/chart-utils';
+import { getTeamLogoPath } from '../../utils/league-comparison-utils';
+import leagueAssets from '../../data/theleague.assets.json';
+import type { ChartSlice } from '../../scripts/chart-utils';
 
 interface Props {
   metrics: FranchiseMetrics[];
+  chartId?: string;
 }
 
-const { metrics } = Astro.props;
+const { metrics, chartId = 'rosterStrengthChart' } = Astro.props;
 
-// Prepare data for stacked bar chart
-const chartData: ChartData = {
-  labels: metrics.map((m) => m.name),
-  datasets: [
-    {
-      label: 'QB',
-      data: metrics.map((m) => m.positionBreakdown.QB.points),
-      backgroundColor: '#3b82f6',
-    },
-    {
-      label: 'RB',
-      data: metrics.map((m) => m.positionBreakdown.RB.points),
-      backgroundColor: '#10b981',
-    },
-    {
-      label: 'WR',
-      data: metrics.map((m) => m.positionBreakdown.WR.points),
-      backgroundColor: '#f59e0b',
-    },
-    {
-      label: 'TE',
-      data: metrics.map((m) => m.positionBreakdown.TE.points),
-      backgroundColor: '#8b5cf6',
-    },
-    {
-      label: 'FLEX',
-      data: metrics.map((m) => m.positionBreakdown.FLEX.points),
-      backgroundColor: '#ec4899',
-    },
-    {
-      label: 'DEF',
-      data: metrics.map((m) => m.positionBreakdown.DEF.points),
-      backgroundColor: '#6b7280',
-    },
-  ],
-};
+// Prepare slices for stacked bar chart (all positions)
+const slices: ChartSlice[] = [
+  {
+    label: 'QB',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.QB.points, 0),
+    color: '#3b82f6',
+  },
+  {
+    label: 'RB',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.RB.points, 0),
+    color: '#10b981',
+  },
+  {
+    label: 'WR',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.WR.points, 0),
+    color: '#f59e0b',
+  },
+  {
+    label: 'TE',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.TE.points, 0),
+    color: '#8b5cf6',
+  },
+  {
+    label: 'FLEX',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.FLEX.points, 0),
+    color: '#ec4899',
+  },
+  {
+    label: 'DEF',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.DEF.points, 0),
+    color: '#6b7280',
+  },
+];
 
 const sortedMetrics = [...metrics].sort((a, b) => b.totalPoints - a.totalPoints);
 const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
 ---
 
 <div class="roster-strength-chart">
-  <BarChart data={chartData} options={{ indexAxis: 'y', stacked: true }} />
+  <div id={chartId} data-slices={JSON.stringify(slices)} data-chart-id={chartId}></div>
 
   <div class="chart-stats">
     <div class="stats-grid">
       {
-        sortedMetrics.map((metric) => (
-          <div class="team-stat-card">
-            <div class="team-name">{metric.name}</div>
-            <div class="total-points">{Math.round(metric.totalPoints)}</div>
-            <div class="points-bar">
-              <div
-                class="points-bar-fill"
-                style={{
-                  width: `${(metric.totalPoints / maxPoints) * 100}%`,
-                }}
-              />
+        sortedMetrics.map((metric) => {
+          const logoPath = getTeamLogoPath(metric.franchiseId, leagueAssets);
+          return (
+            <div class="team-stat-card">
+              <div class="team-logo">
+                {logoPath ? (
+                  <img src={logoPath} alt={metric.name} title={metric.name} />
+                ) : (
+                  <div class="team-name-fallback">{metric.name}</div>
+                )}
+              </div>
+              <div class="total-points">{Math.round(metric.totalPoints)}</div>
+              <div class="points-bar">
+                <div
+                  class="points-bar-fill"
+                  style={{
+                    width: `${(metric.totalPoints / maxPoints) * 100}%`,
+                  }}
+                />
+              </div>
+              <div class="position-breakdown">
+                <span>
+                  QB: {Math.round(metric.positionBreakdown.QB.points)}
+                </span>
+                <span>
+                  RB: {Math.round(metric.positionBreakdown.RB.points)}
+                </span>
+                <span>
+                  WR: {Math.round(metric.positionBreakdown.WR.points)}
+                </span>
+                <span>
+                  TE: {Math.round(metric.positionBreakdown.TE.points)}
+                </span>
+              </div>
             </div>
-            <div class="position-breakdown">
-              <span>
-                QB: {Math.round(metric.positionBreakdown.QB.points)}
-              </span>
-              <span>
-                RB: {Math.round(metric.positionBreakdown.RB.points)}
-              </span>
-              <span>
-                WR: {Math.round(metric.positionBreakdown.WR.points)}
-              </span>
-              <span>
-                TE: {Math.round(metric.positionBreakdown.TE.points)}
-              </span>
-            </div>
-          </div>
-        ))
+          );
+        })
       }
     </div>
   </div>
@@ -121,12 +129,27 @@ const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
     border-color: #cbd5e1;
   }
 
-  .team-name {
+  .team-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    margin-bottom: 0.25rem;
+  }
+
+  .team-logo img {
+    max-width: 100%;
+    max-height: 80px;
+    object-fit: contain;
+  }
+
+  .team-name-fallback {
     font-size: 0.9rem;
     font-weight: 600;
     color: #475569;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    text-align: center;
   }
 
   .total-points {
@@ -170,3 +193,23 @@ const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
     }
   }
 </style>
+
+<script>
+  import { buildBarChart } from '../../scripts/chart-utils';
+
+  // Render bar chart for each roster strength chart element
+  document.querySelectorAll<HTMLElement>('[data-chart-id]').forEach((element) => {
+    const slicesJson = element.dataset.slices;
+    if (!slicesJson) return;
+
+    try {
+      const slices = JSON.parse(slicesJson);
+      const positionOrder = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DEF'];
+      const total = slices.reduce((sum: number, slice: { value: number }) => sum + slice.value, 0);
+
+      buildBarChart(element, slices, positionOrder, total);
+    } catch (error) {
+      console.error('Failed to render roster strength chart:', error);
+    }
+  });
+</script>

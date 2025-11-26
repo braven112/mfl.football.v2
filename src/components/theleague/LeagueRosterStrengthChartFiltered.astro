@@ -1,0 +1,358 @@
+---
+import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
+import { getTeamLogoPath } from '../../utils/league-comparison-utils';
+import leagueAssets from '../../data/theleague.assets.json';
+import type { ChartSlice } from '../../scripts/chart-utils';
+
+interface Props {
+  metrics: FranchiseMetrics[];
+}
+
+const { metrics } = Astro.props;
+
+const POSITIONS = ['All', 'QB', 'RB', 'WR', 'TE', 'FLEX', 'DEF'] as const;
+
+// All position slices for the chart
+const allPositionSlices: ChartSlice[] = [
+  {
+    label: 'QB',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.QB.points, 0),
+    color: '#3b82f6',
+  },
+  {
+    label: 'RB',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.RB.points, 0),
+    color: '#10b981',
+  },
+  {
+    label: 'WR',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.WR.points, 0),
+    color: '#f59e0b',
+  },
+  {
+    label: 'TE',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.TE.points, 0),
+    color: '#8b5cf6',
+  },
+  {
+    label: 'FLEX',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.FLEX.points, 0),
+    color: '#ec4899',
+  },
+  {
+    label: 'DEF',
+    value: metrics.reduce((sum, m) => sum + m.positionBreakdown.DEF.points, 0),
+    color: '#6b7280',
+  },
+];
+
+const sortedMetrics = [...metrics].sort((a, b) => b.totalPoints - a.totalPoints);
+const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
+---
+
+<div class="roster-strength-filtered">
+  <div class="filter-container">
+    <label for="position-filter">Filter by Position:</label>
+    <select id="position-filter" class="position-select">
+      {POSITIONS.map((position) => (
+        <option value={position} selected={position === 'All'}>
+          {position}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div id="chart-container" data-slices={JSON.stringify(allPositionSlices)}></div>
+
+  <div class="team-stats-container">
+    <div class="team-stats-grid" id="team-stats-grid">
+      {
+        sortedMetrics.map((metric) => {
+          const logoPath = getTeamLogoPath(metric.franchiseId, leagueAssets);
+          return (
+            <div class="team-stat-card" data-franchise-id={metric.franchiseId}>
+              <div class="team-logo">
+                {logoPath ? (
+                  <img src={logoPath} alt={metric.name} title={metric.name} />
+                ) : (
+                  <div class="team-name-fallback">{metric.name}</div>
+                )}
+              </div>
+              <div class="total-points" data-total-points={metric.totalPoints}>
+                {Math.round(metric.totalPoints)}
+              </div>
+              <div class="points-bar">
+                <div
+                  class="points-bar-fill"
+                  style={{
+                    width: `${(metric.totalPoints / maxPoints) * 100}%`,
+                  }}
+                />
+              </div>
+              <div class="position-breakdown">
+                <span data-pos="QB">QB: {Math.round(metric.positionBreakdown.QB.points)}</span>
+                <span data-pos="RB">RB: {Math.round(metric.positionBreakdown.RB.points)}</span>
+                <span data-pos="WR">WR: {Math.round(metric.positionBreakdown.WR.points)}</span>
+                <span data-pos="TE">TE: {Math.round(metric.positionBreakdown.TE.points)}</span>
+              </div>
+            </div>
+          );
+        })
+      }
+    </div>
+  </div>
+</div>
+
+<script>
+  import { buildBarChart } from '../../scripts/chart-utils';
+
+  const selectElement = document.getElementById('position-filter') as HTMLSelectElement;
+  const chartContainer = document.getElementById('chart-container') as HTMLElement;
+  const teamStatsGrid = document.getElementById('team-stats-grid') as HTMLElement;
+
+  // Get all slices data
+  const slicesJson = chartContainer.dataset.slices;
+  const allSlices = slicesJson ? JSON.parse(slicesJson) : [];
+
+  // Initial render
+  renderChart('All');
+
+  if (selectElement) {
+    selectElement.addEventListener('change', (e) => {
+      const position = (e.target as HTMLSelectElement).value;
+      renderChart(position);
+      updateTeamCards(position);
+    });
+  }
+
+  function renderChart(position: string) {
+    if (!chartContainer) return;
+
+    let slices: typeof allSlices;
+
+    if (position === 'All') {
+      slices = allSlices;
+    } else {
+      const slice = allSlices.find((s: any) => s.label === position);
+      slices = slice ? [slice] : allSlices;
+    }
+
+    const total = slices.reduce((sum: number, slice: any) => sum + slice.value, 0);
+
+    // Formatter to display fantasy points instead of currency
+    const pointsFormatter = (value: number) => Math.round(value).toString();
+
+    buildBarChart(
+      chartContainer,
+      slices,
+      position === 'All' ? ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DEF'] : [position],
+      total,
+      pointsFormatter
+    );
+  }
+
+  function updateTeamCards(position: string) {
+    if (!teamStatsGrid) return;
+
+    const cards = Array.from(teamStatsGrid.querySelectorAll('.team-stat-card')) as HTMLElement[];
+
+    // Calculate points for each card
+    const cardData = cards.map(card => {
+      let points: number;
+
+      if (position === 'All') {
+        points = parseFloat(card.dataset.totalPoints || '0');
+      } else {
+        const posSpan = card.querySelector(`[data-pos="${position}"]`) as HTMLElement;
+        if (posSpan) {
+          const text = posSpan.textContent || '';
+          const match = text.match(/\d+/);
+          points = match ? parseFloat(match[0]) : 0;
+        } else {
+          points = 0;
+        }
+      }
+
+      return { card, points };
+    });
+
+    // Sort by points (best to worst)
+    cardData.sort((a, b) => b.points - a.points);
+
+    // Calculate max for scaling
+    const maxPoints = Math.max(...cardData.map(d => d.points));
+
+    // Re-order cards in DOM and update
+    cardData.forEach(({ card, points }) => {
+      const breakdown = card.querySelector('.position-breakdown') as HTMLElement;
+      const totalPointsEl = card.querySelector('.total-points') as HTMLElement;
+      const pointsBar = card.querySelector('.points-bar-fill') as HTMLElement;
+
+      if (position === 'All') {
+        breakdown.style.display = 'grid';
+      } else {
+        breakdown.style.display = 'none';
+      }
+
+      totalPointsEl.textContent = Math.round(points).toString();
+
+      if (pointsBar && maxPoints > 0) {
+        pointsBar.style.width = `${(points / maxPoints) * 100}%`;
+      }
+
+      // Move card to correct position in DOM
+      teamStatsGrid?.appendChild(card);
+    });
+  }
+</script>
+
+<style>
+  .roster-strength-filtered {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .filter-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .filter-container label {
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+  }
+
+  .position-select {
+    padding: 0.5rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: white;
+    font-size: 1rem;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .position-select:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .position-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  #chart-container {
+    padding: 1.5rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .team-stats-container {
+    width: 100%;
+  }
+
+  .team-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .team-stat-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .team-stat-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  .team-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    margin-bottom: 0.25rem;
+  }
+
+  .team-name-fallback {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+
+  .total-points {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .points-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .points-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b, #8b5cf6);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .position-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  .position-breakdown span {
+    padding: 0.25rem 0.5rem;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+  }
+
+  @media (max-width: 768px) {
+    .filter-container {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .position-select {
+      width: 100%;
+    }
+
+    .team-stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
