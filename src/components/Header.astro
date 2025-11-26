@@ -16,12 +16,95 @@
 			<span class="brand-text">MFL.football</span>
 		</a>
 
+		<!-- User Menu -->
+		<div class="user-menu-wrapper">
+			<button class="user-btn" id="user-btn" aria-label="User menu">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+					<circle cx="12" cy="7" r="4"></circle>
+				</svg>
+			</button>
+			<div class="user-dropdown" id="user-dropdown">
+				<div id="auth-content"></div>
+			</div>
+		</div>
+
 		<!-- Hamburger Menu Button -->
 		<button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu">
 			<span class="hamburger-line"></span>
 			<span class="hamburger-line"></span>
 			<span class="hamburger-line"></span>
 		</button>
+	</div>
+
+	<!-- Login Modal -->
+	<div class="login-modal" id="login-modal">
+		<div class="login-modal-overlay" id="login-modal-overlay"></div>
+		<div class="login-modal-content">
+			<button class="login-modal-close" id="login-modal-close" aria-label="Close modal">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+			</button>
+			<div class="login-modal-form">
+				<div style="text-align: center; margin-bottom: 2rem;">
+					<h2 style="margin: 0; font-size: 1.5rem;">Sign In</h2>
+					<p style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">Sign in with your MFL account</p>
+				</div>
+
+				<form id="modal-login-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+					<div id="modal-error-message" style="padding: 1rem; background-color: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33; display: none;">
+						<p id="modal-error-text" style="margin: 0; font-size: 0.95rem;"></p>
+					</div>
+
+					<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+						<label for="modal-username" style="font-size: 0.95rem; font-weight: 500; color: #333;">Username</label>
+						<input
+							id="modal-username"
+							type="text"
+							placeholder="Enter your MFL username"
+							required
+							style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+						/>
+					</div>
+
+					<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+						<label for="modal-password" style="font-size: 0.95rem; font-weight: 500; color: #333;">Password</label>
+						<input
+							id="modal-password"
+							type="password"
+							placeholder="Enter your MFL password"
+							required
+							style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+						/>
+					</div>
+
+					<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+						<label for="modal-leagueId" style="font-size: 0.95rem; font-weight: 500; color: #333;">League ID (optional)</label>
+						<input
+							id="modal-leagueId"
+							type="text"
+							placeholder="Leave blank to use default league"
+							style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+						/>
+						<p style="margin: 0; font-size: 0.85rem; color: #666;">Your league ID (e.g., 13522 from the league URL)</p>
+					</div>
+
+					<button
+						type="submit"
+						id="modal-submit-btn"
+						style="padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; background-color: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;"
+					>
+						Sign In
+					</button>
+
+					<p style="margin: 0; font-size: 0.8rem; color: #999; text-align: center;">
+						Your credentials are securely transmitted and validated only with MyFantasyLeague.com. We never store your password.
+					</p>
+				</form>
+			</div>
+		</div>
 	</div>
 
 	<!-- Navigation Menu -->
@@ -96,6 +179,166 @@
 		font-size: 1.5rem;
 		font-weight: bold;
 		color: black;
+	}
+
+	.user-menu-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.user-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		color: black;
+		transition: all 0.2s ease;
+		border-radius: 0.5rem;
+	}
+
+	.user-btn:hover {
+		background: #f5f5f5;
+		color: #dc2626;
+	}
+
+	.user-btn svg {
+		width: 24px;
+		height: 24px;
+		stroke: currentColor;
+	}
+
+	.user-dropdown {
+		position: absolute;
+		top: calc(100% + 0.5rem);
+		right: 0;
+		background: white;
+		border: 1px solid #ddd;
+		border-radius: 0.5rem;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 200px;
+		opacity: 0;
+		visibility: hidden;
+		transform: translateY(-10px);
+		transition: all 0.2s ease;
+		z-index: 1001;
+	}
+
+	.user-dropdown.active {
+		opacity: 1;
+		visibility: visible;
+		transform: translateY(0);
+	}
+
+	.user-dropdown-item {
+		padding: 0.75rem 1rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: black;
+		text-decoration: none;
+		transition: background 0.2s ease;
+		border: none;
+		background: none;
+		cursor: pointer;
+		width: 100%;
+		text-align: left;
+		font-size: 0.95rem;
+	}
+
+	.user-dropdown-item:hover {
+		background: #f5f5f5;
+		color: #dc2626;
+	}
+
+	.user-dropdown-item:first-child {
+		border-radius: 0.375rem 0.375rem 0 0;
+	}
+
+	.user-dropdown-item:last-child {
+		border-radius: 0 0 0.375rem 0.375rem;
+	}
+
+	.logout-btn {
+		color: #c33;
+	}
+
+	.logout-btn:hover {
+		background: #fef2f2;
+		color: #dc2626;
+	}
+
+	/* Login Modal Styles */
+	.login-modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 2000;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 0.3s ease, visibility 0.3s ease;
+	}
+
+	.login-modal.active {
+		opacity: 1;
+		visibility: visible;
+	}
+
+	.login-modal-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.5);
+	}
+
+	.login-modal-content {
+		position: relative;
+		background: white;
+		border-radius: 0.75rem;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+		width: 90%;
+		max-width: 450px;
+		max-height: 90vh;
+		overflow-y: auto;
+	}
+
+	.login-modal-close {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: #666;
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s ease;
+		z-index: 1;
+	}
+
+	.login-modal-close:hover {
+		background: #f5f5f5;
+		color: #000;
+	}
+
+	.login-modal-form {
+		padding: 2rem;
+		padding-top: 1rem;
 	}
 
 	.hamburger-btn {
@@ -250,7 +493,7 @@
 </style>
 
 <script>
-	// Add interactivity to hamburger menu
+	// Hamburger menu functionality
 	const hamburgerBtn = document.getElementById('hamburger-btn');
 	const navMenu = document.getElementById('nav-menu');
 	const navOverlay = document.getElementById('nav-overlay');
@@ -285,4 +528,172 @@
 			closeMenu();
 		}
 	});
+
+	// User menu and authentication functionality
+	const userBtn = document.getElementById('user-btn');
+	const userDropdown = document.getElementById('user-dropdown');
+	const authContent = document.getElementById('auth-content');
+	const loginModal = document.getElementById('login-modal');
+	const loginModalOverlay = document.getElementById('login-modal-overlay');
+	const loginModalClose = document.getElementById('login-modal-close');
+
+	function toggleUserDropdown() {
+		userDropdown?.classList.toggle('active');
+	}
+
+	function closeUserDropdown() {
+		userDropdown?.classList.remove('active');
+	}
+
+	function openLoginModal() {
+		loginModal?.classList.add('active');
+		document.body.style.overflow = 'hidden';
+		closeUserDropdown();
+	}
+
+	function closeLoginModal() {
+		loginModal?.classList.remove('active');
+		document.body.style.overflow = '';
+	}
+
+	// Check authentication status and update dropdown
+	async function updateAuthStatus() {
+		try {
+			const response = await fetch('/api/auth/me', {
+				credentials: 'include',
+			});
+			const data = await response.json();
+
+			if (data.authenticated && data.user) {
+				// User is logged in - show logout option
+				authContent!.innerHTML = `
+					<div class="user-dropdown-item" style="cursor: default; background: #f9fafb;">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+							<circle cx="12" cy="7" r="4"></circle>
+						</svg>
+						<span>${data.user.username}</span>
+					</div>
+					<button class="user-dropdown-item logout-btn" id="logout-btn">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+							<polyline points="16 17 21 12 16 7"></polyline>
+							<line x1="21" y1="12" x2="9" y2="12"></line>
+						</svg>
+						<span>Sign Out</span>
+					</button>
+				`;
+
+				// Add logout listener
+				const logoutBtn = document.getElementById('logout-btn');
+				logoutBtn?.addEventListener('click', handleLogout);
+			} else {
+				// User is not logged in - show login option
+				authContent!.innerHTML = `
+					<button class="user-dropdown-item" id="login-btn">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+							<polyline points="10 17 15 12 10 7"></polyline>
+							<line x1="15" y1="12" x2="3" y2="12"></line>
+						</svg>
+						<span>Sign In</span>
+					</button>
+				`;
+
+				// Add login listener
+				const loginBtn = document.getElementById('login-btn');
+				loginBtn?.addEventListener('click', openLoginModal);
+			}
+		} catch (error) {
+			console.error('Failed to fetch auth status:', error);
+		}
+	}
+
+	async function handleLogout() {
+		try {
+			const response = await fetch('/api/auth/logout', {
+				method: 'POST',
+				credentials: 'include',
+			});
+
+			if (response.ok) {
+				closeUserDropdown();
+				updateAuthStatus();
+			}
+		} catch (error) {
+			console.error('Logout failed:', error);
+		}
+	}
+
+	// User dropdown menu toggle
+	userBtn?.addEventListener('click', toggleUserDropdown);
+
+	// Close dropdown when clicking outside
+	document.addEventListener('click', (e) => {
+		const target = e.target as HTMLElement;
+		if (!userBtn?.contains(target) && !userDropdown?.contains(target)) {
+			closeUserDropdown();
+		}
+	});
+
+	// Login modal controls
+	loginModalOverlay?.addEventListener('click', closeLoginModal);
+	loginModalClose?.addEventListener('click', closeLoginModal);
+
+	// Close modal on escape
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && loginModal?.classList.contains('active')) {
+			closeLoginModal();
+		}
+	});
+
+	// Handle login form submission in modal
+	const modalLoginForm = document.getElementById('modal-login-form') as HTMLFormElement;
+	const modalSubmitBtn = document.getElementById('modal-submit-btn') as HTMLButtonElement;
+	const modalErrorMsg = document.getElementById('modal-error-message') as HTMLDivElement;
+	const modalErrorText = document.getElementById('modal-error-text') as HTMLParagraphElement;
+
+	modalLoginForm?.addEventListener('submit', async (e: Event) => {
+		e.preventDefault();
+		modalErrorMsg.style.display = 'none';
+		modalSubmitBtn.disabled = true;
+		modalSubmitBtn.textContent = 'Signing in...';
+
+		try {
+			const username = (document.getElementById('modal-username') as HTMLInputElement).value;
+			const password = (document.getElementById('modal-password') as HTMLInputElement).value;
+			const leagueId = (document.getElementById('modal-leagueId') as HTMLInputElement).value;
+
+			const response = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({
+					username,
+					password,
+					leagueId: leagueId || undefined,
+				}),
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.message || 'Login failed');
+			}
+
+			closeLoginModal();
+			updateAuthStatus();
+			modalLoginForm.reset();
+			modalSubmitBtn.textContent = 'Sign In';
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : 'Login failed';
+			modalErrorText.textContent = msg;
+			modalErrorMsg.style.display = 'block';
+			modalSubmitBtn.disabled = false;
+			modalSubmitBtn.textContent = 'Sign In';
+		}
+	});
+
+	// Initialize auth status on page load
+	updateAuthStatus();
 </script>
