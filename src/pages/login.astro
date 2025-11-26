@@ -5,7 +5,6 @@
  */
 
 import Layout from '../layouts/Layout.astro';
-import LoginForm from '../components/LoginForm';
 
 // If user is already authenticated, redirect to theleague
 const authUser = Astro.request.headers.get('cookie')?.includes('session_token');
@@ -21,11 +20,105 @@ if (authUser) {
       <p style="color: #666; margin-top: 0.5rem;">Sign in with your MFL account</p>
     </div>
 
-    <LoginForm client:load />
+    <form id="login-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div id="error-message" style="padding: 1rem; background-color: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33; display: none;">
+        <p id="error-text" style="margin: 0; font-size: 0.95rem;"></p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label for="username" style="font-size: 0.95rem; font-weight: 500; color: #333;">Username</label>
+        <input
+          id="username"
+          type="text"
+          placeholder="Enter your MFL username"
+          required
+          style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+        />
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label for="password" style="font-size: 0.95rem; font-weight: 500; color: #333;">Password</label>
+        <input
+          id="password"
+          type="password"
+          placeholder="Enter your MFL password"
+          required
+          style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+        />
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label for="leagueId" style="font-size: 0.95rem; font-weight: 500; color: #333;">League ID (optional)</label>
+        <input
+          id="leagueId"
+          type="text"
+          placeholder="Leave blank to use default league"
+          style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
+        />
+        <p style="margin: 0; font-size: 0.85rem; color: #666;">Your league ID (e.g., 13522 from the league URL)</p>
+      </div>
+
+      <button
+        type="submit"
+        id="submit-btn"
+        style="padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; background-color: #0066cc; color: white; border: none; border-radius: 4px; margin-top: 0.5rem; cursor: pointer;"
+      >
+        Sign In
+      </button>
+
+      <p style="margin: 0; font-size: 0.8rem; color: #999; text-align: center;">
+        Your credentials are securely transmitted and validated only with MyFantasyLeague.com. We never store your password.
+      </p>
+    </form>
 
     <p style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
       Don't have an MFL account? <a href="https://www.myfantasyleague.com/" target="_blank" style="color: #0066cc; text-decoration: none;">Create one here</a>
     </p>
+
+    <script>
+      const form = document.getElementById('login-form') as HTMLFormElement;
+      const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+      const errorMsg = document.getElementById('error-message') as HTMLDivElement;
+      const errorText = document.getElementById('error-text') as HTMLParagraphElement;
+
+      form.addEventListener('submit', async (e: Event) => {
+        e.preventDefault();
+        errorMsg.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in...';
+
+        try {
+          const username = (document.getElementById('username') as HTMLInputElement).value;
+          const password = (document.getElementById('password') as HTMLInputElement).value;
+          const leagueId = (document.getElementById('leagueId') as HTMLInputElement).value;
+
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              username,
+              password,
+              leagueId: leagueId || undefined,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Login failed');
+          }
+
+          window.location.href = '/theleague';
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Login failed';
+          errorText.textContent = msg;
+          errorMsg.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+        }
+      });
+    </script>
   </main>
 
   <style>
