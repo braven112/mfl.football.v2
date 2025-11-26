@@ -21,8 +21,29 @@ interface JWTPayload extends SessionData {
   exp: number;
 }
 
-// Use a strong secret from environment, fallback to random for dev
-const JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString('hex');
+// Get JWT secret from environment variable
+// CRITICAL: Must be consistent across all invocations
+function getJWTSecret(): string {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    // In production, this is a fatal error
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      throw new Error(
+        'FATAL: JWT_SECRET environment variable is not set. ' +
+        'Set JWT_SECRET in your Vercel environment variables before deploying.'
+      );
+    }
+
+    // In development, generate a random secret and warn
+    console.warn('⚠️  JWT_SECRET not set - using random secret. This will invalidate sessions on restart!');
+    return randomBytes(32).toString('hex');
+  }
+
+  return secret;
+}
+
+const JWT_SECRET = getJWTSecret();
 
 /**
  * Create a JWT token for session
