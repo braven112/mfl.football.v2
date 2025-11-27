@@ -2,16 +2,6 @@
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import leagueConfig from '../data/theleague.config.json';
 import aggregatedAssets from '../data/theleague.assets.json';
-import { getSessionTokenFromCookie, validateSessionToken } from '../utils/session';
-
-// Check authentication - redirect to login if not authenticated
-const cookieHeader = Astro.request.headers.get('cookie');
-const sessionToken = getSessionTokenFromCookie(cookieHeader);
-const sessionData = sessionToken ? validateSessionToken(sessionToken) : null;
-
-if (!sessionData) {
-  return Astro.redirect('/login');
-}
 
 export const prerender = false;
 

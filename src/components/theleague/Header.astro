@@ -82,18 +82,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
         <div class="clearfix"></div>
       </div>
       <div class="col right">
-        <!-- User Menu -->
-        <div class="user-menu-wrapper">
-          <button class="user-btn" id="user-btn" aria-label="User menu">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </button>
-          <div class="user-dropdown" id="user-dropdown">
-            <div id="auth-content" class="auth-content"></div>
-          </div>
-        </div>
+       
 
         <!-- Hamburger Menu Button -->
         <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu" aria-expanded="false">
@@ -126,51 +115,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
         <li><a href="/rosters">Roster Analysis</a></li>
         <li><hr></li>
 
-        <!-- MFL League Links -->
-        <li class="nav-section-title">League Management</li>
-        <li>
-          <a href={`${host}/${year}/home/${leagueId}?MODULE=MESSAGE14`}>
-            <svg class="icon-banknote"><use href="/icons.svg#icon-banknote"></use></svg>
-            Roster/Cap
-          </a>
-        </li>
-        <li>
-          <a href={`${host}/${year}/lineup?L=${leagueId}`}>
-            <svg class="icon-submit"><use href="/icons.svg#icon-submit"></use></svg>
-            Submit Lineup
-          </a>
-        </li>
-        <li>
-          <a href={`${host}/${year}/add_drop?L=${leagueId}`}>
-            <svg class="icon-user-plus"><use href="/icons.svg#icon-user-plus"></use></svg>
-            Add/Drop
-          </a>
-        </li>
-        <li>
-          <a href={`${host}/${year}/standings?L=${leagueId}`}>
-            <svg class="icon-numberone"><use href="/icons.svg#icon-numberone"></use></svg>
-            Standings
-          </a>
-        </li>
-        <li>
-          <a href={`${host}/${year}/home/${leagueId}?MODULE=MESSAGE6`}>
-            <svg class="icon-scoreboard"><use href="/icons.svg#icon-scoreboard"></use></svg>
-            Live Scoring
-          </a>
-        </li>
-        <li class="playoffs">
-          <a href={`${host}/${year}/options?L=${leagueId}&O=79`}>
-            <svg class="icon-trophy"><use href="/icons.svg#icon-trophy"></use></svg>
-            Playoffs
-          </a>
-        </li>
-        <li class="prePlayoffs">
-          <a href={`${host}/${year}/home/${leagueId}?MODULE=MESSAGE10`}>
-            <svg class="icon-trophy"><use href="/icons.svg#icon-trophy"></use></svg>
-            Playoffs
-          </a>
-        </li>
-        <li><hr></li>
+       
 
         <!-- External Links -->
         <li class="nav-section-title">Community</li>
