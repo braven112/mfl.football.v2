@@ -14,31 +14,11 @@ export interface AuthUser {
   role: 'owner' | 'commissioner' | 'admin';
 }
 
-// Temporary mapping to cover cases where MFL auth response omits franchise
-const USER_FRANCHISE_OVERRIDES: Record<string, string> = {
-  // username/userId (lowercased) -> franchiseId
-  braven112: '0001',
-};
-
 const normalizeFranchise = (value: string | null | undefined): string => {
   if (!value) return '';
   const trimmed = `${value}`.trim();
   if (!trimmed) return '';
   return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
-};
-
-const applyFranchiseOverride = (user: AuthUser): AuthUser => {
-  if (user.franchiseId) return user;
-  const candidates = [user.id, user.name]
-    .map((v) => (typeof v === 'string' ? v.trim().toLowerCase() : v?.toLowerCase?.()))
-    .filter(Boolean) as string[];
-  for (const key of candidates) {
-    const override = USER_FRANCHISE_OVERRIDES[key];
-    if (override) {
-      return { ...user, franchiseId: normalizeFranchise(override) };
-    }
-  }
-  return user;
 };
 
 /**
@@ -61,13 +41,13 @@ export function getAuthUser(request: Request): AuthUser | null {
     const sessionData = validateSessionToken(sessionToken);
     console.log('[auth.ts] sessionData valid?', !!sessionData);
     if (sessionData) {
-      return applyFranchiseOverride({
+      return {
         id: sessionData.userId,
         name: sessionData.username,
-        franchiseId: sessionData.franchiseId,
+        franchiseId: normalizeFranchise(sessionData.franchiseId),
         leagueId: sessionData.leagueId,
         role: sessionData.role,
-      });
+      };
     }
   }
 
@@ -84,13 +64,13 @@ export function getAuthUser(request: Request): AuthUser | null {
   if (userContextHeader) {
     try {
       const rawUser = JSON.parse(userContextHeader) as AuthUser;
-      const user = applyFranchiseOverride({
+      const user = {
         id: rawUser.id,
         name: rawUser.name,
-        franchiseId: rawUser.franchiseId,
+        franchiseId: normalizeFranchise(rawUser.franchiseId),
         leagueId: rawUser.leagueId,
         role: rawUser.role,
-      });
+      };
       if (user.id && user.franchiseId && user.leagueId) {
         return user;
       }
@@ -104,13 +84,13 @@ export function getAuthUser(request: Request): AuthUser | null {
   if (userHeader) {
     const parts = userHeader.split(':');
     if (parts.length >= 3) {
-      return applyFranchiseOverride({
+      return {
         id: parts[0],
-        franchiseId: parts[1],
+        franchiseId: normalizeFranchise(parts[1]),
         leagueId: parts[2],
         name: parts[3] || 'User',
         role: (parts[4] as any) || 'owner',
-      });
+      };
     }
   }
 

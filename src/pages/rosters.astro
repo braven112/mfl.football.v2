@@ -4605,14 +4605,7 @@ const serializedConfig = JSON.stringify({
           return;
         }
         const data = await res.json();
-        const franchiseOverrides = {
-          braven112: '0001',
-        };
         let franchiseId = normalizeFranchiseId(data?.user?.franchiseId);
-        const userKey = (data?.user?.username || data?.user?.userId || '').toLowerCase();
-        if (!franchiseId && userKey && franchiseOverrides[userKey]) {
-          franchiseId = normalizeFranchiseId(franchiseOverrides[userKey]);
-        }
         console.log('[rosters] hydrateTeamFromSession: data', data);
         const isAuthed = !!data?.authenticated && !!franchiseId;
         const teamExists =

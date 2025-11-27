@@ -14,12 +14,6 @@ export interface MFLLoginResponse {
   error?: string;
 }
 
-// Temporary overrides while we iron out MFL response variations
-const USER_FRANCHISE_OVERRIDES: Record<string, string> = {
-  // username/userId (lowercased) -> franchiseId
-  braven112: '0001',
-};
-
 const normalizeFranchise = (value: string | null | undefined) => {
   if (!value) return '';
   const trimmed = `${value}`.trim();
@@ -164,6 +158,53 @@ export async function authenticateWithMFL(
       ['cookie', 'user_id', 'userId', 'USER_ID', 'USERID', 'user'],
       sourceCandidates
     ) || normalizeId(username);
+
+    // If franchiseId still missing, try myleagues lookup (non-blocking best-effort)
+    if (!normalizedFranchiseId && username && password) {
+      try {
+        const myLeaguesUrl = `https://api.myfantasyleague.com/${year}/myleagues?USERNAME=${encodeURIComponent(
+          username
+        )}&PASSWORD=${encodeURIComponent(password)}&JSON=1`;
+        const mlRes = await fetch(myLeaguesUrl, { method: 'GET' });
+        if (mlRes.ok) {
+          const mlData = await mlRes.json();
+          const leagues = (mlData?.myleagues?.league ?? mlData?.leagues?.league ?? []) as any[];
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[mfl-login] myleagues count', Array.isArray(leagues) ? leagues.length : 0);
+          }
+          // Try to find matching league, otherwise fall back to first
+          const targetLeague =
+            leagues.find(
+              (l) =>
+                `${l.id ?? l.league_id ?? l.leagueId ?? ''}` === `${normalizedLeagueId}` ||
+                `${l.league ?? ''}` === `${normalizedLeagueId}` ||
+                `${l.name ?? ''}` === `${normalizedLeagueId}`
+            ) || leagues[0];
+
+          if (targetLeague) {
+            if (!normalizedLeagueId) {
+              const foundLeagueId =
+                targetLeague.id ?? targetLeague.league_id ?? targetLeague.leagueId ?? targetLeague.league;
+              if (foundLeagueId) normalizedLeagueId = `${foundLeagueId}`;
+            }
+
+            const leagueFranchise =
+              targetLeague?.franchise_id ??
+              targetLeague?.franchiseId ??
+              targetLeague?.FranchiseId ??
+              targetLeague?.team_id ??
+              targetLeague?.teamId ??
+              targetLeague?.team;
+            const normalized = normalizeFranchise(leagueFranchise);
+            if (normalized) {
+              normalizedFranchiseId = normalized;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[mfl-login] myleagues lookup failed', e);
+      }
+    }
 
     return {
       success: true,

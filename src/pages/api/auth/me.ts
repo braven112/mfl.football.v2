@@ -5,31 +5,12 @@
 
 import type { APIRoute } from 'astro';
 import { getSessionTokenFromCookie, validateSessionToken } from '../../../utils/session';
-import { AuthUser } from '../../../utils/auth';
-
-const USER_FRANCHISE_OVERRIDES: Record<string, string> = {
-  braven112: '0001',
-};
 
 const normalizeFranchise = (value: string | null | undefined): string => {
   if (!value) return '';
   const trimmed = `${value}`.trim();
   if (!trimmed) return '';
   return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
-};
-
-const applyFranchiseOverride = (user: AuthUser): AuthUser => {
-  if (user.franchiseId) return user;
-  const candidates = [user.id, user.name]
-    .map((v) => (typeof v === 'string' ? v.trim().toLowerCase() : v?.toLowerCase?.()))
-    .filter(Boolean) as string[];
-  for (const key of candidates) {
-    const override = USER_FRANCHISE_OVERRIDES[key];
-    if (override) {
-      return { ...user, franchiseId: normalizeFranchise(override) };
-    }
-  }
-  return user;
 };
 
 export const GET: APIRoute = async ({ request }) => {
@@ -73,28 +54,26 @@ export const GET: APIRoute = async ({ request }) => {
     const baseUser = {
       id: sessionData.userId,
       name: sessionData.username,
-      franchiseId: sessionData.franchiseId,
+      franchiseId: normalizeFranchise(sessionData.franchiseId),
       leagueId: sessionData.leagueId,
       role: sessionData.role,
     };
-    const user = applyFranchiseOverride(baseUser as AuthUser);
 
     // Dev logging to verify override application
     if (process.env.NODE_ENV !== 'production') {
       console.log('[api/auth/me] sessionData', sessionData);
       console.log('[api/auth/me] baseUser', baseUser);
-      console.log('[api/auth/me] resolvedUser', user);
     }
 
     return new Response(
       JSON.stringify({
         authenticated: true,
         user: {
-          userId: user.id,
-          username: user.name,
-          franchiseId: user.franchiseId,
-          leagueId: user.leagueId,
-          role: user.role,
+          userId: baseUser.id,
+          username: baseUser.name,
+          franchiseId: baseUser.franchiseId,
+          leagueId: baseUser.leagueId,
+          role: baseUser.role,
         },
         expiresAt: sessionData.expiresAt,
       }),
