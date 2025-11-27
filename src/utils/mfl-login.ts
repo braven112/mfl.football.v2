@@ -10,8 +10,22 @@ export interface MFLLoginResponse {
   franchiseId?: string;
   leagueId?: string;
   role?: string;
+  rawResponse?: any;
   error?: string;
 }
+
+// Temporary overrides while we iron out MFL response variations
+const USER_FRANCHISE_OVERRIDES: Record<string, string> = {
+  // username/userId (lowercased) -> franchiseId
+  braven112: '0001',
+};
+
+const normalizeFranchise = (value: string | null | undefined) => {
+  if (!value) return '';
+  const trimmed = `${value}`.trim();
+  if (!trimmed) return '';
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+};
 
 /**
  * Authenticate user against MFL API
@@ -86,16 +100,79 @@ export async function authenticateWithMFL(
       };
     }
 
+    // Debug log for dev to see actual shape
+    console.log('[mfl-login] raw login response', data);
+
     // Extract user information from MFL response
-    // The cookie response includes encoded user data
-    // We'll use it to verify the login worked
+    // The response shape varies across MFL deployments, so normalize generously
+    const normalizeId = (...vals: Array<string | undefined | null>) => {
+      const val = vals.find((v) => v !== undefined && v !== null && `${v}`.trim() !== '');
+      return val ? `${val}` : '';
+    };
+
+    const pickFrom = (
+      keys: string[],
+      sources: Array<Record<string, any> | null | undefined>
+    ) => {
+      for (const source of sources) {
+        if (!source) continue;
+        for (const key of keys) {
+          if (source[key] !== undefined && source[key] !== null && `${source[key]}`.trim() !== '') {
+            return `${source[key]}`;
+          }
+        }
+      }
+      return '';
+    };
+
+    const sourceCandidates = [data, data?.login, data?.LOGIN, data?.auth];
+
+    let normalizedFranchiseId = pickFrom(
+      [
+        'FRANCHISE_ID',
+        'franchise_id',
+        'franchiseId',
+        'FranchiseId',
+        'franchise',
+        'Franchise',
+        'team_id',
+        'teamId',
+        'team',
+      ],
+      sourceCandidates
+    );
+    normalizedFranchiseId = normalizeFranchise(normalizedFranchiseId);
+
+    if (!normalizedFranchiseId) {
+      const normalizeKey = (v: string | undefined) =>
+        typeof v === 'string' ? v.trim().toLowerCase() : v?.toLowerCase?.();
+      const keys = [normalizeKey(username), normalizeKey(normalizedUserId)].filter(Boolean) as string[];
+      for (const key of keys) {
+        if (key && USER_FRANCHISE_OVERRIDES[key]) {
+          normalizedFranchiseId = normalizeFranchise(USER_FRANCHISE_OVERRIDES[key]);
+          break;
+        }
+      }
+    }
+
+    const normalizedLeagueId = pickFrom(
+      ['LEAGUE_ID', 'league_id', 'leagueId', 'LeagueId', 'league'],
+      [{ LEAGUE_ID: leagueId }, ...sourceCandidates]
+    );
+
+    const normalizedUserId = pickFrom(
+      ['cookie', 'user_id', 'userId', 'USER_ID', 'USERID', 'user'],
+      sourceCandidates
+    ) || normalizeId(username);
+
     return {
       success: true,
-      userId: data.cookie || username,
-      username: username,
-      franchiseId: data.FRANCHISE_ID || data.franchiseId || '',
-      leagueId: leagueId || data.LEAGUE_ID || data.leagueId || '',
+      userId: normalizedUserId,
+      username,
+      franchiseId: normalizedFranchiseId,
+      leagueId: normalizedLeagueId,
       role: data.ROLE || data.role || 'owner',
+      rawResponse: data,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

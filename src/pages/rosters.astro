@@ -563,15 +563,41 @@ const seasonOptions = Object.keys(rostersBySeason).sort(
 );
 const defaultSeason = seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
 
+// Normalize franchise ids so "8" and "0008" resolve to the same team
+const normalizeFranchiseId = (id) => {
+  if (!id) return null;
+  const trimmed = `${id}`.trim();
+  if (!trimmed) return null;
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+};
+
+const rosterTeamIds = seasonOptions.flatMap(
+  (season) => Object.keys(rostersBySeason[season]?.teams ?? {})
+);
+const knownTeamIds = new Set([
+  ...teamsList.map((team) => team.id),
+  ...rosterTeamIds,
+]);
+
 // Get authenticated user and set default team to their franchise if logged in
 const authUser = getAuthUser(Astro.request);
 const isLoggedIn = !!authUser;
-const userFranchiseId = authUser?.franchiseId || null;
+const userFranchiseId = normalizeFranchiseId(authUser?.franchiseId);
+const urlFranchiseId = normalizeFranchiseId(
+  Astro.url?.searchParams?.get('franchise') ??
+    Astro.url?.searchParams?.get('team') ??
+    Astro.url?.searchParams?.get('franchiseId') ??
+    null
+);
 
 // Default to user's franchise if logged in, otherwise first team
 const defaultTeamId =
-  (isLoggedIn && userFranchiseId ? userFranchiseId : null) ||
+  (urlFranchiseId && knownTeamIds.has(urlFranchiseId) ? urlFranchiseId : null) ||
+  (isLoggedIn && userFranchiseId && knownTeamIds.has(userFranchiseId)
+    ? userFranchiseId
+    : null) ||
   teamsList[0]?.id ||
+  rosterTeamIds[0] ||
   (Object.keys(rostersBySeason[defaultSeason]?.teams ?? {})[0] ?? 'FA');
 
 const initialSeasonData = rostersBySeason[defaultSeason] ?? { teams: {} };
@@ -3616,6 +3642,13 @@ const serializedConfig = JSON.stringify({
       });
     };
 
+    const normalizeFranchiseId = (id) => {
+      if (!id) return null;
+      const trimmed = `${id}`.trim();
+      if (!trimmed) return null;
+      return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+    };
+
     const renderTableRows = (rows = []) => {
       if (!rosterTableBody) return;
       if (!rows.length) {
@@ -4553,8 +4586,60 @@ const serializedConfig = JSON.stringify({
       });
     });
 
+    const applyTeamSelection = (teamId) => {
+      currentTeam = teamId;
+      if (teamSelect) teamSelect.value = teamId;
+      teamIconBtns.forEach((b) => {
+        const btnTeamId = b.getAttribute('data-team-id');
+        b.setAttribute('data-active', btnTeamId === teamId ? 'true' : 'false');
+      });
+      updateView();
+    };
+
+    const hydrateTeamFromSession = async () => {
+      console.log('[rosters] hydrateTeamFromSession: start');
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        console.log('[rosters] hydrateTeamFromSession: response', res.status);
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        const franchiseOverrides = {
+          braven112: '0001',
+        };
+        let franchiseId = normalizeFranchiseId(data?.user?.franchiseId);
+        const userKey = (data?.user?.username || data?.user?.userId || '').toLowerCase();
+        if (!franchiseId && userKey && franchiseOverrides[userKey]) {
+          franchiseId = normalizeFranchiseId(franchiseOverrides[userKey]);
+        }
+        console.log('[rosters] hydrateTeamFromSession: data', data);
+        const isAuthed = !!data?.authenticated && !!franchiseId;
+        const teamExists =
+          isAuthed &&
+          !!(
+            seasons[currentSeason]?.teams?.[franchiseId] ||
+            seasons[defaultSeason]?.teams?.[franchiseId] ||
+            teams[franchiseId]
+          );
+        if (!teamExists) {
+          console.log('[rosters] hydrateTeamFromSession: team not found', franchiseId);
+          return;
+        }
+        if (franchiseId === currentTeam) {
+          console.log('[rosters] hydrateTeamFromSession: already on team', franchiseId);
+          return;
+        }
+        console.log('[rosters] hydrateTeamFromSession: switching to', franchiseId);
+        applyTeamSelection(franchiseId);
+      } catch (err) {
+        console.error('Failed to set team from session', err);
+      }
+    };
+
     applyHiddenColumns();
     updateView();
+    hydrateTeamFromSession();
   };
 
   if (document.readyState === 'loading') {

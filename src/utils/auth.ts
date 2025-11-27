@@ -14,6 +14,33 @@ export interface AuthUser {
   role: 'owner' | 'commissioner' | 'admin';
 }
 
+// Temporary mapping to cover cases where MFL auth response omits franchise
+const USER_FRANCHISE_OVERRIDES: Record<string, string> = {
+  // username/userId (lowercased) -> franchiseId
+  braven112: '0001',
+};
+
+const normalizeFranchise = (value: string | null | undefined): string => {
+  if (!value) return '';
+  const trimmed = `${value}`.trim();
+  if (!trimmed) return '';
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+};
+
+const applyFranchiseOverride = (user: AuthUser): AuthUser => {
+  if (user.franchiseId) return user;
+  const candidates = [user.id, user.name]
+    .map((v) => (typeof v === 'string' ? v.trim().toLowerCase() : v?.toLowerCase?.()))
+    .filter(Boolean) as string[];
+  for (const key of candidates) {
+    const override = USER_FRANCHISE_OVERRIDES[key];
+    if (override) {
+      return { ...user, franchiseId: normalizeFranchise(override) };
+    }
+  }
+  return user;
+};
+
 /**
  * Get authenticated user from request
  * Checks multiple sources for authentication (in priority order):
@@ -26,18 +53,21 @@ export function getAuthUser(request: Request): AuthUser | null {
 
   // Priority 1: Check for session JWT in cookies
   const cookieHeader = request.headers.get('cookie');
+  console.log('[auth.ts] cookieHeader present?', !!cookieHeader);
   const sessionToken = getSessionTokenFromCookie(cookieHeader);
+  console.log('[auth.ts] sessionToken found?', !!sessionToken);
 
   if (sessionToken) {
     const sessionData = validateSessionToken(sessionToken);
+    console.log('[auth.ts] sessionData valid?', !!sessionData);
     if (sessionData) {
-      return {
+      return applyFranchiseOverride({
         id: sessionData.userId,
         name: sessionData.username,
         franchiseId: sessionData.franchiseId,
         leagueId: sessionData.leagueId,
         role: sessionData.role,
-      };
+      });
     }
   }
 
@@ -53,7 +83,14 @@ export function getAuthUser(request: Request): AuthUser | null {
   const userContextHeader = request.headers.get('x-user-context');
   if (userContextHeader) {
     try {
-      const user = JSON.parse(userContextHeader) as AuthUser;
+      const rawUser = JSON.parse(userContextHeader) as AuthUser;
+      const user = applyFranchiseOverride({
+        id: rawUser.id,
+        name: rawUser.name,
+        franchiseId: rawUser.franchiseId,
+        leagueId: rawUser.leagueId,
+        role: rawUser.role,
+      });
       if (user.id && user.franchiseId && user.leagueId) {
         return user;
       }
@@ -67,13 +104,13 @@ export function getAuthUser(request: Request): AuthUser | null {
   if (userHeader) {
     const parts = userHeader.split(':');
     if (parts.length >= 3) {
-      return {
+      return applyFranchiseOverride({
         id: parts[0],
         franchiseId: parts[1],
         leagueId: parts[2],
         name: parts[3] || 'User',
         role: (parts[4] as any) || 'owner',
-      };
+      });
     }
   }
 

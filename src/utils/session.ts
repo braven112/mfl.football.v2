@@ -157,14 +157,11 @@ export function getSessionTokenFromCookie(cookieHeader: string | null): string |
 export function createSessionCookie(token: string, isDev: boolean = false): string {
   const expiresDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString();
 
-  let cookie = `session_token=${token}; Path=/; Expires=${expiresDate}; HttpOnly`;
+  let cookie = `session_token=${token}; Path=/; Expires=${expiresDate}; HttpOnly; SameSite=Lax`;
 
   // Add Secure flag only in production
   if (!isDev) {
-    cookie += '; Secure; SameSite=Lax';
-  } else {
-    // In development, add SameSite=Lax to ensure cookie is sent
-    cookie += '; SameSite=Lax';
+    cookie += '; Secure';
   }
 
   return cookie;

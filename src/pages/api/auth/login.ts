@@ -91,6 +91,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
           leagueId: mflResult.leagueId,
           role: mflResult.role,
         },
+        ...(process.env.NODE_ENV !== 'production'
+          ? { debug: { rawResponse: mflResult.rawResponse } }
+          : {}),
       }),
       {
         status: 200,
