@@ -30,6 +30,7 @@ import {
   aggregateDeadMoney,
   calculateContractYearsMeta,
 } from '../utils/salary-calculations';
+import { getAuthUser } from '../utils/auth';
 
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -561,8 +562,20 @@ const seasonOptions = Object.keys(rostersBySeason).sort(
   (a, b) => Number(b) - Number(a)
 );
 const defaultSeason = seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
+
+// Get authenticated user and set default team to their franchise if logged in
+const authUser = getAuthUser(Astro.request);
+const isLoggedIn = !!authUser;
+const userFranchiseId = authUser?.franchiseId || null;
+
+// TEST: Temporarily hardcode franchiseId to verify feature works
+const TEST_FRANCHISE_ID = '0001'; // Pacific Pigskins
+
+// Default to user's franchise if logged in, otherwise first team
 const defaultTeamId =
-  teamsList[0]?.id ??
+  (isLoggedIn && userFranchiseId ? userFranchiseId : null) ||
+  TEST_FRANCHISE_ID ||  // TEST: Use hardcoded franchise
+  teamsList[0]?.id ||
   (Object.keys(rostersBySeason[defaultSeason]?.teams ?? {})[0] ?? 'FA');
 
 const initialSeasonData = rostersBySeason[defaultSeason] ?? { teams: {} };
@@ -3047,6 +3060,7 @@ const serializedConfig = JSON.stringify({
   });
 
   const initRosterPage = () => {
+    console.log('=== INIT ROSTER PAGE ===');
     const {
       seasons = {},
       defaultSeason,
@@ -3069,6 +3083,9 @@ const serializedConfig = JSON.stringify({
       targetActiveCount = 22,
       reserveForRookies = 5_000_000,
     } = config;
+
+    console.log('defaultTeamId:', defaultTeamId);
+    console.log('defaultSeason:', defaultSeason);
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
       style: 'currency',

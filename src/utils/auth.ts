@@ -4,6 +4,8 @@
  * Currently supports franchise/league context from message board or external auth
  */
 
+import { getSessionTokenFromCookie, validateSessionToken } from './session';
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -21,8 +23,6 @@ export interface AuthUser {
  * 4. X-Auth-User header (colon-delimited format for test)
  */
 export function getAuthUser(request: Request): AuthUser | null {
-  // Import here to avoid circular dependencies
-  const { getSessionTokenFromCookie, validateSessionToken } = require('./session');
 
   // Priority 1: Check for session JWT in cookies
   const cookieHeader = request.headers.get('cookie');
