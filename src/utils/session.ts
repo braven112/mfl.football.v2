@@ -162,6 +162,9 @@ export function createSessionCookie(token: string, isDev: boolean = false): stri
   // Add Secure flag only in production
   if (!isDev) {
     cookie += '; Secure; SameSite=Lax';
+  } else {
+    // In development, add SameSite=Lax to ensure cookie is sent
+    cookie += '; SameSite=Lax';
   }
 
   return cookie;
