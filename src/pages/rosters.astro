@@ -568,13 +568,9 @@ const authUser = getAuthUser(Astro.request);
 const isLoggedIn = !!authUser;
 const userFranchiseId = authUser?.franchiseId || null;
 
-// TEST: Temporarily hardcode franchiseId to verify feature works
-const TEST_FRANCHISE_ID = '0001'; // Pacific Pigskins
-
 // Default to user's franchise if logged in, otherwise first team
 const defaultTeamId =
   (isLoggedIn && userFranchiseId ? userFranchiseId : null) ||
-  TEST_FRANCHISE_ID ||  // TEST: Use hardcoded franchise
   teamsList[0]?.id ||
   (Object.keys(rostersBySeason[defaultSeason]?.teams ?? {})[0] ?? 'FA');
 
