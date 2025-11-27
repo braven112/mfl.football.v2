@@ -2,18 +2,18 @@
   "metadata": {
     "leagueId": "13522",
     "season": "2025",
-    "week": 12,
+    "week": 14,
     "detectedWeek": 17,
     "freezeWeek": 14,
     "frozenWeek": 14,
     "sources": {
-      "rosters": "https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&JSON=1&W=12",
+      "rosters": "https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&JSON=1&W=14",
       "players": "https://api.myfantasyleague.com/2025/export?TYPE=players&DETAILS=1",
       "weeklyResults": "https://api.myfantasyleague.com/2025/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1",
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-11-27T17:55:28.530Z"
+    "fetchedAt": "2025-11-27T18:08:33.019Z"
   },
   "players": [
     {
@@ -5466,6 +5466,64 @@
       ]
     },
     {
+      "id": "13672",
+      "name": "Gesicki, Mike",
+      "position": "TE",
+      "salary": 1149500,
+      "franchiseId": "0004",
+      "status": "ROSTER",
+      "contractYear": "3",
+      "points": 22.9,
+      "team": "CIN",
+      "draftYear": 2018,
+      "draftTeam": "MIA",
+      "birthdate": 812696400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13672_thumb.jpg",
+      "externalIds": {
+        "mfl": "13672",
+        "sleeper": "4993",
+        "gsis": "00-0034829"
+      },
+      "sleeper": {
+        "id": "4993",
+        "fullName": "Mike Gesicki",
+        "team": "CIN",
+        "age": 30,
+        "height": "78",
+        "weight": "245",
+        "number": 88,
+        "college": "Penn State",
+        "birthDate": "1995-10-03",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034829"
+      },
+      "nflverse": {
+        "week": 12,
+        "season": "2025",
+        "player": "Mike Gesicki",
+        "team": "CIN",
+        "position": "TE",
+        "offenseSnaps": 28,
+        "offenseSnapPct": 0.43,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "GesiMi00"
+      },
+      "depthChartAhead": null
+    },
+    {
       "id": "16635",
       "name": "McCaffrey, Luke",
       "position": "WR",
@@ -5520,64 +5578,6 @@
         "stSnaps": 1,
         "stSnapPct": 0.04,
         "pfrPlayerId": "McCaLu00"
-      },
-      "depthChartAhead": null
-    },
-    {
-      "id": "13672",
-      "name": "Gesicki, Mike",
-      "position": "TE",
-      "salary": 1149500,
-      "franchiseId": "0004",
-      "status": "INJURED_RESERVE",
-      "contractYear": "3",
-      "points": 22.9,
-      "team": "CIN",
-      "draftYear": 2018,
-      "draftTeam": "MIA",
-      "birthdate": 812696400,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13672_thumb.jpg",
-      "externalIds": {
-        "mfl": "13672",
-        "sleeper": "4993",
-        "gsis": "00-0034829"
-      },
-      "sleeper": {
-        "id": "4993",
-        "fullName": "Mike Gesicki",
-        "team": "CIN",
-        "age": 30,
-        "height": "78",
-        "weight": "245",
-        "number": 88,
-        "college": "Penn State",
-        "birthDate": "1995-10-03",
-        "status": "Active",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": "00-0034829"
-      },
-      "nflverse": {
-        "week": 12,
-        "season": "2025",
-        "player": "Mike Gesicki",
-        "team": "CIN",
-        "position": "TE",
-        "offenseSnaps": 28,
-        "offenseSnapPct": 0.43,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "GesiMi00"
       },
       "depthChartAhead": null
     },
@@ -7574,29 +7574,6 @@
       "depthChartAhead": null
     },
     {
-      "id": "15288",
-      "name": "Moore, Elijah",
-      "position": "WR",
-      "salary": 425000,
-      "franchiseId": "0006",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 41,
-      "team": "FA",
-      "draftYear": 2021,
-      "draftTeam": "NYJ",
-      "birthdate": 954133200,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15288_thumb.jpg",
-      "externalIds": {
-        "mfl": "15288",
-        "sleeper": null,
-        "gsis": null
-      },
-      "sleeper": null,
-      "nflverse": null,
-      "depthChartAhead": null
-    },
-    {
       "id": "15798",
       "name": "Likely, Isaiah",
       "position": "TE",
@@ -8243,64 +8220,6 @@
       "depthChartAhead": null
     },
     {
-      "id": "13629",
-      "name": "Ridley, Calvin",
-      "position": "WR",
-      "salary": 1331000,
-      "franchiseId": "0006",
-      "status": "ROSTER",
-      "contractYear": "2",
-      "points": 53.9,
-      "team": "TEN",
-      "draftYear": 2018,
-      "draftTeam": "ATL",
-      "birthdate": 787899600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13629_thumb.jpg",
-      "externalIds": {
-        "mfl": "13629",
-        "sleeper": "4981",
-        "gsis": "00-0034837"
-      },
-      "sleeper": {
-        "id": "4981",
-        "fullName": "Calvin Ridley",
-        "team": "TEN",
-        "age": 30,
-        "height": "73",
-        "weight": "190",
-        "number": 0,
-        "college": "Alabama",
-        "birthDate": "1994-12-20",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": null,
-        "depthChartOrder": 7,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 7,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Lower Leg",
-        "gsisId": "00-0034837"
-      },
-      "nflverse": {
-        "week": 11,
-        "season": "2025",
-        "player": "Calvin Ridley",
-        "team": "TEN",
-        "position": "WR",
-        "offenseSnaps": 1,
-        "offenseSnapPct": 0.02,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "RidlCa00"
-      },
-      "depthChartAhead": null
-    },
-    {
       "id": "16036",
       "name": "Tonges, Jake",
       "position": "TE",
@@ -8777,6 +8696,64 @@
       ]
     },
     {
+      "id": "17077",
+      "name": "Restrepo, Xavier",
+      "position": "WR",
+      "salary": 425000,
+      "franchiseId": "0006",
+      "status": "ROSTER",
+      "contractYear": "5",
+      "points": 0,
+      "team": "TEN",
+      "draftYear": 2025,
+      "draftTeam": "FA",
+      "birthdate": 1018584000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17077_thumb.jpg",
+      "externalIds": {
+        "mfl": "17077",
+        "sleeper": "12520",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12520",
+        "fullName": "Xavier Restrepo",
+        "team": "TEN",
+        "age": 23,
+        "height": "70",
+        "weight": "202",
+        "number": 87,
+        "college": "Miami (FL)",
+        "birthDate": "2002-04-12",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": null,
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 12,
+        "season": "2025",
+        "player": "Xavier Restrepo",
+        "team": "TEN",
+        "position": "WR",
+        "offenseSnaps": 19,
+        "offenseSnapPct": 0.25,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 1,
+        "stSnapPct": 0.04,
+        "pfrPlayerId": "RestXa00"
+      },
+      "depthChartAhead": null
+    },
+    {
       "id": "14223",
       "name": "Mattison, Alexander",
       "position": "RB",
@@ -8947,60 +8924,60 @@
       "depthChartAhead": null
     },
     {
-      "id": "17077",
-      "name": "Restrepo, Xavier",
+      "id": "13629",
+      "name": "Ridley, Calvin",
       "position": "WR",
-      "salary": 425000,
+      "salary": 1331000,
       "franchiseId": "0006",
-      "status": "TAXI_SQUAD",
-      "contractYear": "5",
-      "points": 0,
+      "status": "INJURED_RESERVE",
+      "contractYear": "2",
+      "points": 53.9,
       "team": "TEN",
-      "draftYear": 2025,
-      "draftTeam": "FA",
-      "birthdate": 1018584000,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17077_thumb.jpg",
+      "draftYear": 2018,
+      "draftTeam": "ATL",
+      "birthdate": 787899600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13629_thumb.jpg",
       "externalIds": {
-        "mfl": "17077",
-        "sleeper": "12520",
-        "gsis": null
+        "mfl": "13629",
+        "sleeper": "4981",
+        "gsis": "00-0034837"
       },
       "sleeper": {
-        "id": "12520",
-        "fullName": "Xavier Restrepo",
+        "id": "4981",
+        "fullName": "Calvin Ridley",
         "team": "TEN",
-        "age": 23,
-        "height": "70",
-        "weight": "202",
-        "number": 87,
-        "college": "Miami (FL)",
-        "birthDate": "2002-04-12",
-        "status": "Active",
+        "age": 30,
+        "height": "73",
+        "weight": "190",
+        "number": 0,
+        "college": "Alabama",
+        "birthDate": "1994-12-20",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
+        "experience": 7,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Lower Leg",
+        "gsisId": "00-0034837"
       },
       "nflverse": {
-        "week": 12,
+        "week": 11,
         "season": "2025",
-        "player": "Xavier Restrepo",
+        "player": "Calvin Ridley",
         "team": "TEN",
         "position": "WR",
-        "offenseSnaps": 19,
-        "offenseSnapPct": 0.25,
+        "offenseSnaps": 1,
+        "offenseSnapPct": 0.02,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 1,
-        "stSnapPct": 0.04,
-        "pfrPlayerId": "RestXa00"
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "RidlCa00"
       },
       "depthChartAhead": null
     },
@@ -10261,6 +10238,64 @@
       "depthChartAhead": null
     },
     {
+      "id": "14777",
+      "name": "Burrow, Joe",
+      "position": "QB",
+      "salary": 7400000,
+      "franchiseId": "0007",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 39.72,
+      "team": "CIN",
+      "draftYear": 2020,
+      "draftTeam": "CIN",
+      "birthdate": 850194000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14777_thumb.jpg",
+      "externalIds": {
+        "mfl": "14777",
+        "sleeper": "6770",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "6770",
+        "fullName": "Joe Burrow",
+        "team": "CIN",
+        "age": 28,
+        "height": "76",
+        "weight": "215",
+        "number": 9,
+        "college": "LSU",
+        "birthDate": "1996-12-10",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 2,
+        "season": "2025",
+        "player": "Joe Burrow",
+        "team": "CIN",
+        "position": "QB",
+        "offenseSnaps": 21,
+        "offenseSnapPct": 0.3,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "BurrJo01"
+      },
+      "depthChartAhead": null
+    },
+    {
       "id": "16625",
       "name": "Wilson, Johnny",
       "position": "WR",
@@ -10358,64 +10393,6 @@
           "name": "Chubb, Nick"
         }
       ]
-    },
-    {
-      "id": "14777",
-      "name": "Burrow, Joe",
-      "position": "QB",
-      "salary": 7400000,
-      "franchiseId": "0007",
-      "status": "INJURED_RESERVE",
-      "contractYear": "1",
-      "points": 39.72,
-      "team": "CIN",
-      "draftYear": 2020,
-      "draftTeam": "CIN",
-      "birthdate": 850194000,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14777_thumb.jpg",
-      "externalIds": {
-        "mfl": "14777",
-        "sleeper": "6770",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "6770",
-        "fullName": "Joe Burrow",
-        "team": "CIN",
-        "age": 28,
-        "height": "76",
-        "weight": "215",
-        "number": 9,
-        "college": "LSU",
-        "birthDate": "1996-12-10",
-        "status": "Active",
-        "active": true,
-        "position": "QB",
-        "depthChartPosition": "QB",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "QB"
-        ],
-        "experience": 5,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 2,
-        "season": "2025",
-        "player": "Joe Burrow",
-        "team": "CIN",
-        "position": "QB",
-        "offenseSnaps": 21,
-        "offenseSnapPct": 0.3,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "BurrJo01"
-      },
-      "depthChartAhead": null
     },
     {
       "id": "17055",
@@ -15304,69 +15281,6 @@
       "depthChartAhead": null
     },
     {
-      "id": "16222",
-      "name": "Kraft, Tucker",
-      "position": "TE",
-      "salary": 544500,
-      "franchiseId": "0011",
-      "status": "ROSTER",
-      "contractYear": "3",
-      "points": 157.4,
-      "team": "GB",
-      "draftYear": 2023,
-      "draftTeam": "GBP",
-      "birthdate": 973227600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16222_thumb.jpg",
-      "externalIds": {
-        "mfl": "16222",
-        "sleeper": "9484",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "9484",
-        "fullName": "Tucker Kraft",
-        "team": "GB",
-        "age": 25,
-        "height": "77",
-        "weight": "259",
-        "number": 85,
-        "college": "South Dakota State",
-        "birthDate": "2000-11-03",
-        "status": "Inactive",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": 4,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 2,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Knee - ACL",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 9,
-        "season": "2025",
-        "player": "Tucker Kraft",
-        "team": "GB",
-        "position": "TE",
-        "offenseSnaps": 32,
-        "offenseSnapPct": 0.49,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "KrafTu00"
-      },
-      "depthChartAhead": [
-        {
-          "id": "16215",
-          "name": "Musgrave, Luke"
-        }
-      ]
-    },
-    {
       "id": "16169",
       "name": "Charbonnet, Zach",
       "position": "RB",
@@ -16249,7 +16163,7 @@
       "position": "QB",
       "salary": 450000,
       "franchiseId": "0011",
-      "status": "TAXI_SQUAD",
+      "status": "ROSTER",
       "contractYear": "5",
       "points": 0,
       "team": "PIT",
@@ -16303,7 +16217,7 @@
       "position": "RB",
       "salary": 3100000,
       "franchiseId": "0011",
-      "status": "TAXI_SQUAD",
+      "status": "ROSTER",
       "contractYear": "5",
       "points": 32.25,
       "team": "LAC",
@@ -16354,6 +16268,69 @@
         "pfrPlayerId": "HampOm00"
       },
       "depthChartAhead": null
+    },
+    {
+      "id": "16222",
+      "name": "Kraft, Tucker",
+      "position": "TE",
+      "salary": 544500,
+      "franchiseId": "0011",
+      "status": "INJURED_RESERVE",
+      "contractYear": "3",
+      "points": 157.4,
+      "team": "GB",
+      "draftYear": 2023,
+      "draftTeam": "GBP",
+      "birthdate": 973227600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16222_thumb.jpg",
+      "externalIds": {
+        "mfl": "16222",
+        "sleeper": "9484",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "9484",
+        "fullName": "Tucker Kraft",
+        "team": "GB",
+        "age": 25,
+        "height": "77",
+        "weight": "259",
+        "number": 85,
+        "college": "South Dakota State",
+        "birthDate": "2000-11-03",
+        "status": "Inactive",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 2,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee - ACL",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 9,
+        "season": "2025",
+        "player": "Tucker Kraft",
+        "team": "GB",
+        "position": "TE",
+        "offenseSnaps": 32,
+        "offenseSnapPct": 0.49,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "KrafTu00"
+      },
+      "depthChartAhead": [
+        {
+          "id": "16215",
+          "name": "Musgrave, Luke"
+        }
+      ]
     },
     {
       "id": "15259",
