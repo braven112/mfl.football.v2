@@ -30,6 +30,7 @@ import {
   aggregateDeadMoney,
   calculateContractYearsMeta,
 } from '../utils/salary-calculations';
+import { getAuthUser } from '../utils/auth';
 
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -637,6 +638,11 @@ const initialLastContractYear = (parseInt(defaultSeason, 10) || SALARY_YEARS[0])
 
 const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
 
+// Check if user is authenticated
+const authUser = getAuthUser(Astro.request);
+const isLoggedIn = !!authUser;
+const userFranchiseId = authUser?.franchiseId || null;
+
 // Prepare initial chart data for SSR
 // Note: These are placeholder slices - actual data will be calculated client-side in updateView()
 const initialCapSlices: ChartSlice[] = [];
@@ -671,6 +677,8 @@ const serializedConfig = JSON.stringify({
   targetActiveCount: TARGET_ACTIVE_COUNT,
   reserveForRookies: RESERVE_FOR_ROOKIES,
   collegeLogos: collegeLogosNormalized,
+  isLoggedIn,
+  userFranchiseId,
 });
 ---
 
@@ -1948,6 +1956,11 @@ const serializedConfig = JSON.stringify({
     color: #94a3b8;
   }
 
+  :global(.trade-bait-indicator) {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
   :global(.pill) {
     display: inline-flex;
     align-items: center;
@@ -2261,6 +2274,14 @@ const serializedConfig = JSON.stringify({
     border-color: #f59e0b;
   }
 
+  :global(.contract-action-btn--trade-bait) {
+    border-color: #8b5cf6;
+  }
+
+  :global(.contract-action-btn--trade-bait:hover) {
+    border-color: #7c3aed;
+  }
+
   :global(.contract-modal__extension-options) {
     margin-top: 1rem;
     padding-top: 1rem;
@@ -2383,6 +2404,20 @@ const serializedConfig = JSON.stringify({
 
   :global(.contract-action-badge--trade) {
     background: #7c3aed;
+  }
+
+  :global(.contract-action-badge--trade-bait) {
+    background: #8b5cf6;
+  }
+
+  /* Trade Bait Players - visible with border highlight */
+  :global(.roster-row--trade-bait) {
+    border-left: 4px solid #8b5cf6;
+    background: #f5f3ff !important;
+  }
+
+  :global(.roster-row--trade-bait.roster-row--active-alt) {
+    background: #ede9fe !important;
   }
 
   /* Cut/Traded Players - 50% opacity */
@@ -2637,6 +2672,10 @@ const serializedConfig = JSON.stringify({
           <span>Trade Player</span>
           <small class="action-description">No cap penalty</small>
         </button>
+        <button class="contract-action-btn contract-action-btn--trade-bait" data-action="trade-bait" style="display: none;">
+          <span>Place on Trade Bait</span>
+          <small class="action-description">Available to other franchises</small>
+        </button>
       </div>
       <div class="contract-modal__extension-options" style="display: none;">
         <h4>Extension Length</h4>
@@ -2831,6 +2870,7 @@ const serializedConfig = JSON.stringify({
     const contractYears = playerData.years ?? 0;
     const franchiseTagBtn = modal?.querySelector('[data-action="franchise"]');
     const extensionBtn = modal?.querySelector('[data-action="extension"]');
+    const tradeBaitBtn = modal?.querySelector('[data-action="trade-bait"]');
 
     // Franchise tag: only eligible in last year of contract (contractYears === 1)
     if (franchiseTagBtn) {
@@ -2840,6 +2880,11 @@ const serializedConfig = JSON.stringify({
     // Veteran extension: only eligible with 2+ years remaining
     if (extensionBtn) {
       extensionBtn.style.display = contractYears >= 2 ? 'block' : 'none';
+    }
+
+    // Trade bait: always show - API will verify franchise ownership
+    if (tradeBaitBtn) {
+      tradeBaitBtn.style.display = 'block';
     }
 
     // Reset extension options
@@ -2905,6 +2950,52 @@ const serializedConfig = JSON.stringify({
     applyContractAction('extension', selectedExtensionYears);
   });
 
+  // Submit trade bait action to API
+  const submitTradeBaitAction = async (playerId, playerName) => {
+    try {
+      closeModal();
+
+      const payload = {
+        leagueId: '13522',
+        playerId,
+        playerName,
+        status: 'on_trade_bait'
+      };
+
+      const response = await fetch('/api/trade-bait/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to place player on trade bait');
+      }
+
+      // Update local UI with trade bait status
+      contractActions[playerId] = {
+        type: 'trade-bait',
+        playerId,
+        playerName,
+        onTradingBlock: true
+      };
+
+      console.log('Trade bait action submitted successfully:', data);
+      recalculateRoster();
+      updateClearAllButton();
+
+      // Show success message
+      alert(`${playerName} has been placed on trade bait!`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to place player on trade bait';
+      console.error('Trade bait submission error:', msg);
+      alert(`Error: ${msg}`);
+    }
+  };
+
   // Apply contract action
   const applyContractAction = (actionType, extensionYears = 1) => {
     console.log('applyContractAction called', { actionType, extensionYears, selectedPlayer });
@@ -2960,6 +3051,10 @@ const serializedConfig = JSON.stringify({
         type: 'trade',
         removed: true
       };
+    } else if (actionType === 'trade-bait') {
+      // Handle trade bait submission asynchronously via API
+      submitTradeBaitAction(id, name);
+      return; // Return early, don't process locally
     }
 
     console.log('Result calculated:', result);
@@ -3678,6 +3773,7 @@ const serializedConfig = JSON.stringify({
                 data-player-position="${player.position || ''}"
                 data-player-salary="${player.salary || 0}"
                 data-player-years="${player.contractYears || 1}"
+                data-player-franchise-id="${player.franchiseId || ''}"
                 title="Manage Contract"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3712,7 +3808,7 @@ const serializedConfig = JSON.stringify({
 
           const actionBadge = action ? `
             <span class="contract-action-badge contract-action-badge--${action.type}">
-              ${action.type === 'franchise' ? 'Franchise Tag' : action.type === 'extension' ? 'Extension' : action.type}
+              ${action.type === 'franchise' ? 'Franchise Tag' : action.type === 'extension' ? 'Extension' : action.type === 'trade-bait' ? 'Trade Bait' : action.type}
               <button class="contract-action-remove" data-player-id="${player.id}" title="Remove">×</button>
             </span>
           ` : '';
@@ -3776,6 +3872,11 @@ const serializedConfig = JSON.stringify({
                         >(${player.injuryStatus.substring(0, 1)})</button>`
                       : ''
                   }
+                  ${
+                    action && action.type === 'trade-bait'
+                      ? `<span class="trade-bait-indicator" title="On Trade Bait" style="display: inline-block; margin-left: 0.35rem; color: #8b5cf6; font-weight: 700;">🏷️</span>`
+                      : ''
+                  }
                   </strong>${actionBadge}
                   <div class="player-meta">
                     ${
@@ -3806,13 +3907,24 @@ const serializedConfig = JSON.stringify({
             const playerPosition = btn.dataset.playerPosition;
             const playerSalary = parseFloat(btn.dataset.playerSalary || '0');
             const playerYears = parseInt(btn.dataset.playerYears || '1', 10);
+            const playerFranchiseId = btn.dataset.playerFranchiseId;
+
+            console.log('Button data attributes:', {
+              playerId,
+              playerName,
+              playerPosition,
+              playerSalary,
+              playerYears,
+              playerFranchiseId
+            });
 
             openModal({
               id: playerId,
               name: playerName,
               position: playerPosition,
               salary: playerSalary,
-              years: playerYears
+              years: playerYears,
+              franchiseId: playerFranchiseId
             });
           });
         });
