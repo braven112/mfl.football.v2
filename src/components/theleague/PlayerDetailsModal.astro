@@ -347,6 +347,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 
   .player-details-nfl-logo {
     height: 48px;
+    max-width: 4rem;
     width: auto;
     object-fit: contain;
     text-align: left;
@@ -601,6 +602,8 @@ const NFL_TEAM_NAMES: Record<string, string> = {
         if (!pos) return 'N/A';
         const upper = pos.toUpperCase();
         if (upper === 'SWR') return 'WR (Slot)';
+        if (upper === 'LWR') return 'WR (Left)';
+        if (upper === 'RWR') return 'WR (Right)';
         return upper;
       };
 
@@ -751,7 +754,13 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       setElementText('detail-contract-type', formatContractType(playerData.contractType));
       setElementText('detail-points', playerData.points !== undefined ? playerData.points.toFixed(2) : 'N/A');
       setElementText('detail-bye-week', playerData.byeWeek !== null && playerData.byeWeek !== undefined ? 'Week ' + playerData.byeWeek : 'N/A');
-      setElementText('detail-draft', formatDraft(playerData.draftYear, playerData.draftRound, playerData.draftPick, playerData.draftTeam));
+      if (isDefense) {
+        setElementText('detail-draft', 'N/A');
+        setDraftTeamLogo(null, null, null, null);
+      } else {
+        setElementText('detail-draft', formatDraft(playerData.draftYear, playerData.draftRound, playerData.draftPick, playerData.draftTeam));
+        setDraftTeamLogo(playerData.draftTeam, playerData.draftYear, playerData.draftRound, playerData.draftPick);
+      }
       setCollege(playerData.college, playerData.collegeLogo);
       setElementText('detail-birthdate', birthdateStr);
       setElementText('detail-age', ageStr);
@@ -760,7 +769,6 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       setElementText('detail-number', playerData.number);
       setElementText('detail-experience', playerData.experience !== undefined ? playerData.experience + ' years' : 'N/A');
       setElementText('detail-injury-status', playerData.injuryStatus || 'N/A');
-      setDraftTeamLogo(playerData.draftTeam, playerData.draftYear, playerData.draftRound, playerData.draftPick);
 
       // Handle depth chart ahead
       const depthChartAheadEl = document.getElementById('detail-depth-chart-ahead');
