@@ -51,3 +51,12 @@ Use `pnpm run update:salary-averages` to pull the latest MyFantasyLeague rosters
 - `MFL_API_KEY` – optional, use if your league enforces API keys
 
 The script writes the consolidated snapshot to `src/data/mfl-player-salaries-<season>.json` and the calculated averages to `src/data/mfl-salary-averages-<season>.json`. Each run also archives timestamped copies under `src/data/salary-history/<season>/` so you have a running record of the top salaries through the season.
+
+## To do list
+1. Build Group Me Integration
+1. Build Contract submission tool
+1. Build draft pick projector tool
+1. Playoff Projector script.
+1. Add stats to Roster page
+1. Add Standings and Wildcard calculator so dynamically move the Prize CSS depending on real time breakers
+

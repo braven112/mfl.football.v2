@@ -4,19 +4,23 @@
  * Handles user authentication with MFL credentials
  */
 
-import Layout from '../layouts/Layout.astro';
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 
 // If user is already authenticated, redirect to theleague
 const authUser = Astro.request.headers.get('cookie')?.includes('session_token');
 if (authUser) {
   return Astro.redirect('/theleague');
 }
+
+const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://api.myfantasyleague.com';
+const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '';
+const envYear = (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) || new Date().getFullYear().toString();
+const envStaticHost = (import.meta.env.PUBLIC_STATIC_HOST as string | undefined) || envHost;
 ---
 
-<Layout title="Login - The League">
-  <main style="max-width: 500px; margin: 4rem auto; padding: 2rem;">
+<TheLeagueLayout title="Login - The League" host={envHost} leagueId={envLeagueId} year={envYear} staticHost={envStaticHost}>
+  <div style="max-width: 500px; margin: 0rem auto;">
     <div style="text-align: center; margin-bottom: 3rem;">
-      <h1>The League</h1>
       <p style="color: #666; margin-top: 0.5rem;">Sign in with your MFL account</p>
     </div>
 
@@ -47,16 +51,6 @@ if (authUser) {
         />
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <label for="leagueId" style="font-size: 0.95rem; font-weight: 500; color: #333;">League ID (optional)</label>
-        <input
-          id="leagueId"
-          type="text"
-          placeholder="Leave blank to use default league"
-          style="padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; box-sizing: border-box;"
-        />
-        <p style="margin: 0; font-size: 0.85rem; color: #666;">Your league ID (e.g., 13522 from the league URL)</p>
-      </div>
 
       <button
         type="submit"
@@ -67,30 +61,46 @@ if (authUser) {
       </button>
 
       <p style="margin: 0; font-size: 0.8rem; color: #999; text-align: center;">
-        Your credentials are securely transmitted and validated only with MyFantasyLeague.com. We never store your password.
+        Your credentials are securely transmitted and validated only with MyFantasyLeague.com.
       </p>
     </form>
 
-    <p style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
-      Don't have an MFL account? <a href="https://www.myfantasyleague.com/" target="_blank" style="color: #0066cc; text-decoration: none;">Create one here</a>
-    </p>
 
     <script>
-      const form = document.getElementById('login-form') as HTMLFormElement;
-      const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
-      const errorMsg = document.getElementById('error-message') as HTMLDivElement;
-      const errorText = document.getElementById('error-text') as HTMLParagraphElement;
+      const form = document.getElementById('login-form');
+      const submitBtn = document.getElementById('submit-btn');
+      const errorMsg = document.getElementById('error-message');
+      const errorText = document.getElementById('error-text');
 
-      form.addEventListener('submit', async (e: Event) => {
+      // Check for redirect URL in query params, use referrer, or default to /theleague
+      const params = new URLSearchParams(window.location.search);
+      let redirectUrl = params.get('redirect');
+
+      // If no redirect param, try to get from sessionStorage, then referrer
+      if (!redirectUrl) {
+        redirectUrl = sessionStorage.getItem('loginRedirectUrl') || document.referrer;
+      }
+
+      // Store for use after login
+      if (redirectUrl && redirectUrl !== document.location.href) {
+        sessionStorage.setItem('loginRedirectUrl', redirectUrl);
+      }
+
+      form?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        errorMsg.style.display = 'none';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Signing in...';
+        if (errorMsg) errorMsg.style.display = 'none';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Signing in...';
+        }
 
         try {
-          const username = (document.getElementById('username') as HTMLInputElement).value;
-          const password = (document.getElementById('password') as HTMLInputElement).value;
-          const leagueId = (document.getElementById('leagueId') as HTMLInputElement).value;
+          const usernameEl = document.getElementById('username');
+          const passwordEl = document.getElementById('password');
+
+          const username = usernameEl ? (usernameEl as HTMLInputElement).value : '';
+          const password = passwordEl ? (passwordEl as HTMLInputElement).value : '';
+          const leagueId = '13522';
 
           const response = await fetch('/api/auth/login', {
             method: 'POST',
@@ -99,7 +109,7 @@ if (authUser) {
             body: JSON.stringify({
               username,
               password,
-              leagueId: leagueId || undefined,
+              leagueId,
             }),
           });
 
@@ -109,13 +119,28 @@ if (authUser) {
             throw new Error(data.message || 'Login failed');
           }
 
-          window.location.href = '/theleague';
+          // Redirect back to the page user came from, or default to /theleague
+          let finalRedirectUrl = sessionStorage.getItem('loginRedirectUrl') || '/theleague';
+
+          // Extract just the path if it's a full URL
+          if (finalRedirectUrl.includes('://')) {
+            try {
+              finalRedirectUrl = new URL(finalRedirectUrl).pathname;
+            } catch (e) {
+              finalRedirectUrl = '/theleague';
+            }
+          }
+
+          sessionStorage.removeItem('loginRedirectUrl');
+          window.location.href = finalRedirectUrl;
         } catch (error) {
           const msg = error instanceof Error ? error.message : 'Login failed';
-          errorText.textContent = msg;
-          errorMsg.style.display = 'block';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Sign In';
+          if (errorText) errorText.textContent = msg;
+          if (errorMsg) errorMsg.style.display = 'block';
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign In';
+          }
         }
       });
     </script>
@@ -146,4 +171,4 @@ if (authUser) {
       color: #0052a3 !important;
     }
   </style>
-</Layout>
+</TheLeagueLayout>

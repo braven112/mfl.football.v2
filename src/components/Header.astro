@@ -25,7 +25,7 @@
 				</svg>
 			</button>
 			<div class="user-dropdown" id="user-dropdown">
-				<div id="auth-content"></div>
+				<div id="auth-content" class="auth-content "></div>
 			</div>
 		</div>
 
@@ -181,10 +181,13 @@
 		color: black;
 	}
 
+	/* User Menu Styles - Shared */
 	.user-menu-wrapper {
 		position: relative;
 		display: flex;
 		align-items: center;
+		gap: 0.5rem;
+		margin-right: auto;
 	}
 
 	.user-btn {
@@ -197,20 +200,19 @@
 		border: none;
 		cursor: pointer;
 		padding: 0;
-		color: black;
 		transition: all 0.2s ease;
 		border-radius: 0.5rem;
-	}
-
-	.user-btn:hover {
-		background: #f5f5f5;
-		color: #dc2626;
+		color: black;
 	}
 
 	.user-btn svg {
 		width: 24px;
 		height: 24px;
 		stroke: currentColor;
+	}
+
+	.user-btn:hover {
+		color: #dc2626;
 	}
 
 	.user-dropdown {
@@ -227,6 +229,7 @@
 		transform: translateY(-10px);
 		transition: all 0.2s ease;
 		z-index: 1001;
+		padding: 1rem;
 	}
 
 	.user-dropdown.active {
@@ -240,7 +243,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		color: black;
 		text-decoration: none;
 		transition: background 0.2s ease;
 		border: none;
@@ -249,6 +251,7 @@
 		width: 100%;
 		text-align: left;
 		font-size: 0.95rem;
+		color: black;
 	}
 
 	.user-dropdown-item:hover {
@@ -262,6 +265,11 @@
 
 	.user-dropdown-item:last-child {
 		border-radius: 0 0 0.375rem 0.375rem;
+	}
+
+	.auth-content {
+		display: inline-grid;
+		gap: 0.5rem;
 	}
 
 	.logout-btn {
@@ -354,6 +362,7 @@
 		padding: 0;
 		gap: 0.25rem;
 		transition: all 0.3s ease;
+		margin-left: auto;
 	}
 
 	.hamburger-line {

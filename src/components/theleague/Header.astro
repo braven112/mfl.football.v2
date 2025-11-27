@@ -82,6 +82,19 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
         <div class="clearfix"></div>
       </div>
       <div class="col right">
+        <!-- User Menu -->
+        <div class="user-menu-wrapper">
+          <button class="user-btn" id="user-btn" aria-label="User menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <div id="auth-content" class="auth-content"></div>
+          </div>
+        </div>
+
         <!-- Hamburger Menu Button -->
         <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu" aria-expanded="false">
           <span class="hamburger-box">
@@ -282,6 +295,105 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     margin-left: 0.15rem;
     text-transform: lowercase;
     font-size: 1rem;
+  }
+
+  /* User Menu Styles - Shared */
+  .user-menu-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .user-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+    border-radius: 0.5rem;
+    color: var(--primary-color, #1c497c);
+  }
+
+  .user-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+  }
+
+  .user-btn:hover {
+    color: var(--secondary-color, #2e8743);
+  }
+
+  .user-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    z-index: 1001;
+    padding: 1rem;
+  }
+
+  .user-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .user-dropdown-item {
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    transition: background 0.2s ease;
+    border: none;
+    background: none;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-size: 0.95rem;
+    color: #333;
+  }
+
+  .user-dropdown-item:hover {
+    background: #f5f5f5;
+    color: var(--secondary-color, #2e8743);
+  }
+
+  .user-dropdown-item:first-child {
+    border-radius: 0.375rem 0.375rem 0 0;
+  }
+
+  .user-dropdown-item:last-child {
+    border-radius: 0 0 0.375rem 0.375rem;
+  }
+
+  .auth-content {
+    display: inline-grid;
+    gap: 0.5rem;
+  }
+
+  .logout-btn {
+    color: #c33;
+  }
+
+  .logout-btn:hover {
+    background: #fef2f2;
+    color: #dc2626;
   }
 
   /* Elegant Animated Hamburger Button */
@@ -516,6 +628,17 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
       width: 100%;
     }
   }
+
+  @media (max-width: 360px) {
+    .league_logo svg {
+      height: 1.5rem;
+      width: auto;
+    }
+
+    .leaguename {
+      font-size: 1rem;
+    }
+  }
 </style>
 
 <script>
@@ -549,4 +672,104 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
       closeMenu();
     }
   });
+
+  // User menu and authentication functionality
+  const userBtn = document.getElementById('user-btn');
+  const userDropdown = document.getElementById('user-dropdown');
+  const authContent = document.getElementById('auth-content');
+
+  function toggleUserDropdown() {
+    userDropdown?.classList.toggle('active');
+  }
+
+  function closeUserDropdown() {
+    userDropdown?.classList.remove('active');
+  }
+
+  // Check authentication status and update dropdown
+  async function updateAuthStatus() {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      const data = await response.json();
+
+      if (data.authenticated && data.user) {
+        // User is logged in - show logout option
+        authContent!.innerHTML = `
+          <div class="user-dropdown-item" style="cursor: default; background: #f9fafb;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>${data.user.username}</span>
+          </div>
+          <button class="user-dropdown-item logout-btn" id="logout-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sign Out</span>
+          </button>
+        `;
+
+        // Add logout listener
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn?.addEventListener('click', handleLogout);
+      } else {
+        // User is not logged in - show login option
+        authContent!.innerHTML = `
+          <button class="user-dropdown-item" id="login-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            <span>Sign In</span>
+          </button>
+        `;
+
+        // Add login listener
+        const loginBtn = document.getElementById('login-btn');
+        loginBtn?.addEventListener('click', () => {
+          window.location.href = '/login';
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch auth status:', error);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        closeUserDropdown();
+        updateAuthStatus();
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }
+
+  // User dropdown menu toggle
+  userBtn?.addEventListener('click', toggleUserDropdown);
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!userBtn?.contains(target) && !userDropdown?.contains(target)) {
+      closeUserDropdown();
+    }
+  });
+
+  // Initialize auth status with a small delay to ensure DOM is ready
+  setTimeout(() => {
+    updateAuthStatus();
+  }, 0);
 </script>
