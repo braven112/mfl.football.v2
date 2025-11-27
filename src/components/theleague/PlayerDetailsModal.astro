@@ -58,72 +58,76 @@ const NFL_TEAM_NAMES: Record<string, string> = {
   <div class="player-details-modal__overlay"></div>
   <div class="player-details-modal__content">
     <div class="player-details-modal__header">
-      <h3 id="player-details-title">Player Details</h3>
+      <h3 id="player-details-title">Player Profile</h3>
       <button class="player-details-modal__close" aria-label="Close" title="Close (ESC)">
         ×
       </button>
     </div>
 
     <div class="player-details-modal__body">
-      <!-- Identity Section -->
-      <div class="player-details-section">
-        <h4 class="player-details-section__title">Identity</h4>
-        <div class="player-details-grid">
-          <div class="player-details-field">
-            <span class="player-details-field__label">Name</span>
-            <span class="player-details-field__value" id="detail-name">—</span>
-          </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">Position</span>
-            <span class="player-details-field__value" id="detail-position">—</span>
-          </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">NFL Team</span>
-            <img class="player-details-nfl-logo" id="detail-nfl-team-logo" src="" alt="NFL Team Logo" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Performance Section -->
-      <div class="player-details-section">
-        <h4 class="player-details-section__title">Performance</h4>
-        <div class="player-details-grid">
-          <div class="player-details-field">
-            <span class="player-details-field__label">Fantasy Points</span>
-            <span class="player-details-field__value" id="detail-points">—</span>
-          </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">Bye Week</span>
-            <span class="player-details-field__value" id="detail-bye-week">—</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Background Section -->
-      <div class="player-details-section">
-        <h4 class="player-details-section__title">Background</h4>
-        <div class="player-details-grid">
-          <div class="player-details-field">
-            <span class="player-details-field__label">Draft Year</span>
-            <span class="player-details-field__value" id="detail-draft-year">—</span>
-          </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">College</span>
-            <div class="player-details-field__value college-field">
-              <img class="college-logo" id="detail-college-logo" src="" alt="" />
-              <span id="detail-college">—</span>
+      <!-- Profile Section (Identity + Background + Headshot) -->
+      <div class="player-details-section player-details-section--profile">
+        <div class="profile-content">
+          <!-- Top row: headshot, name, positions -->
+          <div class="profile-top-row">
+            <div class="profile-headshot">
+              <img id="detail-headshot" src="" alt="Player headshot" />
+            </div>
+            <div class="player-details-field">
+              <span class="player-details-field__label">Name</span>
+              <span class="player-details-field__value" id="detail-name">—</span>
+            </div>
+            <div class="player-details-field">
+              <span class="player-details-field__label">Position</span>
+              <div class="position-display">
+                <span class="mfl-pos" id="detail-position">—</span>
+                <span class="position-separator">|</span>
+                <span class="nfl-pos" id="detail-nfl-position">—</span>
+              </div>
             </div>
           </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">Birthdate</span>
-            <span class="player-details-field__value" id="detail-birthdate">—</span>
+
+          <!-- Teams row: NFL Team, Jersey Number, and College -->
+          <div class="profile-teams-row">
+            <div class="player-details-field">
+              <span class="player-details-field__label">NFL Team</span>
+              <img class="player-details-nfl-logo" id="detail-nfl-team-logo" src="" alt="NFL Team Logo" />
+            </div>
+            <div class="player-details-field">
+              <span class="player-details-field__label">Jersey #</span>
+              <span class="player-details-field__value" id="detail-number">—</span>
+            </div>
+            <div class="player-details-field">
+              <span class="player-details-field__label">College</span>
+              <div class="player-details-field__value college-field">
+                <img class="college-logo" id="detail-college-logo" src="" alt="" />
+                <span id="detail-college">—</span>
+              </div>
+            </div>
           </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">Age</span>
-            <span class="player-details-field__value" id="detail-age">—</span>
+
+          <!-- Background row: Draft Year, Age, Birthdate -->
+          <div class="profile-background-row">
+            <div class="player-details-field">
+              <span class="player-details-field__label">Drafted</span>
+              <div class="player-details-field__value draft-display">
+                <img class="draft-team-logo" id="detail-draft-team-logo" src="" alt="" />
+                <span id="detail-draft">—</span>
+              </div>
+            </div>
+            <div class="player-details-field">
+              <span class="player-details-field__label">Age</span>
+              <span class="player-details-field__value" id="detail-age">—</span>
+            </div>
+            <div class="player-details-field">
+              <span class="player-details-field__label">Birthdate</span>
+              <span class="player-details-field__value" id="detail-birthdate">—</span>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Performance Section (moved to end, see bottom of modal) -->
 
       <!-- Physical Attributes Section -->
       <div class="player-details-section" id="section-physical-attributes">
@@ -137,24 +141,20 @@ const NFL_TEAM_NAMES: Record<string, string> = {
             <span class="player-details-field__label">Weight</span>
             <span class="player-details-field__value" id="detail-weight">—</span>
           </div>
-          <div class="player-details-field">
-            <span class="player-details-field__label">Jersey Number</span>
-            <span class="player-details-field__value" id="detail-number">—</span>
-          </div>
         </div>
       </div>
 
       <!-- NFL Status Section -->
       <div class="player-details-section" id="section-nfl-status">
         <h4 class="player-details-section__title">NFL Status</h4>
-        <div class="player-details-grid">
+        <div class="player-details-grid player-details-grid--three">
           <div class="player-details-field">
             <span class="player-details-field__label">Experience</span>
             <span class="player-details-field__value" id="detail-experience">—</span>
           </div>
           <div class="player-details-field">
-            <span class="player-details-field__label">Depth Chart Position</span>
-            <span class="player-details-field__value" id="detail-depth-position">—</span>
+            <span class="player-details-field__label">Injury Status</span>
+            <span class="player-details-field__value" id="detail-injury-status">—</span>
           </div>
           <div class="player-details-field">
             <span class="player-details-field__label">Depth Chart</span>
@@ -166,7 +166,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       <!-- Contract Section -->
       <div class="player-details-section">
         <h4 class="player-details-section__title">Contract</h4>
-        <div class="player-details-grid">
+        <div class="player-details-grid player-details-grid--three">
           <div class="player-details-field">
             <span class="player-details-field__label">Current Salary</span>
             <span class="player-details-field__value" id="detail-salary">—</span>
@@ -186,6 +186,21 @@ const NFL_TEAM_NAMES: Record<string, string> = {
         </div>
       </div>
 
+      <!-- Performance Section -->
+      <div class="player-details-section">
+        <h4 class="player-details-section__title">Performance</h4>
+        <div class="player-details-grid player-details-grid--three">
+          <div class="player-details-field">
+            <span class="player-details-field__label">Fantasy Points</span>
+            <span class="player-details-field__value" id="detail-points">—</span>
+          </div>
+          <div class="player-details-field">
+            <span class="player-details-field__label">Bye Week</span>
+            <span class="player-details-field__value" id="detail-bye-week">—</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -201,7 +216,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
     z-index: 1000;
     justify-content: center;
     align-items: center;
-    padding: 1rem;
+    padding: 0 1.5rem 2rem;
   }
 
   .player-details-modal.active {
@@ -235,7 +250,8 @@ const NFL_TEAM_NAMES: Record<string, string> = {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem 0;
+
     border-bottom: 1px solid #e5e7eb;
     flex-shrink: 0;
   }
@@ -295,6 +311,10 @@ const NFL_TEAM_NAMES: Record<string, string> = {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
+  }
+
+  .player-details-grid--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .player-details-field {
@@ -358,12 +378,88 @@ const NFL_TEAM_NAMES: Record<string, string> = {
     gap: 0.5rem;
   }
 
+  .draft-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .draft-team-logo {
+    height: 1rem;
+    max-width: 2rem;
+    width: auto;
+    object-fit: contain;
+    display: none;
+  }
+
   .college-logo {
     height: 32px;
     width: auto;
     max-width: 40px;
     display: none;
     object-fit: contain;
+  }
+
+  .player-details-section--profile {
+    margin-bottom: 2rem;
+  }
+
+  .profile-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .profile-top-row {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .profile-headshot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .profile-headshot img {
+    width: 100%;
+    max-width: 80px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    object-fit: cover;
+    aspect-ratio: 1;
+  }
+
+  .position-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mfl-pos,
+  .nfl-pos {
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .position-separator {
+    color: #ccc;
+    font-weight: 300;
+  }
+
+  .profile-teams-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .profile-background-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 
   @media (max-width: 640px) {
@@ -388,8 +484,26 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       gap: 0.75rem;
     }
 
+    .player-details-grid--three {
+      grid-template-columns: 1fr;
+    }
+
     .player-details-section {
       margin-bottom: 1.25rem;
+    }
+
+    .profile-top-row {
+      grid-template-columns: auto 1fr;
+      gap: 1rem;
+    }
+
+    .profile-headshot img {
+      max-width: 60px;
+    }
+
+    .profile-teams-row,
+    .profile-background-row {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -490,6 +604,86 @@ const NFL_TEAM_NAMES: Record<string, string> = {
         return upper;
       };
 
+      const normalizeTeamCode = (team?: string | null) => {
+        if (!team) return null;
+        const map: Record<string, string> = {
+          NEP: 'NE',
+          GBP: 'GB',
+          KCC: 'KC',
+          SFO: 'SF',
+          LVR: 'LV',
+          OAK: 'LV',
+          SD: 'LAC',
+          STL: 'LAR',
+          NOS: 'NO',
+          NOR: 'NO',
+          JAC: 'JAX',
+          TBB: 'TB',
+          FA: 'NFL',
+        };
+        const code = team.toUpperCase();
+        return map[code] ?? code;
+      };
+
+      const formatDraft = (
+        year?: number | null,
+        round?: number | null,
+        pick?: number | null,
+        teamCode?: string | null
+      ) => {
+        const normalizedTeam = teamCode ? normalizeTeamCode(teamCode) : null;
+        const rawTeam = teamCode ? teamCode.toUpperCase() : '';
+        const isUndrafted =
+          !year ||
+          rawTeam === 'FA' ||
+          rawTeam === 'UFA' ||
+          (!round && !pick && (normalizedTeam === 'NFL' || normalizedTeam === null));
+        if (isUndrafted) return 'UFA';
+        const formatPick = (value?: number | null) => {
+          if (value === null || value === undefined) return '??';
+          const intVal = parseInt(String(value), 10);
+          return Number.isFinite(intVal) ? String(intVal).padStart(2, '0') : '??';
+        };
+        if (year && round) return `${year} Pick ${round}.${formatPick(pick)}`;
+        if (year && pick) return `${year} Pick ${formatPick(pick)}`;
+        return 'UFA';
+      };
+
+      const formatContractType = (type: string | undefined | null) => {
+        if (!type) return 'N/A';
+        const normalized = type.toUpperCase() === 'INJURED_RESERVE' ? 'Injured Reserve' : type;
+        return normalized.replace(/_/g, ' ');
+      };
+
+      const setDraftTeamLogo = (teamCode?: string | null, year?: number | null, round?: number | null, pick?: number | null) => {
+        const logoEl = document.getElementById('detail-draft-team-logo') as HTMLImageElement | null;
+        if (!logoEl) return;
+        const normalizedTeam = teamCode ? normalizeTeamCode(teamCode) : null;
+        const rawTeam = teamCode ? teamCode.toUpperCase() : '';
+        const isUndrafted =
+          !year ||
+          rawTeam === 'FA' ||
+          rawTeam === 'UFA' ||
+          (!round && !pick && (normalizedTeam === 'NFL' || normalizedTeam === null));
+        if (isUndrafted) {
+          logoEl.src = '/assets/nfl-logos/NFL.svg';
+          logoEl.alt = 'NFL logo';
+          logoEl.style.display = 'inline-block';
+          return;
+        }
+        if (!teamCode) {
+          logoEl.style.display = 'none';
+          logoEl.src = '';
+          logoEl.alt = '';
+          return;
+        }
+        const code = normalizedTeam || 'NFL';
+        const altName = nflTeamNames[code] ?? (code === 'NFL' ? 'NFL' : code);
+        logoEl.src = `/assets/nfl-logos/${code}.svg`;
+        logoEl.alt = `${altName} logo`;
+        logoEl.style.display = 'inline-block';
+      };
+
       const setNflTeamLogo = (teamCode: string | undefined) => {
         const logoEl = document.getElementById('detail-nfl-team-logo') as HTMLImageElement | null;
         if (logoEl) {
@@ -525,16 +719,39 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       setSectionVisibility('section-physical-attributes', !isDefense);
       setSectionVisibility('section-nfl-status', !isDefense);
 
+      // Set headshot image
+      const headshot = document.getElementById('detail-headshot') as HTMLImageElement | null;
+      if (headshot && playerData.id) {
+        const DEFAULT_HEADSHOT_URL = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+        headshot.src = `https://www49.myfantasyleague.com/player_photos_2014/${playerData.id}_thumb.jpg`;
+        headshot.onerror = () => {
+          headshot.src = DEFAULT_HEADSHOT_URL;
+        };
+        headshot.alt = playerData.name || 'Player headshot';
+      }
+
       setElementText('detail-name', playerData.name);
       setElementText('detail-position', formatPosition(position));
+      setElementText('detail-nfl-position', formatPosition(playerData.depthChartPosition));
+
+      // Conditionally show NFL position and separator for WR only
+      const shouldShowDualPosition = position && ['WR', 'SWR', 'LWR', 'RWR'].includes(position.toUpperCase());
+      const separatorEl = document.querySelector('.position-separator') as HTMLElement | null;
+      const nflPosEl = document.getElementById('detail-nfl-position') as HTMLElement | null;
+      if (separatorEl) {
+        separatorEl.style.display = shouldShowDualPosition ? 'block' : 'none';
+      }
+      if (nflPosEl) {
+        nflPosEl.style.display = shouldShowDualPosition ? 'inline' : 'none';
+      }
       setNflTeamLogo(playerData.nflTeam);
       setElementText('detail-salary', formatCurrency(playerData.salary));
       setElementText('detail-contract-years', playerData.contractYears !== undefined ? playerData.contractYears : 'N/A');
       setElementText('detail-total-remaining', formatCurrency(playerData.totalRemaining));
-      setElementText('detail-contract-type', playerData.contractType);
+      setElementText('detail-contract-type', formatContractType(playerData.contractType));
       setElementText('detail-points', playerData.points !== undefined ? playerData.points.toFixed(2) : 'N/A');
       setElementText('detail-bye-week', playerData.byeWeek !== null && playerData.byeWeek !== undefined ? 'Week ' + playerData.byeWeek : 'N/A');
-      setElementText('detail-draft-year', playerData.draftYear);
+      setElementText('detail-draft', formatDraft(playerData.draftYear, playerData.draftRound, playerData.draftPick, playerData.draftTeam));
       setCollege(playerData.college, playerData.collegeLogo);
       setElementText('detail-birthdate', birthdateStr);
       setElementText('detail-age', ageStr);
@@ -542,7 +759,8 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       setElementText('detail-weight', playerData.weight ? playerData.weight + ' lbs' : 'N/A');
       setElementText('detail-number', playerData.number);
       setElementText('detail-experience', playerData.experience !== undefined ? playerData.experience + ' years' : 'N/A');
-      setElementText('detail-depth-position', formatPosition(playerData.depthChartPosition));
+      setElementText('detail-injury-status', playerData.injuryStatus || 'N/A');
+      setDraftTeamLogo(playerData.draftTeam, playerData.draftYear, playerData.draftRound, playerData.draftPick);
 
       // Handle depth chart ahead
       const depthChartAheadEl = document.getElementById('detail-depth-chart-ahead');

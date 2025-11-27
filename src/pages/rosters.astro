@@ -50,6 +50,9 @@ const leagueFeeds = import.meta.glob('../data/mfl-feeds/*/league.json', {
 const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
   eager: true,
 });
+const playersFeeds = import.meta.glob('../data/mfl-feeds/*/players.json', {
+  eager: true,
+});
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -339,6 +342,24 @@ Object.entries(leagueFeeds).forEach(([path, mod]) => {
   };
 });
 
+const playersFeedBySeason = {};
+Object.entries(playersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const list =
+    data?.players?.player ??
+    data?.players ??
+    [];
+  if (!season || !Array.isArray(list) && typeof list !== 'object') return;
+  const arr = Array.isArray(list) ? list : Object.values(list);
+  playersFeedBySeason[season] = {};
+  arr.forEach((player) => {
+    const id = player.id ?? player.player_id ?? player.playerId ?? player.playerid;
+    if (!id) return;
+    playersFeedBySeason[season][id] = player;
+  });
+});
+
 const recordsBySeason = {};
 Object.entries(standingsFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
@@ -393,8 +414,16 @@ const buildDisplayRows = (teamData) => {
 };
 
 const buildSeasonPayload = (season, rawData) => {
+  const feedPlayers = playersFeedBySeason[season] ?? {};
+
   const players = (rawData?.players ?? []).map((player) => {
     const salary = parseNumber(player.salary);
+    const nflverse = player.nflverse ?? {};
+    const parseSnap = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = Number(val);
+      return Number.isFinite(num) ? num : null;
+    };
     const contractYears =
       Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) ||
       0;
@@ -412,6 +441,16 @@ const buildSeasonPayload = (season, rawData) => {
     const headshot = player.headshot ?? getPlayerImageUrl(player.id);
     const collegeName = player.sleeper?.college ?? player.college ?? null;
     const collegeAssets = getCollegeAssets(collegeName);
+    const feedPlayer = feedPlayers[player.id] ?? null;
+    const parseDraft = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = parseInt(val, 10);
+      return Number.isFinite(num) ? num : null;
+    };
+    const draftYear = parseDraft(player.draftYear ?? feedPlayer?.draft_year);
+    const draftRound = parseDraft(feedPlayer?.draft_round);
+    const draftPick = parseDraft(feedPlayer?.draft_pick);
+    const draftTeam = (player.draftTeam ?? feedPlayer?.draft_team ?? '').toUpperCase() || null;
 
     return {
       id: player.id,
@@ -425,7 +464,10 @@ const buildSeasonPayload = (season, rawData) => {
       contractType,
       points: parseNumber(player.points),
       nflTeam,
-      draftYear: player.draftYear ?? null,
+      draftYear,
+      draftTeam,
+      draftRound,
+      draftPick,
       nflLogo: getNflLogoUrl(nflTeam),
       rosterSlot: normalizeStatus(player.status),
       byeWeek: nflByeWeeks[nflTeam] ?? null,
@@ -450,6 +492,9 @@ const buildSeasonPayload = (season, rawData) => {
       sleeperAge: player.sleeper?.age ?? null,
       sleeperStatus: player.sleeper?.status ?? null,
       sleeperActive: player.sleeper?.active ?? null,
+      offenseSnaps: parseSnap(nflverse.offenseSnaps),
+      defenseSnaps: parseSnap(nflverse.defenseSnaps),
+      stSnaps: parseSnap(nflverse.stSnaps),
       depthChartAhead: player.depthChartAhead ?? null,
     };
   });
@@ -3784,6 +3829,9 @@ const serializedConfig = JSON.stringify({
                     data-player-points="${player.points || 0}"
                     data-player-bye-week="${player.byeWeek || ''}"
                     data-player-draft-year="${player.draftYear || ''}"
+                    data-player-draft-team="${player.draftTeam || ''}"
+                    data-player-draft-round="${player.draftRound || ''}"
+                    data-player-draft-pick="${player.draftPick || ''}"
                     data-player-birthdate="${player.birthdate || ''}"
                     data-player-franchise-id="${player.franchiseId || ''}"
                     data-player-roster-slot="${player.rosterSlot || ''}"
@@ -3805,6 +3853,9 @@ const serializedConfig = JSON.stringify({
                     data-player-sleeper-age="${player.sleeperAge || ''}"
                     data-player-sleeper-status="${player.sleeperStatus || ''}"
                     data-player-sleeper-active="${player.sleeperActive || ''}"
+                    data-player-offense-snaps="${player.offenseSnaps ?? ''}"
+                    data-player-defense-snaps="${player.defenseSnaps ?? ''}"
+                    data-player-st-snaps="${player.stSnaps ?? ''}"
                     data-player-depth-chart-ahead="${player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}"
                     style="cursor: pointer;"
                     title="Click to view full player details"
@@ -3867,6 +3918,16 @@ const serializedConfig = JSON.stringify({
         document.querySelectorAll('.roster-player-name').forEach(nameEl => {
           nameEl.addEventListener('click', (e) => {
             e.stopPropagation();
+            const parseSnap = (value) => {
+              if (value === undefined || value === null || value === '') return null;
+              const num = parseInt(value, 10);
+              return Number.isFinite(num) ? num : null;
+            };
+            const parseDraft = (value) => {
+              if (value === undefined || value === null || value === '') return null;
+              const num = parseInt(value, 10);
+              return Number.isFinite(num) ? num : null;
+            };
             const playerData = {
               id: nameEl.dataset.playerId,
               name: nameEl.dataset.playerName,
@@ -3880,6 +3941,9 @@ const serializedConfig = JSON.stringify({
               points: nameEl.dataset.playerPoints ? parseFloat(nameEl.dataset.playerPoints) : undefined,
               byeWeek: nameEl.dataset.playerByeWeek ? parseInt(nameEl.dataset.playerByeWeek, 10) : null,
               draftYear: nameEl.dataset.playerDraftYear ? parseInt(nameEl.dataset.playerDraftYear, 10) : null,
+              draftTeam: nameEl.dataset.playerDraftTeam ? nameEl.dataset.playerDraftTeam.toUpperCase() : null,
+              draftRound: parseDraft(nameEl.dataset.playerDraftRound),
+              draftPick: parseDraft(nameEl.dataset.playerDraftPick),
               birthdate: nameEl.dataset.playerBirthdate ? parseInt(nameEl.dataset.playerBirthdate, 10) : null,
               franchiseId: nameEl.dataset.playerFranchiseId,
               rosterSlot: nameEl.dataset.playerRosterSlot,
@@ -3901,6 +3965,9 @@ const serializedConfig = JSON.stringify({
               sleeperAge: nameEl.dataset.playerSleeperAge ? parseInt(nameEl.dataset.playerSleeperAge, 10) : undefined,
               sleeperStatus: nameEl.dataset.playerSleeperStatus,
               sleeperActive: nameEl.dataset.playerSleeperActive,
+              offenseSnaps: parseSnap(nameEl.dataset.playerOffenseSnaps),
+              defenseSnaps: parseSnap(nameEl.dataset.playerDefenseSnaps),
+              stSnaps: parseSnap(nameEl.dataset.playerStSnaps),
               depthChartAhead: nameEl.dataset.playerDepthChartAhead ? JSON.parse(atob(nameEl.dataset.playerDepthChartAhead)) : null,
             };
             if (window.openPlayerDetailsModal) {
