@@ -3975,11 +3975,6 @@ const serializedConfig = JSON.stringify({
                         >(${player.injuryStatus.substring(0, 1)})</button>`
                       : ''
                   }
-                  ${
-                    player.tradeBait
-                      ? `<span class="trade-bait-badge" title="On Trade Block" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block;">🏷️</span>`
-                      : ''
-                  }
                   </strong>${actionBadge}
                   <div class="player-meta">
                     ${
@@ -3988,6 +3983,11 @@ const serializedConfig = JSON.stringify({
                         : ''
                     }
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
+                    ${
+                      player.tradeBait
+                        ? `<span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block;">🏷️</span>`
+                        : ''
+                    }
                   </div>
                 </div>
               </div>
