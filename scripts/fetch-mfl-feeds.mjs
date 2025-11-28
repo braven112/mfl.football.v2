@@ -55,6 +55,38 @@ const isFreshToday = () => {
 
 const withWeek = (baseUrl) => (week ? `${baseUrl}&W=${week}` : baseUrl);
 
+const parseTradeBait = (data) => {
+  // Handle both JSON and HTML responses
+  const playerIds = new Set();
+
+  // Try JSON format first
+  if (typeof data === 'object' && data !== null) {
+    if (data?.tradeBait && Array.isArray(data.tradeBait)) {
+      data.tradeBait.forEach((item) => {
+        if (item.willGiveUp && Array.isArray(item.willGiveUp)) {
+          item.willGiveUp.forEach((player) => {
+            if (player.id) {
+              playerIds.add(player.id);
+            }
+          });
+        }
+      });
+    }
+  } else if (typeof data === 'string') {
+    // Parse HTML response - extract player links
+    // Format: <a href="...&PLAYER=12345&...">Player Name</a>
+    const playerLinkRegex = /[&?]PLAYER=(\d+)[&"]/g;
+    let match;
+    while ((match = playerLinkRegex.exec(data)) !== null) {
+      if (match[1]) {
+        playerIds.add(match[1]);
+      }
+    }
+  }
+
+  return Array.from(playerIds);
+};
+
 const endpoints = [
   {
     key: 'rosters',
@@ -85,6 +117,19 @@ const endpoints = [
     key: 'option07',
     url: `${host}/${year}/options?L=${leagueId}&O=07`,
     parser: (t) => t, // HTML payload; keep raw
+  },
+  {
+    key: 'tradeBait',
+    url: `${host}/${year}/trade?L=${leagueId}`,
+    parser: (t) => {
+      try {
+        // Try parsing as JSON first
+        return parseTradeBait(JSON.parse(t));
+      } catch {
+        // If JSON fails, treat as HTML
+        return parseTradeBait(t);
+      }
+    },
   },
   {
     key: 'league',
@@ -132,8 +177,22 @@ const writeOut = (key, data) => {
 };
 
 const run = async () => {
+  // Always fetch tradeBait to get latest trade bait info (updates every build)
+  const alwaysFetchKeys = new Set(['tradeBait']);
+
   if (!force && isFreshToday()) {
     console.log(`Feeds already fetched today for ${year}; using cached data in ${outDir}.`);
+    // Still fetch tradeBait for latest trade bait
+    for (const { key, url, parser } of endpoints.filter(e => alwaysFetchKeys.has(e.key))) {
+      try {
+        console.log(`Fetching ${key} from ${url}`);
+        const text = await fetchText(url);
+        const parsed = parser(text);
+        writeOut(key, parsed);
+      } catch (err) {
+        console.error(`Failed ${key}:`, err.message);
+      }
+    }
     return;
   }
 
