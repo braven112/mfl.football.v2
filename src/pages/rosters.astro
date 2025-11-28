@@ -984,7 +984,7 @@ const serializedConfig = JSON.stringify({
                         {player.tradeBait && (
                           <span
                             class="trade-bait-badge"
-                            title="On Trade Bait"
+                            title="On Trade Block"
                             style="margin-left: 0.25rem; font-size: 1rem; display: inline-block;"
                           >
                             🏷️
@@ -1072,6 +1072,10 @@ const serializedConfig = JSON.stringify({
         <span>
           <span class="legend-swatch legend-swatch--injured"></span>
           Injured Reserve
+        </span>
+        <span>
+          <span class="legend-swatch legend-swatch--trade-bait">🏷️</span>
+          Trade Block
         </span>
       </div>
       </div>
@@ -2174,6 +2178,9 @@ const serializedConfig = JSON.stringify({
 
   .legend-swatch--injured {
     background: #e56263;
+  }
+  .legend-swatch--trade-bait {
+    width: 1.25rem;
   }
 
   .deadmoney-row__amount {
@@ -3970,7 +3977,7 @@ const serializedConfig = JSON.stringify({
                   }
                   ${
                     player.tradeBait
-                      ? `<span class="trade-bait-badge" title="On Trade Bait" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block;">🏷️</span>`
+                      ? `<span class="trade-bait-badge" title="On Trade Block" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block;">🏷️</span>`
                       : ''
                   }
                   </strong>${actionBadge}
