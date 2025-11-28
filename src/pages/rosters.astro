@@ -3985,7 +3985,7 @@ const serializedConfig = JSON.stringify({
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
                     ${
                       player.tradeBait
-                        ? `<span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block;">🏷️</span>`
+                        ? `<a href="https://www49.myfantasyleague.com/${defaultSeason}/options?L=${authUser?.leagueId}&O=05"><span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block; cursor: pointer">🏷️</span></a>`
                         : ''
                     }
                   </div>
