@@ -56,31 +56,28 @@ const isFreshToday = () => {
 const withWeek = (baseUrl) => (week ? `${baseUrl}&W=${week}` : baseUrl);
 
 const parseTradeBait = (data) => {
-  // Handle both JSON and HTML responses
+  // Handle MFL trade bait API response
+  // Structure: { tradeBaits: { tradeBait: [ { willGiveUp: "id1,id2,id3", ... }, ... ] } }
   const playerIds = new Set();
 
-  // Try JSON format first
   if (typeof data === 'object' && data !== null) {
-    if (data?.tradeBait && Array.isArray(data.tradeBait)) {
-      data.tradeBait.forEach((item) => {
-        if (item.willGiveUp && Array.isArray(item.willGiveUp)) {
-          item.willGiveUp.forEach((player) => {
-            if (player.id) {
-              playerIds.add(player.id);
+    const tradeBaitArray = data?.tradeBaits?.tradeBait;
+    if (Array.isArray(tradeBaitArray)) {
+      tradeBaitArray.forEach((item) => {
+        if (item.willGiveUp) {
+          // willGiveUp can be a comma-separated string of player IDs
+          const ids = typeof item.willGiveUp === 'string'
+            ? item.willGiveUp.split(',').map(id => id.trim())
+            : [item.willGiveUp];
+
+          ids.forEach((id) => {
+            // Valid MFL player IDs are 4+ digits (reject IDs like 0522 which are formatting errors)
+            if (id && /^\d{4,}$/.test(id)) {
+              playerIds.add(id);
             }
           });
         }
       });
-    }
-  } else if (typeof data === 'string') {
-    // Parse HTML response - extract player links
-    // Format: <a href="...&PLAYER=12345&...">Player Name</a>
-    const playerLinkRegex = /[&?]PLAYER=(\d+)[&"]/g;
-    let match;
-    while ((match = playerLinkRegex.exec(data)) !== null) {
-      if (match[1]) {
-        playerIds.add(match[1]);
-      }
     }
   }
 
@@ -120,14 +117,13 @@ const endpoints = [
   },
   {
     key: 'tradeBait',
-    url: `${host}/${year}/trade?L=${leagueId}`,
+    url: `${host}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`,
     parser: (t) => {
       try {
-        // Try parsing as JSON first
         return parseTradeBait(JSON.parse(t));
-      } catch {
-        // If JSON fails, treat as HTML
-        return parseTradeBait(t);
+      } catch (err) {
+        console.error('Failed to parse tradeBait JSON:', err.message);
+        return [];
       }
     },
   },
