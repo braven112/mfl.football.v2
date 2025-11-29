@@ -1,0 +1,364 @@
+---
+interface Props {
+  groupId: string;
+  limit?: number;
+}
+
+const { groupId, limit = 100 } = Astro.props;
+const accessToken = import.meta.env.GROUPME_ACCESS_TOKEN;
+
+interface Message {
+  id: string;
+  user_id: string;
+  name: string;
+  text: string;
+  avatar_url: string | null;
+  created_at: number;
+}
+
+let messages: Message[] = [];
+let error: string | null = null;
+
+try {
+  if (!accessToken) {
+    error = 'GroupMe access token not configured';
+  } else {
+    const response = await fetch(
+      `https://api.groupme.com/v3/groups/${groupId}/messages?token=${accessToken}&limit=${limit}`
+    );
+
+    if (!response.ok) {
+      error = `Failed to fetch messages: ${response.status}`;
+    } else {
+      const data = await response.json();
+      messages = (data.response?.messages || []).reverse();
+    }
+  }
+} catch (e) {
+  error = `Error fetching messages: ${e instanceof Error ? e.message : 'Unknown error'}`;
+}
+
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+function formatDate(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return 'Today';
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}
+---
+
+<div class="groupme-chat" data-group-id={groupId}>
+  {error && <div class="error-message">{error}</div>}
+
+  {!error && messages.length === 0 && (
+    <div class="empty-state">No messages yet</div>
+  )}
+
+  {!error && messages.length > 0 && (
+    <div class="messages-container">
+      {messages.map((message, index) => {
+        const prevMessage = index > 0 ? messages[index - 1] : null;
+        const showDate =
+          !prevMessage ||
+          formatDate(message.created_at) !== formatDate(prevMessage.created_at);
+        const sameUser =
+          prevMessage && message.user_id === prevMessage.user_id;
+
+        return (
+          <>
+            {showDate && (
+              <div class="date-separator">{formatDate(message.created_at)}</div>
+            )}
+            <div class={`message ${sameUser ? 'grouped' : ''}`}>
+              {!sameUser && message.avatar_url && (
+                <img
+                  src={message.avatar_url}
+                  alt={message.name}
+                  class="avatar"
+                  loading="lazy"
+                />
+              )}
+              {!sameUser && !message.avatar_url && (
+                <div class="avatar-placeholder"></div>
+              )}
+              {sameUser && <div class="avatar-spacer"></div>}
+              <div class="message-content">
+                {!sameUser && <div class="author">{message.name}</div>}
+                <div class="text">{message.text}</div>
+                <div class="timestamp">{formatTime(message.created_at)}</div>
+              </div>
+            </div>
+          </>
+        );
+      })}
+    </div>
+  )}
+
+  {!error && (
+    <form class="message-input-form">
+      <input
+        type="text"
+        class="message-input"
+        placeholder="Type a message..."
+        maxlength="1000"
+        required
+      />
+      <button type="submit" class="send-button" title="Send message">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </form>
+  )}
+</div>
+
+<style>
+  .groupme-chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .error-message {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    color: #d32f2f;
+    background: #ffebee;
+    text-align: center;
+    font-size: 0.875rem;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 0.875rem;
+  }
+
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .messages-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .messages-container::-webkit-scrollbar-track {
+    background: #f0f0f0;
+  }
+
+  .messages-container::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 3px;
+  }
+
+  .messages-container::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+  }
+
+  .date-separator {
+    text-align: center;
+    color: #999;
+    font-size: 0.75rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .message {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .message.grouped {
+    margin-left: 2.5rem;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ddd;
+    flex-shrink: 0;
+  }
+
+  .avatar-spacer {
+    width: 32px;
+    flex-shrink: 0;
+  }
+
+  .message-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .author {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #333;
+  }
+
+  .text {
+    font-size: 0.875rem;
+    color: #555;
+    word-wrap: break-word;
+    line-height: 1.4;
+  }
+
+  .timestamp {
+    font-size: 0.7rem;
+    color: #999;
+    margin-top: 0.2rem;
+  }
+
+  .message-input-form {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid #e0e0e0;
+    background: white;
+  }
+
+  .message-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-family: inherit;
+  }
+
+  .message-input:focus {
+    outline: none;
+    border-color: #999;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .send-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .send-button:hover {
+    background: #f5f5f5;
+    border-color: #999;
+  }
+
+  .send-button:active {
+    background: #efefef;
+  }
+
+  .send-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .send-button svg {
+    width: 18px;
+    height: 18px;
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.groupme-chat').forEach((chatEl) => {
+    const form = chatEl.querySelector('.message-input-form') as HTMLFormElement;
+    const input = chatEl.querySelector('.message-input') as HTMLInputElement;
+    const button = chatEl.querySelector('.send-button') as HTMLButtonElement;
+    const groupId = chatEl.dataset.groupId;
+
+    if (!form || !input || !button) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const text = input.value.trim();
+      if (!text) return;
+
+      button.disabled = true;
+      const originalText = button.innerHTML;
+
+      try {
+        const response = await fetch('/api/groupme/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupId, text }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(`Failed to send message: ${error.error}`);
+          return;
+        }
+
+        // Clear input and show success feedback
+        input.value = '';
+        button.innerHTML = '✓';
+        setTimeout(() => {
+          button.innerHTML = originalText;
+        }, 1500);
+
+        // Refresh messages after a short delay
+        setTimeout(() => {
+          location.reload();
+        }, 500);
+      } catch (error) {
+        alert(`Error sending message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Error:', error);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+</script>
