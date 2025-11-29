@@ -1,0 +1,298 @@
+---
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
+import StandingsTable from '../components/theleague/StandingsTable.astro';
+import LeagueStandingsTable from '../components/theleague/LeagueStandingsTable.astro';
+import StandingsViewSelector from '../components/theleague/StandingsViewSelector.astro';
+import {
+  getDivisionStandings,
+  getLeagueStandings,
+  getAllPlayStandings,
+} from '../utils/standings';
+import type { DivisionStandings } from '../types/standings';
+
+// Import standings data
+const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+
+// Get the latest standings data (2025)
+const latestFeed = standingsFeeds['../data/mfl-feeds/2025/standings.json'] as {
+  version: string;
+  leagueStandings: { franchise: any[] };
+};
+
+const franchises = latestFeed.leagueStandings.franchise;
+
+// Calculate standings for all views
+const divisionStandings = getDivisionStandings(franchises);
+const leagueStandings = getLeagueStandings(franchises);
+const allPlayStandings = getAllPlayStandings(franchises);
+
+// Get view from query parameter (default to 'division')
+const view = (Astro.url.searchParams.get('view') ||
+  'division') as 'division' | 'league' | 'all_play';
+---
+
+<TheLeagueLayout title="Standings">
+  <div class="standings-page">
+    <div class="standings-header-bar">
+      <div class="standings-header-content">
+        {view === 'division' && (
+          <>
+            <h2 class="section-title">Division Standings</h2>
+            <p class="section-subtitle">Standings by division with division record and games back</p>
+          </>
+        )}
+        {view === 'league' && (
+          <>
+            <h2 class="section-title">Playoff Standings</h2>
+            <p class="section-subtitle">Color-coded by playoff tier: Division Winners (Gold) | Wild Cards (Silver) | Play-In (White) | Toilet Bowl (Brown)</p>
+          </>
+        )}
+        {view === 'all_play' && (
+          <>
+            <h2 class="section-title">All-Play Standings</h2>
+            <p class="section-subtitle">Ranked by head-to-head record against all other teams</p>
+          </>
+        )}
+      </div>
+      <StandingsViewSelector activeView={view} />
+    </div>
+
+    <main class="standings-content">
+      {view === 'division' && (
+        <div class="division-view">
+          {divisionStandings.map(division => (
+            <StandingsTable
+              teams={division.teams}
+              view="division"
+              showDivisionHeader={true}
+              divisionName={division.name}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'league' && (
+        <div class="league-view">
+          <LeagueStandingsTable teams={leagueStandings} />
+        </div>
+      )}
+
+      {view === 'all_play' && (
+        <div class="all-play-view">
+          <StandingsTable teams={allPlayStandings} view="all_play" />
+        </div>
+      )}
+    </main>
+
+    <section class="standings-info">
+      <h2>About These Standings</h2>
+      <div class="info-grid">
+        <div class="info-card">
+          <h3>Playoff Format</h3>
+          <ul>
+            <li>4 Division Winners (Seeds 1-4)</li>
+            <li>3 Wild Card Teams (Seeds 5-7)</li>
+            <li>8-9 Play-In Game</li>
+            <li>Toilet Bowl (Seeds 10-16)</li>
+          </ul>
+        </div>
+        <div class="info-card">
+          <h3>Tiebreaker Rules</h3>
+          <p class="tiebreaker-type">Division Tiebreakers:</p>
+          <ol>
+            <li>Head-to-Head</li>
+            <li>Division Record</li>
+            <li>All-Play Record</li>
+            <li>Total Points Scored</li>
+            <li>Power Ranking</li>
+            <li>Victory Points</li>
+            <li>Least Points Allowed</li>
+          </ol>
+        </div>
+        <div class="info-card">
+          <h3>Seeding Details</h3>
+          <ul>
+            <li>Division winner with best record = Seed #1</li>
+            <li>Seed #1 gets first-round bye</li>
+            <li>Wild cards seeded by all-play percentage</li>
+            <li>Seeds 10-16 compete in Toilet Bowl</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .standings-page {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .standings-header {
+    text-align: left;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-md);
+    padding: var(--padding-lg);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: var(--box-shadow-lg);
+    position: relative;
+}
+
+  .standings-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .subtitle {
+    font-size: 1.125rem;
+    color: var(--color-text-secondary, #555);
+    margin: 0;
+  }
+
+  .standings-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .standings-header-content {
+    flex: 1;
+  }
+
+  .standings-content {
+    margin-bottom: 3rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .section-subtitle {
+    color: var(--color-text-secondary, #666);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  /* Division View */
+  .division-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* League View */
+  .league-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .playoff-section {
+    margin-bottom: 2rem;
+  }
+
+  /* All-Play View */
+  .all-play-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* Info Section */
+  .standings-info {
+    margin-top: 3rem;
+    padding: 2rem;
+    background-color: var(--color-bg-secondary, #f5f5f5);
+    border-radius: 8px;
+  }
+
+  .standings-info h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .info-card {
+    background-color: var(--color-bg-primary, #fff);
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--color-primary, #2c3e50);
+  }
+
+  .info-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 1rem 0;
+  }
+
+  .info-card ul,
+  .info-card ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--color-text-secondary, #555);
+  }
+
+  .info-card li {
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card p {
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text-secondary, #555);
+  }
+
+  .tiebreaker-type {
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .standings-page {
+      padding: 1rem 0.5rem;
+    }
+
+    .standings-header h1 {
+      font-size: 1.875rem;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .standings-info {
+      padding: 1rem;
+    }
+  }
+</style>

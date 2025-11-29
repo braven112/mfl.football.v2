@@ -1,0 +1,108 @@
+---
+export interface Props {
+  activeView: 'division' | 'league' | 'all_play';
+}
+
+const { activeView } = Astro.props;
+---
+
+<div class="view-selector">
+  <button
+    class={`view-btn ${activeView === 'division' ? 'active' : ''}`}
+    data-view="division"
+    title="Division Standings"
+  >
+    <span class="view-icon">🏆</span>
+  </button>
+  <button
+    class={`view-btn ${activeView === 'league' ? 'active' : ''}`}
+    data-view="league"
+    title="Playoff Standings"
+  >
+    <span class="view-icon">📊</span>
+  </button>
+  <button
+    class={`view-btn ${activeView === 'all_play' ? 'active' : ''}`}
+    data-view="all_play"
+    title="All-Play Standings"
+  >
+    <span class="view-icon">🎯</span>
+  </button>
+</div>
+
+<style>
+  .view-selector {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    background-color: #f0f0f0;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    color: var(--color-text-primary, #1a1a1a);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .view-btn:hover {
+    background-color: #e8e8e8;
+    border-color: #d0d0d0;
+  }
+
+  .view-btn.active {
+    background-color: var(--color-primary, #2c3e50);
+    color: var(--color-text-inverted, #fff);
+    border-color: var(--color-primary, #2c3e50);
+  }
+
+  .view-icon {
+    font-size: 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .view-btn {
+      width: 44px;
+      height: 44px;
+    }
+
+    .view-icon {
+      font-size: 1.25rem;
+    }
+  }
+</style>
+
+<script>
+  function setupViewSelector() {
+    const buttons = document.querySelectorAll('.view-btn');
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const view = button.dataset.view;
+
+        // Update URL and reload page to show correct view
+        const url = new URL(window.location);
+        url.searchParams.set('view', view);
+        window.location.href = url.toString();
+      });
+    });
+  }
+
+  // Initialize on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupViewSelector);
+  } else {
+    setupViewSelector();
+  }
+
+  // Re-run on page transitions (for Astro view transitions)
+  document.addEventListener('astro:after-swap', setupViewSelector);
+</script>
