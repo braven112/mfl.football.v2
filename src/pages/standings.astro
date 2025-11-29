@@ -55,6 +55,104 @@ const allPlayStandings = getAllPlayStandings(franchises);
 // Get view from query parameter (default to 'division')
 const view = (Astro.url.searchParams.get('view') ||
   'division') as 'division' | 'league' | 'all_play';
+
+// Division Champions by Year (previous year's defending champs)
+const championsByYear: Record<number, Record<string, string>> = {
+  2025: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Bring The Pain',
+    'East': 'Wascawy Wabbits',
+  },
+  2024: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Gridiron Geeks',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Wascawy Wabbits',
+  },
+  2023: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Maverick',
+    'East': 'Fire Ready Aim',
+  },
+  2022: {
+    'Northwest': 'Vitside Mafia',
+    'Southwest': 'Gridiron Geeks',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Dark Magicians of Chaos',
+  },
+  2021: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Bring The Pain',
+    'East': 'Wascawy Wabbits',
+  },
+  2020: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Wascawy Wabbits',
+  },
+  2019: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Bring The Pain',
+    'East': 'Fire Ready Aim',
+  },
+  2018: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Bring The Pain',
+    'East': 'Wascawy Wabbits',
+  },
+  2017: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Cowboy Up',
+    'East': 'Fire Ready Aim',
+  },
+  2016: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Bring The Pain',
+    'East': 'Dark Magicians of Chaos',
+  },
+  2015: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Bring The Pain',
+    'East': 'Fire Ready Aim',
+  },
+  2014: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Maverick',
+    'East': 'Dark Magicians of Chaos',
+  },
+  2013: {
+    'Northwest': 'Vitside Mafia',
+    'Southwest': 'Music City Mafia',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Wascawy Wabbits',
+  },
+  2010: {
+    'Northwest': 'Computer Jocks',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Maverick',
+    'East': 'Fire Ready Aim',
+  },
+  2008: {
+    'Northwest': 'Computer Jocks',
+    'Southwest': 'Gridiron Geeks',
+    'Central': 'Bring The Pain',
+    'East': 'Fire Ready Aim',
+  },
+};
+
+// Get previous year's champions (defending champs for selected year)
+const previousYear = selectedYear - 1;
+const defendingChampions = championsByYear[previousYear] || {};
 ---
 
 <TheLeagueLayout title="Standings">
@@ -101,6 +199,8 @@ const view = (Astro.url.searchParams.get('view') ||
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
+              defendingChampion={defendingChampions[division.name]}
+              defendingChampionYear={previousYear}
               year={selectedYear}
             />
           ))}

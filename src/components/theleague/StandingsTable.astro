@@ -7,10 +7,12 @@ export interface Props {
   view: 'division' | 'league' | 'all_play';
   showDivisionHeader?: boolean;
   divisionName?: string;
+  defendingChampion?: string;
+  defendingChampionYear?: number;
   year?: number;
 }
 
-const { teams, view, showDivisionHeader = false, divisionName = '', year = new Date().getFullYear() } = Astro.props;
+const { teams, view, showDivisionHeader = false, divisionName = '', defendingChampion = '', defendingChampionYear, year = new Date().getFullYear() } = Astro.props;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -69,7 +71,12 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
 
 <div class="standings-container">
   {showDivisionHeader && divisionName && (
-    <h3 class="division-header">{divisionName}</h3>
+    <div class="division-header-section">
+      <h3 class="division-header">{divisionName}</h3>
+      {defendingChampion && (
+        <p class="champion-subtitle">{defendingChampionYear} Division Champions: <strong>{defendingChampion}</strong></p>
+      )}
+    </div>
   )}
 
   <div class="table-wrapper">
@@ -202,12 +209,26 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     overflow-x: auto;
   }
 
+  .division-header-section {
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--color-border, #e2e8f0);
+    padding-bottom: 1rem;
+  }
+
   .division-header {
     font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     color: var(--color-text-primary, #1a1a1a);
-    padding-bottom: 0.5rem;
+    padding: 0;
+  }
+
+  .champion-subtitle {
+    font-size: 0.95rem;
+    color: var(--secondary-color, #2e8743);
+    font-weight: 500;
+    margin: 0;
+    margin-top: 0.25rem;
   }
 
   .table-wrapper {
