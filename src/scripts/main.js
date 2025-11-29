@@ -1,5 +1,6 @@
 import { fixFranchiseIcons } from './features/franchiseIcons.js';
 import { fixPlayoffTableLabels } from './features/projected-playoff.js';
+import { updateFranchiseLinks } from './features/franchiseLinks.js';
 
 const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop', 'body_lineup'];
 
@@ -74,6 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------
   //
   fixPlayoffTableLabels();
+
+  //
+  // --------------------------
+  // Update Franchise Links
+  // --------------------------
+  //
+  updateFranchiseLinks();
 
   //
   // Future features:
