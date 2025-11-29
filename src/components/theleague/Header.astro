@@ -22,6 +22,16 @@ const staticHost = normalize(Astro.props.staticHost || envStaticHost);
 const leagueHome = `${host}/${year}/home/${leagueId}`;
 ---
 
+<div class="breadcrumb-bar">
+  <div class="breadcrumb-container">
+    <nav aria-label="Breadcrumb">
+      <ul class="breadcrumb-list">
+        <li><a href="https://theleague.us" class="breadcrumb-link"><span class="breadcrumb-arrow">←</span> Back to Homepage</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
 <div class="container-header theleague-header">
   <div class="container">
     <div class="row">
@@ -107,12 +117,14 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
       <ul class="nav-links">
         <!-- TheLeague Pages -->
         <li class="nav-section-title">TheLeague Tools</li>
+        <li><a href="/rosters">GM Central</a></li>
+        <li><a href="/standings">Standings</a></li>
+        <li><hr></li>
         <li><a href="/theleague">Asset Library</a></li>
         <li><a href="/salary">Salary Benchmarks</a></li>
         <li><a href="/salary-history">Salary History</a></li>
         <li><a href="/mvp">Salary-Adjusted MVPs</a></li>
         <li><a href="/calculator">Extension Calculator</a></li>
-        <li><a href="/rosters">Roster Analysis</a></li>
         <li><hr></li>
 
        
@@ -133,6 +145,58 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
 </div>
 
 <style>
+  /* Breadcrumb Styles */
+  .breadcrumb-bar {
+    background: #1c497c;
+    border-bottom: 1px solid #1c497c;
+    padding: 0.75rem 0;
+  }
+
+  .breadcrumb-container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .breadcrumb-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.875rem;
+  }
+
+  .breadcrumb-list li {
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb-list li:not(:first-child)::before {
+    content: "/";
+    margin: 0 0.5rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .breadcrumb-link {
+    color: white;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .breadcrumb-arrow {
+    font-size: 1.1em;
+  }
+
+  .breadcrumb-link:hover {
+    color: #e2e8f0;
+    text-decoration: underline;
+  }
+
   .theleague-header {
     background: var(--primary-content-bg-color, #ffffff);
     border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
