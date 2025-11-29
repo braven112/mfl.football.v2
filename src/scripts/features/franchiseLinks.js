@@ -12,7 +12,7 @@ export function updateFranchiseLinks(scope = document) {
   console.log('[franchiseLinks] gmCentralLink found:', !!gmCentralLink);
 
   if (gmCentralLink) {
-    const newHref = `/rosters?franchise=${window.franchise_id}`;
+    const newHref = `https://mflfootballv2.vercel.app/rosters?franchise=${window.franchise_id}`;
     console.log('[franchiseLinks] Updating href to:', newHref);
     gmCentralLink.href = newHref;
   }
