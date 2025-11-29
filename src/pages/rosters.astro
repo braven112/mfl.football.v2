@@ -809,25 +809,20 @@ const serializedConfig = JSON.stringify({
         <div class="team-card__actions">
           <div class="view-tabs">
             <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href="/assets/icons/sprite.svg#icon-banknote"></use>
               </svg>
               <span class="view-tab__label">Roster</span>
             </button>
             <button class="view-tab" data-view="analytics" data-active="false" aria-label="Analytics View" title="Analytics View">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
-                <line x1="18" y1="20" x2="18" y2="10"/>
-                <line x1="12" y1="20" x2="12" y2="4"/>
-                <line x1="6" y1="20" x2="6" y2="14"/>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href="/assets/icons/sprite.svg#icon-bar-chart"></use>
               </svg>
               <span class="view-tab__label">Analytics</span>
             </button>
             <button class="view-tab" data-view="nextyear" data-active="false" aria-label="Next Year View" title="Next Year View">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="view-tab__icon">
-                <path d="M8 7V3m8 4V3M3 11h18M5 7h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href="/assets/icons/sprite.svg#icon-calendar"></use>
               </svg>
               <span class="view-tab__label">Next Year</span>
             </button>
@@ -998,7 +993,7 @@ const serializedConfig = JSON.stringify({
                           <span
                             class="trade-bait-badge"
                             title="On Trade Block"
-                            style="margin-left: 0.25rem; font-size: 1rem; display: inline-block;"
+                            style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer;"
                           >
                             🏷️
                           </span>
@@ -1266,8 +1261,7 @@ const serializedConfig = JSON.stringify({
 
 <style>
   .roster-page {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: var(--padding-lg);
   }
 
@@ -1285,9 +1279,6 @@ const serializedConfig = JSON.stringify({
     align-items: flex-start;
     gap: var(--padding-md);
     flex-wrap: wrap;
-  }
-  .roster-page__header h2 {
-    margin-block: 0;
   }
 
   .roster-page__actions {
@@ -1492,13 +1483,13 @@ const serializedConfig = JSON.stringify({
   }
 
   .view-tab__icon {
-    width: 24px;
-    height: 24px;
-    color: #64748b;
+    width: var(--icon-btn-default-size, 30px);
+    height: var(--icon-btn-default-size, 30px);
+    fill: var(--icon-btn-default-text-color);
   }
 
   .view-tab[data-active="true"] .view-tab__icon {
-    color: #3b82f6;
+    fill: var(--icon-btn-default-focus-color);
   }
 
   .view-tab__label {
@@ -1795,7 +1786,7 @@ const serializedConfig = JSON.stringify({
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #94a3b8;
+    color: var(--table-header-text-color);
     padding: 0.5rem;
     border-bottom: 1px solid #e2e8f0;
     text-align: right;

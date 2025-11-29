@@ -35,6 +35,12 @@ const view = (Astro.url.searchParams.get('view') ||
 
 <TheLeagueLayout title="Standings">
   <div class="standings-page">
+        <header class="roster-page__header">
+      <div>
+        <h2>Standings</h2>
+      </div>
+      
+    </header>
     <div class="standings-header-bar">
       <div class="standings-header-content">
         {view === 'division' && (
@@ -127,10 +133,8 @@ const view = (Astro.url.searchParams.get('view') ||
 
 <style>
   .standings-page {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
+    display: grid;
+    gap: var(--padding-lg);
   }
 
   .standings-header {

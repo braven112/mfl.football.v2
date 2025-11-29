@@ -116,6 +116,10 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 		--inverse-btn-hover-text-color: #ffffff;
 		--inverse-btn-focus-text-color: #ffffff;
 
+		--icon-btn-default-text-color: #64748b;
+		--icon-btn-default-focus-color: #3b82f6;
+
+
 		/* The League specific variables */
 		--muted-text-color: #6b7280;
 		--content-bg: #ffffff;
@@ -144,6 +148,8 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 		--padding-lg: 1.5rem;
 		--padding-xl: 2rem;
 		--padding-xxl: 3rem;
+
+		--table-header-text-color: #94a3b8;
 	}
 
 	html {
@@ -171,6 +177,7 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 	:global(h2) {
 		font-size: var(--font-size-lg);
 		color: var(--primary-link-default-text-color);
+		margin-block: 0;
 	}
 
 	:global(code) {
