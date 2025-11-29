@@ -7,6 +7,7 @@ import DonutChart from '../components/theleague/DonutChart.astro';
 import BarChart from '../components/theleague/BarChart.astro';
 import AgeDistributionChart from '../components/theleague/AgeDistributionChart.astro';
 import FranchiseOptions from '../components/theleague/FranchiseOptions.astro';
+import VeteranExtensionCandidates from '../components/theleague/VeteranExtensionCandidates.astro';
 import PlayerDetailsModal from '../components/theleague/PlayerDetailsModal.astro';
 import PlayerInjuryModal from '../components/theleague/PlayerInjuryModal.astro';
 import collegeLogos from '../data/college-logos.json';
@@ -496,6 +497,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       offenseSnaps: parseSnap(nflverse.offenseSnaps),
       defenseSnaps: parseSnap(nflverse.defenseSnaps),
       stSnaps: parseSnap(nflverse.stSnaps),
+      gamesPlayed: player.gamesPlayed ?? null,
       depthChartAhead: player.depthChartAhead ?? null,
       tradeBait: tradeBaitPlayerIds.has(String(player.id)),
     };
@@ -603,6 +605,7 @@ Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
         WR: data.positions.WR?.top5Average ?? 0,
         TE: data.positions.TE?.top5Average ?? 0,
         PK: data.positions.PK?.top5Average ?? 0,
+        DEF: data.positions.Def?.top5Average ?? 0,
       },
       franchiseSalaries: {
         QB: data.positions.QB?.top3Average ?? 0,
@@ -739,7 +742,14 @@ const initialCapEfficiencySlices: ChartSlice[] = [];
 const initialAgeDistributionSlices: ChartSlice[] = [];
 const initialPositionalAgeSlices: ChartSlice[] = [];
 let initialAverageAge: number | null = null;
-const initialAllPlayers: any[] = [];
+// Get all players from the default season (which contains all rosters)
+const initialAllPlayers: any[] = initialSeasonData
+  ? Object.values(initialSeasonData.teams ?? {}).flatMap((team: any) => [
+      ...(team.players ?? []),
+      ...(team.practiceSquad ?? []),
+      ...(team.injuredReserve ?? []),
+    ])
+  : [];
 
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
@@ -764,6 +774,7 @@ const serializedConfig = JSON.stringify({
   targetActiveCount: TARGET_ACTIVE_COUNT,
   reserveForRookies: RESERVE_FOR_ROOKIES,
   collegeLogos: collegeLogosNormalized,
+  authUser: authUser ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId } : null,
 });
 ---
 
@@ -1240,6 +1251,9 @@ const serializedConfig = JSON.stringify({
       <div class="chart-grid">
         <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
           <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+        </ChartCard>
+        <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
+          <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
         </ChartCard>
       </div>
     </div>
@@ -3984,8 +3998,10 @@ const serializedConfig = JSON.stringify({
                     }
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
                     ${
-                      player.tradeBait
-                        ? `<a href="https://www49.myfantasyleague.com/${defaultSeason}/options?L=${authUser?.leagueId}&O=05"><span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block; cursor: pointer">🏷️</span></a>`
+                      player.tradeBait && config.authUser?.leagueId
+                        ? `<a href="https://www49.myfantasyleague.com/${defaultSeason}/options?L=${config.authUser.leagueId}&O=05"><span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block; cursor: pointer">🏷️</span></a>`
+                        : player.tradeBait
+                        ? `<span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block;">🏷️</span>`
                         : ''
                     }
                   </div>
@@ -4704,6 +4720,7 @@ const serializedConfig = JSON.stringify({
         headshot: p.headshot,
         nflLogo: p.nflLogo,
         contractYears: p.contractYears,
+        gamesPlayed: p.gamesPlayed || null,
       }));
 
       const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');
@@ -4711,6 +4728,16 @@ const serializedConfig = JSON.stringify({
         // Pass all league players for ranking, but filter to current team in component
         franchiseTagEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
         franchiseTagEl.dataset.currentTeam = currentTeam;
+      }
+
+      const veteranExtensionEl = document.querySelector('.veteran-extension-candidates');
+      if (veteranExtensionEl) {
+        // Pass all league players for ranking, but filter to current team in component
+        veteranExtensionEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
+        veteranExtensionEl.dataset.currentTeam = currentTeam;
+        // Pass salary averages for extension salary calculation
+        const seasonSalaryAverages = config.salaryAverages?.[currentSeason] ?? {};
+        veteranExtensionEl.dataset.salaryAverages = JSON.stringify(seasonSalaryAverages.extensionSalaries ?? {});
       }
 
       if (rosterMetadata) {

@@ -218,7 +218,7 @@ const fetchNflverseSnapCounts = async (seasonYear) => {
     });
 
     const rows = parseCsv(decompressed);
-    const latest = new Map();
+    const byPlayer = new Map();
     rows.forEach((row) => {
       const player = row.player || '';
       const team = normalizeTeamCode(row.team || '');
@@ -227,10 +227,25 @@ const fetchNflverseSnapCounts = async (seasonYear) => {
       const key = pfrPlayerId || (player && buildNameKey(player, team));
       if (!key) return;
       const week = Number.parseInt(row.week ?? 0, 10) || 0;
-      const prev = latest.get(key);
-      // Keep the latest week's data
-      if (!prev || week >= prev.week) {
-        latest.set(key, {
+
+      // Track all weeks for games played calculation
+      if (!byPlayer.has(key)) {
+        byPlayer.set(key, {
+          weeks: new Set(),
+          latest: null,
+          player,
+          team,
+          position: row.position ?? null,
+          pfrPlayerId,
+        });
+      }
+
+      const entry = byPlayer.get(key);
+      entry.weeks.add(week);
+
+      // Keep the latest week's data for detailed snaps
+      if (!entry.latest || week >= entry.latest.week) {
+        entry.latest = {
           week,
           season: seasonYear,
           player,
@@ -243,10 +258,23 @@ const fetchNflverseSnapCounts = async (seasonYear) => {
           stSnaps: row.st_snaps ? Number.parseInt(row.st_snaps, 10) : null,
           stSnapPct: row.st_pct ? Number.parseFloat(row.st_pct) : null,
           pfrPlayerId,
+        };
+      }
+    });
+
+    // Convert to final map with games played calculated
+    const result = new Map();
+    byPlayer.forEach((entry, key) => {
+      if (entry.latest) {
+        result.set(key, {
+          ...entry.latest,
+          gamesPlayed: entry.weeks.size,
+          gamesPlayedWeeks: Array.from(entry.weeks).sort((a, b) => a - b),
         });
       }
     });
-    return latest;
+
+    return result;
   } catch (error) {
     console.warn(`[salary-averages] Error fetching snap counts: ${error.message}`);
     return new Map();
@@ -426,7 +454,23 @@ const normalizePlayers = (
               gsisId: sleeperMatch.gsis_id ?? null,
             }
           : null,
-        nflverse: nflverse ?? null,
+        nflverse: nflverse ? {
+              week: nflverse.week,
+              season: nflverse.season,
+              player: nflverse.player,
+              team: nflverse.team,
+              position: nflverse.position,
+              offenseSnaps: nflverse.offenseSnaps,
+              offenseSnapPct: nflverse.offenseSnapPct,
+              defenseSnaps: nflverse.defenseSnaps,
+              defenseSnapPct: nflverse.defenseSnapPct,
+              stSnaps: nflverse.stSnaps,
+              stSnapPct: nflverse.stSnapPct,
+              pfrPlayerId: nflverse.pfrPlayerId,
+              gamesPlayed: nflverse.gamesPlayed,
+              gamesPlayedWeeks: nflverse.gamesPlayedWeeks,
+            } : null,
+        gamesPlayed: nflverse?.gamesPlayed ?? null,
       });
     });
   });
