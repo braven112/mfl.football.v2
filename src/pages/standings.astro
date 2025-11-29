@@ -164,8 +164,7 @@ const view = (Astro.url.searchParams.get('view') ||
 
   .standings-header-bar {
     display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: start;
+
     gap: 2rem;
     margin-bottom: 2rem;
     padding: 2rem;
@@ -173,6 +172,12 @@ const view = (Astro.url.searchParams.get('view') ||
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
+   @media (min-width: 550px) {
+     .standings-header-bar {
+    grid-template-columns: 1fr auto;
+        align-items: start;
+     }
+   }
 
   .standings-header-content {
     /* content naturally flows on the left */
@@ -204,8 +209,7 @@ const view = (Astro.url.searchParams.get('view') ||
 
   /* Division View */
   .division-view {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: 2rem;
   }
 
