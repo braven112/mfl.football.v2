@@ -2,6 +2,11 @@
  * Pull core MFL feeds (rosters, players, salary adjustments, draft results, option07, transactions)
  * and write them into src/data/mfl-feeds/<year>/.
  *
+ * Caching strategy:
+ * - Current year: Fetches daily (data changes throughout season)
+ * - Historical years: Caches indefinitely once standings.json exists (static data)
+ *   Use --force flag to override and refetch historical data
+ *
  * Usage:
  *   node scripts/fetch-mfl-feeds.js [--force]
  *
@@ -50,6 +55,30 @@ const isFreshToday = () => {
     );
   } catch (_err) {
     return false;
+  }
+};
+
+const isHistoricalDataCached = () => {
+  // Check if this is a historical year (older than current year)
+  const currentYear = new Date().getFullYear();
+  const fetchYear = parseInt(year, 10);
+
+  if (fetchYear >= currentYear) {
+    return false; // Current or future year - always fetch
+  }
+
+  // Historical year - check if standings.json exists and is valid
+  const standingsFile = path.join(outDir, 'standings.json');
+  if (!fs.existsSync(standingsFile)) {
+    return false; // File doesn't exist, need to fetch
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
+    // Check if standings data looks valid
+    return data && data.leagueStandings && Array.isArray(data.leagueStandings.franchise);
+  } catch (_err) {
+    return false; // Invalid data, need to refetch
   }
 };
 
@@ -175,6 +204,12 @@ const writeOut = (key, data) => {
 const run = async () => {
   // Always fetch tradeBait to get latest trade bait info (updates every build)
   const alwaysFetchKeys = new Set(['tradeBait']);
+
+  // Check if historical data is already cached (skip to avoid rate limits)
+  if (!force && isHistoricalDataCached()) {
+    console.log(`📦 Historical standings data for ${year} already cached; skipping fetch to avoid rate limits.`);
+    return;
+  }
 
   if (!force && isFreshToday()) {
     console.log(`Feeds already fetched today for ${year}; using cached data in ${outDir}.`);

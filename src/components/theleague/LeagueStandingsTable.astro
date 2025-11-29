@@ -3,13 +3,39 @@ import type { TeamStanding } from '../../types/standings';
 
 export interface Props {
   teams: TeamStanding[];
+  year?: number;
 }
 
-const { teams } = Astro.props;
+const { teams, year = new Date().getFullYear() } = Astro.props;
 
-function parseWLT(wlt: string) {
-  const [w, l, t] = wlt.split('-').map(Number);
-  return { w, l, t };
+function parseWLT(wlt: string | undefined) {
+  if (!wlt) return { w: 0, l: 0, t: 0 };
+  const parts = wlt.split('-').map(Number);
+  return { w: parts[0] || 0, l: parts[1] || 0, t: parts[2] || 0 };
+}
+
+// Derive all_play_wlt from percentage when the record is missing
+// NFL schedule: 16 weeks × 15 opponents = 240 games (2020 and earlier)
+//               17 weeks × 15 opponents = 255 games (2021+)
+// Returns null if percentage data is not available
+function deriveAllPlayWLT(pct: string | undefined, seasonYear: number): { w: number; l: number; t: number } | null {
+  if (!pct) return null; // No data available
+  const TOTAL_GAMES = seasonYear >= 2021 ? 255 : 240;
+  const percentage = parseFloat(pct);
+  if (isNaN(percentage)) return null;
+  const wins = Math.round(TOTAL_GAMES * percentage);
+  const losses = TOTAL_GAMES - wins;
+  return { w: wins, l: losses, t: 0 };
+}
+
+function safeParseFloat(value: string | undefined, decimals: number): string {
+  if (!value) return (0).toFixed(decimals);
+  return parseFloat(value).toFixed(decimals);
+}
+
+function safeParseInt(value: string | undefined): string {
+  if (!value) return '0';
+  return parseInt(value).toString();
 }
 
 function getRowColor(seed: number | undefined): string {
@@ -44,7 +70,10 @@ function getRowColor(seed: number | undefined): string {
         {teams.map((team, index) => {
           const overallRecord = parseWLT(team.h2hwlt);
           const divRecord = parseWLT(team.divwlt);
-          const allPlayRecord = parseWLT(team.all_play_wlt);
+          // Use provided all_play_wlt, or derive from percentage if missing
+          const allPlayRecord = team.all_play_wlt
+            ? parseWLT(team.all_play_wlt)
+            : deriveAllPlayWLT(team.all_play_pct, year);
           const rowColor = getRowColor(team.seed);
           const nextTeam = teams[index + 1];
           const nextTier = nextTeam ? getRowColor(nextTeam.seed) : '';
@@ -71,28 +100,28 @@ function getRowColor(seed: number | undefined): string {
                 {overallRecord.w}-{overallRecord.l}-{overallRecord.t}
               </td>
               <td class="col-overall-pct">
-                {parseFloat(team.h2hpct).toFixed(3)}
+                {safeParseFloat(team.h2hpct, 3)}
               </td>
               <td class="col-div-record">
                 {divRecord.w}-{divRecord.l}-{divRecord.t}
               </td>
               <td class="col-div-pct">
-                {parseFloat(team.divpct).toFixed(3)}
+                {safeParseFloat(team.divpct, 3)}
               </td>
               <td class="col-allplay">
-                {allPlayRecord.w}-{allPlayRecord.l}-{allPlayRecord.t}
+                {allPlayRecord ? `${allPlayRecord.w}-${allPlayRecord.l}-${allPlayRecord.t}` : 'N/A'}
               </td>
               <td class="col-pf">
-                {parseFloat(team.pf).toFixed(1)}
+                {safeParseFloat(team.pf, 1)}
               </td>
               <td class="col-pwr">
-                {parseFloat(team.pwr).toFixed(1)}
+                {safeParseFloat(team.pwr, 1)}
               </td>
               <td class="col-vp">
-                {parseInt(team.vp)}
+                {safeParseInt(team.vp)}
               </td>
               <td class="col-pa">
-                {parseFloat(team.pa).toFixed(1)}
+                {safeParseFloat(team.pa, 1)}
               </td>
             </tr>
           );

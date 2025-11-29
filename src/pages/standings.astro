@@ -3,6 +3,7 @@ import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import StandingsTable from '../components/theleague/StandingsTable.astro';
 import LeagueStandingsTable from '../components/theleague/LeagueStandingsTable.astro';
 import StandingsViewSelector from '../components/theleague/StandingsViewSelector.astro';
+import YearSelector from '../components/theleague/YearSelector.astro';
 import {
   getDivisionStandings,
   getLeagueStandings,
@@ -15,13 +16,36 @@ const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
   eager: true,
 });
 
-// Get the latest standings data (2025)
-const latestFeed = standingsFeeds['../data/mfl-feeds/2025/standings.json'] as {
-  version: string;
-  leagueStandings: { franchise: any[] };
-};
+// Extract available years from the imported feeds
+const availableYears = Object.keys(standingsFeeds)
+  .map(path => {
+    const match = path.match(/\/(\d{4})\/standings\.json$/);
+    return match ? parseInt(match[1], 10) : null;
+  })
+  .filter((year): year is number => year !== null)
+  .sort((a, b) => b - a);
 
-const franchises = latestFeed.leagueStandings.franchise;
+// Get year from query parameter (default to latest year)
+const defaultYear = availableYears[0] || 2025;
+const requestedYear = Astro.url.searchParams.get('year');
+const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+
+// Validate that the requested year is available; redirect to default if not
+if (!availableYears.includes(selectedYear)) {
+  return Astro.redirect(`/standings?year=${defaultYear}`);
+}
+
+// Get standings data for selected year
+const selectedFeed = standingsFeeds[`../data/mfl-feeds/${selectedYear}/standings.json`] as
+  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
+  | undefined;
+
+// Check if data is valid (has leagueStandings and no error)
+if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
+  return Astro.redirect(`/standings?year=${defaultYear}`);
+}
+
+const franchises = selectedFeed.leagueStandings.franchise;
 
 // Calculate standings for all views
 const divisionStandings = getDivisionStandings(franchises);
@@ -36,8 +60,9 @@ const view = (Astro.url.searchParams.get('view') ||
 <TheLeagueLayout title="Standings">
   <div class="standings-page">
         <header class="roster-page__header">
-      <div>
+      <div class="header-grid">
         <h2>Standings</h2>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
       </div>
       
     </header>
@@ -62,7 +87,9 @@ const view = (Astro.url.searchParams.get('view') ||
           </>
         )}
       </div>
-      <StandingsViewSelector activeView={view} />
+      <div class="standings-controls">
+        <StandingsViewSelector activeView={view} />
+      </div>
     </div>
 
     <main class="standings-content">
@@ -74,6 +101,7 @@ const view = (Astro.url.searchParams.get('view') ||
               view="division"
               showDivisionHeader={true}
               divisionName={division.name}
+              year={selectedYear}
             />
           ))}
         </div>
@@ -81,13 +109,13 @@ const view = (Astro.url.searchParams.get('view') ||
 
       {view === 'league' && (
         <div class="league-view">
-          <LeagueStandingsTable teams={leagueStandings} />
+          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} />
         </div>
       )}
 
       {view === 'all_play' && (
         <div class="all-play-view">
-          <StandingsTable teams={allPlayStandings} view="all_play" />
+          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} />
         </div>
       )}
     </main>
@@ -104,6 +132,10 @@ const view = (Astro.url.searchParams.get('view') ||
   .standings-header {
     text-align: left;
     margin-bottom: 2rem;
+  }
+  .header-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
   }
 
   .card {
@@ -131,9 +163,9 @@ const view = (Astro.url.searchParams.get('view') ||
   }
 
   .standings-header-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
     gap: 2rem;
     margin-bottom: 2rem;
     padding: 2rem;
@@ -143,7 +175,14 @@ const view = (Astro.url.searchParams.get('view') ||
   }
 
   .standings-header-content {
-    flex: 1;
+    /* content naturally flows on the left */
+  }
+
+  .standings-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    justify-content: flex-end;
   }
 
   .standings-content {
@@ -172,8 +211,7 @@ const view = (Astro.url.searchParams.get('view') ||
 
   /* League View */
   .league-view {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: 2rem;
   }
 
