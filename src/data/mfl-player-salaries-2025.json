@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-11-29T20:32:25.840Z"
+    "fetchedAt": "2025-11-29T20:44:55.930Z"
   },
   "players": [
     {
@@ -3472,7 +3472,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -3507,6 +3507,10 @@
         {
           "id": "15258",
           "name": "Carter, Michael"
+        },
+        {
+          "id": "13146",
+          "name": "Conner, James"
         }
       ]
     },
@@ -5223,7 +5227,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 10,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -5269,7 +5273,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 9,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -8593,7 +8597,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -8627,10 +8631,6 @@
         {
           "id": "15258",
           "name": "Carter, Michael"
-        },
-        {
-          "id": "16594",
-          "name": "Benson, Trey"
         }
       ]
     },
@@ -10393,8 +10393,8 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -10422,7 +10422,16 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17171",
+          "name": "Dike, Chimere"
+        },
+        {
+          "id": "17073",
+          "name": "Ayomanor, Elic"
+        }
+      ]
     },
     {
       "id": "14223",
@@ -19253,7 +19262,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "RB"
         ],
@@ -19289,6 +19298,10 @@
         {
           "id": "16757",
           "name": "Vidal, Kimani"
+        },
+        {
+          "id": "15254",
+          "name": "Harris, Najee"
         }
       ]
     },
@@ -20786,10 +20799,6 @@
         {
           "id": "16757",
           "name": "Vidal, Kimani"
-        },
-        {
-          "id": "17044",
-          "name": "Hampton, Omarion"
         }
       ]
     },
