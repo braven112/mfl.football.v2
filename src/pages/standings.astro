@@ -92,42 +92,6 @@ const view = (Astro.url.searchParams.get('view') ||
       )}
     </main>
 
-    <section class="standings-info">
-      <h2>About These Standings</h2>
-      <div class="info-grid">
-        <div class="info-card">
-          <h3>Playoff Format</h3>
-          <ul>
-            <li>4 Division Winners (Seeds 1-4)</li>
-            <li>3 Wild Card Teams (Seeds 5-7)</li>
-            <li>8-9 Play-In Game</li>
-            <li>Toilet Bowl (Seeds 10-16)</li>
-          </ul>
-        </div>
-        <div class="info-card">
-          <h3>Tiebreaker Rules</h3>
-          <p class="tiebreaker-type">Division Tiebreakers:</p>
-          <ol>
-            <li>Head-to-Head</li>
-            <li>Division Record</li>
-            <li>All-Play Record</li>
-            <li>Total Points Scored</li>
-            <li>Power Ranking</li>
-            <li>Victory Points</li>
-            <li>Least Points Allowed</li>
-          </ol>
-        </div>
-        <div class="info-card">
-          <h3>Seeding Details</h3>
-          <ul>
-            <li>Division winner with best record = Seed #1</li>
-            <li>Seed #1 gets first-round bye</li>
-            <li>Wild cards seeded by all-play percentage</li>
-            <li>Seeds 10-16 compete in Toilet Bowl</li>
-          </ul>
-        </div>
-      </div>
-    </section>
   </div>
 </TheLeagueLayout>
 

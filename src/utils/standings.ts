@@ -54,23 +54,42 @@ function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
 
   const sorted = [...teams];
 
-  // Sort by record first (wins, then losses)
+  // Sort by overall record first (h2h - wins, then losses)
   sorted.sort((a, b) => {
-    const aRecord = parseWLT(a.divwlt);
-    const bRecord = parseWLT(b.divwlt);
+    // First tiebreaker: overall record (h2h)
+    const aOverall = parseWLT(a.h2hwlt);
+    const bOverall = parseWLT(b.h2hwlt);
 
-    if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
-    if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
+    if (aOverall.wins !== bOverall.wins) return bOverall.wins - aOverall.wins;
+    if (aOverall.losses !== bOverall.losses) return aOverall.losses - bOverall.losses;
 
-    // Now apply tiebreaker sequence
-    const tiebreakers = ['h2h', 'divpct', 'all_play', 'pf', 'pwr', 'vp', 'pa'];
+    // Second tiebreaker: division record (divwlt)
+    const aDiv = parseWLT(a.divwlt);
+    const bDiv = parseWLT(b.divwlt);
 
-    for (const tiebreaker of tiebreakers) {
-      const result = compareBySingleMetric(a, b, tiebreaker);
-      if (result !== 0) return result;
-    }
+    if (aDiv.wins !== bDiv.wins) return bDiv.wins - aDiv.wins;
+    if (aDiv.losses !== bDiv.losses) return aDiv.losses - bDiv.losses;
 
-    return 0; // Coin flip would be here
+    // Remaining tiebreaker sequence: all_play, pf, pwr, vp, pa
+    const aAllPlay = parseFloat(a.all_play_pct);
+    const bAllPlay = parseFloat(b.all_play_pct);
+    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+
+    const aPF = parseFloat(a.pf);
+    const bPF = parseFloat(b.pf);
+    if (aPF !== bPF) return bPF - aPF;
+
+    const aPWR = parseFloat(a.pwr);
+    const bPWR = parseFloat(b.pwr);
+    if (aPWR !== bPWR) return bPWR - aPWR;
+
+    const aVP = parseFloat(a.vp);
+    const bVP = parseFloat(b.vp);
+    if (aVP !== bVP) return bVP - aVP;
+
+    const aPA = parseFloat(a.pa);
+    const bPA = parseFloat(b.pa);
+    return aPA - bPA; // Lower PA is better
   });
 
   return sorted;
@@ -176,11 +195,35 @@ export function getLeagueStandings(franchises: StandingsFranchise[]): TeamStandi
   const divisionWinners = Object.values(divisions)
     .map(divTeams => divisionTiebreaker(divTeams)[0]);
 
-  // Sort division winners by record
+  // Sort division winners by overall record, then tiebreakers
   const sortedDivWinners = divisionWinners.sort((a, b) => {
-    const aRecord = parseWLT(a.divwlt);
-    const bRecord = parseWLT(b.divwlt);
-    return bRecord.wins - aRecord.wins || aRecord.losses - bRecord.losses;
+    // First sort by overall record (h2h)
+    const aRecord = parseWLT(a.h2hwlt);
+    const bRecord = parseWLT(b.h2hwlt);
+
+    if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
+    if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
+
+    // Tiebreaker sequence: all-play, pf, pwr, vp, pa
+    const aAllPlay = parseFloat(a.all_play_pct);
+    const bAllPlay = parseFloat(b.all_play_pct);
+    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+
+    const aPF = parseFloat(a.pf);
+    const bPF = parseFloat(b.pf);
+    if (aPF !== bPF) return bPF - aPF;
+
+    const aPWR = parseFloat(a.pwr);
+    const bPWR = parseFloat(b.pwr);
+    if (aPWR !== bPWR) return bPWR - aPWR;
+
+    const aVP = parseFloat(a.vp);
+    const bVP = parseFloat(b.vp);
+    if (aVP !== bVP) return bVP - aVP;
+
+    const aPA = parseFloat(a.pa);
+    const bPA = parseFloat(b.pa);
+    return aPA - bPA; // Lower PA is better
   });
 
   // Get non-division winners and sort by overall record
@@ -188,10 +231,10 @@ export function getLeagueStandings(franchises: StandingsFranchise[]): TeamStandi
     team => !sortedDivWinners.find(dw => dw.id === team.id)
   );
 
-  // Sort non-division winners by overall record (wins, then losses)
+  // Sort non-division winners by overall record (h2h - wins, then losses)
   const sortedNonDivWinners = nonDivWinners.sort((a, b) => {
-    const aRecord = parseWLT(a.divwlt);
-    const bRecord = parseWLT(b.divwlt);
+    const aRecord = parseWLT(a.h2hwlt);
+    const bRecord = parseWLT(b.h2hwlt);
     return bRecord.wins - aRecord.wins || aRecord.losses - bRecord.losses;
   });
 

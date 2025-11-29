@@ -53,11 +53,13 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
           {view === 'league' && <th class="col-seed">Seed</th>}
           {(view === 'division' || view === 'all_play') && <th class="col-badge">Badge</th>}
           <th class="col-team">Team</th>
-          {view === 'division' && <th class="col-record">Record</th>}
-          {view === 'division' && <th class="col-pct">PCT</th>}
-          {view === 'division' && <th class="col-gb">GB</th>}
-          {view === 'division' && <th class="col-streak">Streak</th>}
-          {view === 'division' && <th class="col-div-record">Div Record</th>}
+          {view === 'division' && <th class="col-overall-record">Overall</th>}
+          {view === 'division' && <th class="col-overall-pct">PCT</th>}
+          {view === 'division' && <th class="col-streak">Strk</th>}
+          {view === 'division' && <th class="col-div-record">Div</th>}
+          {view === 'division' && <th class="col-div-pct">PCT</th>}
+          {view === 'division' && <th class="col-pf">PF</th>}
+          {view === 'division' && <th class="col-pa">PA</th>}
           {view !== 'division' && <th class="col-record">Record</th>}
           {view !== 'division' && <th class="col-pct">PCT</th>}
           {view !== 'division' && <th class="col-pf">PF</th>}
@@ -76,6 +78,8 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
             ? team.all_play_pct
             : team.divpct;
 
+          const overallRecord = parseWLT(team.h2hwlt);
+          const divRecord = parseWLT(team.divwlt);
           const playoffStatus = getPlayoffStatus(team);
           const gamesBack = view === 'division' ? calculateGamesBack(team, teams) : 0;
 
@@ -106,20 +110,26 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
               </td>
               {view === 'division' && (
                 <>
-                  <td class="col-record">
-                    {record.w}-{record.l}-{record.t}
+                  <td class="col-overall-record">
+                    {overallRecord.w}-{overallRecord.l}-{overallRecord.t}
                   </td>
-                  <td class="col-pct">
-                    {parseFloat(team.divpct).toFixed(3)}
-                  </td>
-                  <td class="col-gb">
-                    {gamesBack === 0 ? '—' : gamesBack.toFixed(1)}
+                  <td class="col-overall-pct">
+                    {parseFloat(team.h2hpct).toFixed(3)}
                   </td>
                   <td class="col-streak">
                     {team.strk}
                   </td>
                   <td class="col-div-record">
-                    {record.w}-{record.l}
+                    {divRecord.w}-{divRecord.l}-{divRecord.t}
+                  </td>
+                  <td class="col-div-pct">
+                    {parseFloat(team.divpct).toFixed(3)}
+                  </td>
+                  <td class="col-pf">
+                    {parseFloat(team.pf).toFixed(1)}
+                  </td>
+                  <td class="col-pa">
+                    {parseFloat(team.pa).toFixed(1)}
                   </td>
                 </>
               )}
@@ -262,8 +272,35 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     text-align: center;
   }
 
-  .col-ap-record,
+  .col-overall-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .col-overall-pct {
+    width: 90px;
+    text-align: center;
+  }
+
   .col-div-record {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .col-div-pct {
+    width: 90px;
+    text-align: center;
+  }
+
+  .col-allplay {
+    width: 110px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .col-ap-record {
     width: 110px;
     text-align: center;
   }
