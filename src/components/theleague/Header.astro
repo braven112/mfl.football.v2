@@ -147,7 +147,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   .breadcrumb-bar {
     background: #1c497c;
     border-bottom: 1px solid #1c497c;
-    padding: 0.75rem 0;
+    padding: 0.25rem 0;
   }
 
   .breadcrumb-container {
@@ -285,10 +285,15 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
 
   .leaguename {
     font-weight: 700;
-    font-size: 2.5rem;
+    font-size: 2rem;
     letter-spacing: 0.01em;
     text-transform: uppercase;
   }
+    @media (min-width: 640px) {
+      .leaguename {
+        font-size: 2.5rem;
+      }
+    }
 
   .leaguename--the {
     font-weight: 700;
@@ -441,10 +446,10 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   .hamburger-inner,
   .hamburger-inner::before,
   .hamburger-inner::after {
-    width: 24px;
-    height: 2px;
+    width: 25px;
+    height: 3px;
     background-color: var(--primary-content-bg-color, #ffffff);
-    border-radius: 2px;
+    border-radius: 0px;
     position: absolute;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -457,11 +462,11 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   }
 
   .hamburger-inner::before {
-    top: -7px;
+    top: -9px;
   }
 
   .hamburger-inner::after {
-    bottom: -7px;
+    bottom: -9px;
   }
 
   /* Hover state */
@@ -632,11 +637,6 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
       height: 3rem;
       width: auto;
     }
-
-    .leaguename {
-      font-size: 1.25rem;
-    }
-
     .nav-content {
       width: 100%;
     }
