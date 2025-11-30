@@ -16,20 +16,20 @@
 </script>
 <meta name="viewport" content="initial-scale=1.0, width=device-width" />
 <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700|Roboto+Condensed:400,700|Roboto:400,400i,700" rel="stylesheet">
-<link rel="stylesheet" id="default" href="https://www49.myfantasyleague.com/skins17/MFLBaseCSS.css" type="text/css"  />
-<link rel="stylesheet" id="skin" href="https://www49.myfantasyleague.com/skins17/MFL/MFL.css" type="text/css"  />
-<link rel="stylesheet" id="responsive" href="https://www49.myfantasyleague.com/skins17/MFL/responsive.css" type="text/css"  />
-<link rel="apple-touch-icon" href="https://www49.myfantasyleague.com/apple-touch-icon.png" />
-<link rel="shortcut icon" href="https://www49.myfantasyleague.com/favicon.ico" />
-<script type="text/javascript" src="https://www49.myfantasyleague.com/mfl_common.js"></script>
+<link rel="stylesheet" id="default" href="https://www46.myfantasyleague.com/skins17/MFLBaseCSS.css" type="text/css"  />
+<link rel="stylesheet" id="skin" href="https://www46.myfantasyleague.com/skins17/MFL/MFL.css" type="text/css"  />
+<link rel="stylesheet" id="responsive" href="https://www46.myfantasyleague.com/skins17/MFL/responsive.css" type="text/css"  />
+<link rel="apple-touch-icon" href="https://www46.myfantasyleague.com/apple-touch-icon.png" />
+<link rel="shortcut icon" href="https://www46.myfantasyleague.com/favicon.ico" />
+<script type="text/javascript" src="https://www46.myfantasyleague.com/mfl_common.js"></script>
 <script type="text/javascript">
 <!--
 var league_id = '';
 var year = 2011;
-var xmlBaseURL = 'https://www49.myfantasyleague.com/fflnetdynamic2011/';
-var baseURLStatic = 'https://www49.myfantasyleague.com';
-var baseURLDynamic = 'https://www49.myfantasyleague.com';
-var currentServerTime = 1764402305;
+var xmlBaseURL = 'https://www46.myfantasyleague.com/fflnetdynamic2011/';
+var baseURLStatic = 'https://www46.myfantasyleague.com';
+var baseURLDynamic = 'https://www46.myfantasyleague.com';
+var currentServerTime = 1764493741;
 var completedWeek = 21;
 var liveScoringWeek = 21;
 var startWeek = 1;
@@ -77,45 +77,45 @@ function live_auction_window (url) {
 </noscript>
 <div class="myfantasyleague_menu" onclick=""><span>LEAGUE MENU</span><input id="sub0" type="checkbox"><label for="sub0"><span></span></label><ul>
 <li class="mfl-icon"><a class="no-sub" href="http://home.myfantasyleague.com"><img src="/images/mfl-logo-2017.png" alt="MyFantasyLeague.com"><span>MyFantasyLeague.com</span></a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/home/">Home</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/home/">Home</a></li>
 <li class="has-sub sub-default mm-myacct"><a>My Account</a><b aria-haspopup="true" aria-controls="p1"></b><input id="sub1" type="checkbox"><label for="sub1"><span></span></label>
 <ul id="p1">
 <li><a class="no-sub" href="https://www42.myfantasyleague.com/2025/dash" target="">MFL&nbsp;Dashboard</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/login?L=" target="">Login</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/login?L=" target="">Login</a></li>
 <li><a class="no-sub" href="https://www42.myfantasyleague.com/2025/index" target="">Find&nbsp;A&nbsp;League</a></li>
 </ul>
 </li>
 <li class="has-sub sub-default mm-scores"><a>Scores</a><b aria-haspopup="true" aria-controls="p2"></b><input id="sub2" type="checkbox"><label for="sub2"><span></span></label>
 <ul id="p2">
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/pro_schedule?L=" target="">NFL&nbsp;Schedule</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/pro_schedule?L=" target="">NFL&nbsp;Schedule</a></li>
 </ul>
 </li>
 <li class="has-sub sub-default mm-player"><a>Player Research</a><b aria-haspopup="true" aria-controls="p3"></b><input id="sub3" type="checkbox"><label for="sub3"><span></span></label>
 <ul id="p3">
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/injury?L=" target="">NFL&nbsp;Injury&nbsp;Report</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/news_articles?L=&P=*" target="">Player&nbsp;News</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/injury?L=" target="">NFL&nbsp;Injury&nbsp;Report</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/news_articles?L=&P=*" target="">Player&nbsp;News</a></li>
 </ul>
 </li>
 <li class="has-sub sub-default mm-draft"><a>Draft/Auction</a><b aria-haspopup="true" aria-controls="p4"></b><input id="sub4" type="checkbox"><label for="sub4"><span></span></label>
 <ul id="p4">
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/reports?L=&R=ADP" target="">ADP&nbsp;Report</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/reports?L=&R=AAV" target="">AAV&nbsp;Report</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/reports?L=&R=ADP" target="">ADP&nbsp;Report</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/reports?L=&R=AAV" target="">AAV&nbsp;Report</a></li>
 </ul>
 </li>
 <li class="has-sub sub-default mm-social"><a>Social</a><b aria-haspopup="true" aria-controls="p5"></b><input id="sub5" type="checkbox"><label for="sub5"><span></span></label>
 <ul id="p5">
 <li><a class="no-sub" href="https://www.fantasysharks.com/forum/viewforum.php?f=501" target="">MFL&nbsp;Community&nbsp;Forums</a></li>
 <li><a class="no-sub" href="https://twitter.com/MyFantasyLeague" target="">Follow&nbsp;Us&nbsp;On&nbsp;Twitter</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/options?L=&O=167" target="">Refer&nbsp;A&nbsp;Friend&nbsp;And&nbsp;Save!</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/options?L=&O=167" target="">Refer&nbsp;A&nbsp;Friend&nbsp;And&nbsp;Save!</a></li>
 </ul>
 </li>
 <li class="has-sub sub-default mm-help"><a>Help</a><b aria-haspopup="true" aria-controls="p6"></b><input id="sub6" type="checkbox"><label for="sub6"><span></span></label>
 <ul id="p6">
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/support?L=" target="">Help&nbsp;Center</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/support?PROGRAM=options_07" target="_blank">Help&nbsp;on&nbsp;this&nbsp;Page</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/site_news?L=" target="">What's&nbsp;New?</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/options?L=48815&O=07&PRINTER=1" target="">Printer&nbsp;Friendly&nbsp;Page</a></li>
-<li><a class="no-sub" href="https://www49.myfantasyleague.com/2011/api_info?L=" target="">Developer's&nbsp;API</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/support?L=" target="">Help&nbsp;Center</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/support?PROGRAM=options_07" target="_blank">Help&nbsp;on&nbsp;this&nbsp;Page</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/site_news?L=" target="">What's&nbsp;New?</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/options?L=48815&O=07&PRINTER=1" target="">Printer&nbsp;Friendly&nbsp;Page</a></li>
+<li><a class="no-sub" href="https://www46.myfantasyleague.com/2011/api_info?L=" target="">Developer's&nbsp;API</a></li>
 </ul>
 </li>
 </ul></div>
@@ -127,11 +127,11 @@ function live_auction_window (url) {
 <td class="pagetitle">
 <h1>
  <span>Rosters</span></h1></td></tr></table><div class="pagebody" id="options_07">
-<h3 class="warning">League ID 48815 does not exist on this server for the 2011 season - however, it may have been recently moved to another web server.  You may search for it on other servers on <a href="https://www49.myfantasyleague.com/2011/index">this page</a>.</h3>
+<h3 class="warning">League ID 48815 does not exist on this server for the 2011 season - however, it may have been recently moved to another web server.  You may search for it on other servers on <a href="https://www46.myfantasyleague.com/2011/index">this page</a>.</h3>
 <h3><a href="javascript:history.go(-1);">Go Back To Previous Page</a></h3>
 </div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
 <tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
-<tr><td colspan="2" align="center">Page Generated Sat Nov 29 2:45:05 a.m. ET 2025</td></tr>
+<tr><td colspan="2" align="center">Page Generated Sun Nov 30 4:09:01 a.m. ET 2025</td></tr>
 <tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
  - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
 - <button id="pmLink">Privacy Manager</button>
