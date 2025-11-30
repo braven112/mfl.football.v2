@@ -775,6 +775,7 @@ let draftPredictions = [];
 let actualDraftPicks = [];
 let assetsPredictions = [];
 let toiletBowlWinners = [];
+let assetTeamIds: string[] = [];
 
 // Load standings and bracket data for draft predictions (from current season)
 const standingsKey = Object.keys(standingsFeeds).find(
@@ -839,6 +840,11 @@ if (standingsData?.leagueStandings?.franchise && bracketData) {
       assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
     }
   }
+}
+
+assetTeamIds = Array.from(new Set(assetsPredictions.map((p) => p.franchiseId))).filter(Boolean);
+if (defaultTeamId && !assetTeamIds.includes(defaultTeamId)) {
+  assetTeamIds.unshift(defaultTeamId);
 }
 
 const serializedConfig = JSON.stringify({
@@ -1316,12 +1322,22 @@ const serializedConfig = JSON.stringify({
                     <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                   </svg>
                 </a>
-                <DraftTeamAssetsView
-                  predictions={assetsPredictions}
-                  teams={teamsList}
-                  hideTeamSelector={true}
-                  franchiseId={defaultTeamId}
-                />
+                <div id="draftAssetsPanels">
+                  {assetTeamIds.map((teamId) => (
+                    <div
+                      class="draft-assets-panel"
+                      data-assets-team-id={teamId}
+                      style={`display: ${teamId === defaultTeamId ? 'block' : 'none'}`}
+                    >
+                      <DraftTeamAssetsView
+                        predictions={assetsPredictions}
+                        teams={teamsList}
+                        hideTeamSelector={true}
+                        franchiseId={teamId}
+                      />
+                    </div>
+                  ))}
+                </div>
               </ChartCard>
             ) : draftPredictions.length > 0 ? (
               <ChartCard title="2026 Draft Picks" subtitle="Projected draft picks based on current standings">
@@ -1563,7 +1579,7 @@ const serializedConfig = JSON.stringify({
   }
 
   /* Mobile: Stack team card content */
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     .team-card {
       flex-wrap: wrap;
       padding-bottom: var(--padding-xxl);/* Make room for tabs below */
@@ -1582,7 +1598,7 @@ const serializedConfig = JSON.stringify({
   }
 
   /* Mobile: Stack tabs below team info */
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     .view-tabs {
       position: static;
       transform: none;
@@ -1742,7 +1758,7 @@ const serializedConfig = JSON.stringify({
     grid-template-columns: 1fr;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     .chart-grid {
       grid-template-columns: 1fr;
       overflow: auto;
@@ -2806,7 +2822,7 @@ const serializedConfig = JSON.stringify({
     gap: var(--padding-md);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     :global(.nfl-teams-grid) {
       grid-template-columns: 1fr;
     }
@@ -2897,7 +2913,7 @@ const serializedConfig = JSON.stringify({
     overflow: auto;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     :global(.eligibility-table th:nth-child(2)),
     :global(.eligibility-table td:nth-child(2)) {
       display: none;
@@ -3559,10 +3575,11 @@ const serializedConfig = JSON.stringify({
   const subtotalActive = document.getElementById('subtotalActive');
   const subtotalPractice = document.getElementById('subtotalPractice');
   const subtotalInjured = document.getElementById('subtotalInjured');
-  const subtotalDead = document.getElementById('subtotalDead');
-  const countActive = document.getElementById('countActive');
+    const subtotalDead = document.getElementById('subtotalDead');
+    const countActive = document.getElementById('countActive');
     const countPractice = document.getElementById('countPractice');
     const countInjured = document.getElementById('countInjured');
+    const assetsPanels = document.querySelectorAll('[data-assets-team-id]');
 
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
@@ -4707,6 +4724,22 @@ const serializedConfig = JSON.stringify({
       rosterTable.dataset.hiddenColumns = Array.from(hiddenColumns).join(' ');
     };
 
+    const updateDraftAssetsPanel = (teamId) => {
+      if (!assetsPanels || assetsPanels.length === 0) return;
+      let found = false;
+      assetsPanels.forEach((panel) => {
+        const panelTeamId = panel.getAttribute('data-assets-team-id');
+        const isMatch = panelTeamId === teamId;
+        panel.style.display = isMatch ? 'block' : 'none';
+        if (isMatch) found = true;
+      });
+      if (!found && assetsPanels.length > 0) {
+        assetsPanels.forEach((panel, idx) => {
+          panel.style.display = idx === 0 ? 'block' : 'none';
+        });
+      }
+    };
+
     const updateView = () => {
       console.log('updateView called, contractActions:', contractActions);
       const { seasonData, teamData } = getTeamData();
@@ -4937,6 +4970,8 @@ const serializedConfig = JSON.stringify({
       if (rosterCountLabel) {
         rosterCountLabel.textContent = formatCountLabel(rows.length ?? 0);
       }
+
+      updateDraftAssetsPanel(currentTeam);
     };
 
     columnToggles.forEach((toggle) => {

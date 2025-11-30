@@ -174,11 +174,15 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
 
   .team-assets-container {
     background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    margin-inline: -0.75rem;
   }
+    @media (min-width: 768px) {
+       .team-assets-container {
 
+    margin-inline: -1rem;
+    }
+  }
   .team-assets-header {
     display: flex;
     justify-content: space-between;
@@ -332,7 +336,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     margin: 0;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     .team-assets-header {
       flex-direction: column;
       align-items: flex-start;
