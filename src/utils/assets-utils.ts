@@ -144,9 +144,45 @@ export function extractAssetsFromTransactions(
   const franchises = standingsData.leagueStandings.franchise;
   const transactions = transactionsData.transactions.transaction;
 
-  // Build draft order map (franchise id -> draft position 1-16)
+  // Sort standings worst-to-best using the same rules as calculateDraftOrder (reverse W-L, tiebreakers)
+  const sortByRecordReverse = (list: typeof franchises) => {
+    return [...list].sort((a, b) => {
+      const aWins = (parseInt(a.divw || '0') + parseInt(a.nondivw || '0'));
+      const aLosses = (parseInt(a.divl || '0') + parseInt(a.nondivl || '0'));
+      const bWins = (parseInt(b.divw || '0') + parseInt(b.nondivw || '0'));
+      const bLosses = (parseInt(b.divl || '0') + parseInt(b.nondivl || '0'));
+
+      const aGames = aWins + aLosses;
+      const bGames = bWins + bLosses;
+      const aWinPct = aGames > 0 ? aWins / aGames : 0;
+      const bWinPct = bGames > 0 ? bWins / bGames : 0;
+      if (aWinPct !== bWinPct) return aWinPct - bWinPct;
+
+      const aAllPlay = parseFloat(a.all_play_pct || '0');
+      const bAllPlay = parseFloat(b.all_play_pct || '0');
+      if (aAllPlay !== bAllPlay) return aAllPlay - bAllPlay;
+
+      const aPointsFor = parseFloat(a.pf || '0');
+      const bPointsFor = parseFloat(b.pf || '0');
+      if (aPointsFor !== bPointsFor) return aPointsFor - bPointsFor;
+
+      const aPowerRating = parseFloat(a.ppr || '0');
+      const bPowerRating = parseFloat(b.ppr || '0');
+      if (aPowerRating !== bPowerRating) return aPowerRating - bPowerRating;
+
+      const aVictoryPoints = parseFloat(a.vp || '0');
+      const bVictoryPoints = parseFloat(b.vp || '0');
+      if (aVictoryPoints !== bVictoryPoints) return aVictoryPoints - bVictoryPoints;
+
+      const aPointsAgainst = parseFloat(a.pa || '0');
+      const bPointsAgainst = parseFloat(b.pa || '0');
+      return aPointsAgainst - bPointsAgainst;
+    });
+  };
+
+  // Build draft order map (franchise id -> draft position 1-16) using sorted standings
   const draftOrderMap = new Map<string, number>();
-  franchises.forEach((franchise, index) => {
+  sortByRecordReverse(franchises).forEach((franchise, index) => {
     draftOrderMap.set(franchise.id, index + 1);
   });
 

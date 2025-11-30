@@ -1,12 +1,24 @@
 ---
 export interface Props {
-  activeView: 'projected' | 'assets' | 'trades';
+  activeView: 'projected' | 'final' | 'trades';
 }
 
 const { activeView } = Astro.props;
 ---
 
 <div class="view-selector">
+  <button
+    class={`view-tab ${activeView === 'final' ? 'active' : ''}`}
+    data-view="final"
+    data-active={activeView === 'final' ? 'true' : 'false'}
+    aria-label="Final Draft Order"
+    title="Final Draft Order"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+      <use href="/assets/icons/sprite.svg#icon-draft-podium"></use>
+    </svg>
+    <span class="view-tab__label">Final</span>
+  </button>
   <button
     class={`view-tab ${activeView === 'projected' ? 'active' : ''}`}
     data-view="projected"
@@ -17,19 +29,7 @@ const { activeView } = Astro.props;
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
       <use href="/assets/icons/sprite.svg#icon-numberone"></use>
     </svg>
-    <span class="view-tab__label">Projected</span>
-  </button>
-  <button
-    class={`view-tab ${activeView === 'assets' ? 'active' : ''}`}
-    data-view="assets"
-    data-active={activeView === 'assets' ? 'true' : 'false'}
-    aria-label="Current Draft Assets"
-    title="Current Draft Assets"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href="/assets/icons/sprite.svg#icon-draft-podium"></use>
-    </svg>
-    <span class="view-tab__label">Assets</span>
+    <span class="view-tab__label">Base</span>
   </button>
   <button
     class={`view-tab ${activeView === 'trades' ? 'active' : ''}`}

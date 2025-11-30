@@ -9,7 +9,6 @@ import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import DraftPredictorGrid from '../components/theleague/DraftPredictorGrid.astro';
 import DraftViewSelector from '../components/theleague/DraftViewSelector.astro';
 import DraftTradeHistoryView from '../components/theleague/DraftTradeHistoryView.astro';
-import DraftTeamAssetsView from '../components/theleague/DraftTeamAssetsView.astro';
 import leagueAssets from '../data/theleague.assets.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../utils/draft-utils';
 import { extractToiletBowlWinners } from '../utils/toilet-bowl-utils';
@@ -132,14 +131,20 @@ if (draftResultsData) {
   actualDraftPicks = convertActualPicksToPredictions(actualDraftPicksRaw, teamConfigMap);
 }
 
-// Convert assets data to predictions for display
-let assetsPredictions: ReturnType<typeof convertAssetsToPredictions> = [];
-if (assetsData && isValidAssetsData(assetsData)) {
-  assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
-}
+// Get view from query parameter (default to 'final'); map deprecated 'assets' to 'final'
+const rawView = Astro.url.searchParams.get('view') || 'final';
+const view = (rawView === 'assets' ? 'final' : rawView) as 'projected' | 'final' | 'trades';
 
-// Get view from query parameter (default to 'projected')
-const view = (Astro.url.searchParams.get('view') || 'projected') as 'projected' | 'assets' | 'trades';
+// Final order favors traded/actual ownership, then falls back to projection
+const finalBase =
+  (assetsData && isValidAssetsData(assetsData) && convertAssetsToPredictions(assetsData, teamConfigMap).length > 0)
+    ? convertAssetsToPredictions(assetsData, teamConfigMap)
+    : actualDraftPicks.length > 0
+      ? actualDraftPicks
+      : sortedPredictions;
+const finalPredictions = [...finalBase].sort(
+  (a, b) => a.overallPickNumber - b.overallPickNumber
+);
 ---
 
 <TheLeagueLayout title="Draft Predictor">
@@ -148,9 +153,9 @@ const view = (Astro.url.searchParams.get('view') || 'projected') as 'projected' 
       <div>
         <h1 class="draft-predictor-title">{nextYear} Draft Order Predictor</h1>
         <p class="draft-predictor-subtitle">
-          {view === 'projected' && `Projected draft order based on current ${currentYear} season standings`}
-          {view === 'assets' && `Current draft assets and ownership after all trades`}
-          {view === 'trades' && `Draft pick trade history and movements`}
+          {view === 'projected' && `Projected base draft order based on current ${currentYear} season standings`}
+          {view === 'final' && `Projected final draft order with traded pick ownership applied`}
+          {view === 'trades' && `Draft pick history`}
         </p>
       </div>
       <DraftViewSelector activeView={view} />
@@ -162,14 +167,13 @@ const view = (Astro.url.searchParams.get('view') || 'projected') as 'projected' 
           {view === 'projected' && (
             <DraftPredictorGrid predictions={sortedPredictions} />
           )}
-          {view === 'assets' && assetsPredictions.length > 0 && (
-            <DraftTeamAssetsView predictions={assetsPredictions} teams={teamsList} />
+          {view === 'final' && finalPredictions.length > 0 && (
+            <DraftPredictorGrid predictions={finalPredictions} />
           )}
-          {view === 'assets' && assetsPredictions.length === 0 && actualDraftPicks.length > 0 && (
-            <DraftTeamAssetsView predictions={actualDraftPicks} teams={teamsList} />
-          )}
-          {view === 'assets' && assetsPredictions.length === 0 && actualDraftPicks.length === 0 && sortedPredictions.length > 0 && (
-            <DraftTeamAssetsView predictions={sortedPredictions} teams={teamsList} />
+          {view === 'final' && finalPredictions.length === 0 && (
+            <div class="draft-predictor-loading">
+              <p>No final draft order available yet.</p>
+            </div>
           )}
           {view === 'trades' && actualDraftPicks.length > 0 && (
             <DraftTradeHistoryView predictions={actualDraftPicks} />
