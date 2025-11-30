@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-11-30T14:47:59.202Z"
+    "fetchedAt": "2025-11-30T14:56:17.495Z"
   },
   "players": [
     {
@@ -15596,6 +15596,71 @@
       ]
     },
     {
+      "id": "17282",
+      "name": "Brosmer, Max",
+      "position": "QB",
+      "salary": 425000,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "MIN",
+      "draftYear": 2025,
+      "draftTeam": "FA",
+      "birthdate": 985755600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17282_thumb.jpg",
+      "externalIds": {
+        "mfl": "17282",
+        "sleeper": "12775",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12775",
+        "fullName": "Max Brosmer",
+        "team": "MIN",
+        "age": 24,
+        "height": "74",
+        "weight": "218",
+        "number": 12,
+        "college": "Minnesota",
+        "birthDate": "2001-03-28",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 8,
+        "season": "2025",
+        "player": "Max Brosmer",
+        "team": "MIN",
+        "position": "QB",
+        "offenseSnaps": 6,
+        "offenseSnapPct": 0.12,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "BrosMa00",
+        "gamesPlayed": 3,
+        "gamesPlayedWeeks": [
+          3,
+          5,
+          8
+        ]
+      },
+      "gamesPlayed": 3,
+      "depthChartAhead": null
+    },
+    {
       "id": "16597",
       "name": "Brooks, Jonathon",
       "position": "RB",
@@ -20163,7 +20228,12 @@
         ]
       },
       "gamesPlayed": 6,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17282",
+          "name": "Brosmer, Max"
+        }
+      ]
     },
     {
       "id": "16603",
