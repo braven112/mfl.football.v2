@@ -157,36 +157,34 @@ const defendingChampions = championsByYear[previousYear] || {};
 
 <TheLeagueLayout title="Standings">
   <div class="standings-page">
-        <header class="roster-page__header">
-      <div class="header-grid">
-        <h2>Standings</h2>
-        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
-      </div>
-      
-    </header>
-    <div class="standings-header-bar">
-      <div class="standings-header-content">
+    <header class="standings-hero">
+      <div class="standings-hero__text">
         {view === 'division' && (
           <>
-            <h2 class="section-title">Division Standings</h2>
-            
+            <h1 class="section-title">Division Standings</h1>
           </>
         )}
         {view === 'league' && (
           <>
-            <h2 class="section-title">Playoff Standings</h2>
-            
+            <h1 class="section-title">Playoff Standings</h1>
+            <p class="subtitle">Division winners are seeded 1-4</p>
           </>
         )}
         {view === 'all_play' && (
           <>
-            <h2 class="section-title">All-Play Standings</h2>
-            
+            <h1 class="section-title">All-Play Standings</h1>
           </>
         )}
       </div>
-      <div class="standings-controls">
+      <div class="standings-hero__actions">
         <StandingsViewSelector activeView={view} />
+      </div>
+    </header>
+
+    <div class="standings-filters">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
       </div>
     </div>
 
@@ -229,13 +227,42 @@ const defendingChampions = championsByYear[previousYear] || {};
     gap: var(--padding-lg);
   }
 
-  .standings-header {
-    text-align: left;
-    margin-bottom: 2rem;
-  }
-  .header-grid {
+  .standings-hero {
     display: grid;
     grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  .standings-hero__text h1 {
+    margin: 0;
+  }
+
+  .standings-hero__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .standings-filters {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
   }
 
   .card {
@@ -257,8 +284,8 @@ const defendingChampions = championsByYear[previousYear] || {};
   }
 
   .subtitle {
-    font-size: 1.125rem;
-    color: var(--color-text-secondary, #555);
+    font-size: 1rem;
+    color: var(--text-secondary-color, #64748b);
     margin: 0;
   }
 
@@ -295,10 +322,10 @@ const defendingChampions = championsByYear[previousYear] || {};
   }
 
   .section-title {
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--color-text-primary, #1a1a1a);
-    margin: 0 0 0.5rem 0;
+    margin: 0;
   }
 
   .section-subtitle {
