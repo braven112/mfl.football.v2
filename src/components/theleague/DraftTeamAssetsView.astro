@@ -1,0 +1,374 @@
+---
+/**
+ * DraftTeamAssetsView - Shows all draft assets (picks owned) for a specific team
+ * Displays picks organized by round with original owner information if traded
+ */
+
+import type { DraftPrediction } from '../../types/standings';
+
+export interface Props {
+  predictions: DraftPrediction[];
+  teams: Array<{ id: string; name: string; icon: string }>;
+  hideTeamSelector?: boolean;
+  franchiseId?: string;
+}
+
+const { predictions, teams, hideTeamSelector = false, franchiseId } = Astro.props;
+
+// Get unique team list from predictions (current owners)
+const teamMap = new Map(teams.map(t => [t.id, t]));
+const uniqueTeams = Array.from(
+  new Map(
+    predictions
+      .map(p => [p.franchiseId, { id: p.franchiseId, name: p.teamName, icon: p.teamIcon }])
+  ).values()
+).sort((a, b) => a.name.localeCompare(b.name));
+
+// Determine selected team
+let selectedTeamId: string;
+if (hideTeamSelector && franchiseId) {
+  // If hiding selector, use the provided franchiseId
+  selectedTeamId = franchiseId;
+} else {
+  // Otherwise, get from URL parameter or default to first team
+  const urlTeamId = Astro.url.searchParams.get('team');
+  selectedTeamId = (urlTeamId && uniqueTeams.some(t => t.id === urlTeamId))
+    ? urlTeamId
+    : uniqueTeams[0]?.id || '';
+}
+
+// Filter predictions for selected team
+const teamAssets = predictions
+  .filter(p => p.franchiseId === selectedTeamId)
+  .sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+
+// Group assets by round
+const assetsByRound: Record<number, typeof teamAssets> = {};
+teamAssets.forEach(asset => {
+  if (!assetsByRound[asset.round]) {
+    assetsByRound[asset.round] = [];
+  }
+  assetsByRound[asset.round].push(asset);
+});
+
+const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
+---
+
+<div class="draft-team-assets-view">
+  {!hideTeamSelector && (
+    <div class="team-selector">
+      <label for="team-select">Select Team:</label>
+      <select id="team-select" class="team-select">
+        {uniqueTeams.map(team => (
+          <option value={team.id} selected={team.id === selectedTeamId}>
+            {team.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )}
+
+  {teamAssets.length > 0 ? (
+    <div class="team-assets-container">
+      <div class="team-assets-header">
+        <div class="team-info">
+          {selectedTeam?.icon && (
+            <img src={selectedTeam.icon} alt={selectedTeam?.name} class="team-icon" />
+          )}
+          <h3 class="team-name">{selectedTeam?.name}</h3>
+        </div>
+        <div class="assets-summary">
+          <span class="asset-count">{teamAssets.length} picks</span>
+        </div>
+      </div>
+
+      <div class="assets-by-round">
+        {Object.entries(assetsByRound).map(([round, assets]) => (
+          <div class="round-section" key={round}>
+            <h4 class="round-title">Round {round}</h4>
+            <div class="assets-list">
+              {assets.map(asset => (
+                <div class="asset-item">
+                  <div class="asset-pick-info">
+                    <span class="pick-number">
+                      {asset.round}.{String(asset.pickInRound).padStart(2, '0')}
+                    </span>
+                    {asset.isTraded && asset.originalTeamName && (
+                      <span class="asset-status">Traded</span>
+                    )}
+                    {asset.isToiletBowlPick && (
+                      <span class="asset-status toilet-bowl">Toilet Bowl</span>
+                    )}
+                  </div>
+                  <div class="asset-description">
+                    <span class="year">Year 2026</span>
+                    <span class="round-label">Round {asset.round}</span>
+                    <span class="text">Draft Pick</span>
+                    {asset.isTraded && asset.originalTeamName && (
+                      <>
+                        <span class="text">from</span>
+                        <span class="original-team">{asset.originalTeamName}</span>
+                      </>
+                    )}
+                    {!asset.isTraded && (
+                      <>
+                        <span class="text">from</span>
+                        <span class="original-team">{asset.teamName}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : (
+    <div class="no-assets">
+      <p>No draft assets available for this team.</p>
+    </div>
+  )}
+</div>
+
+<style>
+  .draft-team-assets-view {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .team-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: var(--padding-md);
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .team-selector label {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .team-select {
+    padding: 0.5rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: #fff;
+    cursor: pointer;
+    min-width: 200px;
+  }
+
+  .team-select:hover {
+    border-color: #94a3b8;
+  }
+
+  .team-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .team-assets-container {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .team-assets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--padding-lg);
+    border-bottom: 2px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .team-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .team-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+  }
+
+  .team-name {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .assets-summary {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .asset-count {
+    padding: 0.5rem 1rem;
+    background: #dbeafe;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #1e40af;
+    font-size: 0.875rem;
+  }
+
+  .assets-by-round {
+    padding: var(--padding-lg);
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .round-section {
+    display: grid;
+    gap: var(--padding-md);
+  }
+
+  .round-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+  }
+
+  .assets-list {
+    display: grid;
+    gap: var(--padding-sm, 0.5rem);
+  }
+
+  .asset-item {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: var(--padding-md);
+    padding: var(--padding-md);
+    background: #f8fafc;
+    border-radius: 6px;
+    border-left: 4px solid #3b82f6;
+  }
+
+  .asset-pick-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .pick-number {
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+    font-size: 1.125rem;
+  }
+
+  .asset-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #1e40af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .asset-status.toilet-bowl {
+    background: rgba(168, 85, 247, 0.1);
+    color: #6b21a8;
+  }
+
+  .asset-description {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+    color: var(--text-secondary-color, #64748b);
+  }
+
+  .year {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .round-label {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .text {
+    color: var(--text-secondary-color, #64748b);
+  }
+
+  .original-team {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .no-assets {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 1.125rem;
+    background: #fff;
+    border-radius: 8px;
+    border: 2px dashed #cbd5e1;
+  }
+
+  .no-assets p {
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .team-assets-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--padding-md);
+    }
+
+    .asset-item {
+      grid-template-columns: 1fr;
+    }
+
+    .asset-description {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+  }
+</style>
+
+<script>
+  function setupTeamSelector() {
+    const select = document.getElementById('team-select') as HTMLSelectElement;
+    if (!select) return;
+
+    select.addEventListener('change', (e) => {
+      const teamId = (e.target as HTMLSelectElement).value;
+      const url = new URL(window.location);
+      url.searchParams.set('team', teamId);
+      window.location.href = url.toString();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTeamSelector);
+  } else {
+    setupTeamSelector();
+  }
+
+  document.addEventListener('astro:after-swap', setupTeamSelector);
+</script>

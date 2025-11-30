@@ -10,6 +10,8 @@ import FranchiseOptions from '../components/theleague/FranchiseOptions.astro';
 import VeteranExtensionCandidates from '../components/theleague/VeteranExtensionCandidates.astro';
 import PlayerDetailsModal from '../components/theleague/PlayerDetailsModal.astro';
 import PlayerInjuryModal from '../components/theleague/PlayerInjuryModal.astro';
+import DraftPicksCard from '../components/theleague/DraftPicksCard.astro';
+import DraftTeamAssetsView from '../components/theleague/DraftTeamAssetsView.astro';
 import collegeLogos from '../data/college-logos.json';
 import type { ChartSlice } from '../scripts/chart-utils';
 import {
@@ -33,6 +35,9 @@ import {
 } from '../utils/salary-calculations';
 import { getAuthUser } from '../utils/auth';
 import tradeBait2025Data from '../data/mfl-feeds/2025/tradeBait.json';
+import { calculateDraftOrder, buildActualDraftPicks } from '../utils/draft-utils';
+import { extractToiletBowlWinners } from '../utils/toilet-bowl-utils';
+import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../utils/assets-utils';
 
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -52,7 +57,19 @@ const leagueFeeds = import.meta.glob('../data/mfl-feeds/*/league.json', {
 const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
   eager: true,
 });
+const playoffBracketFeeds = import.meta.glob(
+  '../data/mfl-feeds/*/playoffBracket.json',
+  {
+    eager: true,
+  }
+);
 const playersFeeds = import.meta.glob('../data/mfl-feeds/*/players.json', {
+  eager: true,
+});
+const draftResultsFeeds = import.meta.glob('../data/mfl-feeds/*/draftResults.json', {
+  eager: true,
+});
+const transactionsFeeds = import.meta.glob('../data/mfl-feeds/*/transactions.json', {
   eager: true,
 });
 const getModuleData = (mod) =>
@@ -751,6 +768,79 @@ const initialAllPlayers: any[] = initialSeasonData
     ])
   : [];
 
+// Calculate draft predictions for 2026 roster view
+const currentYear = new Date().getFullYear();
+const nextYear = currentYear + 1;
+let draftPredictions = [];
+let actualDraftPicks = [];
+let assetsPredictions = [];
+let toiletBowlWinners = [];
+
+// Load standings and bracket data for draft predictions (from current season)
+const standingsKey = Object.keys(standingsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+
+const bracketKey = Object.keys(playoffBracketFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+
+// Load draft results from next year to show actual picks with trades
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(nextYear)
+);
+const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+// Load transactions from current year to extract trade information
+const transactionsKey = Object.keys(transactionsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
+
+if (standingsData?.leagueStandings?.franchise && bracketData) {
+  // Build team config map with icons and banners
+  const teamConfigMap = new Map(
+    teamsList.map((team) => [
+      team.id,
+      {
+        id: team.id,
+        name: team.name,
+        icon: team.icon,
+        banner: leagueAssets.teams?.find((t) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+      },
+    ])
+  );
+
+  // Extract toilet bowl winners from bracket
+  toiletBowlWinners = extractToiletBowlWinners(bracketData);
+
+  // TODO: Determine league winner (needs to be fetched from playoff results)
+  const leagueWinnerId = '';
+
+  // Calculate draft order
+  draftPredictions = calculateDraftOrder(
+    standingsData.leagueStandings.franchise,
+    teamConfigMap,
+    leagueWinnerId,
+    toiletBowlWinners
+  );
+
+  // Extract actual draft assets from draft results if available
+  if (draftResultsData) {
+    actualDraftPicks = buildActualDraftPicks(draftResultsData, teamConfigMap);
+  }
+
+  // Extract draft assets from transactions (trades)
+  if (transactionsData) {
+    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, nextYear);
+    if (isValidAssetsData(assetsData)) {
+      assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
+    }
+  }
+}
+
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
   seasonOptions,
@@ -1214,44 +1304,90 @@ const serializedConfig = JSON.stringify({
     <!-- Next Year View -->
     <div class="view-container" data-view-content="nextyear" style="display: none;">
       <h3 class="chart-metrics__headline">2026 at a glance</h3>
-      <div class="chart-metrics">
-        <MetricCard
-          label="Cap Space"
-          value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
-          valueId="summaryCapNext"
-        />
-        <MetricCard
-          label="Avg per Player*"
-          value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
-          valueId="summaryAvg2026"
-        />
-        <MetricCard
-          label="Players Signed"
-          value={String(initialPlayersNextYear)}
-          valueId="summaryPlayersNext"
-          hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
-          hintVariant="error"
-          hintId="needsToCutRoster2026"
-        />
-        <MetricCard
-          label="Dead Money"
-          value={formatCurrency(initialDeadMoney2026)}
-          valueId="summaryDeadMoney2026"
-        />
-        <MetricCard
-          label="Average Age"
-          value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
-          valueId="summaryAverageAge"
-        />
+
+      <div class="next-year-layout">
+        <!-- Left Column: Draft Order -->
+        <div class="next-year-layout__left">
+          <div class="draft-section">
+            {assetsPredictions.length > 0 ? (
+              <ChartCard title="2026 Draft Assets" subtitle="Picks your team owns after all trades">
+                <a href="/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  </svg>
+                </a>
+                <DraftTeamAssetsView
+                  predictions={assetsPredictions}
+                  teams={teamsList}
+                  hideTeamSelector={true}
+                  franchiseId={defaultTeamId}
+                />
+              </ChartCard>
+            ) : draftPredictions.length > 0 ? (
+              <ChartCard title="2026 Draft Picks" subtitle="Projected draft picks based on current standings">
+                <a href="/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  </svg>
+                </a>
+                <DraftPicksCard
+                  franchiseId={defaultTeamId}
+                  draftPredictions={draftPredictions}
+                  actualPicks={actualDraftPicks}
+                  season={2026}
+                />
+              </ChartCard>
+            ) : null}
+          </div>
+        </div>
+
+        <!-- Right Column: Metrics -->
+        <div class="next-year-layout__right">
+          <div class="chart-metrics">
+            <MetricCard
+              label="Cap Space"
+              value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
+              valueId="summaryCapNext"
+            />
+            <MetricCard
+              label="Avg per Player*"
+              value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
+              valueId="summaryAvg2026"
+            />
+            <MetricCard
+              label="Players Signed"
+              value={String(initialPlayersNextYear)}
+              valueId="summaryPlayersNext"
+              hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
+              hintVariant="error"
+              hintId="needsToCutRoster2026"
+            />
+            <MetricCard
+              label="Dead Money"
+              value={formatCurrency(initialDeadMoney2026)}
+              valueId="summaryDeadMoney2026"
+            />
+            <MetricCard
+              label="Average Age"
+              value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
+              valueId="summaryAverageAge"
+            />
+          </div>
+          <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
+        </div>
       </div>
-      <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
-      <div class="chart-grid">
-        <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
-          <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
-        </ChartCard>
-        <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
-          <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
-        </ChartCard>
+
+      <!-- Extensions Section -->
+      <div class="extensions-section">
+        <h2 class="extensions-section__title">Extensions</h2>
+        <div class="chart-grid">
+          <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
+            <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+          </ChartCard>
+          <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
+            <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+          </ChartCard>
+        </div>
       </div>
     </div>
     <!-- End Next Year View -->
@@ -1712,6 +1848,66 @@ const serializedConfig = JSON.stringify({
   .chart-metrics__headline {
     margin: 0;
     font-size: 1.25rem;
+  }
+
+  .chart-card-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 0.375rem;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .chart-card-link:hover {
+    color: #2563eb;
+    background-color: #eff6ff;
+  }
+
+  .extensions-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .extensions-section__title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .next-year-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  .next-year-layout__left {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .next-year-layout__right {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .draft-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (max-width: 1200px) {
+    .next-year-layout {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
   }
 
   .roster-table-card__header {

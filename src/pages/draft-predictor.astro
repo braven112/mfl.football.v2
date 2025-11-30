@@ -1,0 +1,331 @@
+---
+/**
+ * Draft Predictor Page
+ * Displays projected draft order for next season based on current standings
+ * Updates as season progresses with real-time standings
+ */
+
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
+import DraftPredictorGrid from '../components/theleague/DraftPredictorGrid.astro';
+import DraftViewSelector from '../components/theleague/DraftViewSelector.astro';
+import DraftTradeHistoryView from '../components/theleague/DraftTradeHistoryView.astro';
+import DraftTeamAssetsView from '../components/theleague/DraftTeamAssetsView.astro';
+import leagueAssets from '../data/theleague.assets.json';
+import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../utils/draft-utils';
+import { extractToiletBowlWinners } from '../utils/toilet-bowl-utils';
+import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../utils/assets-utils';
+
+const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+const playoffBracketFeeds = import.meta.glob(
+  '../data/mfl-feeds/*/playoffBracket.json',
+  {
+    eager: true,
+  }
+);
+const draftResultsFeeds = import.meta.glob('../data/mfl-feeds/*/draftResults.json', {
+  eager: true,
+});
+const assetsFeeds = import.meta.glob('../data/mfl-feeds/*/assets.json', {
+  eager: true,
+});
+const transactionsFeeds = import.meta.glob('../data/mfl-feeds/*/transactions.json', {
+  eager: true,
+});
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Get current year
+const currentYear = new Date().getFullYear();
+const nextYear = currentYear + 1;
+
+// Load standings for current year
+const standingsKey = Object.keys(standingsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+
+// Load playoff bracket for current year to determine toilet bowl winners
+const bracketKey = Object.keys(playoffBracketFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+
+// Load draft results for next year (to show actual picks with trades)
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(nextYear)
+);
+const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+// Load assets for current year (to show team ownership of draft picks)
+let assetsData = null;
+const assetsKey = Object.keys(assetsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+if (assetsKey) {
+  assetsData = getModuleData(assetsFeeds[assetsKey]);
+}
+
+// Fallback: extract assets from transactions if API data is unavailable
+if (!assetsData || !isValidAssetsData(assetsData)) {
+  const transactionsKey = Object.keys(transactionsFeeds).find(
+    (path) => extractFeedSeason(path) === String(currentYear)
+  );
+  const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
+
+  if (transactionsData && standingsData) {
+    assetsData = extractAssetsFromTransactions(transactionsData, standingsData, nextYear);
+  }
+}
+
+// Build team config map
+const teamsList = (leagueAssets.teams ?? []).map((team) => ({
+  id: team.id,
+  name: team.name,
+  icon: team.assets?.icons?.[0]?.relativePath ?? '',
+  banner: team.assets?.banners?.[0]?.relativePath ?? '',
+}));
+
+const teamConfigMap = new Map(teamsList.map((team) => [team.id, team]));
+
+// Extract toilet bowl winners
+let toiletBowlWinners = [];
+if (bracketData) {
+  toiletBowlWinners = extractToiletBowlWinners(bracketData);
+}
+
+// Calculate draft predictions
+let draftPredictions = [];
+let leagueWinnerId = '';
+
+if (standingsData?.leagueStandings?.franchise) {
+  // TODO: Determine league winner (champion playoff winner)
+  // For now, assume first team in standings, but this needs real logic
+  const franchises = standingsData.leagueStandings.franchise;
+
+  // Draft predictions will be calculated once we have toilet bowl winners
+  draftPredictions = calculateDraftOrder(
+    franchises,
+    teamConfigMap,
+    leagueWinnerId,
+    toiletBowlWinners
+  );
+}
+
+// Sort by overall pick number
+const sortedPredictions = draftPredictions.sort(
+  (a, b) => a.overallPickNumber - b.overallPickNumber
+);
+
+// Build actual draft picks from draft results (showing current ownership after trades)
+let actualDraftPicksRaw: ReturnType<typeof buildActualDraftPicks> = [];
+let actualDraftPicks: ReturnType<typeof convertActualPicksToPredictions> = [];
+if (draftResultsData) {
+  actualDraftPicksRaw = buildActualDraftPicks(draftResultsData, teamConfigMap);
+  actualDraftPicks = convertActualPicksToPredictions(actualDraftPicksRaw, teamConfigMap);
+}
+
+// Convert assets data to predictions for display
+let assetsPredictions: ReturnType<typeof convertAssetsToPredictions> = [];
+if (assetsData && isValidAssetsData(assetsData)) {
+  assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
+}
+
+// Get view from query parameter (default to 'projected')
+const view = (Astro.url.searchParams.get('view') || 'projected') as 'projected' | 'assets' | 'trades';
+---
+
+<TheLeagueLayout title="Draft Predictor">
+  <section class="draft-predictor-page">
+    <header class="draft-predictor-header">
+      <div>
+        <h1 class="draft-predictor-title">{nextYear} Draft Order Predictor</h1>
+        <p class="draft-predictor-subtitle">
+          {view === 'projected' && `Projected draft order based on current ${currentYear} season standings`}
+          {view === 'assets' && `Current draft assets and ownership after all trades`}
+          {view === 'trades' && `Draft pick trade history and movements`}
+        </p>
+      </div>
+      <DraftViewSelector activeView={view} />
+    </header>
+
+    <div class="draft-predictor-content">
+      {sortedPredictions.length > 0 ? (
+        <>
+          {view === 'projected' && (
+            <DraftPredictorGrid predictions={sortedPredictions} />
+          )}
+          {view === 'assets' && assetsPredictions.length > 0 && (
+            <DraftTeamAssetsView predictions={assetsPredictions} teams={teamsList} />
+          )}
+          {view === 'assets' && assetsPredictions.length === 0 && actualDraftPicks.length > 0 && (
+            <DraftTeamAssetsView predictions={actualDraftPicks} teams={teamsList} />
+          )}
+          {view === 'assets' && assetsPredictions.length === 0 && actualDraftPicks.length === 0 && sortedPredictions.length > 0 && (
+            <DraftTeamAssetsView predictions={sortedPredictions} teams={teamsList} />
+          )}
+          {view === 'trades' && actualDraftPicks.length > 0 && (
+            <DraftTradeHistoryView predictions={actualDraftPicks} />
+          )}
+          {view === 'trades' && actualDraftPicks.length === 0 && (
+            <div class="draft-predictor-loading">
+              <p>No draft results available yet for {nextYear}</p>
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="draft-predictor-loading">
+          <p>Loading draft predictions...</p>
+        </div>
+      )}
+    </div>
+
+    <div class="draft-predictor-info">
+      <div class="info-card">
+        <h3>How It Works</h3>
+        <ul>
+          <li>
+            <strong>Regular Picks (1-15, 17-48):</strong> Determined by reverse standings order (worst record gets 1st pick)
+          </li>
+          <li>
+            <strong>Pick 16:</strong> League champion always receives the 16th pick
+          </li>
+          <li>
+            <strong>Special Picks (1.17, 2.17, 2.18):</strong> Awarded to toilet bowl tournament winners
+          </li>
+          <li>
+            <strong>Tiebreakers:</strong> Uses same wild card tiebreaker rules as standings (all-play %, points for, power rating, victory points, points against)
+          </li>
+          <li>
+            <strong>Updates:</strong> Refreshes in real-time as season progresses
+          </li>
+        </ul>
+      </div>
+
+      <div class="info-card">
+        <h3>Traded Picks</h3>
+        <p>
+          This page automatically tracks draft picks traded between teams using the MFL API.
+          Each team's actual draft capital is reflected in their {nextYear} roster view.
+        </p>
+      </div>
+    </div>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .draft-predictor-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .draft-predictor-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+    align-items: start;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (min-width: 550px) {
+    .draft-predictor-header {
+      grid-template-columns: 1fr auto;
+      align-items: start;
+    }
+  }
+
+  .draft-predictor-title {
+    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .draft-predictor-subtitle {
+    margin: 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 1rem;
+  }
+
+  .draft-predictor-content {
+    min-height: 400px;
+  }
+
+  .draft-predictor-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #64748b;
+    font-size: 1.125rem;
+  }
+
+
+  .draft-predictor-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--padding-md);
+  }
+
+  .info-card {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  .info-card h3 {
+    margin: 0 0 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    list-style: disc;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.925rem;
+    line-height: 1.6;
+  }
+
+  .info-card li {
+    margin-bottom: 0.75rem;
+  }
+
+  .info-card li strong {
+    color: var(--text-primary-color, #111827);
+  }
+
+  .info-card p {
+    margin: 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.925rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 768px) {
+    .draft-predictor-title {
+      font-size: 1.5rem;
+    }
+
+    .draft-predictor-subtitle {
+      font-size: 0.925rem;
+    }
+
+    .draft-predictor-info {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

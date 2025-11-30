@@ -15,6 +15,8 @@
  *   MFL_YEAR (optional) - defaults to current year
  *   MFL_WEEK (optional) - defaults to 'YTD'
  *   MFL_HOST (optional) - defaults to https://api.myfantasyleague.com
+ *   MFL_USER_ID (optional) - MFL user ID for authenticated requests
+ *   MFL_APIKEY (optional) - MFL API key for authenticated requests (used for assets endpoint)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -35,6 +37,8 @@ const year = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SE
 // Only include a week param when explicitly provided; otherwise let MFL serve latest/YTD.
 const week = getNonEmpty(process.env.MFL_WEEK) || null;
 const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.com';
+const mflUserId = getNonEmpty(process.env.MFL_USER_ID);
+const mflApiKey = getNonEmpty(process.env.MFL_APIKEY);
 
 const outDir = path.join('src', 'data', 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });
@@ -83,6 +87,14 @@ const isHistoricalDataCached = () => {
 };
 
 const withWeek = (baseUrl) => (week ? `${baseUrl}&W=${week}` : baseUrl);
+
+const withAuth = (baseUrl) => {
+  // Add authentication to requests that require it (e.g., assets)
+  if (mflApiKey) {
+    return `${baseUrl}&APIKEY=${encodeURIComponent(mflApiKey)}`;
+  }
+  return baseUrl;
+};
 
 const parseTradeBait = (data) => {
   // Handle MFL trade bait API response
@@ -164,6 +176,16 @@ const endpoints = [
   {
     key: 'standings',
     url: withWeek(`${host}/${year}/export?TYPE=standings&L=${leagueId}&JSON=1`),
+    parser: (t) => JSON.parse(t),
+  },
+  {
+    key: 'playoffBracket',
+    url: `${host}/${year}/export?TYPE=playoffBracket&L=${leagueId}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
+    key: 'assets',
+    url: withAuth(`${host}/${year}/export?TYPE=assets&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
 ];
