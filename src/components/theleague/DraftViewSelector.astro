@@ -1,6 +1,6 @@
 ---
 export interface Props {
-  activeView: 'projected' | 'final' | 'trades';
+  activeView: 'projected' | 'final' | 'history';
 }
 
 const { activeView } = Astro.props;
@@ -32,11 +32,11 @@ const { activeView } = Astro.props;
     <span class="view-tab__label">Base</span>
   </button>
   <button
-    class={`view-tab ${activeView === 'trades' ? 'active' : ''}`}
-    data-view="trades"
-    data-active={activeView === 'trades' ? 'true' : 'false'}
-    aria-label="Trade History"
-    title="Trade History"
+    class={`view-tab ${activeView === 'history' ? 'active' : ''}`}
+    data-view="history"
+    data-active={activeView === 'history' ? 'true' : 'false'}
+    aria-label="Draft History"
+    title="Draft History"
   >
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
       <use href="/assets/icons/sprite.svg#icon-history"></use>

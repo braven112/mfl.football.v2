@@ -8,11 +8,11 @@
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 import DraftPredictorGrid from '../components/theleague/DraftPredictorGrid.astro';
 import DraftViewSelector from '../components/theleague/DraftViewSelector.astro';
-import DraftTradeHistoryView from '../components/theleague/DraftTradeHistoryView.astro';
 import leagueAssets from '../data/theleague.assets.json';
-import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../utils/draft-utils';
+import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, parseTradeFromComment } from '../utils/draft-utils';
 import { extractToiletBowlWinners } from '../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../utils/assets-utils';
+import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../constants/roster-constants';
 
 const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
   eager: true,
@@ -24,6 +24,9 @@ const playoffBracketFeeds = import.meta.glob(
   }
 );
 const draftResultsFeeds = import.meta.glob('../data/mfl-feeds/*/draftResults.json', {
+  eager: true,
+});
+const playersFeeds = import.meta.glob('../data/mfl-feeds/*/players.json', {
   eager: true,
 });
 const assetsFeeds = import.meta.glob('../data/mfl-feeds/*/assets.json', {
@@ -62,6 +65,12 @@ const draftResultsKey = Object.keys(draftResultsFeeds).find(
   (path) => extractFeedSeason(path) === String(nextYear)
 );
 const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+// All available years for history view
+const draftResultYears = Object.keys(draftResultsFeeds)
+  .map((path) => extractFeedSeason(path))
+  .filter((y) => !!y)
+  .sort((a, b) => Number(b) - Number(a));
 
 // Load assets for current year (to show team ownership of draft picks)
 let assetsData = null;
@@ -133,7 +142,8 @@ if (draftResultsData) {
 
 // Get view from query parameter (default to 'final'); map deprecated 'assets' to 'final'
 const rawView = Astro.url.searchParams.get('view') || 'final';
-const view = (rawView === 'assets' ? 'final' : rawView) as 'projected' | 'final' | 'trades';
+const normalizedView = rawView === 'assets' ? 'final' : rawView === 'trades' ? 'history' : rawView;
+const view = normalizedView as 'projected' | 'final' | 'history';
 
 // Final order favors traded/actual ownership, then falls back to projection
 const finalBase =
@@ -145,6 +155,151 @@ const finalBase =
 const finalPredictions = [...finalBase].sort(
   (a, b) => a.overallPickNumber - b.overallPickNumber
 );
+
+// History view: pick a year and show all draft picks with trade notes
+const historyYearParam = Astro.url.searchParams.get('year');
+const historyYear =
+  (historyYearParam && draftResultYears.includes(historyYearParam) && historyYearParam) ||
+  draftResultYears[0] ||
+  String(currentYear);
+
+const historyResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(historyYear)
+);
+const historyResultsData = historyResultsKey ? getModuleData(draftResultsFeeds[historyResultsKey]) : null;
+
+const playerFeedYears = Object.keys(playersFeeds)
+  .map((path) => extractFeedSeason(path))
+  .filter((y) => !!y)
+  .map((y) => Number(y))
+  .sort((a, b) => b - a);
+
+const resolvePlayersDataForYear = (year: number | string) => {
+  const numeric = Number(year);
+  const exactKey = Object.keys(playersFeeds).find(
+    (path) => extractFeedSeason(path) === String(year)
+  );
+  if (exactKey) return getModuleData(playersFeeds[exactKey]);
+
+  const fallbackYear = playerFeedYears.find((y) => y <= numeric) ?? playerFeedYears[0];
+  const fallbackKey = Object.keys(playersFeeds).find(
+    (path) => extractFeedSeason(path) === String(fallbackYear)
+  );
+  return fallbackKey ? getModuleData(playersFeeds[fallbackKey]) : null;
+};
+
+const historyPlayersData = resolvePlayersDataForYear(historyYear);
+
+const buildPlayerLookup = (playersData: any) => {
+  const lookup = new Map<
+    string,
+    { name: string; position?: string; nflTeam?: string; espnId?: string }
+  >();
+  const players = playersData?.players?.player;
+  const list = Array.isArray(players) ? players : players ? [players] : [];
+  list.forEach((p: any) => {
+    if (!p?.id) return;
+    lookup.set(p.id, {
+      name: p.name || '',
+      position: p.position || '',
+      nflTeam: p.team || p.draft_team || '',
+      espnId: p.espn_id || '',
+    });
+  });
+  return lookup;
+};
+
+const buildHeadshotUrl = (playerId: string, espnId?: string) => {
+  if (espnId) {
+    return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+  }
+  return getPlayerImageUrl(playerId);
+};
+
+const normalizeNflTeamCode = (code = '') => {
+  const upper = code.toUpperCase();
+  const map: Record<string, string> = {
+    GBP: 'GB',
+    GNB: 'GB',
+    NEP: 'NE',
+    NWE: 'NE',
+    NOS: 'NO',
+    NOR: 'NO',
+    TBB: 'TB',
+    TAM: 'TB',
+    KCC: 'KC',
+    JAX: 'JAX',
+    JAC: 'JAX',
+    LVR: 'LV',
+    OAK: 'LV',
+    SFO: 'SF',
+    SFR: 'SF',
+    WAS: 'WAS',
+    WFT: 'WAS',
+    STL: 'LAR',
+    SD: 'LAC',
+    SDG: 'LAC',
+    HST: 'HOU',
+  };
+  return map[upper] || upper;
+};
+
+const historyPlayerLookup = buildPlayerLookup(historyPlayersData);
+
+const buildHistoryRows = (
+  resultsData: any,
+  teamConfigs: Map<string, { id: string; name: string; icon: string; banner: string }>,
+  playerLookup: Map<string, { name: string; position?: string; nflTeam?: string }>
+) => {
+  const picks = resultsData?.draftResults?.draftUnit?.draftPick;
+  if (!picks) return [];
+  const pickArray = Array.isArray(picks) ? picks : [picks];
+
+  return pickArray
+    .filter((p: any) => p.round && p.pick && p.franchise)
+    .map((p: any) => {
+      const roundNum = parseInt(p.round, 10);
+      const pickNum = parseInt(p.pick, 10);
+      const overallPickNumber = (roundNum - 1) * 16 + pickNum;
+      const teamName = teamConfigs.get(p.franchise)?.name || 'Unknown Team';
+      const teamBanner = teamConfigs.get(p.franchise)?.banner || '';
+      const originalTeam = parseTradeFromComment(p.comments || '');
+      const playerInfo = playerLookup.get(p.player) || {};
+      const playerName = playerInfo.name || p.player || '';
+      const position = playerInfo.position || '';
+      const nflTeam = normalizeNflTeamCode(playerInfo.nflTeam || '');
+      const headshot = buildHeadshotUrl(p.player, playerInfo.espnId);
+      const nflLogo = getNflLogoUrl(nflTeam);
+      return {
+        overallPickNumber,
+        round: roundNum,
+        pick: pickNum,
+        franchiseId: p.franchise,
+        teamName,
+        teamBanner,
+        originalTeam,
+        playerId: p.player || '',
+        playerName,
+        position,
+        nflTeam,
+        headshot,
+        nflLogo,
+        player: p.player || '',
+        notes: p.comments || '',
+      };
+    })
+    .sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+};
+
+const historyRows = buildHistoryRows(historyResultsData, teamConfigMap, historyPlayerLookup);
+const historyTeamParam = Astro.url.searchParams.get('team');
+const historyTeam =
+  historyTeamParam && historyTeamParam !== 'all' && teamConfigMap.has(historyTeamParam)
+    ? historyTeamParam
+    : 'all';
+const filteredHistoryRows = historyRows.filter((row) =>
+  historyTeam === 'all' ? true : row.franchiseId === historyTeam
+);
 ---
 
 <TheLeagueLayout title="Draft Predictor">
@@ -155,7 +310,7 @@ const finalPredictions = [...finalBase].sort(
         <p class="draft-predictor-subtitle">
           {view === 'projected' && `Projected base draft order based on current ${currentYear} season standings`}
           {view === 'final' && `Projected final draft order with traded pick ownership applied`}
-          {view === 'trades' && `Draft pick history`}
+          {view === 'history' && `Draft history and pick trades by year`}
         </p>
       </div>
       <DraftViewSelector activeView={view} />
@@ -175,12 +330,89 @@ const finalPredictions = [...finalBase].sort(
               <p>No final draft order available yet.</p>
             </div>
           )}
-          {view === 'trades' && actualDraftPicks.length > 0 && (
-            <DraftTradeHistoryView predictions={actualDraftPicks} />
-          )}
-          {view === 'trades' && actualDraftPicks.length === 0 && (
-            <div class="draft-predictor-loading">
-              <p>No draft results available yet for {nextYear}</p>
+          {view === 'history' && (
+            <div class="draft-history">
+              <div class="history-controls">
+                <label for="historyYear">Season:</label>
+                <select id="historyYear">
+                  {draftResultYears.map((yr) => (
+                    <option value={yr} selected={yr === historyYear}>{yr}</option>
+                  ))}
+                </select>
+                <label for="historyTeam">Team:</label>
+                <select id="historyTeam">
+                  <option value="all" selected={historyTeam === 'all'}>All Teams</option>
+                  {teamsList.map((team) => (
+                    <option value={team.id} selected={team.id === historyTeam}>{team.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {filteredHistoryRows.length > 0 ? (
+                <div class="history-table-wrapper">
+                  <table class="history-table">
+                    <thead>
+                      <tr>
+                        <th>Pick</th>
+                        <th>Rd.</th>
+                        <th>Team</th>
+                        <th>Original Team</th>
+                        <th>Player</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredHistoryRows.map((row) => (
+                        <tr>
+                          <td>{row.overallPickNumber}</td>
+                          <td>{row.round}.{String(row.pick).padStart(2, '0')}</td>
+                          <td>
+                            {row.teamBanner ? (
+                              <img src={row.teamBanner} alt={row.teamName} class="history-team-banner" />
+                            ) : (
+                              row.teamName
+                            )}
+                          </td>
+                          <td>{row.originalTeam ?? '—'}</td>
+                          <td>
+                            {row.playerId ? (
+                              <div class="history-player">
+                                <img
+                                  src={row.headshot}
+                                  alt={row.playerName}
+                                  class="history-player__headshot"
+                                  onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                                />
+                                <div class="history-player__meta">
+                                  <div class="history-player__name">{row.playerName || '—'}</div>
+                                  <div class="history-player__sub">
+                                    {row.nflLogo && (
+                                      <img
+                                        src={row.nflLogo}
+                                        alt={row.nflTeam}
+                                        class="history-player__logo"
+                                        onerror="this.onerror=null;this.src='/assets/nfl-logos/NFL.svg';"
+                                      />
+                                    )}
+                                    <span class="history-player__pos">{row.position || '—'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              row.player || '—'
+                            )}
+                          </td>
+                          <td class="history-notes">{row.notes || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div class="draft-predictor-loading">
+                  <p>No draft results available yet for {historyYear}</p>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -274,6 +506,136 @@ const finalPredictions = [...finalBase].sort(
     font-size: 1.125rem;
   }
 
+  .draft-history {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .history-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  .history-controls label {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .history-controls select {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    min-width: 120px;
+  }
+
+  .history-table-wrapper {
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .history-table thead {
+    background: #f8fafc;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.95rem;
+  }
+
+  .history-table th {
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .history-table td {
+    color: var(--text-secondary-color, #475569);
+  }
+
+  .history-notes {
+    max-width: 360px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-player {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .history-player__headshot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e2e8f0;
+  }
+
+  .history-player__meta {
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  .history-player__name {
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+    font-size: 0.95rem;
+  }
+
+  .history-player__sub {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-secondary-color, #475569);
+    font-size: 0.85rem;
+  }
+
+  .history-player__logo {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .history-player__pos {
+    font-weight: 600;
+  }
+
+  .history-team-banner {
+    max-height: 35px;
+    width: auto;
+    display: block;
+  }
+
+  @media (max-width: 640px) {
+    .history-controls {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 0.6rem 0.75rem;
+      font-size: 0.85rem;
+    }
+  }
+
 
   .draft-predictor-info {
     display: grid;
@@ -333,3 +695,47 @@ const finalPredictions = [...finalBase].sort(
     }
   }
 </style>
+
+<script>
+  const setupHistorySelect = () => {
+    const yearSelect = document.getElementById('historyYear');
+    const teamSelect = document.getElementById('historyTeam');
+    if (yearSelect) {
+      yearSelect.addEventListener('change', (e) => {
+        const year = e.target.value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'history');
+        url.searchParams.set('year', year);
+        if (teamSelect) {
+          const team = teamSelect.value;
+          if (team && team !== 'all') {
+            url.searchParams.set('team', team);
+          } else {
+            url.searchParams.delete('team');
+          }
+        }
+        window.location.href = url.toString();
+      });
+    }
+    if (teamSelect) {
+      teamSelect.addEventListener('change', (e) => {
+        const team = e.target.value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'history');
+        url.searchParams.set('year', yearSelect ? yearSelect.value : '');
+        if (team && team !== 'all') {
+          url.searchParams.set('team', team);
+        } else {
+          url.searchParams.delete('team');
+        }
+        window.location.href = url.toString();
+      });
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupHistorySelect);
+  } else {
+    setupHistorySelect();
+  }
+</script>

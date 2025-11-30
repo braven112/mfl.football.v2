@@ -17,6 +17,9 @@ const sortedPredictions = [...predictions].sort(
   (a, b) => a.overallPickNumber - b.overallPickNumber
 );
 
+const championUnknown = !sortedPredictions.some((p) => p.isLeagueWinner);
+const isChampionPick = (pick: DraftPrediction) => pick.pickInRound === 16;
+
 // Group picks by round
 const picksByRound = {
   1: sortedPredictions.filter((p) => p.round === 1),
@@ -45,6 +48,8 @@ const specialPicksAssigned = {
               {
                 'draft-pick--league-winner': pick.isLeagueWinner,
                 'draft-pick--toilet-bowl': pick.isToiletBowlPick,
+                'draft-pick--champion': isChampionPick(pick),
+                'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
               },
             ]}
             title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
@@ -71,6 +76,9 @@ const specialPicksAssigned = {
               <div class="draft-pick__number">
                 {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
               </div>
+              {isChampionPick(pick) && (
+                <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
+              )}
             </div>
           </div>
         ))
@@ -101,6 +109,8 @@ const specialPicksAssigned = {
               {
                 'draft-pick--league-winner': pick.isLeagueWinner,
                 'draft-pick--toilet-bowl': pick.isToiletBowlPick,
+                'draft-pick--champion': isChampionPick(pick),
+                'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
               },
             ]}
             title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
@@ -127,6 +137,9 @@ const specialPicksAssigned = {
               <div class="draft-pick__number">
                 {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
               </div>
+              {isChampionPick(pick) && (
+                <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
+              )}
             </div>
           </div>
         ))
@@ -147,7 +160,7 @@ const specialPicksAssigned = {
           <div class="draft-pick__content">
             <div class="draft-pick__name">TBD</div>
             <div class="draft-pick__number">2.18</div>
-            <div class="draft-pick__label">Consolation 2</div>
+            <div class="draft-pick__label">Consolation</div>
           </div>
         </div>
       )}
@@ -166,6 +179,8 @@ const specialPicksAssigned = {
               {
                 'draft-pick--league-winner': pick.isLeagueWinner,
                 'draft-pick--toilet-bowl': pick.isToiletBowlPick,
+                'draft-pick--champion': isChampionPick(pick),
+                'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
               },
             ]}
             title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
@@ -192,6 +207,9 @@ const specialPicksAssigned = {
               <div class="draft-pick__number">
                 {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
               </div>
+              {isChampionPick(pick) && (
+                <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
+              )}
             </div>
           </div>
         ))
@@ -199,10 +217,51 @@ const specialPicksAssigned = {
     </div>
   </div>
 
-  <!-- Special Picks Summary Section -->
+  <!-- Legend -->
+
   <div class="draft-round">
-    <h3 class="draft-round__title">Special Picks Summary</h3>
+    <h3 class="draft-round__title">Legend</h3>
     <div class="draft-round__picks">
+      <!-- Champion placeholders grouped -->
+      <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
+        <div class="draft-pick__content">
+          <div class="draft-pick__icon-container">
+            <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
+              <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
+              <rect x="4" y="42" width="56" height="8" rx="2" fill="currentColor" opacity="0.15"/>
+            </svg>
+          </div>
+          <div class="draft-pick__name">League Champion</div>
+          <div class="draft-pick__number">1.16</div>
+          <div class="draft-pick__label">Reserved</div>
+        </div>
+      </div>
+      <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
+        <div class="draft-pick__content">
+          <div class="draft-pick__icon-container">
+            <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
+              <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
+              <rect x="4" y="42" width="56" height="8" rx="2" fill="currentColor" opacity="0.15"/>
+            </svg>
+          </div>
+          <div class="draft-pick__name">League Champion</div>
+          <div class="draft-pick__number">2.16</div>
+          <div class="draft-pick__label">Reserved</div>
+        </div>
+      </div>
+      <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
+        <div class="draft-pick__content">
+          <div class="draft-pick__icon-container">
+            <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
+              <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="draft-pick__name">League Champion</div>
+          <div class="draft-pick__number">3.16</div>
+          <div class="draft-pick__label">Reserved</div>
+        </div>
+      </div>
+
       <!-- Pick 1.17 -->
       {
         sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17) ? (
@@ -290,7 +349,7 @@ const specialPicksAssigned = {
                 {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName}
               </div>
               <div class="draft-pick__number">2.18</div>
-              <div class="draft-pick__label">Consolation 2</div>
+              <div class="draft-pick__label">Consolation</div>
             </div>
           </div>
         ) : (
@@ -298,7 +357,7 @@ const specialPicksAssigned = {
             <div class="draft-pick__content">
               <div class="draft-pick__name">TBD</div>
               <div class="draft-pick__number">2.18</div>
-              <div class="draft-pick__label">Consolation 2</div>
+              <div class="draft-pick__label">Consolation</div>
             </div>
           </div>
         )
@@ -306,22 +365,7 @@ const specialPicksAssigned = {
     </div>
   </div>
 
-  <!-- Legend -->
-  <div class="draft-grid-legend">
-    <div class="legend-item">
-      <div class="legend-swatch legend-swatch--league-winner"></div>
-      <span>League Champion (Pick 16)</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-swatch legend-swatch--toilet-bowl"></div>
-      <span>Toilet Bowl Winner</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-swatch legend-swatch--tbd"></div>
-      <span>To Be Determined</span>
-    </div>
-  </div>
-</div>
+
 
 <style>
   .draft-rounds-container {
@@ -374,6 +418,16 @@ const specialPicksAssigned = {
   .draft-pick--league-winner {
     background: #fffbeb;
     border-color: #fbbf24;
+  }
+
+  .draft-pick--champion {
+    background: #fff7ed;
+    border-color: #fb923c;
+    color: #c2410c;
+  }
+
+  .draft-pick--champion-tbd {
+    border-style: dashed;
   }
 
   .draft-pick--league-winner:hover {
@@ -433,6 +487,7 @@ const specialPicksAssigned = {
     height: 40px;
     object-fit: contain;
     flex-shrink: 0;
+    color: #fb923c;
   }
 
   .draft-pick__icon--original {
@@ -444,6 +499,7 @@ const specialPicksAssigned = {
     border: 1px solid #fff;
     border-radius: 50%;
     object-fit: contain;
+    background-color: var(--card-bg-color, #fff);
   }
 
   .draft-pick__name {
