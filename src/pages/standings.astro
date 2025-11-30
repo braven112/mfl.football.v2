@@ -231,7 +231,7 @@ const defendingChampions = championsByYear[previousYear] || {};
 
   .standings-hero {
     display: grid;
-    grid-template-columns: 1fr auto;
+    justify-content: center;
     align-items: center;
     gap: 1.5rem;
     padding: 2rem;
@@ -239,14 +239,18 @@ const defendingChampions = championsByYear[previousYear] || {};
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
   }
-
+@media screen and (min-width: 600px) {
+  .standings-hero {
+    grid-template-columns: 1fr auto;
+  }
+}
   .standings-hero__text h1 {
     margin: 0;
   }
 
   .standings-hero__actions {
-    display: flex;
-    justify-content: flex-end;
+    display: grid;
+    justify-content: center;
   }
 
   .standings-filters {
