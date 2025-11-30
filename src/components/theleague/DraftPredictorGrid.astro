@@ -1,7 +1,7 @@
 ---
 /**
  * DraftPredictorGrid - Grid display of all draft picks organized by round
- * Shows picks grouped by round with special picks marked as TBD
+ * Shows picks grouped by round with Compensatory picks marked as TBD
  */
 
 import type { DraftPrediction } from '../../types/standings';
@@ -39,7 +39,7 @@ const picksByRound = {
   3: sortedPredictions.filter((p) => p.round === 3),
 };
 
-// Check which special picks have assignments
+// Check which Compensatory picks have assignments
 const specialPicksAssigned = {
   '1.17': sortedPredictions.some((p) => p.round === 1 && p.pickInRound === 17),
   '2.17': sortedPredictions.some((p) => p.round === 2 && p.pickInRound === 17),
@@ -50,7 +50,7 @@ const specialPicksAssigned = {
 <div class="draft-rounds-container">
   <!-- Round 1 -->
   <div class="draft-round">
-    <h3 class="draft-round__title">Round 1 (Picks 1-16 + Special 1.17)</h3>
+    <h3 class="draft-round__title">Round 1 (Picks 1-16 + Compensatory 1.17)</h3>
     <div class="draft-round__picks">
       {
         picksByRound[1].map((pick) => (
@@ -111,7 +111,7 @@ const specialPicksAssigned = {
 
   <!-- Round 2 -->
   <div class="draft-round">
-    <h3 class="draft-round__title">Round 2 (Picks 17-32 + Special 2.17, 2.18)</h3>
+    <h3 class="draft-round__title">Round 2 (Picks 17-32 + Compensatory 2.17, 2.18)</h3>
     <div class="draft-round__picks">
       {
         picksByRound[2].map((pick) => (
@@ -157,7 +157,7 @@ const specialPicksAssigned = {
         ))
       }
 
-      <!-- Special Picks 2.17 and 2.18 if not assigned -->
+      <!-- Compensatory Picks 2.17 and 2.18 if not assigned -->
       {!specialPicksAssigned['2.17'] && (
         <div class="draft-pick draft-pick--tbd draft-pick--special">
           <div class="draft-pick__content">

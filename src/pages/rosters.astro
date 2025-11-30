@@ -5060,6 +5060,13 @@ const serializedConfig = JSON.stringify({
     };
 
     applyHiddenColumns();
+    const urlViewParam = new URL(window.location.href).searchParams.get('view');
+    const validViews = ['roster', 'analytics', 'nextyear'];
+    if (urlViewParam && validViews.includes(urlViewParam)) {
+      switchView(urlViewParam);
+    } else {
+      switchView(currentView);
+    }
     updateView();
     hydrateTeamFromSession();
   };

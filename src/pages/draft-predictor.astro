@@ -306,7 +306,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>
-        <h1 class="draft-predictor-title">{nextYear} Draft Order Predictions and History</h1>
+        <h1 class="draft-predictor-title">{nextYear} Draft Order</h1>
         <p class="draft-predictor-subtitle">
           {view === 'projected' && `Projected base draft order based on current ${currentYear} season standings`}
           {view === 'final' && `Projected final draft order with traded pick ownership applied`}
@@ -434,7 +434,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
             <strong>Pick 16:</strong> League champion always receives the 16th pick
           </li>
           <li>
-            <strong>Special Picks (1.17, 2.17, 2.18):</strong> Awarded to toilet bowl tournament winners
+            <strong>Compensatory Picks (1.17, 2.17, 2.18):</strong> Awarded to toilet bowl tournament winners
           </li>
           <li>
             <strong>Tiebreakers:</strong> Uses same wild card tiebreaker rules as standings (all-play %, points for, power rating, victory points, points against)
@@ -443,14 +443,6 @@ const filteredHistoryRows = historyRows.filter((row) =>
             <strong>Updates:</strong> Refreshes in real-time as season progresses
           </li>
         </ul>
-      </div>
-
-      <div class="info-card">
-        <h3>Traded Picks</h3>
-        <p>
-          This page automatically tracks draft picks traded between teams using the MFL API.
-          Each team's actual draft capital is reflected in their {nextYear} roster view.
-        </p>
       </div>
     </div>
   </section>
