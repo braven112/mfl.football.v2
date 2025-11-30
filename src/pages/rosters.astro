@@ -2009,7 +2009,7 @@ const serializedConfig = JSON.stringify({
     text-align: left !important;
     padding-left: 0.75rem;
     padding-block: 0.25rem;
-    font-size: .9rem;
+    font-size: var(--table-cell-font-size, .75rem);
   }
 
   .deadmoney-player-heading {
@@ -2033,7 +2033,7 @@ const serializedConfig = JSON.stringify({
 }
 
   :global(.roster-table td[data-column^='year']) {
-    font-size: 0.75rem;
+    font-size: var(--table-cell-font-size, 0.75rem);
     text-align: right;
     padding-right: 0.5rem;
   }
@@ -2404,12 +2404,7 @@ const serializedConfig = JSON.stringify({
     }
   }
 
-  @media (max-width: 640px) {
-    .roster-table th,
-    .roster-table td {
-      font-size: 0.85rem;
-    }
-  }
+
 
   /* Contract Action Modal */
   :global(.contract-modal) {
