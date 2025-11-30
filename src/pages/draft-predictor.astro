@@ -306,7 +306,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>
-        <h1 class="draft-predictor-title">{nextYear} Draft Order Predictor</h1>
+        <h1 class="draft-predictor-title">{nextYear} Draft Order Predictions and History</h1>
         <p class="draft-predictor-subtitle">
           {view === 'projected' && `Projected base draft order based on current ${currentYear} season standings`}
           {view === 'final' && `Projected final draft order with traded pick ownership applied`}
@@ -464,9 +464,10 @@ const filteredHistoryRows = historyRows.filter((row) =>
 
   .draft-predictor-header {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr;
     gap: 2rem;
-    align-items: start;
+    justify-items: center;
+    align-items: center;
     padding: 2rem;
     background: #fff;
     border-radius: 8px;
@@ -477,6 +478,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
     .draft-predictor-header {
       grid-template-columns: 1fr auto;
       align-items: start;
+      justify-items: start;
     }
   }
 
