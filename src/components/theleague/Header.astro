@@ -29,6 +29,12 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
         <li><a href="https://theleague.us" class="breadcrumb-link"><span class="breadcrumb-arrow">←</span> Back to Homepage</a></li>
       </ul>
     </nav>
+    <!-- Hamburger Menu Button (moved to top bar) -->
+    <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu" aria-expanded="false">
+      <span class="hamburger-box">
+        <span class="hamburger-inner"></span>
+      </span>
+    </button>
   </div>
 </div>
 
@@ -92,14 +98,6 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
         <div class="clearfix"></div>
       </div>
       <div class="col right">
-       
-
-        <!-- Hamburger Menu Button -->
-        <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu" aria-expanded="false">
-          <span class="hamburger-box">
-            <span class="hamburger-inner"></span>
-          </span>
-        </button>
       </div>
     </div>
   </div>
@@ -156,6 +154,9 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     max-width: 1180px;
     margin: 0 auto;
     padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .breadcrumb-list {
@@ -196,6 +197,8 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     color: #e2e8f0;
     text-decoration: underline;
   }
+
+  
 
   .theleague-header {
     background: var(--primary-content-bg-color, #ffffff);
@@ -405,6 +408,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
     color: #dc2626;
   }
 
+
   /* Elegant Animated Hamburger Button */
   .hamburger-btn {
     display: flex;
@@ -439,7 +443,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   .hamburger-inner::after {
     width: 24px;
     height: 2px;
-    background-color: var(--primary-color, #1c497c);
+    background-color: var(--primary-content-bg-color, #ffffff);
     border-radius: 2px;
     position: absolute;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -464,7 +468,7 @@ const leagueHome = `${host}/${year}/home/${leagueId}`;
   .hamburger-btn:hover .hamburger-inner,
   .hamburger-btn:hover .hamburger-inner::before,
   .hamburger-btn:hover .hamburger-inner::after {
-    background-color: var(--secondary-color, #2e8743);
+    background-color: var(---accent-content-bg-color:, #ddd);
   }
 
   /* Active state - Transform to X */
