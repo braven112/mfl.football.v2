@@ -15,7 +15,7 @@ const { activeView } = Astro.props;
     title="Final Draft Order"
   >
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href="/assets/icons/sprite.svg#icon-draft-podium"></use>
+      <use href="/assets/icons/sprite.svg#icon-podium-persona"></use>
     </svg>
     <span class="view-tab__label">Final</span>
   </button>
@@ -27,7 +27,7 @@ const { activeView } = Astro.props;
     title="Projected Draft Order"
   >
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href="/assets/icons/sprite.svg#icon-numberone"></use>
+      <use href="/assets/icons/sprite.svg#icon-podium-empty"></use>
     </svg>
     <span class="view-tab__label">Base</span>
   </button>
@@ -90,10 +90,12 @@ const { activeView } = Astro.props;
     width: 100%;
     height: 100%;
     fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
   }
 
   .view-tab[data-active="true"] .view-tab__icon {
     fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
   }
 
   .view-tab__label {

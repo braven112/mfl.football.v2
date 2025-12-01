@@ -179,6 +179,11 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    key: 'weekly-results',
+    url: null, // handled separately per-week
+    parser: (t) => JSON.parse(t),
+  },
+  {
     key: 'playoffBracket',
     url: `${host}/${year}/export?TYPE=playoffBracket&L=${leagueId}&JSON=1`,
     parser: (t) => JSON.parse(t),
@@ -194,6 +199,21 @@ const fetchText = async (url) => {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Fetch failed ${res.status} ${url}`);
   return res.text();
+};
+
+const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+const fetchTextWithRetry = async (url, retries = 3, baseDelayMs = 1500) => {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fetchText(url);
+    } catch (err) {
+      if (attempt === retries - 1) throw err;
+      const wait = baseDelayMs * (attempt + 1);
+      console.warn(`Retrying ${url} in ${wait}ms (${err.message})`);
+      await delay(wait);
+    }
+  }
 };
 
 const writeOut = (key, data) => {
@@ -258,6 +278,52 @@ const run = async () => {
     } catch (err) {
       console.error(`Failed ${key}:`, err.message);
     }
+  }
+
+  // Fetch weekly results (weeks 1–14) more gently to avoid hammering MFL.
+  const weeks = Array.from({ length: 14 }, (_, idx) => idx + 1);
+  const weeklyResults = [];
+  for (const weekNum of weeks) {
+    const weekUrl = `${host}/${year}/export?TYPE=weeklyResults&L=${leagueId}&JSON=1&W=${weekNum}`;
+    try {
+      console.log(`Fetching weeklyResults week ${weekNum} from ${weekUrl}`);
+      const text = await fetchTextWithRetry(weekUrl, 4, 2000);
+      const parsed = JSON.parse(text);
+      weeklyResults.push(parsed);
+    } catch (err) {
+      console.error(`Failed weeklyResults week ${weekNum}:`, err.message);
+    }
+    // Slow down between calls to be polite
+    await delay(1200);
+  }
+
+  if (weeklyResults.length > 0) {
+    writeOut('weekly-results-raw', weeklyResults);
+    const normalized = {
+      weeks: weeklyResults.map((weekPayload) => {
+        const weekVal = Number(weekPayload?.weeklyResults?.week) || undefined;
+        const matchups = weekPayload?.weeklyResults?.matchup
+          ? Array.isArray(weekPayload.weeklyResults.matchup)
+            ? weekPayload.weeklyResults.matchup
+            : [weekPayload.weeklyResults.matchup]
+          : [];
+        const scores = {};
+        matchups.forEach((m) => {
+          const franchises = m?.franchise
+            ? Array.isArray(m.franchise)
+              ? m.franchise
+              : [m.franchise]
+            : [];
+          franchises.forEach((team) => {
+            if (team?.id) {
+              scores[String(team.id)] = Number(team.score) || 0;
+            }
+          });
+        });
+        return { week: weekVal, scores };
+      }),
+    };
+    writeOut('weekly-results', normalized);
   }
 
   fs.writeFileSync(

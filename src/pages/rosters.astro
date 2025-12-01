@@ -909,7 +909,7 @@ const serializedConfig = JSON.stringify({
             </button>
             <button class="view-tab" data-view="nextyear" data-active="false" aria-label="Next Year View" title="Next Year View">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href="/assets/icons/sprite.svg#icon-calendar"></use>
+                <use href="/assets/icons/sprite.svg#icon-chalkboard"></use>
               </svg>
               <span class="view-tab__label">Next Year</span>
             </button>
@@ -1606,15 +1606,20 @@ const serializedConfig = JSON.stringify({
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    padding: 0.75rem;
+    padding: 0.5rem .7rem;
     border: 2px solid transparent;
     border-radius: 0.5rem;
     background: #f8fafc;
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    min-width: 69px;
   }
-
+  @media (min-width: 640px) {
+    .view-tab {
+    padding: 0.75rem;
+    }
+  }
   .view-tab:hover {
     background: #e2e8f0;
     border-color: #cbd5e1;
@@ -1629,10 +1634,12 @@ const serializedConfig = JSON.stringify({
     width: var(--icon-btn-default-size, 30px);
     height: var(--icon-btn-default-size, 30px);
     fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
   }
 
   .view-tab[data-active="true"] .view-tab__icon {
     fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
   }
 
   .view-tab__label {

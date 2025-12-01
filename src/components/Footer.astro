@@ -21,6 +21,11 @@
 			<div class="footer-info">
 				<p class="copyright">© 2025 MFL.football. All rights reserved.</p>
 				<div class="footer-links">
+					<div class="footer-link-group">
+						<span class="footer-link-label">Assets</span>
+						<a href="/theleague" class="footer-link">Team Assets</a>
+						<a href="/icons" class="footer-link">Sprite Icons</a>
+					</div>
 					<a href="#" class="social-link">
 						<!-- Simple social icon placeholder -->
 						<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -90,8 +95,33 @@
 
 	.footer-links {
 		display: flex;
-		gap: 1rem;
+		gap: 1.5rem;
 		align-items: center;
+	}
+
+	.footer-link-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		align-items: flex-start;
+	}
+
+	.footer-link-label {
+		font-weight: 700;
+		font-size: 0.9rem;
+		color: #cbd5e1;
+	}
+
+	.footer-link {
+		color: white;
+		text-decoration: none;
+		font-size: 0.9rem;
+		transition: color 0.2s ease;
+	}
+
+	.footer-link:hover,
+	.footer-link:focus-visible {
+		color: #dc2626;
 	}
 
 	.social-link {
@@ -131,5 +161,9 @@
       justify-content: center;
       flex-wrap: wrap;
     }
+
+		.footer-link-group {
+			align-items: center;
+		}
 	}
 </style>
