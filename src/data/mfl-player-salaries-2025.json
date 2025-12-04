@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-12-04T02:56:55.122Z"
+    "fetchedAt": "2025-12-04T03:33:31.560Z"
   },
   "players": [
     {
@@ -13589,80 +13589,6 @@
       ]
     },
     {
-      "id": "16215",
-      "name": "Musgrave, Luke",
-      "position": "TE",
-      "salary": 1850000,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 14.5,
-      "team": "GB",
-      "draftYear": 2023,
-      "draftTeam": "GBP",
-      "birthdate": 967870800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16215_thumb.jpg",
-      "externalIds": {
-        "mfl": "16215",
-        "sleeper": "9481",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "9481",
-        "fullName": "Luke Musgrave",
-        "team": "GB",
-        "age": 25,
-        "height": "78",
-        "weight": "253",
-        "number": 88,
-        "college": "Oregon State",
-        "birthDate": "2000-09-02",
-        "status": "Active",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 13,
-        "season": "2025",
-        "player": "Luke Musgrave",
-        "team": "GB",
-        "position": "TE",
-        "offenseSnaps": 37,
-        "offenseSnapPct": 0.59,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "MusgLu00",
-        "gamesPlayed": 12,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11,
-          12,
-          13
-        ]
-      },
-      "gamesPlayed": 12,
-      "depthChartAhead": null
-    },
-    {
       "id": "17076",
       "name": "Bond, Isaiah",
       "position": "WR",
@@ -13956,6 +13882,84 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": null
+    },
+    {
+      "id": "16788",
+      "name": "Vele, Devaughn",
+      "position": "WR",
+      "salary": 850000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 19.5,
+      "team": "NO",
+      "draftYear": 2024,
+      "draftTeam": "DEN",
+      "birthdate": 881902800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16788_thumb.jpg",
+      "externalIds": {
+        "mfl": "16788",
+        "sleeper": "11834",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11834",
+        "fullName": "Devaughn Vele",
+        "team": "NO",
+        "age": 27,
+        "height": "77",
+        "weight": "210",
+        "number": 14,
+        "college": "Utah",
+        "birthDate": "1997-12-12",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 1,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 13,
+        "season": "2025",
+        "player": "Devaughn Vele",
+        "team": "NO",
+        "position": "WR",
+        "offenseSnaps": 63,
+        "offenseSnapPct": 0.88,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 1,
+        "stSnapPct": 0.04,
+        "pfrPlayerId": "VeleDe00",
+        "gamesPlayed": 11,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          12,
+          13
+        ]
+      },
+      "gamesPlayed": 11,
+      "depthChartAhead": [
+        {
+          "id": "15754",
+          "name": "Olave, Chris"
+        }
+      ]
     },
     {
       "id": "16628",
@@ -19587,12 +19591,7 @@
         ]
       },
       "gamesPlayed": 8,
-      "depthChartAhead": [
-        {
-          "id": "16215",
-          "name": "Musgrave, Luke"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15259",
