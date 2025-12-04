@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-12-04T01:25:41.824Z"
+    "fetchedAt": "2025-12-04T02:15:59.387Z"
   },
   "players": [
     {
@@ -197,7 +197,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -238,6 +238,10 @@
         {
           "id": "15761",
           "name": "Shakir, Khalil"
+        },
+        {
+          "id": "15319",
+          "name": "Palmer, Joshua"
         }
       ]
     },
@@ -1280,7 +1284,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -1331,6 +1335,10 @@
         {
           "id": "17079",
           "name": "Johnson, Tez"
+        },
+        {
+          "id": "11671",
+          "name": "Evans, Mike"
         }
       ]
     },
@@ -3866,7 +3874,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -3903,7 +3911,12 @@
         ]
       },
       "gamesPlayed": 10,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14842",
+          "name": "Pittman, Michael"
+        }
+      ]
     },
     {
       "id": "0522",
@@ -6784,7 +6797,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 8,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "DB",
           "WR"
@@ -12419,7 +12432,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -12793,12 +12806,12 @@
       "gamesPlayed": 11,
       "depthChartAhead": [
         {
-          "id": "15768",
-          "name": "Pierce, Alec"
-        },
-        {
           "id": "14842",
           "name": "Pittman, Michael"
+        },
+        {
+          "id": "15768",
+          "name": "Pierce, Alec"
         }
       ]
     },
@@ -13764,7 +13777,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -14002,12 +14015,12 @@
           "name": "Johnson, Tez"
         },
         {
-          "id": "12658",
-          "name": "Shepard, Sterling"
-        },
-        {
           "id": "11671",
           "name": "Evans, Mike"
+        },
+        {
+          "id": "12658",
+          "name": "Shepard, Sterling"
         }
       ]
     },
@@ -15660,12 +15673,12 @@
           "name": "Shakir, Khalil"
         },
         {
-          "id": "16617",
-          "name": "Coleman, Keon"
-        },
-        {
           "id": "15319",
           "name": "Palmer, Joshua"
+        },
+        {
+          "id": "16617",
+          "name": "Coleman, Keon"
         }
       ]
     },
@@ -17211,7 +17224,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -17250,12 +17263,7 @@
         ]
       },
       "gamesPlayed": 12,
-      "depthChartAhead": [
-        {
-          "id": "15768",
-          "name": "Pierce, Alec"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "14127",
@@ -17290,7 +17298,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -18847,7 +18855,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -19997,7 +20005,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -20815,84 +20823,6 @@
       ]
     },
     {
-      "id": "16608",
-      "name": "Holani, George",
-      "position": "RB",
-      "salary": 475000,
-      "franchiseId": "0012",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 31.6,
-      "team": "SEA",
-      "draftYear": 2024,
-      "draftTeam": "FA",
-      "birthdate": 945320400,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16608_thumb.jpg",
-      "externalIds": {
-        "mfl": "16608",
-        "sleeper": "12048",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "12048",
-        "fullName": "George Holani",
-        "team": "SEA",
-        "age": 25,
-        "height": "71",
-        "weight": "210",
-        "number": 36,
-        "college": "Boise State",
-        "birthDate": "1999-12-16",
-        "status": "Inactive",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 4,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 1,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Hamstring",
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 12,
-        "season": "2025",
-        "player": "George Holani",
-        "team": "SEA",
-        "position": "RB",
-        "offenseSnaps": 0,
-        "offenseSnapPct": 0,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 5,
-        "stSnapPct": 0.19,
-        "pfrPlayerId": "HolaGe00",
-        "gamesPlayed": 11,
-        "gamesPlayedWeeks": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          9,
-          10,
-          11,
-          12
-        ]
-      },
-      "gamesPlayed": 11,
-      "depthChartAhead": [
-        {
-          "id": "16169",
-          "name": "Charbonnet, Zach"
-        }
-      ]
-    },
-    {
       "id": "12616",
       "name": "Brissett, Jacoby",
       "position": "QB",
@@ -20996,7 +20926,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "RB"
         ],
@@ -21034,6 +20964,84 @@
         {
           "id": "16757",
           "name": "Vidal, Kimani"
+        }
+      ]
+    },
+    {
+      "id": "16608",
+      "name": "Holani, George",
+      "position": "RB",
+      "salary": 475000,
+      "franchiseId": "0012",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 31.6,
+      "team": "SEA",
+      "draftYear": 2024,
+      "draftTeam": "FA",
+      "birthdate": 945320400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16608_thumb.jpg",
+      "externalIds": {
+        "mfl": "16608",
+        "sleeper": "12048",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12048",
+        "fullName": "George Holani",
+        "team": "SEA",
+        "age": 25,
+        "height": "71",
+        "weight": "210",
+        "number": 36,
+        "college": "Boise State",
+        "birthDate": "1999-12-16",
+        "status": "Inactive",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 1,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Hamstring",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 12,
+        "season": "2025",
+        "player": "George Holani",
+        "team": "SEA",
+        "position": "RB",
+        "offenseSnaps": 0,
+        "offenseSnapPct": 0,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 5,
+        "stSnapPct": 0.19,
+        "pfrPlayerId": "HolaGe00",
+        "gamesPlayed": 11,
+        "gamesPlayedWeeks": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "gamesPlayed": 11,
+      "depthChartAhead": [
+        {
+          "id": "16169",
+          "name": "Charbonnet, Zach"
         }
       ]
     },
@@ -22431,7 +22439,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -22470,10 +22478,6 @@
         {
           "id": "15761",
           "name": "Shakir, Khalil"
-        },
-        {
-          "id": "16617",
-          "name": "Coleman, Keon"
         }
       ]
     },
@@ -22874,7 +22878,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -22917,10 +22921,6 @@
         {
           "id": "17079",
           "name": "Johnson, Tez"
-        },
-        {
-          "id": "12658",
-          "name": "Shepard, Sterling"
         }
       ]
     },
