@@ -9,10 +9,15 @@ import {
   getLeagueStandings,
   getAllPlayStandings,
 } from '../../utils/standings';
-import type { DivisionStandings } from '../types/standings';
+import type { DivisionStandings } from '../../types/standings';
+import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
 
-// Import standings data
-const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
+// Get league context from URL
+const league = getLeagueContext(Astro.url);
+const baseUrl = getLeagueBaseUrl(league);
+
+// Import standings data for AFL Fantasy
+const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
   eager: true,
 });
 
@@ -32,17 +37,17 @@ const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 
 // Validate that the requested year is available; redirect to default if not
 if (!availableYears.includes(selectedYear)) {
-  return Astro.redirect(`/standings?year=${defaultYear}`);
+  return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
 }
 
 // Get standings data for selected year
-const selectedFeed = standingsFeeds[`../data/mfl-feeds/${selectedYear}/standings.json`] as
+const selectedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
   | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
   | undefined;
 
 // Check if data is valid (has leagueStandings and no error)
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
-  return Astro.redirect(`/standings?year=${defaultYear}`);
+  return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
 }
 
 const franchises = selectedFeed.leagueStandings.franchise;
