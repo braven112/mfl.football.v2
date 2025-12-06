@@ -1,221 +1,222 @@
 {
-  "leagueId": "13522",
-  "name": "The League",
-  "domain": "theleague.us",
-  "teams": 16,
-  "draftRounds": 3,
-  "structure": "single-conference",
-  "divisions": ["Northwest", "Central", "Southwest", "East"],
+  "leagueId": "19621",
+  "name": "American Football League",
+  "domain": "afl-fantasy.com",
+  "teams": 24,
+  "draftRounds": 9,
+  "keepers": 7,
+  "structure": "two-conference",
+  "conferences": [
+    { "name": "Conference A", "code": "00", "divisions": ["North", "South"] },
+    { "name": "Conference B", "code": "01", "divisions": ["East", "West"] }
+  ],
+  "divisions": ["00", "01", "02", "03"],
   "theme": {
-    "primaryColor": "#1c497c",
-    "secondaryColor": "#3c9950",
-    "cssBundle": "theleague_main.css",
-    "jsBundle": "theleague-tools.js"
+    "primaryColor": "#c41e3a",
+    "secondaryColor": "#002244",
+    "cssBundle": "afl_main.css",
+    "jsBundle": "afl-tools.js"
   },
   "features": {
-    "salaryAverages": true,
-    "toiletBowl": true,
+    "salaryAverages": false,
+    "toiletBowl": false,
     "draftPredictor": true,
-    "contractManagement": true
+    "contractManagement": false
   },
-  "allowedLeagues": ["13522", "18202"],
+  "allowedLeagues": ["19621"],
   "assetDomain": "https://mfl.football",
   "teams": [
     {
       "franchiseId": "0001",
-      "name": "Pacific Pigskins",
-      "aliases": [
-        "Pigskins",
-        "Skins",
-        "Pigs"
-      ],
-      "division": "Northwest",
-      "icon": "/assets/theleague/icons/pigskins.png",
-      "banner": "/assets/theleague/banners/pigskins.png",
-      "groupMe": "/assets/theleague/group-me/pigskins.png"
+      "name": "Smokane FC",
+      "abbrev": "SMOKE",
+      "division": "00",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane.png"
     },
     {
       "franchiseId": "0002",
-      "name": "Da Dangsters",
-      "division": "Northwest",
-      "aliases": [
-        "Dangsters",
-        "DD"
-      ],
-      "icon": "/assets/theleague/icons/da_dangsters.png",
-      "banner": "/assets/theleague/banners/da_dangsters.png",
-      "groupMe": "/assets/theleague/group-me/da_dangsters.png"
+      "name": "Drunk Indians",
+      "abbrev": "DRUNK",
+      "division": "00",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians.png"
     },
     {
       "franchiseId": "0003",
-      "name": "Maverick",
-      "division": "Central",
-      "aliases": [
-        "Mavs",
-        "Mavericks"
-      ],
-      "icon": "/assets/theleague/icons/maverick.png",
-      "banner": "/assets/theleague/banners/maverick.png",
-      "groupMe": "/assets/theleague/group-me/maverick.png"
+      "name": "Team Minty Fresh",
+      "abbrev": "MINT",
+      "division": "01",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh.png"
     },
     {
       "franchiseId": "0004",
-      "name": "Heavy Chevy",
-      "division": "Southwest",
-      "aliases": [
-        "Heavy",
-        "Chevy"
-      ],
-      "icon": "/assets/theleague/icons/heavy_chevy.png",
-      "banner": "/assets/theleague/banners/heavy_chevy.png",
-      "groupMe": "/assets/theleague/group-me/heavy_chevy.png"
+      "name": "Get off my Ditka",
+      "abbrev": "DITKA",
+      "division": "00",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/ditka_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/ditka.png"
     },
     {
       "franchiseId": "0005",
-      "name": "The Mariachi Ninjas",
-      "division": "Central",
-      "aliases": [
-        "Ninjas",
-        "Mariachi Ninjas"
-      ],
-      "icon": "/assets/theleague/icons/ninjas.png",
-      "banner": "/assets/theleague/banners/ninjas.png",
-      "groupMe": "/assets/theleague/group-me/ninjas.png"
+      "name": "Computer Jocks",
+      "abbrev": "JOCKS",
+      "division": "01",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks.png"
     },
     {
       "franchiseId": "0006",
-      "name": "Music City Mafia",
-      "aliases": [
-        "Music City",
-        "Mafia"
-      ],
-      "division": "Southwest",
-      "icon": "/assets/theleague/icons/music_city.png",
-      "banner": "/assets/theleague/banners/music_city.png",
-      "groupMe": "/assets/theleague/group-me/music_city.png"
+      "name": "Da Dangsters",
+      "abbrev": "DANG",
+      "division": "00",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters.png"
     },
     {
       "franchiseId": "0007",
-      "name": "Fire Ready Aim",
-      "division": "East",
-      "icon": "/assets/theleague/icons/fire_ready_aim.png",
-      "banner": "/assets/theleague/banners/fire_ready_aim.png",
-      "groupMe": "/assets/theleague/group-me/fire_ready_aim.png"
+      "name": "Avenging Amish",
+      "abbrev": "AMISH",
+      "division": "01",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish.png"
     },
     {
       "franchiseId": "0008",
-      "name": "Bring The Pain",
-      "aliases": [
-        "Pain",
-        "BTP"
-      ],
-      "division": "Central",
-      "icon": "/assets/theleague/icons/bring_the_pain.png",
-      "banner": "/assets/theleague/banners/bring_the_pain.png",
-      "groupMe": "/assets/theleague/group-me/bring_the_pain.png"
+      "name": "Dicks out for Harambe",
+      "abbrev": "DICK",
+      "division": "01",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe.png"
     },
     {
       "franchiseId": "0009",
-      "name": "Wascawy Wabbits",
-      "aliases": [
-        "Wabbits",
-        "WW"
-      ],
-      "division": "East",
-      "icon": "/assets/theleague/icons/wabbits.png",
-      "banner": "/assets/theleague/banners/wabbits.png",
-      "groupMe": "/assets/theleague/group-me/wabbits.png"
+      "name": "Vitside Mafia",
+      "abbrev": "VIT",
+      "division": "01",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/vitside_mafia_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/11/vitside.jpg"
     },
     {
       "franchiseId": "0010",
-      "name": "Computer Jocks",
-      "division": "Northwest",
-      "aliases": [
-        "Jocks",
-        "CPU Jocks",
-        "cpu jocks"
-      ],
-      "icon": "/assets/theleague/icons/computer_jocks.png",
-      "banner": "/assets/theleague/banners/computer_jocks.png",
-      "groupMe": "/assets/theleague/group-me/computer_jocks.png"
+      "name": "Fullybaked",
+      "abbrev": "BAKD",
+      "division": "00",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked.png"
     },
     {
       "franchiseId": "0011",
       "name": "Midwestside Connection",
-      "division": "Southwest",
-      "aliases": [
-        "midwest",
-        "Midwestside",
-        "midwestside",
-        "mws",
-        "mwc"
-      ],
-      "icon": "/assets/theleague/icons/midwestside.png",
-      "banner": "/assets/theleague/banners/midwestside.png",
-      "groupMe": "/assets/theleague/group-me/midwestside.png"
+      "abbrev": "MWS",
+      "division": "01",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/midwestside_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/11/midwestside.jpg"
     },
     {
       "franchiseId": "0012",
-      "name": "Vitside Mafia",
-      "division": "Northwest",
-      "icon": "/assets/theleague/icons/vitside_mafia.png",
-      "banner": "/assets/theleague/banners/vitside_mafia.png",
-      "groupMe": "/assets/theleague/group-me/vitside_mafia.png"
+      "name": "Suh girls, one cup",
+      "abbrev": "SHIT",
+      "division": "00",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls-icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls.png"
     },
     {
       "franchiseId": "0013",
-      "name": "Gridiron Geeks",
-      "aliases": [
-        "Geeks",
-        "GG"
-      ],
-      "division": "Southwest",
-      "icon": "/assets/theleague/icons/geeks.png",
-      "banner": "/assets/theleague/banners/geeks.png",
-      "groupMe": "/assets/theleague/group-me/geeks.png"
+      "name": "Muck Juggling Micks",
+      "abbrev": "MICKS",
+      "division": "03",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks-icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks.png"
     },
     {
       "franchiseId": "0014",
-      "name": "Cowboy Up",
-      "aliases": [
-        "Cowboy",
-        "CU"
-      ],
-      "division": "Central",
-      "icon": "/assets/theleague/icons/cowboy_up.png",
-      "banner": "/assets/theleague/banners/cowboy_up.png",
-      "groupMe": "/assets/theleague/group-me/cowboy_up.png"
+      "name": "Thundering Herd",
+      "abbrev": "HERD",
+      "division": "03",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd.png"
     },
     {
       "franchiseId": "0015",
-      "name": "Dark Magicians of Chaos",
-      "division": "East",
-      "aliases": [
-        "Dark Magicians",
-        "Dark Magician",
-        "DMC",
-        "DMOC",
-        "dark magicians",
-        "dark magician",
-        "dmc"
-      ],
-      "icon": "/assets/theleague/icons/dark_magicians.png",
-      "banner": "/assets/theleague/banners/dark_magicians.png",
-      "groupMe": "/assets/theleague/group-me/dark_magicians.png"
+      "name": "The Mariachi Ninjas",
+      "abbrev": "NINJAS",
+      "division": "02",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas.png"
     },
     {
       "franchiseId": "0016",
-      "name": "Running down the Dream",
-      "division": "East",
-      "aliases": [
-        "The Dream",
-        "dream",
-        "Dream",
-        "RDTD"
-      ],
-      "icon": "/assets/theleague/icons/the_dream.png",
-      "banner": "/assets/theleague/banners/the_dream.png",
-      "groupMe": "/assets/theleague/group-me/the_dream.png"
+      "name": "Swiftie 4 Life",
+      "abbrev": "SWIFTY",
+      "division": "03",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life.png"
+    },
+    {
+      "franchiseId": "0017",
+      "name": "Titsburgh Feelers",
+      "abbrev": "TITS",
+      "division": "02",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers.png"
+    },
+    {
+      "franchiseId": "0018",
+      "name": "Jewpacabra",
+      "abbrev": "JEW",
+      "division": "03",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra.png"
+    },
+    {
+      "franchiseId": "0019",
+      "name": "Badd Boys",
+      "abbrev": "BADD",
+      "division": "02",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys.png"
+    },
+    {
+      "franchiseId": "0020",
+      "name": "The Boondock Saints",
+      "abbrev": "SAINTS",
+      "division": "03",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints.png"
+    },
+    {
+      "franchiseId": "0021",
+      "name": "Chatmaster",
+      "abbrev": "CHAT",
+      "division": "03",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/chatmastericon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/10/chatmaster.jpg"
+    },
+    {
+      "franchiseId": "0022",
+      "name": "Balls Deep",
+      "abbrev": "BALLS",
+      "division": "02",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep.png"
+    },
+    {
+      "franchiseId": "0023",
+      "name": "Bring the Pain",
+      "abbrev": "PAIN",
+      "division": "02",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/bring_the_pain_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/bring_the_pain.png"
+    },
+    {
+      "franchiseId": "0024",
+      "name": "Amish Mafia",
+      "abbrev": "AMISH2",
+      "division": "02",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/amishmafia_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/amishmafia.png"
     }
   ]
 }
