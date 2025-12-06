@@ -1,0 +1,149 @@
+---
+/**
+ * DraftPredictorView - Wrapper component for draft predictor with toggle between projected and actual views
+ * Handles switching between "Projected Order" and "Actual (With Trades)" views
+ */
+
+import type { DraftPrediction } from '../../types/standings';
+import DraftPredictorGrid from './DraftPredictorGrid.astro';
+import DraftPredictorViewToggle from './DraftPredictorViewToggle';
+
+interface ActualPick {
+  round: string;
+  pick: string;
+  overallPickNumber: number;
+  currentFranchiseId: string;
+  currentTeamName: string;
+  originalTeamName?: string;
+  isTraded: boolean;
+}
+
+interface TeamConfig {
+  id: string;
+  name: string;
+  icon?: string;
+  banner?: string;
+}
+
+export interface Props {
+  predictions: DraftPrediction[];
+  actualPicks?: ActualPick[];
+  teamConfigs?: Map<string, TeamConfig>;
+}
+
+const { predictions, actualPicks = [], teamConfigs } = Astro.props;
+
+// Convert actual picks to a format compatible with DraftPrediction for display
+function convertActualPicksToPredictions(
+  picks: ActualPick[],
+  teamConfigs?: Map<string, TeamConfig>
+): DraftPrediction[] {
+  return picks.map((pick) => {
+    const teamConfig = teamConfigs?.get(pick.currentFranchiseId);
+    const originalTeamConfig = pick.originalTeamName
+      ? Array.from(teamConfigs?.entries() || []).find(([_, config]) => config.name === pick.originalTeamName)?.[1]
+      : undefined;
+
+    return {
+      overallPickNumber: pick.overallPickNumber,
+      round: parseInt(pick.round),
+      pickInRound: parseInt(pick.pick),
+      franchiseId: pick.currentFranchiseId,
+      teamName: pick.currentTeamName,
+      teamIcon: teamConfig?.icon || '',
+      teamBanner: teamConfig?.banner || '',
+      currentRecord: {
+        wins: 0,
+        losses: 0,
+        ties: 0,
+      },
+      currentStanding: {
+        allPlayPct: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        powerRating: 0,
+        victoryPoints: 0,
+      },
+      isToiletBowlPick: false,
+      isLeagueWinner: false,
+      originalTeamName: pick.originalTeamName,
+      originalTeamIcon: originalTeamConfig?.icon || '',
+      isTraded: pick.isTraded,
+    };
+  });
+}
+
+const displayPredictions = convertActualPicksToPredictions(actualPicks, teamConfigs);
+const hasActualPicks = actualPicks.length > 0;
+---
+
+<div class="draft-predictor-view">
+  {hasActualPicks && (
+    <>
+      <DraftPredictorViewToggle client:load predictions={predictions} actualPicks={displayPredictions} />
+      <div id="draft-grid-projected" class="draft-grid-view draft-grid-view--active">
+        <DraftPredictorGrid predictions={predictions} />
+      </div>
+      <div id="draft-grid-actual" class="draft-grid-view">
+        <DraftPredictorGrid predictions={displayPredictions} />
+      </div>
+      <script>
+        // Listen for toggle changes
+        document.addEventListener('DOMContentLoaded', () => {
+          const projectedView = document.getElementById('draft-grid-projected');
+          const actualView = document.getElementById('draft-grid-actual');
+          const toggleButtons = document.querySelectorAll('.toggle-button');
+
+          toggleButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+              const isProjected = button.textContent?.includes('Projected');
+              if (isProjected) {
+                projectedView?.classList.add('draft-grid-view--active');
+                actualView?.classList.remove('draft-grid-view--active');
+              } else {
+                projectedView?.classList.remove('draft-grid-view--active');
+                actualView?.classList.add('draft-grid-view--active');
+              }
+            });
+          });
+        });
+      </script>
+    </>
+  )}
+  {!hasActualPicks && (
+    <>
+      <div class="draft-predictor-info-notice">
+        <p>Actual draft data not yet available. Showing projected draft order based on current standings.</p>
+      </div>
+      <DraftPredictorGrid predictions={predictions} />
+    </>
+  )}
+</div>
+
+<style>
+  .draft-predictor-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .draft-grid-view {
+    display: none;
+  }
+
+  .draft-grid-view--active {
+    display: grid;
+  }
+
+  .draft-predictor-info-notice {
+    padding: 1rem;
+    background: #f0f9ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 0.5rem;
+    color: #1e40af;
+    font-size: 0.875rem;
+  }
+
+  .draft-predictor-info-notice p {
+    margin: 0;
+  }
+</style>

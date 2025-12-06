@@ -1,0 +1,243 @@
+{
+  "snapshot": "2025-11-17T07-16-11.705Z",
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2022",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2022/export?TYPE=rosters&L=13522&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2022/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2022/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-17T07:16:11.700Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-17T07:16:11.703Z"
+  },
+  "positions": {
+    "Def": {
+      "totalPlayers": 32,
+      "top3Average": 1336666.67,
+      "top5Average": 1205614.4,
+      "topPlayers": [
+        {
+          "id": "0516",
+          "name": "Cowboys, Dallas",
+          "salary": 1440000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "0502",
+          "name": "Colts, Indianapolis",
+          "salary": 1370000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0528",
+          "name": "Rams, Los Angeles",
+          "salary": 1200000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "0530",
+          "name": "49ers, San Francisco",
+          "salary": 1018072,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0504",
+          "name": "Patriots, New England",
+          "salary": 1000000,
+          "franchiseId": "0001"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 100,
+      "top3Average": 10716666.67,
+      "top5Average": 9900000,
+      "topPlayers": [
+        {
+          "id": "12626",
+          "name": "Henry, Derrick",
+          "salary": 13050000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "13404",
+          "name": "Ekeler, Austin",
+          "salary": 10000000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "13132",
+          "name": "Kamara, Alvin",
+          "salary": 9100000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "13128",
+          "name": "Cook, Dalvin",
+          "salary": 8750000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "13319",
+          "name": "Jones, Aaron",
+          "salary": 8600000,
+          "franchiseId": "0007"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 124,
+      "top3Average": 11616666.67,
+      "top5Average": 10445000,
+      "topPlayers": [
+        {
+          "id": "11675",
+          "name": "Adams, Davante",
+          "salary": 12600000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "12801",
+          "name": "Hill, Tyreek",
+          "salary": 11725000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "11232",
+          "name": "Hopkins, DeAndre",
+          "salary": 10525000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon",
+          "salary": 9125000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan",
+          "salary": 8250000,
+          "franchiseId": "0005"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 28,
+      "top3Average": 783333.33,
+      "top5Average": 705500,
+      "topPlayers": [
+        {
+          "id": "11947",
+          "name": "McManus, Brandon",
+          "salary": 900000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "10976",
+          "name": "Tucker, Justin",
+          "salary": 800000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "8851",
+          "name": "Folk, Nick",
+          "salary": 650000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "13354",
+          "name": "Butker, Harrison",
+          "salary": 600000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "11945",
+          "name": "Santos, Cairo",
+          "salary": 577500,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 51,
+      "top3Average": 7767777,
+      "top5Average": 6670666.2,
+      "topPlayers": [
+        {
+          "id": "10703",
+          "name": "Wilson, Russell",
+          "salary": 8684775,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "13116",
+          "name": "Mahomes, Patrick",
+          "salary": 7818556,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron",
+          "salary": 6800000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "12620",
+          "name": "Prescott, Dak",
+          "salary": 5025000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "5848",
+          "name": "Brady, Tom",
+          "salary": 5025000,
+          "franchiseId": "0011"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 57,
+      "top3Average": 6534584.33,
+      "top5Average": 4990750.6,
+      "topPlayers": [
+        {
+          "id": "13299",
+          "name": "Kittle, George",
+          "salary": 11000000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "11247",
+          "name": "Ertz, Zach",
+          "salary": 5775000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "13772",
+          "name": "Schultz, Dalton",
+          "salary": 2828753,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "15329",
+          "name": "Pitts, Kyle",
+          "salary": 2750000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "13189",
+          "name": "Engram, Evan",
+          "salary": 2600000,
+          "franchiseId": "0010"
+        }
+      ]
+    }
+  }
+}

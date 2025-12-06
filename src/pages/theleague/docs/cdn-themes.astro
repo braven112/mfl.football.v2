@@ -1,0 +1,272 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = true;
+
+const cdnLinkExample = `&lt;!-- Include one theme file in your HTML head --&gt;
+&lt;link rel="stylesheet" href="https://your-cdn.com/path/to/playoff-blue-green.css"&gt;`;
+
+const htmlShellExample = `&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Fantasy Football App&lt;/title&gt;
+  &lt;link rel="stylesheet" href="https://your-cdn.com/path/to/playoff-blue-green.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="report-wrapper"&gt;
+    &lt;h2&gt;Team Rankings&lt;/h2&gt;
+    &lt;table class="report"&gt;
+      &lt;thead&gt;
+        &lt;tr&gt;
+          &lt;th&gt;Team&lt;/th&gt;
+          &lt;th&gt;Points&lt;/th&gt;
+          &lt;th&gt;Record&lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+        &lt;tr class="oddtablerow"&gt;
+          &lt;td&gt;Team Alpha&lt;/td&gt;
+          &lt;td&gt;1,245&lt;/td&gt;
+          &lt;td&gt;8-2&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr class="eventablerow"&gt;
+          &lt;td&gt;Team Beta&lt;/td&gt;
+          &lt;td&gt;1,180&lt;/td&gt;
+          &lt;td&gt;7-3&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;`;
+
+const cssExample = `:root {
+  --color-primary: #your-color;
+  --bg-primary: #your-background;
+  --text-primary: #your-text-color;
+}`;
+
+const jsExample = `const themeLink = document.querySelector('link[rel="stylesheet"]');
+themeLink.href = 'https://your-cdn.com/path/to/dark-theme.css';`;
+---
+
+<Layout title="MFL.football - CDN CSS Themes">
+	<main class="doc-page">
+		<article class="doc-card">
+			<header>
+				<h1>CDN CSS Themes</h1>
+				<p>
+					This guide explains the standalone CSS theme files bundled with MFL.football. Each file can be hosted on
+					your CDN and dropped directly into an external site without a build step.
+				</p>
+			</header>
+
+			<section>
+				<h2>Available themes</h2>
+				<ul>
+					<li>
+						<strong><code>playoff-blue-green.css</code></strong> — Original playoff palette with embedded design tokens.
+					</li>
+					<li>
+						<strong><code>dark-theme.css</code></strong> — High-contrast styling tuned for low-light viewing.
+					</li>
+					<li>
+						<strong><code>light-theme.css</code></strong> — Neutral, versatile palette for general use.
+					</li>
+					<li>
+						<strong><code>blue-theme.css</code></strong> — Blue-forward palette with supporting accents.
+					</li>
+					<li>
+						<strong><code>green-theme.css</code></strong> — Nature-inspired earth tones.
+					</li>
+					<li>
+						<strong><code>red-theme.css</code></strong> — Bold red focus, great for sports or high-energy layouts.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>Use the themes from a CDN</h2>
+				<p>Serve any theme and reference it directly in your HTML:</p>
+				<pre class="code-block"><code class="language-html" set:html={cdnLinkExample}></code></pre>
+				<p>
+					Because each theme is standalone, you can swap files without additional JavaScript or build tooling.
+					Only include one theme at a time to avoid conflicting design tokens.
+				</p>
+			</section>
+
+			<section>
+				<h2>HTML starter structure</h2>
+				<p>
+					Drop the stylesheet into a simple HTML shell to get started. All typography, table styling, and
+					component classes ship with the theme file.
+				</p>
+				<pre class="code-block"><code class="language-html" set:html={htmlShellExample}></code></pre>
+			</section>
+
+			<section>
+				<h2>Included components</h2>
+				<div class="two-column">
+					<div>
+						<h3>Layout &amp; wrappers</h3>
+						<ul>
+							<li><code>.report-wrapper</code> — Primary content container.</li>
+							<li><code>.card</code> — Versatile card component.</li>
+						</ul>
+						<h3>Tables</h3>
+						<ul>
+							<li><code>.report</code> — Base league table styling.</li>
+							<li><code>.oddtablerow</code> — Alternating table row treatment.</li>
+							<li><code>.eventablerow</code> — Highlight row styling.</li>
+						</ul>
+					</div>
+					<div>
+						<h3>Buttons &amp; forms</h3>
+						<ul>
+							<li><code>.btn</code> — Primary button pattern.</li>
+							<li><code>input</code>, <code>textarea</code>, <code>select</code> — Form inputs styled for consistency.</li>
+						</ul>
+						<h3>Alerts &amp; status</h3>
+						<ul>
+							<li><code>.alert</code> — Base alert container.</li>
+							<li>
+								Variants: <code>.alert-info</code>, <code>.alert-warning</code>, <code>.alert-success</code>,
+								<code>.alert-error</code>.
+							</li>
+						</ul>
+						<h3>Utility classes</h3>
+						<ul>
+							<li><code>.hidden</code> — Quickly hide elements.</li>
+							<li><code>.text-center</code>, <code>.text-left</code>, <code>.text-right</code> — Alignment utilities.</li>
+							<li><code>.text-uppercase</code>, <code>.text-primary</code>, <code>.text-secondary</code>, <code>.text-muted</code>.</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<h2>Customize the palette</h2>
+				<p>
+					Each theme exposes CSS custom properties. Override them in your own stylesheet to tweak colors without
+					editing the distributed file.
+				</p>
+				<pre class="code-block"><code class="language-css">{cssExample}</code></pre>
+			</section>
+
+			<section>
+				<h2>Switch themes dynamically</h2>
+				<p>
+					Swap the CSS file at runtime to give users light/dark or seasonal options. The snippet below targets the
+					first stylesheet in the document and points it to a different CDN URL.
+				</p>
+				<pre class="code-block"><code class="language-js">{jsExample}</code></pre>
+			</section>
+
+			<section>
+				<h2>Font expectations</h2>
+				<p>
+					Load the fonts <code>BentonSans400</code> and <code>playoff-bold</code> before the theme stylesheet so the
+					typography renders as designed. Web font imports or self-hosted files both work.
+				</p>
+			</section>
+
+			<section>
+				<h2>Browser support</h2>
+				<p>
+					The themes lean on modern features such as CSS variables, Grid, Flexbox, and logical properties. They work
+					in the current evergreen browsers (Chrome 88+, Firefox 85+, Safari 14+, Edge 88+).
+				</p>
+			</section>
+
+			<section>
+				<h2>File sizes &amp; performance tips</h2>
+				<ul>
+					<li>Each file is minified with design tokens inlined (≈15–25KB).</li>
+					<li>Preload critical CSS with <code>&lt;link rel="preload" as="style"&gt;</code> for faster paints.</li>
+					<li>Serve from an HTTP/2 enabled CDN and enable gzip or Brotli compression.</li>
+					<li>Set long-lived cache headers and version filenames when you update.</li>
+				</ul>
+			</section>
+		</article>
+	</main>
+</Layout>
+
+<style>
+	.doc-page {
+		padding: 2.5rem 1.5rem;
+		max-width: 75ch;
+		margin: 0 auto;
+	}
+
+	.doc-card {
+		background: white;
+		border-radius: 1.25rem;
+		border: 1px solid rgba(37, 99, 235, 0.2);
+		box-shadow: 0 35px 120px rgba(15, 23, 42, 0.08);
+		padding: 3rem;
+		display: grid;
+		gap: 2.5rem;
+	}
+
+	header p {
+		margin-top: 1rem;
+		line-height: 1.7;
+		color: rgba(15, 23, 42, 0.75);
+	}
+
+	section p {
+		line-height: 1.7;
+		color: rgba(15, 23, 42, 0.75);
+	}
+
+	ul {
+		margin: 1rem 0 0 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	li {
+		padding: 0.75rem 1rem;
+		background: rgba(241, 245, 249, 0.6);
+		border-radius: 0.75rem;
+		border: 1px solid rgba(148, 163, 184, 0.3);
+	}
+
+	li code {
+		font-size: 0.95rem;
+	}
+
+	.code-block {
+		background: rgba(15, 23, 42, 0.9);
+		color: rgba(248, 250, 252, 0.95);
+		padding: 1.25rem 1.5rem;
+		border-radius: 1rem;
+		overflow-x: auto;
+		font-size: 0.95rem;
+	}
+
+	.code-block code {
+		white-space: pre;
+		display: block;
+	}
+
+	.two-column {
+		display: grid;
+		gap: 2rem;
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	}
+
+	.two-column h3 {
+		margin-top: 0;
+	}
+
+	@media (max-width: 767px) {
+		.doc-card {
+			padding: 2rem;
+		}
+	}
+</style>

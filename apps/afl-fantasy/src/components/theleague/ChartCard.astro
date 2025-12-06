@@ -1,0 +1,93 @@
+---
+/**
+ * ChartCard - Reusable card wrapper for charts and visualizations
+ * Provides consistent header/body layout across all chart components
+ */
+
+export interface Props {
+  /** Card title/heading */
+  title: string;
+  /** Optional subtitle/description */
+  subtitle?: string;
+  /** Additional CSS classes for the card */
+  class?: string;
+}
+
+const { title, subtitle, class: className } = Astro.props;
+---
+
+<div class:list={['chart-card', className]}>
+  <div class="chart-card__header">
+    <div class="chart-card__title-section">
+      <h3>{title}</h3>
+      {subtitle && <p class="chart-card__sub">{subtitle}</p>}
+    </div>
+    <div class="chart-card__actions">
+      <slot name="actions" />
+    </div>
+  </div>
+  <div class="chart-card__body">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .chart-card {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .chart-card__header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .chart-card__title-section {
+    grid-column: 1;
+  }
+
+  .chart-card__header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .chart-card__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .chart-card__sub {
+    margin: 0.15rem 0 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
+  }
+
+  .chart-card__body {
+    display: block;
+  }
+
+  @media (max-width: 640px) {
+    .chart-card {
+      padding: 0.875rem;
+    }
+
+    .chart-card__header h3 {
+      font-size: 1rem;
+    }
+
+    .chart-card__sub {
+      font-size: 0.825rem;
+    }
+  }
+</style>

@@ -1,0 +1,242 @@
+{
+  "metadata": {
+    "leagueId": "33798",
+    "season": "2011",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2011/export?TYPE=rosters&L=33798&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2011/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2011/export?TYPE=weeklyResults&L=33798&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-22T08:35:14.699Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-22T08:35:14.702Z"
+  },
+  "positions": {
+    "RB": {
+      "totalPlayers": 75,
+      "top3Average": 6418333.33,
+      "top5Average": 6040000,
+      "topPlayers": [
+        {
+          "id": "9101",
+          "name": "Stewart, Jonathan",
+          "salary": 6655000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "9122",
+          "name": "Forte, Matt",
+          "salary": 6500000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "9898",
+          "name": "Blount, LeGarrette",
+          "salary": 6100000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "9851",
+          "name": "Mathews, Ryan",
+          "salary": 5500000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "9440",
+          "name": "Wells, Beanie",
+          "salary": 5445000,
+          "franchiseId": "0010"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 95,
+      "top3Average": 8366666.67,
+      "top5Average": 7220000,
+      "topPlayers": [
+        {
+          "id": "8657",
+          "name": "Johnson, Calvin",
+          "salary": 9100000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "6931",
+          "name": "Johnson, Andre",
+          "salary": 8000000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "8293",
+          "name": "Jennings, Greg",
+          "salary": 8000000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "7393",
+          "name": "Fitzgerald, Larry",
+          "salary": 7700000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "9874",
+          "name": "Ford, Jacoby",
+          "salary": 3300000,
+          "franchiseId": "0010"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 40,
+      "top3Average": 5260000,
+      "top5Average": 3753820,
+      "topPlayers": [
+        {
+          "id": "8247",
+          "name": "Davis, Vernon",
+          "salary": 10500000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "6997",
+          "name": "Witten, Jason",
+          "salary": 3080000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "7019",
+          "name": "Shiancoe, Visanthe",
+          "salary": 2200000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "7842",
+          "name": "Miller, Heath",
+          "salary": 1525000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "6952",
+          "name": "Clark, Dallas",
+          "salary": 1464100,
+          "franchiseId": "0008"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 12,
+      "top3Average": 508333.33,
+      "top5Average": 488500,
+      "topPlayers": [
+        {
+          "id": "8074",
+          "name": "Bironas, Rob",
+          "salary": 525000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "1383",
+          "name": "Kasay, John",
+          "salary": 500000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "5818",
+          "name": "Rackers, Neil",
+          "salary": 500000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "1275",
+          "name": "Hanson, Jason",
+          "salary": 467500,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "8851",
+          "name": "Folk, Nick",
+          "salary": 450000,
+          "franchiseId": "0001"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 21,
+      "top3Average": 830603.33,
+      "top5Average": 788362,
+      "topPlayers": [
+        {
+          "id": "0521",
+          "name": "Bears, Chicago",
+          "salary": 900000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "0524",
+          "name": "Vikings, Minnesota",
+          "salary": 797500,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0531",
+          "name": "Ravens, Baltimore",
+          "salary": 794310,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "0513",
+          "name": "Raiders, Oakland",
+          "salary": 750000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "0518",
+          "name": "Eagles, Philadelphia",
+          "salary": 700000,
+          "franchiseId": "0012"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 45,
+      "top3Average": 6567653.33,
+      "top5Average": 5808501.34,
+      "topPlayers": [
+        {
+          "id": "4925",
+          "name": "Brees, Drew",
+          "salary": 7492320,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "4891",
+          "name": "Vick, Michael",
+          "salary": 6500000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron",
+          "salary": 5710640,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "7394",
+          "name": "Rivers, Philip",
+          "salary": 4939198,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "7391",
+          "name": "Manning, Eli",
+          "salary": 4400348.7,
+          "franchiseId": "0009"
+        }
+      ]
+    }
+  }
+}

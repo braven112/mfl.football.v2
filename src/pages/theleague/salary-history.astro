@@ -1,0 +1,250 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+
+const summaryModules = import.meta.glob(
+  '../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
+
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const positionLabels = [
+  { key: 'QB', label: 'Quarterback' },
+  { key: 'RB', label: 'Running Back' },
+  { key: 'WR', label: 'Wide Receiver' },
+  { key: 'TE', label: 'Tight End' },
+  { key: 'PK', label: 'Kicker' },
+  { key: 'Def', label: 'Defense/ST' },
+];
+
+const summariesBySeason = {};
+Object.entries(summaryModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+  summariesBySeason[season] = getModuleData(mod);
+});
+
+const seasons = Object.keys(summariesBySeason).sort(
+  (a, b) => Number(a) - Number(b)
+);
+
+const franchiseChartData = {
+  labels: seasons,
+  datasets: positionLabels.map(({ key, label }, index) => ({
+    label,
+    borderWidth: 2,
+    tension: 0.3,
+    data: seasons.map((season) => {
+      const summary = summariesBySeason[season];
+      return summary?.positions?.[key]?.top3Average ?? null;
+    }),
+    borderColor: [
+      '#ff595e',
+      '#1982c4',
+      '#6a4c93',
+      '#ffca3a',
+      '#8ac926',
+      '#1982c4',
+    ][index % 6],
+    backgroundColor: 'transparent',
+  })),
+};
+
+const extensionChartData = {
+  labels: seasons,
+  datasets: positionLabels.map(({ key, label }, index) => ({
+    label,
+    borderWidth: 2,
+    tension: 0.3,
+    data: seasons.map((season) => {
+      const summary = summariesBySeason[season];
+      return summary?.positions?.[key]?.top5Average ?? null;
+    }),
+    borderColor: [
+      '#ff595e',
+      '#1982c4',
+      '#6a4c93',
+      '#ffca3a',
+      '#8ac926',
+      '#1982c4',
+    ][index % 6],
+    backgroundColor: 'transparent',
+  })),
+};
+
+const serializedFranchiseChart = JSON.stringify(franchiseChartData);
+const serializedExtensionChart = JSON.stringify(extensionChartData);
+---
+
+<TheLeagueLayout title="Franchise Tag History">
+  <section class="salary-history">
+    <header>
+      <h1>Salary Trends Over Time</h1>
+      <p>
+        Tracking the average of the top three (franchise tag) and top five
+        (extension) salaries at each position across available seasons. These
+        numbers reflect the data captured for the contract tools and salary
+        benchmarks.
+      </p>
+    </header>
+    {seasons.length ? (
+      <>
+        <div class="chart-toggle">
+          <button
+            type="button"
+            class="chart-toggle__btn active"
+            data-chart="franchise"
+          >
+            Franchise Tag (Top 3)
+          </button>
+          <button
+            type="button"
+            class="chart-toggle__btn"
+            data-chart="extension"
+          >
+            Extension (Top 5)
+          </button>
+        </div>
+        <div class="chart-card">
+          <canvas id="salaryHistoryChart" width="800" height="400"></canvas>
+        </div>
+      </>
+    ) : (
+      <p>No salary history data found.</p>
+    )}
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .salary-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .salary-history header h1 {
+    margin-bottom: 0.25rem;
+  }
+
+  .chart-toggle {
+    display: inline-flex;
+    gap: 0.75rem;
+  }
+
+  .chart-toggle__btn {
+    border: 1px solid #d7dce3;
+    background: #f8fafc;
+    border-radius: 999px;
+    padding: 0.4rem 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .chart-toggle__btn.active {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+
+  .chart-card {
+    background: #fff;
+    border: 1px solid #d7dce3;
+    border-radius: 0.85rem;
+    padding: 1rem;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  canvas {
+    max-width: 100%;
+  }
+</style>
+
+{seasons.length ? (
+  <script
+    type="application/json"
+    id="history-chart-franchise"
+    set:html={serializedFranchiseChart}
+  ></script>
+) : null}
+
+{seasons.length ? (
+  <script
+    type="application/json"
+    id="history-chart-extension"
+    set:html={serializedExtensionChart}
+  ></script>
+) : null}
+
+{seasons.length ? (
+  <>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+      const franchiseDataEl = document.getElementById('history-chart-franchise');
+      const extensionDataEl = document.getElementById('history-chart-extension');
+      const chartConfigs = {
+        franchise: franchiseDataEl ? JSON.parse(franchiseDataEl.textContent) : null,
+        extension: extensionDataEl ? JSON.parse(extensionDataEl.textContent) : null,
+      };
+      const ctx = document.getElementById('salaryHistoryChart');
+      if (ctx && window.Chart && chartConfigs.franchise) {
+        const chart = new Chart(ctx, {
+          type: 'line',
+          data: chartConfigs.franchise,
+          options: {
+            responsive: true,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: (context) =>
+                    `${context.dataset.label}: ${context.formattedValue}`,
+                },
+              },
+            },
+            scales: {
+              y: {
+                ticks: {
+                  callback: (value) =>
+                    new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      maximumFractionDigits: 0,
+                    }).format(value),
+                },
+                title: { display: true, text: 'Average Salary (Top 3)' },
+              },
+              x: {
+                title: { display: true, text: 'Season' },
+              },
+            },
+          },
+        });
+
+        const toggleButtons = document.querySelectorAll('.chart-toggle__btn');
+        toggleButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const key = button.dataset.chart;
+            if (!key || !chartConfigs[key]) return;
+            toggleButtons.forEach((btn) =>
+              btn.classList.toggle('active', btn === button)
+            );
+            chart.data = chartConfigs[key];
+            chart.options.scales.y.title.text =
+              key === 'franchise'
+                ? 'Average Salary (Top 3)'
+                : 'Average Salary (Top 5)';
+            chart.update();
+          });
+        });
+      }
+    </script>
+  </>
+) : null}

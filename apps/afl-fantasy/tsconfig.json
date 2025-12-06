@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@mfl/shared-types": ["../../packages/shared-types/src"],
+      "@mfl/shared-utils": ["../../packages/shared-utils/src"],
+      "@mfl/league-utils": ["../../packages/league-utils/src"],
+      "@mfl/mfl-data-fetcher": ["../../packages/mfl-data-fetcher/src"]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm run build",
+  "routes": [
+    {
+      "src": "/theleague/(.*)",
+      "dest": "/apps/theleague/dist/$1"
+    },
+    {
+      "src": "/afl-fantasy/(.*)",
+      "dest": "/apps/afl-fantasy/dist/$1"
+    },
+    {
+      "src": "/mfl-football/(.*)",
+      "dest": "/apps/mfl-football/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/apps/theleague/dist/$1"
+    }
+  ]
+}

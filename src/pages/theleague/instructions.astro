@@ -1,0 +1,388 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = true;
+---
+
+<Layout title="MFL.football - Installation Instructions">
+	<main class="instructions-page">
+		<section class="intro">
+			<h1>Installation &amp; Customization Guide</h1>
+			<p>
+				Follow these steps to launch the MFL.football template on your league site. The guide walks
+				through everything from picking a theme to wiring up Header/Footer/HPM modules and optional
+				customization touches.
+			</p>
+			<div class="cta-row">
+				<a class="cta-link secondary" href="https://www59.myfantasyleague.com/2017/home/65353" target="_blank"
+					>Live Demo</a
+				>
+				<a class="cta-link" href="/">Return to Homepage</a>
+			</div>
+		</section>
+
+		<div class="guide-layout">
+			<div class="guide-content">
+				<section id="requirements" class="card">
+					<h2>Before you start</h2>
+					<ul>
+						<li>Commissioner access to your MyFantasyLeague season.</li>
+						<li>Ability to edit Header, Footer, and Home Page Modules (HPMs).</li>
+						<li>
+							Latest theme URLs from <code>mfl.football</code>; start with the quick list below or browse the
+							repository's <code>src/assets/css</code> folder for the full catalog.
+						</li>
+					</ul>
+					<div class="theme-grid">
+						<div>
+							<h3>Popular themes</h3>
+							<ul>
+								<li><code>https://mfl.football/assets/css/dark.css</code></li>
+								<li><code>https://mfl.football/assets/css/light.css</code></li>
+								<li><code>https://mfl.football/assets/css/red.css</code></li>
+								<li><code>https://mfl.football/assets/css/green.css</code></li>
+								<li><code>https://mfl.football/assets/css/blue.css</code></li>
+							</ul>
+						</div>
+						<div>
+							<h3>Playoff favorites</h3>
+							<ul>
+								<li><code>https://mfl.football/assets/css/playoff-blue-green.css</code></li>
+								<li><code>https://mfl.football/assets/css/playoff-blue-green-optimized.css</code></li>
+								<li><code>https://mfl.football/assets/css/dist/red-theme.css</code></li>
+								<li><code>https://mfl.football/assets/css/dist/blue-theme.css</code></li>
+								<li><code>https://mfl.football/assets/css/dist/green-theme.css</code></li>
+							</ul>
+						</div>
+					</div>
+				</section>
+
+				<section id="step-1" class="card">
+					<h2>Step 1: Prep MFL settings</h2>
+					<ol>
+						<li>Log in as commissioner and open <strong>Setup &gt; Appearance &gt; Skins</strong>.</li>
+						<li>Set the selected skin to <code>None</code>. The template supplies its own styling.</li>
+						<li>
+							Open <strong>Setup &gt; Franchise Setup &gt; Images and Other URLs</strong> and locate the custom
+							CSS field.
+						</li>
+					</ol>
+					<p>
+						Leaving the skin blank ensures the MFL base styles do not conflict with the responsive grid and theme
+						colors provided by this template.
+					</p>
+				</section>
+
+				<section id="step-2" class="card">
+					<h2>Step 2: Apply a theme</h2>
+					<ol>
+						<li>Copy one of the theme URLs listed above or your own hosted stylesheet.</li>
+						<li>
+							Paste the URL into the custom CSS field and save. MFL immediately loads the stylesheet across your
+							public site.
+						</li>
+						<li>
+							Reload the league homepage. If you do not see the new theme, clear your browser cache or force
+							refresh (<code>Ctrl + F5</code> or <code>Cmd + Shift + R</code>).
+						</li>
+					</ol>
+					<p>
+						The stylesheets are intentionally lightweight, so switching themes is as simple as swapping the URL.
+						Feel free to experiment and settle on the palette that fits your league.
+					</p>
+				</section>
+
+				<section id="step-3" class="card">
+					<h2>Step 3: Configure modules</h2>
+					<p>
+						The template uses Header, Footer, and Home Page Messages to render the layout structure. Use the snippets
+						from the download package or copy from the live demo markup.
+					</p>
+					<div class="module-grid">
+						<div>
+							<h3>Header (HPM)</h3>
+							<p>Place navigation, league logo, and hero copy in this module.</p>
+							<ol>
+								<li>Go to <strong>Setup &gt; Appearance &gt; Home Page Modules</strong>.</li>
+								<li>Select <strong>Header</strong> and paste the header HTML snippet.</li>
+								<li>Update links like <code>/league_rules</code> or external resources to match your league.</li>
+							</ol>
+						</div>
+						<div>
+							<h3>Footer (HPM)</h3>
+							<p>Use this area for attribution, support links, and sponsor callouts.</p>
+							<ol>
+								<li>Select <strong>Footer</strong> in Home Page Modules.</li>
+								<li>Paste the footer snippet provided in the download.</li>
+								<li>Swap in any custom links or disclaimers.</li>
+							</ol>
+						</div>
+						<div>
+							<h3>Home Page Content</h3>
+							<p>Populate flexible sections like standings, scoreboard, news, or custom HTML widgets.</p>
+							<ol>
+								<li>Place modules in your preferred order using drag and drop.</li>
+								<li>
+									For custom HTML modules, copy markup from the demo or tailor blocks to your content while
+									keeping class names intact for styling.
+								</li>
+							</ol>
+						</div>
+					</div>
+				</section>
+
+				<section id="step-4" class="card">
+					<h2>Step 4: Personalize</h2>
+					<ul>
+						<li>
+							<strong>Logos &amp; imagery:</strong> Upload files in <strong>Setup &gt; Franchise Setup &gt; Logos</strong>,
+							then swap image URLs inside the header snippet.
+						</li>
+						<li>
+							<strong>Fonts:</strong> Add a Google Fonts import to your Header snippet before the template CSS
+							classes if you want a custom typeface.
+						</li>
+						<li>
+							<strong>Color tweaks:</strong> Add an extra stylesheet URL after the theme (e.g. a hosted
+							<code>custom.css</code>) to override variables or component colors without editing the base theme.
+						</li>
+						<li>
+							<strong>Season updates:</strong> When rolling forward to a new year, simply update references like
+							the league ID, scoreboard embed IDs, and any season-specific copy.
+						</li>
+					</ul>
+				</section>
+
+				<section id="faq" class="card">
+					<h2>FAQ &amp; Support</h2>
+					<ul>
+						<li>
+							<strong>Need help?</strong> The
+							<a href="https://forums.myfantasyleague.com/forums/index.php?showtopic=35720" target="_blank"
+								>MyFantasyLeague community forum</a
+							>
+							is active and responsive.
+						</li>
+						<li>
+							<strong>Template updates:</strong> Follow
+							<a href="https://twitter.com/MFLaddons" target="_blank">@MFLaddons</a> for theme announcements and
+							new features.
+						</li>
+						<li>
+							<strong>Report an issue:</strong> Open a ticket or DM on Twitter with your league URL and a brief
+							description so we can help quickly.
+						</li>
+					</ul>
+				</section>
+			</div>
+			<aside class="toc" aria-label="On this page">
+				<strong>On this page</strong>
+				<ul>
+					<li><a href="#requirements">Before you start</a></li>
+					<li><a href="#step-1">Step 1: Prep MFL settings</a></li>
+					<li><a href="#step-2">Step 2: Apply a theme</a></li>
+					<li><a href="#step-3">Step 3: Configure modules</a></li>
+					<li><a href="#step-4">Step 4: Personalize</a></li>
+					<li><a href="#faq">FAQ &amp; support</a></li>
+				</ul>
+			</aside>
+
+			
+		</div>
+	</main>
+</Layout>
+
+<style>
+	:root {
+		--card-bg: rgba(255, 255, 255, 0.92);
+		--card-border: rgba(37, 99, 235, 0.2);
+		--card-shadow: 0 15px 45px -25px rgba(15, 23, 42, 0.45);
+	}
+
+
+	.intro {
+		text-align: center;
+		background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(5, 150, 105, 0.95));
+		color: white;
+		padding: 3rem 2rem;
+		border-radius: 1.5rem;
+		box-shadow: var(--card-shadow);
+	}
+
+	.intro h1 {
+		margin-bottom: 1rem;
+	}
+
+	.cta-row {
+		margin-top: 2rem;
+		display: flex;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.cta-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: rgba(255, 255, 255, 0.18);
+		border: 1px solid rgba(255, 255, 255, 0.4);
+		color: white;
+		padding: 0.75rem 1.5rem;
+		border-radius: 999px;
+		text-decoration: none;
+		font-weight: 600;
+		transition: all 0.3s ease;
+	}
+
+	.cta-link.secondary {
+		background: rgba(15, 23, 42, 0.65);
+	}
+
+	.cta-link:hover {
+		background: rgba(255, 255, 255, 0.3);
+		transform: translateY(-2px);
+	}
+
+	.guide-layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 280px;
+		gap: 2.5rem;
+		align-items: start;
+	}
+
+	.guide-content {
+		display: grid;
+		gap: 2.5rem;
+		grid-column: 1;
+		min-width: 0;
+	}
+
+	.guide-layout > .toc {
+		grid-column: 2;
+		align-self: start;
+	}
+
+	.toc {
+		background: rgba(15, 23, 42, 0.04);
+		border-left: 4px solid rgba(37, 99, 235, 0.65);
+		padding: 1.5rem 1.75rem;
+		border-radius: 1rem;
+		box-shadow: var(--card-shadow);
+		position: sticky;
+		top: 2rem;
+		max-height: calc(100vh - 4rem);
+		overflow-y: auto;
+	}
+
+	.toc::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.toc::-webkit-scrollbar-thumb {
+		background: rgba(37, 99, 235, 0.35);
+		border-radius: 999px;
+	}
+
+	.toc ul {
+		list-style: none;
+		padding-left: 0;
+		margin: 0.75rem 0 0;
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.toc a {
+		color: rgba(37, 99, 235, 0.95);
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	.card {
+		background: var(--card-bg);
+		border: 1px solid var(--card-border);
+		border-radius: 1.4rem;
+		padding: 2.25rem 2rem;
+		box-shadow: var(--card-shadow);
+		backdrop-filter: blur(3px);
+		scroll-margin-top: 2rem;
+	}
+
+	.card h2 {
+		margin-top: 0;
+		margin-bottom: 1rem;
+		color: rgba(15, 23, 42, 0.92);
+	}
+
+	.card ul,
+	.card ol {
+		margin: 0;
+		padding-left: 1.4rem;
+		line-height: 1.75;
+	}
+
+	.theme-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.theme-grid h3 {
+		margin-bottom: 0.75rem;
+		color: rgba(37, 99, 235, 0.95);
+	}
+
+	.theme-grid code {
+		background: rgba(15, 23, 42, 0.04);
+		padding: 0.25rem 0.4rem;
+		border-radius: 0.4rem;
+		display: inline-block;
+	}
+
+	.module-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.module-grid h3 {
+		margin-top: 0;
+		margin-bottom: 0.5rem;
+		color: rgba(37, 99, 235, 0.95);
+	}
+
+	@media (max-width: 1024px) {
+		.guide-layout {
+			grid-template-columns: minmax(0, 1fr) 240px;
+		}
+	}
+
+	@media (max-width: 767px) {
+
+		.guide-layout {
+			grid-template-columns: 1fr;
+		}
+
+		.toc {
+			position: static;
+			max-height: none;
+			box-shadow: none;
+			grid-column: auto;
+		}
+
+		.guide-content {
+			gap: 2rem;
+			grid-column: auto;
+		}
+
+		.card {
+			padding: 1.75rem 1.5rem;
+		}
+
+		.cta-row {
+			flex-direction: column;
+		}
+	}
+</style>

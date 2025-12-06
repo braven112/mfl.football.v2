@@ -12,8 +12,8 @@ import {
   aggregateByFranchise,
   rankByPosition,
   type FranchiseMetrics,
-} from '../utils/league-comparison-utils';
-import { parseNumber } from '../utils/formatters';
+} from '@mfl/league-utils';
+import { parseNumber } from '@mfl/shared-utils';
 
 // Load roster and salary data
 const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {

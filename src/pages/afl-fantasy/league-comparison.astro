@@ -1,0 +1,225 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueAssets from '../../data/theleague.assets.json';
+import ChartCard from '../../components/theleague/ChartCard.astro';
+import BarChart from '../../components/theleague/BarChart.astro';
+import LeagueRosterStrengthChart from '../../components/theleague/LeagueRosterStrengthChart.astro';
+import PositionalRankingHeatmap from '../../components/theleague/PositionalRankingHeatmap.astro';
+import ContractHealthBadges from '../../components/theleague/ContractHealthBadges.astro';
+import PointsBreakdownTable from '../../components/theleague/PointsBreakdownTable.astro';
+import DraftCapitalTable from '../../components/theleague/DraftCapitalTable.astro';
+import {
+  aggregateByFranchise,
+  rankByPosition,
+  type FranchiseMetrics,
+} from '../../utils/league-comparison-utils';
+import { parseNumber } from '../../utils/formatters';
+
+// Load roster and salary data
+const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
+  eager: true,
+});
+const salaryAdjustmentFeeds = import.meta.glob(
+  '../data/mfl-feeds/*/salaryAdjustments.json',
+  {
+    eager: true,
+  }
+);
+
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const extractFeedSeason = (filepath) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Get team lookup
+const teamsList = (leagueAssets.teams ?? []).map((team) => ({
+  id: team.id,
+  name: team.name,
+}));
+const teamLookup = Object.fromEntries(teamsList.map((team) => [team.id, team.name]));
+
+// Get latest roster data
+const rosterEntries = Object.entries(rosterModules)
+  .map(([path, mod]) => {
+    const season = extractSeason(path);
+    const data = getModuleData(mod);
+    return { season, data, path };
+  })
+  .filter((item) => item.season && item.data)
+  .sort((a, b) => parseInt(b.season!) - parseInt(a.season!));
+
+const latestRoster = rosterEntries[0]?.data || {};
+const currentYear = rosterEntries[0]?.season || new Date().getFullYear().toString();
+
+// Get salary adjustments for the current year
+const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
+  .map(([path, mod]) => {
+    const season = extractFeedSeason(path);
+    const data = getModuleData(mod);
+    return { season, data, path };
+  })
+  .filter((item) => item.season === currentYear && item.data);
+
+const adjustmentData = adjustmentEntries[0]?.data || {};
+const salaryAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
+
+// Build dead money map and IR map from adjustments
+const deadMoneyMap = new Map<string, number>();
+const irMap = new Map<string, boolean>();
+
+salaryAdjustments.forEach((adj) => {
+  const franchiseId = adj.franchise_id;
+  if (franchiseId && adj.description) {
+    const amount = parseNumber(adj.amount) || 0;
+
+    // Track dead money
+    if (adj.description.includes('Dead money')) {
+      deadMoneyMap.set(franchiseId, (deadMoneyMap.get(franchiseId) || 0) + amount);
+    }
+
+    // Track IR status (players that are injured)
+    if (adj.description.toLowerCase().includes('injured')) {
+      irMap.set(adj.id || '', true);
+    }
+  }
+});
+
+// Process roster data to get players by franchise
+const playersByFranchise = new Map<string, any[]>();
+
+Object.entries(latestRoster).forEach(([franchiseId, franchiseData]: [string, any]) => {
+  const players = franchiseData.players || [];
+  playersByFranchise.set(franchiseId, players);
+});
+
+// Flatten all players into a single array for aggregation
+const allPlayers = Array.from(playersByFranchise.entries()).flatMap(([franchiseId, players]) =>
+  players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    salary: parseNumber(p.salary),
+    points: parseNumber(p.points),
+    franchiseId,
+    birthdate: p.birthdate,
+    contractYears: parseNumber(p.contractYears),
+    status: p.status,
+    nflTeam: p.nflTeam,
+  }))
+);
+
+// Aggregate by franchise
+const franchiseMetrics = aggregateByFranchise(allPlayers, teamLookup, deadMoneyMap);
+
+// Rank franchises by position
+const positionalRankings = rankByPosition(franchiseMetrics);
+
+// Calculate league-wide stats
+const totalLeaguePoints = franchiseMetrics.reduce((sum, f) => sum + f.totalPoints, 0);
+const leagueAvgPoints = totalLeaguePoints / franchiseMetrics.length;
+const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalary, 0);
+---
+
+<TheLeagueLayout title="League Comparison">
+  <div class="league-comparison-container">
+    <h1>League Comparison</h1>
+    <p class="subtitle">League-wide metrics and team rankings for {currentYear}</p>
+
+    <!-- Section 1: Roster Strength by Position -->
+    <section class="comparison-section">
+      <h2>Roster Strength by Position</h2>
+      <p class="section-description">Total fantasy points contributed by position for each team</p>
+      <LeagueRosterStrengthChart metrics={franchiseMetrics} />
+    </section>
+
+    <!-- Section 2: Positional Ranking Heatmap -->
+    <section class="comparison-section">
+      <h2>Positional Ranking Heatmap</h2>
+      <p class="section-description">
+        Team rank (1-16) at each position. Green = strong, Red = weak
+      </p>
+      <PositionalRankingHeatmap rankings={positionalRankings} />
+    </section>
+
+    <!-- Section 3: Contract Health & Cap Efficiency -->
+    <section class="comparison-section">
+      <h2>Contract Health & Cap Efficiency</h2>
+      <p class="section-description">Cap health status and salary efficiency for each team</p>
+      <ContractHealthBadges
+        metrics={franchiseMetrics}
+        deadMoneyMap={deadMoneyMap}
+      />
+    </section>
+
+    <!-- Section 4: Points Breakdown -->
+    <section class="comparison-section">
+      <h2>Points Breakdown & Performance</h2>
+      <p class="section-description">Total points, consistency, and luck analysis by team</p>
+      <PointsBreakdownTable
+        metrics={franchiseMetrics}
+        leagueAvgPoints={leagueAvgPoints}
+        allPlayers={allPlayers}
+      />
+    </section>
+
+    <!-- Section 5: Draft Capital -->
+    <section class="comparison-section">
+      <h2>Future Draft Capital</h2>
+      <p class="section-description">Multi-year draft picks and asset value by team</p>
+      <DraftCapitalTable />
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .league-comparison-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1a1a1a;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: 3rem;
+  }
+
+  .comparison-section {
+    margin-bottom: 4rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .comparison-section:last-child {
+    border-bottom: none;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #1a1a1a;
+  }
+
+  .section-description {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+</style>

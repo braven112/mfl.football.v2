@@ -1,0 +1,5070 @@
+---
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
+import leagueAssets from '../../../../data/afl-fantasy/assets.json';
+import MetricCard from '../components/theleague/MetricCard.astro';
+import ChartCard from '../components/theleague/ChartCard.astro';
+import DonutChart from '../components/theleague/DonutChart.astro';
+import BarChart from '../components/theleague/BarChart.astro';
+import AgeDistributionChart from '../components/theleague/AgeDistributionChart.astro';
+import FranchiseOptions from '../components/theleague/FranchiseOptions.astro';
+import VeteranExtensionCandidates from '../components/theleague/VeteranExtensionCandidates.astro';
+import PlayerDetailsModal from '../components/theleague/PlayerDetailsModal.astro';
+import PlayerInjuryModal from '../components/theleague/PlayerInjuryModal.astro';
+import DraftPicksCard from '../components/theleague/DraftPicksCard.astro';
+import DraftTeamAssetsView from '../components/theleague/DraftTeamAssetsView.astro';
+import collegeLogos from '../../../../data/afl-fantasy/college-logos.json';
+import type { ChartSlice } from '../scripts/chart-utils';
+import {
+  parseNumber,
+  currencyFormatter,
+  formatCapSpaceDisplay,
+  formatCurrency as formatCurrencyUtil,
+  SALARY_CAP,
+  ROSTER_LIMIT,
+  TARGET_ACTIVE_COUNT,
+  RESERVE_FOR_ROOKIES,
+  SALARY_YEARS,
+  CAP_INCLUSION,
+  normalizeStatus,
+  getCapPercent,
+  calculateCapCharges,
+  aggregateDeadMoney,
+  calculateContractYearsMeta,
+  getAuthUser,
+} from '@mfl/shared-utils';
+import tradeBait2025Data from '../../../../data/afl-fantasy/mfl-feeds/2025/tradeBait.json';
+import { calculateDraftOrder, buildActualDraftPicks } from '@mfl/league-utils';
+import { extractToiletBowlWinners } from '@mfl/league-utils';
+import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '@mfl/league-utils';
+
+const rosterModules = import.meta.glob('../../../../data/afl-fantasy/mfl-player-salaries-*.json', {
+  eager: true,
+});
+const salaryAveragesModules = import.meta.glob('../../../../data/afl-fantasy/mfl-salary-averages-*.json', {
+  eager: true,
+});
+const salaryAdjustmentFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/*/salaryAdjustments.json',
+  {
+    eager: true,
+  }
+);
+const leagueFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/league.json', {
+  eager: true,
+});
+const standingsFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+const playoffBracketFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/*/playoffBracket.json',
+  {
+    eager: true,
+  }
+);
+const playersFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/players.json', {
+  eager: true,
+});
+const draftResultsFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json', {
+  eager: true,
+});
+const transactionsFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/transactions.json', {
+  eager: true,
+});
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const extractFeedSeason = (filepath) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
+
+const teamsList = (leagueAssets.teams ?? [])
+  .map((team) => ({
+    id: team.id,
+    name: team.name,
+    division: team.division ?? '',
+    icon: team.assets?.icons?.[0]?.relativePath ?? '',
+  }))
+  .sort((a, b) => {
+    // Sort by division order first
+    const divIndexA = divisionOrder.indexOf(a.division);
+    const divIndexB = divisionOrder.indexOf(b.division);
+
+    if (divIndexA !== divIndexB) {
+      return divIndexA - divIndexB;
+    }
+
+    // Within same division, sort alphabetically by name
+    return a.name.localeCompare(b.name);
+  });
+
+const teamLookup = Object.fromEntries(teamsList.map((team) => [team.id, team]));
+
+const DEFAULT_HEADSHOT_URL =
+  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+const getPlayerImageUrl = (playerId) =>
+  playerId
+    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+    : DEFAULT_HEADSHOT_URL;
+
+const getNflLogoUrl = (teamCode) => {
+  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+  return `/assets/nfl-logos/${teamCode}.svg`;
+};
+
+const collegeLogosNormalized = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
+);
+
+const getCollegeAssets = (collegeName?: string | null) => {
+  if (!collegeName) return null;
+  return collegeLogosNormalized[collegeName.toLowerCase()] ?? null;
+};
+
+const parseAdjustmentMeta = (description = '') => {
+  // Normalize team codes from various formats to standard 2-letter codes
+  const normalizeTeamCode = (team) => {
+    const map = {
+      // AFC East
+      BUF: 'BUF', MIA: 'MIA', NE: 'NE', NEP: 'NE',
+      NYJ: 'NYJ',
+      // AFC North
+      BAL: 'BAL', CIN: 'CIN', CLE: 'CLE', CLV: 'CLE',
+      PIT: 'PIT',
+      // AFC South
+      HOU: 'HOU', IND: 'IND', JAX: 'JAX', JAC: 'JAX',
+      TEN: 'TEN',
+      // AFC West
+      DEN: 'DEN', KC: 'KC', KCC: 'KC',
+      LAC: 'LAC', SD: 'LAC',
+      LV: 'LV', LVR: 'LV', OAK: 'LV',
+      // NFC East
+      DAL: 'DAL', PHI: 'PHI', WAS: 'WAS', WSH: 'WAS',
+      NYG: 'NYG',
+      // NFC North
+      CHI: 'CHI', DET: 'DET', GB: 'GB', GBP: 'GB',
+      MIN: 'MIN',
+      // NFC South
+      ATL: 'ATL', CAR: 'CAR', NO: 'NO', NOR: 'NO', NOS: 'NO',
+      TB: 'TB', TBB: 'TB',
+      // NFC West
+      ARI: 'ARI', ARZ: 'ARI', LA: 'LAR', LAR: 'LAR', STL: 'LAR',
+      SF: 'SF', SFO: 'SF', SEA: 'SEA',
+      // Other
+      FA: 'FA',
+    };
+    if (!team) return '';
+    const upper = team.toString().toUpperCase();
+    return map[upper] ?? upper;
+  };
+
+  const meta = {
+    name: '',
+    nflTeam: '',
+    position: '',
+    salary: null,
+    yearsRemaining: null,
+  };
+  const nameMatch = description.match(/^Dropped\s+([^()]+)\s*\(/i);
+  if (nameMatch) {
+    const fullNamePart = nameMatch[1].trim();
+    const parts = fullNamePart.split(' ');
+
+    // Extract position (last part, like "QB", "WR", "RB")
+    const maybePosition = parts[parts.length - 1];
+    if (maybePosition && /^(QB|RB|WR|TE|PK|K|DEF|DET)$/i.test(maybePosition)) {
+      meta.position = maybePosition.toUpperCase();
+    }
+
+    // Extract NFL team (second to last part, like "NYG", "SFO", "TB", "SF")
+    const maybeTeam = parts[parts.length - 2];
+    if (maybeTeam && (maybeTeam.length === 2 || maybeTeam.length === 3)) {
+      meta.nflTeam = normalizeTeamCode(maybeTeam);
+    }
+
+    // Extract player name (everything before team and position)
+    const nameEndIndex = meta.position ? parts.length - 2 : (meta.nflTeam ? parts.length - 1 : parts.length);
+    meta.name = parts.slice(0, nameEndIndex).join(' ');
+  }
+  const salaryMatch = description.match(/Salary:\s*\$?([\d,\.]+)/i);
+  if (salaryMatch) {
+    const raw = salaryMatch[1].replace(/,/g, '');
+    meta.salary = Number(raw) || null;
+  }
+  const yearsMatch = description.match(/Years:\s*(\d+)/i);
+  if (yearsMatch) meta.yearsRemaining = parseInt(yearsMatch[1], 10);
+  return meta;
+};
+
+const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+const POSITION_COLORS = {
+  QB: '#6366f1', // indigo
+  RB: '#f97316', // orange
+  WR: '#22c55e', // green
+  TE: '#14b8a6', // teal
+  PK: '#0ea5e9', // light blue
+  K: '#0ea5e9',
+  DEF: '#475569', // slate
+};
+const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
+const rosterColumnOptions = [
+  { key: 'player', label: 'Player' },
+  { key: 'years', label: 'Yrs' },
+  ...SALARY_YEARS.map((year, index) => ({
+    key: `year${index + 1}`,
+    label: String(year),
+  })),
+];
+
+const nflByeWeeks = {
+  ARI: 8,
+  ATL: 5,
+  BAL: 7,
+  BUF: 7,
+  CAR: 14,
+  CHI: 5,
+  CIN: 10,
+  CLE: 9,
+  DAL: 10,
+  DEN: 12,
+  DET: 8,
+  GB: 5,
+  HOU: 6,
+  IND: 11,
+  JAC: 8,
+  KC: 10,
+  LV: 8,
+  LAC: 12,
+  LAR: 8,
+  MIA: 12,
+  MIN: 6,
+  NE: 14,
+  NO: 11,
+  NYG: 14,
+  NYJ: 9,
+  PHI: 9,
+  PIT: 5,
+  SEA: 8,
+  SF: 14,
+  TB: 9,
+  TEN: 10,
+  WAS: 12,
+};
+const getPositionRank = (pos) => {
+  if (!pos) return positionOrder.length;
+  const rank = positionOrder.indexOf(pos.toUpperCase());
+  return rank === -1 ? positionOrder.length : rank;
+};
+
+const sortByPosition = (list) =>
+  list.slice().sort((a, b) => {
+    const diff = getPositionRank(a.position) - getPositionRank(b.position);
+    if (diff !== 0) return diff;
+    return parseNumber(b.salary) - parseNumber(a.salary);
+  });
+
+const annotatePositionDividers = (rows = []) => {
+  const normalized = rows.map((player, index) => {
+    const prevPosition =
+      index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
+    const current = (player.position ?? '').toUpperCase();
+    const showDivider = (index === 0) || (index > 0 && current !== prevPosition);
+    return {
+      ...player,
+      positionDivider: showDivider,
+      _positionGroup: current,
+    };
+  });
+
+  return normalized.map((player, index) => {
+    const next = normalized[index + 1];
+    const isEndDivider =
+      !!next && (next._positionGroup ?? '') !== (player._positionGroup ?? '');
+    return {
+      ...player,
+      positionDividerEnd: isEndDivider,
+    };
+  });
+};
+
+const annotateTierDividers = (rows = []) => {
+  let lastTag = null;
+  return rows.map((player) => {
+    const currentTag = player.displayTag ?? 'active';
+    const divider =
+      lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
+    lastTag = currentTag;
+    return {
+      ...player,
+      tierDivider: divider,
+    };
+  });
+};
+
+const annotateActiveStriping = (rows = []) => {
+  let activeIndex = 0;
+  return rows.map((player) => {
+    if ((player.displayTag ?? 'active') === 'active') {
+      const striped = activeIndex % 2 === 1;
+      activeIndex += 1;
+      return { ...player, activeStripe: striped };
+    }
+    return { ...player, activeStripe: false };
+  });
+};
+
+// Wrapper for aggregateDeadMoney that accepts season data object
+const aggregateDeadMoneyFromSeasonData = (seasonData = {}, franchiseId) => {
+  const adjustments = DEAD_MONEY_SOURCES.flatMap((key) =>
+    Array.isArray(seasonData[key]) ? seasonData[key] : []
+  );
+  return aggregateDeadMoney(adjustments, franchiseId);
+};
+
+const feedSalaryAdjustmentsBySeason = {};
+Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.salaryAdjustments?.salaryAdjustment) return;
+  feedSalaryAdjustmentsBySeason[season] = data.salaryAdjustments.salaryAdjustment
+    .map((adj) => ({
+      franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
+      amount: parseNumber(adj.amount),
+      description: adj.description ?? '',
+      yearOffset: 0, // default to current season; can enhance if offset parsing desired
+      timestamp: adj.timestamp ?? null,
+      ...parseAdjustmentMeta(adj.description ?? ''),
+    }))
+    .filter((adj) => Number.isFinite(adj.amount));
+});
+
+const leagueMetaBySeason = {};
+Object.entries(leagueFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.league) return;
+  const league = data.league;
+  leagueMetaBySeason[season] = {
+    capLimit: parseNumber(league.salaryCapAmount) || SALARY_CAP,
+    rosterLimit: parseInt(league.rosterSize, 10) || ROSTER_LIMIT,
+    taxiPercent: parseNumber(league.includeTaxiWithSalary) / 100 || CAP_INCLUSION.PRACTICE.current,
+    irPercent: parseNumber(league.includeIRWithSalary) / 100 || CAP_INCLUSION.INJURED.current,
+  };
+});
+
+const playersFeedBySeason = {};
+Object.entries(playersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const list =
+    data?.players?.player ??
+    data?.players ??
+    [];
+  if (!season || !Array.isArray(list) && typeof list !== 'object') return;
+  const arr = Array.isArray(list) ? list : Object.values(list);
+  playersFeedBySeason[season] = {};
+  arr.forEach((player) => {
+    const id = player.id ?? player.player_id ?? player.playerId ?? player.playerid;
+    if (!id) return;
+    playersFeedBySeason[season][id] = player;
+  });
+});
+
+const recordsBySeason = {};
+Object.entries(standingsFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const rows =
+    data?.leagueStandings?.franchise ??
+    data?.standings?.standing ??
+    data?.standings ??
+    [];
+  const list = Array.isArray(rows) ? rows : Object.values(rows ?? {});
+  if (!season || !list.length) return;
+  const toInt = (v) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const map = {};
+  list.forEach((row) => {
+    const id =
+      row.franchise_id ??
+      row.franchiseId ??
+      row.id ??
+      row.franchise ??
+      row.team ??
+      row.franchise_id1;
+    if (!id) return;
+    const wins =
+      toInt(row.h2hw ?? row.wins ?? row.w ?? row.h2h_w ?? row.h2hwins);
+    const losses =
+      toInt(row.h2hl ?? row.losses ?? row.l ?? row.h2h_l ?? row.h2hlosses);
+    const ties = toInt(row.h2ht ?? row.ties ?? row.t ?? row.h2h_t);
+    map[id] = `${wins}-${losses}-${ties}`;
+  });
+  recordsBySeason[season] = map;
+});
+
+const buildDisplayRows = (teamData) => {
+  const mapPlayers = (players = [], displayTag = 'active') =>
+    sortByPosition(players).map((player) => ({
+      ...player,
+      displayTag,
+      byeWeek: player.byeWeek ?? nflByeWeeks[player.nflTeam ?? ''] ?? null,
+    }));
+
+  const combined = [
+    ...mapPlayers(teamData.players ?? [], 'active'),
+    ...mapPlayers(teamData.practiceSquad ?? [], 'practice'),
+    ...mapPlayers(teamData.injuredReserve ?? [], 'injured'),
+  ];
+
+  const withDividers = annotateTierDividers(annotatePositionDividers(combined));
+  return annotateActiveStriping(withDividers);
+};
+
+const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => {
+  const feedPlayers = playersFeedBySeason[season] ?? {};
+
+  const players = (rawData?.players ?? []).map((player) => {
+    const salary = parseNumber(player.salary);
+    const nflverse = player.nflverse ?? {};
+    const parseSnap = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = Number(val);
+      return Number.isFinite(num) ? num : null;
+    };
+    const contractYears =
+      Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) ||
+      0;
+    const franchiseId = player.franchiseId ?? 'FA';
+    const totalRemaining = salary * Math.max(contractYears || 1, 1);
+    const seasonYear = Number.parseInt(season, 10) || new Date().getFullYear();
+    const contractType =
+      player.contractType ??
+      (player.status && player.status !== 'ROSTER'
+        ? player.status
+        : player.draftYear && seasonYear - Number(player.draftYear) <= 2
+          ? 'Rookie'
+          : 'Standard');
+    const nflTeam = (player.team ?? '').toUpperCase();
+    const headshot = player.headshot ?? getPlayerImageUrl(player.id);
+    const collegeName = player.sleeper?.college ?? player.college ?? null;
+    const collegeAssets = getCollegeAssets(collegeName);
+    const feedPlayer = feedPlayers[player.id] ?? null;
+    const parseDraft = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = parseInt(val, 10);
+      return Number.isFinite(num) ? num : null;
+    };
+    const draftYear = parseDraft(player.draftYear ?? feedPlayer?.draft_year);
+    const draftRound = parseDraft(feedPlayer?.draft_round);
+    const draftPick = parseDraft(feedPlayer?.draft_pick);
+    const draftTeam = (player.draftTeam ?? feedPlayer?.draft_team ?? '').toUpperCase() || null;
+
+    return {
+      id: player.id,
+      name: player.name,
+      position: player.position ?? 'N/A',
+      salary,
+      contractYears,
+      totalRemaining,
+      franchiseId,
+      status: player.status ?? 'ROSTER',
+      contractType,
+      points: parseNumber(player.points),
+      nflTeam,
+      draftYear,
+      draftTeam,
+      draftRound,
+      draftPick,
+      nflLogo: getNflLogoUrl(nflTeam),
+      rosterSlot: normalizeStatus(player.status),
+      byeWeek: nflByeWeeks[nflTeam] ?? null,
+      birthdate: player.birthdate ?? null,
+      headshot,
+      college: collegeName,
+      collegeLogo: collegeAssets?.logo ?? null,
+      collegeLogoDark: collegeAssets?.logoDark ?? null,
+      height: player.sleeper?.height ?? null,
+      weight: player.sleeper?.weight ?? null,
+      number: player.sleeper?.number ?? null,
+      experience: player.sleeper?.experience ?? null,
+      depthChartPosition: player.sleeper?.depthChartPosition ?? null,
+      depthChartOrder: player.sleeper?.depthChartOrder ?? null,
+      injuryStatus: player.sleeper?.injuryStatus ?? null,
+      injuryBodyPart: player.sleeper?.injuryBodyPart ?? null,
+      sleeperId: player.sleeper?.id ?? null,
+      sleeperFullName: player.sleeper?.fullName ?? null,
+      sleeperPosition: player.sleeper?.position ?? null,
+      fantasyPositions: player.sleeper?.fantasyPositions ?? null,
+      gsisId: player.sleeper?.gsisId ?? null,
+      sleeperAge: player.sleeper?.age ?? null,
+      sleeperStatus: player.sleeper?.status ?? null,
+      sleeperActive: player.sleeper?.active ?? null,
+      offenseSnaps: parseSnap(nflverse.offenseSnaps),
+      defenseSnaps: parseSnap(nflverse.defenseSnaps),
+      stSnaps: parseSnap(nflverse.stSnaps),
+      gamesPlayed: player.gamesPlayed ?? null,
+      depthChartAhead: player.depthChartAhead ?? null,
+      tradeBait: tradeBaitPlayerIds.has(String(player.id)),
+    };
+  });
+
+  const grouped = {};
+  players.forEach((player) => {
+    const key = player.franchiseId || 'FA';
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+    grouped[key].push(player);
+  });
+
+  const teams = {};
+
+  Object.entries(grouped).forEach(([teamId, teamPlayers]) => {
+    const buckets: { ACTIVE: typeof players; PRACTICE: typeof players; INJURED: typeof players } = {
+      ACTIVE: [],
+      PRACTICE: [],
+      INJURED: [],
+    };
+    (Array.isArray(teamPlayers) ? teamPlayers : []).forEach((player) => {
+      if (player.status === 'TAXI_SQUAD') {
+        buckets.PRACTICE.push(player);
+      } else if (player.status === 'INJURED_RESERVE') {
+        buckets.INJURED.push(player);
+      } else {
+        buckets.ACTIVE.push(player);
+      }
+    });
+    const activeSorted = sortByPosition(buckets.ACTIVE);
+    const practiceSorted = sortByPosition(buckets.PRACTICE);
+    const injuredSorted = sortByPosition(buckets.INJURED);
+
+    // Calculate total salary: ACTIVE @ 100%, INJURED @ 100%, PRACTICE @ 50%
+    const activeSalary = activeSorted.reduce(
+      (sum, player) => sum + parseNumber(player.salary),
+      0
+    );
+    const injuredSalary = injuredSorted.reduce(
+      (sum, player) => sum + parseNumber(player.salary),
+      0
+    );
+    const practiceSalary = practiceSorted.reduce(
+      (sum, player) => sum + parseNumber(player.salary) * 0.5,
+      0
+    );
+    const totalSalary = activeSalary + injuredSalary + practiceSalary;
+    teams[teamId] = {
+      players: activeSorted,
+      practiceSquad: practiceSorted,
+      injuredReserve: injuredSorted,
+      record: recordsBySeason[season]?.[teamId] ?? null,
+      totals: {
+        totalSalary,
+        rosterCount: activeSorted.length,
+        openSpots: Math.max(ROSTER_LIMIT - activeSorted.length, 0),
+        practiceCount: practiceSorted.length,
+        injuredCount: injuredSorted.length,
+      },
+    };
+  });
+
+  return {
+    metadata: {
+      capLimit: leagueMetaBySeason[season]?.capLimit ?? SALARY_CAP,
+      rosterLimit: leagueMetaBySeason[season]?.rosterLimit ?? ROSTER_LIMIT,
+      season,
+    },
+    teams,
+    salaryAdjustments: feedSalaryAdjustmentsBySeason[season] ?? [],
+  };
+};
+
+// Build tradeBait lookup by season
+const tradeBaitBySeason = {
+  '2025': new Set(tradeBait2025Data ?? []),
+};
+console.log('DEBUG: tradeBait2025Data =', tradeBait2025Data);
+console.log('DEBUG: tradeBaitBySeason["2025"] =', tradeBaitBySeason['2025']);
+
+const rostersBySeason = {};
+Object.entries(rosterModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+  rostersBySeason[season] = buildSeasonPayload(
+    season,
+    getModuleData(mod),
+    tradeBaitBySeason[season] ?? new Set()
+  );
+});
+
+// Process salary averages for extension calculator
+const salaryAveragesBySeason = {};
+Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+  const data = getModuleData(mod);
+  if (data?.positions) {
+    salaryAveragesBySeason[season] = {
+      extensionSalaries: {
+        QB: data.positions.QB?.top5Average ?? 0,
+        RB: data.positions.RB?.top5Average ?? 0,
+        WR: data.positions.WR?.top5Average ?? 0,
+        TE: data.positions.TE?.top5Average ?? 0,
+        PK: data.positions.PK?.top5Average ?? 0,
+        DEF: data.positions.Def?.top5Average ?? 0,
+      },
+      franchiseSalaries: {
+        QB: data.positions.QB?.top3Average ?? 0,
+        RB: data.positions.RB?.top3Average ?? 0,
+        WR: data.positions.WR?.top3Average ?? 0,
+        TE: data.positions.TE?.top3Average ?? 0,
+        PK: data.positions.PK?.top3Average ?? 0,
+        DEF: data.positions.Def?.top3Average ?? 0,
+      },
+    };
+  }
+});
+
+const seasonOptions = Object.keys(rostersBySeason).sort(
+  (a, b) => Number(b) - Number(a)
+);
+const defaultSeason = seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
+
+// Normalize franchise ids so "8" and "0008" resolve to the same team
+const normalizeFranchiseId = (id) => {
+  if (!id) return null;
+  const trimmed = `${id}`.trim();
+  if (!trimmed) return null;
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+};
+
+const rosterTeamIds = seasonOptions.flatMap(
+  (season) => Object.keys(rostersBySeason[season]?.teams ?? {})
+);
+const knownTeamIds = new Set([
+  ...teamsList.map((team) => team.id),
+  ...rosterTeamIds,
+]);
+
+// Get authenticated user and set default team to their franchise if logged in
+const authUser = getAuthUser(Astro.request);
+const isLoggedIn = !!authUser;
+const userFranchiseId = normalizeFranchiseId(authUser?.franchiseId);
+const urlFranchiseId = normalizeFranchiseId(
+  Astro.url?.searchParams?.get('franchise') ??
+    Astro.url?.searchParams?.get('team') ??
+    Astro.url?.searchParams?.get('franchiseId') ??
+    null
+);
+
+// Default to user's franchise if logged in, otherwise first team
+const defaultTeamId =
+  (urlFranchiseId && knownTeamIds.has(urlFranchiseId) ? urlFranchiseId : null) ||
+  (isLoggedIn && userFranchiseId && knownTeamIds.has(userFranchiseId)
+    ? userFranchiseId
+    : null) ||
+  teamsList[0]?.id ||
+  rosterTeamIds[0] ||
+  (Object.keys(rostersBySeason[defaultSeason]?.teams ?? {})[0] ?? 'FA');
+
+const initialSeasonData = rostersBySeason[defaultSeason] ?? { teams: {} };
+const initialTeamData =
+  initialSeasonData.teams?.[defaultTeamId] ?? {
+    players: [],
+    practiceSquad: [],
+    injuredReserve: [],
+    record: null,
+    totals: {
+      totalSalary: 0,
+      rosterCount: 0,
+      openSpots: ROSTER_LIMIT,
+      practiceCount: 0,
+      injuredCount: 0,
+    },
+  };
+const initialCapLimit = initialSeasonData?.metadata?.capLimit ?? SALARY_CAP;
+const initialRosterLimit = initialSeasonData?.metadata?.rosterLimit ?? ROSTER_LIMIT;
+
+const calculateYearTotals = (
+  rows: Array<{ contractYears: number; salary?: number; displayTag?: string; status?: string }> = []
+) =>
+  SALARY_YEARS.map((_, index) =>
+    rows.reduce((sum, player) => {
+      if ((player.contractYears ?? 0) > index) {
+        const isCurrent = index === 0;
+        const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
+        const tag = tagRaw.includes('PRACTICE')
+          ? 'PRACTICE'
+          : tagRaw.includes('INJURED') || tagRaw === 'IR'
+            ? 'INJURED'
+            : 'ACTIVE';
+        const percent = getCapPercent(tag, isCurrent);
+        const baseSalary = parseNumber(player.salary ?? 0);
+        const salaryForYear = baseSalary; // use the explicit salary provided for that season
+        return sum + (salaryForYear * percent || 0);
+      }
+      return sum;
+    }, 0)
+  );
+
+const initialRosterRows = buildDisplayRows(initialTeamData);
+const initialYearTotals = calculateYearTotals(initialRosterRows);
+const initialCapCharges = calculateCapCharges(initialRosterRows);
+const initialDeadMoney = aggregateDeadMoneyFromSeasonData(initialSeasonData, defaultTeamId);
+const initialCapChargesWithDead = initialCapCharges.map(
+  (val, idx) => val + (initialDeadMoney[idx] ?? 0)
+);
+const initialCapCharge = initialCapChargesWithDead[0] ?? 0;
+const initialNextYearCapCharge = initialCapChargesWithDead[1] ?? 0;
+const initialActiveCount =
+  initialTeamData.players?.length ??
+  initialTeamData.totals?.rosterCount ??
+  0;
+const {
+  contractYearsTotal: initialContractYearsTotal,
+  longestContract: initialLongestContract,
+} = calculateContractYearsMeta(initialRosterRows);
+const initialPlayersNextYear = initialRosterRows.filter((p) => (p.contractYears ?? 0) > 1).length;
+const initialRemainingSlots2026 = Math.max(TARGET_ACTIVE_COUNT - initialPlayersNextYear, 1);
+const initialPlayersToCut2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT, 0);
+const initialPlayersToCutToSign2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT + 1, 0);
+const initialNeedsToCutToSign2026 = initialPlayersNextYear >= TARGET_ACTIVE_COUNT;
+const initialDeadMoney2026 = initialDeadMoney[1] ?? 0;
+const initialCapSpace2026 =
+  (initialSeasonData?.metadata?.capLimit ?? initialCapLimit) -
+  (initialCapChargesWithDead[1] ?? 0) -
+  RESERVE_FOR_ROOKIES;
+const initialAvgPerPlayer2026 = Math.max(initialCapSpace2026, 0) / initialRemainingSlots2026;
+const initialLastContractYear = (parseInt(defaultSeason, 10) || SALARY_YEARS[0]) + (initialLongestContract || 0) - 1;
+
+const formatCurrency = (value) => currencyFormatter.format(value ?? 0);
+
+// Prepare initial chart data for SSR
+// Note: These are placeholder slices - actual data will be calculated client-side in updateView()
+const initialCapSlices: ChartSlice[] = [];
+const initialRosterSlices: ChartSlice[] = [];
+const initialPositionSlices: ChartSlice[] = [];
+const initialCapEfficiencySlices: ChartSlice[] = [];
+const initialAgeDistributionSlices: ChartSlice[] = [];
+const initialPositionalAgeSlices: ChartSlice[] = [];
+let initialAverageAge: number | null = null;
+// Get all players from the default season (which contains all rosters)
+const initialAllPlayers: any[] = initialSeasonData
+  ? Object.values(initialSeasonData.teams ?? {}).flatMap((team: any) => [
+      ...(team.players ?? []),
+      ...(team.practiceSquad ?? []),
+      ...(team.injuredReserve ?? []),
+    ])
+  : [];
+
+// Calculate draft predictions for 2026 roster view
+const currentYear = new Date().getFullYear();
+const nextYear = currentYear + 1;
+let draftPredictions = [];
+let actualDraftPicks = [];
+let assetsPredictions = [];
+let toiletBowlWinners = [];
+let assetTeamIds: string[] = [];
+
+// Load standings and bracket data for draft predictions (from current season)
+const standingsKey = Object.keys(standingsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+
+const bracketKey = Object.keys(playoffBracketFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+
+// Load draft results from next year to show actual picks with trades
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(nextYear)
+);
+const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+// Load transactions from current year to extract trade information
+const transactionsKey = Object.keys(transactionsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
+
+if (standingsData?.leagueStandings?.franchise && bracketData) {
+  // Build team config map with icons and banners
+  const teamConfigMap = new Map(
+    teamsList.map((team) => [
+      team.id,
+      {
+        id: team.id,
+        name: team.name,
+        icon: team.icon,
+        banner: leagueAssets.teams?.find((t) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+      },
+    ])
+  );
+
+  // Extract toilet bowl winners from bracket
+  toiletBowlWinners = extractToiletBowlWinners(bracketData);
+
+  // TODO: Determine league winner (needs to be fetched from playoff results)
+  const leagueWinnerId = '';
+
+  // Calculate draft order
+  draftPredictions = calculateDraftOrder(
+    standingsData.leagueStandings.franchise,
+    teamConfigMap,
+    leagueWinnerId,
+    toiletBowlWinners
+  );
+
+  // Extract actual draft assets from draft results if available
+  if (draftResultsData) {
+    actualDraftPicks = buildActualDraftPicks(draftResultsData, teamConfigMap);
+  }
+
+  // Extract draft assets from transactions (trades)
+  if (transactionsData) {
+    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, nextYear);
+    if (isValidAssetsData(assetsData)) {
+      assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
+    }
+  }
+}
+
+assetTeamIds = Array.from(new Set(assetsPredictions.map((p) => p.franchiseId))).filter(Boolean);
+if (defaultTeamId && !assetTeamIds.includes(defaultTeamId)) {
+  assetTeamIds.unshift(defaultTeamId);
+}
+
+const serializedConfig = JSON.stringify({
+  seasons: rostersBySeason,
+  seasonOptions,
+  defaultSeason,
+  defaultTeamId,
+  initialSeasonData,
+  initialTeamData,
+  adjustmentsBySeason: feedSalaryAdjustmentsBySeason,
+  salaryAverages: salaryAveragesBySeason,
+  teams: teamLookup,
+  rosterLimit: ROSTER_LIMIT,
+  positionOrder,
+  columnOptions: rosterColumnOptions,
+  salaryYears: SALARY_YEARS,
+  byeWeeks: nflByeWeeks,
+  capLimit: initialCapLimit,
+  rosterLimitOverride: initialRosterLimit,
+  capInclusion: CAP_INCLUSION,
+  deadMoneySources: DEAD_MONEY_SOURCES,
+  positionColors: POSITION_COLORS,
+  targetActiveCount: TARGET_ACTIVE_COUNT,
+  reserveForRookies: RESERVE_FOR_ROOKIES,
+  collegeLogos: collegeLogosNormalized,
+  authUser: authUser ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId } : null,
+});
+---
+
+<TheLeagueLayout title="Team Rosters">
+  <section class="roster-page">
+    <!-- Team Header Card (separate from content) -->
+      <div class="team-card" data-team-identity>
+        {teamLookup[defaultTeamId]?.icon && (
+          <img
+            src={teamLookup[defaultTeamId]?.icon}
+            alt={`${teamLookup[defaultTeamId]?.name ?? 'Team'} icon`}
+          />
+        )}
+        <div>
+          <p class="team-card__label" data-view-label>Roster & Salary Cap</p>
+          <h2 data-team-name>
+            {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
+          </h2>
+          <p data-team-meta>
+            {teamLookup[defaultTeamId]?.division ?? 'Independent'}
+          </p>
+        </div>
+        <div class="team-card__actions">
+          <div class="view-tabs">
+            <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href="/assets/icons/sprite.svg#icon-banknote"></use>
+              </svg>
+              <span class="view-tab__label">Roster</span>
+            </button>
+            <button class="view-tab" data-view="analytics" data-active="false" aria-label="Analytics View" title="Analytics View">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href="/assets/icons/sprite.svg#icon-bar-chart"></use>
+              </svg>
+              <span class="view-tab__label">Analytics</span>
+            </button>
+            <button class="view-tab" data-view="nextyear" data-active="false" aria-label="Next Year View" title="Next Year View">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href="/assets/icons/sprite.svg#icon-chalkboard"></use>
+              </svg>
+              <span class="view-tab__label">Next Year</span>
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="roster-controls">
+      <div class="team-icon-nav">
+        {divisionOrder.map((division) => {
+          const divisionTeams = teamsList.filter(team => team.division === division);
+          return divisionTeams.length > 0 ? (
+            <div class="division-group">
+              <div class="division-label">{division}</div>
+              <div class="division-teams">
+                {divisionTeams.map((team) => (
+                  <button
+                    class="team-icon-btn"
+                    data-team-id={team.id}
+                    data-active={team.id === defaultTeamId}
+                    title={team.name}
+                    aria-label={`View ${team.name} roster`}
+                  >
+                    {team.icon && (
+                      <img
+                        src={team.icon}
+                        alt={`${team.name} icon`}
+                        class="team-icon-img"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })}
+      </div>
+      <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
+      <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
+    </div>
+    <!-- Roster View -->
+    <div class="view-container" data-view-content="roster">
+      <div class="roster-table-card">
+        <div class="table-header-actions">
+          <button class="clear-all-tags-btn" id="clearAllTagsBtn" style="display: none;" title="Clear all contract actions">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            Clear All Tags
+          </button>
+        </div>
+      <div class="roster-table-wrapper">
+        <table class="roster-table" data-hidden-columns="">
+          <thead>
+            <tr>
+              <th scope="col" data-column="player">Player</th>
+              <th scope="col" data-column="years">Yrs</th>
+              <th scope="col" data-column="actions" class="actions-column">Actions</th>
+              {SALARY_YEARS.map((year, index) => (
+                <th scope="col" data-column={`year${index + 1}`}>{year}</th>
+              ))}
+            </tr>
+          </thead>
+          <tfoot>
+            <tr class="roster-totals">
+              <td data-column="player" class="roster-totals__label">Total Salary</td>
+              <td data-column="years"></td>
+              <td data-column="actions"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
+                  {formatCurrency(initialYearTotals[index] ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr class="roster-totals roster-totals--dead">
+              <td data-column="player" class="roster-totals__label">Dead Money</td>
+              <td data-column="years"></td>
+              <td data-column="actions"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`}>
+                  {formatCurrency(initialDeadMoney[index] ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr class="roster-totals roster-totals--cap">
+              <td data-column="player" class="roster-totals__label">Salary Cap</td>
+              <td data-column="years"></td>
+              <td data-column="actions"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`}>
+                  {formatCurrency(initialCapLimit)}
+                </td>
+              ))}
+            </tr>
+            <tr class="roster-totals roster-totals--space">
+              <td data-column="player" class="roster-totals__label">Cap Space</td>
+              <td data-column="years"></td>
+              <td data-column="actions"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`}>
+                  {formatCurrency(
+                    (index === 0 ? initialCapLimit : initialCapLimit) -
+                      ((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))
+                  )}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+          <tbody id="rosterTableBody">
+          {initialRosterRows.length ? (
+            initialRosterRows.map((player) => (
+              <tr
+                data-player-id={player.id}
+                class={`roster-row roster-row--${player.displayTag ?? 'active'}${player.positionDivider ? ' roster-row--position-divider' : ''}${player.positionDividerEnd ? ' roster-row--position-divider-end' : ''}${player.tierDivider ? ' roster-row--tier-divider' : ''}${player.activeStripe ? ' roster-row--active-alt' : ''}`}
+              >
+                <td data-label="Player" data-column="player">
+                  <div class="player-cell">
+                    <div class="player-cell__avatar">
+                      <img
+                        src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                        alt={`${player.name} headshot`}
+                        loading="lazy"
+                        decoding="async"
+                        onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                      />
+                    </div>
+                    <div>
+                      <strong
+                        class="roster-player-name"
+                        data-player-id={player.id}
+                        data-player-name={player.name}
+                        data-player-position={player.position}
+                        data-player-nfl-team={player.nflTeam}
+                        data-player-status={player.status}
+                        data-player-salary={player.salary}
+                        data-player-contract-years={player.contractYears}
+                        data-player-total-remaining={player.totalRemaining}
+                        data-player-contract-type={player.contractType}
+                        data-player-points={player.points}
+                        data-player-bye-week={player.byeWeek}
+                        data-player-draft-year={player.draftYear}
+                        data-player-birthdate={player.birthdate}
+                        data-player-franchise-id={player.franchiseId}
+                        data-player-roster-slot={player.rosterSlot}
+                        data-player-college={player.college}
+                        data-player-college-logo={player.collegeLogo}
+                        data-player-height={player.height}
+                        data-player-weight={player.weight}
+                        data-player-number={player.number}
+                        data-player-experience={player.experience}
+                        data-player-depth-position={player.depthChartPosition}
+                        data-player-depth-order={player.depthChartOrder}
+                        data-player-injury-status={player.injuryStatus}
+                        data-player-injury-body-part={player.injuryBodyPart}
+                        data-player-sleeper-id={player.sleeperId}
+                        data-player-sleeper-full-name={player.sleeperFullName}
+                        data-player-sleeper-position={player.sleeperPosition}
+                        data-player-fantasy-positions={player.fantasyPositions}
+                        data-player-gsis-id={player.gsisId}
+                        data-player-sleeper-age={player.sleeperAge}
+                        data-player-sleeper-status={player.sleeperStatus}
+                        data-player-sleeper-active={player.sleeperActive}
+                        data-player-depth-chart-ahead={player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}
+                        style="cursor: pointer;"
+                        title="Click to view full player details"
+                      >
+                        {player.name}
+                        {player.tradeBait && (
+                          <span
+                            class="trade-bait-badge"
+                            title="On Trade Block"
+                            style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer;"
+                          >
+                            🏷️
+                          </span>
+                        )}
+                        {player.injuryStatus && (
+                          <button
+                            class="injury-indicator"
+                            data-player-id={player.id}
+                            data-player-name={player.name}
+                            data-injury-status={player.injuryStatus}
+                            data-injury-body-part={player.injuryBodyPart}
+                            title={`${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}`}
+                            style="cursor: pointer; background: none; color: #ef4444; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
+                          >
+                            ({player.injuryStatus.substring(0, 1)})
+                          </button>
+                        )}
+                      </strong>
+                      <div class="player-meta">
+                        {player.position?.toUpperCase() !== 'DEF' && player.nflLogo && (
+                          <img
+                            src={player.nflLogo}
+                            alt={`${player.nflTeam ?? 'FA'} logo`}
+                            class="player-meta__logo"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                        {player.position && <span class="player-meta__pos">{player.position}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Yrs" data-column="years">{player.contractYears || 0}</td>
+                {SALARY_YEARS.map((year, index) => {
+                  const isUfa = !(player.contractYears > index);
+                  const isFirstYearUfa = isUfa && player.contractYears === index;
+                  const isFutureUfa = isUfa && player.contractYears < index;
+
+                  let displayValue;
+                  let cellClass = 'salary-cell';
+
+                  if (isFirstYearUfa) {
+                    displayValue = 'UFA';
+                    cellClass += ' salary-cell--ufa';
+                  } else if (isFutureUfa) {
+                    displayValue = '—';
+                    cellClass += ' salary-cell--future-ufa';
+                  } else {
+                    displayValue = formatCurrency(player.salary ?? 0);
+                  }
+
+                  return (
+                    <td
+                      data-label={year}
+                      data-column={`year${index + 1}`}
+                      class={cellClass}
+                    >
+                      
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colspan={2 + SALARY_YEARS.length} class="roster-empty">
+                This franchise has no players recorded for this season snapshot.
+              </td>
+            </tr>
+          )}
+          </tbody>
+        </table>
+      </div>
+      <div class="roster-legend">
+        <span>
+          <span class="legend-swatch legend-swatch--active"></span>
+          Active Roster
+        </span>
+        <span>
+          <span class="legend-swatch legend-swatch--practice"></span>
+          Practice Squad
+        </span>
+        <span>
+          <span class="legend-swatch legend-swatch--injured"></span>
+          Injured Reserve
+        </span>
+        <span>
+          <span class="legend-swatch legend-swatch--trade-bait">🏷️</span>
+          Trade Block
+        </span>
+      </div>
+      </div>
+
+      <!-- Cap Subtotals Card -->
+      <div class="chart-card chart-card--sub">
+        <div class="chart-card__header">
+          <h3>Cap Subtotals (Current Season)</h3>
+          <p class="chart-card__sub">Active, IR, Practice, and Dead Money</p>
+        </div>
+        <div class="cap-subtotals">
+          <div class="cap-subtotals__row">
+            <span>
+              <span class="legend-dot legend-active"></span>
+              Active Roster <span id="countActive" class="cap-count"></span>
+            </span>
+            <strong id="subtotalActive">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span>
+              <span class="legend-dot legend-practice"></span>
+              Practice Squad <span id="countPractice" class="cap-count"></span>
+            </span>
+            <strong id="subtotalPractice">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span>
+              <span class="legend-dot legend-injured"></span>
+              Injured Reserve <span id="countInjured" class="cap-count"></span>
+            </span>
+            <strong id="subtotalInjured">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span><span class="legend-dot legend-dead"></span>Dead Money</span>
+            <strong id="subtotalDead">$0</strong>
+          </div>
+          <div class="cap-subtotals__row">
+            <span><span class="legend-dot legend-capspace"></span>Cap Space</span>
+            <strong id="subtotalCapSpace">$0</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dead Money Table (moved to roster view) -->
+      <div class="roster-table-card roster-table-card--sub">
+        <div class="roster-table-card__header">
+          <div>
+            <h3>Cap Hits / Dead Money</h3>
+            <p>Includes drops/buyouts for the selected franchise.</p>
+          </div>
+        </div>
+        <div class="roster-table-wrapper">
+          <table class="roster-table roster-table--compact">
+            <thead>
+              <tr>
+                <th scope="col" data-column="player" class="deadmoney-player-heading">Player/Adjustment</th>
+                {SALARY_YEARS.map((year, index) => (
+                  <th scope="col" data-column={`dm-year${index + 1}`}>{year}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody id="deadMoneyTableBody">
+              <tr>
+                <td colspan={1 + SALARY_YEARS.length} class="roster-empty">
+                  No cap hits recorded for this franchise.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- End Roster View -->
+
+    <!-- Analytics View -->
+    <div class="view-container" data-view-content="analytics" style="display: none;">
+      <!-- Cap Charts Section -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">Cap Analysis</h3>
+        <div class="chart-grid">
+          <ChartCard title="Cap Allocation" subtitle="Current season cap usage by bucket">
+            <DonutChart chartId="capDonut" slices={initialCapSlices} showLegend={true} />
+          </ChartCard>
+          <ChartCard title="Roster Composition" subtitle="Active vs IR vs Practice vs Open slots">
+            <DonutChart chartId="rosterDonut" slices={initialRosterSlices} showLegend={true} />
+          </ChartCard>
+          <ChartCard title="Position Allocation" subtitle="Current season cap by position">
+            <BarChart chartId="posBar" slices={initialPositionSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+          </ChartCard>
+          <ChartCard title="Cap Efficiency" subtitle="Cost per point by position">
+            <BarChart chartId="efficiencyBar" slices={initialCapEfficiencySlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+          </ChartCard>
+        </div>
+      </div>
+
+      <!-- Age Charts Section -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">Age Analysis</h3>
+        <div class="chart-grid">
+          <ChartCard title="Age Distribution" subtitle="Roster composition by age bracket">
+            <AgeDistributionChart chartId="ageChart" slices={initialAgeDistributionSlices} />
+          </ChartCard>
+          <ChartCard title="Average Age by Position" subtitle="Years old by position group">
+            <BarChart chartId="posAgeBar" slices={initialPositionalAgeSlices} positionOrder={['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']} />
+          </ChartCard>
+        </div>
+      </div>
+
+    <!-- Players by Team Report -->
+    <div class="analytics-section">
+      <h3 class="analytics-section__title">NFL Analysis</h3>
+      <p class="analytics-section__sub">Players on the same NFL team</p>
+    </div>
+    <div id="playersbyTeamContainer" class="nfl-teams-grid"></div>
+    <!-- End Players by Team Report -->
+
+    <!-- Players by College Report -->
+    <div class="analytics-section">
+      <h3 class="analytics-section__title">College Analysis</h3>
+      <p class="analytics-section__sub">Players who played for the same college</p>
+    </div>
+    <div id="playersByCollegeContainer" class="nfl-teams-grid"></div>
+    <!-- End Players by College Report -->
+
+    </div>
+    <!-- End Analytics View -->
+
+    <!-- Next Year View -->
+    <div class="view-container" data-view-content="nextyear" style="display: none;">
+      <h3 class="chart-metrics__headline">2026 at a glance</h3>
+
+      <div class="next-year-layout">
+        <!-- Left Column: Draft Order -->
+        <div class="next-year-layout__left">
+          <div class="draft-section">
+            {assetsPredictions.length > 0 ? (
+              <ChartCard title="2026 Draft Assets" subtitle="Picks your team owns after all trades">
+                <a href="/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  </svg>
+                </a>
+                <div id="draftAssetsPanels">
+                  {assetTeamIds.map((teamId) => (
+                    <div
+                      class="draft-assets-panel"
+                      data-assets-team-id={teamId}
+                      style={`display: ${teamId === defaultTeamId ? 'block' : 'none'}`}
+                    >
+                      <DraftTeamAssetsView
+                        predictions={assetsPredictions}
+                        teams={teamsList}
+                        hideTeamSelector={true}
+                        franchiseId={teamId}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </ChartCard>
+            ) : draftPredictions.length > 0 ? (
+              <ChartCard title="2026 Draft Picks" subtitle="Projected draft picks based on current standings">
+                <a href="/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  </svg>
+                </a>
+                <DraftPicksCard
+                  franchiseId={defaultTeamId}
+                  draftPredictions={draftPredictions}
+                  actualPicks={actualDraftPicks}
+                  season={2026}
+                />
+              </ChartCard>
+            ) : null}
+          </div>
+        </div>
+
+        <!-- Right Column: Metrics -->
+        <div class="next-year-layout__right">
+          <div class="chart-metrics">
+            <MetricCard
+              label="Cap Space"
+              value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
+              valueId="summaryCapNext"
+            />
+            <MetricCard
+              label="Avg per Player*"
+              value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
+              valueId="summaryAvg2026"
+            />
+            <MetricCard
+              label="Players Signed"
+              value={String(initialPlayersNextYear)}
+              valueId="summaryPlayersNext"
+              hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
+              hintVariant="error"
+              hintId="needsToCutRoster2026"
+            />
+            <MetricCard
+              label="Dead Money"
+              value={formatCurrency(initialDeadMoney2026)}
+              valueId="summaryDeadMoney2026"
+            />
+            <MetricCard
+              label="Average Age"
+              value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
+              valueId="summaryAverageAge"
+            />
+          </div>
+          <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
+        </div>
+      </div>
+
+      <!-- Extensions Section -->
+      <div class="extensions-section">
+        <h2 class="extensions-section__title">Extensions</h2>
+        <div class="chart-grid">
+          <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
+            <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+          </ChartCard>
+          <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
+            <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+          </ChartCard>
+        </div>
+      </div>
+    </div>
+    <!-- End Next Year View -->
+
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .roster-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+  }
+
+  .roster-page__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--padding-md);
+    flex-wrap: wrap;
+  }
+
+  .roster-page__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 1.4rem;
+    border-radius: 999px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-btn-hover);
+  }
+
+  .btn-secondary {
+    background: #e5e7eb;
+    color: #111827;
+    cursor: not-allowed;
+  }
+
+  .roster-controls {
+    display: flex;
+    justify-content: center;
+    margin-bottom: .5rem;
+  }
+
+
+.team-icon-nav {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--padding-lg);
+  justify-content: center;
+  align-items: center;
+  background-color: var(--card-bg-color);
+  box-shadow: var(--box-shadow-md);
+  border-radius: 1rem;
+  padding: var(--padding-lg);
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Tablet: 2x2 grid */
+@media (min-width: 768px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop: all in one row */
+@media (min-width: 1200px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.division-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+  .division-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+  }
+
+  .division-teams {
+    display: flex;
+    gap: var(--padding-md);
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+ @media (min-width: 1024px) {
+      .division-teams {
+        gap: var(--padding-sm);
+      }
+  }
+
+  .team-icon-btn {
+    max-width: 60px;
+    max-height: 60px;
+    width: 100%;
+    height: 100%;
+    padding: 0.25rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .team-icon-btn:hover {
+    border-color: #eeeeee;
+    transform: scale(1.1);
+  }
+
+  .team-icon-btn[data-active="true"] {
+    background: #f0f9ff;
+    box-shadow: var(--box-shadow-focus-ring);
+  }
+
+  .team-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+
+
+
+
+  .team-card {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-md);
+    padding: var(--padding-lg);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: var(--box-shadow-lg);
+    position: relative;
+  }
+  .team-card.roster-card {
+    box-shadow: none;
+    border-radius: none;
+  }
+
+  /* Mobile: Stack team card content */
+  @media (max-width: 767px) {
+    .team-card {
+      flex-wrap: wrap;
+      padding-bottom: var(--padding-xxl);/* Make room for tabs below */
+      justify-content: center;
+    }
+  }
+
+  /* View Tabs */
+  .view-tabs {
+    position: absolute;
+    right: var(--padding-lg);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* Mobile: Stack tabs below team info */
+  @media (max-width: 767px) {
+    .view-tabs {
+      position: static;
+      transform: none;
+      width: 100%;
+      justify-content: center;
+      margin-top: var(--padding-md);
+      order: 3; /* Place tabs at the end */
+    }
+  }
+
+  .view-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem .7rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 69px;
+  }
+  @media (min-width: 640px) {
+    .view-tab {
+    padding: 0.75rem;
+    }
+  }
+  .view-tab:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  .view-tab[data-active="true"] {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
+
+  .view-tab__icon {
+    width: var(--icon-btn-default-size, 30px);
+    height: var(--icon-btn-default-size, 30px);
+    fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
+  }
+
+  .view-tab[data-active="true"] .view-tab__icon {
+    fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
+  }
+
+  .view-tab__label {
+    position: absolute;
+    bottom: -1.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .view-tab:hover .view-tab__label,
+  .view-tab:focus .view-tab__label {
+    opacity: 1;
+  }
+
+  .view-tab[data-active="true"] .view-tab__label {
+    color: #3b82f6;
+  }
+
+  /* View Container */
+  .view-container {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .view-container[style*="display: none"] {
+    display: none;
+  }
+
+  .team-card img {
+    width: 90px;
+    height: 90px;
+    border-radius: 14px;
+    object-fit: cover;
+  }
+
+  .team-card__label {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .team-card h2 {
+    margin: 0;
+    font-size: 1.6rem;
+  }
+
+  .team-card p {
+    margin: 0;
+    color: #64748b;
+  }
+
+  .roster-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--padding-md);
+  }
+
+  .roster-summary article {
+    background: #fff;
+    border-radius: 1rem;
+    padding: var(--padding-md) var(--padding-md) var(--padding-xl);
+    box-shadow: var(--box-shadow-md);
+  }
+
+  .roster-summary p {
+    margin: 0;
+    color: #6b7280;
+  }
+
+  .roster-summary strong {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: clamp(1.1rem, 4vw, 1.6rem);
+    line-height: 1.2;
+  }
+
+  .roster-table-card {
+    background: #fff;
+    border-radius: 1rem;
+    padding: var(--padding-md);
+    box-shadow: var(--box-shadow-lg);
+    overflow-x: auto;
+  }
+
+  .roster-table-card--sub {
+    padding: var(--padding-md);
+  }
+
+  .table-header-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0 0.75rem 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--padding-md);
+    row-gap: var(--padding-lg);
+  }
+
+  /* Full width for single-child chart grids (like Franchise Tag Options) */
+  .chart-grid:has(> :only-child) {
+    grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 767px) {
+    .chart-grid {
+      grid-template-columns: 1fr;
+      overflow: auto;
+    }
+  }
+
+  :global(.chart-card) {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: var(--padding-md);
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+    grid-template-rows: min-content;
+  }
+
+  :global(.chart-card__header) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-self: start;
+  }
+
+  :global(.chart-card__header h3) {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  :global(.chart-card__sub) {
+    margin: 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
+  }
+
+  .cap-subtotals {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .cap-subtotals__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    color: #1f2937;
+    border-bottom: 1px solid #f7f7f7;
+    padding-bottom: var(--padding-xs);
+  }
+
+  .cap-subtotals__row strong {
+    font-size: 0.95rem;
+  }
+
+  .cap-count {
+    font-weight: 600;
+    margin-left: 0.35rem;
+    color: #475569;
+    font-size: 0.9rem;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    margin-right: 0.35rem;
+  }
+
+  .legend-active {
+    background: #57b881;
+  }
+  .legend-practice {
+    background: #487ae7;
+  }
+  .legend-injured {
+    background: #e56263;
+  }
+  .legend-dead {
+    background: #4b5563;
+  }
+  .legend-capspace {
+    background: #e2e8f0;
+  }
+
+  .deadmoney-row td {
+    font-size: 0.75rem;
+  }
+
+  .chart-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .chart-metrics__hint {
+    color: #6b7280;
+    font-size: 0.8rem;
+  }
+
+  .chart-metrics__headline {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .chart-card-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 0.375rem;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .chart-card-link:hover {
+    color: #2563eb;
+    background-color: #eff6ff;
+  }
+
+  .extensions-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .extensions-section__title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .next-year-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  .next-year-layout__left {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .next-year-layout__right {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .draft-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (max-width: 1200px) {
+    .next-year-layout {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  .roster-table-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .roster-table-card__header h3 {
+    margin: 0;
+  }
+
+  #rosterCountLabel {
+    font-weight: 600;
+    color: #487ae7;
+    background: #dbeafe;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+  }
+
+  .column-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: #475569;
+  }
+
+  .column-controls span {
+    font-weight: 600;
+  }
+
+  .column-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #f1f5f9;
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    font-weight: 600;
+  }
+
+  .column-controls input {
+    accent-color: #2563eb;
+  }
+
+  .roster-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .roster-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+  }
+
+  .roster-table--compact {
+    min-width: auto;
+  }
+
+  .roster-table--compact th,
+  .roster-table--compact td {
+    font-size: 0.85rem;
+  }
+
+  .roster-table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--table-header-text-color);
+    padding: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: right;
+  }
+
+  .roster-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+
+
+  :global(.roster-table th[data-column='player']) {
+    text-align: left !important;
+  }
+  :global(.roster-table td[data-column='player']) {
+    text-align: left !important;
+    padding-left: 0.75rem;
+    padding-block: 0.25rem;
+    font-size: var(--table-cell-font-size, .75rem);
+  }
+
+  .deadmoney-player-heading {
+    text-align: left !important;
+  }
+
+:global(.roster-table th.deadmoney-player-heading) {
+  text-align: left !important;
+  padding-left: 0.75rem;
+}
+
+.deadmoney-player-cell {
+  text-align: left !important;
+  padding-left: 0.75rem;
+}
+
+:global(.roster-table th[data-column='years']),
+:global(.roster-table td[data-column='years']) {
+  width: 60px;
+  text-align: center;
+}
+
+  :global(.roster-table td[data-column^='year']) {
+    font-size: var(--table-cell-font-size, 0.75rem);
+    text-align: right;
+    padding-right: 0.5rem;
+  }
+
+:global(.roster-table th[data-column^='year']) {
+  text-align: right;
+  padding-right: 0.5rem;
+}
+
+  :global(.salary-cell) {
+    text-align: right;
+    padding-right: 0.5rem;
+  }
+
+  :global(.salary-cell--ufa) {
+    text-align: center;
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  :global(.ufa-cell-content) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+  }
+
+  :global(.ufa-action-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid #f59e0b;
+    background: white;
+    color: #f59e0b;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  :global(.ufa-action-btn:hover) {
+    background: #f59e0b;
+    color: white;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+  }
+
+  :global(.ufa-action-btn svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  :global(.salary-cell--future-ufa) {
+    text-align: center;
+    color: #9ca3af;
+    font-weight: 400;
+  }
+
+  :global(.salary-cell--simulated) {
+    color: #9ca3af !important;
+    font-style: italic;
+  }
+
+  :global(.actions-cell) {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.5rem;
+    width: 60px;
+  }
+
+  :global(.actions-column) {
+    width: 60px;
+    text-align: center;
+  }
+
+  .roster-table tfoot td {
+    border-top: 2px solid #e2e8f0;
+    border-bottom: none;
+    font-weight: 600;
+    background: #f8fafc;
+  }
+
+  .roster-totals__label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    color: #475569;
+    text-align: left;
+    padding-left: 0.75rem;
+  }
+
+  .roster-totals,
+  .roster-totals td {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .roster-totals td[data-column='player'] {
+    text-align: right;
+  }
+
+:global(.player-meta) {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+:global(.player-meta span) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 100;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+:global(.player-meta__pos) {
+  font-weight: 300;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+:global(.player-meta__logo) {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  object-fit: contain;
+  }
+
+
+  :global(.roster-table[data-hidden-columns~='player'] th[data-column='player']),
+  :global(.roster-table[data-hidden-columns~='player'] td[data-column='player']),
+  :global(.roster-table[data-hidden-columns~='years'] th[data-column='years']),
+  :global(.roster-table[data-hidden-columns~='years'] td[data-column='years']),
+  :global(.roster-table[data-hidden-columns~='year1'] th[data-column='year1']),
+  :global(.roster-table[data-hidden-columns~='year1'] td[data-column='year1']),
+  :global(.roster-table[data-hidden-columns~='year2'] th[data-column='year2']),
+  :global(.roster-table[data-hidden-columns~='year2'] td[data-column='year2']),
+  :global(.roster-table[data-hidden-columns~='year3'] th[data-column='year3']),
+  :global(.roster-table[data-hidden-columns~='year3'] td[data-column='year3']),
+  :global(.roster-table[data-hidden-columns~='year4'] th[data-column='year4']),
+  :global(.roster-table[data-hidden-columns~='year4'] td[data-column='year4']),
+  :global(.roster-table[data-hidden-columns~='year5'] th[data-column='year5']),
+  :global(.roster-table[data-hidden-columns~='year5'] td[data-column='year5']) {
+    display: none;
+  }
+
+  :global(.deadmoney-row td) {
+    padding-block: 0.25rem;
+    font-size: 0.75rem;
+    text-align: right;
+  }
+
+  :global(.deadmoney-row) {
+    border-left: 0;
+    background: var(--color-bg-base, #fff);
+  }
+
+  :global(.deadmoney-row--alt) {
+    background: var(--color-bg-subtle, #f7f8fb);
+  }
+
+  :global(.player-cell) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  :global(.player-cell__avatar) {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  :global(.player-cell__avatar img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  :global(.player-cell__avatar--def img) {
+    object-fit: contain;
+    border: 0;
+    background: transparent;
+  }
+  :global(.player-cell__avatar--def) {
+    border: 0;
+    background: transparent;
+  }
+  :global(.player-cell__avatar--dm) {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #c2410c;
+    font-weight: 700;
+    font-size: 0.75rem;
+  }
+
+  :global(.player-cell__nfl-icon) {
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    object-fit: contain;
+  }
+
+  :global(.player-cell__meta) {
+    display: block;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  :global(.pill) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.9rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1e3a8a;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 0.35rem;
+  }
+
+  :global(.contract-years) {
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .timeline-header {
+    text-align: right;
+  }
+
+  .timeline-header div {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(70px, 1fr));
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  :global(.timeline-row) {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(70px, 1fr));
+    gap: 0.35rem;
+  }
+
+  :global(.roster-empty) {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+  }
+
+  :global(.roster-row) {
+    border-left: 4px solid transparent;
+    transition: background 0.15s ease;
+  }
+
+  :global(.roster-row--active) {
+    border-left-color: #57b881;
+    background: var(--color-bg-base, #fff);
+  }
+
+  :global(.roster-row--active-alt) {
+    background: var(--color-bg-subtle, #f7f8fb);
+  }
+
+  :global(.roster-row--practice) {
+    border-left-color: #487ae7;
+    background: var(--color-bg-practice, #f0f7ff);
+  }
+
+  :global(.roster-row--practice:nth-of-type(even)) {
+    background: var(--color-bg-practice-alt, #e0efff);
+  }
+
+  :global(.roster-row--injured) {
+    border-left-color: #e56263;
+    background: var(--color-bg-injured, #fff5f5);
+  }
+
+  :global(.roster-row--injured:nth-of-type(even)) {
+    background: var(--color-bg-injured-alt, #ffe8e8);
+  }
+
+  :global(.roster-row--position-divider) {
+    border-top: 2px solid #e2e8f0;
+  }
+
+  :global(.roster-row--active.roster-row--position-divider td), :global(.roster-table tbody tr:first-child td[data-column="player"])  {
+    padding-top: 0.5rem;
+  }
+  :global(.roster-row--active.roster-row--position-divider-end td) {
+    padding-bottom: 0.5rem;
+  }
+  :global(.roster-row--practice.roster-row--position-divider-end td) {
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--color-border-practice, #bfdbfe);
+  }
+  :global(.roster-row--injured.roster-row--position-divider-end td) {
+    padding-bottom: 0.75rem;
+    
+  }
+
+  :global(.roster-row--tier-divider td) {
+    padding-top: 0.75rem;
+  }
+
+  :global(.roster-row--practice.roster-row--tier-divider td) {
+    border-top: 3px solid var(--color-border-practice, #bfdbfe);
+        padding-top: 0.5rem;
+  }
+
+  :global(.roster-row--injured.roster-row--tier-divider td) {
+    border-top: 3px solid var(--color-border-injured, #fecaca);
+        padding-top: 0.5rem;
+  }
+
+  .roster-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.85rem;
+    font-size: 0.9rem;
+    color: #475569;
+  }
+
+  .legend-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    margin-right: 0.35rem;
+  }
+
+  .legend-swatch--active {
+    background: #57b881;
+  }
+
+  .legend-swatch--practice {
+    background: #487ae7;
+  }
+
+  .legend-swatch--injured {
+    background: #e56263;
+  }
+  .legend-swatch--trade-bait {
+    width: 1.25rem;
+  }
+
+  .deadmoney-row__amount {
+    text-align: right;
+  }
+
+
+  @media (max-width: 900px) {
+    .roster-table {
+      min-width: 720px;
+    }
+  }
+
+
+
+  /* Contract Action Modal */
+  :global(.contract-modal) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :global(.contract-modal__overlay) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+  }
+
+  :global(.contract-modal__content) {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  :global(.contract-modal__header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  :global(.contract-modal__title) {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
+  }
+
+  :global(.contract-modal__close) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  :global(.contract-modal__close:hover) {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+
+  :global(.contract-modal__body) {
+    padding: 1.5rem;
+  }
+
+  :global(.contract-modal__player-info) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  :global(.contract-player-name-row) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  :global(.player-name-display) {
+    font-size: 1.125rem;
+    color: #1e293b;
+  }
+
+  :global(.contract-player-injury) {
+    color: #e56263;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  :global(.contract-player-meta .player-meta__logo) {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  :global(.player-position-display) {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
+  }
+
+  :global(.contract-modal__current-contract) {
+    margin-bottom: 1.5rem;
+  }
+
+  :global(.contract-modal__current-contract p) {
+    margin: 0.5rem 0;
+    color: #475569;
+    font-size: 0.9375rem;
+  }
+
+  :global(.contract-modal__actions) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :global(.contract-action-btn) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  :global(.contract-action-btn span) {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  :global(.contract-action-btn .action-description) {
+    font-size: 0.8125rem;
+    color: #64748b;
+    font-weight: 400;
+  }
+
+  :global(.contract-action-btn:hover) {
+    border-color: var(--primary-color);
+    background: #f8fafc;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.contract-action-btn--franchise:hover) {
+    border-color: #2563eb;
+  }
+
+  :global(.contract-action-btn--extension:hover) {
+    border-color: var(--secondary-color);
+  }
+
+  :global(.contract-action-btn--cut:hover) {
+    border-color: #dc2626;
+  }
+
+  :global(.contract-action-btn--trade:hover) {
+    border-color: #f59e0b;
+  }
+
+  :global(.contract-modal__extension-options) {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  :global(.contract-modal__extension-options h4) {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #1e293b;
+  }
+
+  :global(.extension-year-buttons) {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  :global(.extension-year-btn) {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  :global(.extension-year-btn:hover) {
+    border-color: var(--secondary-color);
+    background: #f0fdf4;
+  }
+
+  :global(.extension-year-btn.active) {
+    border-color: var(--secondary-color);
+    background: var(--secondary-color);
+    color: white;
+  }
+
+  :global(.extension-confirm-btn),
+  :global(.extension-cancel-btn) {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+  }
+
+  :global(.extension-confirm-btn) {
+    background: var(--secondary-color);
+    color: white;
+  }
+
+  :global(.extension-confirm-btn:hover) {
+    background: #26743a;
+    box-shadow: 0 2px 4px rgba(46, 135, 67, 0.3);
+  }
+
+  :global(.extension-cancel-btn) {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  :global(.extension-cancel-btn:hover) {
+    background: #e2e8f0;
+  }
+
+  @media (max-width: 640px) {
+    :global(.contract-modal__content) {
+      width: 95%;
+      max-height: 95vh;
+    }
+
+    :global(.contract-modal__header),
+    :global(.contract-modal__body) {
+      padding: 1rem;
+    }
+  }
+
+  /* Contract Action Visual Indicators */
+  :global(.roster-row--contract-action) {
+    background: #fef3c7 !important;
+    border-left: 3px solid #f59e0b !important;
+  }
+
+  :global(.roster-row--contract-action.roster-row--active-alt) {
+    background: #fde68a !important;
+  }
+
+  :global(.contract-action-badge) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    background: #f59e0b;
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  :global(.contract-action-badge--franchise) {
+    background: #2563eb;
+  }
+
+  :global(.contract-action-badge--extension) {
+    background: var(--secondary-color);
+  }
+
+  :global(.contract-action-badge--cut) {
+    background: #dc2626;
+  }
+
+  :global(.contract-action-badge--trade) {
+    background: #7c3aed;
+  }
+
+  /* Cut/Traded Players - 50% opacity */
+  :global(.roster-row--cut),
+  :global(.roster-row--trade) {
+    opacity: 0.5;
+    background: #f3f4f6 !important;
+  }
+
+  :global(.roster-row--cut.roster-row--active-alt),
+  :global(.roster-row--trade.roster-row--active-alt) {
+    background: #e5e7eb !important;
+  }
+
+  :global(.contract-action-remove) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin-left: 0.25rem;
+    border: none;
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  :global(.contract-action-remove:hover) {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Clear All Tags Button */
+  .team-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .clear-all-tags-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid #f59e0b;
+    background: white;
+    color: #f59e0b;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .clear-all-tags-btn:hover {
+    background: #f59e0b;
+    color: white;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+  }
+
+  .clear-all-tags-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @media (max-width: 960px) {
+    .team-card__actions {
+      gap: 0.75rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .team-card__actions {
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .clear-all-tags-btn {
+      order: -1;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .view-tabs {
+      width: 100%;
+    }
+  }
+
+  /* Players by Team Report */
+  :global(.nfl-teams-grid) {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--padding-md);
+  }
+
+  @media (max-width: 767px) {
+    :global(.nfl-teams-grid) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  :global(.team-group) {
+    margin-bottom: 2rem;
+  }
+
+  :global(.team-group__name) {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(.team-group__logo) {
+    height: 2rem;
+    max-width: 3rem;
+    object-fit: contain;
+    align-self: flex-start;
+  }
+  :global(.team-group__logo--fallback) {
+    height: 2rem;
+    width: 2rem;
+    border-radius: 0.5rem;
+    background: #e2e8f0;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+
+  :global(.team-group__players) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :global(.players-team__player) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 4px;
+    gap: 1rem;
+  }
+
+  :global(.players-team__player .player-cell) {
+    flex: 1;
+  }
+
+  :global(.players-team__salary) {
+    font-weight: 600;
+    color: #111;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    text-align: right;
+  }
+
+  @media (max-width: 640px) {
+    :global(.team-group) {
+      margin-bottom: 1.5rem;
+    }
+
+    :global(.team-group__name) {
+      font-size: 0.875rem;
+    }
+
+    :global(.players-team__player) {
+      padding: 0.5rem;
+      gap: 0.75rem;
+    }
+
+    :global(.players-team__salary) {
+      font-size: 0.75rem;
+    }
+  }
+
+  :global(.franchise-tag-eligibility .table-wrapper) {
+    overflow: auto;
+  }
+
+  @media (max-width: 767px) {
+    :global(.eligibility-table th:nth-child(2)),
+    :global(.eligibility-table td:nth-child(2)) {
+      display: none;
+    }
+  }
+
+  .analytics-section__title + .analytics-section__sub {
+    margin-top: -1rem;
+    margin-bottom: 0;
+  }
+  .analytics-section__sub{
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
+  }
+</style>
+
+<!-- Player Details Modal -->
+<PlayerDetailsModal />
+
+<!-- Player Injury Modal -->
+<PlayerInjuryModal />
+
+<!-- Contract Action Modal -->
+<div class="contract-modal" id="contract-modal" style="display: none;">
+  <div class="contract-modal__overlay"></div>
+  <div class="contract-modal__content">
+    <div class="contract-modal__header">
+      <h3 class="contract-modal__title">Manage Contract</h3>
+      <button class="contract-modal__close" title="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+      <div class="contract-modal__body">
+        <div class="contract-modal__player-info">
+          <div class="player-cell contract-player-cell">
+            <div class="player-cell__avatar">
+              <img id="contract-player-headshot" src="" alt="Player headshot" />
+            </div>
+            <div>
+              <div class="contract-player-name-row">
+                <strong class="player-name-display contract-player-name"></strong>
+                <span class="contract-player-injury" id="contract-player-injury"></span>
+              </div>
+              <div class="player-meta contract-player-meta">
+                <img
+                  id="contract-player-nfl-logo"
+                  class="player-meta__logo"
+                  src=""
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span class="player-meta__pos" id="contract-player-position"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      <div class="contract-modal__current-contract">
+        <p><strong>Current Salary:</strong> <span class="current-salary-display"></span></p>
+        <p><strong>Years Remaining:</strong> <span class="current-years-display"></span></p>
+      </div>
+      <div class="contract-modal__actions">
+        <button class="contract-action-btn contract-action-btn--franchise" data-action="franchise">
+          <span>Franchise Tag</span>
+          <small class="action-description">1 year at higher of 120% or position average</small>
+        </button>
+        <button class="contract-action-btn contract-action-btn--extension" data-action="extension">
+          <span>Veteran Extension</span>
+          <small class="action-description">Extend contract 1-2 years</small>
+        </button>
+        <button class="contract-action-btn contract-action-btn--cut" data-action="cut">
+          <span>Cut Player</span>
+          <small class="action-description">50% cap hit + future penalties</small>
+        </button>
+        <button class="contract-action-btn contract-action-btn--trade" data-action="trade">
+          <span>Trade Player</span>
+          <small class="action-description">No cap penalty</small>
+        </button>
+      </div>
+      <div class="contract-modal__extension-options" style="display: none;">
+        <h4>Extension Length</h4>
+        <div class="extension-year-buttons">
+          <button class="extension-year-btn" data-years="1">1 Year</button>
+          <button class="extension-year-btn" data-years="2">2 Years</button>
+        </div>
+        <button class="extension-confirm-btn">Confirm Extension</button>
+        <button class="extension-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script
+  type="application/json"
+  id="roster-config"
+  set:html={serializedConfig}
+></script>
+
+<script type="module">
+  const config = JSON.parse(
+    document.getElementById('roster-config').textContent
+  );
+
+  // View switching logic
+  let currentView = 'roster';
+
+  const viewLabels = {
+    'roster': 'Roster & Salary Cap',
+    'analytics': 'Advanced Analytics',
+    'nextyear': 'Next Year (2026)'
+  };
+
+  // Contract Actions State Management
+  const contractActions = {}; // { playerId: { type, newSalary, newYears, originalSalary, originalYears, ufaYear } }
+  const franchiseTagsByYear = {}; // Track franchise tags by year: { yearIndex: playerId }
+  let currentVeteranExtension = null; // Track which player has veteran extension
+  let currentSeason = config.defaultSeason; // Track current season for salary averages
+
+  const DEFAULT_HEADSHOT_URL =
+    'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  const getPlayerImageUrl = (playerId) =>
+    playerId
+      ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+      : DEFAULT_HEADSHOT_URL;
+
+  const getNflLogoUrl = (teamCode) => {
+    if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+    return `/assets/nfl-logos/${teamCode}.svg`;
+  };
+
+  // Helper functions for contract calculations
+  const formatCurrency = (value) => {
+    if (!Number.isFinite(value)) return '$0';
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    return formatter.format(Math.round(value));
+  };
+
+  const parseCurrency = (value) => {
+    if (!value) return 0;
+    const numeric = parseFloat(value.replace(/[^\d.-]/g, ''));
+    return Number.isNaN(numeric) ? 0 : numeric;
+  };
+
+  const getReferenceSalary = (position, type, season) => {
+    const averages = config.salaryAverages?.[season];
+    if (!averages) return 0;
+
+    if (type === 'franchise') {
+      return averages.franchiseSalaries?.[position] ?? 0;
+    }
+    return averages.extensionSalaries?.[position] ?? 0;
+  };
+
+  // Contract Action Calculations
+  const calculateFranchiseTag = (salary, position, season) => {
+    const increasedSalary = salary * 1.2;
+    const avgSalary = getReferenceSalary(position, 'franchise', season);
+    return {
+      newSalary: Math.round(Math.max(increasedSalary, avgSalary)),
+      newYears: 1
+    };
+  };
+
+  const calculateVeteranExtension = (
+    contractYears,
+    position,
+    season,
+    extensionYears,
+    currentSalary
+  ) => {
+    const existingYears = Number(contractYears ?? 0) || 0;
+    const extYears = Number(extensionYears ?? 0) || 0;
+    const avgSalary = getReferenceSalary(position, 'extension', season);
+
+    // Per rules: (top5 avg * extensionYears / (existing years + extensionYears)) + existing salary
+    const denominator = existingYears + extYears;
+    const proratedPortion =
+      denominator > 0 ? (avgSalary * extYears) / denominator : 0;
+    const baseSalary = Number(currentSalary ?? 0);
+    const newSalaryCurrent = Math.round(proratedPortion + baseSalary);
+
+    const totalYears = existingYears + extYears;
+
+    // Create salary breakdown for ALL years with 10% increases each year starting from newSalaryCurrent
+    const salaryBreakdown = {};
+    for (let i = 0; i < totalYears; i++) {
+      salaryBreakdown[`year${i}`] = Math.round(newSalaryCurrent * Math.pow(1.1, i));
+    }
+
+    return {
+      newSalary: newSalaryCurrent,
+      newYears: totalYears,
+      salaryBreakdown: salaryBreakdown
+    };
+  };
+
+  const calculateCutPenalty = (salary, contractYears) => {
+    const currentSeasonPenalty = salary * 0.5;
+    let futureSeasonPenalty = 0;
+
+    if (contractYears > 1) {
+      // Future penalty: 15% for 2 years, 25% for 3 years, 35% for 4 years, 45% for 5 years
+      const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+      futureSeasonPenalty = salary * (futurePercentByYears[contractYears] ?? 0);
+    }
+
+    return {
+      currentPenalty: currentSeasonPenalty,
+      futurePenalty: futureSeasonPenalty,
+      totalPenalty: currentSeasonPenalty + futureSeasonPenalty
+    };
+  };
+
+  const switchView = (viewName) => {
+    if (currentView === viewName) return;
+
+    currentView = viewName;
+
+    // Hide all view containers
+    document.querySelectorAll('.view-container').forEach(container => {
+      container.style.display = 'none';
+    });
+
+    // Show selected view
+    const selectedView = document.querySelector(`[data-view-content="${viewName}"]`);
+    if (selectedView) {
+      selectedView.style.display = 'grid';
+    }
+
+    // Update tab active states
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      const isActive = tab.dataset.view === viewName;
+      tab.dataset.active = isActive;
+    });
+
+    // Update view label
+    const viewLabelEl = document.querySelector('[data-view-label]');
+    if (viewLabelEl && viewLabels[viewName]) {
+      viewLabelEl.textContent = viewLabels[viewName];
+    }
+  };
+
+  // Initialize view tabs
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      switchView(tab.dataset.view);
+    });
+  });
+
+  // Modal Management
+  const modal = document.getElementById('contract-modal');
+  const modalOverlay = modal?.querySelector('.contract-modal__overlay');
+  const modalClose = modal?.querySelector('.contract-modal__close');
+  const playerNameDisplay = modal?.querySelector('.player-name-display');
+  const playerPositionDisplay = modal?.querySelector('#contract-player-position');
+  const playerInjuryDisplay = modal?.querySelector('#contract-player-injury');
+  const playerHeadshotDisplay = modal?.querySelector('#contract-player-headshot');
+  const playerNflLogoDisplay = modal?.querySelector('#contract-player-nfl-logo');
+  const currentSalaryDisplay = modal?.querySelector('.current-salary-display');
+  const currentYearsDisplay = modal?.querySelector('.current-years-display');
+  const extensionOptions = modal?.querySelector('.contract-modal__extension-options');
+  const extensionYearButtons = modal?.querySelectorAll('.extension-year-btn');
+  const extensionConfirmBtn = modal?.querySelector('.extension-confirm-btn');
+  const extensionCancelBtn = modal?.querySelector('.extension-cancel-btn');
+
+  let selectedPlayer = null;
+  let selectedExtensionYears = 1;
+
+  const openModal = (playerData) => {
+    selectedPlayer = playerData;
+    if (!modal || !playerData) return;
+
+    // Populate modal with player data
+    if (playerNameDisplay) playerNameDisplay.textContent = playerData.name;
+    if (playerPositionDisplay) playerPositionDisplay.textContent = playerData.position || '';
+    if (playerInjuryDisplay) {
+      if (playerData.injuryStatus) {
+        playerInjuryDisplay.textContent = `(${playerData.injuryStatus.substring(0, 1)})`;
+        playerInjuryDisplay.style.display = 'inline';
+      } else {
+        playerInjuryDisplay.textContent = '';
+        playerInjuryDisplay.style.display = 'none';
+      }
+    }
+    if (playerHeadshotDisplay) {
+      const imgUrl = playerData.headshot ?? getPlayerImageUrl(playerData.id);
+      playerHeadshotDisplay.src = imgUrl;
+      playerHeadshotDisplay.alt = `${playerData.name} headshot`;
+      playerHeadshotDisplay.onerror = () => {
+        playerHeadshotDisplay.src = DEFAULT_HEADSHOT_URL;
+      };
+    }
+    if (playerNflLogoDisplay) {
+      const logo =
+        playerData.nflLogo ||
+        (playerData.nflTeam && playerData.nflTeam !== 'FA'
+          ? getNflLogoUrl(playerData.nflTeam)
+          : '');
+      if (logo) {
+        playerNflLogoDisplay.src = logo;
+        playerNflLogoDisplay.alt = playerData.nflTeam ? `${playerData.nflTeam} logo` : 'Team logo';
+        playerNflLogoDisplay.style.display = 'inline-block';
+      } else {
+        playerNflLogoDisplay.src = '';
+        playerNflLogoDisplay.alt = '';
+        playerNflLogoDisplay.style.display = 'none';
+      }
+    }
+    if (currentSalaryDisplay) currentSalaryDisplay.textContent = formatCurrency(playerData.salary);
+    if (currentYearsDisplay) currentYearsDisplay.textContent = playerData.years;
+
+    // Show/hide contract action buttons based on eligibility
+    const contractYears = playerData.years ?? 0;
+    const franchiseTagBtn = modal?.querySelector('[data-action="franchise"]');
+    const extensionBtn = modal?.querySelector('[data-action="extension"]');
+
+    // Franchise tag: only eligible in last year of contract (contractYears === 1)
+    if (franchiseTagBtn) {
+      franchiseTagBtn.style.display = contractYears === 1 ? 'block' : 'none';
+    }
+
+    // Veteran extension: only eligible with 2+ years remaining
+    if (extensionBtn) {
+      extensionBtn.style.display = contractYears >= 2 ? 'block' : 'none';
+    }
+
+    // Reset extension options
+    if (extensionOptions) extensionOptions.style.display = 'none';
+    selectedExtensionYears = 1;
+    extensionYearButtons?.forEach(btn => btn.classList.remove('active'));
+    extensionYearButtons?.[0]?.classList.add('active');
+
+    // Show modal
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeModal = () => {
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    selectedPlayer = null;
+    if (extensionOptions) extensionOptions.style.display = 'none';
+  };
+
+  // Modal close handlers
+  modalClose?.addEventListener('click', closeModal);
+  modalOverlay?.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.style.display === 'flex') {
+      closeModal();
+    }
+  });
+
+  // Extension year selection
+  extensionYearButtons?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      extensionYearButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedExtensionYears = parseInt(btn.dataset.years || '1', 10);
+    });
+  });
+
+  // Extension cancel
+  extensionCancelBtn?.addEventListener('click', () => {
+    if (extensionOptions) extensionOptions.style.display = 'none';
+  });
+
+  // Contract action handlers
+  modal?.querySelectorAll('.contract-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (!action || !selectedPlayer) return;
+
+      if (action === 'extension') {
+        // Show extension year selection
+        if (extensionOptions) extensionOptions.style.display = 'block';
+      } else {
+        // Handle other actions immediately
+        applyContractAction(action);
+      }
+    });
+  });
+
+  // Extension confirm handler
+  extensionConfirmBtn?.addEventListener('click', () => {
+    applyContractAction('extension', selectedExtensionYears);
+  });
+
+  // Apply contract action
+  const applyContractAction = (actionType, extensionYears = 1) => {
+    console.log('applyContractAction called', { actionType, extensionYears, selectedPlayer });
+    if (!selectedPlayer) {
+      console.error('No selected player');
+      return;
+    }
+
+    const { id, name, position, salary, years } = selectedPlayer;
+    console.log('Player data:', { id, name, position, salary, years });
+
+    // Calculate which year the franchise tag applies (0-indexed)
+    // If player has 3 years, they're signed through index 2 (2027), so franchise tag is at index 3 (2028)
+    const franchiseYearIndex = years; // The year after their current contract
+    console.log('Franchise Year Index:', franchiseYearIndex);
+
+    let result = null;
+
+    // Check for conflicts with existing tags
+    if (actionType === 'franchise') {
+      // Check if there's already a franchise tag for this year
+      if (franchiseTagsByYear[franchiseYearIndex] && franchiseTagsByYear[franchiseYearIndex] !== id) {
+        // Remove previous franchise tag for this year
+        const previousPlayerId = franchiseTagsByYear[franchiseYearIndex];
+        delete contractActions[previousPlayerId];
+      }
+      result = calculateFranchiseTag(salary, position, currentSeason);
+      result.ufaYearIndex = franchiseYearIndex;
+      franchiseTagsByYear[franchiseYearIndex] = id;
+    } else if (actionType === 'extension') {
+      if (currentVeteranExtension && currentVeteranExtension !== id) {
+        // Remove previous veteran extension
+        delete contractActions[currentVeteranExtension];
+      }
+      result = calculateVeteranExtension(
+        years,
+        position,
+        currentSeason,
+        extensionYears,
+        salary
+      );
+      currentVeteranExtension = id;
+    } else if (actionType === 'cut') {
+      const penalty = calculateCutPenalty(salary, years);
+      result = {
+        type: 'cut',
+        currentPenalty: penalty.currentPenalty,
+        futurePenalty: penalty.futurePenalty,
+        totalPenalty: penalty.totalPenalty
+      };
+    } else if (actionType === 'trade') {
+      result = {
+        type: 'trade',
+        removed: true
+      };
+    }
+
+    console.log('Result calculated:', result);
+
+    if (result) {
+      contractActions[id] = {
+        type: actionType,
+        playerId: id,
+        playerName: name,
+        playerPosition: position,
+        originalSalary: salary,
+        originalYears: years,
+        ...result
+      };
+
+      console.log('Contract action stored:', contractActions[id]);
+      console.log('All contract actions:', contractActions);
+
+      // Close modal and recalculate
+      closeModal();
+      console.log('Calling recalculateRoster');
+      recalculateRoster();
+      updateClearAllButton();
+    } else {
+      console.error('No result calculated for action:', actionType);
+    }
+  };
+
+  // Recalculate roster with contract actions
+  const recalculateRoster = () => {
+    console.log('recalculateRoster called');
+    // Trigger a view update by simulating a team change
+    // This will call updateView which is defined later
+    const select = document.getElementById('rosterTeamSelect');
+    if (select) {
+      const event = new Event('change');
+      select.dispatchEvent(event);
+    } else {
+      console.error('teamSelect element not found');
+    }
+  };
+
+  // Remove contract action
+  const removeContractAction = (playerId) => {
+    if (contractActions[playerId]) {
+      const action = contractActions[playerId];
+
+      // Clear tag tracking
+      if (action.type === 'franchise' && action.ufaYearIndex !== undefined) {
+        delete franchiseTagsByYear[action.ufaYearIndex];
+      } else if (action.type === 'extension' && currentVeteranExtension === playerId) {
+        currentVeteranExtension = null;
+      }
+
+      delete contractActions[playerId];
+      recalculateRoster();
+      updateClearAllButton();
+    }
+  };
+
+  // Clear all contract actions
+  const clearAllContractActions = () => {
+    Object.keys(contractActions).forEach(key => delete contractActions[key]);
+    Object.keys(franchiseTagsByYear).forEach(key => delete franchiseTagsByYear[key]);
+    currentVeteranExtension = null;
+    recalculateRoster();
+    updateClearAllButton();
+  };
+
+  // Update clear all button visibility
+  const updateClearAllButton = () => {
+    const clearAllBtn = document.getElementById('clearAllTagsBtn');
+    if (clearAllBtn) {
+      const hasActions = Object.keys(contractActions).length > 0;
+      clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
+    }
+  };
+
+  // Clear all tags button event listener
+  const clearAllBtn = document.getElementById('clearAllTagsBtn');
+  clearAllBtn?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all contract actions?')) {
+      clearAllContractActions();
+    }
+  });
+
+  const initRosterPage = () => {
+    console.log('=== INIT ROSTER PAGE ===');
+    const {
+      seasons = {},
+      defaultSeason,
+      defaultTeamId,
+      initialSeasonData: initialSeasonDataConfig,
+      initialTeamData: initialTeamDataConfig,
+      adjustmentsBySeason = {},
+      teams = {},
+      rosterLimit,
+      positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
+      columnOptions = [],
+      salaryYears = [],
+      byeWeeks = {},
+      collegeLogos = {},
+      capLimit = 45_000_000,
+      capInclusion = {},
+      deadMoneySources = [],
+      rosterLimitOverride,
+      positionColors = {},
+      targetActiveCount = 22,
+      reserveForRookies = 5_000_000,
+    } = config;
+
+    console.log('defaultTeamId:', defaultTeamId);
+    console.log('defaultSeason:', defaultSeason);
+
+    const formatCurrency = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    });
+
+    const formatCapSpaceText = (value = 0) => {
+      if (!Number.isFinite(value)) return formatCurrency.format(0);
+      if (value >= 1_000_000) {
+        const millions = value / 1_000_000;
+        return `$${millions.toFixed(1)} million`;
+      }
+      return formatCurrency.format(value);
+    };
+
+    const DEFAULT_HEADSHOT_URL =
+      'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+
+    const getCollegeAssets = (collegeName) => {
+      if (!collegeName) return null;
+      const entry = collegeLogos[collegeName.toLowerCase()];
+      return entry || null;
+    };
+
+    // Create player name lookup across all seasons for dead money
+    const createPlayerLookup = () => {
+      const lookup = {};
+      Object.values(seasons).forEach(seasonData => {
+        if (seasonData?.teams) {
+          // Players are nested inside teams
+          Object.values(seasonData.teams).forEach(teamData => {
+            const allPlayers = [
+              ...(teamData.players || []),
+              ...(teamData.practiceSquad || []),
+              ...(teamData.injuredReserve || [])
+            ];
+            allPlayers.forEach(player => {
+              if (player.name && player.id) {
+                // Store by "Last, First" format
+                lookup[player.name.toLowerCase()] = player.id;
+              }
+            });
+          });
+        }
+      });
+      return lookup;
+    };
+
+    const playerLookup = createPlayerLookup();
+
+    const findPlayerId = (playerName) => {
+      if (!playerName) return null;
+      return playerLookup[playerName.toLowerCase()] || null;
+    };
+
+    const seasonSelect = document.getElementById('rosterSeasonSelect');
+    const teamSelect = document.getElementById('rosterTeamSelect');
+    const summaryCap = document.getElementById('summaryCap');
+    const summaryPlayers = document.getElementById('summaryPlayers');
+    const summaryOpen = document.getElementById('summaryOpen');
+    const summaryPractice = document.getElementById('practiceCount');
+    const summaryInjured = document.getElementById('injuredCount');
+    const teamNames = document.querySelectorAll('[data-team-name]');
+    const teamMetas = document.querySelectorAll('[data-team-meta]');
+    const teamIdentityEls = document.querySelectorAll('[data-team-identity]');
+    const rosterTable = document.querySelector('.roster-table');
+    const rosterTableBody = document.getElementById('rosterTableBody');
+    const rosterMetadata = document.getElementById('rosterMetadata');
+    const rosterCountLabel = document.getElementById('rosterCountLabel');
+    const columnToggles = document.querySelectorAll('[data-column-toggle]');
+    const yearTotalCells = salaryYears.map((_, index) =>
+      document.getElementById(`yearTotal${index + 1}`)
+    );
+    const capLimitCells = salaryYears.map((_, index) =>
+      document.getElementById(`capLimit${index + 1}`)
+    );
+    const capSpaceCells = salaryYears.map((_, index) =>
+      document.getElementById(`capSpaceTotal${index + 1}`)
+    );
+    const dmTotalCells = salaryYears.map((_, index) =>
+      document.getElementById(`dmTotal${index + 1}`)
+    );
+    const deadMoneyTableBody = document.getElementById('deadMoneyTableBody');
+  const capDonut = document.getElementById('capDonut');
+  const capLegend = document.getElementById('capDonut-legend');
+  const rosterDonut = document.getElementById('rosterDonut');
+  const rosterLegend = document.getElementById('rosterDonut-legend');
+  const posBar = document.getElementById('posBar');
+  const efficiencyBar = document.getElementById('efficiencyBar');
+  const ageChart = document.getElementById('ageChart');
+  const posAgeBar = document.getElementById('posAgeBar');
+  const playersbyTeamContainer = document.getElementById('playersbyTeamContainer');
+  const playersByCollegeContainer = document.getElementById('playersByCollegeContainer');
+  const subtotalActive = document.getElementById('subtotalActive');
+  const subtotalPractice = document.getElementById('subtotalPractice');
+  const subtotalInjured = document.getElementById('subtotalInjured');
+    const subtotalDead = document.getElementById('subtotalDead');
+    const countActive = document.getElementById('countActive');
+    const countPractice = document.getElementById('countPractice');
+    const countInjured = document.getElementById('countInjured');
+    const assetsPanels = document.querySelectorAll('[data-assets-team-id]');
+
+    let currentSeason = defaultSeason;
+    let currentTeam = defaultTeamId;
+    const hiddenColumns = new Set();
+
+    const formatCountLabel = (count) => `${count} Players`;
+
+    const getCapPercent = (tag = 'ACTIVE', isCurrent = true) => {
+      const normalized = String(tag).toUpperCase();
+      const map = capInclusion?.[normalized] ?? { current: 1, future: 1 };
+      return isCurrent ? map.current ?? 1 : map.future ?? 1;
+    };
+
+    const getPositionRank = (pos = '') => {
+      const normalized = pos.toUpperCase();
+      const index = positionOrder.indexOf(normalized);
+      return index === -1 ? positionOrder.length : index;
+    };
+
+    const sortByPosition = (list = []) =>
+      list.slice().sort((a, b) => {
+        const diff = getPositionRank(a.position ?? '') - getPositionRank(b.position ?? '');
+        if (diff !== 0) return diff;
+        return (b.salary ?? 0) - (a.salary ?? 0);
+      });
+
+    const enrichPlayer = (player = {}, tag = 'active') => {
+      const nflTeam = (player.nflTeam ?? player.team ?? '').toUpperCase();
+      return {
+        ...player,
+        displayTag: tag,
+        nflTeam,
+        headshot: player.headshot ?? getPlayerImageUrl(player.id),
+        nflLogo: player.nflLogo ?? getNflLogoUrl(nflTeam),
+        contractYears:
+          Number.parseInt(player.contractYears ?? player.contractYear ?? 0, 10) || 0,
+        salary: Number(player.salary ?? 0) || 0,
+        byeWeek: player.byeWeek ?? byeWeeks[nflTeam] ?? null,
+      };
+    };
+
+    const annotatePositionDividers = (rows = []) => {
+      const normalized = rows.map((player, index) => {
+        const prevPosition =
+          index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
+        const current = (player.position ?? '').toUpperCase();
+        const divider = index > 0 && current !== prevPosition;
+        return { ...player, positionDivider: divider, _positionGroup: current };
+      });
+
+      return normalized.map((player, index) => {
+        const next = normalized[index + 1];
+        const positionDividerEnd =
+          !next || (next?._positionGroup ?? '') !== (player._positionGroup ?? '');
+        return { ...player, positionDividerEnd };
+      });
+    };
+
+    const annotateTierDividers = (rows = []) => {
+      let lastTag = null;
+      return rows.map((player) => {
+        const currentTag = player.displayTag ?? 'active';
+        const tierDivider =
+          lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
+        lastTag = currentTag;
+        return { ...player, tierDivider };
+      });
+    };
+
+    const annotateActiveStriping = (rows = []) => {
+      let activeIndex = 0;
+      return rows.map((player) => {
+        if ((player.displayTag ?? 'active') === 'active') {
+          const striped = activeIndex % 2 === 1;
+          activeIndex += 1;
+          return { ...player, activeStripe: striped };
+        }
+        return { ...player, activeStripe: false };
+      });
+    };
+
+    const buildDisplayRows = (teamData = {}) => {
+      const combined = [
+        ...sortByPosition(teamData.players ?? []).map((player) =>
+          enrichPlayer(player, 'active')
+        ),
+        ...sortByPosition(teamData.practiceSquad ?? []).map((player) =>
+          enrichPlayer(player, 'practice')
+        ),
+        ...sortByPosition(teamData.injuredReserve ?? []).map((player) =>
+          enrichPlayer(player, 'injured')
+        ),
+      ];
+      return annotateActiveStriping(
+        annotateTierDividers(annotatePositionDividers(combined))
+      );
+    };
+
+    const getSeasonData = () =>
+      seasons[currentSeason] ||
+      seasons[defaultSeason] ||
+      initialSeasonDataConfig ||
+      {};
+
+    const getTeamData = () => {
+      const seasonData = getSeasonData();
+      const teamData =
+        seasonData?.teams?.[currentTeam] ||
+        seasonData?.teams?.[defaultTeamId] ||
+        initialTeamDataConfig || {
+          players: [],
+          practiceSquad: [],
+          injuredReserve: [],
+          totals: {
+            totalSalary: 0,
+            rosterCount: 0,
+            openSpots: rosterLimit,
+            practiceCount: 0,
+            injuredCount: 0,
+          },
+        };
+      return { seasonData, teamData };
+    };
+
+    const renderSummary = (
+      capCharge = 0,
+      nextYearCapCharge = 0,
+      contractYearsTotal = 0,
+      longestContract = 0,
+      totals = {},
+      deadMoney = 0,
+      capLimitOverride = capLimit,
+      rosterLimitOverrideLocal = rosterLimitOverride ?? rosterLimit,
+      bucketCaps = { active: 0, practice: 0, injured: 0 },
+      playersNextYear = 0,
+      lastContractYear = ''
+    ) => {
+      const effectiveCap = capLimitOverride ?? capLimit ?? 0;
+      const capSpace = Math.max(effectiveCap - capCharge, 0);
+      const capSpaceNext = Math.max(effectiveCap - nextYearCapCharge, 0);
+
+      if (capDonut) {
+        const capSlices = [
+          { label: 'Active', value: bucketCaps.active, color: '#57b881' },
+          { label: 'Practice', value: bucketCaps.practice, color: '#487ae7' },
+          { label: 'Injured', value: bucketCaps.injured, color: '#e56263' },
+          { label: 'Dead Money', value: deadMoney, color: '#4b5563' },
+          { label: 'Cap Space', value: capSpace, color: '#e2e8f0' },
+        ].filter((s) => s.value > 0);
+        const total = capSlices.reduce((s, c) => s + c.value, 0);
+        buildDonut(capDonut, capSlices, total);
+        if (capLegend) {
+          renderLegend(capLegend, capSlices);
+        }
+      }
+
+      if (rosterDonut) {
+        const activeCount = totals.rosterCount ?? 0;
+        const practiceCount = totals.practiceCount ?? 0;
+        const injuredCount = totals.injuredCount ?? 0;
+        const openActive = Math.max(targetActiveCount - activeCount, 0);
+        const rosterSlices = [
+          { label: 'Active', value: activeCount, color: '#57b881' },
+          { label: 'Practice', value: practiceCount, color: '#487ae7' },
+          { label: 'Injured', value: injuredCount, color: '#e56263' },
+          { label: 'Open Spots', value: openActive, color: '#e2e8f0' },
+        ].filter((s) => s.value > 0);
+        const totalSlots = rosterSlices.reduce((s, r) => s + r.value, 0);
+        buildDonut(rosterDonut, rosterSlices, totalSlots);
+        if (rosterLegend) {
+          const countFormatter = (v) => String(v);
+          renderLegend(rosterLegend, rosterSlices, countFormatter);
+        }
+      }
+
+      const summaryCapNext = document.getElementById('summaryCapNext');
+      if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
+      const summaryPlayersNext = document.getElementById('summaryPlayersNext');
+      if (summaryPlayersNext) summaryPlayersNext.textContent = playersNextYear;
+    const summaryLastContract = document.getElementById('summaryLastContract');
+    const summaryAvg2026 = document.getElementById('summaryAvg2026');
+      if (summaryLastContract) summaryLastContract.textContent = lastContractYear;
+
+      // legacy summary labels (if present)
+      if (summaryCap) summaryCap.textContent = formatCapSpaceText(capSpace);
+      if (summaryPlayers) summaryPlayers.textContent = totals.rosterCount ?? 0;
+      if (summaryOpen) summaryOpen.textContent = totals.openSpots ?? 0;
+      if (summaryPractice) summaryPractice.textContent = totals.practiceCount ?? 0;
+      if (summaryInjured) summaryInjured.textContent = totals.injuredCount ?? 0;
+    };
+
+    const renderPlayersbyTeam = (playersData = []) => {
+      if (!playersbyTeamContainer) return;
+
+      // Group players by NFL team
+      const playersByTeam = {};
+      playersData.forEach((player) => {
+        const nflTeam = player.nflTeam || 'FA';
+        if (!playersByTeam[nflTeam]) {
+          playersByTeam[nflTeam] = [];
+        }
+        playersByTeam[nflTeam].push(player);
+      });
+
+      // Sort teams alphabetically and filter to only teams with more than one player
+      const sortedTeams = Object.keys(playersByTeam)
+        .filter((team) => playersByTeam[team].length > 1)
+        .sort();
+
+      // Build HTML
+      const teamsHtml = sortedTeams.map((team) => {
+        const teamPlayers = playersByTeam[team];
+        const playersHtml = teamPlayers.map((player) => {
+          const nflLogo = getNflLogoUrl(player.nflTeam);
+          const headshot = player.headshot || getPlayerImageUrl(player.id);
+          const position = player.position || 'UNK';
+          // All salaries increase by 10% per year (year 0 = current year)
+          const baseSalary = Number(player.salary || 0);
+          const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
+          const salary = formatCurrency.format(salaryForYear);
+          return `
+            <div class="players-team__player">
+              <div class="player-cell">
+                <div class="player-cell__avatar">
+                  <img src="${headshot}" alt="${player.name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${player.name}</strong>
+                  <div class="player-meta">
+                    <img src="${nflLogo}" alt="${player.nflTeam}" class="player-meta__logo" loading="lazy" />
+                    <span class="player-meta__pos">${position}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="players-team__salary">${salary}</div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="chart-card">
+            <div class="chart-card__header">
+            <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" />
+            </div>
+            <div class="team-group__players">
+              ${playersHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      playersbyTeamContainer.innerHTML = teamsHtml || '<p style="text-align: center; color: #999;">No players</p>';
+    };
+
+    const renderPlayersByCollege = (playersData = []) => {
+      if (!playersByCollegeContainer) return;
+
+      const playersByCollege = {};
+      playersData.forEach((player) => {
+        const pos = (player.position || '').toUpperCase();
+        const college = (player.college || '').trim();
+        if (!college || college.toLowerCase() === 'unknown') return;
+        if (pos === 'DEF') return;
+        if (!playersByCollege[college]) {
+          playersByCollege[college] = [];
+        }
+        playersByCollege[college].push(player);
+      });
+
+      const sortedColleges = Object.keys(playersByCollege)
+        .filter((college) => college && playersByCollege[college].length > 1)
+        .sort((a, b) => a.localeCompare(b));
+
+      const collegesHtml = sortedColleges.map((college) => {
+        const collegePlayers = playersByCollege[college];
+        const playersHtml = collegePlayers.map((player) => {
+          const headshot = player.headshot || getPlayerImageUrl(player.id);
+          const position = player.position || 'UNK';
+          const baseSalary = Number(player.salary || 0);
+          const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
+          const salary = formatCurrency.format(salaryForYear);
+          return `
+            <div class="players-team__player">
+              <div class="player-cell">
+                <div class="player-cell__avatar">
+                  <img src="${headshot}" alt="${player.name}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${player.name}</strong>
+                  <div class="player-meta">
+                    <span class="player-meta__pos">${position}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="players-team__salary">${salary}</div>
+            </div>
+          `;
+        }).join('');
+
+        const logo = collegePlayers[0]?.collegeLogo;
+        const collegeLogoMarkup = logo
+          ? `<img src="${logo}" alt="${college}" class="team-group__logo" />`
+          : `<div class="team-group__logo team-group__logo--fallback">${college[0] ?? '?'}</div>`;
+
+        return `
+          <div class="chart-card">
+            <div class="chart-card__header">
+              ${collegeLogoMarkup}
+              <div class="chart-card__title">${college}</div>
+            </div>
+            <div class="team-group__players">
+              ${playersHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      playersByCollegeContainer.innerHTML = collegesHtml || '<p style="text-align: center; color: #999;">No colleges with multiple players.</p>';
+    };
+
+    const renderDeadMoney = (seasonData = {}, franchiseId) => {
+      if (!deadMoneyTableBody) return;
+      const adjustments = getSalaryAdjustments(seasonData)
+        .filter((adj) => adj.franchiseId === franchiseId)
+        .map((adj, idx) => {
+          const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0) || 0;
+          const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+          const salary = Number(adj.salary) || Number(adj.amount) || 0;
+          const yearsRemaining = adj.yearsRemaining ?? 1;
+          const currentPenalty = 0.5 * salary;
+          const futurePenalty =
+            (futurePercentByYears[yearsRemaining] ?? 0) * salary;
+          return {
+            ...adj,
+            currentPenalty,
+            futurePenalty,
+            baseOffset,
+            rowClass: idx % 2 ? 'eventablerow' : 'oddtablerow',
+          };
+        });
+      if (!adjustments.length) {
+        deadMoneyTableBody.innerHTML = `<tr><td colspan="${1 + salaryYears.length}" class="roster-empty">No cap hits recorded for this franchise.</td></tr>`;
+        return;
+      }
+      const rowsHtml = adjustments
+        .map((adj, idx) => {
+          const cells = salaryYears
+            .map((_, yearIdx) => {
+              let value = '';
+              if (yearIdx === adj.baseOffset) value = adj.currentPenalty;
+              if (yearIdx === adj.baseOffset + 1 && adj.futurePenalty > 0)
+                value = adj.futurePenalty;
+              if (!value) return `<td data-column="dm-year${yearIdx + 1}" style="text-align:right"></td>`;
+              return `<td data-column="dm-year${yearIdx + 1}" class="deadmoney-row__amount">${formatCurrency.format(
+                value
+              )}</td>`;
+            })
+            .join('');
+          const name = adj.name || adj.description || 'Adjustment';
+          const teamLabel = adj.nflTeam || 'FA';
+          const nflLogo = adj.nflTeam ? getNflLogoUrl(adj.nflTeam) : '';
+          const playerId = findPlayerId(name);
+
+          // Use player headshot if available, otherwise use franchise team logo, finally fallback to default
+          let headshot = DEFAULT_HEADSHOT_URL;
+          if (playerId) {
+            headshot = getPlayerImageUrl(playerId);
+          } else if (config.teams[franchiseId]?.icon) {
+            headshot = config.teams[franchiseId].icon;
+          }
+          const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
+          return `<tr class="${rowClasses.join(' ').trim()}">
+            <td data-column="player" class="deadmoney-player-cell">
+              <div class="player-cell">
+                <div class="player-cell__avatar player-cell__avatar--dm">
+                  <img src="${headshot}" alt="${name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong>${name}</strong>
+                  <div class="player-meta">
+                    ${
+                      adj.position && adj.position.toUpperCase() !== 'DEF' && nflLogo
+                        ? `<img src="${nflLogo}" alt="${teamLabel} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
+                        : ''
+                    }
+                    ${adj.position ? `<span class="player-meta__pos">${adj.position}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+            </td>
+            ${cells}
+          </tr>`;
+        })
+        .join('');
+      deadMoneyTableBody.innerHTML = rowsHtml;
+    };
+
+    const renderTeamIdentity = (recordText = '') => {
+      const meta = teams[currentTeam];
+      teamIdentityEls.forEach((card) => {
+        let img = card.querySelector('img');
+        if (meta?.icon) {
+          if (!img) {
+            img = document.createElement('img');
+            card.prepend(img);
+          }
+          img.src = meta.icon;
+          img.alt = `${meta?.name ?? 'Franchise'} icon`;
+        } else if (img) {
+          img.remove();
+        }
+      });
+      teamNames.forEach((el) => {
+        el.textContent = meta?.name ?? 'Franchise';
+      });
+      const bits = [];
+      if (meta?.division) bits.push(meta.division);
+      if (recordText) bits.push(recordText);
+      const metaText = bits.join(' • ') || 'Independent';
+      teamMetas.forEach((el) => {
+        el.textContent = metaText;
+      });
+    };
+
+    const normalizeFranchiseId = (id) => {
+      if (!id) return null;
+      const trimmed = `${id}`.trim();
+      if (!trimmed) return null;
+      return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
+    };
+
+    const renderTableRows = (rows = []) => {
+      if (!rosterTableBody) return;
+      if (!rows.length) {
+        rosterTableBody.innerHTML = `<tr><td colspan="${5 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
+        return;
+      }
+
+      rosterTableBody.innerHTML = rows
+        .map((player) => {
+          // Apply contract action if exists
+          const action = contractActions[player.id];
+          let displaySalary = player.salary;
+          let displayYears = player.contractYears;
+
+          if (action) {
+            if (action.newSalary) displaySalary = action.newSalary;
+            if (action.newYears) displayYears = action.newYears;
+          }
+
+          const useDefenseLogo =
+            (player.position ?? '').toUpperCase() === 'DEF' && player.nflLogo;
+          const avatarSrc = useDefenseLogo
+            ? player.nflLogo
+            : player.headshot ?? getPlayerImageUrl(player.id);
+
+          const salaryCells = salaryYears
+            .map((year, index) => {
+              const columnKey = `year${index + 1}`;
+              const isUfa = !(player.contractYears > index);
+              const isFirstYearUfa = isUfa && player.contractYears === index;
+              const isFutureUfa = isUfa && player.contractYears < index;
+
+              let value;
+              let cellClass = 'salary-cell';
+
+              // Check if this cell should show franchise tag salary
+              if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
+                value = formatCurrency.format(action.newSalary ?? 0);
+                cellClass += ' salary-cell--simulated';
+              } else if (isFirstYearUfa) {
+                value = 'UFA';
+                cellClass += ' salary-cell--ufa';
+              } else if (isFutureUfa) {
+                value = '—';
+                cellClass += ' salary-cell--future-ufa';
+              } else {
+                // Add simulated class if this player has a contract action applied
+                if (action && action.type === 'extension' && action.salaryBreakdown) {
+                  cellClass += ' salary-cell--simulated';
+                  // Use the salary breakdown from the extension for this year
+                  const yearKey = `year${index}`;
+                  const yearSalary = action.salaryBreakdown[yearKey] ?? displaySalary;
+                  value = formatCurrency.format(yearSalary ?? 0);
+                } else {
+                  // Apply 10% annual escalation to all salaries
+                  const baseSalary = Number(player.salary ?? 0);
+                  const escalatedSalary = Math.round(baseSalary * Math.pow(1.1, index));
+                  value = formatCurrency.format(escalatedSalary);
+                }
+              }
+
+              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}</td>`;
+            })
+            .join('');
+
+          // Add action button for all players
+          const actionsCell = `
+            <td data-label="Actions" data-column="actions" class="actions-cell">
+              <button
+                class="ufa-action-btn"
+                data-player-id="${player.id}"
+                data-player-name="${player.name}"
+                data-player-position="${player.position || ''}"
+                data-player-nfl-team="${player.nflTeam || ''}"
+                data-player-nfl-logo="${player.nflLogo || ''}"
+                data-player-headshot="${player.headshot || ''}"
+                data-player-salary="${player.salary || 0}"
+                data-player-years="${player.contractYears || 1}"
+                data-player-injury-status="${player.injuryStatus || ''}"
+                title="Manage Contract"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </td>
+          `;
+
+          const rowClasses = [
+            'roster-row',
+            `roster-row--${player.displayTag ?? 'active'}`,
+          ];
+          if (player.positionDivider) {
+            rowClasses.push('roster-row--position-divider');
+          }
+          if (player.positionDividerEnd) {
+            rowClasses.push('roster-row--position-divider-end');
+          }
+          if (player.tierDivider) {
+            rowClasses.push('roster-row--tier-divider');
+          }
+          if (player.activeStripe) {
+            rowClasses.push('roster-row--active-alt');
+          }
+
+          // Add contract action indicator
+          if (action) {
+            rowClasses.push('roster-row--contract-action');
+            rowClasses.push(`roster-row--${action.type}`);
+          }
+
+          const actionBadge = action ? `
+            <span class="contract-action-badge contract-action-badge--${action.type}">
+              ${action.type === 'franchise' ? 'Franchise Tag' : action.type === 'extension' ? 'Extension' : action.type}
+              <button class="contract-action-remove" data-player-id="${player.id}" title="Remove">×</button>
+            </span>
+          ` : '';
+
+          return `<tr data-player-id="${player.id}" class="${rowClasses.join(' ')}">
+            <td data-label="Player" data-column="player">
+              <div class="player-cell">
+                <div class="player-cell__avatar${useDefenseLogo ? ' player-cell__avatar--def' : ''}">
+                  <img src="${avatarSrc}" alt="${player.name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+                </div>
+                <div>
+                  <strong
+                    class="roster-player-name"
+                    data-player-id="${player.id}"
+                    data-player-name="${player.name}"
+                    data-player-position="${player.position}"
+                    data-player-nfl-team="${player.nflTeam}"
+                    data-player-status="${player.status}"
+                    data-player-salary="${player.salary || 0}"
+                    data-player-contract-years="${player.contractYears || 1}"
+                    data-player-total-remaining="${player.totalRemaining || 0}"
+                    data-player-contract-type="${player.contractType}"
+                    data-player-points="${player.points || 0}"
+                    data-player-bye-week="${player.byeWeek || ''}"
+                    data-player-draft-year="${player.draftYear || ''}"
+                    data-player-draft-team="${player.draftTeam || ''}"
+                    data-player-draft-round="${player.draftRound || ''}"
+                    data-player-draft-pick="${player.draftPick || ''}"
+                    data-player-birthdate="${player.birthdate || ''}"
+                    data-player-franchise-id="${player.franchiseId || ''}"
+                    data-player-roster-slot="${player.rosterSlot || ''}"
+                    data-player-college="${player.college || ''}"
+                    data-player-college-logo="${player.collegeLogo || ''}"
+                    data-player-height="${player.height || ''}"
+                    data-player-weight="${player.weight || ''}"
+                    data-player-number="${player.number || ''}"
+                    data-player-experience="${player.experience || ''}"
+                    data-player-depth-position="${player.depthChartPosition || ''}"
+                    data-player-depth-order="${player.depthChartOrder || ''}"
+                    data-player-injury-status="${player.injuryStatus || ''}"
+                    data-player-injury-body-part="${player.injuryBodyPart || ''}"
+                    data-player-sleeper-id="${player.sleeperId || ''}"
+                    data-player-sleeper-full-name="${player.sleeperFullName || ''}"
+                    data-player-sleeper-position="${player.sleeperPosition || ''}"
+                    data-player-fantasy-positions="${player.fantasyPositions || ''}"
+                    data-player-gsis-id="${player.gsisId || ''}"
+                    data-player-sleeper-age="${player.sleeperAge || ''}"
+                    data-player-sleeper-status="${player.sleeperStatus || ''}"
+                    data-player-sleeper-active="${player.sleeperActive || ''}"
+                    data-player-offense-snaps="${player.offenseSnaps ?? ''}"
+                    data-player-defense-snaps="${player.defenseSnaps ?? ''}"
+                    data-player-st-snaps="${player.stSnaps ?? ''}"
+                    data-player-depth-chart-ahead="${player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}"
+                    data-player-trade-bait="${player.tradeBait ? 'true' : 'false'}"
+                    style="cursor: pointer;"
+                    title="Click to view full player details"
+                  >${player.name}
+                  ${
+                    player.injuryStatus
+                      ? `<button
+                          class="injury-indicator"
+                          data-player-id="${player.id}"
+                          data-player-name="${player.name}"
+                          data-injury-status="${player.injuryStatus}"
+                          data-injury-body-part="${player.injuryBodyPart || ''}"
+                          title="${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}"
+                          style="cursor: pointer; background: none; color: #e56263; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
+                        >(${player.injuryStatus.substring(0, 1)})</button>`
+                      : ''
+                  }
+                  </strong>${actionBadge}
+                  <div class="player-meta">
+                    ${
+                      !useDefenseLogo && player.nflLogo
+                        ? `<img src="${player.nflLogo}" alt="${player.nflTeam || 'FA'} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
+                        : ''
+                    }
+                    ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
+                    ${
+                      player.tradeBait && config.authUser?.leagueId
+                        ? `<a href="https://www49.myfantasyleague.com/${defaultSeason}/options?L=${config.authUser.leagueId}&O=05"><span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block; cursor: pointer">🏷️</span></a>`
+                        : player.tradeBait
+                        ? `<span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block;">🏷️</span>`
+                        : ''
+                    }
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td data-label="Yrs" data-column="years">${displayYears || 0}</td>
+            ${actionsCell}
+            ${salaryCells}
+          </tr>`;
+        })
+        .join('');
+
+      // Add event listeners for UFA buttons and remove buttons
+      setTimeout(() => {
+        // UFA action buttons
+        document.querySelectorAll('.ufa-action-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerId = btn.dataset.playerId;
+            const playerName = btn.dataset.playerName;
+            const playerPosition = btn.dataset.playerPosition;
+            const playerSalary = parseFloat(btn.dataset.playerSalary || '0');
+            const playerYears = parseInt(btn.dataset.playerYears || '1', 10);
+
+            openModal({
+              id: playerId,
+              name: playerName,
+              position: playerPosition,
+              nflTeam: btn.dataset.playerNflTeam,
+              nflLogo: btn.dataset.playerNflLogo,
+              headshot: btn.dataset.playerHeadshot,
+              injuryStatus: btn.dataset.playerInjuryStatus,
+              salary: playerSalary,
+              years: playerYears
+            });
+          });
+        });
+
+        // Player name clicks for details modal
+        document.querySelectorAll('.roster-player-name').forEach(nameEl => {
+          nameEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const parseSnap = (value) => {
+              if (value === undefined || value === null || value === '') return null;
+              const num = parseInt(value, 10);
+              return Number.isFinite(num) ? num : null;
+            };
+            const parseDraft = (value) => {
+              if (value === undefined || value === null || value === '') return null;
+              const num = parseInt(value, 10);
+              return Number.isFinite(num) ? num : null;
+            };
+            const playerData = {
+              id: nameEl.dataset.playerId,
+              name: nameEl.dataset.playerName,
+              position: nameEl.dataset.playerPosition,
+              nflTeam: nameEl.dataset.playerNflTeam,
+              status: nameEl.dataset.playerStatus,
+              salary: nameEl.dataset.playerSalary ? parseFloat(nameEl.dataset.playerSalary) : undefined,
+              contractYears: nameEl.dataset.playerContractYears ? parseInt(nameEl.dataset.playerContractYears, 10) : undefined,
+              totalRemaining: nameEl.dataset.playerTotalRemaining ? parseFloat(nameEl.dataset.playerTotalRemaining) : undefined,
+              contractType: nameEl.dataset.playerContractType,
+              points: nameEl.dataset.playerPoints ? parseFloat(nameEl.dataset.playerPoints) : undefined,
+              byeWeek: nameEl.dataset.playerByeWeek ? parseInt(nameEl.dataset.playerByeWeek, 10) : null,
+              draftYear: nameEl.dataset.playerDraftYear ? parseInt(nameEl.dataset.playerDraftYear, 10) : null,
+              draftTeam: nameEl.dataset.playerDraftTeam ? nameEl.dataset.playerDraftTeam.toUpperCase() : null,
+              draftRound: parseDraft(nameEl.dataset.playerDraftRound),
+              draftPick: parseDraft(nameEl.dataset.playerDraftPick),
+              birthdate: nameEl.dataset.playerBirthdate ? parseInt(nameEl.dataset.playerBirthdate, 10) : null,
+              franchiseId: nameEl.dataset.playerFranchiseId,
+              rosterSlot: nameEl.dataset.playerRosterSlot,
+              college: nameEl.dataset.playerCollege,
+              collegeLogo: nameEl.dataset.playerCollegeLogo,
+              height: nameEl.dataset.playerHeight,
+              weight: nameEl.dataset.playerWeight ? parseInt(nameEl.dataset.playerWeight, 10) : undefined,
+              number: nameEl.dataset.playerNumber ? parseInt(nameEl.dataset.playerNumber, 10) : undefined,
+              experience: nameEl.dataset.playerExperience ? parseInt(nameEl.dataset.playerExperience, 10) : undefined,
+              depthChartPosition: nameEl.dataset.playerDepthPosition,
+              depthChartOrder: nameEl.dataset.playerDepthOrder ? parseInt(nameEl.dataset.playerDepthOrder, 10) : undefined,
+              injuryStatus: nameEl.dataset.playerInjuryStatus,
+              injuryBodyPart: nameEl.dataset.playerInjuryBodyPart,
+              sleeperId: nameEl.dataset.playerSleeperId,
+              sleeperFullName: nameEl.dataset.playerSleeperFullName,
+              sleeperPosition: nameEl.dataset.playerSleeperPosition,
+              fantasyPositions: nameEl.dataset.playerFantasyPositions ? nameEl.dataset.playerFantasyPositions.split(',') : undefined,
+              gsisId: nameEl.dataset.playerGsisId,
+              sleeperAge: nameEl.dataset.playerSleeperAge ? parseInt(nameEl.dataset.playerSleeperAge, 10) : undefined,
+              sleeperStatus: nameEl.dataset.playerSleeperStatus,
+              sleeperActive: nameEl.dataset.playerSleeperActive,
+              offenseSnaps: parseSnap(nameEl.dataset.playerOffenseSnaps),
+              defenseSnaps: parseSnap(nameEl.dataset.playerDefenseSnaps),
+              stSnaps: parseSnap(nameEl.dataset.playerStSnaps),
+              depthChartAhead: nameEl.dataset.playerDepthChartAhead ? JSON.parse(atob(nameEl.dataset.playerDepthChartAhead)) : null,
+            };
+            if (window.openPlayerDetailsModal) {
+              window.openPlayerDetailsModal(playerData);
+            } else {
+              console.warn('openPlayerDetailsModal function not found');
+            }
+          });
+        });
+
+        // Injury indicator buttons
+        document.querySelectorAll('.injury-indicator').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const injuryData = {
+              name: btn.dataset.playerName,
+              injuryStatus: btn.dataset.injuryStatus,
+              injuryBodyPart: btn.dataset.injuryBodyPart,
+            };
+            if (window.openPlayerInjuryModal) {
+              window.openPlayerInjuryModal(injuryData);
+            } else {
+              console.warn('openPlayerInjuryModal function not found');
+            }
+          });
+        });
+
+        // Remove contract action buttons
+        document.querySelectorAll('.contract-action-remove').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerId = btn.dataset.playerId;
+            if (playerId) {
+              removeContractAction(playerId);
+            }
+          });
+        });
+      }, 0);
+    };
+
+    const updateYearTotals = (rows = [], deadMoney = []) => {
+      const totals = calculateCapCharges(rows);
+      const capThisYearBase = Number(getTeamData().seasonData?.metadata?.capLimit ?? capLimit) || 0;
+      yearTotalCells.forEach((cell, index) => {
+        if (cell) cell.textContent = formatCurrency.format(totals[index] ?? 0);
+        if (dmTotalCells[index]) dmTotalCells[index].textContent = formatCurrency.format(deadMoney[index] ?? 0);
+        if (capLimitCells[index]) capLimitCells[index].textContent = formatCurrency.format(capThisYearBase);
+        if (capSpaceCells[index])
+          capSpaceCells[index].textContent = formatCurrency.format(
+            capThisYearBase - ((totals[index] ?? 0) + (deadMoney[index] ?? 0))
+          );
+      });
+      return totals;
+    };
+
+    const calculateCapCharges = (rows = []) =>
+      salaryYears.map((_, index) => {
+        let total = rows.reduce((sum, player) => {
+          // Skip cut/traded players
+          const action = contractActions[player.id];
+          if (action && (action.type === 'cut' || action.type === 'trade')) {
+            return sum;
+          }
+
+          if ((player.contractYears ?? 0) > index) {
+            const isCurrent = index === 0;
+            const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
+            const tag = tagRaw.includes('PRACTICE')
+              ? 'PRACTICE'
+              : tagRaw.includes('INJURED') || tagRaw === 'IR'
+                ? 'INJURED'
+                : 'ACTIVE';
+            const percent = getCapPercent(tag, isCurrent);
+            const baseSalary = Number(player.salary ?? 0);
+
+            // If there's an extension, calculate salary for this year with 10% increases
+            let salaryForYear = baseSalary;
+            if (action && action.type === 'extension' && action.salaryBreakdown) {
+              const yearKey = `year${index}`;
+              salaryForYear = Number(action.salaryBreakdown[yearKey] ?? baseSalary);
+            }
+
+            return sum + (salaryForYear * percent || 0);
+          }
+          return sum;
+        }, 0);
+
+        // Add franchise tag salaries for this specific year
+        Object.values(contractActions).forEach(action => {
+          if (action.type === 'franchise' && action.ufaYearIndex === index) {
+            total += Number(action.newSalary ?? 0);
+          }
+        });
+
+        return total;
+      });
+
+    const calculateBucketCaps = (rows = []) =>
+      rows.reduce(
+        (acc, player) => {
+          const tag = (player.displayTag ?? 'active').toUpperCase();
+          const isCurrent = true;
+          const percent = getCapPercent(tag, isCurrent);
+          const salary = Number(player.salary ?? 0) || 0;
+          if (tag === 'PRACTICE') {
+            acc.practice += salary * percent;
+            acc.counts.practice += 1;
+          } else if (tag === 'INJURED') {
+            acc.injured += salary * percent;
+            acc.counts.injured += 1;
+          } else {
+            acc.active += salary * percent;
+            acc.counts.active += 1;
+          }
+          return acc;
+        },
+        { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } }
+      );
+
+    const calculatePositionCaps = (rows = []) =>
+      rows.reduce((totals, player) => {
+        if ((player.contractYears ?? 0) <= 0) return totals;
+        const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
+        const tag = tagRaw.includes('PRACTICE')
+          ? 'PRACTICE'
+          : tagRaw.includes('INJURED') || tagRaw === 'IR'
+            ? 'INJURED'
+            : 'ACTIVE';
+        const percent = getCapPercent(tag, true);
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        const salary = (Number(player.salary ?? 0) || 0) * percent;
+        totals[pos] = (totals[pos] ?? 0) + salary;
+        return totals;
+      }, {});
+
+    const calculateCapEfficiency = (rows = []) => {
+      const efficiency = {};
+      rows.forEach((player) => {
+        if ((player.contractYears ?? 0) <= 0 || (player.points ?? 0) <= 0) return;
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        const salary = Number(player.salary ?? 0) || 0;
+        const points = Number(player.points ?? 0) || 0;
+
+        if (!efficiency[pos]) {
+          efficiency[pos] = { totalCost: 0, totalPoints: 0 };
+        }
+        efficiency[pos].totalCost += salary;
+        efficiency[pos].totalPoints += points;
+      });
+
+      const result = {};
+      Object.entries(efficiency).forEach(([pos, data]) => {
+        result[pos] = data.totalCost / data.totalPoints;
+      });
+      return result;
+    };
+
+    const getSalaryAdjustments = (seasonData = {}) => {
+      if (Array.isArray(seasonData.salaryAdjustments)) return seasonData.salaryAdjustments;
+      if (adjustmentsBySeason[currentSeason]) return adjustmentsBySeason[currentSeason];
+      if (adjustmentsBySeason[defaultSeason]) return adjustmentsBySeason[defaultSeason];
+      if (Array.isArray(initialSeasonDataConfig?.salaryAdjustments))
+        return initialSeasonDataConfig.salaryAdjustments;
+      return [];
+    };
+
+    const setCapSubtotals = (caps, deadMoneyCurrent, capSpaceCurrent) => {
+      if (subtotalActive) subtotalActive.textContent = formatCurrency.format(caps.active);
+      if (subtotalPractice) subtotalPractice.textContent = formatCurrency.format(caps.practice);
+      if (subtotalInjured) subtotalInjured.textContent = formatCurrency.format(caps.injured);
+      if (countActive) countActive.textContent = `(${caps.counts?.active ?? 0})`;
+      if (countPractice) countPractice.textContent = `(${caps.counts?.practice ?? 0})`;
+      if (countInjured) countInjured.textContent = `(${caps.counts?.injured ?? 0})`;
+      if (subtotalDead) subtotalDead.textContent = formatCurrency.format(deadMoneyCurrent);
+      const subtotalCapSpace = document.getElementById('subtotalCapSpace');
+      if (subtotalCapSpace)
+        subtotalCapSpace.textContent = formatCurrency.format(capSpaceCurrent ?? 0);
+    };
+
+    const aggregateDeadMoney = (seasonData = {}, franchiseId) => {
+      const adjustments = getSalaryAdjustments(seasonData);
+      return salaryYears.map((_, idx) =>
+        adjustments.reduce((sum, adj) => {
+          if (adj.franchiseId !== franchiseId) return sum;
+          const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0);
+      const salary = Number(adj.salary) || Number(adj.amount) || 0;
+      const yearsRemaining = adj.yearsRemaining;
+      const hasYearsRemaining = Number.isFinite(yearsRemaining);
+      const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
+      const currentPenalty = hasYearsRemaining ? 0.5 * salary : salary; // carryover hits 100% current year
+      const futurePenalty =
+        hasYearsRemaining ? (futurePercentByYears[yearsRemaining] ?? 0) * salary : 0;
+          let total = sum;
+          if (idx === baseOffset) total += currentPenalty;
+          if (idx === baseOffset + 1 && futurePenalty > 0) total += futurePenalty;
+          return total;
+        }, 0)
+      );
+    };
+
+    const calculateContractYearsMeta = (rows = []) => {
+      const contractYearsTotal = rows.reduce(
+        (sum, player) => sum + Math.max(Number(player.contractYears ?? 0) || 0, 0),
+        0
+      );
+      const longestContract = rows.reduce(
+        (max, player) => Math.max(max, Number(player.contractYears ?? 0) || 0),
+        0
+      );
+      return { contractYearsTotal, longestContract };
+    };
+
+    const buildDonut = (el, slices = [], total = 0) => {
+      if (!el) return;
+      if (!total || total <= 0 || !slices.length) {
+        el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+        return;
+      }
+      let start = 0;
+      const parts = slices
+        .filter((s) => s.value > 0)
+        .map((s) => {
+          const angle = (s.value / total) * 360;
+          const end = start + angle;
+          const gradient = `${s.color} ${start}deg ${end}deg`;
+          start = end;
+          return gradient;
+        });
+      if (!parts.length) {
+        el.style.background = 'conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg)';
+        return;
+      }
+      el.style.background = `conic-gradient(${parts.join(',')})`;
+    };
+
+    const renderLegend = (el, slices = [], formatter = null) => {
+      if (!el) return;
+      if (!slices.length) {
+        el.innerHTML = '';
+        return;
+      }
+
+      const formatValue = formatter ?? ((v) => formatCurrency.format(v));
+
+      const legendHTML = slices
+        .map(
+          (slice) => `
+          <div class="chart-legend__item">
+            <span class="chart-legend__label">
+              <span class="legend-dot" style="background:${slice.color}"></span>
+              ${slice.label}
+            </span>
+            <span class="chart-legend__value">${formatValue(slice.value)}</span>
+          </div>
+        `
+        )
+        .join('');
+
+      el.innerHTML = legendHTML;
+    };
+
+    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null, minValue = undefined) => {
+      if (!el) return;
+      if (!total || total <= 0 || !slices.length) {
+        el.innerHTML = '';
+        return;
+      }
+
+      // Create a map of position -> slice for quick lookup
+      const sliceMap = new Map();
+      slices.forEach((slice) => {
+        sliceMap.set(slice.label.toUpperCase(), slice);
+      });
+
+      // Build bars in the specified order, only including positions in positionOrder
+      const orderedBars = positionOrder
+        .map((pos) => sliceMap.get(pos.toUpperCase()))
+        .filter((slice) => slice !== undefined && slice.value > 0);
+
+      // Use provided formatter or default to currency formatter
+      const formatValue = formatter || ((v) => formatCurrency.format(v));
+
+      // Build bar HTML
+      const barsHTML = orderedBars
+        .map((slice) => {
+          let percentage;
+
+          // If minValue is provided (for age-based charts), calculate percentage within range
+          if (minValue !== undefined) {
+            const range = total - minValue;
+            percentage = range > 0 ? ((slice.value - minValue) / range) * 100 : 0;
+          } else {
+            // Standard percentage calculation
+            percentage = (slice.value / total) * 100;
+          }
+
+          return `
+            <div class="bar-item">
+              <div class="bar-label">
+                <span class="bar-label-position">${slice.label}</span>
+                <span class="bar-label-value">${formatValue(slice.value)}</span>
+              </div>
+              <div class="bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
+            </div>
+          `;
+        })
+        .join('');
+
+      el.innerHTML = barsHTML;
+    };
+
+    const buildAgeDistributionChart = (el, slices = [], total = 0) => {
+      if (!el) return;
+      if (!total || total <= 0 || !slices.length) {
+        el.innerHTML = '';
+        return;
+      }
+
+      const barsHTML = slices
+        .map((slice) => {
+          const percentage = (slice.value / total) * 100;
+          return `
+            <div class="age-bar-item">
+              <div class="age-bar-label">
+                <span class="age-bar-label-range">${slice.label}</span>
+                <span class="age-bar-label-count">${slice.value} player${slice.value !== 1 ? 's' : ''}</span>
+              </div>
+              <div class="age-bar-fill" style="width: ${percentage}%; background-color: ${slice.color};"></div>
+            </div>
+          `;
+        })
+        .join('');
+
+      el.innerHTML = barsHTML;
+    };
+
+    const calculateAge = (birthdate) => {
+      if (!birthdate) return null;
+      const birthDate = new Date(birthdate * 1000);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    const calculateAverageAge = (players = []) => {
+      const ages = players
+        .map((p) => calculateAge(p.birthdate))
+        .filter((age) => age !== null);
+      if (ages.length === 0) return null;
+      return Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
+    };
+
+    const calculateAverageAgeByPosition = (players = []) => {
+      const byPosition = new Map();
+      players.forEach((player) => {
+        const pos = (player.position ?? 'UNK').toUpperCase();
+        const age = calculateAge(player.birthdate);
+        if (age !== null) {
+          if (!byPosition.has(pos)) {
+            byPosition.set(pos, []);
+          }
+          byPosition.get(pos).push(age);
+        }
+      });
+
+      const result = new Map();
+      byPosition.forEach((ages, position) => {
+        const avgAge = Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
+        result.set(position, { avgAge, count: ages.length });
+      });
+      return result;
+    };
+
+    const getAgeDistribution = (players = [], bucketSize = 5) => {
+      const ages = players
+        .map((p) => calculateAge(p.birthdate))
+        .filter((age) => age !== null);
+      if (ages.length === 0) {
+        return [];
+      }
+
+      const buckets = new Map();
+      ages.forEach((age) => {
+        const bucketStart = Math.floor(age / bucketSize) * bucketSize;
+        buckets.set(bucketStart, (buckets.get(bucketStart) ?? 0) + 1);
+      });
+
+      return Array.from(buckets.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([bucketStart, count]) => ({
+          range: `${bucketStart}-${bucketStart + bucketSize - 1}`,
+          count,
+          percentage: Math.round((count / ages.length) * 100),
+        }));
+    };
+
+    const getAgeDistributionColors = (count) => {
+      const colors = [
+        '#22c55e', // green (younger)
+        '#84cc16', // lime
+        '#eab308', // yellow
+        '#f97316', // orange
+        '#ef4444', // red (older)
+      ];
+      if (count <= colors.length) {
+        return colors.slice(0, count);
+      }
+      const result = [];
+      for (let i = 0; i < count; i++) {
+        result.push(colors[i % colors.length]);
+      }
+      return result;
+    };
+
+    const applyHiddenColumns = () => {
+      if (!rosterTable) return;
+      rosterTable.dataset.hiddenColumns = Array.from(hiddenColumns).join(' ');
+    };
+
+    const updateDraftAssetsPanel = (teamId) => {
+      if (!assetsPanels || assetsPanels.length === 0) return;
+      let found = false;
+      assetsPanels.forEach((panel) => {
+        const panelTeamId = panel.getAttribute('data-assets-team-id');
+        const isMatch = panelTeamId === teamId;
+        panel.style.display = isMatch ? 'block' : 'none';
+        if (isMatch) found = true;
+      });
+      if (!found && assetsPanels.length > 0) {
+        assetsPanels.forEach((panel, idx) => {
+          panel.style.display = idx === 0 ? 'block' : 'none';
+        });
+      }
+    };
+
+    const updateView = () => {
+      console.log('updateView called, contractActions:', contractActions);
+      const { seasonData, teamData } = getTeamData();
+      let rows = buildDisplayRows(teamData);
+      console.log('Initial rows count:', rows.length);
+
+      // Apply contract actions to rows
+      rows = rows.map(player => {
+        const action = contractActions[player.id];
+        if (!action) return player;
+        console.log('Applying action to player:', player.id, action);
+
+        // Keep cut/traded players in the list (they'll be shown at 50% opacity)
+        // but don't modify their data
+        if (action.type === 'cut' || action.type === 'trade') {
+          return player;
+        }
+
+        // Apply salary/years changes (but not for franchise tags - those are shown in specific year columns)
+        if (action.type === 'franchise') {
+          // Don't modify player data for franchise tags
+          return player;
+        }
+
+        // For extensions, update salary and years
+        return {
+          ...player,
+          salary: action.newSalary ?? player.salary,
+          contractYears: action.newYears ?? player.contractYears
+        };
+      });
+
+      let deadMoney = aggregateDeadMoney(seasonData, currentTeam);
+
+      // Add dead money from contract actions (cuts)
+      Object.values(contractActions).forEach(action => {
+        if (action.type === 'cut') {
+          deadMoney[0] = (deadMoney[0] || 0) + (action.currentPenalty || 0);
+          deadMoney[1] = (deadMoney[1] || 0) + (action.futurePenalty || 0);
+        }
+      });
+      const yearTotals = updateYearTotals(rows, deadMoney);
+      const capCharges = calculateCapCharges(rows);
+      const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));
+      const capCharge = capChargesWithDead?.[0] ?? 0;
+      const nextYearCapCharge = capChargesWithDead?.[1] ?? 0;
+      const { contractYearsTotal, longestContract } = calculateContractYearsMeta(rows);
+      const capLimitForSeason = Number(
+        seasonData?.metadata?.capLimit ?? capLimit ?? 0
+      );
+      const rosterLimitForSeason = Number(
+        seasonData?.metadata?.rosterLimit ?? rosterLimitOverride ?? rosterLimit ?? 0
+      );
+      const deadMoneyCurrent = deadMoney[0] ?? 0;
+      const playersNextYear = rows.filter((p) => (p.contractYears ?? 0) > 1).length;
+      const lastContractYear =
+        (seasonData?.metadata?.season
+          ? Number(seasonData.metadata.season)
+          : Number(defaultSeason)) +
+        Math.max(longestContract - 1, 0);
+      renderSummary(
+        capCharge,
+        nextYearCapCharge,
+        contractYearsTotal,
+        longestContract,
+        teamData.totals ?? {},
+        deadMoneyCurrent,
+        capLimitForSeason,
+        rosterLimitForSeason,
+        calculateBucketCaps(rows),
+        playersNextYear,
+        lastContractYear
+      );
+      const bucketCapsCurrent = calculateBucketCaps(rows);
+      setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
+      renderTeamIdentity(teamData.record ?? '');
+      renderTableRows(rows);
+      renderDeadMoney(seasonData, currentTeam);
+
+      const activeCount = teamData.totals?.rosterCount ?? rows.filter((p) => (p.displayTag ?? 'active') === 'active').length;
+      const remainingSlots2026 = Math.max(targetActiveCount - playersNextYear, 1);
+      const playersToCut2026 = Math.max(playersNextYear - targetActiveCount, 0);
+      const playersToCutToSign2026 = Math.max(playersNextYear - targetActiveCount + 1, 0);
+      const needsToCutToSign2026 = playersNextYear >= targetActiveCount;
+      const deadMoney2026 = deadMoney[1] ?? 0;
+      const capSpace2026 =
+        capLimitForSeason -
+        (capChargesWithDead?.[1] ?? 0) -
+        reserveForRookies;
+      const avgPerPlayer2026 = Math.max(capSpace2026, 0) / remainingSlots2026;
+      if (summaryAvg2026) summaryAvg2026.textContent = `${formatCurrency.format(avgPerPlayer2026)} × ${remainingSlots2026}`;
+
+      const summaryDeadMoney2026 = document.getElementById('summaryDeadMoney2026');
+      if (summaryDeadMoney2026) summaryDeadMoney2026.textContent = formatCurrency.format(deadMoney2026);
+
+      const needsToCutRosterHint = document.getElementById('needsToCutRoster2026');
+      if (needsToCutRosterHint) {
+        if (playersToCut2026 > 0) {
+          const playerWord = playersToCut2026 === 1 ? 'player' : 'players';
+          needsToCutRosterHint.textContent = `Must cut ${playersToCut2026} ${playerWord} by cutdown`;
+          needsToCutRosterHint.style.display = 'block';
+        } else {
+          needsToCutRosterHint.style.display = 'none';
+        }
+      }
+
+      const positionCaps = calculatePositionCaps(rows);
+      const posPalette = ['#a855f7', '#ec4899', '#facc15', '#c084fc'];
+      const posSlices = Object.entries(positionCaps).map(([label, value], idx) => {
+        const upper = label.toUpperCase();
+        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
+        return { label, value, color };
+      });
+      const posTotal = posSlices.reduce((sum, s) => sum + s.value, 0);
+      const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+      buildBarChart(posBar, posSlices, positionOrder, posTotal);
+
+      // Cap efficiency calculations and rendering
+      const efficiencyCaps = calculateCapEfficiency(rows);
+      const efficiencySlices = Object.entries(efficiencyCaps).map(([label, value], idx) => {
+        const upper = label.toUpperCase();
+        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
+        return { label, value, color };
+      });
+      const maxEfficiency = efficiencySlices.length > 0 ? Math.max(...efficiencySlices.map(s => s.value)) : 0;
+      const efficiencyFormatter = (v) => `$${(v / 1000).toFixed(0)}k`;
+      if (efficiencyBar) {
+        buildBarChart(efficiencyBar, efficiencySlices, positionOrder, maxEfficiency, efficiencyFormatter);
+      }
+
+      // Age-related calculations and rendering
+      const ageDistribution = getAgeDistribution(rows);
+      const ageColors = getAgeDistributionColors(ageDistribution.length);
+      const ageDistributionSlices = ageDistribution.map((item, idx) => ({
+        label: item.range,
+        value: item.count,
+        color: ageColors[idx]
+      }));
+      const ageDistTotal = ageDistributionSlices.reduce((sum, s) => sum + s.value, 0);
+      if (ageChart) {
+        buildAgeDistributionChart(ageChart, ageDistributionSlices, ageDistTotal);
+      }
+
+      const avgAgeByPos = calculateAverageAgeByPosition(rows);
+      const posAgeSlices = positionOrder
+        .map(pos => {
+          const data = avgAgeByPos.get(pos);
+          if (!data) return null;
+          const upper = pos.toUpperCase();
+          const color = positionColors[upper] ?? '#999';
+          return {
+            label: pos,
+            value: data.avgAge,
+            color
+          };
+        })
+        .filter(s => s !== null);
+      const maxAge = 40;
+      const minAge = 20;
+      const ageFormatter = (v) => `${v.toFixed(1)} years`;
+      if (posAgeBar) {
+        buildBarChart(posAgeBar, posAgeSlices, positionOrder, maxAge, ageFormatter, minAge);
+      }
+
+      const teamAvgAge = calculateAverageAge(rows);
+      const summaryAvgAge = document.getElementById('summaryAverageAge');
+      if (summaryAvgAge && teamAvgAge !== null) {
+        summaryAvgAge.textContent = `${teamAvgAge} years`;
+      }
+
+      // Render players by team report
+      renderPlayersbyTeam(rows);
+
+      // Update franchise tag eligibility component
+      // Collect ALL league players for ranking, but only show selected team's eligible players
+      const allLeaguePlayers = [];
+      if (seasonData && seasonData.teams) {
+        Object.values(seasonData.teams).forEach(team => {
+          const teamPlayers = [
+            ...(team.players || []),
+            ...(team.practiceSquad || []),
+            ...(team.injuredReserve || [])
+          ];
+          allLeaguePlayers.push(...teamPlayers);
+        });
+      }
+
+      // Render college report using current team's roster only
+      renderPlayersByCollege(rows);
+
+      // Include all league players for ranking purposes, but also mark which team they belong to
+      const allPlayersForTag = allLeaguePlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        position: p.position,
+        salary: p.salary,
+        points: p.points || 0,
+        franchiseId: p.franchiseId,
+        nflTeam: p.nflTeam,
+        headshot: p.headshot,
+        nflLogo: p.nflLogo,
+        contractYears: p.contractYears,
+        gamesPlayed: p.gamesPlayed || null,
+      }));
+
+      const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');
+      if (franchiseTagEl) {
+        // Pass all league players for ranking, but filter to current team in component
+        franchiseTagEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
+        franchiseTagEl.dataset.currentTeam = currentTeam;
+      }
+
+      const veteranExtensionEl = document.querySelector('.veteran-extension-candidates');
+      if (veteranExtensionEl) {
+        // Pass all league players for ranking, but filter to current team in component
+        veteranExtensionEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
+        veteranExtensionEl.dataset.currentTeam = currentTeam;
+        // Pass salary averages for extension salary calculation
+        const seasonSalaryAverages = config.salaryAverages?.[currentSeason] ?? {};
+        veteranExtensionEl.dataset.salaryAverages = JSON.stringify(seasonSalaryAverages.extensionSalaries ?? {});
+      }
+
+      if (rosterMetadata) {
+        rosterMetadata.textContent = `Season ${
+          seasonData?.metadata?.season ?? currentSeason
+        }`;
+      }
+      if (rosterCountLabel) {
+        rosterCountLabel.textContent = formatCountLabel(rows.length ?? 0);
+      }
+
+      updateDraftAssetsPanel(currentTeam);
+    };
+
+    columnToggles.forEach((toggle) => {
+      toggle.addEventListener('change', (event) => {
+        const key = toggle.getAttribute('data-column-toggle');
+        if (!key) return;
+        if (event.target.checked) {
+          hiddenColumns.delete(key);
+        } else {
+          hiddenColumns.add(key);
+        }
+        applyHiddenColumns();
+      });
+    });
+
+    seasonSelect?.addEventListener('change', (event) => {
+      currentSeason = event.target.value;
+      updateView();
+    });
+
+    teamSelect?.addEventListener('change', (event) => {
+      currentTeam = event.target.value;
+      updateView();
+    });
+
+    // Team icon navigation
+    const teamIconBtns = document.querySelectorAll('.team-icon-btn');
+    teamIconBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const teamId = btn.getAttribute('data-team-id');
+        if (!teamId) return;
+
+        // Update active state
+        teamIconBtns.forEach((b) => b.setAttribute('data-active', 'false'));
+        btn.setAttribute('data-active', 'true');
+
+        // Update hidden input and current team
+        if (teamSelect) teamSelect.value = teamId;
+        currentTeam = teamId;
+        updateView();
+      });
+    });
+
+    const applyTeamSelection = (teamId) => {
+      currentTeam = teamId;
+      if (teamSelect) teamSelect.value = teamId;
+      teamIconBtns.forEach((b) => {
+        const btnTeamId = b.getAttribute('data-team-id');
+        b.setAttribute('data-active', btnTeamId === teamId ? 'true' : 'false');
+      });
+      updateView();
+    };
+
+    const hydrateTeamFromSession = async () => {
+      console.log('[rosters] hydrateTeamFromSession: start');
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        console.log('[rosters] hydrateTeamFromSession: response', res.status);
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        let franchiseId = normalizeFranchiseId(data?.user?.franchiseId);
+        console.log('[rosters] hydrateTeamFromSession: data', data);
+        const isAuthed = !!data?.authenticated && !!franchiseId;
+        const teamExists =
+          isAuthed &&
+          !!(
+            seasons[currentSeason]?.teams?.[franchiseId] ||
+            seasons[defaultSeason]?.teams?.[franchiseId] ||
+            teams[franchiseId]
+          );
+        if (!teamExists) {
+          console.log('[rosters] hydrateTeamFromSession: team not found', franchiseId);
+          return;
+        }
+        if (franchiseId === currentTeam) {
+          console.log('[rosters] hydrateTeamFromSession: already on team', franchiseId);
+          return;
+        }
+        console.log('[rosters] hydrateTeamFromSession: switching to', franchiseId);
+        applyTeamSelection(franchiseId);
+      } catch (err) {
+        console.error('Failed to set team from session', err);
+      }
+    };
+
+    applyHiddenColumns();
+    const urlViewParam = new URL(window.location.href).searchParams.get('view');
+    const validViews = ['roster', 'analytics', 'nextyear'];
+    if (urlViewParam && validViews.includes(urlViewParam)) {
+      switchView(urlViewParam);
+    } else {
+      switchView(currentView);
+    }
+    updateView();
+    hydrateTeamFromSession();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRosterPage);
+  } else {
+    initRosterPage();
+  }
+</script>

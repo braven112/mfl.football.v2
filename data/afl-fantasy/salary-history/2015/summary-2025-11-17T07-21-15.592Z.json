@@ -1,0 +1,243 @@
+{
+  "snapshot": "2025-11-17T07-21-15.592Z",
+  "metadata": {
+    "leagueId": "28077",
+    "season": "2015",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2015/export?TYPE=rosters&L=28077&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2015/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2015/export?TYPE=weeklyResults&L=28077&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-17T07:21:15.589Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-17T07:21:15.590Z"
+  },
+  "positions": {
+    "TE": {
+      "totalPlayers": 42,
+      "top3Average": 5073611,
+      "top5Average": 4320166.6,
+      "topPlayers": [
+        {
+          "id": "9902",
+          "name": "Gronkowski, Rob",
+          "salary": 7000000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "9925",
+          "name": "Graham, Jimmy",
+          "salary": 4893333,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "9474",
+          "name": "Cook, Jared",
+          "salary": 3327500,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "10409",
+          "name": "Clay, Charles",
+          "salary": 3300000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "8416",
+          "name": "Walker, Delanie",
+          "salary": 3080000,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 107,
+      "top3Average": 4724228.33,
+      "top5Average": 4384737,
+      "topPlayers": [
+        {
+          "id": "10080",
+          "name": "Cruz, Victor",
+          "salary": 5000000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "10080",
+          "name": "Cruz, Victor",
+          "salary": 5000000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "10271",
+          "name": "Jones, Julio",
+          "salary": 4172685,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "9881",
+          "name": "Decker, Eric",
+          "salary": 4000000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "11213",
+          "name": "Austin, Tavon",
+          "salary": 3751000,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 11,
+      "top3Average": 531391.67,
+      "top5Average": 513835,
+      "topPlayers": [
+        {
+          "id": "10872",
+          "name": "Walsh, Blair",
+          "salary": 565675,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "8851",
+          "name": "Folk, Nick",
+          "salary": 514250,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "9686",
+          "name": "Succop, Ryan",
+          "salary": 514250,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "2842",
+          "name": "Vinatieri, Adam",
+          "salary": 500000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "11947",
+          "name": "McManus, Brandon",
+          "salary": 475000,
+          "franchiseId": "0008"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 14,
+      "top3Average": 1210000,
+      "top5Average": 1079577.6,
+      "topPlayers": [
+        {
+          "id": "0511",
+          "name": "Broncos, Denver",
+          "salary": 1210000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "0515",
+          "name": "Seahawks, Seattle",
+          "salary": 1210000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "0527",
+          "name": "Panthers, Carolina",
+          "salary": 1210000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "0503",
+          "name": "Dolphins, Miami",
+          "salary": 1075000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "0519",
+          "name": "Cardinals, Arizona",
+          "salary": 692888,
+          "franchiseId": "0011"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 32,
+      "top3Average": 8214250,
+      "top5Average": 6178550,
+      "topPlayers": [
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron",
+          "salary": 13642750,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "5848",
+          "name": "Brady, Tom",
+          "salary": 6600000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "7260",
+          "name": "Romo, Tony",
+          "salary": 4400000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "7813",
+          "name": "Smith, Alex",
+          "salary": 3500000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "6929",
+          "name": "Palmer, Carson",
+          "salary": 2750000,
+          "franchiseId": "0016"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 78,
+      "top3Average": 5736666.67,
+      "top5Average": 5257000,
+      "topPlayers": [
+        {
+          "id": "8658",
+          "name": "Peterson, Adrian",
+          "salary": 6765000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "11193",
+          "name": "Bernard, Giovani",
+          "salary": 5445000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "12151",
+          "name": "Gordon, Melvin",
+          "salary": 5000000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "11192",
+          "name": "Bell, Le'Veon",
+          "salary": 4537500,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "11192",
+          "name": "Bell, Le'Veon",
+          "salary": 4537500,
+          "franchiseId": "0006"
+        }
+      ]
+    }
+  }
+}
