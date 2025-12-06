@@ -1,0 +1,172 @@
+---
+import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
+import BarChart from './BarChart.astro';
+import type { ChartData } from '../../scripts/chart-utils';
+
+interface Props {
+  metrics: FranchiseMetrics[];
+}
+
+const { metrics } = Astro.props;
+
+// Prepare data for stacked bar chart
+const chartData: ChartData = {
+  labels: metrics.map((m) => m.name),
+  datasets: [
+    {
+      label: 'QB',
+      data: metrics.map((m) => m.positionBreakdown.QB.points),
+      backgroundColor: '#3b82f6',
+    },
+    {
+      label: 'RB',
+      data: metrics.map((m) => m.positionBreakdown.RB.points),
+      backgroundColor: '#10b981',
+    },
+    {
+      label: 'WR',
+      data: metrics.map((m) => m.positionBreakdown.WR.points),
+      backgroundColor: '#f59e0b',
+    },
+    {
+      label: 'TE',
+      data: metrics.map((m) => m.positionBreakdown.TE.points),
+      backgroundColor: '#8b5cf6',
+    },
+    {
+      label: 'FLEX',
+      data: metrics.map((m) => m.positionBreakdown.FLEX.points),
+      backgroundColor: '#ec4899',
+    },
+    {
+      label: 'DEF',
+      data: metrics.map((m) => m.positionBreakdown.DEF.points),
+      backgroundColor: '#6b7280',
+    },
+  ],
+};
+
+const sortedMetrics = [...metrics].sort((a, b) => b.totalPoints - a.totalPoints);
+const maxPoints = Math.max(...sortedMetrics.map((m) => m.totalPoints));
+---
+
+<div class="roster-strength-chart">
+  <BarChart data={chartData} options={{ indexAxis: 'y', stacked: true }} />
+
+  <div class="chart-stats">
+    <div class="stats-grid">
+      {
+        sortedMetrics.map((metric) => (
+          <div class="team-stat-card">
+            <div class="team-name">{metric.name}</div>
+            <div class="total-points">{Math.round(metric.totalPoints)}</div>
+            <div class="points-bar">
+              <div
+                class="points-bar-fill"
+                style={{
+                  width: `${(metric.totalPoints / maxPoints) * 100}%`,
+                }}
+              />
+            </div>
+            <div class="position-breakdown">
+              <span>
+                QB: {Math.round(metric.positionBreakdown.QB.points)}
+              </span>
+              <span>
+                RB: {Math.round(metric.positionBreakdown.RB.points)}
+              </span>
+              <span>
+                WR: {Math.round(metric.positionBreakdown.WR.points)}
+              </span>
+              <span>
+                TE: {Math.round(metric.positionBreakdown.TE.points)}
+              </span>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<style>
+  .roster-strength-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .chart-stats {
+    width: 100%;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .team-stat-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .team-stat-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  .team-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .total-points {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .points-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .points-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b, #8b5cf6);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .position-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  .position-breakdown span {
+    padding: 0.25rem 0.5rem;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+  }
+
+  @media (max-width: 767px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

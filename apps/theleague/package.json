@@ -1,0 +1,24 @@
+{
+  "name": "theleague",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "type-check": "astro check",
+    "clean": "rm -rf dist .astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.5",
+    "@astrojs/vercel": "^8.0.4",
+    "astro": "^5.1.1",
+    "chokidar": "^3.6.0",
+    "react": "18.3.1",
+    "typescript": "^5.9.3",
+    "@mfl/shared-types": "workspace:*",
+    "@mfl/shared-utils": "workspace:*",
+    "@mfl/league-utils": "workspace:*",
+    "@mfl/mfl-data-fetcher": "workspace:*"
+  }
+}

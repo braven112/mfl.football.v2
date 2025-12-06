@@ -1,0 +1,109 @@
+---
+/**
+ * BarChart - Horizontal bar chart component
+ * Renders using div bars with widths based on values
+ */
+
+import type { ChartSlice } from '../../scripts/chart-utils';
+
+export interface Props {
+  /** Array of chart slices to render */
+  slices: ChartSlice[];
+  /** Unique ID for the chart element */
+  chartId: string;
+  /** Custom position order (optional) */
+  positionOrder?: string[];
+}
+
+const {
+  slices = [],
+  chartId,
+  positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
+} = Astro.props;
+---
+
+<div class="bar-chart-container" data-chart-id={chartId}>
+  <div class="bar-chart" id={chartId} data-slices={JSON.stringify(slices)} data-position-order={JSON.stringify(positionOrder)}></div>
+</div>
+
+<script>
+  import { buildBarChart } from '../../scripts/chart-utils';
+
+  // Find all bar charts and render them
+  document.querySelectorAll<HTMLElement>('[id^="posBar"]').forEach((chartEl) => {
+    const slicesJson = chartEl.dataset.slices;
+    const positionOrderJson = chartEl.dataset.positionOrder;
+    if (!slicesJson) return;
+
+    try {
+      const slices = JSON.parse(slicesJson);
+      const positionOrder = positionOrderJson ? JSON.parse(positionOrderJson) : ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+      const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+
+      // Render the bar chart
+      buildBarChart(chartEl, slices, positionOrder, total);
+    } catch (error) {
+      console.error('Failed to render bar chart:', error);
+    }
+  });
+</script>
+
+<style>
+  .bar-chart-container {
+    width: 100%;
+  }
+
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  :global(.bar-item) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  :global(.bar-label) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #111;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  :global(.bar-label-position) {
+    flex-shrink: 0;
+  }
+
+  :global(.bar-label-value) {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  :global(.bar-fill) {
+    height: 24px;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  :global(.bar-fill:hover) {
+    opacity: 0.85;
+  }
+
+  @media (max-width: 640px) {
+    .bar-chart {
+      gap: 0.75rem;
+    }
+
+    :global(.bar-fill) {
+      height: 20px;
+    }
+
+    :global(.bar-label) {
+      font-size: 0.65rem;
+    }
+  }
+</style>

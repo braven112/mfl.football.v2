@@ -1,0 +1,368 @@
+---
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
+import leagueAssets from '../data/theleague.assets.json';
+
+const playerModules = import.meta.glob(
+  '../data/mfl-player-salaries-*.json',
+  { eager: true }
+);
+
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const positionLabels = [
+  { key: 'QB', label: 'Quarterback' },
+  { key: 'RB', label: 'Running Back' },
+  { key: 'WR', label: 'Wide Receiver' },
+  { key: 'TE', label: 'Tight End' },
+  { key: 'PK', label: 'Kicker' },
+  { key: 'Def', label: 'Defense/ST' },
+];
+const positionLabelMap = new Map(
+  positionLabels.map(({ key, label }) => [key, label])
+);
+
+const franchiseLookup = new Map(
+  (leagueAssets.teams ?? []).map((team) => [
+    team.id,
+    {
+      name: team.name,
+      icon: team.assets?.icons?.[0]?.relativePath,
+    },
+  ])
+);
+
+/** @type {Array<{
+  season: string,
+  id: string,
+  name: string,
+  position: string,
+  salary: number,
+  points: number,
+  efficiency: number,
+  franchiseId?: string,
+  team?: string,
+  positionLabel?: string
+}>} */
+const overallCandidates: Array<{
+  season: string,
+  id: string,
+  name: string,
+  position: string,
+  salary: number,
+  points: number,
+  efficiency: number,
+  franchiseId?: string,
+  team?: string,
+  positionLabel?: string
+}> = [];
+const positionBuckets = new Map<string, Array<{
+  season: string,
+  id: string,
+  name: string,
+  position: string,
+  salary: number,
+  points: number,
+  efficiency: number,
+  franchiseId?: string,
+  team?: string,
+  positionLabel?: string
+}>>(positionLabels.map(({ key }) => [key, []]));
+Object.entries(playerModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+
+  const data = getModuleData(mod);
+  const players = data?.players ?? [];
+  const seasonCandidates = players
+    .map((player) => {
+      const salary = Number(player.salary) || 0;
+      const points = Number(player.points) || 0;
+      if (!salary || !points) return null;
+      return {
+        season,
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        salary,
+        points,
+        efficiency: points / salary,
+        franchiseId: player.franchiseId,
+        team: player.team ?? '',
+      };
+    })
+    .filter(Boolean);
+
+  if (!seasonCandidates.length) return;
+  seasonCandidates.sort((a, b) => b.efficiency - a.efficiency);
+  const overall = seasonCandidates[0];
+  if (overall) {
+    overallCandidates.push({
+      ...overall,
+      positionLabel: positionLabelMap.get(overall.position) ?? overall.position,
+    });
+  }
+
+  const positionLeaders = new Map();
+  seasonCandidates.forEach((candidate) => {
+    const existing = positionLeaders.get(candidate.position);
+    if (!existing || candidate.efficiency > existing.efficiency) {
+      positionLeaders.set(candidate.position, candidate);
+    }
+  });
+  positionLeaders.forEach((value, posKey) => {
+    const entry = {
+      ...value,
+      positionLabel: positionLabelMap.get(posKey) ?? posKey,
+    };
+    const bucket = positionBuckets.get(posKey);
+    if (bucket) bucket.push(entry);
+  });
+});
+
+overallCandidates.sort((a, b) => Number(b.season) - Number(a.season));
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+const formatCurrency = (value) => {
+  if (!Number.isFinite(value)) return '$0';
+  return currencyFormatter.format(Math.round(value));
+};
+const formatPoints = (value) =>
+  Number.isFinite(value) ? value.toFixed(1) : '0.0';
+const getNflLogo = (team) => {
+  const code = (team ?? '').toUpperCase() || 'FA';
+  return `/assets/nfl-logos/${code}.svg`;
+};
+---
+
+<TheLeagueLayout title="MFL MVPs">
+  <section class="mvp-history">
+    <header>
+      <h1>Salary-Adjusted MVP History</h1>
+      <p>
+        Most efficient contracts by season, calculated as points scored divided
+        by salary. Data refreshes whenever new salary snapshots are generated.
+      </p>
+    </header>
+    <div class="mvp-grid">
+      {overallCandidates.length ? (
+        overallCandidates.map((player) => {
+          const franchise = player.franchiseId
+            ? franchiseLookup.get(player.franchiseId)
+            : null;
+          const nflLogo = player.team ? getNflLogo(player.team) : null;
+          return (
+            <article class="mvp-card">
+              <header>
+                <p class="mvp-season">{player.season}</p>
+                {franchise?.icon && (
+                  <img
+                    src={franchise.icon}
+                    alt={franchise?.name ?? 'Franchise'}
+                    loading="lazy"
+                  />
+                )}
+                <h2>{player.name}</h2>
+                        <p class="mvp-meta">
+                          {nflLogo && (
+                            <img
+                              src={nflLogo}
+                              alt={`${player.team ?? 'FA'} logo`}
+                              class="nfl-icon"
+                              loading="lazy"
+                            />
+                          )}
+                          <span>{player.position}</span>
+                        </p>
+              </header>
+              <dl>
+                <div>
+                  <dt>Points</dt>
+                  <dd>{formatPoints(player.points)}</dd>
+                </div>
+                <div>
+                  <dt>Salary</dt>
+                  <dd>{formatCurrency(player.salary)}</dd>
+                </div>
+                <div>
+                  <dt>Efficiency</dt>
+                  <dd>{(player.efficiency * 1_000_000).toFixed(2)} pts/MM</dd>
+                </div>
+              </dl>
+            </article>
+          );
+        })
+      ) : (
+        <p>No MVP data available yet.</p>
+      )}
+    </div>
+    <section class="position-mvps">
+      <h2>Position MVPs</h2>
+      {positionLabels.map(({ key, label }) => {
+        const list = positionBuckets.get(key) ?? [];
+        return (
+          <div class="position-group">
+            <h3>{label}</h3>
+            <div class="mvp-grid">
+              {list.length ? (
+                list.map((player) => {
+                  const franchise = player.franchiseId
+                    ? franchiseLookup.get(player.franchiseId)
+                    : null;
+                  const nflLogo = player.team ? getNflLogo(player.team) : null;
+                  return (
+                    <article class="mvp-card">
+                      <header>
+                        <p class="mvp-season">{player.season}</p>
+                        {franchise?.icon && (
+                          <img
+                            src={franchise.icon}
+                            alt={franchise?.name ?? 'Franchise'}
+                            loading="lazy"
+                          />
+                        )}
+                        <h2>{player.name}</h2>
+                  <p class="mvp-meta">
+                    {nflLogo && (
+                      <img
+                        src={nflLogo}
+                        alt={`${player.team ?? 'FA'} logo`}
+                        class="nfl-icon"
+                        loading="lazy"
+                      />
+                    )}
+                    <span>{player.position}</span>
+                  </p>
+                      </header>
+                      <dl>
+                        <div>
+                          <dt>Points</dt>
+                          <dd>{formatPoints(player.points)}</dd>
+                        </div>
+                        <div>
+                          <dt>Salary</dt>
+                          <dd>{formatCurrency(player.salary)}</dd>
+                        </div>
+                        <div>
+                          <dt>Efficiency</dt>
+                          <dd>{(player.efficiency * 1_000_000).toFixed(2)} pts/MM</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })
+              ) : (
+                <p class="empty-state">No MVP data yet.</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .mvp-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .mvp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .mvp-card {
+    background: #fff;
+    border: 1px solid #d7dce3;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .mvp-card header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .mvp-card header img {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    object-fit: cover;
+  }
+
+  .mvp-season {
+    margin: 0;
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .mvp-meta {
+    margin: 0;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .nfl-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  dt {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .position-mvps h2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .position-group {
+    margin-bottom: 2rem;
+  }
+
+  .position-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .empty-state {
+    margin: 0;
+    color: #6b7280;
+  }
+</style>

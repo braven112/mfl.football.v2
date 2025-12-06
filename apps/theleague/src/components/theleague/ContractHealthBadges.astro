@@ -1,0 +1,232 @@
+---
+import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
+import { getCapHealthStatus } from '../../utils/league-comparison-utils';
+import { currencyFormatter } from '../../utils/formatters';
+
+interface Props {
+  metrics: FranchiseMetrics[];
+  deadMoneyMap?: Map<string, number>;
+}
+
+const { metrics, deadMoneyMap = new Map() } = Astro.props;
+
+const SALARY_CAP = 45000000;
+
+const getHealthBadge = (status: 'healthy' | 'mediocre' | 'disaster') => {
+  switch (status) {
+    case 'healthy':
+      return { emoji: '🔵', label: 'Healthy Cap', color: '#10b981' };
+    case 'mediocre':
+      return { emoji: '🟠', label: 'Mediocre', color: '#f59e0b' };
+    case 'disaster':
+      return { emoji: '🔴', label: 'Cap Disaster', color: '#ef4444' };
+  }
+};
+
+const sortedMetrics = [...metrics].sort((a, b) => {
+  const statusA = getCapHealthStatus(a.totalSalary, a.totalPoints, deadMoneyMap.get(a.franchiseId) || 0);
+  const statusB = getCapHealthStatus(b.totalSalary, b.totalPoints, deadMoneyMap.get(b.franchiseId) || 0);
+  const statusOrder = { healthy: 0, mediocre: 1, disaster: 2 };
+  return statusOrder[statusA] - statusOrder[statusB];
+});
+---
+
+<div class="health-badges-container">
+  <div class="badges-grid">
+    {
+      sortedMetrics.map((metric) => {
+        const deadMoney = deadMoneyMap.get(metric.franchiseId) || 0;
+        const status = getCapHealthStatus(metric.totalSalary, metric.totalPoints, deadMoney);
+        const badge = getHealthBadge(status);
+        const capUsagePercent = (metric.totalSalary / SALARY_CAP) * 100;
+        const deadMoneyPercent = (deadMoney / SALARY_CAP) * 100;
+        const ppm = metric.totalSalary > 0 ? metric.totalPoints / (metric.totalSalary / 1000000) : 0;
+
+        return (
+          <div class="health-card">
+            <div class="card-header">
+              <h3 class="team-name">{metric.name}</h3>
+              <div class="health-badge" style={{ backgroundColor: badge.color }}>
+                <span class="badge-emoji">{badge.emoji}</span>
+                <span class="badge-label">{badge.label}</span>
+              </div>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric">
+                <div class="metric-label">Total Salary</div>
+                <div class="metric-value">{currencyFormatter.format(metric.totalSalary)}</div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">Cap Usage</div>
+                <div class="metric-value">{capUsagePercent.toFixed(1)}%</div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">Dead Money</div>
+                <div class="metric-value">{currencyFormatter.format(deadMoney)}</div>
+                <div class="metric-percent">{deadMoneyPercent.toFixed(1)}% of cap</div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">Points Per Million</div>
+                <div class="metric-value">{ppm.toFixed(2)}</div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">Cap Remaining</div>
+                <div class="metric-value">
+                  {currencyFormatter.format(Math.max(0, SALARY_CAP - metric.totalSalary))}
+                </div>
+              </div>
+
+              <div class="metric">
+                <div class="metric-label">Total Points</div>
+                <div class="metric-value">{Math.round(metric.totalPoints)}</div>
+              </div>
+            </div>
+
+            <div class="cap-bar">
+              <div
+                class="cap-bar-used"
+                style={{
+                  width: `${Math.min(capUsagePercent, 100)}%`,
+                  backgroundColor: capUsagePercent > 100 ? '#ef4444' : '#3b82f6',
+                }}
+              />
+            </div>
+            <div class="cap-bar-label">
+              {capUsagePercent > 100 ? `${(capUsagePercent - 100).toFixed(1)}% over cap` : 'Under cap'}
+            </div>
+          </div>
+        );
+      })
+    }
+  </div>
+</div>
+
+<style>
+  .health-badges-container {
+    width: 100%;
+  }
+
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .health-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.2s;
+  }
+
+  .health-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  .team-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+  }
+
+  .health-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-emoji {
+    font-size: 1rem;
+  }
+
+  .badge-label {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .metric-percent {
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  .cap-bar {
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .cap-bar-used {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s ease;
+  }
+
+  .cap-bar-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  @media (max-width: 767px) {
+    .badges-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

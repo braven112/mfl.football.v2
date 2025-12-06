@@ -1,0 +1,351 @@
+---
+import leagueAssets from '../../data/theleague.assets.json';
+import { calculatePickValue } from '../../utils/league-comparison-utils';
+
+// Sample draft capital data - in a real app, this would come from MFL draft tracker
+// Format: franchiseId -> array of picks with round, pick number, year, etc.
+const draftCapitalData = {
+  '0001': [
+    { year: 2025, round: 1, pick: 8, value: calculatePickValue(8) },
+    { year: 2025, round: 2, pick: 40, value: calculatePickValue(40) },
+    { year: 2026, round: 1, pick: 12, value: calculatePickValue(12) },
+    { year: 2027, round: 1, pick: 15, value: calculatePickValue(15) },
+  ],
+  '0002': [
+    { year: 2025, round: 1, pick: 4, value: calculatePickValue(4) },
+    { year: 2025, round: 2, pick: 36, value: calculatePickValue(36) },
+    { year: 2026, round: 1, pick: 8, value: calculatePickValue(8) },
+  ],
+  '0003': [
+    { year: 2025, round: 1, pick: 16, value: calculatePickValue(16) },
+    { year: 2025, round: 2, pick: 48, value: calculatePickValue(48) },
+  ],
+  // Add placeholder data for all teams
+};
+
+const teamsList = leagueAssets.teams ?? [];
+
+const getTeamName = (franchiseId: string) => {
+  const team = teamsList.find((t) => t.id === franchiseId);
+  return team?.name || `Team ${franchiseId}`;
+};
+
+// Fill in placeholder data for all teams that don't have explicit picks
+teamsList.forEach((team) => {
+  if (!draftCapitalData[team.id]) {
+    draftCapitalData[team.id] = [
+      { year: 2025, round: 1, pick: 16, value: calculatePickValue(16) },
+      { year: 2025, round: 2, pick: 48, value: calculatePickValue(48) },
+    ];
+  }
+});
+
+// Calculate total values by team
+const teamAssets = Object.entries(draftCapitalData).map(([franchiseId, picks]) => {
+  const totalValue = picks.reduce((sum, p) => sum + p.value, 0);
+  return {
+    franchiseId,
+    name: getTeamName(franchiseId),
+    picks,
+    totalValue,
+    pickCount: picks.length,
+  };
+});
+
+// Sort by total value descending
+const sortedTeams = [...teamAssets].sort((a, b) => b.totalValue - a.totalValue);
+
+// Group picks by year
+const picksByYear = (picks) => {
+  const grouped = {};
+  picks.forEach((pick) => {
+    if (!grouped[pick.year]) {
+      grouped[pick.year] = [];
+    }
+    grouped[pick.year].push(pick);
+  });
+  return grouped;
+};
+---
+
+<div class="draft-capital-container">
+  <div class="draft-capital-scroll">
+    <table class="draft-table">
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th>2025 Picks</th>
+          <th>2026 Picks</th>
+          <th>2027 Picks</th>
+          <th>Total Value</th>
+          <th>Asset Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          sortedTeams.map((team, index) => {
+            const byYear = picksByYear(team.picks);
+            const picks2025 = byYear[2025] || [];
+            const picks2026 = byYear[2026] || [];
+            const picks2027 = byYear[2027] || [];
+
+            // Calculate asset score (1-16, where 1 is best)
+            const assetScore = index + 1;
+
+            return (
+              <tr class="team-row">
+                <td class="team-cell">
+                  <span class="team-name">{team.name}</span>
+                </td>
+                <td class="picks-cell">
+                  {picks2025.map((p) => (
+                    <span class="pick-tag">
+                      R{p.round}P{p.pick}
+                    </span>
+                  ))}
+                  {picks2025.length === 0 && <span class="no-picks">—</span>}
+                </td>
+                <td class="picks-cell">
+                  {picks2026.map((p) => (
+                    <span class="pick-tag">
+                      R{p.round}P{p.pick}
+                    </span>
+                  ))}
+                  {picks2026.length === 0 && <span class="no-picks">—</span>}
+                </td>
+                <td class="picks-cell">
+                  {picks2027.map((p) => (
+                    <span class="pick-tag">
+                      R{p.round}P{p.pick}
+                    </span>
+                  ))}
+                  {picks2027.length === 0 && <span class="no-picks">—</span>}
+                </td>
+                <td class="numeric-cell">
+                  <strong>{team.totalValue.toFixed(0)}</strong>
+                </td>
+                <td class="score-cell">
+                  <div class="score-badge">{assetScore}</div>
+                </td>
+              </tr>
+            );
+          })
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-section">
+    <h4>Draft Capital Information</h4>
+    <p>
+      This table shows multi-year draft pick inventory for each team. Pick values are based on the
+      Jimmy Johnson value chart, which assigns point values to each pick position. Higher total
+      values indicate more future flexibility.
+    </p>
+
+    <div class="legend-section">
+      <h5>Pick Format</h5>
+      <p>
+        <strong>R1P8</strong> = Round 1, Pick 8 in that round. Picks across all 16 teams per round
+        are numbered 1-32 (or 1-16 for 2-round drafts).
+      </p>
+
+      <h5>Asset Score</h5>
+      <p>Ranking of teams by total draft capital value (1 = most assets, 16 = fewest assets).</p>
+    </div>
+
+    <div class="warning">
+      ⚠️ <strong>Note:</strong> This is placeholder data. Connect to your league's draft tracker API
+      to display actual pick trades and compensation picks.
+    </div>
+  </div>
+</div>
+
+<style>
+  .draft-capital-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .draft-capital-scroll {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .draft-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+  }
+
+  .draft-table thead {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+  }
+
+  .draft-table th {
+    padding: 1rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .draft-table th:nth-child(2),
+  .draft-table th:nth-child(3),
+  .draft-table th:nth-child(4),
+  .draft-table th:nth-child(5),
+  .draft-table th:nth-child(6) {
+    text-align: center;
+  }
+
+  .team-row {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .team-row:hover {
+    background: #f8fafc;
+  }
+
+  .team-cell {
+    padding: 1rem 0.75rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    min-width: 180px;
+  }
+
+  .team-name {
+    display: inline-block;
+  }
+
+  .picks-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    min-width: 150px;
+  }
+
+  .pick-tag {
+    display: inline-block;
+    background: #3b82f6;
+    color: white;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .no-picks {
+    color: #cbd5e1;
+    font-size: 1.2rem;
+  }
+
+  .numeric-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    color: #1a1a1a;
+    font-weight: 500;
+    min-width: 120px;
+  }
+
+  .score-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #10b981;
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .info-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .info-section h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .info-section p {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0 0 1rem 0;
+  }
+
+  .legend-section {
+    margin-top: 1rem;
+  }
+
+  .legend-section h5 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0.75rem 0 0.35rem 0;
+  }
+
+  .legend-section p {
+    margin: 0 0 0.75rem 0;
+    padding-left: 0.75rem;
+  }
+
+  .warning {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #92400e;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 767px) {
+    .draft-table th,
+    .draft-table td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .picks-cell {
+      min-width: 100px;
+    }
+
+    .numeric-cell {
+      min-width: 90px;
+    }
+
+    .pick-tag {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+</style>

@@ -1,0 +1,243 @@
+{
+  "snapshot": "2025-11-22T08-32-57.970Z",
+  "metadata": {
+    "leagueId": "48815",
+    "season": "2012",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2012/export?TYPE=rosters&L=48815&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2012/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2012/export?TYPE=weeklyResults&L=48815&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-22T08:32:57.965Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-22T08:32:57.968Z"
+  },
+  "positions": {
+    "RB": {
+      "totalPlayers": 74,
+      "top3Average": 8833333.33,
+      "top5Average": 8135000,
+      "topPlayers": [
+        {
+          "id": "9054",
+          "name": "Charles, Jamaal",
+          "salary": 10000000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "8301",
+          "name": "Jones-Drew, Maurice",
+          "salary": 9000000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "7544",
+          "name": "Turner, Michael",
+          "salary": 7500000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "9122",
+          "name": "Forte, Matt",
+          "salary": 7150000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "7877",
+          "name": "Gore, Frank",
+          "salary": 7025000,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 111,
+      "top3Average": 9093333.33,
+      "top5Average": 8111000,
+      "topPlayers": [
+        {
+          "id": "8657",
+          "name": "Johnson, Calvin",
+          "salary": 10010000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "6931",
+          "name": "Johnson, Andre",
+          "salary": 8800000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "7393",
+          "name": "Fitzgerald, Larry",
+          "salary": 8470000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "8360",
+          "name": "Marshall, Brandon",
+          "salary": 7000000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "8493",
+          "name": "Colston, Marques",
+          "salary": 6275000,
+          "franchiseId": "0015"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 47,
+      "top3Average": 3629333.33,
+      "top5Average": 2913100,
+      "topPlayers": [
+        {
+          "id": "8247",
+          "name": "Davis, Vernon",
+          "salary": 5500000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "6997",
+          "name": "Witten, Jason",
+          "salary": 3388000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "8339",
+          "name": "Daniels, Owen",
+          "salary": 2000000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "9044",
+          "name": "Bennett, Martellus",
+          "salary": 2000000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "7842",
+          "name": "Miller, Heath",
+          "salary": 1677500,
+          "franchiseId": "0012"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 13,
+      "top3Average": 885000,
+      "top5Average": 794854,
+      "topPlayers": [
+        {
+          "id": "0521",
+          "name": "Bears, Chicago",
+          "salary": 1080000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "0501",
+          "name": "Bills, Buffalo",
+          "salary": 800000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "0505",
+          "name": "Jets, New York",
+          "salary": 775000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "0515",
+          "name": "Seahawks, Seattle",
+          "salary": 714270,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "0510",
+          "name": "Steelers, Pittsburgh",
+          "salary": 605000,
+          "franchiseId": "0013"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 41,
+      "top3Average": 8463594.67,
+      "top5Average": 6438156.8,
+      "topPlayers": [
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron",
+          "salary": 10250000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "4925",
+          "name": "Brees, Drew",
+          "salary": 8990784,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "3291",
+          "name": "Manning, Peyton",
+          "salary": 6150000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "8252",
+          "name": "Cutler, Jay",
+          "salary": 3500000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "6929",
+          "name": "Palmer, Carson",
+          "salary": 3300000,
+          "franchiseId": "0012"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 17,
+      "top3Average": 609166.67,
+      "top5Average": 563500,
+      "topPlayers": [
+        {
+          "id": "5666",
+          "name": "Janikowski, Sebastian",
+          "salary": 650000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "8359",
+          "name": "Gostkowski, Stephen",
+          "salary": 600000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "8074",
+          "name": "Bironas, Rob",
+          "salary": 577500,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "10506",
+          "name": "Bailey, Dan",
+          "salary": 495000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "3579",
+          "name": "Akers, David",
+          "salary": 495000,
+          "franchiseId": "0010"
+        }
+      ]
+    }
+  }
+}

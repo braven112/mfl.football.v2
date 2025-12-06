@@ -1,0 +1,107 @@
+---
+/**
+ * TeamIdentityCard - Display team identity with icon, name, and division
+ * Used in roster pages and other team-focused views
+ */
+
+export interface Props {
+  /** Team icon/logo URL */
+  icon?: string;
+  /** Team name */
+  name: string;
+  /** Team division (e.g., "Northwest", "Southwest") */
+  division?: string;
+  /** Optional label above the team name (e.g., "Active Roster") */
+  label?: string;
+  /** Additional CSS classes */
+  class?: string;
+}
+
+const { icon, name, division, label, class: className } = Astro.props;
+---
+
+<div class:list={['team-identity-card', className]} data-team-identity>
+  {icon && (
+    <img
+      src={icon}
+      alt={`${name} icon`}
+      class="team-identity-card__icon"
+    />
+  )}
+  <div class="team-identity-card__content">
+    {label && <p class="team-identity-card__label">{label}</p>}
+    <h2 class="team-identity-card__name" data-team-name>
+      {name}
+    </h2>
+    {division && (
+      <p class="team-identity-card__division" data-team-meta>
+        {division} Division
+      </p>
+    )}
+  </div>
+</div>
+
+<style>
+  .team-identity-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: var(--card-bg-color, #ffffff);
+    border-radius: 12px;
+    border: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .team-identity-card__icon {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .team-identity-card__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .team-identity-card__label {
+    font-size: 0.875rem;
+    color: var(--text-secondary-color, #64748b);
+    font-weight: 500;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .team-identity-card__name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .team-identity-card__division {
+    font-size: 0.875rem;
+    color: var(--text-secondary-color, #64748b);
+    margin: 0;
+  }
+
+  @media (max-width: 767px) {
+    .team-identity-card {
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    .team-identity-card__icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .team-identity-card__name {
+      font-size: 1.25rem;
+    }
+  }
+</style>

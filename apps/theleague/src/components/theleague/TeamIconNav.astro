@@ -1,0 +1,181 @@
+---
+/**
+ * TeamIconNav - Division-grouped team icon navigation
+ * Allows users to switch between teams with icon buttons
+ * Includes client-side click handlers for dynamic team switching
+ */
+
+import { divisionOrder } from '../../constants/roster-constants';
+
+export interface Team {
+  id: string;
+  name: string;
+  division: string;
+  icon?: string;
+}
+
+export interface Props {
+  /** List of teams to display */
+  teams: Team[];
+  /** Currently selected team ID */
+  activeTeamId?: string;
+  /** Optional callback event name to dispatch on team selection */
+  eventName?: string;
+  /** Additional CSS classes */
+  class?: string;
+}
+
+const {
+  teams,
+  activeTeamId,
+  eventName = 'teamchange',
+  class: className,
+} = Astro.props;
+
+// Group teams by division
+const teamsByDivision = divisionOrder.map((division) => ({
+  division,
+  teams: teams.filter((t) => t.division === division),
+})).filter((group) => group.teams.length > 0);
+---
+
+<nav class:list={['team-icon-nav', className]}>
+  {teamsByDivision.map(({ division, teams: divisionTeams }) => (
+    <div class="division-group">
+      <div class="division-label">{division}</div>
+      <div class="division-teams">
+        {divisionTeams.map((team) => (
+          <button
+            class="team-icon-btn"
+            data-team-id={team.id}
+            data-active={team.id === activeTeamId}
+            title={team.name}
+            aria-label={`View ${team.name} roster`}
+          >
+            {team.icon && (
+              <img
+                src={team.icon}
+                alt={`${team.name} icon`}
+                class="team-icon-img"
+              />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  ))}
+</nav>
+
+<script>
+  /**
+   * Team icon navigation click handler
+   * Manages active state and dispatches custom events
+   */
+  const initTeamIconNav = () => {
+    const teamIconBtns = document.querySelectorAll('.team-icon-btn');
+
+    teamIconBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const teamId = btn.getAttribute('data-team-id');
+        if (!teamId) return;
+
+        // Update active state for all buttons
+        teamIconBtns.forEach((b) => b.setAttribute('data-active', 'false'));
+        btn.setAttribute('data-active', 'true');
+
+        // Dispatch custom event with team ID
+        const event = new CustomEvent('teamchange', {
+          detail: { teamId },
+          bubbles: true,
+        });
+        btn.dispatchEvent(event);
+      });
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTeamIconNav);
+  } else {
+    initTeamIconNav();
+  }
+</script>
+
+<style>
+  .team-icon-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .division-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .division-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary-color, #64748b);
+  }
+
+  .division-teams {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .team-icon-btn {
+    width: 48px;
+    height: 48px;
+    padding: 0.375rem;
+    background: var(--card-bg-color, #ffffff);
+    border: 2px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .team-icon-btn:hover {
+    border-color: var(--primary-color, #1c497c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .team-icon-btn:active {
+    transform: translateY(0);
+  }
+
+  .team-icon-btn[data-active='true'] {
+    border-color: var(--primary-color, #1c497c);
+    background: var(--primary-light-bg, #f0f4f8);
+    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+  }
+
+  .team-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  @media (max-width: 767px) {
+    .team-icon-nav {
+      gap: 1.25rem;
+    }
+
+    .division-teams {
+      gap: 0.625rem;
+    }
+
+    .team-icon-btn {
+      width: 40px;
+      height: 40px;
+      padding: 0.3125rem;
+    }
+  }
+</style>

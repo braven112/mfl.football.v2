@@ -1,0 +1,244 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = true;
+---
+
+<Layout title="MFL.football - Project Overview">
+	<main class="doc-page">
+		<article class="doc-card">
+			<header>
+				<h1>Astro Project Overview</h1>
+				<p>
+					This page summarizes what ships with the base Astro project behind the MFL.football site, so you
+					can quickly understand the available routes, structure, and developer commands without digging
+					through the repository.
+				</p>
+			</header>
+
+			<section>
+				<h2>Included demo routes</h2>
+				<ul>
+					<li>
+						<strong><code>/</code></strong> — Static landing page (pre-rendered for fast delivery).
+					</li>
+					<li>
+						<strong><code>/ssr</code></strong> — Server-rendered example powered by Vercel Functions.
+					</li>
+					<li>
+						<strong><code>/ssr-with-swr-caching</code></strong> — Server-rendered with cache headers for Vercel
+						Edge Network.
+					</li>
+					<li>
+						<strong><code>/image</code></strong> — Demonstrates Astro Asset pipeline and Vercel image
+						optimization.
+					</li>
+				</ul>
+				<p>
+					Need more background on Astro + Vercel? Start with the
+					<a href="https://vercel.com/docs/frameworks/astro" target="_blank">deployment guide</a>.
+				</p>
+			</section>
+
+			<section>
+				<h2>Deploy instantly</h2>
+				<p>
+					You can spin up your own copy of the project on Vercel with the deploy button below. Vercel will clone
+					the template and walk you through project setup.
+				</p>
+				<p class="deploy-link">
+					<a
+						class="cta"
+						href="https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/astro&amp;template=astro"
+						target="_blank"
+					>
+						Deploy with Vercel
+					</a>
+				</p>
+				<p class="note">Live Example: <a href="https://astro-template.vercel.app" target="_blank">astro-template.vercel.app</a></p>
+			</section>
+
+			<section>
+				<h2>Project structure</h2>
+				<p>
+					Pages live in <code>src/pages/</code>. Every <code>.astro</code>, <code>.md</code>, or <code>.js</code>
+					file in that folder becomes a route that matches the file name.
+				</p>
+				<ul>
+					<li>
+						<strong><code>src/components/</code></strong> — Reusable UI components.
+					</li>
+					<li>
+						<strong><code>public/</code></strong> — Static assets copied directly to the final build.
+					</li>
+					<li>
+						<strong><code>src/assets/</code></strong> — Styles, tokens, and supporting assets used across
+						pages.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>Developer commands</h2>
+				<div class="commands-table">
+					<table>
+						<thead>
+							<tr>
+								<th scope="col">Command</th>
+								<th scope="col">What it does</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code>pnpm install</code></td>
+								<td>Install dependencies.</td>
+							</tr>
+							<tr>
+								<td><code>pnpm run dev</code></td>
+								<td>Start the dev server at <code>localhost:3000</code>.</td>
+							</tr>
+							<tr>
+								<td><code>pnpm run build</code></td>
+								<td>Generate the production build in <code>./dist/</code>.</td>
+							</tr>
+							<tr>
+								<td><code>pnpm run preview</code></td>
+								<td>Serve the build output locally before deploying.</td>
+							</tr>
+							<tr>
+								<td><code>pnpm run start</code></td>
+								<td>Run a production server locally at <code>localhost:3000</code>.</td>
+							</tr>
+							<tr>
+								<td><code>pnpm run astro ...</code></td>
+								<td>Access Astro CLI commands such as <code>astro add</code> or <code>astro preview</code>.</td>
+							</tr>
+							<tr>
+								<td><code>pnpm run astro --help</code></td>
+								<td>Show the Astro CLI help text.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</article>
+	</main>
+</Layout>
+
+<style>
+	.doc-page {
+		padding: 2.5rem 1.5rem;
+		max-width: 75ch;
+		margin: 0 auto;
+	}
+
+	.doc-card {
+		background: white;
+		border-radius: 1.25rem;
+		border: 1px solid rgba(37, 99, 235, 0.2);
+		box-shadow: 0 35px 120px rgba(15, 23, 42, 0.08);
+		padding: 3rem;
+		display: grid;
+		gap: 2.5rem;
+	}
+
+	header p {
+		margin-top: 1rem;
+		line-height: 1.7;
+		color: rgba(15, 23, 42, 0.75);
+	}
+
+	section p {
+		line-height: 1.7;
+		color: rgba(15, 23, 42, 0.75);
+	}
+
+	ul {
+		margin: 1rem 0 0 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	li {
+		padding: 0.75rem 1rem;
+		background: rgba(241, 245, 249, 0.6);
+		border-radius: 0.75rem;
+		border: 1px solid rgba(148, 163, 184, 0.3);
+	}
+
+	li strong {
+		display: block;
+		margin-bottom: 0.25rem;
+		color: #0f172a;
+	}
+
+	li code {
+		font-size: 0.95rem;
+	}
+
+	.commands-table table {
+		width: 100%;
+		border-collapse: collapse;
+		background: rgba(248, 250, 252, 0.9);
+		border-radius: 0.75rem;
+		overflow: hidden;
+	}
+
+	.commands-table th,
+	.commands-table td {
+		text-align: left;
+		padding: 1rem 1.25rem;
+		border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+	}
+
+	.commands-table tbody tr:last-child td {
+		border-bottom: none;
+	}
+
+	.commands-table code {
+		background: rgba(15, 23, 42, 0.08);
+		padding: 0.2rem 0.5rem;
+		border-radius: 0.5rem;
+	}
+
+	.deploy-link {
+		margin: 1.5rem 0 0;
+	}
+
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		background: linear-gradient(135deg, #2563eb, #059669);
+		color: white;
+		font-weight: 600;
+		padding: 0.85rem 1.75rem;
+		border-radius: 999px;
+		text-decoration: none;
+		box-shadow: 0 16px 40px rgba(37, 99, 235, 0.35);
+	}
+
+	.cta:hover {
+		background: linear-gradient(135deg, #1d4ed8, #047857);
+	}
+
+	.note {
+		font-style: italic;
+		color: rgba(15, 23, 42, 0.65);
+	}
+
+	@media (max-width: 767px) {
+		.doc-card {
+			padding: 2rem;
+		}
+
+		.commands-table th,
+		.commands-table td {
+			display: block;
+			padding: 0.75rem 1rem;
+		}
+	}
+</style>

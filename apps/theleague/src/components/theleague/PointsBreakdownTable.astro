@@ -1,0 +1,319 @@
+---
+import type { FranchiseMetrics } from '../../utils/league-comparison-utils';
+import type { Player } from '../../utils/league-comparison-utils';
+import { calculateLuckScore } from '../../utils/league-comparison-utils';
+
+interface Props {
+  metrics: FranchiseMetrics[];
+  leagueAvgPoints: number;
+  allPlayers: Player[];
+}
+
+const { metrics, leagueAvgPoints, allPlayers } = Astro.props;
+
+// Calculate standard deviation and weekly averages
+const WEEKS = 17;
+
+const teamStats = metrics.map((metric) => {
+  const teamPlayers = allPlayers.filter((p) => p.franchiseId === metric.franchiseId);
+  const weeklyAvg = metric.totalPoints / WEEKS;
+
+  // Calculate standard deviation of individual player points
+  const playerPoints = teamPlayers.map((p) => p.points || 0);
+  const meanPoints = playerPoints.reduce((a, b) => a + b, 0) / playerPoints.length || 0;
+  const stdDev = Math.sqrt(
+    playerPoints.reduce((sum, points) => sum + Math.pow(points - meanPoints, 2), 0) /
+      playerPoints.length || 0
+  );
+
+  const luckScore = calculateLuckScore(metric.totalPoints, weeklyAvg, stdDev, leagueAvgPoints, WEEKS);
+
+  return {
+    ...metric,
+    weeklyAvg,
+    stdDev,
+    luckScore,
+  };
+});
+
+// Sort by total points
+const sortedStats = [...teamStats].sort((a, b) => b.totalPoints - a.totalPoints);
+
+const getLuckColor = (luck: number) => {
+  if (luck > 0.5) return '#10b981'; // Green - lucky (overperformed)
+  if (luck < -0.5) return '#ef4444'; // Red - unlucky (underperformed)
+  return '#f59e0b'; // Yellow - neutral
+};
+
+const getLuckLabel = (luck: number) => {
+  if (luck > 0.5) return 'Lucky ↑';
+  if (luck < -0.5) return 'Unlucky ↓';
+  return 'Neutral';
+};
+---
+
+<div class="points-table-container">
+  <table class="points-table">
+    <thead>
+      <tr>
+        <th>Team</th>
+        <th>Total Points</th>
+        <th>Weekly Avg</th>
+        <th>Std Dev</th>
+        <th>Consistency</th>
+        <th>Luck Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        sortedStats.map((stat, index) => (
+          <tr class="team-row">
+            <td class="team-cell">
+              <span class="rank-badge">{index + 1}</span>
+              {stat.name}
+            </td>
+            <td class="numeric-cell">
+              <strong>{Math.round(stat.totalPoints)}</strong>
+            </td>
+            <td class="numeric-cell">{stat.weeklyAvg.toFixed(1)}</td>
+            <td class="numeric-cell">{stat.stdDev.toFixed(1)}</td>
+            <td class="consistency-cell">
+              <div class="consistency-bar">
+                <div
+                  class="consistency-fill"
+                  style={{
+                    width: `${Math.min(100, (10 / stat.stdDev) * 100)}%`,
+                  }}
+                />
+              </div>
+              <span class="consistency-label">
+                {stat.stdDev < 8 ? 'High' : stat.stdDev < 12 ? 'Medium' : 'Low'}
+              </span>
+            </td>
+            <td class="luck-cell">
+              <div
+                class="luck-badge"
+                style={{
+                  backgroundColor: getLuckColor(stat.luckScore),
+                }}
+              >
+                <span class="luck-score">{stat.luckScore > 0 ? '+' : ''}{stat.luckScore.toFixed(2)}</span>
+                <span class="luck-label">{getLuckLabel(stat.luckScore)}</span>
+              </div>
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <div class="table-info">
+    <h4>Metric Explanations</h4>
+    <ul>
+      <li>
+        <strong>Weekly Avg:</strong> Total points divided by 17 weeks - consistency indicator
+      </li>
+      <li>
+        <strong>Std Dev:</strong> Standard deviation of player points - higher = more volatile roster
+      </li>
+      <li>
+        <strong>Consistency:</strong> Visual indicator of score predictability (inverse of std dev)
+      </li>
+      <li>
+        <strong>Luck Score:</strong> Performance vs expected (league average adjusted) - positive = overperformed
+      </li>
+    </ul>
+  </div>
+</div>
+
+<style>
+  .points-table-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .points-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .points-table thead {
+    background: #f8fafc;
+  }
+
+  .points-table th {
+    padding: 1rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .points-table th:nth-child(2),
+  .points-table th:nth-child(3),
+  .points-table th:nth-child(4),
+  .points-table th:nth-child(5),
+  .points-table th:nth-child(6) {
+    text-align: center;
+  }
+
+  .team-row {
+    border-bottom: 1px solid #e2e8f0;
+    transition: background-color 0.2s;
+  }
+
+  .team-row:hover {
+    background: #f8fafc;
+  }
+
+  .team-row:last-child {
+    border-bottom: none;
+  }
+
+  .team-cell {
+    padding: 1rem 0.75rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .numeric-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  .consistency-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-direction: column;
+  }
+
+  .consistency-bar {
+    width: 80px;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .consistency-fill {
+    height: 100%;
+    background: #10b981;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .consistency-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .luck-cell {
+    padding: 1rem 0.75rem;
+    text-align: center;
+  }
+
+  .luck-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .luck-score {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .luck-label {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+  }
+
+  .table-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .table-info h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .table-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .table-info li {
+    font-size: 0.85rem;
+    color: #64748b;
+    line-height: 1.4;
+  }
+
+  .table-info strong {
+    color: #475569;
+  }
+
+  @media (max-width: 767px) {
+    .points-table th,
+    .points-table td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .consistency-bar {
+      width: 60px;
+    }
+
+    .table-info ul {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

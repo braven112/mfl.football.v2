@@ -1,0 +1,21 @@
+{
+  "name": "@mfl/shared-types",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mfl-api": "./src/mfl-api.ts",
+    "./contracts": "./src/contracts.ts",
+    "./standings": "./src/standings.ts",
+    "./roster": "./src/roster.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
