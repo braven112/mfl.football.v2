@@ -3,7 +3,7 @@
  * Parses playoff bracket data to extract toilet bowl tournament winners
  */
 
-import type { ToiletBowlResult } from '../types/standings';
+import type { ToiletBowlResult } from '@mfl/shared-types';
 
 interface PlayoffBracketData {
   playoffBracket?: {

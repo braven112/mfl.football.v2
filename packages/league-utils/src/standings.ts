@@ -3,8 +3,10 @@
  * Handles tiebreakers, playoff seeding, and standings sorting
  */
 
-import type { StandingsFranchise, TeamStanding, DivisionStandings, PlayoffSeeding } from '../types/standings';
-import leagueConfig from '../data/theleague.config.json';
+import type { StandingsFranchise, TeamStanding, DivisionStandings, PlayoffSeeding } from '@mfl/shared-types';
+// TODO: Remove hardcoded league config - should be passed as parameter
+// @ts-ignore - temporary until we refactor to pass config as parameter
+const leagueConfig = { teams: [] } as any;
 
 // Parse W-L-T string to get wins and losses
 function parseWLT(wlt: string): { wins: number; losses: number; ties: number } {

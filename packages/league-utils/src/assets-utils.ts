@@ -3,7 +3,7 @@
  * Parses MFL Assets API data or transactions to determine which picks each team owns
  */
 
-import type { DraftPrediction } from '../types/standings';
+import type { DraftPrediction } from '@mfl/shared-types';
 
 interface TransactionData {
   transactions?: {

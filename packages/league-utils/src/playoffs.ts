@@ -2,13 +2,11 @@
  * Playoff utilities for fetching and normalizing MFL playoff brackets and scores
  */
 
-import type { TeamStanding } from '../types/standings';
+import type { TeamStanding } from '@mfl/shared-types';
 
-const DEFAULT_HOST =
-  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
-  'https://www49.myfantasyleague.com';
-const DEFAULT_LEAGUE_ID =
-  (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
+// Default values - should be passed as parameters in monorepo setup
+const DEFAULT_HOST = 'https://www49.myfantasyleague.com';
+const DEFAULT_LEAGUE_ID = '13522';
 
 const trimHost = (host: string) => host.replace(/\/+$/, '');
 

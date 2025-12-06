@@ -7,7 +7,7 @@ import type {
   DraftPrediction,
   StandingsFranchise,
   ToiletBowlResult,
-} from '../types/standings';
+} from '@mfl/shared-types';
 
 interface TeamConfig {
   id: string;

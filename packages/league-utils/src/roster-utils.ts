@@ -2,8 +2,7 @@
  * Roster processing utilities for player lists and tables
  */
 
-import { parseNumber } from './formatters';
-import { positionOrder, nflByeWeeks } from '../constants/roster-constants';
+import { parseNumber, positionOrder, nflByeWeeks } from '@mfl/shared-utils';
 
 /**
  * Player interface for roster display
