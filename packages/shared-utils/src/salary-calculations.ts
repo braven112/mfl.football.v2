@@ -69,7 +69,7 @@ export interface CapPlayer {
 export const calculateCapCharges = (rows: CapPlayer[] = []): number[] =>
   SALARY_YEARS.map((_, index) =>
     rows.reduce((sum, player) => {
-      if ((player.contractYears ?? 0) > index) {
+      if (parseNumber(player.contractYears ?? 0) > index) {
         const isCurrent = index === 0;
         const percent = getCapPercent(player.displayTag ?? 'ACTIVE', isCurrent);
         return sum + (parseNumber(player.salary) * percent || 0);

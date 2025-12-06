@@ -3,6 +3,16 @@
  * Handles authentication with MyFantasyLeague API
  */
 
+/**
+ * User-to-franchise override map
+ * Maps usernames/user IDs to franchise IDs for cases where API doesn't return franchise info
+ * Can be configured per-deployment
+ */
+const USER_FRANCHISE_OVERRIDES: Record<string, string> = {
+  // Example: 'username': '0001'
+  // Add user-to-franchise mappings here as needed
+};
+
 export interface MFLLoginResponse {
   success: boolean;
   userId?: string;
@@ -121,6 +131,12 @@ export async function authenticateWithMFL(
 
     const sourceCandidates = [data, data?.login, data?.LOGIN, data?.auth];
 
+    // Extract user ID first (needed for franchise override lookup)
+    const normalizedUserId = pickFrom(
+      ['cookie', 'user_id', 'userId', 'USER_ID', 'USERID', 'user'],
+      sourceCandidates
+    ) || normalizeId(username);
+
     let normalizedFranchiseId = pickFrom(
       [
         'FRANCHISE_ID',
@@ -138,8 +154,8 @@ export async function authenticateWithMFL(
     normalizedFranchiseId = normalizeFranchise(normalizedFranchiseId);
 
     if (!normalizedFranchiseId) {
-      const normalizeKey = (v: string | undefined) =>
-        typeof v === 'string' ? v.trim().toLowerCase() : v?.toLowerCase?.();
+      const normalizeKey = (v: string | undefined): string | undefined =>
+        typeof v === 'string' ? v.trim().toLowerCase() : undefined;
       const keys = [normalizeKey(username), normalizeKey(normalizedUserId)].filter(Boolean) as string[];
       for (const key of keys) {
         if (key && USER_FRANCHISE_OVERRIDES[key]) {
@@ -149,15 +165,10 @@ export async function authenticateWithMFL(
       }
     }
 
-    const normalizedLeagueId = pickFrom(
+    let normalizedLeagueId = pickFrom(
       ['LEAGUE_ID', 'league_id', 'leagueId', 'LeagueId', 'league'],
       [{ LEAGUE_ID: leagueId }, ...sourceCandidates]
     );
-
-    const normalizedUserId = pickFrom(
-      ['cookie', 'user_id', 'userId', 'USER_ID', 'USERID', 'user'],
-      sourceCandidates
-    ) || normalizeId(username);
 
     // If franchiseId still missing, try myleagues lookup (non-blocking best-effort)
     if (!normalizedFranchiseId && username && password) {
@@ -167,7 +178,7 @@ export async function authenticateWithMFL(
         )}&PASSWORD=${encodeURIComponent(password)}&JSON=1`;
         const mlRes = await fetch(myLeaguesUrl, { method: 'GET' });
         if (mlRes.ok) {
-          const mlData = await mlRes.json();
+          const mlData: any = await mlRes.json();
           const leagues = (mlData?.myleagues?.league ?? mlData?.leagues?.league ?? []) as any[];
           if (process.env.NODE_ENV !== 'production') {
             console.log('[mfl-login] myleagues count', Array.isArray(leagues) ? leagues.length : 0);
@@ -234,7 +245,7 @@ export async function validateMFLSession(
 ): Promise<boolean> {
   try {
     const year = new Date().getFullYear();
-    const testUrl = `https://www${leagueId % 50}.myfantasyleague.com/${year}/export`;
+    const testUrl = `https://www${Number(leagueId) % 50}.myfantasyleague.com/${year}/export`;
 
     const response = await fetch(testUrl, {
       method: 'POST',
