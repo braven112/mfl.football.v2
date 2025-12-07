@@ -61,7 +61,7 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 }
 
 const franchises = selectedFeed.leagueStandings.franchise;
-const leagueStandings = getLeagueStandings(franchises);
+const leagueStandings = getLeagueStandings(franchises, leagueConfig);
 
 const fallbackBracketFeed =
   bracketFallbackFeeds[`../data/mfl-feeds/${selectedYear}/playoff-brackets.json`] as

@@ -4,7 +4,45 @@
  */
 
 import type { StandingsFranchise, TeamStanding, DivisionStandings, PlayoffSeeding } from '../types/standings';
-import leagueConfig from '../data/theleague.config.json';
+
+// League config type (can come from either league)
+type LeagueConfig = {
+  leagueId?: string;
+  name?: string;
+  domain?: string;
+  draftRounds?: number;
+  keepers?: number;
+  structure?: string;
+  teams: Array<{
+    franchiseId: string;
+    name: string;
+    abbrev?: string;
+    aliases?: string[];
+    conference?: string;
+    division: string;
+    tier?: string;
+    icon?: string;
+    banner?: string;
+  }>;
+  divisions?: string[];
+  conferences?: Array<{
+    name: string;
+    code: string;
+    divisions: string[];
+    divisionNames?: Record<string, string>;
+  }>;
+  divisionToConference?: Record<string, string>;
+  theme?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    cssBundle?: string;
+    jsBundle?: string;
+  };
+  features?: Record<string, boolean>;
+  allowedLeagues?: string[];
+  assetDomain?: string;
+  [key: string]: any; // Allow additional properties
+};
 
 // Parse W-L-T string to get wins and losses
 function parseWLT(wlt: string): { wins: number; losses: number; ties: number } {
@@ -13,8 +51,8 @@ function parseWLT(wlt: string): { wins: number; losses: number; ties: number } {
 }
 
 // Get team config info
-function getTeamConfig(franchiseId: string) {
-  return leagueConfig.teams.find(t => t.franchiseId === franchiseId);
+function getTeamConfig(franchiseId: string, config: LeagueConfig) {
+  return config.teams.find(t => t.franchiseId === franchiseId);
 }
 
 // Compare two teams using a specific tiebreaker metric
@@ -134,8 +172,8 @@ function wildCardTiebreaker(teams: TeamStanding[]): TeamStanding[] {
 }
 
 // Enrich franchise data with team config info
-export function enrichTeamStanding(franchise: StandingsFranchise): TeamStanding {
-  const teamConfig = getTeamConfig(franchise.id);
+export function enrichTeamStanding(franchise: StandingsFranchise, config: LeagueConfig): TeamStanding {
+  const teamConfig = getTeamConfig(franchise.id, config);
 
   return {
     ...franchise,
@@ -147,16 +185,16 @@ export function enrichTeamStanding(franchise: StandingsFranchise): TeamStanding 
 }
 
 // Get division standings
-export function getDivisionStandings(franchises: StandingsFranchise[]): DivisionStandings[] {
+export function getDivisionStandings(franchises: StandingsFranchise[], config: LeagueConfig): DivisionStandings[] {
   // First get league standings to get seed information
-  const leagueStandings = getLeagueStandings(franchises);
+  const leagueStandings = getLeagueStandings(franchises, config);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
 
   const divisions: { [key: string]: TeamStanding[] } = {};
 
   // Group by division and enrich data
   franchises.forEach(franchise => {
-    const standing = enrichTeamStanding(franchise);
+    const standing = enrichTeamStanding(franchise, config);
     const div = standing.division;
     // Add seed from league standings
     standing.seed = seedMap.get(standing.id);
@@ -167,8 +205,8 @@ export function getDivisionStandings(franchises: StandingsFranchise[]): Division
     divisions[div].push(standing);
   });
 
-  // Sort each division by tiebreakers
-  const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
+  // Get division order from config, or use sorted keys
+  const divisionOrder = config.divisions || Object.keys(divisions).sort();
 
   return divisionOrder
     .filter(div => divisions[div])
@@ -179,8 +217,8 @@ export function getDivisionStandings(franchises: StandingsFranchise[]): Division
 }
 
 // Get league standings (all teams sorted by playoff seeding)
-export function getLeagueStandings(franchises: StandingsFranchise[]): TeamStanding[] {
-  const standings = franchises.map(enrichTeamStanding);
+export function getLeagueStandings(franchises: StandingsFranchise[], config: LeagueConfig): TeamStanding[] {
+  const standings = franchises.map(f => enrichTeamStanding(f, config));
 
   // Group by division
   const divisions: { [key: string]: TeamStanding[] } = {};
@@ -248,13 +286,13 @@ export function getLeagueStandings(franchises: StandingsFranchise[]): TeamStandi
 }
 
 // Get all-play standings
-export function getAllPlayStandings(franchises: StandingsFranchise[]): TeamStanding[] {
+export function getAllPlayStandings(franchises: StandingsFranchise[], config: LeagueConfig): TeamStanding[] {
   // First get league standings to get seed information
-  const leagueStandings = getLeagueStandings(franchises);
+  const leagueStandings = getLeagueStandings(franchises, config);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
 
   const standings = franchises.map(franchise => {
-    const standing = enrichTeamStanding(franchise);
+    const standing = enrichTeamStanding(franchise, config);
     // Add seed from league standings
     standing.seed = seedMap.get(standing.id);
     return standing;
@@ -285,9 +323,163 @@ export function getAllPlayStandings(franchises: StandingsFranchise[]): TeamStand
   });
 }
 
+// Get all-play standings grouped by tier (for AFL Fantasy)
+export function getTierAllPlayStandings(franchises: StandingsFranchise[], config: LeagueConfig): { tier: string; teams: TeamStanding[] }[] {
+  // First get league standings to get seed information
+  const leagueStandings = getLeagueStandings(franchises, config);
+  const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
+
+  const standings = franchises.map(franchise => {
+    const standing = enrichTeamStanding(franchise, config);
+    // Add seed from league standings
+    standing.seed = seedMap.get(standing.id);
+    return standing;
+  });
+
+  // Group by tier
+  const tiers: { [key: string]: TeamStanding[] } = {};
+  standings.forEach(team => {
+    const teamConfig = getTeamConfig(team.id, config);
+    const tier = teamConfig?.tier || 'Unknown';
+    if (!tiers[tier]) {
+      tiers[tier] = [];
+    }
+    tiers[tier].push(team);
+  });
+
+  // Sort teams within each tier by All-Play percentage
+  const sortTeamsByAllPlay = (teams: TeamStanding[]) => {
+    return teams.sort((a, b) => {
+      const aAllPlay = parseFloat(a.all_play_pct);
+      const bAllPlay = parseFloat(b.all_play_pct);
+
+      if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+
+      // Tiebreaker: PF, PWR, VP, PA
+      const aPF = parseFloat(a.pf);
+      const bPF = parseFloat(b.pf);
+      if (aPF !== bPF) return bPF - aPF;
+
+      const aPWR = parseFloat(a.pwr);
+      const bPWR = parseFloat(b.pwr);
+      if (aPWR !== bPWR) return bPWR - aPWR;
+
+      const aVP = parseFloat(a.vp);
+      const bVP = parseFloat(b.vp);
+      if (aVP !== bVP) return bVP - aVP;
+
+      const aPA = parseFloat(a.pa);
+      const bPA = parseFloat(b.pa);
+      return aPA - bPA;
+    });
+  };
+
+  // Return tiers in order: Premier League first, then D-League
+  const tierOrder = ['Premier League', 'D-League'];
+  return tierOrder
+    .filter(tier => tiers[tier])
+    .map(tier => ({
+      tier,
+      teams: sortTeamsByAllPlay(tiers[tier]),
+    }));
+}
+
+// Get conference standings (for leagues with conferences like AFL Fantasy)
+export function getConferenceStandings(franchises: StandingsFranchise[], config: LeagueConfig, conferenceCode: string) {
+  if (!config.conferences || !config.divisionToConference) {
+    throw new Error('League config does not have conference structure');
+  }
+
+  const conference = config.conferences.find(c => c.code === conferenceCode);
+  if (!conference) {
+    throw new Error(`Conference ${conferenceCode} not found`);
+  }
+
+  // Get all teams and enrich them
+  const allStandings = franchises.map(f => enrichTeamStanding(f, config));
+
+  // Filter to only teams in this conference's divisions
+  const conferenceTeams = allStandings.filter(team =>
+    conference.divisions.includes(team.division)
+  );
+
+  // Group by division
+  const divisionGroups: { [key: string]: TeamStanding[] } = {};
+  conferenceTeams.forEach(team => {
+    if (!divisionGroups[team.division]) {
+      divisionGroups[team.division] = [];
+    }
+    divisionGroups[team.division].push(team);
+  });
+
+  // Get division winners (one per division)
+  const divisionWinners = Object.values(divisionGroups)
+    .map(divTeams => divisionTiebreaker(divTeams)[0]);
+
+  // Sort division winners by overall record
+  const sortedDivWinners = divisionWinners.sort((a, b) => {
+    const aRecord = parseWLT(a.h2hwlt);
+    const bRecord = parseWLT(b.h2hwlt);
+
+    if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
+    if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
+
+    // Tiebreakers
+    const aAllPlay = parseFloat(a.all_play_pct);
+    const bAllPlay = parseFloat(b.all_play_pct);
+    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+
+    const aPF = parseFloat(a.pf);
+    const bPF = parseFloat(b.pf);
+    if (aPF !== bPF) return bPF - aPF;
+
+    return 0;
+  });
+
+  // Get non-division winners (wild card candidates)
+  const wildCardCandidates = conferenceTeams.filter(
+    team => !sortedDivWinners.find(dw => dw.id === team.id)
+  );
+
+  // Sort wild card candidates by overall record
+  const sortedWildCards = wildCardCandidates.sort((a, b) => {
+    const aRecord = parseWLT(a.h2hwlt);
+    const bRecord = parseWLT(b.h2hwlt);
+
+    if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
+    if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
+
+    // Tiebreakers
+    const aAllPlay = parseFloat(a.all_play_pct);
+    const bAllPlay = parseFloat(b.all_play_pct);
+    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+
+    const aPF = parseFloat(a.pf);
+    const bPF = parseFloat(b.pf);
+    if (aPF !== bPF) return bPF - aPF;
+
+    return 0;
+  });
+
+  // Assign seeds within conference
+  // Division winners get seeds 1-2 (however many divisions in conference)
+  // Wild cards get seeds 3-4
+  const conferenceStandings = [
+    ...sortedDivWinners.map((team, idx) => ({ ...team, conferenceSeed: idx + 1 })),
+    ...sortedWildCards.map((team, idx) => ({ ...team, conferenceSeed: sortedDivWinners.length + idx + 1 })),
+  ];
+
+  return {
+    conference,
+    divisionWinners: sortedDivWinners.map((team, idx) => ({ ...team, conferenceSeed: idx + 1 })),
+    wildCards: sortedWildCards.slice(0, 2).map((team, idx) => ({ ...team, conferenceSeed: sortedDivWinners.length + idx + 1 })),
+    allTeams: conferenceStandings,
+  };
+}
+
 // Determine playoff status for seeding view
-export function getPlayoffSeeding(franchises: StandingsFranchise[]): PlayoffSeeding {
-  const league = getLeagueStandings(franchises);
+export function getPlayoffSeeding(franchises: StandingsFranchise[], config: LeagueConfig): PlayoffSeeding {
+  const league = getLeagueStandings(franchises, config);
 
   return {
     divisionWinners: league.filter(t => t.seed && t.seed <= 4),

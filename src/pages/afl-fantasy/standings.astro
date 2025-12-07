@@ -1,22 +1,23 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import StandingsTable from '../../components/theleague/StandingsTable.astro';
-import LeagueStandingsTable from '../../components/theleague/LeagueStandingsTable.astro';
+import ConferenceLeagueStandingsTable from '../../components/theleague/ConferenceLeagueStandingsTable.astro';
+import TierAllPlayStandingsTable from '../../components/theleague/TierAllPlayStandingsTable.astro';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
+import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
 import {
   getDivisionStandings,
-  getLeagueStandings,
-  getAllPlayStandings,
+  getConferenceStandings,
+  getTierAllPlayStandings,
 } from '../../utils/standings';
-import type { DivisionStandings } from '../../types/standings';
-import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 
-// Import standings data for AFL Fantasy
+// Import standings data
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
   eager: true,
 });
@@ -53,114 +54,21 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 const franchises = selectedFeed.leagueStandings.franchise;
 
 // Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises);
-const leagueStandings = getLeagueStandings(franchises);
-const allPlayStandings = getAllPlayStandings(franchises);
+const divisionStandings = getDivisionStandings(franchises, aflConfig);
+const conferenceAStandings = getConferenceStandings(franchises, aflConfig, 'A');
+const conferenceBStandings = getConferenceStandings(franchises, aflConfig, 'B');
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
 
 // Get view from query parameter (default to 'division')
 const view = (Astro.url.searchParams.get('view') ||
   'division') as 'division' | 'league' | 'all_play';
 
-// Division Champions by Year (previous year's defending champs)
-const championsByYear: Record<number, Record<string, string>> = {
-  2025: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Midwestside Connection',
-    'Central': 'Bring The Pain',
-    'East': 'Wascawy Wabbits',
-  },
-  2024: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Gridiron Geeks',
-    'Central': 'The Mariachi Ninjas',
-    'East': 'Wascawy Wabbits',
-  },
-  2023: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Midwestside Connection',
-    'Central': 'Maverick',
-    'East': 'Fire Ready Aim',
-  },
-  2022: {
-    'Northwest': 'Vitside Mafia',
-    'Southwest': 'Gridiron Geeks',
-    'Central': 'The Mariachi Ninjas',
-    'East': 'Dark Magicians of Chaos',
-  },
-  2021: {
-    'Northwest': 'Pacific Pigskins',
-    'Southwest': 'Midwestside Connection',
-    'Central': 'Bring The Pain',
-    'East': 'Wascawy Wabbits',
-  },
-  2020: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Music City Mafia',
-    'Central': 'The Mariachi Ninjas',
-    'East': 'Wascawy Wabbits',
-  },
-  2019: {
-    'Northwest': 'Pacific Pigskins',
-    'Southwest': 'Midwestside Connection',
-    'Central': 'Bring The Pain',
-    'East': 'Fire Ready Aim',
-  },
-  2018: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Music City Mafia',
-    'Central': 'Bring The Pain',
-    'East': 'Wascawy Wabbits',
-  },
-  2017: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Music City Mafia',
-    'Central': 'Cowboy Up',
-    'East': 'Fire Ready Aim',
-  },
-  2016: {
-    'Northwest': 'Pacific Pigskins',
-    'Southwest': 'Music City Mafia',
-    'Central': 'Bring The Pain',
-    'East': 'Dark Magicians of Chaos',
-  },
-  2015: {
-    'Northwest': 'Da Dangsters',
-    'Southwest': 'Music City Mafia',
-    'Central': 'Bring The Pain',
-    'East': 'Fire Ready Aim',
-  },
-  2014: {
-    'Northwest': 'Pacific Pigskins',
-    'Southwest': 'Music City Mafia',
-    'Central': 'Maverick',
-    'East': 'Dark Magicians of Chaos',
-  },
-  2013: {
-    'Northwest': 'Vitside Mafia',
-    'Southwest': 'Music City Mafia',
-    'Central': 'The Mariachi Ninjas',
-    'East': 'Wascawy Wabbits',
-  },
-  2010: {
-    'Northwest': 'Computer Jocks',
-    'Southwest': 'Midwestside Connection',
-    'Central': 'Maverick',
-    'East': 'Fire Ready Aim',
-  },
-  2008: {
-    'Northwest': 'Computer Jocks',
-    'Southwest': 'Gridiron Geeks',
-    'Central': 'Bring The Pain',
-    'East': 'Fire Ready Aim',
-  },
-};
-
-// Get previous year's champions (defending champs for selected year)
+// AFL Fantasy is a new league, so no defending champions yet
+const defendingChampions: Record<string, string> = {};
 const previousYear = selectedYear - 1;
-const defendingChampions = championsByYear[previousYear] || {};
 ---
 
-<TheLeagueLayout title="Standings">
+<TheLeagueLayout title="AFL Fantasy Standings">
   <div class="standings-page">
     <header class="standings-hero">
       <div class="standings-hero__text">
@@ -178,8 +86,8 @@ const defendingChampions = championsByYear[previousYear] || {};
         )}
         {view === 'all_play' && (
           <>
-            <h1 class="section-title">All-Play Standings</h1>
-            <p class="subtitle">Top ranked teams across the league</p>
+            <h1 class="section-title">Premier League Standings</h1>
+            <p class="subtitle">Top 4 advance to playoffs • Bottom 2 relegated to D-League</p>
           </>
         )}
       </div>
@@ -214,13 +122,28 @@ const defendingChampions = championsByYear[previousYear] || {};
 
       {view === 'league' && (
         <div class="league-view">
-          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} />
+          <ConferenceLeagueStandingsTable
+            conferenceName={conferenceAStandings.conference.name}
+            teams={conferenceAStandings.allTeams}
+            year={selectedYear}
+          />
+          <ConferenceLeagueStandingsTable
+            conferenceName={conferenceBStandings.conference.name}
+            teams={conferenceBStandings.allTeams}
+            year={selectedYear}
+          />
         </div>
       )}
 
       {view === 'all_play' && (
-        <div class="all-play-view">
-          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} />
+        <div class="all-play-view tier-grid">
+          {tierAllPlayStandings.map(tierGroup => (
+            <TierAllPlayStandingsTable
+              tierName={tierGroup.tier}
+              teams={tierGroup.teams}
+              year={selectedYear}
+            />
+          ))}
         </div>
       )}
     </main>
@@ -365,6 +288,19 @@ const defendingChampions = championsByYear[previousYear] || {};
   .all-play-view {
     display: grid;
     gap: 2rem;
+  }
+
+  /* Tier Grid - Side by Side */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .tier-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Info Section */

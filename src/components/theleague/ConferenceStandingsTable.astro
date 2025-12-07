@@ -1,0 +1,250 @@
+---
+interface Props {
+  conferenceName: string;
+  divisionWinners: any[];
+  wildCards: any[];
+  year: string | number;
+}
+
+const { conferenceName, divisionWinners, wildCards, year } = Astro.props;
+---
+
+<div class="conference-standings">
+  <h2 class="conference-title">{conferenceName}</h2>
+
+  <!-- Division Winners -->
+  <div class="playoff-section">
+    <h3 class="section-header">Division Winners</h3>
+    <div class="standings-table">
+      <table>
+        <thead>
+          <tr>
+            <th class="seed-col">Seed</th>
+            <th class="team-col">Team</th>
+            <th class="record-col">Record</th>
+            <th class="stat-col">PF</th>
+            <th class="stat-col">PA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {divisionWinners.map((team) => (
+            <tr>
+              <td class="seed-col">{team.conferenceSeed}</td>
+              <td class="team-col">
+                <div class="team-info">
+                  {team.teamIcon && (
+                    <img src={team.teamIcon} alt={team.teamName} class="team-icon" />
+                  )}
+                  <div class="team-details">
+                    <div class="team-name">{team.teamName}</div>
+                    <div class="team-abbrev">{team.division}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="record-col">{team.h2hwlt}</td>
+              <td class="stat-col">{parseFloat(team.pf).toFixed(2)}</td>
+              <td class="stat-col">{parseFloat(team.pa).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Wild Cards -->
+  <div class="playoff-section">
+    <h3 class="section-header">Wild Card</h3>
+    <div class="standings-table">
+      <table>
+        <thead>
+          <tr>
+            <th class="seed-col">Seed</th>
+            <th class="team-col">Team</th>
+            <th class="record-col">Record</th>
+            <th class="stat-col">PF</th>
+            <th class="stat-col">PA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {wildCards.map((team) => (
+            <tr>
+              <td class="seed-col">{team.conferenceSeed}</td>
+              <td class="team-col">
+                <div class="team-info">
+                  {team.teamIcon && (
+                    <img src={team.teamIcon} alt={team.teamName} class="team-icon" />
+                  )}
+                  <div class="team-details">
+                    <div class="team-name">{team.teamName}</div>
+                    <div class="team-abbrev">{team.division}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="record-col">{team.h2hwlt}</td>
+              <td class="stat-col">{parseFloat(team.pf).toFixed(2)}</td>
+              <td class="stat-col">{parseFloat(team.pa).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+  .conference-standings {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .conference-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    padding: 1.5rem 2rem;
+    margin: 0;
+    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+    color: white;
+  }
+
+  .playoff-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .playoff-section:last-child {
+    border-bottom: none;
+  }
+
+  .section-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: #1e293b;
+  }
+
+  .standings-table {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  td {
+    padding: 0.75rem;
+  }
+
+  .seed-col {
+    width: 60px;
+    text-align: center;
+    font-weight: 700;
+    color: #c41e3a;
+    font-size: 1.125rem;
+  }
+
+  .team-col {
+    min-width: 250px;
+  }
+
+  .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .team-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .team-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 1rem;
+  }
+
+  .team-abbrev {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .record-col {
+    width: 100px;
+    text-align: center;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .stat-col {
+    width: 80px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: #475569;
+  }
+
+  @media (max-width: 767px) {
+    .conference-title {
+      font-size: 1.5rem;
+      padding: 1rem 1.5rem;
+    }
+
+    .playoff-section {
+      padding: 1rem 1.5rem;
+    }
+
+    .section-header {
+      font-size: 1.125rem;
+    }
+
+    th, td {
+      padding: 0.5rem;
+    }
+
+    .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .stat-col:last-child {
+      display: none;
+    }
+  }
+</style>
