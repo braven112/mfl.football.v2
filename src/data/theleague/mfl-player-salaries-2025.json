@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-12-07T19:38:58.832Z"
+    "fetchedAt": "2025-12-07T21:36:15.281Z"
   },
   "players": [
     {
@@ -1673,7 +1673,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -1791,12 +1791,12 @@
           "name": "Doubs, Romeo"
         },
         {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
-        },
-        {
           "id": "16184",
           "name": "Reed, Jayden"
+        },
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
         },
         {
           "id": "17075",
@@ -3279,13 +3279,13 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Foot",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -3316,10 +3316,6 @@
         {
           "id": "15779",
           "name": "Doubs, Romeo"
-        },
-        {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
         }
       ]
     },
@@ -3647,13 +3643,13 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -3728,8 +3724,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Head",
         "gsisId": null
       },
       "nflverse": {
@@ -5867,7 +5863,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -5882,10 +5878,6 @@
         {
           "id": "14102",
           "name": "Metcalf, DK"
-        },
-        {
-          "id": "16629",
-          "name": "Wilson, Roman"
         }
       ]
     },
@@ -8406,7 +8398,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
@@ -8461,7 +8453,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
@@ -9845,13 +9837,13 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 3,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": {
@@ -10548,7 +10540,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -10617,7 +10609,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 10,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -11710,7 +11702,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -12239,7 +12231,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 10,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -12285,7 +12277,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -12975,7 +12967,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -13018,6 +13010,10 @@
         {
           "id": "14102",
           "name": "Metcalf, DK"
+        },
+        {
+          "id": "13793",
+          "name": "Valdes-Scantling, Marquez"
         }
       ]
     },
@@ -14797,7 +14793,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -15485,7 +15481,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -15532,10 +15528,6 @@
         {
           "id": "16617",
           "name": "Coleman, Keon"
-        },
-        {
-          "id": "15319",
-          "name": "Palmer, Joshua"
         }
       ]
     },
@@ -16558,8 +16550,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Knee",
         "gsisId": null
       },
       "nflverse": {
@@ -20486,8 +20478,8 @@
           "TE"
         ],
         "experience": 12,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Knee",
         "gsisId": "00-0030061"
       },
       "nflverse": {
@@ -20709,8 +20701,8 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Wrist",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -20750,12 +20742,12 @@
           "name": "Doubs, Romeo"
         },
         {
-          "id": "16195",
-          "name": "Wicks, Dontayvion"
-        },
-        {
           "id": "16184",
           "name": "Reed, Jayden"
+        },
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
         }
       ]
     },
@@ -21501,7 +21493,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -21546,6 +21538,10 @@
         {
           "id": "15779",
           "name": "Doubs, Romeo"
+        },
+        {
+          "id": "16184",
+          "name": "Reed, Jayden"
         }
       ]
     },
@@ -22096,7 +22092,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -22137,10 +22133,6 @@
         {
           "id": "14127",
           "name": "Meyers, Jakobi"
-        },
-        {
-          "id": "16192",
-          "name": "Washington, Parker"
         }
       ]
     },
@@ -22380,7 +22372,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -22423,6 +22415,10 @@
         {
           "id": "16617",
           "name": "Coleman, Keon"
+        },
+        {
+          "id": "16451",
+          "name": "Shavers, Tyrell"
         }
       ]
     },
@@ -22757,7 +22753,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -23448,8 +23444,8 @@
           "QB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": null,
@@ -25254,8 +25250,8 @@
           "QB"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Elbow",
         "gsisId": null
       },
       "nflverse": {
@@ -27798,7 +27794,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -27841,6 +27837,10 @@
         {
           "id": "14127",
           "name": "Meyers, Jakobi"
+        },
+        {
+          "id": "15292",
+          "name": "Brown, Dyami"
         }
       ]
     },
