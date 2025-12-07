@@ -10,7 +10,7 @@
     "dev:mfl": "pnpm --filter mfl-football dev",
     "build": "pnpm run build:packages && pnpm run build:apps",
     "build:packages": "echo 'Skipping package builds for now'",
-    "build:styles": "echo 'TODO: Create scripts/build-styles.mjs'",
+    "build:styles": "node scripts/build-styles.mjs",
     "build:tools": "echo 'TODO: Create scripts/build-league-tools.mjs'",
     "build:apps": "pnpm --filter './apps/*' build || astro build",
     "prebuild": "echo 'Skipping prebuild steps'",
