@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Sync rosters from MFL (${{ matrix.league.name }})
+      - name: Fetch MFL data (${{ matrix.league.name }})
         env:
           MFL_LEAGUE_ID: ${{ matrix.league.id }}
           MFL_LEAGUE_SLUG: ${{ matrix.league.slug }}
@@ -51,9 +51,15 @@ jobs:
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
-        run: |
-          node ./scripts/fetch-mfl-feeds.mjs --force
-          node ./scripts/update-salary-averages.mjs
+        run: node ./scripts/fetch-mfl-feeds.mjs --force
+
+      - name: Update salary averages (theleague only)
+        if: matrix.league.slug == 'theleague'
+        env:
+          MFL_LEAGUE_ID: ${{ matrix.league.id }}
+          MFL_LEAGUE_SLUG: ${{ matrix.league.slug }}
+          MFL_YEAR: ${{ vars.MFL_YEAR }}
+        run: node ./scripts/update-salary-averages.mjs
 
       - name: Commit and push updates
         run: |
