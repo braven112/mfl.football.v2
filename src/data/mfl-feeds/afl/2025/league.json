@@ -1,8 +1,6 @@
 {
-  "encoding": "utf-8",
   "league": {
     "victoryPointsEndWeek": "13",
-    "currentWaiverType": "WAIVERS_FCFS",
     "rosterLimits": {
       "position": [
         {
@@ -10,8 +8,8 @@
           "name": "QB"
         },
         {
-          "limit": "0-0",
-          "name": "RB"
+          "name": "RB",
+          "limit": "0-0"
         },
         {
           "limit": "0-0",
@@ -22,8 +20,8 @@
           "limit": "0-0"
         },
         {
-          "limit": "0-0",
-          "name": "PK"
+          "name": "PK",
+          "limit": "0-0"
         },
         {
           "name": "Def",
@@ -31,14 +29,16 @@
         }
       ]
     },
+    "currentWaiverType": "WAIVERS_FCFS",
+    "usesContractYear": "0",
     "startWeek": "1",
     "divisions": {
       "count": "4",
       "division": [
         {
-          "conference": "00",
           "id": "00",
-          "name": "North"
+          "name": "North",
+          "conference": "00"
         },
         {
           "conference": "00",
@@ -51,26 +51,27 @@
           "conference": "01"
         },
         {
-          "conference": "01",
           "name": "West",
-          "id": "03"
+          "id": "03",
+          "conference": "01"
         }
       ]
     },
     "taxiSquad": "0",
-    "usesContractYear": "0",
     "maxWaiverRounds": "8",
     "victoryPointsStartWeek": "1",
     "standingsSort": "PCT,H2H,DIVPCT,CONFPCT,PWR,PTS,ALL_PLAY_PCT,VICTORY_POINTS,OPP_PTS,",
-    "rostersPerPlayer": "1",
     "draft_kind": "email",
+    "rostersPerPlayer": "1",
     "victoryPointsTie": "1",
     "victoryPointsLoss": "0",
     "usesSalaries": "0",
-    "injuredReserve": "10",
     "maxKeepers": "7",
-    "lockout": "Yes",
+    "injuredReserve": "10",
+    "playerLimitUnit": "CONFERENCE",
+    "lastRegularSeasonWeek": "14",
     "conferences": {
+      "count": "2",
       "conference": [
         {
           "id": "00",
@@ -80,11 +81,9 @@
           "id": "01",
           "name": "National League"
         }
-      ],
-      "count": "2"
+      ]
     },
-    "lastRegularSeasonWeek": "14",
-    "playerLimitUnit": "CONFERENCE",
+    "lockout": "Yes",
     "history": {
       "league": [
         {
@@ -96,20 +95,20 @@
           "year": "2003"
         },
         {
-          "url": "https://www47.myfantasyleague.com/2004/home/23644",
-          "year": "2004"
+          "year": "2004",
+          "url": "https://www47.myfantasyleague.com/2004/home/23644"
         },
         {
           "year": "2005",
           "url": "https://www42.myfantasyleague.com/2005/home/29232"
         },
         {
-          "url": "https://www45.myfantasyleague.com/2006/home/49793",
-          "year": "2006"
+          "year": "2006",
+          "url": "https://www45.myfantasyleague.com/2006/home/49793"
         },
         {
-          "year": "2007",
-          "url": "https://www43.myfantasyleague.com/2007/home/47555"
+          "url": "https://www43.myfantasyleague.com/2007/home/47555",
+          "year": "2007"
         },
         {
           "year": "2008",
@@ -140,8 +139,8 @@
           "url": "https://www45.myfantasyleague.com/2014/home/40840"
         },
         {
-          "year": "2015",
-          "url": "https://www44.myfantasyleague.com/2015/home/14236"
+          "url": "https://www44.myfantasyleague.com/2015/home/14236",
+          "year": "2015"
         },
         {
           "url": "https://www44.myfantasyleague.com/2016/home/19621",
@@ -152,16 +151,16 @@
           "year": "2017"
         },
         {
-          "year": "2018",
-          "url": "http://www44.myfantasyleague.com/2018/home/19621"
+          "url": "http://www44.myfantasyleague.com/2018/home/19621",
+          "year": "2018"
         },
         {
-          "url": "http://www44.myfantasyleague.com/2019/home/19621",
-          "year": "2019"
+          "year": "2019",
+          "url": "http://www44.myfantasyleague.com/2019/home/19621"
         },
         {
-          "url": "https://www44.myfantasyleague.com/2020/home/19621",
-          "year": "2020"
+          "year": "2020",
+          "url": "https://www44.myfantasyleague.com/2020/home/19621"
         },
         {
           "url": "https://www44.myfantasyleague.com/2021/home/19621",
@@ -172,88 +171,87 @@
           "year": "2022"
         },
         {
-          "year": "2023",
-          "url": "https://www44.myfantasyleague.com/2023/home/19621"
+          "url": "https://www44.myfantasyleague.com/2023/home/19621",
+          "year": "2023"
         },
         {
-          "year": "2024",
-          "url": "https://www44.myfantasyleague.com/2024/home/19621"
+          "url": "https://www44.myfantasyleague.com/2024/home/19621",
+          "year": "2024"
         }
       ]
     },
     "minKeepers": "7",
     "precision": "2",
-    "draftTimer": "OFF",
     "bestLineup": "No",
+    "draftTimer": "OFF",
     "baseURL": "https://www44.myfantasyleague.com",
     "name": "American Football League",
     "victoryPointsBuckets": "2 1 0",
-    "id": "19621",
+    "loadRosters": "email_draft",
+    "h2h": "YES",
     "starters": {
+      "count": "9",
       "position": [
         {
           "name": "QB",
           "limit": "1"
         },
         {
-          "limit": "1-4",
-          "name": "RB"
+          "name": "RB",
+          "limit": "1-4"
         },
         {
           "name": "WR",
           "limit": "1-4"
         },
         {
-          "limit": "1-4",
-          "name": "TE"
-        },
-        {
-          "name": "PK",
-          "limit": "1"
+          "name": "TE",
+          "limit": "1-4"
         },
         {
           "limit": "1",
-          "name": "Def"
+          "name": "PK"
+        },
+        {
+          "name": "Def",
+          "limit": "1"
         }
-      ],
-      "count": "9"
+      ]
     },
-    "h2h": "YES",
+    "id": "19621",
     "endWeek": "18",
-    "loadRosters": "email_draft",
     "victoryPointsWin": "2",
     "mobileAlerts": "",
     "rosterSize": "16",
-    "draftLimitHours": "12:00",
     "partialLineupAllowed": "NO",
     "franchises": {
       "franchise": [
         {
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane_icon.png",
           "id": "0001",
-          "waiverSortOrder": "21",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane.png",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane_icon.png",
           "name": "Smokane FC",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane.png",
+          "division": "00",
           "abbrev": "SMOKE",
-          "division": "00"
+          "waiverSortOrder": "21"
         },
         {
-          "id": "0002",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians_icon.png",
+          "abbrev": "DRUNK",
+          "division": "00",
+          "name": "Drunk Indians",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians.png",
           "waiverSortOrder": "11",
-          "name": "Drunk Indians",
-          "abbrev": "DRUNK",
-          "division": "00"
+          "id": "0002",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians_icon.png"
         },
         {
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh_icon.png",
-          "id": "0003",
+          "abbrev": "MINT",
+          "division": "01",
+          "name": "Team Minty Fresh",
           "waiverSortOrder": "1",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh.png",
-          "name": "Team Minty Fresh",
-          "division": "01",
-          "abbrev": "MINT"
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh_icon.png",
+          "id": "0003"
         },
         {
           "name": "Get off my Ditka",
@@ -265,40 +263,40 @@
           "waiverSortOrder": "5"
         },
         {
-          "waiverSortOrder": "24",
-          "logo": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks.png",
           "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks_icon.png",
           "id": "0005",
+          "waiverSortOrder": "24",
+          "logo": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks.png",
+          "name": "Computer Jocks",
           "abbrev": "JOCKS",
-          "division": "01",
-          "name": "Computer Jocks"
-        },
-        {
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters_icon.png",
-          "id": "0006",
-          "waiverSortOrder": "12",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters.png",
-          "name": "Da Dangsters",
-          "abbrev": "DANG",
-          "division": "00"
-        },
-        {
-          "id": "0007",
-          "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish_icon.png",
-          "logo": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish.png",
-          "waiverSortOrder": "6",
-          "name": "Avenging Amish",
-          "abbrev": "AMISH",
           "division": "01"
         },
         {
-          "waiverSortOrder": "16",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe.png",
-          "abbrev": "DICK",
+          "name": "Da Dangsters",
+          "division": "00",
+          "abbrev": "DANG",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters_icon.png",
+          "id": "0006",
+          "waiverSortOrder": "12",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters.png"
+        },
+        {
+          "waiverSortOrder": "6",
+          "logo": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish.png",
+          "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish_icon.png",
+          "id": "0007",
+          "abbrev": "AMISH",
           "division": "01",
+          "name": "Avenging Amish"
+        },
+        {
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe.png",
+          "waiverSortOrder": "16",
+          "id": "0008",
           "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe_icon.png",
-          "name": "Dicks out for Harambe",
-          "id": "0008"
+          "division": "01",
+          "abbrev": "DICK",
+          "name": "Dicks out for Harambe"
         },
         {
           "id": "0009",
@@ -307,48 +305,48 @@
           "waiverSortOrder": "9",
           "sound": "http://leadingedgegym.com/files/VitDraftClimax.mp3",
           "name": "Vitside Mafia",
-          "abbrev": "VIT",
-          "division": "01"
+          "division": "01",
+          "abbrev": "VIT"
         },
         {
-          "id": "0010",
-          "name": "Fullybaked",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked_icon.png",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked.png",
           "abbrev": "BAKD",
           "division": "00",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked.png",
-          "waiverSortOrder": "17"
+          "waiverSortOrder": "17",
+          "id": "0010",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked_icon.png",
+          "name": "Fullybaked"
         },
         {
           "logo": "https://mfl.football/afl-fantasy.com/images/team_pages/11/midwestside.jpg",
+          "abbrev": "MWS",
+          "division": "01",
           "waiverSortOrder": "10",
           "id": "0011",
           "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/midwestside_icon.png",
-          "division": "01",
-          "abbrev": "MWS",
           "name": "Midwestside Connection"
         },
         {
           "abbrev": "SHIT",
           "division": "00",
           "name": "Suh girls, one cup",
-          "waiverSortOrder": "19",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls.png",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls-icon.png",
-          "id": "0012"
+          "waiverSortOrder": "19",
+          "id": "0012",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls-icon.png"
         },
         {
+          "division": "03",
+          "abbrev": "MICKS",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks.png",
+          "waiverSortOrder": "13",
           "id": "0013",
           "name": "Muck Juggling Micks",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks-icon.png",
-          "abbrev": "MICKS",
-          "division": "03",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks.png",
-          "waiverSortOrder": "13"
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks-icon.png"
         },
         {
-          "abbrev": "HERD",
           "division": "03",
+          "abbrev": "HERD",
           "name": "Thundering Herd",
           "waiverSortOrder": "14",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd.png",
@@ -356,103 +354,105 @@
           "id": "0014"
         },
         {
-          "stadium": "Koga Stadium",
-          "division": "02",
           "abbrev": "NINJAS",
+          "division": "02",
+          "stadium": "Koga Stadium",
           "name": "The Mariachi Ninjas",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas.png",
           "waiverSortOrder": "23",
-          "id": "0015",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas_icon.png"
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas.png",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas_icon.png",
+          "id": "0015"
         },
         {
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life.png",
-          "waiverSortOrder": "3",
-          "id": "0016",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life_icon.png",
           "abbrev": "SWIFTY",
           "division": "03",
-          "name": "Swiftie 4 Life"
+          "name": "Swiftie 4 Life",
+          "waiverSortOrder": "3",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life.png",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life_icon.png",
+          "id": "0016"
         },
         {
-          "id": "0017",
           "name": "Titsburgh Feelers",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers_icon.png",
+          "division": "02",
           "abbrev": "TITS",
           "stadium": "Elland Road",
-          "division": "02",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers.png",
-          "waiverSortOrder": "15"
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers_icon.png",
+          "id": "0017",
+          "waiverSortOrder": "15",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers.png"
         },
         {
-          "id": "0018",
           "name": "Jewpacabra",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra_icon.png",
           "abbrev": "JEW",
           "division": "03",
+          "id": "0018",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra_icon.png",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra.png",
           "waiverSortOrder": "18"
         },
         {
-          "logo": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys.png",
-          "abbrev": "BADD",
-          "division": "02",
           "waiverSortOrder": "2",
-          "id": "0019",
+          "logo": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys.png",
+          "division": "02",
+          "abbrev": "BADD",
           "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys_icon.png",
-          "name": "Badd Boys"
+          "name": "Badd Boys",
+          "id": "0019"
+        },
+        {
+          "waiverSortOrder": "20",
+          "abbrev": "SAINTS",
+          "division": "03",
+          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints.png",
+          "name": "The Boondock Saints",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints_icon.png",
+          "id": "0020"
         },
         {
           "division": "03",
-          "abbrev": "SAINTS",
-          "name": "The Boondock Saints",
-          "logo": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints.png",
-          "waiverSortOrder": "20",
-          "id": "0020",
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints_icon.png"
-        },
-        {
-          "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/chatmastericon.png",
-          "name": "Chatmaster",
-          "id": "0021",
-          "waiverSortOrder": "4",
-          "logo": "https://mfl.football/afl-fantasy.com/images/team_pages/10/chatmaster.jpg",
-          "stadium": "AOL Field",
           "abbrev": "CHAT",
-          "division": "03"
+          "stadium": "AOL Field",
+          "name": "Chatmaster",
+          "logo": "https://mfl.football/afl-fantasy.com/images/team_pages/10/chatmaster.jpg",
+          "waiverSortOrder": "4",
+          "id": "0021",
+          "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/chatmastericon.png"
         },
         {
+          "id": "0022",
           "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep_icon.png",
           "name": "Balls Deep",
-          "id": "0022",
-          "waiverSortOrder": "22",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep.png",
           "abbrev": "BALLS",
-          "division": "02"
+          "division": "02",
+          "waiverSortOrder": "22"
         },
         {
-          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/gobbler_icon.png",
-          "name": "Cock Gobbler",
-          "id": "0023",
-          "waiverSortOrder": "8",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/gobbler.png",
           "abbrev": "DkLuvr",
-          "division": "02"
+          "division": "02",
+          "waiverSortOrder": "8",
+          "id": "0023",
+          "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/gobbler_icon.png",
+          "name": "Cock Gobbler"
         },
         {
-          "division": "02",
-          "abbrev": "SOUP",
-          "name": "No Soup For You",
-          "waiverSortOrder": "7",
           "logo": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/no_soup_for_you.png",
+          "waiverSortOrder": "7",
+          "id": "0024",
           "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/no_soup_for_you_icon.png",
-          "id": "0024"
+          "abbrev": "SOUP",
+          "division": "02",
+          "name": "No Soup For You"
         }
       ],
       "count": "24"
     },
     "draftPlayerPool": "Both",
+    "draftLimitHours": "12:00",
     "defaultTradeExpirationDays": "7"
   },
+  "encoding": "utf-8",
   "version": "1.0"
 }
