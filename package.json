@@ -12,7 +12,7 @@
     "build:packages": "echo 'Skipping package builds for now'",
     "build:styles": "node scripts/build-styles.mjs",
     "build:tools": "echo 'TODO: Create scripts/build-league-tools.mjs'",
-    "build:apps": "pnpm --filter './apps/*' build || astro build",
+    "build:apps": "astro build",
     "prebuild": "echo 'Skipping prebuild steps'",
     "fetch:all": "echo 'TODO: Create scripts/fetch-all-feeds.mjs'",
     "sync:all": "echo 'TODO: Create scripts/sync-all-assets.mjs'",
