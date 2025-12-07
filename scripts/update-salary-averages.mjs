@@ -17,17 +17,18 @@ const season =
   getNonEmpty(env.MFL_YEAR) ??
   '2025';
 const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
+const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? leagueId;
 const apiBase = getNonEmpty(env.MFL_API_BASE) ?? 'https://api.myfantasyleague.com';
 const configuredWeek = getNonEmpty(env.MFL_WEEK);
 const username = getNonEmpty(env.MFL_USERNAME);
 const password = getNonEmpty(env.MFL_PASSWORD);
 const apiKey = getNonEmpty(env.MFL_API_KEY);
 const freezeWeek = Number.parseInt(getNonEmpty(env.MFL_FREEZE_WEEK) ?? '14', 10);
-const outputRaw = path.join(dataDir, `mfl-player-salaries-${season}.json`);
-const outputSummary = path.join(dataDir, `mfl-salary-averages-${season}.json`);
-const historyDir = path.join(dataDir, 'salary-history', season);
-const seasonStateFile = path.join(dataDir, 'mfl-season-state.json');
-const cachedRostersFile = path.join(dataDir, 'mfl-feeds', season, 'rosters.json');
+const outputRaw = path.join(dataDir, leagueKey, `mfl-player-salaries-${season}.json`);
+const outputSummary = path.join(dataDir, leagueKey, `mfl-salary-averages-${season}.json`);
+const historyDir = path.join(dataDir, 'salary-history', leagueKey, season);
+const seasonStateFile = path.join(dataDir, `mfl-season-state-${leagueKey}.json`);
+const cachedRostersFile = path.join(dataDir, 'mfl-feeds', leagueKey, season, 'rosters.json');
 const DEFAULT_HEADSHOT_URL =
   'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
