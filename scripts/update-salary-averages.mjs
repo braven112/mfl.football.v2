@@ -814,7 +814,8 @@ const run = async () => {
   });
 
   if (!players.length) {
-    throw new Error('No player salaries found in the combined API responses.');
+    console.warn('[salary-averages] No player salaries found - league may not use salary cap feature. Skipping...');
+    return;
   }
 
   // Calculate depth chart ahead for each player
