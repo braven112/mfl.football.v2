@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-12-06T01:25:27.429Z"
+    "fetchedAt": "2025-12-07T08:23:02.498Z"
   },
   "players": [
     {
@@ -439,8 +439,8 @@
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": null
       },
       "nflverse": null,
@@ -1280,7 +1280,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -1327,10 +1327,6 @@
         {
           "id": "13163",
           "name": "Godwin, Chris"
-        },
-        {
-          "id": "11671",
-          "name": "Evans, Mike"
         },
         {
           "id": "17079",
@@ -1747,7 +1743,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -1797,6 +1793,10 @@
         {
           "id": "16195",
           "name": "Wicks, Dontayvion"
+        },
+        {
+          "id": "16184",
+          "name": "Reed, Jayden"
         },
         {
           "id": "17075",
@@ -3440,17 +3440,17 @@
         "number": 11,
         "college": "Michigan State",
         "birthDate": "2000-04-28",
-        "status": "Inactive",
+        "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "PR",
+        "depthChartPosition": "SWR",
         "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Collarbone",
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Foot",
         "gsisId": null
       },
       "nflverse": {
@@ -3473,7 +3473,20 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15789",
+          "name": "Watson, Christian"
+        },
+        {
+          "id": "15779",
+          "name": "Doubs, Romeo"
+        },
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
+        }
+      ]
     },
     {
       "id": "16594",
@@ -3508,7 +3521,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -3543,6 +3556,10 @@
         {
           "id": "15258",
           "name": "Carter, Michael"
+        },
+        {
+          "id": "13146",
+          "name": "Conner, James"
         }
       ]
     },
@@ -4660,7 +4677,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -4699,7 +4716,12 @@
         ]
       },
       "gamesPlayed": 12,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13319",
+          "name": "Jones, Aaron"
+        }
+      ]
     },
     {
       "id": "13671",
@@ -5256,7 +5278,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 10,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -5302,7 +5324,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 9,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -6009,8 +6031,8 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -6021,7 +6043,16 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14102",
+          "name": "Metcalf, DK"
+        },
+        {
+          "id": "16629",
+          "name": "Wilson, Roman"
+        }
+      ]
     },
     {
       "id": "14080",
@@ -6673,7 +6704,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 9,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -8012,7 +8043,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
+        "depthChartPosition": "LWR",
         "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
@@ -8233,7 +8264,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -8279,10 +8310,6 @@
         {
           "id": "13163",
           "name": "Godwin, Chris"
-        },
-        {
-          "id": "11671",
-          "name": "Evans, Mike"
         }
       ]
     },
@@ -8650,7 +8677,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -8684,10 +8711,6 @@
         {
           "id": "15258",
           "name": "Carter, Michael"
-        },
-        {
-          "id": "16594",
-          "name": "Benson, Trey"
         }
       ]
     },
@@ -8887,7 +8910,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -9987,7 +10010,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -10305,7 +10328,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -10340,12 +10363,7 @@
         ]
       },
       "gamesPlayed": 8,
-      "depthChartAhead": [
-        {
-          "id": "15972",
-          "name": "Mason, Jordan"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16390",
@@ -10581,7 +10599,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -10695,7 +10713,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -10764,7 +10782,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 9,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -11267,16 +11285,16 @@
         "number": 4,
         "college": "Wake Forest",
         "birthDate": "1998-05-29",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 6,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Chest",
         "gsisId": " 00-0035500"
       },
@@ -11689,12 +11707,12 @@
         "id": "12490",
         "fullName": "Bhayshul Tuten",
         "team": "JAX",
-        "age": 23,
+        "age": 22,
         "height": "69",
         "weight": "209",
         "number": 33,
         "college": "Virginia Tech",
-        "birthDate": "2002-02-14",
+        "birthDate": "2003-02-14",
         "status": "Active",
         "active": true,
         "position": "RB",
@@ -12432,7 +12450,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -13980,7 +13998,7 @@
         "id": "11618",
         "fullName": "Jalen McMillan",
         "team": "TB",
-        "age": 23,
+        "age": 24,
         "height": "73",
         "weight": "192",
         "number": 11,
@@ -13990,7 +14008,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -14011,16 +14029,16 @@
           "name": "Godwin, Chris"
         },
         {
-          "id": "11671",
-          "name": "Evans, Mike"
-        },
-        {
           "id": "17079",
           "name": "Johnson, Tez"
         },
         {
           "id": "12658",
           "name": "Shepard, Sterling"
+        },
+        {
+          "id": "11671",
+          "name": "Evans, Mike"
         }
       ]
     },
@@ -14205,7 +14223,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -14252,10 +14270,6 @@
         {
           "id": "12187",
           "name": "Lockett, Tyler"
-        },
-        {
-          "id": "17087",
-          "name": "Thornton, Dont'e"
         }
       ]
     },
@@ -15853,7 +15867,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -16779,7 +16793,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
@@ -18778,7 +18792,7 @@
         "id": "3214",
         "fullName": "Hunter Henry",
         "team": "NE",
-        "age": 30,
+        "age": 31,
         "height": "77",
         "weight": "249",
         "number": 85,
@@ -18863,7 +18877,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -19489,7 +19503,7 @@
         "number": 8,
         "college": "North Carolina",
         "birthDate": "2003-03-16",
-        "status": "Inactive",
+        "status": "Active",
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
@@ -19526,6 +19540,81 @@
       },
       "gamesPlayed": 5,
       "depthChartAhead": null
+    },
+    {
+      "id": "15260",
+      "name": "Patterson, Jaret",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0011",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "LAC",
+      "draftYear": 2021,
+      "draftTeam": "FA",
+      "birthdate": 945925200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15260_thumb.jpg",
+      "externalIds": {
+        "mfl": "15260",
+        "sleeper": "7537",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "7537",
+        "fullName": "Jaret Patterson",
+        "team": "LAC",
+        "age": 25,
+        "height": "68",
+        "weight": "195",
+        "number": 32,
+        "college": "Buffalo",
+        "birthDate": "1999-12-23",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 13,
+        "season": "2025",
+        "player": "Jaret Patterson",
+        "team": "LAC",
+        "position": "RB",
+        "offenseSnaps": 15,
+        "offenseSnapPct": 0.22,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "PattJa01",
+        "gamesPlayed": 4,
+        "gamesPlayedWeeks": [
+          8,
+          9,
+          10,
+          13
+        ]
+      },
+      "gamesPlayed": 4,
+      "depthChartAhead": [
+        {
+          "id": "17044",
+          "name": "Hampton, Omarion"
+        },
+        {
+          "id": "16757",
+          "name": "Vidal, Kimani"
+        }
+      ]
     },
     {
       "id": "16222",
@@ -20828,6 +20917,10 @@
         {
           "id": "16195",
           "name": "Wicks, Dontayvion"
+        },
+        {
+          "id": "16184",
+          "name": "Reed, Jayden"
         }
       ]
     },
@@ -20903,6 +20996,76 @@
       "depthChartAhead": null
     },
     {
+      "id": "17046",
+      "name": "Neal, Devin",
+      "position": "RB",
+      "salary": 450000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "5",
+      "points": 0,
+      "team": "NO",
+      "draftYear": 2025,
+      "draftTeam": "NOS",
+      "birthdate": 1060660800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17046_thumb.jpg",
+      "externalIds": {
+        "mfl": "17046",
+        "sleeper": "12476",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12476",
+        "fullName": "Devin Neal",
+        "team": "NO",
+        "age": 22,
+        "height": "71",
+        "weight": "213",
+        "number": 24,
+        "college": "Kansas",
+        "birthDate": "2003-08-12",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 13,
+        "season": "2025",
+        "player": "Devin Neal",
+        "team": "NO",
+        "position": "RB",
+        "offenseSnaps": 59,
+        "offenseSnapPct": 0.82,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "NealDe00",
+        "gamesPlayed": 8,
+        "gamesPlayedWeeks": [
+          1,
+          6,
+          7,
+          8,
+          9,
+          10,
+          12,
+          13
+        ]
+      },
+      "gamesPlayed": 8,
+      "depthChartAhead": null
+    },
+    {
       "id": "15254",
       "name": "Harris, Najee",
       "position": "RB",
@@ -20973,6 +21136,10 @@
         {
           "id": "16757",
           "name": "Vidal, Kimani"
+        },
+        {
+          "id": "15260",
+          "name": "Patterson, Jaret"
         }
       ]
     },
@@ -21053,76 +21220,6 @@
           "name": "Charbonnet, Zach"
         }
       ]
-    },
-    {
-      "id": "17046",
-      "name": "Neal, Devin",
-      "position": "RB",
-      "salary": 450000,
-      "franchiseId": "0012",
-      "status": "TAXI_SQUAD",
-      "contractYear": "5",
-      "points": 0,
-      "team": "NO",
-      "draftYear": 2025,
-      "draftTeam": "NOS",
-      "birthdate": 1060660800,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17046_thumb.jpg",
-      "externalIds": {
-        "mfl": "17046",
-        "sleeper": "12476",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "12476",
-        "fullName": "Devin Neal",
-        "team": "NO",
-        "age": 22,
-        "height": "71",
-        "weight": "213",
-        "number": 24,
-        "college": "Kansas",
-        "birthDate": "2003-08-12",
-        "status": "Active",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": {
-        "week": 13,
-        "season": "2025",
-        "player": "Devin Neal",
-        "team": "NO",
-        "position": "RB",
-        "offenseSnaps": 59,
-        "offenseSnapPct": 0.82,
-        "defenseSnaps": 0,
-        "defenseSnapPct": 0,
-        "stSnaps": 0,
-        "stSnapPct": 0,
-        "pfrPlayerId": "NealDe00",
-        "gamesPlayed": 8,
-        "gamesPlayedWeeks": [
-          1,
-          6,
-          7,
-          8,
-          9,
-          10,
-          12,
-          13
-        ]
-      },
-      "gamesPlayed": 8,
-      "depthChartAhead": null
     },
     {
       "id": "17243",
@@ -22448,7 +22545,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -22891,7 +22988,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -22930,6 +23027,14 @@
         {
           "id": "13163",
           "name": "Godwin, Chris"
+        },
+        {
+          "id": "17079",
+          "name": "Johnson, Tez"
+        },
+        {
+          "id": "12658",
+          "name": "Shepard, Sterling"
         }
       ]
     },
@@ -24378,7 +24483,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -24647,7 +24752,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -24693,6 +24798,10 @@
         {
           "id": "12187",
           "name": "Lockett, Tyler"
+        },
+        {
+          "id": "17078",
+          "name": "Bech, Jack"
         }
       ]
     },
@@ -25314,7 +25423,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "QB"
         ],
@@ -25347,12 +25456,7 @@
         ]
       },
       "gamesPlayed": 6,
-      "depthChartAhead": [
-        {
-          "id": "12141",
-          "name": "Mariota, Marcus"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15329",
@@ -25804,8 +25908,8 @@
         "status": "Active",
         "active": true,
         "position": "K",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "K"
         ],
@@ -25925,7 +26029,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -25960,7 +26064,12 @@
         ]
       },
       "gamesPlayed": 8,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16581",
+          "name": "Daniels, Jayden"
+        }
+      ]
     },
     {
       "id": "17106",

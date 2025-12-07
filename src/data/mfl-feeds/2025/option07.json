@@ -27,7 +27,7 @@ var year = 2025;
 var xmlBaseURL = 'https://www49.myfantasyleague.com/fflnetdynamic2025/';
 var baseURLStatic = 'https://www49.myfantasyleague.com';
 var baseURLDynamic = 'https://www49.myfantasyleague.com';
-var currentServerTime = 1764984298;
+var currentServerTime = 1765095755;
 var completedWeek = 13;
 var liveScoringWeek = 14;
 var startWeek = 1;
@@ -645,7 +645,7 @@ td#division03 h3::after {
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16610');" title="Salary: $522,500, Years: 4, Tag: , Week 14: at Jets Sun 10:00 a.m. PT" class="position_rb">Wright, Jaylen MIA RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16610&amp;YEAR=2025">6.75</a></td>
 <td class="week">12</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16632');" title="Salary: $880,000, Years: 4, Tag: , Week 14: at Bills Sun 10:00 a.m. PT" class="position_wr">Burton, Jermaine CIN WR</a></td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16632');" title="Salary: $880,000, Years: 4, Tag: , Week 14: at Bills Sun 10:00 a.m. PT" class="position_wr">Burton, Jermaine CIN WR</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
 <td class="points"> &dash; </td>
 <td class="week">10</td><td class="salary">$880,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16617');" title="Salary: $1,485,000, Years: 4, Tag: , Week 14: vs Bengals Sun 10:00 a.m. PT" class="position_wr">Coleman, Keon BUF WR</a></td>
@@ -799,9 +799,10 @@ td#division03 h3::after {
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16594');" title="Salary: $825,000, Years: 4, Tag: , Week 14: vs Rams Sun 1:25 p.m. PT" class="position_rb">Benson, Trey ARI RB</a> (<span class="warning injurystatus" title="IR-R">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16594&amp;YEAR=2025">25.65</a></td>
 <td class="week">8</td><td class="salary">$825,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16184');" title="Salary: $665,500, Years: 3, Tag: , Week 14: vs Bears Sun 1:25 p.m. PT" class="position_wr">Reed, Jayden GBP WR</a> (<span class="warning injurystatus" title="IR-R">I</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16184');" title="Salary: $665,500, Years: 3, Tag: , Week 14: vs Bears Sun 1:25 p.m. PT" class="position_wr">Reed, Jayden GBP WR</a> (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16184&amp;YEAR=2025">12.63</a></td>
 <td class="week">5</td><td class="salary">$665,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr><td align="center" colspan="6"><b class="warning">Warning!</b> Possible IR Rule Violation Above.</td></tr>
 <tr><th colspan="6">4 Total Players on IR</th></tr>
 <tr><th colspan="6">Taxi Squad</th></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17064');" title="Salary: $475,000, Years: 5, Tag: , Week 14: at Cardinals Sun 1:25 p.m. PT" class="position_rb">Hunter, Jarquez LAR RB</a> (R) </td>
@@ -1229,7 +1230,7 @@ td#division03 h3::after {
 <tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16193');" title="Salary: $467,500, Years: 4, Tag: , Week 14: Bye" class="position_wr">Boutte, Kayshon NEP WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16193&amp;YEAR=2025">98.60</a></td>
 <td class="week">14</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14108');" title="Salary: $467,500, Years: 3, Tag: , Week 14: vs Rams Sun 1:25 p.m. PT" class="position_wr">Dortch, Greg ARI WR</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14108');" title="Salary: $467,500, Years: 3, Tag: , Week 14: vs Rams Sun 1:25 p.m. PT" class="position_wr">Dortch, Greg ARI WR</a> (<span class="warning injurystatus" title="IR">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14108&amp;YEAR=2025">90.48</a></td>
 <td class="week">8</td><td class="salary">$467,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15751');" title="Salary: $3,460,600, Years: 2, Tag: , Week 14: vs Seahawks Sun 10:00 a.m. PT" class="position_wr">London, Drake ATL WR</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
@@ -1615,60 +1616,63 @@ td#division03 h3::after {
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17044');" title="Salary: $3,100,000, Years: 5, Tag: , Week 14: vs Eagles Mon 5:15 p.m. PT" class="position_rb">Hampton, Omarion LAC RB</a> (R)  (<span class="warning injurystatus" title="IR-R">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17044&amp;YEAR=2025">62.90</a></td>
 <td class="week">12</td><td class="salary">$3,100,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14085');" title="Salary: $4,000,000, Years: 1, Tag: , Week 14: at Browns Sun 10:00 a.m. PT" class="position_rb">Pollard, Tony TEN RB</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15260');" title="Salary: $425,000, Years: 1, Tag: , Week 14: vs Eagles Mon 5:15 p.m. PT" class="position_rb">Patterson, Jaret LAC RB</a></td>
+<td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15260&amp;YEAR=2025">18.90</a></td>
+<td class="week">12</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14085');" title="Salary: $4,000,000, Years: 1, Tag: , Week 14: at Browns Sun 10:00 a.m. PT" class="position_rb">Pollard, Tony TEN RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14085&amp;YEAR=2025">88.05</a></td>
 <td class="week">10</td><td class="salary">$4,000,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','17073');" title="Salary: $450,000, Years: 5, Tag: , Week 14: at Browns Sun 10:00 a.m. PT" class="position_wr">Ayomanor, Elic TEN WR</a> (R) </td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','17073');" title="Salary: $450,000, Years: 5, Tag: , Week 14: at Browns Sun 10:00 a.m. PT" class="position_wr">Ayomanor, Elic TEN WR</a> (R) </td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17073&amp;YEAR=2025">60.40</a></td>
 <td class="week">10</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15293');" title="Salary: $1,317,690, Years: 1, Tag: , Week 14: vs Steelers Sun 10:00 a.m. PT" class="position_wr">Bateman, Rashod BAL WR</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15293');" title="Salary: $1,317,690, Years: 1, Tag: , Week 14: vs Steelers Sun 10:00 a.m. PT" class="position_wr">Bateman, Rashod BAL WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15293&amp;YEAR=2025">41.40</a></td>
 <td class="week">7</td><td class="salary">$1,317,690</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15757');" title="Salary: $698,775, Years: 2, Tag: , Week 14: Bye" class="position_wr">Robinson, Wan'Dale NYG WR</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15757');" title="Salary: $698,775, Years: 2, Tag: , Week 14: Bye" class="position_wr">Robinson, Wan'Dale NYG WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15757&amp;YEAR=2025">138.73</a></td>
 <td class="week">14</td><td class="salary">$698,775</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14122');" title="Salary: $1,050,000, Years: 1, Tag: , Week 14: Bye" class="position_wr">Slayton, Darius NYG WR</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14122');" title="Salary: $1,050,000, Years: 1, Tag: , Week 14: Bye" class="position_wr">Slayton, Darius NYG WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14122&amp;YEAR=2025">59.70</a></td>
 <td class="week">14</td><td class="salary">$1,050,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','17103');" title="Salary: $475,000, Years: 5, Tag: , Week 14: vs Titans Sun 10:00 a.m. PT" class="position_te">Fannin, Harold CLE TE</a> (R) </td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','17103');" title="Salary: $475,000, Years: 5, Tag: , Week 14: vs Titans Sun 10:00 a.m. PT" class="position_te">Fannin, Harold CLE TE</a> (R) </td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17103&amp;YEAR=2025">118.50</a></td>
 <td class="week">9</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12676');" title="Salary: $825,000, Years: 1, Tag: , Week 14: Bye" class="position_te">Henry, Hunter NEP TE</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12676');" title="Salary: $825,000, Years: 1, Tag: , Week 14: Bye" class="position_te">Henry, Hunter NEP TE</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=12676&amp;YEAR=2025">136.00</a></td>
 <td class="week">14</td><td class="salary">$825,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16649');" title="Salary: $495,000, Years: 4, Tag: , Week 14: Bye" class="position_te">Johnson, Theo NYG TE</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16649');" title="Salary: $495,000, Years: 4, Tag: , Week 14: Bye" class="position_te">Johnson, Theo NYG TE</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16649&amp;YEAR=2025">117.60</a></td>
 <td class="week">14</td><td class="salary">$495,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16414');" title="Salary: $514,250, Years: 1, Tag: , Week 14: at Lions Thu 5:15 p.m. PT" class="position_pk">Aubrey, Brandon DAL PK</a></td>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16414');" title="Salary: $514,250, Years: 1, Tag: , Week 14: at Lions Thu 5:15 p.m. PT" class="position_pk">Aubrey, Brandon DAL PK</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16414&amp;YEAR=2025">154.20</a></td>
 <td class="week">10</td><td class="salary">$514,250</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16775');" title="Salary: $450,000, Years: 5, Tag: , Week 14: at Cardinals Sun 1:25 p.m. PT" class="position_pk">Karty, Joshua LAR PK</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16775');" title="Salary: $450,000, Years: 5, Tag: , Week 14: at Cardinals Sun 1:25 p.m. PT" class="position_pk">Karty, Joshua LAR PK</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16775&amp;YEAR=2025">61.30</a></td>
 <td class="week">8</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11945');" title="Salary: $550,000, Years: 2, Tag: , Week 14: at Packers Sun 1:25 p.m. PT" class="position_pk">Santos, Cairo CHI PK</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11945');" title="Salary: $550,000, Years: 2, Tag: , Week 14: at Packers Sun 1:25 p.m. PT" class="position_pk">Santos, Cairo CHI PK</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=11945&amp;YEAR=2025">100.80</a></td>
 <td class="week">5</td><td class="salary">$550,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0519');" title="Salary: $514,250, Years: 3, Tag: , Week 14: vs Rams Sun 1:25 p.m. PT" class="position_def">Cardinals, Arizona ARI Def</a></td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0519');" title="Salary: $514,250, Years: 3, Tag: , Week 14: vs Rams Sun 1:25 p.m. PT" class="position_def">Cardinals, Arizona ARI Def</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=0519&amp;YEAR=2025">87.99</a></td>
 <td class="week">8</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0517');" title="Salary: $467,500, Years: 4, Tag: , Week 14: Bye" class="position_def">Giants, New York NYG Def</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0517');" title="Salary: $467,500, Years: 4, Tag: , Week 14: Bye" class="position_def">Giants, New York NYG Def</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=0517&amp;YEAR=2025">30.22</a></td>
 <td class="week">14</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0524');" title="Salary: $1,100,000, Years: 2, Tag: , Week 14: vs Commanders Sun 10:00 a.m. PT" class="position_def">Vikings, Minnesota MIN Def</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0524');" title="Salary: $1,100,000, Years: 2, Tag: , Week 14: vs Commanders Sun 10:00 a.m. PT" class="position_def">Vikings, Minnesota MIN Def</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=0524&amp;YEAR=2025">93.83</a></td>
 <td class="week">6</td><td class="salary">$1,100,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr><th colspan="6">21 Total Players</th></tr>
-<tr class="eventablerow"><td class="player"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=142&amp;F=0011">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$2,096,809</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><th colspan="6">22 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=142&amp;F=0011">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$2,096,809</td><td>&nbsp;</td><td>&nbsp;</td></tr>
 <tr><th colspan="6">Injured Reserve</th></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16222');" title="Salary: $544,500, Years: 3, Tag: , Week 14: vs Bears Sun 1:25 p.m. PT" class="position_te">Kraft, Tucker GBP TE</a> (<span class="warning injurystatus" title="IR">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16222&amp;YEAR=2025">117.20</a></td>
 <td class="week">5</td><td class="salary">$544,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
 <tr><th colspan="6">1 Total Player on IR</th></tr>
-<tr class="total_salary_row"><th colspan="3">Total:</th><th>$35,550,449</th>
-<th>55</th>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$35,975,449</th>
+<th>56</th>
 <th>&nbsp;</th></tr>
 <tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
-<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$9,449,550</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$9,024,550</th><th>&nbsp;</th><th>&nbsp;</th></tr>
 </tbody></table></td>
 <td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 11-6-0, PF: 1478.56"  class="franchise_0012 " href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;F=0012&amp;O=01"><img align="middle" src="https://mflfootballv2.vercel.app/assets/theleague/icons/vitside_mafia.png" alt="Vitside Mafia"  id="franchiseicon_0012" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
 <th class="points">YTD Pts</th>
@@ -1692,47 +1696,50 @@ td#division03 h3::after {
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16603');" title="Salary: $522,500, Years: 4, Tag: , Week 14: vs Bengals Sun 10:00 a.m. PT" class="position_rb">Davis, Ray BUF RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16603&amp;YEAR=2025">40.31</a></td>
 <td class="week">7</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15259');" title="Salary: $732,050, Years: 1, Tag: , Week 14: Bye" class="position_rb">Stevenson, Rhamondre NEP RB</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17046');" title="Salary: $450,000, Years: 5, Tag: , Week 14: at Buccaneers Sun 10:00 a.m. PT" class="position_rb">Neal, Devin NOS RB</a> (R) </td>
+<td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17046&amp;YEAR=2025">27.71</a></td>
+<td class="week">11</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15259');" title="Salary: $732,050, Years: 1, Tag: , Week 14: Bye" class="position_rb">Stevenson, Rhamondre NEP RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15259&amp;YEAR=2025">74.00</a></td>
 <td class="week">14</td><td class="salary">$732,050</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15710');" title="Salary: $598,950, Years: 2, Tag: , Week 14: at Cardinals Sun 1:25 p.m. PT" class="position_rb">Williams, Kyren LAR RB</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15710');" title="Salary: $598,950, Years: 2, Tag: , Week 14: at Cardinals Sun 1:25 p.m. PT" class="position_rb">Williams, Kyren LAR RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15710&amp;YEAR=2025">167.44</a></td>
 <td class="week">8</td><td class="salary">$598,950</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12186');" title="Salary: $1,700,000, Years: 3, Tag: , Week 14: Bye" class="position_wr">Diggs, Stefon NEP WR</a></td>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12186');" title="Salary: $1,700,000, Years: 3, Tag: , Week 14: Bye" class="position_wr">Diggs, Stefon NEP WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=12186&amp;YEAR=2025">120.50</a></td>
 <td class="week">14</td><td class="salary">$1,700,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17075');" title="Salary: $1,150,000, Years: 5, Tag: , Week 14: vs Bears Sun 1:25 p.m. PT" class="position_wr">Golden, Matthew GBP WR</a> (R)  (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17075');" title="Salary: $1,150,000, Years: 5, Tag: , Week 14: vs Bears Sun 1:25 p.m. PT" class="position_wr">Golden, Matthew GBP WR</a> (R)  (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17075&amp;YEAR=2025">46.00</a></td>
 <td class="week">5</td><td class="salary">$1,150,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14102');" title="Salary: $6,768,426, Years: 1, Tag: R2, Week 14: at Ravens Sun 10:00 a.m. PT" class="position_wr">Metcalf, DK PIT WR</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14102');" title="Salary: $6,768,426, Years: 1, Tag: R2, Week 14: at Ravens Sun 10:00 a.m. PT" class="position_wr">Metcalf, DK PIT WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14102&amp;YEAR=2025">120.20</a></td>
 <td class="week">5</td><td class="salary">$6,768,426</td><td class="contractyear">1</td><td class="contractinfo">R2</tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15754');" title="Salary: $2,229,425, Years: 2, Tag: , Week 14: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Olave, Chris NOS WR</a> (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15754');" title="Salary: $2,229,425, Years: 2, Tag: , Week 14: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Olave, Chris NOS WR</a> (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15754&amp;YEAR=2025">142.30</a></td>
 <td class="week">11</td><td class="salary">$2,229,425</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15762');" title="Salary: $1,430,825, Years: 2, Tag: , Week 14: at Lions Thu 5:15 p.m. PT" class="position_wr">Pickens, George DAL WR</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15762');" title="Salary: $1,430,825, Years: 2, Tag: , Week 14: at Lions Thu 5:15 p.m. PT" class="position_wr">Pickens, George DAL WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15762&amp;YEAR=2025">206.90</a></td>
 <td class="week">10</td><td class="salary">$1,430,825</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11247');" title="Salary: $1,375,000, Years: 2, Tag: , Week 14: at Vikings Sun 10:00 a.m. PT" class="position_te">Ertz, Zach WAS TE</a></td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11247');" title="Salary: $1,375,000, Years: 2, Tag: , Week 14: at Vikings Sun 10:00 a.m. PT" class="position_te">Ertz, Zach WAS TE</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=11247&amp;YEAR=2025">124.30</a></td>
 <td class="week">12</td><td class="salary">$1,375,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14137');" title="Salary: $1,100,000, Years: 1, Tag: , Week 14: at Bills Sun 10:00 a.m. PT" class="position_te">Fant, Noah CIN TE</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14137');" title="Salary: $1,100,000, Years: 1, Tag: , Week 14: at Bills Sun 10:00 a.m. PT" class="position_te">Fant, Noah CIN TE</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14137&amp;YEAR=2025">72.80</a></td>
 <td class="week">10</td><td class="salary">$1,100,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15331');" title="Salary: $878,460, Years: 1, Tag: , Week 14: at Ravens Sun 10:00 a.m. PT" class="position_te">Freiermuth, Pat PIT TE</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15331');" title="Salary: $878,460, Years: 1, Tag: , Week 14: at Ravens Sun 10:00 a.m. PT" class="position_te">Freiermuth, Pat PIT TE</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15331&amp;YEAR=2025">79.80</a></td>
 <td class="week">5</td><td class="salary">$878,460</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','8851');" title="Salary: $425,000, Years: 1, Tag: , Week 14: vs Dolphins Sun 10:00 a.m. PT" class="position_pk">Folk, Nick NYJ PK</a></td>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','8851');" title="Salary: $425,000, Years: 1, Tag: , Week 14: vs Dolphins Sun 10:00 a.m. PT" class="position_pk">Folk, Nick NYJ PK</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=8851&amp;YEAR=2025">109.80</a></td>
 <td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
-<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0527');" title="Salary: $467,500, Years: 3, Tag: , Week 14: Bye" class="position_def">Panthers, Carolina CAR Def</a></td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0527');" title="Salary: $467,500, Years: 3, Tag: , Week 14: Bye" class="position_def">Panthers, Carolina CAR Def</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=0527&amp;YEAR=2025">91.80</a></td>
 <td class="week">14</td><td class="salary">$467,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0515');" title="Salary: $700,000, Years: 3, Tag: , Week 14: at Falcons Sun 10:00 a.m. PT" class="position_def">Seahawks, Seattle SEA Def</a></td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0515');" title="Salary: $700,000, Years: 3, Tag: , Week 14: at Falcons Sun 10:00 a.m. PT" class="position_def">Seahawks, Seattle SEA Def</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=0515&amp;YEAR=2025">169.02</a></td>
 <td class="week">8</td><td class="salary">$700,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
-<tr><th colspan="6">18 Total Players</th></tr>
-<tr class="oddtablerow"><td class="player"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=142&amp;F=0012">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$3,852,810</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><th colspan="6">19 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=142&amp;F=0012">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$3,852,810</td><td>&nbsp;</td><td>&nbsp;</td></tr>
 <tr><th colspan="6">Injured Reserve</th></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15254');" title="Salary: $3,806,660, Years: 1, Tag: , Week 14: vs Eagles Mon 5:15 p.m. PT" class="position_rb">Harris, Najee LAC RB</a> (<span class="warning injurystatus" title="IR">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15254&amp;YEAR=2025">9.35</a></td>
@@ -1742,18 +1749,15 @@ td#division03 h3::after {
 <td class="week">8</td><td class="salary">$475,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
 <tr><th colspan="6">2 Total Players on IR</th></tr>
 <tr><th colspan="6">Taxi Squad</th></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17046');" title="Salary: $450,000, Years: 5, Tag: , Week 14: at Buccaneers Sun 10:00 a.m. PT" class="position_rb">Neal, Devin NOS RB</a> (R) </td>
-<td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17046&amp;YEAR=2025">27.71</a></td>
-<td class="week">11</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17243');" title="Salary: $425,000, Years: 4, Tag: , Week 14: Bye" class="position_te">Fidone, Thomas NYG TE</a> (R)  (<span class="warning injurystatus" title="IR">I</span>)</td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17243');" title="Salary: $425,000, Years: 4, Tag: , Week 14: Bye" class="position_te">Fidone, Thomas NYG TE</a> (R)  (<span class="warning injurystatus" title="IR">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17243&amp;YEAR=2025">0.00</a></td>
 <td class="week">14</td><td class="salary">$425,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr><th colspan="6">2 Total Players on Taxi Squad</th></tr>
-<tr class="total_salary_row"><th colspan="3">Total:</th><th>$44,131,906</th>
-<th>39</th>
+<tr><th colspan="6">1 Total Player on Taxi Squad</th></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$44,356,906</th>
+<th>44</th>
 <th>&nbsp;</th></tr>
 <tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
-<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$868,093</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$643,093</th><th>&nbsp;</th><th>&nbsp;</th></tr>
 </tbody></table></td>
 </tr>
 <tr>
@@ -2250,7 +2254,7 @@ $('body').addClass('regularSeason')}
 
 <script src="https://mflfootballv2.vercel.app/assets/js/dist/league-tools.js"></script></div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
 <tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
-<tr><td colspan="2" align="center">Page Generated Fri Dec 5 5:24:58 p.m. PT 2025</td></tr>
+<tr><td colspan="2" align="center">Page Generated Sun Dec 7 12:22:35 a.m. PT 2025</td></tr>
 <tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
  - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
 - <button id="pmLink">Privacy Manager</button>

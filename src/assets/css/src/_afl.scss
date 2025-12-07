@@ -1,0 +1,668 @@
+@use "./globals" as *;
+
+//AFL Logo
+ .afl {
+     fill: #243C65;
+ }
+  .afl0 {
+     fill: #243C65;
+ }
+ .afl1 {
+     fill: #B34826;
+ }
+ 
+ .afl2 {
+     fill: #FFFFFF;
+ }
+ 
+ .afl3 {
+     fill: #C43C3B;
+ }
+ 
+ .afl4 {
+     fill: #B22626;
+ }
+ 
+ .afl5 {
+     fill: #FFFFFF;
+     stroke: #243C65;
+     stroke-width: 20;
+     stroke-miterlimit: 10;
+ }
+ 
+ .afl6 {
+     fill: #B22726;
+ }
+ 
+ #AFLLogo {
+     width: 150px;
+     @media (min-width: 992px) {
+         width: 200px;
+     }
+     @media (min-width: 768px) {
+         margin-bottom: 24px;
+     }
+     @media (min-width: 992px) {
+         margin-bottom: 0;
+     }
+     height: 75px;
+     @media (min-width: 992px) {
+         height: 100px;
+     }
+ }
+
+.pro-relpage {
+  .pro-rel th a:link {
+    text-decoration: none;
+    pointer-events: none;
+  }
+
+  // Hide detail stats not used on the promotion/relegation tables
+  .premierleague,
+  .dleague,
+  .pro-rel-playoffs {
+    .bench_points,
+    .maxpf,
+    .minpf,
+    .total_points,
+    .total_potential_points,
+    .coulda_won,
+    .woulda_lost,
+    .efficiency,
+    .power_rank,
+    .alt_power_rank,
+    .all_play_t,
+    .h2hwlt {
+      display: none;
+    }
+
+    th[colspan="11"],
+    th[colspan="4"] {
+      display: none;
+    }
+  }
+
+  .dleague {
+    caption {
+      animation: slideInDown 0.5s ease both;
+      background-image: url(//mfl.football/afl-fantasy.com/images/league_logo/dleague.svg);
+      background-repeat: no-repeat;
+      background-position: top right;
+      background-size: contain;
+      height: 65px;
+      padding-top: 8px;
+    }
+
+    .premierleague--row {
+      display: none;
+    }
+
+    .dleague--row {
+      &:after {
+        content: "-";
+        display: table-cell;
+        vertical-align: middle;
+        padding: 6px 8px;
+        font-size: 13px;
+        text-align: right;
+        font-weight: bold;
+      }
+
+      &:nth-child(even) {
+        background-color: $eventablerow;
+      }
+
+      &:nth-child(3) {
+        background-color: #fff7d2;
+        border-bottom: 3px solid #e4d271;
+
+        &:after {
+          content: "$50";
+          color: green;
+        }
+      }
+
+      &:nth-child(4) {
+        background-color: #d2f1d2;
+        border-bottom: 3px solid green;
+
+        &:after {
+          content: "▲";
+          color: green;
+        }
+      }
+
+      &:nth-child(5) {
+        background-color: #e9f7e9;
+        border-bottom: 1px solid #d8efd8;
+      }
+
+      &:nth-child(6) {
+        background-color: #e9f7e9;
+        border-bottom: 3px solid #98b398;
+      }
+
+      &:nth-child(5),
+      &:nth-child(6) {
+        &:after {
+          content: "▲";
+          color: white;
+          text-shadow: green 0 0 3px;
+        }
+      }
+
+      &:nth-child(13) {
+        border-bottom: 3px solid #4a3000;
+      }
+
+      &:nth-child(14) {
+        background-color: #543b1e;
+        color: $white;
+        font-weight: bold;
+        border-bottom: 6px solid transparent;
+
+        td {
+          padding: 8px 8px;
+
+          @media (min-width: 992px) {
+            padding: 14px 8px;
+          }
+
+          @media (min-width: 1200px) {
+            padding: 8px 8px;
+          }
+        }
+      }
+    }
+  }
+
+  .premierleague {
+    caption {
+      animation: slideInUp 0.5s ease both;
+      background-image: url(//mfl.football/afl-fantasy.com/images/league_logo/premier.svg);
+      background-repeat: no-repeat;
+      background-position: top right;
+      background-size: contain;
+      height: 65px;
+      padding-top: 8px;
+    }
+
+    .dleague--row {
+      display: none;
+    }
+
+    .premierleague--row {
+      &:after {
+        content: "-";
+        display: table-cell;
+        vertical-align: middle;
+        padding: 6px 8px;
+        font-size: 13px;
+        text-align: right;
+        font-weight: bold;
+      }
+
+      &:nth-child(even) {
+        background-color: $eventablerow;
+      }
+
+      &:nth-child(3) {
+        background-color: #fff7d2;
+        border-bottom: 3px solid #e4d271;
+
+        &:after {
+          content: "$225";
+        }
+      }
+
+      &:nth-child(4) {
+        background-color: #f1f1f1;
+        border-bottom: 3px solid silver;
+
+        &:after {
+          content: "$150";
+        }
+      }
+
+      &:nth-child(5) {
+        background-color: #ffede0;
+        border-bottom: 3px solid #e0c7b1;
+
+        &:after {
+          content: "$100";
+        }
+      }
+
+      &:nth-child(6) {
+        background-color: #e9f7e9;
+        border-bottom: 3px solid #a2cca2;
+
+        &:after {
+          content: "$50";
+        }
+      }
+
+      &:nth-child(10) {
+        border-bottom: 3px solid pink;
+      }
+
+      &:nth-child(11) {
+        background-color: #ffe2e7;
+        border-bottom: 1px solid #f5d5db;
+
+        &:after {
+          content: "▼";
+          color: white;
+          text-shadow: red 0 0 3px;
+        }
+      }
+
+      &:nth-child(12) {
+        background-color: #ffe2e7;
+        border-bottom: 3px solid red;
+
+        &:after {
+          content: "▼";
+          color: white;
+          text-shadow: red 0 0 3px;
+        }
+      }
+
+      &:nth-child(13) {
+        background-color: pink;
+        border-bottom: 1px solid #f5b3bf;
+
+        &:after {
+          content: "▼";
+          color: red;
+        }
+      }
+
+      &:nth-child(14) {
+        background-color: pink;
+
+        &:after {
+          content: "▼";
+          color: red;
+        }
+      }
+    }
+  }
+
+  span.reportnavigation,
+  .reportform {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .report-wrapper.premierleague.pro-rel,
+  .report-wrapper.dleague.pro-rel,
+  .report-wrapper.pro-rel-playoffs.pro-rel {
+    width: 48%;
+    float: left;
+    margin: 0 1% 24px;
+  }
+
+  .report-wrapper.pro-rel-playoffs.pro-rel {
+    width: 98%;
+  }
+}
+
+#premierleague caption span::after {
+  content: "2020 Champions: Boondock Saints";
+  display: block;
+  font-size: 0.5em;
+  color: $accent-color;
+}
+
+#dleague caption span::after {
+  content: "2020 Champion: The Mariachi Ninjas";
+  display: block;
+  font-size: 0.5em;
+  color: $accent-color;
+}
+
+@keyframes slideInUp {
+  0% {
+    background-position: right 8px;
+  }
+  100% {
+    background-position: right 0;
+  }
+}
+
+@keyframes slideInDown {
+  0% {
+    background-position: right -8px;
+  }
+  100% {
+    background-position: right 0;
+  }
+}
+
+.pro-relpage .report tr:nth-child(2):after,
+.pro-relpage .pro-rel-playoffs.pro-rel .report tr:nth-child(1):after {
+  content: "Prize";
+  font-weight: bold;
+  display: table-cell;
+  vertical-align: middle;
+  padding: 6px 8px;
+  color: $primary-color;
+}
+
+.pro-relpage .all_play_t,
+.pro-rel-playoffs {
+  .total_points,
+  .total_potential_points,
+  .efficiency,
+  .bench_points,
+  .maxpf,
+  .minpf,
+  .coulda_won,
+  .woulda_lost,
+  .power_rank,
+  .alt_power_rank,
+  .all_play_t {
+    display: none;
+  }
+}
+
+.pro-rel-playoffs {
+  caption span:after {
+    content: "Top 2 will be in the Premier League next season.";
+    display: block;
+    font-size: 0.5em;
+    color: $accent-color;
+  }
+
+  .report {
+    tr:nth-child(2):after,
+    tr:nth-child(3):after {
+      content: "▲";
+      color: green;
+      text-shadow: none;
+      font-weight: bold;
+      display: table-cell;
+      vertical-align: middle;
+      padding: 6px 8px;
+    }
+
+    tr:nth-child(4):after,
+    tr:nth-child(5):after {
+      content: "▼";
+      color: red;
+      text-shadow: none;
+      font-weight: bold;
+      display: table-cell;
+      vertical-align: middle;
+      padding: 6px 8px;
+    }
+
+    tr:nth-child(2),
+    tr:nth-child(3) {
+      background-color: #d2f1d2;
+      border-bottom: 1px solid #a2cca2;
+    }
+
+    tr:nth-child(4),
+    tr:nth-child(5) {
+      background-color: pink;
+      border-bottom: 1px solid #f5b3bf;
+    }
+
+    tr:nth-child(3) {
+      border-bottom: 3px solid #98b398;
+    }
+  }
+}
+
+// Records / standings / gamecenter layout tweaks
+body#game_records,
+body#season_records,
+body#career_records,
+body#playoff_records,
+body#milestones,
+body#player_records,
+body#standings,
+body[id^="teampage_"],
+body#gamecenter {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+
+  .leaguehistorymodule {
+    background-color: $white;
+    border: 1px solid $offwhite;
+    border-radius: $border-radius-default;
+    float: none;
+    padding: 15px;
+    margin-bottom: 15px;
+    width: 100%;
+  }
+
+  #mainnav li {
+    float: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .homepagemodule caption {
+    color: $primary-color;
+    background-color: transparent;
+    margin-bottom: 0;
+    padding: 0 0 5px 0;
+  }
+
+  .leaguehistorymodule td,
+  .leaguehistorymodule th {
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 14px;
+  }
+
+  .leaguehistorymodule,
+  .leaguehistorymodule table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .homepagemodule th,
+  .homepagemodule td {
+    border: 1px solid $lightgray;
+  }
+
+  #mainnav li a {
+    padding: 6px 8px;
+    border-color: transparent $lightgray transparent transparent;
+    font-size: 0.8em;
+  }
+
+  ul#mainnav {
+    width: 100%;
+    display: block;
+  }
+
+  td.leaguehistorypagetitle h1 {
+    display: flex;
+    flex-direction: column;
+  }
+
+  td.leaguehistorypagetitle span {
+    padding: 0;
+  }
+
+  .leaguehistorypagetitle {
+    padding-bottom: 2em;
+  }
+}
+// Standings logos spacing on AFL home standings page
+#standings img.standingslogo {
+    margin-left: 0px;
+}
+// Standings page: division filters and labels
+#body_home.al-north #standings tr:nth-child(n + 9),
+#body_home.nl-east #standings tr:nth-child(n + 9),
+#body_home.al-south #standings tr:nth-child(-n + 8),
+#body_home.nl-west #standings tr:nth-child(-n + 8) {
+  display: none;
+}
+
+.al table#waiver_order tr:nth-child(15),
+.al table#waiver_order tr:nth-child(16),
+.al table#waiver_order tr:nth-child(17),
+.al table#waiver_order tr:nth-child(18),
+.al table#waiver_order tr:nth-child(19),
+.al table#waiver_order tr:nth-child(20),
+.al table#waiver_order tr:nth-child(21),
+.al table#waiver_order tr:nth-child(22),
+.al table#waiver_order tr:nth-child(23),
+.al table#waiver_order tr:nth-child(24),
+.al table#waiver_order tr:nth-child(25),
+.al table#waiver_order tr:nth-child(26),
+.al table#waiver_order tr:nth-child(27),
+.al table#waiver_order tr:nth-child(28),
+.al table#waiver_order tr:nth-child(n + 15),
+.nl table#waiver_order tr:nth-child(1),
+.nl table#waiver_order tr:nth-child(2),
+.nl table#waiver_order tr:nth-child(3),
+.nl table#waiver_order tr:nth-child(4),
+.nl table#waiver_order tr:nth-child(5),
+.nl table#waiver_order tr:nth-child(6),
+.nl table#waiver_order tr:nth-child(7),
+.nl table#waiver_order tr:nth-child(8),
+.nl table#waiver_order tr:nth-child(9),
+.nl table#waiver_order tr:nth-child(10),
+.nl table#waiver_order tr:nth-child(11),
+.nl table#waiver_order tr:nth-child(12),
+.nl table#waiver_order tr:nth-child(13),
+.nl table#waiver_order tr:nth-child(14),
+.nl table#waiver_order tr:nth-child(-n + 14) {
+  display: none;
+}
+
+.pl .nav_button--button.dleague {
+  display: none !important;
+}
+
+.dl .nav_button--button.premier {
+  display: none !important;
+}
+
+.dl .nav_button--button.dleague {
+  display: inline-block !important;
+}
+
+.nav_button--button.dleague img {
+  position: relative;
+  top: -2px;
+}
+
+@media (min-width: 1200px) {
+  .nav_button--button {
+    min-width: 42px;
+  }
+}
+
+td#division00::after {
+  content: " 2020 Division Champions: Fullybaked";
+  font-size: 1em;
+  color: $accent-color;
+  display: block;
+  padding-bottom: 7px;
+  padding-left: 5px;
+  font-family: $headline-font;
+}
+
+td#division01::after {
+  content: " 2020 Division Champions: Vitside Mafia";
+  font-size: 1em;
+  color: $accent-color;
+  display: block;
+  padding-bottom: 7px;
+  padding-left: 5px;
+  font-family: $headline-font;
+}
+
+td#division02::after {
+  content: " 2020 Division Champions: No Soup For You";
+  font-size: 1em;
+  color: $accent-color;
+  display: block;
+  padding-bottom: 7px;
+  padding-left: 5px;
+  font-family: $headline-font;
+}
+
+td#division03::after {
+  content: " 2020 Division Champions: Boondock Saints";
+  font-size: 1em;
+  color: $accent-color;
+  display: block;
+  padding-bottom: 7px;
+  padding-left: 5px;
+  font-family: $headline-font;
+}
+
+#body_standings td#division00::after,
+#body_standings td#division01::after,
+#body_standings td#division02::after,
+#body_standings td#division03::after {
+  padding-left: 11px;
+}
+
+#body_standings td#division00 img.standingslogo,
+#body_standings td#division01 img.standingslogo {
+  margin-left: 9px;
+}
+
+// Standings logos spacing on AFL standings page
+#body_standings img.standingslogo {
+  margin-right: 8px;
+}
+
+// Explicit home standings filters to mirror legacy AFL layout
+#body_home.al-north #standings tr:nth-child(9),
+#body_home.al-north #standings tr:nth-child(10),
+#body_home.al-north #standings tr:nth-child(11),
+#body_home.al-north #standings tr:nth-child(12),
+#body_home.al-north #standings tr:nth-child(13),
+#body_home.al-north #standings tr:nth-child(14),
+#body_home.al-north #standings tr:nth-child(15),
+#body_home.al-north #standings tr:nth-child(16),
+#body_home.nl-east #standings tr:nth-child(9),
+#body_home.nl-east #standings tr:nth-child(10),
+#body_home.nl-east #standings tr:nth-child(11),
+#body_home.nl-east #standings tr:nth-child(12),
+#body_home.nl-east #standings tr:nth-child(13),
+#body_home.nl-east #standings tr:nth-child(14),
+#body_home.nl-east #standings tr:nth-child(15),
+#body_home.nl-east #standings tr:nth-child(16) {
+  display: none;
+}
+
+#body_home.al-south #standings tr:nth-child(1),
+#body_home.al-south #standings tr:nth-child(2),
+#body_home.al-south #standings tr:nth-child(3),
+#body_home.al-south #standings tr:nth-child(4),
+#body_home.al-south #standings tr:nth-child(5),
+#body_home.al-south #standings tr:nth-child(6),
+#body_home.al-south #standings tr:nth-child(7),
+#body_home.al-south #standings tr:nth-child(8),
+#body_home.nl-west #standings tr:nth-child(1),
+#body_home.nl-west #standings tr:nth-child(2),
+#body_home.nl-west #standings tr:nth-child(3),
+#body_home.nl-west #standings tr:nth-child(4),
+#body_home.nl-west #standings tr:nth-child(5),
+#body_home.nl-west #standings tr:nth-child(6),
+#body_home.nl-west #standings tr:nth-child(7),
+#body_home.nl-west #standings tr:nth-child(8) {
+  display: none;
+}
+
+
+// remove once we create new icons and logos for AFL
+img.franchiseicon {
+    opacity: 1 !important;
+}

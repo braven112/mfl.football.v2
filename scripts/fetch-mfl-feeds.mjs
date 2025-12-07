@@ -32,6 +32,7 @@ if (!leagueId) {
   console.error('Missing MFL_LEAGUE_ID env var');
   process.exit(1);
 }
+const leagueKey = getNonEmpty(process.env.MFL_LEAGUE_SLUG) || leagueId;
 
 // Determine league name for output directory
 // MFL_LEAGUE_NAME env var or default based on league ID
