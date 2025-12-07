@@ -1,0 +1,51 @@
+@use "./fonts-afl";
+@use "./reset";
+
+//// Alphabetical
+@use "./add-drop";
+@use "./alerts";
+@use "./auctions";
+@use "./calendar";
+@use "./chat";
+@use "./commish";
+@use "./constitution";
+@use "./custom-buttons";
+@use "./custom-message-board";
+@use "./draft";
+@use "./draft-grid";
+@use "./footer";
+@use "./grid";
+@use "./header";
+//@use "./history";
+@use "./icons";
+@use "./injured-reserve";
+@use "./inputs";
+@use "./livescoring";
+@use "./livescoring-toshabman";
+@use "./login";
+@use "./message-board";
+@use "./mflmenu";
+@use "./mflsubmenu";
+@use "./mfltabs";
+@use "./misc";
+@use "./news";
+@use "./owner-setup";
+@use "./player-news";
+@use "./playoffs";
+@use "./playoff-projections";
+@use "./power-rank";
+@use "./rosters";
+@use "./salarycap";
+@use "./scrollbar";
+@use "./standings";
+@use "./submit-lineup";
+@use "./tables";
+@use "./tabs";
+@use "./theleague";
+@use "./top-players";
+@use "./transactions";
+
+// AFL-specific font size adjustment
+body {
+  font-size: 14.25px; // Slightly larger than default 14px
+}

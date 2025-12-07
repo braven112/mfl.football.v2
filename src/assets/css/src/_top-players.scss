@@ -34,16 +34,16 @@
 }
     tr.eventablerow.myfranchise {
         background-color: #dbefd3;
-        color: #2c501e;
+        color: $dark-accent-color;
         a {
-            color: #2c501e;
+            color: $dark-accent-color;
         }
     }
     tr.oddtablerow.myfranchise {
         background-color: #f0fff0;
-        color: #2c501e;
+        color: $dark-accent-color;
         a {
-            color: #2c501e;
+            color: $dark-accent-color;
         }
     }
 }

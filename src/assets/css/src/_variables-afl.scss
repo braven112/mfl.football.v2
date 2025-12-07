@@ -4,7 +4,7 @@
 //////////////////////Colors//////////////////////////
 $primary-color:#1c497c;//#33629b;
 $secondary-color:#1d4b7e;
-$accent-color:#3c9950;
+$accent-color:#b22222;
 $dark-accent-color:darken($accent-color, 10%);
 $today-bg-color:$accent-color;
 $today-border-color:lighten($today-bg-color, 1%);
@@ -57,5 +57,9 @@ $border-radius-default: .5rem;
 $border-radius-lg: 1rem;
 $border-radius-xl: 8rem;
 
-//////////////////////Typography//////////////////////////
-$svg-text-font-size: 12px;
+//////////////////////Fonts//////////////////////////
+$headline-font: "Gabarito";
+$headline-font-weight: 700;
+$body-font: "TikTok Sans";
+$body-font-weight: 400;
+$svg-text-font-size: 11.25px;

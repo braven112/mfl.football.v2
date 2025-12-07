@@ -156,7 +156,7 @@
       }
 
       .svg-text {
-        font-size: 12px;
+        font-size: $svg-text-font-size;
         display: inline-block;
         margin-top: 4px;
         margin-right: 10px;
@@ -352,7 +352,7 @@
 
   .capspace,
   .year {
-    border-right: 3px solid #2e8743;
+    border-right: 3px solid $dark-accent-color;
   }
 
   th.contract-pos {
@@ -418,12 +418,12 @@
       padding: 0;
       font-size: 15px;
       margin-top: -15px;
-      color: #2e8743;
+      color: $dark-accent-color;
       margin-bottom: 12px;
     }
 
     option {
-      font-family: "Roboto Slab", sans-serif;
+      font-family: $body-font, sans-serif;
       font-size: 0.9em;
     }
 
@@ -442,14 +442,14 @@
   }
 
   tr.cap_room_available_row {
-    background-color: #2e8743;
+    background-color: $dark-accent-color;
   }
 
   tr.practice_squad,
   tr.activeroster,
   tr.ir,
   .deadmoney-row {
-    background-color: #2e8743;
+    background-color: $dark-accent-color;
   }
 
   tr.practice_squad th,

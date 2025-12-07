@@ -1,45 +1,41 @@
 {
+  "name": "mfl-monorepo",
   "private": true,
   "type": "module",
   "scripts": {
-    "sass:build": "sass src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded",
-    "sass:watch": "sass --watch src/assets/css/src:public/assets/css/dist --no-source-map --style=expanded",
-    "build:themes": "node ./scripts/build-themes.js",
-    "postcss:build": "postcss \"public/assets/css/dist/**/*.css\" --dir public/assets/css/dist",
-    "postcss:watch": "postcss \"public/assets/css/dist/**/*.css\" --dir public/assets/css/dist --watch",
-    "dev:css": "pnpm run sass:watch & pnpm run postcss:watch",
-    "dev:theleague-watch": "node ./scripts/watch-theleague-assets.mjs",
-    "dev": "pnpm run dev:css & pnpm run dev:theleague-watch & astro dev",
-    "start": "astro dev",
-    "build:css": "pnpm run sass:build && pnpm run postcss:build",
-    "bundle:tools": "vite build --config scripts/league-tools.vite.config.mjs",
-    "build": "pnpm run build:css && astro build && pnpm run bundle:tools",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "sync:theleague": "node ./scripts/sync-theleague-assets.mjs",
-    "update:salary-averages": "node ./scripts/update-salary-averages.mjs",
-    "download:nfl-logos": "node ./scripts/download-nfl-logos.mjs",
-    "predev": "pnpm run sync:theleague && pnpm run update:salary-averages",
-    "prebuild": "pnpm run sync:theleague && pnpm run update:salary-averages && pnpm run download:nfl-logos",
-    "fetch:mfl": "node ./scripts/fetch-mfl-feeds.mjs && node ./scripts/update-salary-averages.mjs",
-    "preview": "astro preview",
-    "astro": "astro"
+    "dev": "astro dev",
+    "dev:apps": "pnpm run --parallel --filter './apps/*' dev",
+    "dev:theleague": "pnpm --filter theleague dev",
+    "dev:afl": "pnpm --filter afl-fantasy dev",
+    "dev:mfl": "pnpm --filter mfl-football dev",
+    "build": "pnpm run build:packages && pnpm run build:apps",
+    "build:packages": "echo 'Skipping package builds for now'",
+    "build:styles": "node scripts/build-styles.mjs",
+    "build:tools": "echo 'TODO: Create scripts/build-league-tools.mjs'",
+    "build:apps": "pnpm --filter './apps/*' build || astro build",
+    "prebuild": "echo 'Skipping prebuild steps'",
+    "fetch:all": "echo 'TODO: Create scripts/fetch-all-feeds.mjs'",
+    "sync:all": "echo 'TODO: Create scripts/sync-all-assets.mjs'",
+    "test": "pnpm --filter './packages/*' test",
+    "type-check": "pnpm --filter './apps/*' --filter './packages/*' type-check",
+    "clean": "pnpm --parallel --filter './apps/*' clean && pnpm --parallel --filter './packages/*' clean"
   },
-  "dependencies": {
+  "devDependencies": {
     "@astrojs/check": "^0.9.5",
     "@astrojs/vercel": "^8.0.4",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "astro": "^5.1.1",
+    "autoprefixer": "^10.4.14",
     "chokidar": "^3.6.0",
-    "react": "18.3.1",
-    "typescript": "^5.9.3"
-  }
-  ,
-  "devDependencies": {
-    "sass": "^1.76.0",
+    "cssnano": "^6.0.1",
     "postcss": "^8.4.34",
     "postcss-cli": "^10.1.0",
     "postcss-import": "^15.1.0",
-    "autoprefixer": "^10.4.14",
-    "cssnano": "^6.0.1"
+    "react": "18.3.1",
+    "sass": "^1.76.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
   }
 }
