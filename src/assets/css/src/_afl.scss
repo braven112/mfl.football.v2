@@ -1,19 +1,55 @@
 @use "./globals" as *;
 
-#AFLLogo {
-  width: 150px;
-  height: 75px;
-
-  @media (min-width: 768px) {
-    margin-bottom: 24px;
-  }
-
-  @media (min-width: 992px) {
-    width: 200px;
-    height: 100px;
-    margin-bottom: 0;
-  }
-}
+//AFL Logo
+ .afl {
+     fill: #243C65;
+ }
+  .afl0 {
+     fill: #243C65;
+ }
+ .afl1 {
+     fill: #B34826;
+ }
+ 
+ .afl2 {
+     fill: #FFFFFF;
+ }
+ 
+ .afl3 {
+     fill: #C43C3B;
+ }
+ 
+ .afl4 {
+     fill: #B22626;
+ }
+ 
+ .afl5 {
+     fill: #FFFFFF;
+     stroke: #243C65;
+     stroke-width: 20;
+     stroke-miterlimit: 10;
+ }
+ 
+ .afl6 {
+     fill: #B22726;
+ }
+ 
+ #AFLLogo {
+     width: 150px;
+     @media (min-width: 992px) {
+         width: 200px;
+     }
+     @media (min-width: 768px) {
+         margin-bottom: 24px;
+     }
+     @media (min-width: 992px) {
+         margin-bottom: 0;
+     }
+     height: 75px;
+     @media (min-width: 992px) {
+         height: 100px;
+     }
+ }
 
 .pro-relpage {
   .pro-rel th a:link {
@@ -461,7 +497,10 @@ body#gamecenter {
     padding-bottom: 2em;
   }
 }
-
+// Standings logos spacing on AFL home standings page
+#standings img.standingslogo {
+    margin-left: 0px;
+}
 // Standings page: division filters and labels
 #body_home.al-north #standings tr:nth-child(n + 9),
 #body_home.nl-east #standings tr:nth-child(n + 9),
