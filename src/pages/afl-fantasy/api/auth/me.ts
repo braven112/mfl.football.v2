@@ -4,7 +4,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getSessionTokenFromCookie, validateSessionToken } from '../../../utils/session';
+import { getSessionTokenFromCookie, validateSessionToken } from '../../../../utils/session';
 
 const normalizeFranchise = (value: string | null | undefined): string => {
   if (!value) return '';

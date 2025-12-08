@@ -4,8 +4,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { authenticateWithMFL } from '../../../utils/mfl-login';
-import { createSessionToken, createSessionCookie } from '../../../utils/session';
+import { authenticateWithMFL } from '../../../../utils/mfl-login';
+import { createSessionToken, createSessionCookie } from '../../../../utils/session';
 
 interface LoginRequest {
   username: string;
