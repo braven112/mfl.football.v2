@@ -4,15 +4,15 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "dev:apps": "pnpm run --parallel --filter './apps/*' dev",
-    "dev:theleague": "pnpm --filter theleague dev",
-    "dev:afl": "pnpm --filter afl-fantasy dev",
-    "dev:mfl": "pnpm --filter mfl-football dev",
+    "dev:apps": "echo 'apps/ folder removed'",
+    "dev:theleague": "echo 'apps/ folder removed'",
+    "dev:afl": "echo 'apps/ folder removed'",
+    "dev:mfl": "echo 'apps/ folder removed'",
     "build": "pnpm run build:packages && pnpm run build:apps",
     "build:packages": "echo 'Skipping package builds for now'",
     "build:styles": "node scripts/build-styles.mjs",
     "build:tools": "node scripts/build-league-tools.mjs",
-    "build:apps": "pnpm --filter './apps/*' build || astro build",
+    "build:apps": "astro build",
     "prebuild": "echo 'Skipping prebuild steps'",
     "fetch:all": "echo 'TODO: Create scripts/fetch-all-feeds.mjs'",
     "sync:all": "pnpm run sync:theleague && pnpm run sync:afl",
@@ -21,8 +21,8 @@
     "watch:theleague": "node scripts/watch-theleague-assets.mjs",
     "watch:afl": "node scripts/watch-afl-assets.mjs",
     "test": "pnpm --filter './packages/*' test",
-    "type-check": "pnpm --filter './apps/*' --filter './packages/*' type-check",
-    "clean": "pnpm --parallel --filter './apps/*' clean && pnpm --parallel --filter './packages/*' clean"
+    "type-check": "pnpm --filter './packages/*' type-check",
+    "clean": "pnpm --parallel --filter './packages/*' clean"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.5",

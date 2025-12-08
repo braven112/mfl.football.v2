@@ -1,0 +1,64 @@
+
+> mfl-monorepo@ prebuild /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> echo 'Skipping prebuild steps'
+
+Skipping prebuild steps
+
+> mfl-monorepo@ build /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> pnpm run build:packages && pnpm run build:apps
+
+
+> mfl-monorepo@ build:packages /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> echo 'Skipping package builds for now'
+
+Skipping package builds for now
+
+> mfl-monorepo@ build:apps /Users/brandon.shields@alaskaair.com/mfl.football.v2
+> astro build
+
+14:36:34 [content] Syncing content
+14:36:34 [content] Synced content
+14:36:34 [types] Generated 16ms
+14:36:34 [build] output: "server"
+14:36:34 [build] mode: "server"
+14:36:34 [build] directory: /Users/brandon.shields@alaskaair.com/mfl.football.v2/dist/
+14:36:34 [build] adapter: @astrojs/vercel
+14:36:34 [build] Collecting build info...
+14:36:34 [build] ✓ Completed in 31ms.
+14:36:34 [build] Building server entrypoints...
+14:36:37 [vite] ✓ built in 3.12s
+14:36:37 [build] ✓ Completed in 3.13s.
+
+ building client (vite) 
+14:36:37 [vite] transforming...
+14:36:37 [vite] ✓ 17 modules transformed.
+14:36:37 [vite] rendering chunks...
+14:36:37 [vite] computing gzip size...
+14:36:37 [vite] dist/client/_astro/salary-history.astro_astro_type_script_index_0_lang.Ds9P6cqp.js              0.05 kB │ gzip: 0.07 kB
+14:36:37 [vite] dist/client/_astro/AgeDistributionChart.astro_astro_type_script_index_0_lang.DJF9VyTK.js        0.27 kB │ gzip: 0.24 kB
+14:36:37 [vite] dist/client/_astro/DonutChart.astro_astro_type_script_index_0_lang.ChkbpV7S.js                  0.32 kB │ gzip: 0.26 kB
+14:36:37 [vite] dist/client/_astro/BarChart.astro_astro_type_script_index_0_lang.7HDIqmlg.js                    0.34 kB │ gzip: 0.28 kB
+14:36:37 [vite] dist/client/_astro/chart-utils.BkX2q2MT.js                                                      2.33 kB │ gzip: 0.86 kB
+14:36:37 [vite] dist/client/_astro/FranchiseOptions.astro_astro_type_script_index_0_lang.CZ74ndJR.js            4.10 kB │ gzip: 1.77 kB
+14:36:37 [vite] dist/client/_astro/VeteranExtensionCandidates.astro_astro_type_script_index_0_lang.fdbzaHO_.js  4.58 kB │ gzip: 1.94 kB
+14:36:37 [vite] dist/client/_astro/PlayerDetailsModal.astro_astro_type_script_index_0_lang.BG2jSKGp.js          5.46 kB │ gzip: 2.38 kB
+14:36:37 [vite] ✓ built in 628ms
+
+ prerendering static routes 
+14:36:38 ▶ src/pages/afl-fantasy/index.astro
+14:36:38   └─ /afl-fantasy/index.html (+7ms) 
+14:36:38 ▶ src/pages/theleague/contracts.astro
+14:36:38   └─ /theleague/contracts/index.html (+2ms) 
+14:36:38 ▶ src/pages/theleague/instructions.astro
+14:36:38   └─ /theleague/instructions/index.html (+1ms) 
+14:36:38 ▶ src/pages/theleague/templates.astro
+14:36:38   └─ /theleague/templates/index.html (+2ms) 
+14:36:38 ▶ src/pages/theleague/index.astro
+14:36:38   └─ /theleague/index.html (+1ms) 
+14:36:38 ✓ Completed in 57ms.
+
+14:36:38 [build] Rearranging server assets...
+14:36:38 [@astrojs/vercel] Bundling function ../../../../dist/server/entry.mjs
+14:36:39 [@astrojs/vercel] Copying static files to .vercel/output/static
+14:36:40 [build] Server built in 6.71s
+14:36:40 [build] Complete!
