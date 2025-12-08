@@ -39,37 +39,37 @@ import { calculateDraftOrder, buildActualDraftPicks } from '../../utils/draft-ut
 import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
 
-const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
 });
-const salaryAveragesModules = import.meta.glob('../data/mfl-salary-averages-*.json', {
+const salaryAveragesModules = import.meta.glob('../../data/mfl-salary-averages-*.json', {
   eager: true,
 });
 const salaryAdjustmentFeeds = import.meta.glob(
-  '../data/mfl-feeds/*/salaryAdjustments.json',
+  '../../data/mfl-feeds/*/salaryAdjustments.json',
   {
     eager: true,
   }
 );
-const leagueFeeds = import.meta.glob('../data/mfl-feeds/*/league.json', {
+const leagueFeeds = import.meta.glob('../../data/mfl-feeds/*/league.json', {
   eager: true,
 });
-const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
+const standingsFeeds = import.meta.glob('../../data/mfl-feeds/*/standings.json', {
   eager: true,
 });
 const playoffBracketFeeds = import.meta.glob(
-  '../data/mfl-feeds/*/playoffBracket.json',
+  '../../data/mfl-feeds/*/playoffBracket.json',
   {
     eager: true,
   }
 );
-const playersFeeds = import.meta.glob('../data/mfl-feeds/*/players.json', {
+const playersFeeds = import.meta.glob('../../data/mfl-feeds/*/players.json', {
   eager: true,
 });
-const draftResultsFeeds = import.meta.glob('../data/mfl-feeds/*/draftResults.json', {
+const draftResultsFeeds = import.meta.glob('../../data/mfl-feeds/*/draftResults.json', {
   eager: true,
 });
-const transactionsFeeds = import.meta.glob('../data/mfl-feeds/*/transactions.json', {
+const transactionsFeeds = import.meta.glob('../../data/mfl-feeds/*/transactions.json', {
   eager: true,
 });
 const getModuleData = (mod) =>
@@ -1308,7 +1308,7 @@ const serializedConfig = JSON.stringify({
           <div class="draft-section">
             {assetsPredictions.length > 0 ? (
               <ChartCard title="2026 Draft Assets" subtitle="Picks your team owns after all trades">
-                <a href="/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                <a href="/theleague/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                   </svg>
@@ -1332,7 +1332,7 @@ const serializedConfig = JSON.stringify({
               </ChartCard>
             ) : draftPredictions.length > 0 ? (
               <ChartCard title="2026 Draft Picks" subtitle="Projected draft picks based on current standings">
-                <a href="/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                <a href="/theleague/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                   </svg>

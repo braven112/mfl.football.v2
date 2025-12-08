@@ -16,11 +16,11 @@ import {
 import { parseNumber } from '../../utils/formatters';
 
 // Load roster and salary data
-const rosterModules = import.meta.glob('../data/mfl-player-salaries-*.json', {
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
 });
 const salaryAdjustmentFeeds = import.meta.glob(
-  '../data/mfl-feeds/*/salaryAdjustments.json',
+  '../../data/mfl-feeds/*/salaryAdjustments.json',
   {
     eager: true,
   }

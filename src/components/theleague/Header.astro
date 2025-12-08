@@ -38,7 +38,7 @@ const isAFL = league.slug === 'afl-fantasy';
     <nav aria-label="Breadcrumb">
       <ul class="breadcrumb-list">
         <li>
-          <a href={isAFL ? "/afl-fantasy" : "https://theleague.us"} class="breadcrumb-link"
+          <a href={isAFL ? "/afl-fantasy" : "/theleague"} class="breadcrumb-link"
             ><span class="breadcrumb-arrow">←</span> Back to Homepage</a>
         </li>
       </ul>
@@ -61,7 +61,7 @@ const isAFL = league.slug === 'afl-fantasy';
   <div class="container">
     <div class="row">
       <div class="col left">
-        <a class="league-link" href={isAFL ? "/afl-fantasy" : "https://theleague.us"}>
+        <a class="league-link" href={isAFL ? "/afl-fantasy" : "/theleague"}>
           <div class="league_logo" id="league_logo">
             {isAFL ? (
               <!-- AFL Logo -->
@@ -167,26 +167,30 @@ const isAFL = league.slug === 'afl-fantasy';
         </svg>
       </button>
       <ul class="nav-links">
-        <!-- TheLeague Pages -->
+        <!-- Dynamic League Pages -->
         <li class="nav-section-title">Tools</li>
-        <li><a href="/rosters">Roster/Salary</a></li>
-        <li><a href="/rosters?view=nextyear">Next Year Summary</a></li>
-        <li><a href="/calculator">Extension Calculator</a></li>
-        <li><a href="/draft-predictor">Draft Order</a></li>
-        <li><a href="/standings">Standings</a></li>
-        <li><a href="/playoffs">Playoffs</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"}>Roster/Salary</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/rosters?view=nextyear" : "/theleague/rosters?view=nextyear"}>Next Year Summary</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/calculator" : "/theleague/calculator"}>Extension Calculator</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/draft-predictor" : "/theleague/draft-predictor"}>Draft Order</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"}>Standings</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs"}>Playoffs</a></li>
         <li class="nav-section-title">Advanced Reports</li>
-        <li><a href="/salary">Salary Benchmarks</a></li>
-        <li><a href="/salary-history">Salary History</a></li>
-        <li><a href="/mvp">Salary-Adjusted MVPs</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/salary" : "/theleague/salary"}>Salary Benchmarks</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/salary-history" : "/theleague/salary-history"}>Salary History</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/mvp" : "/theleague/mvp"}>Salary-Adjusted MVPs</a></li>
 
         <li><hr /></li>
 
         <!-- External Links -->
-        <li class="nav-section-title">Community</li>
-        <li>
-          <a href="https://theleague.us/forum/index.php"> Message Board </a>
-        </li>
+        {!isAFL && (
+          <>
+            <li class="nav-section-title">Community</li>
+            <li>
+              <a href="https://theleague.us/forum/index.php"> Message Board </a>
+            </li>
+          </>
+        )}
         <li class="nav-section-title">Leagues</li>
         <li><a href="https://theleague.us">TheLeague.us</a></li>
         <li><a href="https://afl-fantasy.com">AFL Fantasy</a></li>

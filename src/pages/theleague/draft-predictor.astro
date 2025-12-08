@@ -12,27 +12,27 @@ import leagueAssets from '../../data/theleague.assets.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, parseTradeFromComment } from '../../utils/draft-utils';
 import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
-import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../constants/roster-constants';
+import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 
-const standingsFeeds = import.meta.glob('../data/mfl-feeds/*/standings.json', {
+const standingsFeeds = import.meta.glob('../../data/mfl-feeds/*/standings.json', {
   eager: true,
 });
 const playoffBracketFeeds = import.meta.glob(
-  '../data/mfl-feeds/*/playoffBracket.json',
+  '../../data/mfl-feeds/*/playoffBracket.json',
   {
     eager: true,
   }
 );
-const draftResultsFeeds = import.meta.glob('../data/mfl-feeds/*/draftResults.json', {
+const draftResultsFeeds = import.meta.glob('../../data/mfl-feeds/*/draftResults.json', {
   eager: true,
 });
-const playersFeeds = import.meta.glob('../data/mfl-feeds/*/players.json', {
+const playersFeeds = import.meta.glob('../../data/mfl-feeds/*/players.json', {
   eager: true,
 });
-const assetsFeeds = import.meta.glob('../data/mfl-feeds/*/assets.json', {
+const assetsFeeds = import.meta.glob('../../data/mfl-feeds/*/assets.json', {
   eager: true,
 });
-const transactionsFeeds = import.meta.glob('../data/mfl-feeds/*/transactions.json', {
+const transactionsFeeds = import.meta.glob('../../data/mfl-feeds/*/transactions.json', {
   eager: true,
 });
 
