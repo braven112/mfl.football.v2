@@ -27,7 +27,7 @@ var year = 2025;
 var xmlBaseURL = 'https://www44.myfantasyleague.com/fflnetdynamic2025/';
 var baseURLStatic = 'https://www44.myfantasyleague.com';
 var baseURLDynamic = 'https://www44.myfantasyleague.com';
-var currentServerTime = 1765233944;
+var currentServerTime = 1765235533;
 var completedWeek = 13;
 var liveScoringWeek = 14;
 var startWeek = 1;
@@ -972,9 +972,10 @@ display:inline-block;
 <td class="week">8</td></tr>
 <tr><th colspan="3">16 Total Players</th></tr>
 <tr><th colspan="3">Injured Reserve</th></tr>
-<tr class="oddtablerow"><td class="player"><a href="player?L=19621&P=17044" title="Week 14: vs Eagles Mon 5:15 p.m. PT" class="position_rb">Hampton, Omarion LAC RB</a> (R)  (<span class="warning injurystatus" title="IR-R">I</span>)</td>
+<tr class="oddtablerow"><td class="player"><a href="player?L=19621&P=17044" title="Week 14: vs Eagles Mon 5:15 p.m. PT" class="position_rb">Hampton, Omarion LAC RB</a> (R)  (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
 <td class="points"><a href="https://www44.myfantasyleague.com/2025/options?L=19621&amp;O=08&amp;PLAYER_ID=17044&amp;YEAR=2025">77.00</a></td>
 <td class="week">12</td></tr>
+<tr><td align="center" colspan="3"><b class="warning">Warning!</b> Possible IR Rule Violation Above.</td></tr>
 <tr class="eventablerow"><td class="player"><a href="player?L=19621&P=16616" title="Week 14: at Packers Sun 1:25 p.m. PT" class="position_wr">Odunze, Rome CHI WR</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
 <td class="points"><a href="https://www44.myfantasyleague.com/2025/options?L=19621&amp;O=08&amp;PLAYER_ID=16616&amp;YEAR=2025">146.10</a></td>
 <td class="week">5</td></tr>
@@ -1700,7 +1701,7 @@ $('body').addClass('regularSeason')}
 }
 </style></div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
 <tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
-<tr><td colspan="2" align="center">Page Generated Mon Dec 8 2:45:44 p.m. PT 2025</td></tr>
+<tr><td colspan="2" align="center">Page Generated Mon Dec 8 3:12:13 p.m. PT 2025</td></tr>
 <tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
  - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
 - <button id="pmLink">Privacy Manager</button>
