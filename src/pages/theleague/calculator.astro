@@ -3,11 +3,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
 
 const salarySummaryModules = import.meta.glob(
-  '../data/mfl-salary-averages-*.json',
+  '../../data/mfl-salary-averages-*.json',
   { eager: true }
 );
 const playerSalaryModules = import.meta.glob(
-  '../data/mfl-player-salaries-*.json',
+  '../../data/mfl-player-salaries-*.json',
   { eager: true }
 );
 
