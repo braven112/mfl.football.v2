@@ -2,7 +2,345 @@
   "leagueId": "19621",
   "name": "American Football League",
   "domain": "afl-fantasy.com",
-  "teams": 24,
+  "teams": [
+    {
+      "franchiseId": "0001",
+      "name": "Smokane FC",
+      "abbrev": "SMOKE",
+      "aliases": [
+        "Smokane"
+      ],
+      "conference": "A",
+      "division": "00",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane.png"
+    },
+    {
+      "franchiseId": "0002",
+      "name": "Drunk Indians",
+      "abbrev": "DRUNK",
+      "aliases": [
+        "Indians"
+      ],
+      "conference": "A",
+      "division": "00",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians.png"
+    },
+    {
+      "franchiseId": "0003",
+      "name": "Team Minty Fresh",
+      "abbrev": "MINT",
+      "aliases": [
+        "Minty Fresh",
+        "Minty"
+      ],
+      "conference": "B",
+      "division": "01",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh.png"
+    },
+    {
+      "franchiseId": "0004",
+      "name": "Get off my Ditka",
+      "abbrev": "DITKA",
+      "aliases": [
+        "Ditka",
+        "Ditkas"
+      ],
+      "conference": "A",
+      "division": "00",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/ditka_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/ditka.png"
+    },
+    {
+      "franchiseId": "0005",
+      "name": "Computer Jocks",
+      "abbrev": "JOCKS",
+      "aliases": [
+        "Jocks",
+        "CPU Jocks"
+      ],
+      "conference": "B",
+      "division": "01",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks.png"
+    },
+    {
+      "franchiseId": "0006",
+      "name": "Da Dangsters",
+      "abbrev": "DANG",
+      "aliases": [
+        "Dangsters",
+        "DD"
+      ],
+      "conference": "A",
+      "division": "00",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters.png"
+    },
+    {
+      "franchiseId": "0007",
+      "name": "Avenging Amish",
+      "abbrev": "AMISH",
+      "aliases": [
+        "Amish"
+      ],
+      "conference": "B",
+      "division": "01",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish.png"
+    },
+    {
+      "franchiseId": "0008",
+      "name": "Dicks out for Harambe",
+      "abbrev": "DICK",
+      "aliases": [
+        "Harambe",
+        "Dicks"
+      ],
+      "conference": "B",
+      "division": "01",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe.png"
+    },
+    {
+      "franchiseId": "0009",
+      "name": "Vitside Mafia",
+      "abbrev": "VIT",
+      "aliases": [
+        "Vitside",
+        "Mafia"
+      ],
+      "conference": "B",
+      "division": "01",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/vitside_mafia_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/11/vitside.jpg"
+    },
+    {
+      "franchiseId": "0010",
+      "name": "Fullybaked",
+      "abbrev": "BAKD",
+      "aliases": [
+        "Baked"
+      ],
+      "conference": "A",
+      "division": "00",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked.png"
+    },
+    {
+      "franchiseId": "0011",
+      "name": "Midwestside Connection",
+      "abbrev": "MWS",
+      "aliases": [
+        "Midwestside",
+        "midwest",
+        "mws",
+        "mwc"
+      ],
+      "conference": "B",
+      "division": "01",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/midwestside_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/11/midwestside.jpg"
+    },
+    {
+      "franchiseId": "0012",
+      "name": "Suh girls, one cup",
+      "abbrev": "SHIT",
+      "aliases": [
+        "Suh girls",
+        "Suh"
+      ],
+      "conference": "A",
+      "division": "00",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls-icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls.png"
+    },
+    {
+      "franchiseId": "0013",
+      "name": "Muck Juggling Micks",
+      "abbrev": "MICKS",
+      "aliases": [
+        "Micks",
+        "MJM"
+      ],
+      "conference": "B",
+      "division": "03",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks-icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks.png"
+    },
+    {
+      "franchiseId": "0014",
+      "name": "Thundering Herd",
+      "abbrev": "HERD",
+      "aliases": [
+        "Herd",
+        "Thunderingherd"
+      ],
+      "conference": "B",
+      "division": "03",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd.png"
+    },
+    {
+      "franchiseId": "0015",
+      "name": "The Mariachi Ninjas",
+      "abbrev": "NINJAS",
+      "aliases": [
+        "Ninjas",
+        "Mariachi Ninjas"
+      ],
+      "conference": "A",
+      "division": "02",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas.png"
+    },
+    {
+      "franchiseId": "0016",
+      "name": "Swiftie 4 Life",
+      "abbrev": "SWIFTY",
+      "aliases": [
+        "Swiftie",
+        "Swifty",
+        "Swift",
+        "Swiftie4life"
+      ],
+      "conference": "B",
+      "division": "03",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life.png"
+    },
+    {
+      "franchiseId": "0017",
+      "name": "Titsburgh Feelers",
+      "abbrev": "TITS",
+      "aliases": [
+        "Titsburgh",
+        "Feelers",
+        "Tits"
+      ],
+      "conference": "A",
+      "division": "02",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers.png"
+    },
+    {
+      "franchiseId": "0018",
+      "name": "Jewpacabra",
+      "abbrev": "JEW",
+      "aliases": [
+        "Jew"
+      ],
+      "conference": "B",
+      "division": "03",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra.png"
+    },
+    {
+      "franchiseId": "0019",
+      "name": "Badd Boys",
+      "abbrev": "BADD",
+      "aliases": [
+        "Badd"
+      ],
+      "conference": "A",
+      "division": "02",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys.png"
+    },
+    {
+      "franchiseId": "0020",
+      "name": "The Boondock Saints",
+      "abbrev": "SAINTS",
+      "aliases": [
+        "Boondock Saints",
+        "Saints",
+        "Boondocksaints"
+      ],
+      "conference": "B",
+      "division": "03",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints.png"
+    },
+    {
+      "franchiseId": "0021",
+      "name": "Chatmaster",
+      "abbrev": "CHAT",
+      "aliases": [
+        "Chat"
+      ],
+      "conference": "B",
+      "division": "03",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/chatmastericon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/10/chatmaster.jpg"
+    },
+    {
+      "franchiseId": "0022",
+      "name": "Balls Deep",
+      "abbrev": "BALLS",
+      "aliases": [
+        "Balls"
+      ],
+      "conference": "A",
+      "division": "02",
+      "tier": "Premier League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep.png"
+    },
+    {
+      "franchiseId": "0023",
+      "name": "Cock Gobbler",
+      "abbrev": "DkLuvr",
+      "aliases": [
+        "Pain",
+        "BTP",
+        "The Show",
+        "Gobbler",
+        "Gobblers"
+      ],
+      "conference": "A",
+      "division": "02",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/gobbler_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/gobbler.png"
+    },
+    {
+      "franchiseId": "0024",
+      "name": "No Soup For You",
+      "abbrev": "SOUP",
+      "aliases": [
+        "Amish",
+        "No Soup"
+      ],
+      "conference": "A",
+      "division": "02",
+      "tier": "D-League",
+      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/no_soup_for_you_icon.png",
+      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/no_soup_for_you.png"
+    }
+  ],
   "draftRounds": 9,
   "keepers": 7,
   "structure": "two-conference",
@@ -10,17 +348,34 @@
     {
       "name": "American League",
       "code": "A",
-      "divisions": ["00", "01"],
-      "divisionNames": { "00": "North", "01": "South" }
+      "divisions": [
+        "00",
+        "01"
+      ],
+      "divisionNames": {
+        "00": "North",
+        "01": "South"
+      }
     },
     {
       "name": "National League",
       "code": "B",
-      "divisions": ["02", "03"],
-      "divisionNames": { "02": "East", "03": "West" }
+      "divisions": [
+        "02",
+        "03"
+      ],
+      "divisionNames": {
+        "02": "East",
+        "03": "West"
+      }
     }
   ],
-  "divisions": ["00", "01", "02", "03"],
+  "divisions": [
+    "00",
+    "01",
+    "02",
+    "03"
+  ],
   "divisionToConference": {
     "00": "A",
     "01": "A",
@@ -39,272 +394,8 @@
     "draftPredictor": true,
     "contractManagement": false
   },
-  "allowedLeagues": ["19621"],
-  "assetDomain": "https://mfl.football",
-  "teams": [
-    {
-      "franchiseId": "0001",
-      "name": "Smokane FC",
-      "abbrev": "SMOKE",
-      "aliases": ["Smokane"],
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/smokane.png"
-    },
-    {
-      "franchiseId": "0002",
-      "name": "Drunk Indians",
-      "abbrev": "DRUNK",
-      "aliases": ["Indians"],
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/drunk_indians.png"
-    },
-    {
-      "franchiseId": "0003",
-      "name": "Team Minty Fresh",
-      "abbrev": "MINT",
-      "aliases": ["Minty Fresh", "Minty"],
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/team_minty_fresh.png"
-    },
-    {
-      "franchiseId": "0004",
-      "name": "Get off my Ditka",
-      "abbrev": "DITKA",
-      "aliases": ["Ditka"],
-      "conference": "A",
-      "division": "00",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/ditka_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/ditka.png"
-    },
-    {
-      "franchiseId": "0005",
-      "name": "Computer Jocks",
-      "abbrev": "JOCKS",
-      "aliases": ["Jocks", "CPU Jocks"],
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/computer_jocks.png"
-    },
-    {
-      "franchiseId": "0006",
-      "name": "Da Dangsters",
-      "abbrev": "DANG",
-      "aliases": ["Dangsters", "DD"],
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/da_dangsters.png"
-    },
-    {
-      "franchiseId": "0007",
-      "name": "Avenging Amish",
-      "abbrev": "AMISH",
-      "aliases": ["Amish"],
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/avenging_amish.png"
-    },
-    {
-      "franchiseId": "0008",
-      "name": "Dicks out for Harambe",
-      "abbrev": "DICK",
-      "aliases": ["Harambe", "Dicks"],
-      "conference": "B",
-      "division": "01",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/harambe.png"
-    },
-    {
-      "franchiseId": "0009",
-      "name": "Vitside Mafia",
-      "abbrev": "VIT",
-      "aliases": ["Vitside", "Mafia"],
-      "conference": "B",
-      "division": "01",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/vitside_mafia_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/11/vitside.jpg"
-    },
-    {
-      "franchiseId": "0010",
-      "name": "Fullybaked",
-      "abbrev": "BAKD",
-      "aliases": ["Baked"],
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/fullybaked.png"
-    },
-    {
-      "franchiseId": "0011",
-      "name": "Midwestside Connection",
-      "abbrev": "MWS",
-      "aliases": ["Midwestside", "midwest", "mws", "mwc"],
-      "conference": "B",
-      "division": "01",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/midwestside_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/11/midwestside.jpg"
-    },
-    {
-      "franchiseId": "0012",
-      "name": "Suh girls, one cup",
-      "abbrev": "SHIT",
-      "aliases": ["Suh girls"],
-      "conference": "A",
-      "division": "00",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls-icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/suh-girls.png"
-    },
-    {
-      "franchiseId": "0013",
-      "name": "Muck Juggling Micks",
-      "abbrev": "MICKS",
-      "aliases": ["Micks", "MJM"],
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks-icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2020_team_banners/muck-juggling-micks.png"
-    },
-    {
-      "franchiseId": "0014",
-      "name": "Thundering Herd",
-      "abbrev": "HERD",
-      "aliases": ["Herd"],
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/thunderingherd.png"
-    },
-    {
-      "franchiseId": "0015",
-      "name": "The Mariachi Ninjas",
-      "abbrev": "NINJAS",
-      "aliases": ["Ninjas", "Mariachi Ninjas"],
-      "conference": "A",
-      "division": "02",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2019_team_banners/mariachi_ninjas.png"
-    },
-    {
-      "franchiseId": "0016",
-      "name": "Swiftie 4 Life",
-      "abbrev": "SWIFTY",
-      "aliases": ["Swiftie", "Swifty"],
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/swiftie4life.png"
-    },
-    {
-      "franchiseId": "0017",
-      "name": "Titsburgh Feelers",
-      "abbrev": "TITS",
-      "aliases": ["Titsburgh", "Feelers"],
-      "conference": "A",
-      "division": "02",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/titsburgh_feelers.png"
-    },
-    {
-      "franchiseId": "0018",
-      "name": "Jewpacabra",
-      "abbrev": "JEW",
-      "aliases": ["Jew"],
-      "conference": "B",
-      "division": "03",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/jewpacabra.png"
-    },
-    {
-      "franchiseId": "0019",
-      "name": "Badd Boys",
-      "abbrev": "BADD",
-      "aliases": ["Badd"],
-      "conference": "A",
-      "division": "02",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/badd_boys.png"
-    },
-    {
-      "franchiseId": "0020",
-      "name": "The Boondock Saints",
-      "abbrev": "SAINTS",
-      "aliases": ["Boondock Saints", "Saints"],
-      "conference": "B",
-      "division": "03",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2016_team_banners/boondocksaints.png"
-    },
-    {
-      "franchiseId": "0021",
-      "name": "Chatmaster",
-      "abbrev": "CHAT",
-      "aliases": ["Chat"],
-      "conference": "B",
-      "division": "03",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/chatmastericon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_pages/10/chatmaster.jpg"
-    },
-    {
-      "franchiseId": "0022",
-      "name": "Balls Deep",
-      "abbrev": "BALLS",
-      "aliases": ["Balls"],
-      "conference": "A",
-      "division": "02",
-      "tier": "Premier League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2013_team_banners/balls_deep.png"
-    },
-    {
-      "franchiseId": "0023",
-      "name": "Bring the Pain",
-      "abbrev": "PAIN",
-      "aliases": ["Pain", "BTP"],
-      "conference": "A",
-      "division": "02",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/images/team_banners/bring_the_pain_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/images/team_banners/bring_the_pain.png"
-    },
-    {
-      "franchiseId": "0024",
-      "name": "Amish Mafia",
-      "abbrev": "AMISH2",
-      "aliases": ["Amish"],
-      "conference": "A",
-      "division": "02",
-      "tier": "D-League",
-      "icon": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/amishmafia_icon.png",
-      "banner": "https://mfl.football/afl-fantasy.com/team_banners/2025_team_banners/amishmafia.png"
-    }
-  ]
+  "allowedLeagues": [
+    "19621"
+  ],
+  "assetDomain": "https://mfl.football"
 }
