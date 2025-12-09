@@ -7,6 +7,11 @@ const summaryModules = import.meta.glob(
   { eager: true }
 );
 
+const weeklyModules = import.meta.glob(
+  '../../data/salary-history/theleague/*/summary-week-*.json',
+  { eager: true }
+);
+
 const positionLabels = [
   { key: 'QB', label: 'Quarterback' },
   { key: 'RB', label: 'Running Back' },
@@ -35,10 +40,43 @@ const extractSeason = (filepath: string) => {
   return match ? match[1] : null;
 };
 
+const extractSeasonAndWeek = (filepath: string) => {
+  const seasonMatch = filepath.match(/\/(\d{4})\//);
+  const weekMatch = filepath.match(/week-(\d+)\.json$/);
+  return {
+    season: seasonMatch ? seasonMatch[1] : null,
+    week: weekMatch ? weekMatch[1] : null,
+  };
+};
+
+// Load season-level summaries
 const summariesBySeason: Record<string, any> = {};
 Object.entries(summaryModules).forEach(([path, mod]) => {
   const season = extractSeason(path);
-  if (season) summariesBySeason[season] = getModuleData(mod);
+  if (season) {
+    const data = getModuleData(mod);
+    summariesBySeason[season] = {
+      ...data,
+      week: data?.metadata?.week ?? null,
+      type: 'season',
+    };
+  }
+});
+
+// Load weekly snapshots and organize by season
+const weeklyDataBySeasonAndWeek: Record<string, Record<string, any>> = {};
+Object.entries(weeklyModules).forEach(([path, mod]) => {
+  const { season, week } = extractSeasonAndWeek(path);
+  if (season && week) {
+    if (!weeklyDataBySeasonAndWeek[season]) {
+      weeklyDataBySeasonAndWeek[season] = {};
+    }
+    const data = getModuleData(mod);
+    weeklyDataBySeasonAndWeek[season][week] = {
+      ...data,
+      type: 'weekly',
+    };
+  }
 });
 
 const seasonOptions = Object.keys(summariesBySeason).sort(
@@ -75,8 +113,18 @@ const franchiseLookup = Object.fromEntries(
   Array.from(franchiseMeta.entries()).map(([id, data]) => [id, data ?? {}])
 );
 
+// Get available weeks for each season
+const weekOptionsBySeason: Record<string, string[]> = {};
+Object.entries(weeklyDataBySeasonAndWeek).forEach(([season, weeks]) => {
+  weekOptionsBySeason[season] = Object.keys(weeks).sort(
+    (a, b) => Number(b) - Number(a)
+  );
+});
+
 const serializedConfig = JSON.stringify({
   seasons: summariesBySeason,
+  weeklyData: weeklyDataBySeasonAndWeek,
+  weekOptions: weekOptionsBySeason,
   seasonOptions,
   defaultSeason,
   franchiseMeta: franchiseLookup,
@@ -87,26 +135,36 @@ const serializedConfig = JSON.stringify({
   <section class="salary-report">
     <header class="salary-report__intro">
       <h1>Salary Benchmarks</h1>
-      {seasonOptions.length > 1 && (
-        <label class="season-toggle">
-          <span>Season:</span>
-          <select id="salarySeasonSelect">
-            {seasonOptions.map((season) => (
-              <option value={season} selected={season === defaultSeason}>
-                {season}
-              </option>
-            ))}
+      <div class="salary-report__filters">
+        {seasonOptions.length > 1 && (
+          <label class="season-toggle">
+            <span>Season:</span>
+            <select id="salarySeasonSelect">
+              {seasonOptions.map((season) => (
+                <option value={season} selected={season === defaultSeason}>
+                  {season}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label class="week-toggle" id="weekToggleContainer" style="display: none;">
+          <span>Week:</span>
+          <select id="salaryWeekSelect">
+            <option value="season">Season Total</option>
           </select>
         </label>
-      )}
+      </div>
       <p>
         League {currentSummary?.metadata?.leagueId ?? 'Unknown'} &middot; Season{' '}
         <span id="salarySeasonLabel">
           {currentSummary?.metadata?.season ?? defaultSeason}
         </span>
-        {currentSummary?.metadata?.week
-          ? ` &middot; Week ${currentSummary.metadata.week}`
-          : ''}
+        <span id="salaryWeekLabel">
+          {currentSummary?.metadata?.week
+            ? ` · Week ${currentSummary.metadata.week}`
+            : ''}
+        </span>
       </p>
       <p class="salary-report__timestamp" id="salarySnapshotLabel">
         Last Snapshot: {generatedLabel}
@@ -203,15 +261,23 @@ const serializedConfig = JSON.stringify({
     color: #555;
   }
 
-  .season-toggle {
+  .salary-report__filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .season-toggle,
+  .week-toggle {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
   }
 
-  .season-toggle select {
+  .season-toggle select,
+  .week-toggle select {
     padding: 0.3rem 0.75rem;
     border: 1px solid #ccd3df;
     border-radius: 0.5rem;
@@ -339,12 +405,23 @@ const serializedConfig = JSON.stringify({
 <script type="module">
   const summaryConfigEl = document.getElementById('salary-config');
   if (summaryConfigEl) {
-    const { seasons = {}, defaultSeason, franchiseMeta = {} } = JSON.parse(
-      summaryConfigEl.textContent
-    );
-    const selectEl = document.getElementById('salarySeasonSelect');
+    const {
+      seasons = {},
+      weeklyData = {},
+      weekOptions = {},
+      defaultSeason,
+      franchiseMeta = {}
+    } = JSON.parse(summaryConfigEl.textContent);
+
+    const seasonSelectEl = document.getElementById('salarySeasonSelect');
+    const weekSelectEl = document.getElementById('salaryWeekSelect');
+    const weekToggleContainer = document.getElementById('weekToggleContainer');
     const seasonLabel = document.getElementById('salarySeasonLabel');
+    const weekLabel = document.getElementById('salaryWeekLabel');
     const snapshotLabel = document.getElementById('salarySnapshotLabel');
+
+    let currentSeason = defaultSeason;
+    let currentWeek = 'season';
 
     const currencyFormatter = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -357,10 +434,48 @@ const serializedConfig = JSON.stringify({
       return currencyFormatter.format(Math.round(value));
     };
 
-    const renderSeason = (seasonKey) => {
-      const summary = seasons?.[seasonKey];
+    const populateWeekDropdown = (seasonKey) => {
+      const weeks = weekOptions[seasonKey] || [];
+      weekSelectEl.innerHTML = '<option value="season">Season Total</option>';
+
+      if (weeks.length > 0) {
+        weeks.forEach((week) => {
+          const option = document.createElement('option');
+          option.value = week;
+          option.textContent = `Week ${week}`;
+          weekSelectEl.appendChild(option);
+        });
+        weekToggleContainer.style.display = 'inline-flex';
+      } else {
+        weekToggleContainer.style.display = 'none';
+      }
+
+      // Reset to season total when changing seasons
+      weekSelectEl.value = 'season';
+      currentWeek = 'season';
+    };
+
+    const renderData = (seasonKey, weekKey) => {
+      let summary;
+
+      if (weekKey === 'season') {
+        summary = seasons?.[seasonKey];
+      } else {
+        summary = weeklyData?.[seasonKey]?.[weekKey];
+      }
+
       if (!summary) return;
+
       seasonLabel.textContent = summary?.metadata?.season ?? seasonKey;
+
+      if (weekKey === 'season') {
+        weekLabel.textContent = summary?.metadata?.week
+          ? ` · Week ${summary.metadata.week}`
+          : '';
+      } else {
+        weekLabel.textContent = ` · Week ${weekKey}`;
+      }
+
       const generatedAt = summary?.metadata?.generatedAt
         ? new Date(summary.metadata.generatedAt)
         : null;
@@ -416,9 +531,20 @@ const serializedConfig = JSON.stringify({
       });
     };
 
-    renderSeason(defaultSeason);
-    selectEl?.addEventListener('change', (event) => {
-      renderSeason(event.target.value);
+    // Initialize
+    populateWeekDropdown(defaultSeason);
+    renderData(defaultSeason, 'season');
+
+    // Event listeners
+    seasonSelectEl?.addEventListener('change', (event) => {
+      currentSeason = event.target.value;
+      populateWeekDropdown(currentSeason);
+      renderData(currentSeason, currentWeek);
+    });
+
+    weekSelectEl?.addEventListener('change', (event) => {
+      currentWeek = event.target.value;
+      renderData(currentSeason, currentWeek);
     });
   }
 </script>

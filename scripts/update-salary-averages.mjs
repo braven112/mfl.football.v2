@@ -886,6 +886,26 @@ const run = async () => {
       historyDir
     )}`
   );
+
+  // Save week-based snapshots for easy reference
+  if (effectiveWeek) {
+    const weekRaw = path.join(historyDir, `raw-week-${effectiveWeek}.json`);
+    const weekSummary = path.join(historyDir, `summary-week-${effectiveWeek}.json`);
+    await writeJson(weekRaw, {
+      snapshot,
+      week: effectiveWeek,
+      rosters: rosterPayload,
+      players: playerPayloads,
+      weeklyResults: weeklyResultsPayload,
+    });
+    await writeJson(weekSummary, { snapshot, week: effectiveWeek, ...summary });
+    console.log(
+      `[salary-averages] Saved week ${effectiveWeek} snapshot -> ${path.relative(
+        projectRoot,
+        weekSummary
+      )}`
+    );
+  }
 };
 
 run().catch((error) => {
