@@ -1,6 +1,6 @@
 /**
  * Pull core MFL feeds (rosters, players, salary adjustments, draft results, option07, transactions)
- * and write them into src/data/mfl-feeds/<year>/.
+ * and write them into data/<league>/mfl-feeds/<year>/.
  *
  * Caching strategy:
  * - Current year: Fetches daily (data changes throughout season)

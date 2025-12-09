@@ -13,7 +13,7 @@ import type { DivisionStandings } from '../types/standings';
 import leagueConfig from '../../data/theleague.config.json';
 
 // Import standings data
-const standingsFeeds = import.meta.glob('../../data/mfl-feeds/*/standings.json', {
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
 });
 
@@ -37,7 +37,7 @@ if (!availableYears.includes(selectedYear)) {
 }
 
 // Get standings data for selected year
-const selectedFeed = standingsFeeds[`../../data/mfl-feeds/${selectedYear}/standings.json`] as
+const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
   | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
   | undefined;
 

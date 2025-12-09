@@ -21,13 +21,13 @@ const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';
 const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
 
-const standingsFeeds = import.meta.glob('../../data/mfl-feeds/*/standings.json', {
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
 });
-const bracketFallbackFeeds = import.meta.glob('../../data/mfl-feeds/*/playoff-brackets.json', {
+const bracketFallbackFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/playoff-brackets.json', {
   eager: true,
 });
-const weeklyResultsFeeds = import.meta.glob('../../data/mfl-feeds/*/weekly-results.json', {
+const weeklyResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
 
@@ -52,7 +52,7 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`/theleague/playoffs?year=${defaultYear}`);
 }
 
-const selectedFeed = standingsFeeds[`../../data/mfl-feeds/${selectedYear}/standings.json`] as
+const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
   | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
   | undefined;
 
@@ -64,7 +64,7 @@ const franchises = selectedFeed.leagueStandings.franchise;
 const leagueStandings = getLeagueStandings(franchises, leagueConfig);
 
 const fallbackBracketFeed =
-  bracketFallbackFeeds[`../../data/mfl-feeds/${selectedYear}/playoff-brackets.json`] as
+  bracketFallbackFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/playoff-brackets.json`] as
     | { playoffBrackets?: any; brackets?: Record<string, any> }
     | undefined;
 const fallbackBracketMetas = fallbackBracketFeed?.playoffBrackets?.playoffBracket || [];
@@ -143,7 +143,7 @@ const weeksNeeded = Array.from(
 const weeklyResultsEntries = await Promise.all(
   weeksNeeded.map(async week => {
     // Prefer cached weekly results if available for this year
-    const cachedKey = `../../data/mfl-feeds/${selectedYear}/weekly-results.json`;
+    const cachedKey = `../../../data/theleague/mfl-feeds/${selectedYear}/weekly-results.json`;
     const cachedFeed = weeklyResultsFeeds[cachedKey] as
       | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
       | undefined;
@@ -411,7 +411,7 @@ const weeklyHighs = await Promise.all(
   Array.from({ length: REGULAR_SEASON_WEEKS }, async (_, idx) => {
     const week = idx + 1;
     // Use cached weekly results if available; otherwise mark as missing
-    const cachedKey = `../../data/mfl-feeds/${selectedYear}/weekly-results.json`;
+    const cachedKey = `../../../data/theleague/mfl-feeds/${selectedYear}/weekly-results.json`;
     const cachedFeed = weeklyResultsFeeds[cachedKey] as
       | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
       | undefined;
