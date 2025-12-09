@@ -1,3 +1,6 @@
+// Pages where franchise icons should NOT be swapped to banners
+const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop', 'body_lineup'];
+
 // Fix Franchise Icons - removes "_icon" from image URLs and preloads replacements
 export function fixFranchiseIcons(scope = document, options = {}) {
   if (!scope) return;
@@ -29,4 +32,10 @@ export function fixFranchiseIcons(scope = document, options = {}) {
       };
     }
   });
+}
+
+// Check if current page should skip franchise icon replacement
+export function shouldSkipFranchiseIcons() {
+  const bodyId = document.body?.id;
+  return bodyId && FRANCHISE_ICON_EXCLUSIONS.includes(bodyId);
 }

@@ -1,6 +1,4 @@
-import { fixFranchiseIcons } from './features/franchiseIcons.js';
-
-const FRANCHISE_ICON_EXCLUSIONS = ['body_ajax_ls', 'body_add_drop', 'body_lineup'];
+import { fixFranchiseIcons, shouldSkipFranchiseIcons } from './features/franchiseIcons.js';
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
@@ -29,8 +27,7 @@ const FRANCHISE_ICON_SCOPES = {
 
 document.addEventListener('DOMContentLoaded', () => {
   const bodyId = document.body?.id;
-  const skipFranchiseIcons =
-    bodyId && FRANCHISE_ICON_EXCLUSIONS.includes(bodyId);
+  const skipFranchiseIcons = shouldSkipFranchiseIcons();
 
   const scopeConfigs = bodyId ? FRANCHISE_ICON_SCOPES[bodyId] : undefined;
 
