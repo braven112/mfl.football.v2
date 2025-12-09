@@ -9,6 +9,11 @@ export interface Props {
 
 const { tierName, teams, year = new Date().getFullYear() } = Astro.props;
 
+// Determine logo based on tier
+const tierLogo = tierName === 'Premier League'
+  ? '/assets/afl/premier.svg'
+  : '/assets/afl/dleague.svg';
+
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
   const parts = wlt.split('-').map(Number);
@@ -35,6 +40,7 @@ const prizes: Record<string, string[]> = {
 
 <div class="tier-standings-container">
   <div class="tier-header-section">
+    <img src={tierLogo} alt={`${tierName} Logo`} class="tier-logo" />
     <h3 class="tier-header">{tierName}</h3>
   </div>
 
@@ -66,6 +72,11 @@ const prizes: Record<string, string[]> = {
             else if (rank === 4) rowClass = 'playoff-tier';
             else if (rank === 9 || rank === 10) rowClass = 'relegation-danger';
             else if (rank === 11 || rank === 12) rowClass = 'relegated';
+          } else if (tierName === 'D-League') {
+            if (rank === 1) rowClass = 'gold-tier';
+            else if (rank === 2) rowClass = 'second-place';
+            else if (rank === 3 || rank === 4) rowClass = 'dleague-playoff-tier';
+            else if (rank === 12) rowClass = 'last-place';
           }
 
           // Add border classes
@@ -73,6 +84,9 @@ const prizes: Record<string, string[]> = {
           if (tierName === 'Premier League') {
             if (rank === 8) borderClass = 'border-below';
             if (rank === 10) borderClass = 'border-below-relegation';
+          } else if (tierName === 'D-League') {
+            if (rank === 2) borderClass = 'border-below-green';
+            if (rank === 4) borderClass = 'border-below-playoff';
           }
 
           return (
@@ -98,6 +112,13 @@ const prizes: Record<string, string[]> = {
               </td>
               <td class="col-prize">
                 {prizeValue && <span class="prize-amount">{prizeValue}</span>}
+                {tierName === 'D-League' && rank === 2 && <span class="promo-arrow rank-2">⬆</span>}
+                {tierName === 'D-League' && rank === 3 && <span class="promo-arrow rank-3">⬆</span>}
+                {tierName === 'D-League' && rank === 4 && <span class="promo-arrow rank-4">⬆</span>}
+                {tierName === 'Premier League' && rank === 9 && <span class="promo-arrow pl-rank-9">⬇</span>}
+                {tierName === 'Premier League' && rank === 10 && <span class="promo-arrow pl-rank-10">⬇</span>}
+                {tierName === 'Premier League' && rank === 11 && <span class="promo-arrow pl-rank-11">⬇</span>}
+                {tierName === 'Premier League' && rank === 12 && <span class="promo-arrow pl-rank-12">⬇</span>}
               </td>
             </tr>
           );
@@ -117,14 +138,23 @@ const prizes: Record<string, string[]> = {
 
   .tier-header-section {
     padding: 1.5rem 2rem;
-    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .tier-logo {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
   }
 
   .tier-header {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #fff;
+    color: #002244;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -201,10 +231,47 @@ const prizes: Record<string, string[]> = {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--color-primary, #c41e3a);
+    background: #9ca3af;
     color: #fff;
     font-weight: 700;
     font-size: 0.875rem;
+  }
+
+  /* Premier League rank badge colors */
+  tbody tr.gold-tier .rank-number {
+    background: #ffd700;
+    color: #000;
+  }
+
+  tbody tr.silver-tier .rank-number {
+    background: #c0c0c0;
+    color: #000;
+  }
+
+  tbody tr.bronze-tier .rank-number {
+    background: #cd7f32;
+    color: #fff;
+  }
+
+  tbody tr.playoff-tier .rank-number {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  tbody tr.relegation-danger .rank-number {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  tbody tr.relegated .rank-number {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  /* D-League rank badge colors */
+  tbody tr.second-place .rank-number {
+    background: #16a34a;
+    color: #fff;
   }
 
   .team-info {
@@ -282,7 +349,95 @@ const prizes: Record<string, string[]> = {
     border-bottom: 3px solid #dc2626;
   }
 
+  /* D-League tier styling */
+  tbody tr.second-place {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.18) 100%);
+    color: #000;
+  }
+
+  tbody tr.second-place .team-name,
+  tbody tr.second-place .col-record,
+  tbody tr.second-place .col-prize {
+    color: #000;
+  }
+
+  tbody tr.last-place {
+    background: linear-gradient(135deg, #7c4a2e 0%, #6b4423 100%);
+    color: #fff;
+  }
+
+  tbody tr.last-place .team-name,
+  tbody tr.last-place .col-record,
+  tbody tr.last-place .col-prize,
+  tbody tr.last-place .prize-amount {
+    color: #fff;
+  }
+
+  tbody tr.last-place .rank-number {
+    background: #5a3620;
+    color: #fff;
+  }
+
+  tbody tr.border-below-green {
+    border-bottom: 4px solid #22c55e;
+  }
+
+  tbody tr.border-below-playoff {
+    border-bottom: 4px solid #16a34a;
+  }
+
+  /* D-League playoff tier (ranks 3-4) - same background as Premier League playoff but no special border */
+  tbody tr.dleague-playoff-tier {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.08) 100%);
+  }
+
+  tbody tr.dleague-playoff-tier .rank-number {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  /* Promotion/Relegation arrows */
+  .promo-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-left: 0.5rem;
+  }
+
+  /* D-League arrows */
+  .promo-arrow.rank-2 {
+    color: #22c55e;
+  }
+
+  .promo-arrow.rank-3,
+  .promo-arrow.rank-4 {
+    color: #fff;
+    filter: drop-shadow(0 0 1px #22c55e);
+  }
+
+  /* Premier League arrows */
+  .promo-arrow.pl-rank-2 {
+    color: #22c55e;
+  }
+
+  .promo-arrow.pl-rank-9,
+  .promo-arrow.pl-rank-10 {
+    color: #fff;
+    filter: drop-shadow(0 0 1px #ef4444);
+  }
+
+  .promo-arrow.pl-rank-11,
+  .promo-arrow.pl-rank-12 {
+    color: #ef4444;
+  }
+
   @media (max-width: 767px) {
+    .tier-logo {
+      height: 35px;
+    }
+
     .tier-header {
       font-size: 1.25rem;
     }

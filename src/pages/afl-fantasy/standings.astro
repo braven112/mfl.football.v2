@@ -66,6 +66,19 @@ const view = (Astro.url.searchParams.get('view') ||
 // AFL Fantasy is a new league, so no defending champions yet
 const defendingChampions: Record<string, string> = {};
 const previousYear = selectedYear - 1;
+
+// Get promotion/relegation playoff teams (Premier League 9-10 + D-League 3-4)
+const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
+const promoRegTeams = [
+  ...(premierLeague?.teams.slice(8, 10) || []), // Premier League ranks 9-10
+  ...(dLeague?.teams.slice(2, 4) || []), // D-League ranks 3-4
+].sort((a, b) => {
+  // Sort by all-play percentage (descending)
+  const aPct = parseFloat(a.all_play_pct || '0');
+  const bPct = parseFloat(b.all_play_pct || '0');
+  return bPct - aPct;
+});
 ---
 
 <TheLeagueLayout title="AFL Fantasy Standings">
@@ -144,6 +157,59 @@ const previousYear = selectedYear - 1;
               year={selectedYear}
             />
           ))}
+        </div>
+      )}
+
+      {view === 'all_play' && promoRegTeams.length === 4 && (
+        <div class="promo-reg-section">
+          <div class="promo-reg-header">
+            <img src="/assets/afl/premier.svg" alt="Premier League Logo" class="promo-reg-logo" />
+            <div class="promo-reg-text">
+              <h2 class="promo-reg-title">Promotion/Relegation playoff standings</h2>
+              <p class="promo-reg-subtitle">Top 2 will be in the Premier League next season.</p>
+            </div>
+          </div>
+
+          <div class="promo-reg-table-wrapper">
+            <table class="promo-reg-table">
+              <thead>
+                <tr>
+                  <th class="col-rank">Rank</th>
+                  <th class="col-team">Team</th>
+                  <th class="col-record">W</th>
+                  <th class="col-record">L</th>
+                  <th class="col-prize">Prize</th>
+                </tr>
+              </thead>
+              <tbody>
+                {promoRegTeams.map((team, index) => (
+                  <tr class={index + 1 <= 2 ? 'promoted' : 'relegated'}>
+                    <td class="col-rank">
+                      <span class="rank-badge">{index + 1}</span>
+                    </td>
+                    <td class="col-team">
+                      <div class="team-info">
+                        {team.teamIcon && (
+                          <img
+                            src={team.teamIcon}
+                            alt={team.teamName}
+                            class="team-icon"
+                            loading="lazy"
+                          />
+                        )}
+                        <span class="team-name">{team.teamName}</span>
+                      </div>
+                    </td>
+                    <td class="col-record">{team.all_play_wlt?.split('-')[0] || '0'}</td>
+                    <td class="col-record">{team.all_play_wlt?.split('-')[1] || '0'}</td>
+                    <td class="col-prize">
+                      <span class="prize-icon">{index + 1 <= 2 ? '⬆' : '⬇'}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </main>
@@ -360,6 +426,169 @@ const previousYear = selectedYear - 1;
     margin-bottom: 0.75rem !important;
   }
 
+  /* Promotion/Relegation Section */
+  .promo-reg-section {
+    margin-top: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  .promo-reg-header {
+    padding: 1.5rem 2rem;
+    background: #c41e3a;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .promo-reg-logo {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .promo-reg-text {
+    flex: 1;
+  }
+
+  .promo-reg-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-reg-subtitle {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .promo-reg-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .promo-reg-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .promo-reg-table thead {
+    background: var(--color-bg-secondary, #f8f9fa);
+    border-bottom: 2px solid var(--color-border, #dee2e6);
+  }
+
+  .promo-reg-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-reg-table .col-rank {
+    width: 80px;
+    text-align: center;
+  }
+
+  .promo-reg-table .col-team {
+    min-width: 200px;
+  }
+
+  .promo-reg-table .col-record {
+    width: 80px;
+    text-align: center;
+  }
+
+  .promo-reg-table .col-prize {
+    width: 100px;
+    text-align: center;
+  }
+
+  .promo-reg-table tbody tr {
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    transition: background-color 0.15s ease;
+  }
+
+  .promo-reg-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .promo-reg-table tbody tr.promoted {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%);
+  }
+
+  .promo-reg-table tbody tr.relegated {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
+  }
+
+  .promo-reg-table td {
+    padding: 1rem;
+  }
+
+  .promo-reg-table .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+
+  .promo-reg-table tr.promoted .rank-badge {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  .promo-reg-table tr.relegated .rank-badge {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .promo-reg-table .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .promo-reg-table .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .promo-reg-table .team-name {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .promo-reg-table .col-record td {
+    font-weight: 600;
+    font-family: var(--font-mono, monospace);
+  }
+
+  .promo-reg-table .prize-icon {
+    font-size: 1.5rem;
+  }
+
+  .promo-reg-table tr.promoted .prize-icon {
+    color: #22c55e;
+  }
+
+  .promo-reg-table tr.relegated .prize-icon {
+    color: #ef4444;
+  }
+
   /* Responsive */
   @media (max-width: 767px) {
     .standings-page {
@@ -376,6 +605,17 @@ const previousYear = selectedYear - 1;
 
     .standings-info {
       padding: 1rem;
+    }
+
+    .promo-reg-table .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .promo-reg-table .rank-badge {
+      width: 28px;
+      height: 28px;
+      font-size: 0.75rem;
     }
   }
 </style>

@@ -11,7 +11,7 @@ export const prerender = true;
     <header class="hero-section">
       <h1 class="league-title">{aflConfig.name}</h1>
       <p class="league-info">
-        {aflConfig.teams} Teams • {aflConfig.conferences.length} Conferences • {aflConfig.draftRounds} Draft Rounds
+        {aflConfig.teams.length} Teams • {aflConfig.conferences.length} Conferences • {aflConfig.draftRounds} Draft Rounds
       </p>
     </header>
 
@@ -72,8 +72,8 @@ export const prerender = true;
   }
 
   .hero-section {
-    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
-    color: white;
+    background: var(--hero-bg-color, #fff);
+    color: var(--hero-text-color, #002244);
     padding: 4rem 2rem;
     border-radius: 1rem;
     text-align: center;
