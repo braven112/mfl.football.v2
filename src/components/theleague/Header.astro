@@ -10,7 +10,7 @@ interface Props {
 
 const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
-  "https://api.myfantasyleague.com";
+  "www49.myfantasyleague.com/";
 const envLeagueId =
   (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || "";
 const envYear =
@@ -21,16 +21,16 @@ const envStaticHost =
 
 const normalize = (value: string) => value.replace(/\/+$/, "");
 
-const host = normalize(Astro.props.host || envHost);
-const leagueId = Astro.props.leagueId || envLeagueId;
-const year = (Astro.props.year || envYear).toString();
-const staticHost = normalize(Astro.props.staticHost || envStaticHost);
-
-const leagueHome = `${host}/${year}/home/${leagueId}`;
-
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
+
+// Use the year passed from the page, or fall back to the environment variable/current year.
+const year = (Astro.props.year || envYear).toString();
+
+// Construct the MFL homepage URL using the context-aware league object.
+// This ensures the correct host and leagueId are always used.
+const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
 ---
 
 <div class="breadcrumb-bar">
@@ -38,8 +38,8 @@ const isAFL = league.slug === 'afl-fantasy';
     <nav aria-label="Breadcrumb">
       <ul class="breadcrumb-list">
         <li>
-          <a href={isAFL ? "/afl-fantasy" : "/theleague"} class="breadcrumb-link"
-            ><span class="breadcrumb-arrow">←</span> Back to Homepage</a>
+          <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
+            ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
         </li>
       </ul>
     </nav>

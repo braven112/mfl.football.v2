@@ -58,6 +58,16 @@ const divisionStandings = getDivisionStandings(franchises, aflConfig);
 const conferenceAStandings = getConferenceStandings(franchises, aflConfig, 'A');
 const conferenceBStandings = getConferenceStandings(franchises, aflConfig, 'B');
 const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
+const nitTeams = [
+  ...conferenceAStandings.allTeams.filter(
+    team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
+  ),
+  ...conferenceBStandings.allTeams.filter(
+    team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
+  ),
+]
+  .sort((a, b) => parseFloat(b.pwr || '0') - parseFloat(a.pwr || '0'))
+  .map((team, idx) => ({ ...team, nitRank: idx + 1 }));
 
 // Get view from query parameter (default to 'division')
 const view = (Astro.url.searchParams.get('view') ||
@@ -81,7 +91,7 @@ const promoRegTeams = [
 });
 ---
 
-<TheLeagueLayout title="AFL Fantasy Standings">
+<TheLeagueLayout title="AFL Fantasy Standings" year={selectedYear}>
   <div class="standings-page">
     <header class="standings-hero">
       <div class="standings-hero__text">
@@ -145,6 +155,65 @@ const promoRegTeams = [
             teams={conferenceBStandings.allTeams}
             year={selectedYear}
           />
+
+          {nitTeams.length > 0 && (
+            <div class="nit-section">
+              <div class="nit-header">
+                <div class="nit-title-block">
+                  <p class="nit-label">Secondary Playoffs</p>
+                  <h2 class="nit-title">NIT Standings</h2>
+                  <p class="nit-subtitle">
+                    Teams outside the top 4 seeds, ranked by Power Rank
+                  </p>
+                </div>
+              </div>
+
+              <div class="nit-table-wrapper">
+                <table class="nit-table">
+                  <thead>
+                    <tr>
+                      <th class="col-rank">NIT Rank</th>
+                      <th class="col-team">Team</th>
+                      <th class="col-seed">Seed</th>
+                      <th class="col-record">Record</th>
+                      <th class="col-pwr">Power Rank</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nitTeams.map(team => {
+                      const [wins = '0', losses = '0'] = (team.h2hwlt || '0-0').split('-');
+                      return (
+                        <tr>
+                          <td class="col-rank">
+                            <span class="rank-badge">{team.nitRank}</span>
+                          </td>
+                          <td class="col-team">
+                            <div class="team-info">
+                              {team.teamIcon && (
+                                <img
+                                  src={team.teamIcon}
+                                  alt={team.teamName}
+                                  class="team-icon"
+                                  loading="lazy"
+                                />
+                              )}
+                              <div class="team-meta">
+                                <span class="team-name">{team.teamName}</span>
+                                <span class="team-division">Seed {team.seed || '—'} • Div {team.division}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="col-seed">{team.seed ?? '—'}</td>
+                          <td class="col-record">{wins}-{losses}</td>
+                          <td class="col-pwr">{team.pwr || '0'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -589,6 +658,134 @@ const promoRegTeams = [
     color: #ef4444;
   }
 
+  /* NIT Section */
+  .nit-section {
+    margin-top: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  .nit-header {
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #fff;
+  }
+
+  .nit-label {
+    margin: 0 0 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    opacity: 0.85;
+    color: #fff;
+  }
+
+  .nit-title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .nit-subtitle {
+    margin: 0.25rem 0 0;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .nit-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .nit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .nit-table thead {
+    background: var(--color-bg-secondary, #f8f9fa);
+    border-bottom: 2px solid var(--color-border, #e5e7eb);
+  }
+
+  .nit-table th {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .nit-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .nit-table .col-rank {
+    width: 90px;
+    text-align: center;
+  }
+
+  .nit-table .col-team {
+    min-width: 240px;
+  }
+
+  .nit-table .col-seed,
+  .nit-table .col-record,
+  .nit-table .col-pwr {
+    width: 120px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nit-table .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nit-table .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .nit-table .team-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .nit-table .team-name {
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .nit-table .team-division {
+    color: var(--text-secondary-color, #6b7280);
+    font-size: 0.9rem;
+  }
+
+  .nit-table .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    background: #0f172a;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .nit-table tbody tr:hover {
+    background: rgba(15, 23, 42, 0.04);
+  }
+
   /* Responsive */
   @media (max-width: 767px) {
     .standings-page {
@@ -616,6 +813,17 @@ const promoRegTeams = [
       width: 28px;
       height: 28px;
       font-size: 0.75rem;
+    }
+
+    .nit-table .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .nit-table .rank-badge {
+      width: 30px;
+      height: 30px;
+      font-size: 0.8rem;
     }
   }
 </style>

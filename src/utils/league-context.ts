@@ -4,11 +4,18 @@
  */
 
 export interface LeagueContext {
+  host: string;
   leagueId: string;
   name: string;
   slug: string; // 'theleague' or 'afl-fantasy'
   dataPath: string; // 'data/theleague' or 'data/afl-fantasy'
 }
+
+const defaultMflHost =
+  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'www49.myfantasyleague.com/';
+
+const normalizeHost = (value: string) =>
+  value.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
 /**
  * Get league context from URL
@@ -17,10 +24,12 @@ export interface LeagueContext {
  */
 export function getLeagueContext(url: URL): LeagueContext {
   const pathname = url.pathname;
+  const host = normalizeHost(defaultMflHost);
 
   // Check if URL starts with /afl-fantasy
   if (pathname.startsWith('/afl-fantasy')) {
     return {
+      host,
       leagueId: '19621',
       name: 'American Football League',
       slug: 'afl-fantasy',
@@ -31,6 +40,7 @@ export function getLeagueContext(url: URL): LeagueContext {
   // Check if URL starts with /theleague
   if (pathname.startsWith('/theleague')) {
     return {
+      host,
       leagueId: '13522',
       name: 'The League',
       slug: 'theleague',
@@ -40,6 +50,7 @@ export function getLeagueContext(url: URL): LeagueContext {
 
   // Default to The League for backward compatibility
   return {
+    host,
     leagueId: '13522',
     name: 'The League',
     slug: 'theleague',
