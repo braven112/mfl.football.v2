@@ -1,0 +1,222 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+export const prerender = true;
+---
+
+<TheLeagueLayout title="AFL Fantasy - American Football League">
+  <div class="landing-page">
+    <!-- Hero Section -->
+    <header class="hero-section">
+      <h1 class="league-title">{aflConfig.name}</h1>
+      <p class="league-info">
+        {aflConfig.teams.length} Teams • {aflConfig.conferences.length} Conferences • {aflConfig.draftRounds} Draft Rounds
+      </p>
+    </header>
+
+    <!-- Quick Links -->
+    <section class="quick-links">
+      <h2>League Pages</h2>
+      <div class="links-grid">
+        <a href="/afl-fantasy/standings" class="link-card">
+          <div class="link-icon">📊</div>
+          <h3>Standings</h3>
+          <p>View current season standings by division</p>
+        </a>
+
+        <a href="/afl-fantasy/rosters" class="link-card">
+          <div class="link-icon">👥</div>
+          <h3>Rosters</h3>
+          <p>Browse team rosters and player information</p>
+        </a>
+
+        <a href="/afl-fantasy/playoffs" class="link-card">
+          <div class="link-icon">🏆</div>
+          <h3>Playoffs</h3>
+          <p>Playoff bracket and tournament results</p>
+        </a>
+
+        <a href="/afl-fantasy/draft-predictor" class="link-card">
+          <div class="link-icon">📈</div>
+          <h3>Draft Predictor</h3>
+          <p>Projected draft order for upcoming season</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- League Info -->
+    <section class="league-info-section">
+      <h2>League Structure</h2>
+      <div class="structure-grid">
+        {aflConfig.conferences.map(conf => (
+          <div class="conference-card">
+            <h3>{conf.name}</h3>
+            <div class="divisions">
+              {conf.divisions.map(div => (
+                <div class="division-badge">{div}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .landing-page {
+    padding: 2rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .hero-section {
+    background: var(--hero-bg-color, #fff);
+    color: var(--hero-text-color, #002244);
+    padding: 4rem 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    margin-bottom: 3rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  .league-title {
+    font-size: 3rem;
+    font-weight: 900;
+    margin: 0 0 1rem 0;
+  }
+
+  .league-info {
+    font-size: 1.25rem;
+    margin: 0;
+    opacity: 0.95;
+  }
+
+  .quick-links {
+    margin-bottom: 3rem;
+  }
+
+  .quick-links h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #1e293b;
+  }
+
+  .links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .link-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 2px solid #e2e8f0;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+
+  .link-card:hover {
+    border-color: #c41e3a;
+    box-shadow: 0 10px 15px -3px rgb(196 30 58 / 0.2);
+    transform: translateY(-2px);
+  }
+
+  .link-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .link-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #1e293b;
+  }
+
+  .link-card p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.5;
+  }
+
+  .league-info-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  .league-info-section h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    color: #1e293b;
+  }
+
+  .structure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .conference-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 2px solid #cbd5e1;
+  }
+
+  .conference-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: #002244;
+  }
+
+  .divisions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .division-badge {
+    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 767px) {
+    .landing-page {
+      padding: 1rem 0.5rem;
+    }
+
+    .hero-section {
+      padding: 3rem 1.5rem;
+    }
+
+    .league-title {
+      font-size: 2rem;
+    }
+
+    .league-info {
+      font-size: 1rem;
+    }
+
+    .links-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .structure-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

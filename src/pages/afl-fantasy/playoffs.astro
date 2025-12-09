@@ -1,0 +1,1476 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import YearSelector from '../../components/theleague/YearSelector.astro';
+import ConferenceStandingsTable from '../../components/theleague/ConferenceStandingsTable.astro';
+import { getConferenceStandings } from '../../utils/standings';
+import {
+  buildSeedMaps,
+  // fetchLiveScoring, // moved to lazy client fetch (disabled for SSR perf)
+  // fetchPlayoffBracket,
+  // fetchPlayoffBrackets,
+  // fetchWeeklyResults,
+  formatRecord,
+  normalizePlayoffBracket,
+  type SeededTeam,
+  type NormalizedBracket,
+} from '../../utils/playoffs';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+export const prerender = false;
+
+const envHost =
+  (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';
+const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
+
+const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+const bracketFallbackFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/playoff-brackets.json', {
+  eager: true,
+});
+const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
+  eager: true,
+});
+
+const availableYears = Object.keys(standingsFeeds)
+  .map(path => {
+    const match = path.match(/\/(\d{4})\/standings\.json$/);
+    return match ? parseInt(match[1], 10) : null;
+  })
+  .filter((year): year is number => year !== null)
+  .sort((a, b) => b - a);
+
+const defaultYear = availableYears[0] || new Date().getFullYear();
+const requestedYear = Astro.url.searchParams.get('year');
+const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+const requestedView = Astro.url.searchParams.get('view');
+const requestedMode = Astro.url.searchParams.get('mode');
+
+type TabView = 'winners' | 'toilet' | 'prizes';
+type BracketMode = 'projected' | 'clean';
+
+if (!availableYears.includes(selectedYear)) {
+  return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
+}
+
+const selectedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
+  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
+  | undefined;
+
+if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
+  return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
+}
+
+const franchises = selectedFeed.leagueStandings.franchise;
+
+// Get conference standings for both conferences
+const conferenceAStandings = getConferenceStandings(franchises, aflConfig, 'A');
+const conferenceBStandings = getConferenceStandings(franchises, aflConfig, 'B');
+
+const fallbackBracketFeed =
+  bracketFallbackFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/playoff-brackets.json`] as
+    | { playoffBrackets?: any; brackets?: Record<string, any> }
+    | undefined;
+const fallbackBracketMetas = fallbackBracketFeed?.playoffBrackets?.playoffBracket || [];
+const fallbackBracketDetails = fallbackBracketFeed?.brackets || {};
+
+const assetMap = new Map(
+  (aflConfig?.teams ?? []).map(team => [
+    team.franchiseId,
+    {
+      icon: team.icon,
+      banner: team.banner,
+      aliases: team.aliases || [],
+      name: team.name,
+    },
+  ])
+);
+
+// Combine both conferences for seed maps
+const allPlayoffTeams = [
+  ...conferenceAStandings.divisionWinners,
+  ...conferenceAStandings.wildCards,
+  ...conferenceBStandings.divisionWinners,
+  ...conferenceBStandings.wildCards,
+];
+const seedMaps = buildSeedMaps(allPlayoffTeams, assetMap);
+
+// Use cached playoff bracket metadata only to avoid live fetch latency
+let bracketMetas: Array<{ id: string; name?: string; startWeek?: number; teamsInvolved?: number }> =
+  fallbackBracketMetas;
+
+const fallbackBracketIds = ['1', '3', '2', '5', '6', '7'];
+const bracketIdsToFetch =
+  bracketMetas.length > 0 ? bracketMetas.map(b => b.id) : fallbackBracketMetas.length > 0 ? fallbackBracketMetas.map((b: any) => b.id) : fallbackBracketIds;
+
+const bracketDetails = await Promise.all(
+  bracketIdsToFetch.map(async id => {
+    const meta = bracketMetas.find(b => b.id === id);
+    const fallbackRaw = fallbackBracketDetails?.[id];
+    return { id, meta, bracket: fallbackRaw ? normalizePlayoffBracket(fallbackRaw, meta) : null };
+  })
+);
+
+const normalizedBrackets: NormalizedBracket[] = bracketIdsToFetch.map(id => {
+  const entry = bracketDetails.find(b => b?.id === id);
+  const meta = entry?.meta || fallbackBracketMetas.find((b: any) => b.id === id);
+  const bracket = entry?.bracket;
+  if (bracket) return bracket;
+
+  return {
+    id,
+    name: meta?.name || `Bracket ${id}`,
+    startWeek: meta?.startWeek,
+    teamsInvolved: meta?.teamsInvolved,
+    rounds: [],
+  };
+});
+
+const bracketOrder = ['1', '3', '2', '5', '6', '7'];
+const sortedBrackets: NormalizedBracket[] = [
+  ...bracketOrder
+    .map(id => normalizedBrackets.find(b => b.id === id))
+    .filter((b): b is NormalizedBracket => Boolean(b)),
+  ...normalizedBrackets.filter(b => !bracketOrder.includes(b.id)),
+];
+
+const availableViews: TabView[] = ['winners', 'toilet', 'prizes'];
+const tabView: TabView = availableViews.includes(requestedView as TabView)
+  ? (requestedView as TabView)
+  : 'winners';
+
+const availableModes: BracketMode[] = ['projected', 'clean'];
+const bracketMode: BracketMode = availableModes.includes(requestedMode as BracketMode)
+  ? (requestedMode as BracketMode)
+  : 'projected';
+
+const winnersSet = new Set(['1', '2', '3']);
+const toiletSet = new Set(['5', '6', '7']);
+
+const weeksNeeded = Array.from(
+  new Set(sortedBrackets.flatMap(bracket => bracket.rounds.map(round => round.week)).filter(Boolean))
+);
+
+const weeklyResultsEntries = await Promise.all(
+  weeksNeeded.map(async week => {
+    // Prefer cached weekly results if available for this year
+    const cachedKey = `../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`;
+    const cachedFeed = weeklyResultsFeeds[cachedKey] as
+      | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
+      | undefined;
+    const cachedWeek = cachedFeed?.weeks?.find(entry => entry.week === week);
+    if (cachedWeek?.scores) {
+      const scoresMap = new Map<string, number>(
+        Object.entries(cachedWeek.scores).map(([id, score]) => [id, Number(score) || 0])
+      );
+      return [week, { week, scores: scoresMap }] as const;
+    }
+    return [week, null] as const;
+  })
+);
+
+const weeklyResults = new Map<number, Map<string, number>>();
+weeklyResultsEntries.forEach(([week, result]) => {
+  if (result?.scores) {
+    weeklyResults.set(week, result.scores);
+  }
+});
+
+const resolvedGames = new Map<string, { winner?: SeededTeam; loser?: SeededTeam }>();
+
+const getSeedMapForBracket = (bracketId: string) => {
+  if (bracketId === '3') return seedMaps.playInSeeds;
+  if (['5', '6', '7'].includes(bracketId)) return seedMaps.toiletSeeds;
+  return seedMaps.championshipSeeds;
+};
+
+const formatPlaceholder = (ref: any, slot: 'home' | 'away') => {
+  if (ref?.winner_of_game) {
+    return `Winner of Game ${ref.winner_of_game}${ref.bracket ? ` (Bracket ${ref.bracket})` : ''}`;
+  }
+  if (ref?.loser_of_game) {
+    return `Loser of Game ${ref.loser_of_game}${ref.bracket ? ` (Bracket ${ref.bracket})` : ''}`;
+  }
+  if (ref?.seed) return `Seed ${ref.seed}`;
+  return `${slot === 'home' ? 'Home' : 'Away'} TBD`;
+};
+
+const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
+  const sourceBracket = ref?.bracket ? String(ref.bracket) : bracketId;
+  const seedMap = getSeedMapForBracket(sourceBracket);
+
+  if (ref?.seed && seedMap.has(ref.seed)) {
+    return seedMap.get(ref.seed);
+  }
+
+  if (ref?.seed && seedMaps.playInSeeds.has(ref.seed)) {
+    return seedMaps.playInSeeds.get(ref.seed);
+  }
+
+  if (ref?.winner_of_game || ref?.loser_of_game) {
+    const key = `${sourceBracket}-${ref.winner_of_game || ref.loser_of_game}`;
+    const result = resolvedGames.get(key);
+    return ref.winner_of_game ? result?.winner : result?.loser;
+  }
+
+  return undefined;
+};
+
+const getScoreForTeam = (week: number, franchiseId: string) => {
+  const weekly = weeklyResults.get(week);
+  const weeklyScore = weekly?.get(franchiseId);
+  if (typeof weeklyScore === 'number') return weeklyScore;
+  return undefined;
+};
+
+const getRemainingSeconds = (week: number, franchiseId: string) => {
+  // Live scoring disabled for SSR; treat remaining time as 0
+  return 0;
+};
+
+type MatchupView = {
+  id: string;
+  week: number;
+  status: 'scheduled' | 'live' | 'final';
+  home: {
+    team?: SeededTeam;
+    label: string;
+    record?: string;
+    seedLabel?: string;
+    icon?: string;
+  };
+  away: {
+    team?: SeededTeam;
+    label: string;
+    record?: string;
+    seedLabel?: string;
+    icon?: string;
+  };
+  scores: {
+    home?: number;
+    away?: number;
+  };
+  winnerId?: string;
+};
+
+const buildBracketViews = () => {
+  const views: Array<
+    NormalizedBracket & { emphasis?: boolean; roundsView: MatchupView[][] }
+  > = [];
+  const scoresAvailable = weeklyResults.size > 0;
+
+  sortedBrackets.forEach(bracket => {
+    const roundsView: MatchupView[][] = [];
+
+    bracket.rounds.forEach(round => {
+      const games = round.games.map(game => {
+        const homeTeam = bracketMode === 'projected' ? resolveTeam(game.home, bracket.id) : undefined;
+        const awayTeam = bracketMode === 'projected' ? resolveTeam(game.away, bracket.id) : undefined;
+        const homeLabel =
+          homeTeam?.displayName ||
+          homeTeam?.teamName ||
+          formatPlaceholder(game.home, 'home');
+        const awayLabel =
+          awayTeam?.displayName ||
+          awayTeam?.teamName ||
+          formatPlaceholder(game.away, 'away');
+        const homeScoreValue = homeTeam?.id ? getScoreForTeam(round.week, homeTeam.id) : undefined;
+        const awayScoreValue = awayTeam?.id ? getScoreForTeam(round.week, awayTeam.id) : undefined;
+
+        const homeScore =
+          homeTeam?.id && typeof homeScoreValue === 'number' ? homeScoreValue : undefined;
+        const awayScore =
+          awayTeam?.id && typeof awayScoreValue === 'number' ? awayScoreValue : undefined;
+
+        const homeRemaining = homeTeam?.id ? getRemainingSeconds(round.week, homeTeam.id) : 0;
+        const awayRemaining = awayTeam?.id ? getRemainingSeconds(round.week, awayTeam.id) : 0;
+
+        const hasHomeScore = typeof homeScore === 'number' && homeScore > 0;
+        const hasAwayScore = typeof awayScore === 'number' && awayScore > 0;
+        const hasAnyScore = hasHomeScore || hasAwayScore;
+
+        let status: MatchupView['status'] = 'scheduled';
+        if (scoresAvailable) {
+          if ((homeRemaining > 0 || awayRemaining > 0) && hasAnyScore) {
+            status = 'live';
+          } else if (homeRemaining === 0 && awayRemaining === 0 && hasAnyScore) {
+            status = 'final';
+          }
+        }
+
+        let winnerId: string | undefined;
+        if (
+          homeTeam?.id &&
+          awayTeam?.id &&
+          homeScore !== undefined &&
+          awayScore !== undefined &&
+          homeScore !== awayScore
+        ) {
+          winnerId = homeScore > awayScore ? homeTeam.id : awayTeam.id;
+          const loserId = winnerId === homeTeam.id ? awayTeam.id : homeTeam.id;
+          resolvedGames.set(`${bracket.id}-${game.id}`, {
+            winner: winnerId === homeTeam.id ? homeTeam : awayTeam,
+            loser: winnerId === homeTeam.id ? awayTeam : homeTeam,
+          });
+        }
+
+        return {
+          id: game.id,
+          week: round.week,
+          status,
+          home: {
+            team: homeTeam,
+            label: homeLabel,
+            record: homeTeam?.record || (homeTeam ? formatRecord(homeTeam.h2hwlt) : undefined),
+            seedLabel: homeTeam?.originalSeed ? `#${homeTeam.originalSeed}` : undefined,
+            icon: homeTeam?.teamIcon || homeTeam?.icon,
+          },
+          away: {
+            team: awayTeam,
+            label: awayLabel,
+            record: awayTeam?.record || (awayTeam ? formatRecord(awayTeam.h2hwlt) : undefined),
+            seedLabel: awayTeam?.originalSeed ? `#${awayTeam.originalSeed}` : undefined,
+            icon: awayTeam?.teamIcon || awayTeam?.icon,
+          },
+          scores: { home: homeScore, away: awayScore },
+          winnerId,
+        };
+      });
+
+      roundsView.push(games);
+    });
+
+    views.push({
+      ...bracket,
+      emphasis: bracket.id === '1',
+      roundsView,
+    });
+  });
+
+  return views;
+};
+
+const bracketViews = buildBracketViews();
+const filteredBrackets = bracketViews.filter(bracket => {
+  if (tabView === 'prizes') return false;
+  if (tabView === 'winners') return winnersSet.has(bracket.id);
+  return toiletSet.has(bracket.id) || (!winnersSet.has(bracket.id) && bracket.id !== '2');
+});
+const hasBrackets = filteredBrackets.length > 0;
+
+const REGULAR_SEASON_WEEKS = 14;
+const WEEKLY_HIGH_PAYOUT = 3;
+const placementPayouts = {
+  champion: 300,
+  second: 150,
+  third: 100,
+  fourth: 50,
+  fifth: 45,
+  sixth: 25,
+};
+
+const franchiseLookup = new Map(
+  franchises.map(f => [String((f as any).id ?? (f as any).franchise_id ?? ''), f])
+);
+
+const getTeamDisplay = (franchiseId?: string) => {
+  if (!franchiseId) return undefined;
+  const id = String(franchiseId);
+  const asset = assetMap.get(id);
+  const franchise = franchiseLookup.get(id);
+  return {
+    id,
+    name: asset?.name || franchise?.name || franchise?.franchise_name || `Franchise ${id}`,
+    icon: asset?.icon,
+  };
+};
+
+const findFinalGame = (bracketId: string) => {
+  const bracket = bracketViews.find(b => b.id === bracketId);
+  if (!bracket || !bracket.roundsView.length) return undefined;
+  const lastRound = bracket.roundsView[bracket.roundsView.length - 1];
+  const game = lastRound?.[0];
+  if (!game) return undefined;
+  const winnerId = game.winnerId;
+  const homeId = game.home.team?.id;
+  const awayId = game.away.team?.id;
+  const loserId =
+    winnerId && homeId && awayId
+      ? winnerId === homeId
+        ? awayId
+        : homeId
+      : undefined;
+  return { winnerId, loserId, game };
+};
+
+const playoffPlacements = (() => {
+  const champGame = findFinalGame('1');
+  const thirdGame = findFinalGame('2');
+  const fifthGame = findFinalGame('3');
+
+  return [
+    { label: 'Champion', amount: placementPayouts.champion, teamId: champGame?.winnerId },
+    { label: '2nd Place', amount: placementPayouts.second, teamId: champGame?.loserId },
+    { label: '3rd Place', amount: placementPayouts.third, teamId: thirdGame?.winnerId },
+    { label: '4th Place', amount: placementPayouts.fourth, teamId: thirdGame?.loserId },
+    { label: '5th Place', amount: placementPayouts.fifth, teamId: fifthGame?.winnerId },
+    { label: '6th Place', amount: placementPayouts.sixth, teamId: fifthGame?.loserId },
+  ];
+})();
+
+const weeklyHighs = await Promise.all(
+  Array.from({ length: REGULAR_SEASON_WEEKS }, async (_, idx) => {
+    const week = idx + 1;
+    // Use cached weekly results if available; otherwise mark as missing
+    const cachedKey = `../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`;
+    const cachedFeed = weeklyResultsFeeds[cachedKey] as
+      | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
+      | undefined;
+    const cachedWeek = cachedFeed?.weeks?.find(entry => entry.week === week);
+    const scoresRaw = cachedWeek?.scores;
+    const entries =
+      scoresRaw
+        ? Object.entries(scoresRaw as Record<string, number>)
+        : [];
+    if (entries.length === 0) return { week, franchiseId: undefined, score: undefined };
+    const [franchiseId, score] = entries.reduce(
+      (best, current) => ((current[1] ?? 0) > (best[1] ?? 0) ? current : best),
+      entries[0]
+    );
+    return { week, franchiseId: String(franchiseId), score: typeof score === 'number' ? score : undefined };
+  })
+);
+
+const weeklyHighTotal = weeklyHighs.filter(w => w.franchiseId && typeof w.score === 'number').length * WEEKLY_HIGH_PAYOUT;
+
+type PrizeLine = {
+  label: string;
+  amount: number;
+  teamId?: string;
+  score?: number;
+  week?: number;
+};
+
+const placementPrizeLines: PrizeLine[] = playoffPlacements.map(entry => ({
+  label: entry.label,
+  amount: entry.amount,
+  teamId: entry.teamId,
+}));
+
+const weeklyPrizeLines: PrizeLine[] = weeklyHighs.map(entry => ({
+  label: `Week ${entry.week} High Score`,
+  amount: entry.franchiseId ? WEEKLY_HIGH_PAYOUT : 0,
+  teamId: entry.franchiseId,
+  score: entry.score,
+  week: entry.week,
+}));
+
+const prizeTotalsByTeam = new Map<
+  string,
+  {
+    team: ReturnType<typeof getTeamDisplay>;
+    titles: string[];
+    total: number;
+  }
+>();
+
+const addPrize = (teamId: string | undefined, amount: number, title: string) => {
+  if (!teamId) return;
+  const id = String(teamId);
+  const entry = prizeTotalsByTeam.get(id) || {
+    team: getTeamDisplay(id),
+    titles: [],
+    total: 0,
+  };
+  entry.titles.push(title);
+  entry.total += amount;
+  prizeTotalsByTeam.set(id, entry);
+};
+
+placementPrizeLines.forEach(line => addPrize(line.teamId, line.amount, line.label));
+weeklyPrizeLines.forEach(line => addPrize(line.teamId, line.amount, `Week ${line.week} High Score`));
+
+const prizeSummary = Array.from(prizeTotalsByTeam.values()).sort((a, b) => b.total - a.total);
+const grandTotal =
+  placementPrizeLines.reduce((sum, p) => sum + p.amount, 0) + weeklyHighTotal;
+---
+
+<TheLeagueLayout title="Playoff Brackets">
+  <section class="playoff-page">
+    <header class="playoff-hero">
+      <div>
+        <h1 class="hero-title">Playoff Brackets</h1>
+        <p class="hero-subtitle">
+          Track championship and consolation paths. Switch views to see Winners, Toilet, or Prizes.
+        </p>
+      </div>
+      <div class="view-selector">
+        <button class={`view-tab ${tabView === 'winners' ? 'active' : ''}`} data-view="winners" title="Winners">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+            <use href="/assets/icons/sprite.svg#icon-trophy"></use>
+          </svg>
+        </button>
+        <button class={`view-tab ${tabView === 'toilet' ? 'active' : ''}`} data-view="toilet" title="Toilet Bowl">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+            <use href="/assets/icons/sprite.svg#icon-toilet"></use>
+          </svg>
+        </button>
+        <button class={`view-tab ${tabView === 'prizes' ? 'active' : ''}`} data-view="prizes" title="Prizes">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+            <use href="/assets/icons/sprite.svg#icon-money-bag"></use>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="season-row">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
+    </div>
+
+    <!-- Conference Playoff Standings -->
+    {tabView === 'winners' && (
+      <div class="conference-standings-section">
+        <h2 class="section-heading">Playoff Seeding</h2>
+        <div class="conferences-grid">
+          <ConferenceStandingsTable
+            conferenceName={conferenceAStandings.conference.name}
+            divisionWinners={conferenceAStandings.divisionWinners}
+            wildCards={conferenceAStandings.wildCards}
+            year={selectedYear}
+          />
+          <ConferenceStandingsTable
+            conferenceName={conferenceBStandings.conference.name}
+            divisionWinners={conferenceBStandings.divisionWinners}
+            wildCards={conferenceBStandings.wildCards}
+            year={selectedYear}
+          />
+        </div>
+      </div>
+    )}
+
+    {tabView !== 'prizes' && !hasBrackets && (
+      <div class="empty-state">
+        <p>Brackets are not available for this season yet. Check back once playoff seeds are set.</p>
+      </div>
+    )}
+
+    {tabView === 'prizes' ? (
+      <div class="prizes-card">
+        <div class="prizes-header">
+          <div>
+            <h2>Prizes</h2>
+            <p class="prizes-subtitle">
+              {placementPrizeLines.some(p => !p.teamId) ? 'Projected prize money — awaiting final results' : 'Final prize money'}
+            </p>
+          </div>
+          <div class="prizes-total">
+            <span>Total</span>
+            <strong>${grandTotal}</strong>
+          </div>
+        </div>
+        <div class="prizes-body">
+          <div class="prizes-grid-top">
+            <section class="prize-section">
+              <header class="prize-section__header">
+                <h3>Season Payouts</h3>
+                <span class="section-total">${placementPrizeLines.reduce((sum, p) => sum + p.amount, 0)}</span>
+              </header>
+              <ul class="prize-list">
+                {placementPrizeLines.map(line => {
+                  const team = getTeamDisplay(line.teamId);
+                  return (
+                    <li class="prize-row">
+                      <div class="prize-row__left">
+                        <div class="icon-thumb">
+                          {team?.icon ? (
+                            <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+                          ) : (
+                            <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                          )}
+                        </div>
+                        <div class="prize-row__info">
+                          <p class="prize-label">{line.label}</p>
+                          <p class="prize-team">{team?.name ?? 'TBD'}</p>
+                        </div>
+                      </div>
+                      <div class="prize-row__amount">
+                        <span>${line.amount}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            <section class="prize-section prize-section--totals">
+              <header class="prize-section__header">
+                <h3>Team Totals</h3>
+              </header>
+              <ul class="team-total-list">
+                {prizeSummary.length === 0 ? (
+                  <li class="prize-row">No payouts calculated yet.</li>
+                ) : (
+                  prizeSummary.map(entry => (
+                    <li class="prize-row">
+                      <div class="prize-row__left">
+                        <div class="icon-thumb">
+                          {entry.team?.icon ? (
+                            <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
+                          ) : (
+                            <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                          )}
+                        </div>
+                        <div class="prize-row__info">
+                          <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
+                          <p class="prize-titles">{entry.titles.join(' · ') || '—'}</p>
+                        </div>
+                      </div>
+                      <div class="prize-row__amount">
+                        <span>${entry.total}</span>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </section>
+          </div>
+
+          <section class="prize-section">
+            <header class="prize-section__header">
+              <h3>Weekly High Scores (Weeks 1–14)</h3>
+              <span class="section-total">${weeklyHighTotal}</span>
+            </header>
+            <ul class="prize-list">
+              {weeklyPrizeLines.map(line => {
+                const team = getTeamDisplay(line.teamId);
+                return (
+                  <li class="prize-row">
+                    <div class="prize-row__left">
+                      <div class="week-badge">W{line.week}</div>
+                      <div class="prize-row__info">
+                        <p class="prize-label">{line.label}</p>
+                        <p class="prize-team">
+                          {team?.name ?? 'TBD'}
+                          {typeof line.score === 'number' && (
+                            <span class="prize-score"> · {line.score.toFixed(2)} pts</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="prize-row__amount">
+                      <span>{line.teamId ? `$${line.amount}` : '$0'}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+      </div>
+    ) : hasBrackets && (
+      <div class="brackets-grid">
+        {filteredBrackets.map(bracket => (
+          <article
+            class={`bracket-card ${bracket.emphasis ? 'bracket-card--championship' : ''} ${bracket.rounds?.length > 1 ? 'bracket-card--full' : ''}`}
+            id={`bracket-${bracket.id}`}
+          >
+            <div class="bracket-header">
+              <div>
+                <p class="bracket-label">{bracket.emphasis ? 'Championship' : 'Bracket'}</p>
+                <h2 class="bracket-title">{bracket.name || `Bracket ${bracket.id}`}</h2>
+                <p class="bracket-meta">
+                  Starts week {bracket.startWeek || '?'} · {bracket.teamsInvolved ?? '?'} teams
+                </p>
+              </div>
+              <div class="bracket-pill">
+                {bracket.emphasis ? 'Primary' : 'Side bracket'}
+              </div>
+            </div>
+
+            {bracket.roundsView.length === 0 ? (
+              <div class="bracket-missing">Bracket data not available for this season.</div>
+            ) : (
+              <div class="bracket-scroll" aria-label={`${bracket.name || 'Bracket'} rounds`}>
+                {bracket.roundsView.map((round, roundIdx) => (
+                  <div class="bracket-round">
+                    <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
+                    {round.map(game => (
+                      <div class="matchup-card" data-status={game.status}>
+                        <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.home.seedLabel || '—'}</span>
+                            {game.home.icon ? (
+                              <img
+                                src={game.home.icon}
+                                alt={`${game.home.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.home.label}</div>
+                              {game.home.record && <div class="team-record">{game.home.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class="score"
+                            data-live-week={game.week}
+                            data-live-team={game.home.team?.id || ''}
+                          >
+                            {typeof game.scores.home === 'number' ? game.scores.home.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.away.seedLabel || '—'}</span>
+                            {game.away.icon ? (
+                              <img
+                                src={game.away.icon}
+                                alt={`${game.away.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.away.label}</div>
+                              {game.away.record && <div class="team-record">{game.away.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class="score"
+                            data-live-week={game.week}
+                            data-live-team={game.away.team?.id || ''}
+                          >
+                            {typeof game.scores.away === 'number' ? game.scores.away.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="matchup-status">
+                          <span class={`status-pill status-${game.status}`}>
+                            {game.status === 'live' && 'Live'}
+                            {game.status === 'final' && 'Final'}
+                            {game.status === 'scheduled' && 'Scheduled'}
+                          </span>
+                          {game.winnerId && (
+                            <span class="winner-flag">
+                              Winner:{' '}
+                              {game.winnerId === game.home.team?.id
+                                ? game.home.label
+                                : game.away.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    )}
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .playoff-page {
+    padding: clamp(1.5rem, 2vw, 2.5rem) clamp(1rem, 1.5vw, 1.75rem);
+    background: var(--primary-page-bg, #f1f1f1);
+    color: var(--primary-text-color, #0f172a);
+  }
+
+  .playoff-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    align-items: center;
+    padding: clamp(1.25rem, 2vw, 1.75rem);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    margin-bottom: 1rem;
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: clamp(1.8rem, 2vw, 2.2rem);
+    color: #0f172a;
+  }
+
+  .hero-subtitle {
+    margin: 0.35rem 0 0;
+    color: #475569;
+    max-width: 720px;
+    font-size: 0.98rem;
+  }
+
+  .season-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #ffffff;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    margin-bottom: 1rem;
+  }
+
+  .filter-item {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: flex-start;
+  }
+
+  .filter-label {
+    font-size: 0.85rem;
+    color: #475569;
+  }
+
+  .view-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .view-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem .7rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 69px;
+  }
+  @media (min-width: 640px) {
+    .view-tab {
+    padding: 0.75rem;
+    }
+  }
+
+  .view-tab:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  .view-tab.active {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
+
+  .view-tab__icon {
+    max-width: var(--icon-btn-default-size, 30px);
+    max-height: var(--icon-btn-default-size, 30px);
+    width: 100%;
+    height: 100%;
+    fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
+  }
+
+  .view-tab[data-active="true"] .view-tab__icon {
+    fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
+  }
+
+  .brackets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .prizes-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .prizes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .prizes-subtitle {
+    margin: 0.25rem 0 0;
+    color: #475569;
+  }
+
+  .prizes-total {
+    background: #0ea5e9;
+    color: #0b172a;
+    padding: 0.65rem 0.9rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 110px;
+  }
+
+  .prizes-total strong {
+    font-size: 1.3rem;
+  }
+
+  .prizes-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .prizes-grid-top {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  .prize-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem;
+    background: #f8fafc;
+  }
+
+  .prize-section__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .prize-section__header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  .section-total {
+    font-weight: 700;
+    color: #0f172a;
+    background: #e2e8f0;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+  }
+
+  .prize-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+
+  .prize-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    justify-items: start;
+    gap: 0.75rem;
+    padding: 0.65rem 0.5rem;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+  }
+
+  .prize-row__left {
+    display: grid;
+    grid-template-columns: 1fr auto;
+        align-items: center;
+    gap: 0.65rem;
+  }
+
+  .prize-row__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .prize-label {
+    margin: 0;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .prize-team {
+    margin: 0;
+    color: #475569;
+    font-size: 0.95rem;
+  }
+
+  .prize-score {
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  .prize-row__amount {
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
+  .icon-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #e2e8f0;
+    display: grid;
+    place-items: center;
+  }
+
+  .icon-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .icon-thumb--placeholder {
+    width: 48px;
+    height: 48px;
+    background: #cbd5e1;
+    border-radius: 12px;
+  }
+
+  .week-badge {
+    background: #e2e8f0;
+    color: #0f172a;
+    padding: 0.35rem 0.55rem;
+    border-radius: 8px;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: center;
+  }
+
+  .prize-titles {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.9rem;
+  }
+
+  .team-total-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+
+  .bracket-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    grid-column: 1 / -1;
+  }
+
+  .bracket-card--championship {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 50%);
+    border-color: rgba(28, 73, 124, 0.35);
+    box-shadow: 0 12px 30px rgba(28, 73, 124, 0.15);
+  }
+
+
+  .bracket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .bracket-label {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #2e8743;
+    letter-spacing: 0.04em;
+  }
+
+  .bracket-title {
+    margin: 0.1rem 0;
+    font-size: 1.35rem;
+    color: #0f172a;
+  }
+
+  .bracket-meta {
+    margin: 0;
+    color: #475569;
+    font-size: 0.9rem;
+  }
+
+  .bracket-pill {
+    padding: 0.45rem 0.75rem;
+    background: #eef2ff;
+    color: #312e81;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .bracket-scroll {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 1fr);
+    gap: 0.9rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .bracket-round {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .round-label {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #1c497c;
+    margin: 0 0 0.35rem 0.25rem;
+  }
+
+  .matchup-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem;
+    position: relative;
+    display: grid;
+    row-gap: 0.6rem;
+  }
+
+  .matchup-card[data-status='live'] {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+  }
+
+  .matchup-card[data-status='final'] {
+    border-color: rgba(28, 73, 124, 0.35);
+  }
+
+  .matchup-card[data-status='scheduled'] {
+    border-style: dashed;
+  }
+
+  .team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .team-text {
+    min-width: 0;
+  }
+
+  .team-name {
+    margin: 0;
+    font-weight: 800;
+    font-size: 0.98rem;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-record {
+    margin: 0.15rem 0 0;
+    font-size: 0.82rem;
+    color: #475569;
+  }
+
+  .team-icon {
+    width: 2rem;
+    height: 2rem;
+    object-fit: contain;
+  }
+
+  .team-icon--placeholder {
+    background: #e2e8f0;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .seed-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.82rem;
+    min-width: 1rem;
+  }
+
+  .score {
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #0f172a;
+    min-width: 3.4rem;
+    text-align: right;
+  }
+
+  .matchup-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: #475569;
+  }
+
+  .status-pill {
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    font-weight: 700;
+  }
+
+  .status-live {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: rgba(194, 65, 12, 0.25);
+  }
+
+  .status-final {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: rgba(14, 116, 144, 0.25);
+  }
+
+  .status-scheduled {
+    background: #eef2ff;
+    color: #312e81;
+    border-color: rgba(49, 46, 129, 0.25);
+  }
+
+  .winner-flag {
+    font-weight: 700;
+    color: #1c497c;
+  }
+
+  .empty-state {
+    background: #fff;
+    border: 1px dashed #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-align: center;
+    color: #475569;
+  }
+
+  .bracket-missing {
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 1rem;
+    color: #475569;
+    background: #f8fafc;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  @media (max-width: 1024px) {
+    .playoff-hero {
+      flex-direction: column;
+    }
+
+    .controls-row {
+      width: 100%;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .bracket-card--championship,
+    .bracket-card--full {
+      grid-column: span 1;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .playoff-page {
+      padding: 1.25rem 1rem;
+    }
+
+    .bracket-scroll {
+      grid-auto-columns: minmax(220px, 1fr);
+    }
+
+    .team-name {
+      max-width: 150px;
+    }
+
+    .view-tabs {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+  }
+
+  /* Conference Standings Section */
+  .conference-standings-section {
+    margin: 2rem 0;
+  }
+
+  .section-heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    color: #1e293b;
+    text-align: center;
+  }
+
+  .conferences-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+    gap: 2rem;
+  }
+
+  @media (max-width: 767px) {
+    .conferences-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-heading {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+<script>
+  function setupPlayoffSelectors() {
+    const updateParam = (key, value) => {
+      const url = new URL(window.location.href);
+      url.searchParams.set(key, value);
+      window.location.href = url.toString();
+    };
+
+    document.querySelectorAll('.view-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view || 'winners';
+        updateParam('view', view);
+      });
+    });
+
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupPlayoffSelectors);
+  } else {
+    setupPlayoffSelectors();
+  }
+
+  document.addEventListener('astro:after-swap', setupPlayoffSelectors);
+</script>
+
+{hasBrackets && (
+  <script is:inline>
+    (() => {
+      const liveWeeks = {JSON.stringify(weeksNeeded)};
+      const leagueId = "{envLeagueId}";
+      const host = "{envHost}";
+      const year = {selectedYear};
+
+      const scoreNodes = Array.from(document.querySelectorAll('[data-live-week][data-live-team]'));
+      if (!scoreNodes.length || !leagueId || !host || !year || !Array.isArray(liveWeeks)) return;
+
+      const updateScores = (liveData) => {
+        liveData.forEach(({ week, scores }) => {
+          scoreNodes.forEach(node => {
+            const nodeWeek = Number(node.getAttribute('data-live-week'));
+            const teamId = node.getAttribute('data-live-team');
+            if (nodeWeek !== week || !teamId) return;
+            const val = scores[teamId];
+            if (typeof val === 'number') {
+              node.textContent = val.toFixed(2);
+            }
+          });
+        });
+      };
+
+      const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+      const fetchLiveWeek = async (week) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        try {
+          const url = `${host}/${year}/export?TYPE=liveScoring&L=${leagueId}&W=${week}&JSON=1`;
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
+          const data = await res.json();
+          const franchises = data?.liveScoring?.franchise
+            ? Array.isArray(data.liveScoring.franchise)
+              ? data.liveScoring.franchise
+              : [data.liveScoring.franchise]
+            : [];
+          const scores = {};
+          franchises.forEach(team => {
+            if (!team?.id) return;
+            scores[String(team.id)] = Number(team.score) || 0;
+          });
+          return { week, scores };
+        } catch (_err) {
+          return null;
+        } finally {
+          clearTimeout(timer);
+        }
+      };
+
+      const run = async () => {
+        const results = [];
+        for (const wk of liveWeeks) {
+          const res = await fetchLiveWeek(wk);
+          if (res) results.push(res);
+          await delay(750);
+        }
+        if (results.length) updateScores(results);
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run, { once: true });
+      } else {
+        run();
+      }
+
+      document.addEventListener('astro:after-swap', run);
+    })();
+  </script>
+)}

@@ -1,0 +1,508 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+// Get league context from URL
+const league = getLeagueContext(Astro.url);
+const baseUrl = getLeagueBaseUrl(league);
+
+// Import rosters data for AFL Fantasy
+const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', {
+  eager: true,
+});
+
+// Import players data for AFL Fantasy
+const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', {
+  eager: true,
+});
+
+// Extract available years
+const availableYears = Object.keys(rostersFeeds)
+  .map(path => {
+    const match = path.match(/\/(\d{4})\/rosters\.json$/);
+    return match ? parseInt(match[1], 10) : null;
+  })
+  .filter((year): year is number => year !== null)
+  .sort((a, b) => b - a);
+
+// Get selected year
+const defaultYear = availableYears[0] || 2025;
+const requestedYear = Astro.url.searchParams.get('year');
+const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+
+// Validate year
+if (!availableYears.includes(selectedYear)) {
+  return Astro.redirect(`${baseUrl}/rosters?year=${defaultYear}`);
+}
+
+// Get rosters data
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const rostersData = getModuleData(
+  rostersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/rosters.json`]
+);
+
+const playersData = getModuleData(
+  playersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]
+);
+
+if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
+  return Astro.redirect(`${baseUrl}/rosters?year=${defaultYear}`);
+}
+
+// Create players lookup map
+const playersMap = new Map();
+playersData.players.player.forEach((p: any) => {
+  playersMap.set(p.id, {
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    team: p.team,
+    age: p.age,
+    college: p.college,
+  });
+});
+
+// Get selected franchise from query param or default to first team
+const selectedFranchiseId = Astro.url.searchParams.get('franchise') || aflConfig.teams[0].franchiseId;
+
+// Build teams list for dropdown
+const teamsList = aflConfig.teams
+  .map(team => ({
+    id: team.franchiseId,
+    name: team.name,
+    abbrev: team.abbrev,
+    division: team.division,
+    icon: team.icon,
+  }))
+  .sort((a, b) => {
+    // Sort by division first, then by name
+    if (a.division !== b.division) {
+      return a.division.localeCompare(b.division);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+// Get selected team info
+const selectedTeam = teamsList.find(t => t.id === selectedFranchiseId) || teamsList[0];
+
+// Get roster for selected franchise
+const franchiseRoster = rostersData.rosters.franchise.find(
+  (f: any) => f.id === selectedFranchiseId
+);
+
+// Build roster with player details
+const roster = franchiseRoster?.player?.map((p: any) => {
+  const playerInfo = playersMap.get(p.id) || {};
+  return {
+    id: p.id,
+    status: p.status,
+    name: playerInfo.name || `Player ${p.id}`,
+    position: playerInfo.position || 'N/A',
+    team: playerInfo.team || 'N/A',
+    age: playerInfo.age || 'N/A',
+    college: playerInfo.college || 'N/A',
+  };
+}) || [];
+
+// Group players by position
+const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'Coach'];
+const rosterByPosition = new Map<string, typeof roster>();
+
+positionOrder.forEach(pos => {
+  rosterByPosition.set(pos, []);
+});
+
+roster.forEach((player: any) => {
+  const pos = player.position;
+  if (!rosterByPosition.has(pos)) {
+    rosterByPosition.set(pos, []);
+  }
+  rosterByPosition.get(pos)!.push(player);
+});
+
+// Sort players within each position by name
+rosterByPosition.forEach(players => {
+  players.sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// Calculate roster counts
+const totalPlayers = roster.length;
+const activeRoster = roster.filter((p: any) => p.status === 'ROSTER').length;
+const taxiSquad = roster.filter((p: any) => p.status === 'TAXI_SQUAD').length;
+const injured = roster.filter((p: any) => p.status === 'INJURED_RESERVE').length;
+---
+
+<TheLeagueLayout title={`AFL Fantasy - ${selectedTeam.name} Roster`}>
+  <div class="rosters-page">
+    <!-- Header -->
+    <header class="roster-hero">
+      <div class="roster-hero__content">
+        <div class="roster-hero__team">
+          {selectedTeam.icon && (
+            <img src={selectedTeam.icon} alt={selectedTeam.name} class="team-logo" />
+          )}
+          <div>
+            <h1 class="team-name">{selectedTeam.name}</h1>
+            <p class="team-abbrev">{selectedTeam.abbrev}</p>
+          </div>
+        </div>
+
+        <!-- Team Selector -->
+        <div class="team-selector">
+          <label for="franchise-select">Select Team:</label>
+          <select
+            id="franchise-select"
+            onchange={`window.location.href = '${baseUrl}/rosters?year=${selectedYear}&franchise=' + this.value`}
+          >
+            {teamsList.map(team => (
+              <option value={team.id} selected={team.id === selectedFranchiseId}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <!-- Roster Stats -->
+      <div class="roster-stats">
+        <div class="stat-card">
+          <div class="stat-value">{totalPlayers}</div>
+          <div class="stat-label">Total Players</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{activeRoster}</div>
+          <div class="stat-label">Active Roster</div>
+        </div>
+        {taxiSquad > 0 && (
+          <div class="stat-card">
+            <div class="stat-value">{taxiSquad}</div>
+            <div class="stat-label">Taxi Squad</div>
+          </div>
+        )}
+        {injured > 0 && (
+          <div class="stat-card">
+            <div class="stat-value">{injured}</div>
+            <div class="stat-label">Injured Reserve</div>
+          </div>
+        )}
+      </div>
+    </header>
+
+    <!-- Roster Table by Position -->
+    <main class="roster-content">
+      {Array.from(rosterByPosition.entries())
+        .filter(([_, players]) => players.length > 0)
+        .map(([position, players]) => (
+          <div class="position-group">
+            <h2 class="position-title">
+              {position} ({players.length})
+            </h2>
+
+            <div class="roster-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="player-col">Player</th>
+                    <th class="pos-col">Pos</th>
+                    <th class="team-col">NFL Team</th>
+                    <th class="age-col">Age</th>
+                    <th class="college-col">College</th>
+                    <th class="status-col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {players.map((player: any) => (
+                    <tr>
+                      <td class="player-col">
+                        <div class="player-name">{player.name}</div>
+                      </td>
+                      <td class="pos-col">{player.position}</td>
+                      <td class="team-col">{player.team}</td>
+                      <td class="age-col">{player.age}</td>
+                      <td class="college-col">{player.college}</td>
+                      <td class="status-col">
+                        <span class={`status-badge status-${player.status.toLowerCase().replace('_', '-')}`}>
+                          {player.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+    </main>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .rosters-page {
+    display: grid;
+    gap: 2rem;
+    padding: 2rem 1rem;
+  }
+
+  .roster-hero {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    padding: 2rem;
+  }
+
+  .roster-hero__content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .roster-hero__team {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .team-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 0.5rem;
+  }
+
+  .team-name {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1e293b;
+  }
+
+  .team-abbrev {
+    font-size: 1.125rem;
+    color: #64748b;
+    margin: 0.25rem 0 0 0;
+  }
+
+  .team-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-selector label {
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .team-selector select {
+    padding: 0.5rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+    min-width: 250px;
+  }
+
+  .team-selector select:hover {
+    border-color: #cbd5e1;
+  }
+
+  .team-selector select:focus {
+    outline: none;
+    border-color: #c41e3a;
+  }
+
+  .roster-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+  }
+
+  .roster-content {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .position-group {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+  }
+
+  .position-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 1.5rem 2rem;
+    margin: 0;
+    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+    color: white;
+  }
+
+  .roster-table {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  td {
+    padding: 1rem;
+  }
+
+  .player-col {
+    min-width: 200px;
+  }
+
+  .player-name {
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .pos-col {
+    width: 80px;
+    text-align: center;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .team-col {
+    width: 100px;
+    text-align: center;
+  }
+
+  .age-col {
+    width: 80px;
+    text-align: center;
+  }
+
+  .college-col {
+    min-width: 150px;
+  }
+
+  .status-col {
+    width: 120px;
+    text-align: center;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .status-roster {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-taxi-squad {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-injured-reserve {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  @media (max-width: 767px) {
+    .rosters-page {
+      padding: 1rem 0.5rem;
+    }
+
+    .roster-hero {
+      padding: 1.5rem;
+    }
+
+    .roster-hero__content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .team-logo {
+      width: 60px;
+      height: 60px;
+    }
+
+    .team-name {
+      font-size: 1.5rem;
+    }
+
+    .team-selector {
+      width: 100%;
+    }
+
+    .team-selector select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .position-title {
+      font-size: 1.25rem;
+      padding: 1rem 1.5rem;
+    }
+
+    th, td {
+      padding: 0.75rem 0.5rem;
+    }
+
+    .college-col {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,441 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import StandingsTable from '../../components/theleague/StandingsTable.astro';
+import LeagueStandingsTable from '../../components/theleague/LeagueStandingsTable.astro';
+import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
+import YearSelector from '../../components/theleague/YearSelector.astro';
+import {
+  getDivisionStandings,
+  getLeagueStandings,
+  getAllPlayStandings,
+} from '../../utils/standings';
+import type { DivisionStandings } from '../types/standings';
+import leagueConfig from '../../data/theleague.config.json';
+
+// Import standings data
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+
+// Extract available years from the imported feeds
+const availableYears = Object.keys(standingsFeeds)
+  .map(path => {
+    const match = path.match(/\/(\d{4})\/standings\.json$/);
+    return match ? parseInt(match[1], 10) : null;
+  })
+  .filter((year): year is number => year !== null)
+  .sort((a, b) => b - a);
+
+// Get year from query parameter (default to latest year)
+const defaultYear = availableYears[0] || 2025;
+const requestedYear = Astro.url.searchParams.get('year');
+const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+
+// Validate that the requested year is available; redirect to default if not
+if (!availableYears.includes(selectedYear)) {
+  return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
+}
+
+// Get standings data for selected year
+const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
+  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
+  | undefined;
+
+// Check if data is valid (has leagueStandings and no error)
+if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
+  return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
+}
+
+const franchises = selectedFeed.leagueStandings.franchise;
+
+// Calculate standings for all views
+const divisionStandings = getDivisionStandings(franchises, leagueConfig);
+const leagueStandings = getLeagueStandings(franchises, leagueConfig);
+const allPlayStandings = getAllPlayStandings(franchises, leagueConfig);
+
+// Get view from query parameter (default to 'division')
+const view = (Astro.url.searchParams.get('view') ||
+  'division') as 'division' | 'league' | 'all_play';
+
+// Division Champions by Year (previous year's defending champs)
+const championsByYear: Record<number, Record<string, string>> = {
+  2025: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Bring The Pain',
+    'East': 'Wascawy Wabbits',
+  },
+  2024: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Gridiron Geeks',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Wascawy Wabbits',
+  },
+  2023: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Maverick',
+    'East': 'Fire Ready Aim',
+  },
+  2022: {
+    'Northwest': 'Vitside Mafia',
+    'Southwest': 'Gridiron Geeks',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Dark Magicians of Chaos',
+  },
+  2021: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Bring The Pain',
+    'East': 'Wascawy Wabbits',
+  },
+  2020: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Wascawy Wabbits',
+  },
+  2019: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Bring The Pain',
+    'East': 'Fire Ready Aim',
+  },
+  2018: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Bring The Pain',
+    'East': 'Wascawy Wabbits',
+  },
+  2017: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Cowboy Up',
+    'East': 'Fire Ready Aim',
+  },
+  2016: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Bring The Pain',
+    'East': 'Dark Magicians of Chaos',
+  },
+  2015: {
+    'Northwest': 'Da Dangsters',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Bring The Pain',
+    'East': 'Fire Ready Aim',
+  },
+  2014: {
+    'Northwest': 'Pacific Pigskins',
+    'Southwest': 'Music City Mafia',
+    'Central': 'Maverick',
+    'East': 'Dark Magicians of Chaos',
+  },
+  2013: {
+    'Northwest': 'Vitside Mafia',
+    'Southwest': 'Music City Mafia',
+    'Central': 'The Mariachi Ninjas',
+    'East': 'Wascawy Wabbits',
+  },
+  2010: {
+    'Northwest': 'Computer Jocks',
+    'Southwest': 'Midwestside Connection',
+    'Central': 'Maverick',
+    'East': 'Fire Ready Aim',
+  },
+  2008: {
+    'Northwest': 'Computer Jocks',
+    'Southwest': 'Gridiron Geeks',
+    'Central': 'Bring The Pain',
+    'East': 'Fire Ready Aim',
+  },
+};
+
+// Get previous year's champions (defending champs for selected year)
+const previousYear = selectedYear - 1;
+const defendingChampions = championsByYear[previousYear] || {};
+---
+
+<TheLeagueLayout title="Standings">
+  <div class="standings-page">
+    <header class="standings-hero">
+      <div class="standings-hero__text">
+        {view === 'division' && (
+          <>
+            <h1 class="section-title">Division Standings</h1>
+            <p class="subtitle">Standings by division within the league</p>
+          </>
+        )}
+        {view === 'league' && (
+          <>
+            <h1 class="section-title">Playoff Standings</h1>
+            <p class="subtitle">Division winners are seeded 1-4</p>
+          </>
+        )}
+        {view === 'all_play' && (
+          <>
+            <h1 class="section-title">All-Play Standings</h1>
+            <p class="subtitle">Top ranked teams across the league</p>
+          </>
+        )}
+      </div>
+      <div class="standings-hero__actions">
+        <StandingsViewSelector activeView={view} />
+      </div>
+    </header>
+
+    <div class="standings-filters">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
+    </div>
+
+    <main class="standings-content">
+      {view === 'division' && (
+        <div class="division-view">
+          {divisionStandings.map(division => (
+            <StandingsTable
+              teams={division.teams}
+              view="division"
+              showDivisionHeader={true}
+              divisionName={division.name}
+              defendingChampion={defendingChampions[division.name]}
+              defendingChampionYear={previousYear}
+              year={selectedYear}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'league' && (
+        <div class="league-view">
+          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} />
+        </div>
+      )}
+
+      {view === 'all_play' && (
+        <div class="all-play-view">
+          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} />
+        </div>
+      )}
+    </main>
+
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .standings-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .standings-hero {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+@media screen and (min-width: 600px) {
+  .standings-hero {
+    grid-template-columns: 1fr auto;
+  }
+}
+  .standings-hero__text h1 {
+    margin: 0;
+  }
+
+  .standings-hero__actions {
+    display: grid;
+    justify-content: center;
+  }
+
+  .standings-filters {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .card {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-md);
+    padding: var(--padding-lg);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: var(--box-shadow-lg);
+    position: relative;
+}
+
+  .standings-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary-color, #64748b);
+    margin: 0;
+  }
+
+  .standings-header-bar {
+    display: grid;
+
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+   @media (min-width: 550px) {
+     .standings-header-bar {
+    grid-template-columns: 1fr auto;
+        align-items: start;
+     }
+   }
+
+  .standings-header-content {
+    /* content naturally flows on the left */
+  }
+
+  .standings-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    justify-content: flex-end;
+  }
+
+  .standings-content {
+    margin-bottom: 3rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0;
+  }
+
+  .section-subtitle {
+    color: var(--color-text-secondary, #666);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  /* Division View */
+  .division-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  /* League View */
+  .league-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .playoff-section {
+    margin-bottom: 2rem;
+  }
+
+  /* All-Play View */
+  .all-play-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  /* Info Section */
+  .standings-info {
+    margin-top: 3rem;
+    padding: 2rem;
+    background-color: var(--color-bg-secondary, #f5f5f5);
+    border-radius: 8px;
+  }
+
+  .standings-info h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .info-card {
+    background-color: var(--color-bg-primary, #fff);
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--color-primary, #2c3e50);
+  }
+
+  .info-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 1rem 0;
+  }
+
+  .info-card ul,
+  .info-card ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--color-text-secondary, #555);
+  }
+
+  .info-card li {
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card p {
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text-secondary, #555);
+  }
+
+  .tiebreaker-type {
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Responsive */
+  @media (max-width: 767px) {
+    .standings-page {
+      padding: 1rem 0.5rem;
+    }
+
+    .standings-header h1 {
+      font-size: 1.875rem;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .standings-info {
+      padding: 1rem;
+    }
+  }
+</style>

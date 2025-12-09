@@ -1,0 +1,242 @@
+{
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2018",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2018/export?TYPE=rosters&L=13522&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2018/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2018/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-17T07:18:11.527Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-17T07:18:11.531Z"
+  },
+  "positions": {
+    "QB": {
+      "totalPlayers": 47,
+      "top3Average": 5490000,
+      "top5Average": 4708050,
+      "topPlayers": [
+        {
+          "id": "10695",
+          "name": "Luck, Andrew",
+          "salary": 7000000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "4925",
+          "name": "Brees, Drew",
+          "salary": 5445000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "9099",
+          "name": "Ryan, Matt",
+          "salary": 4025000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "9431",
+          "name": "Stafford, Matthew",
+          "salary": 3962750.01,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "7394",
+          "name": "Rivers, Philip",
+          "salary": 3107500.01,
+          "franchiseId": "0005"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 95,
+      "top3Average": 8214833.34,
+      "top5Average": 6499700.01,
+      "topPlayers": [
+        {
+          "id": "11192",
+          "name": "Bell, Le'Veon",
+          "salary": 12000000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "12151",
+          "name": "Gordon, Melvin",
+          "salary": 6655000.01,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "12150",
+          "name": "Gurley, Todd",
+          "salary": 5989500.01,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "12625",
+          "name": "Elliott, Ezekiel",
+          "salary": 4114000.01,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "13129",
+          "name": "Fournette, Leonard",
+          "salary": 3740000.01,
+          "franchiseId": "0013"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 134,
+      "top3Average": 9100000,
+      "top5Average": 7206691,
+      "topPlayers": [
+        {
+          "id": "10261",
+          "name": "Green, A.J.",
+          "salary": 11000000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "10271",
+          "name": "Jones, Julio",
+          "salary": 9500000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "10729",
+          "name": "Hilton, T.Y.",
+          "salary": 6800000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "11239",
+          "name": "Goodwin, Marquise",
+          "salary": 5000000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "11671",
+          "name": "Evans, Mike",
+          "salary": 3733455.01,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 29,
+      "top3Average": 556721.34,
+      "top5Average": 538882.8,
+      "topPlayers": [
+        {
+          "id": "10868",
+          "name": "Zuerlein, Greg",
+          "salary": 600664,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "10976",
+          "name": "Tucker, Justin",
+          "salary": 544500.01,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "11936",
+          "name": "Boswell, Chris",
+          "salary": 525000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "12956",
+          "name": "Lutz, Wil",
+          "salary": 514250.01,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "8153",
+          "name": "Gould, Robbie",
+          "salary": 510000,
+          "franchiseId": "0011"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 32,
+      "top3Average": 844730.67,
+      "top5Average": 737838.41,
+      "topPlayers": [
+        {
+          "id": "0511",
+          "name": "Broncos, Denver",
+          "salary": 1100000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "0514",
+          "name": "Chargers, Los Angeles",
+          "salary": 746692,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "0519",
+          "name": "Cardinals, Arizona",
+          "salary": 687500.01,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "0505",
+          "name": "Jets, New York",
+          "salary": 605000.01,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "0520",
+          "name": "Redskins, Washington",
+          "salary": 550000.01,
+          "franchiseId": "0013"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 57,
+      "top3Average": 7421133.33,
+      "top5Average": 5343179.5,
+      "topPlayers": [
+        {
+          "id": "11244",
+          "name": "Kelce, Travis",
+          "salary": 10000000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "11247",
+          "name": "Ertz, Zach",
+          "salary": 7738400,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "10312",
+          "name": "Rudolph, Kyle",
+          "salary": 4525000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "11705",
+          "name": "Burton, Trey",
+          "salary": 3025000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "11695",
+          "name": "Ebron, Eric",
+          "salary": 1427497.5,
+          "franchiseId": "0016"
+        }
+      ]
+    }
+  }
+}

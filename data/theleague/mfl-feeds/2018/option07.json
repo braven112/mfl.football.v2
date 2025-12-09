@@ -1,0 +1,1414 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>Fantasy Football: The League Rosters</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"  />
+<meta name="keywords" content="Rosters, fantasy football, keeper fantasy football league, dynasty fantasy football league, salary cap fantasy football league, IDP fantasy football league, MyFantasyLeague, MFL, ffl, league management"  />
+<meta name="description" content="The most customizable way to run your fantasy football league on the web today, MyFantasyLeague.com was voted 'Best Fantasy Commissioner Product' by the Fantasy Sports Trade Association, and has won several additional significant industry awards.  Our 31 years of experience means we do fantasy football right.  If you're ready to move beyond basic league settings, and onto fantasy football how the hard-core players play it, try MyFantasyLeague.com: Beyond League Management"  />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"  />
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WZDGQ9CBF2"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-WZDGQ9CBF2');
+</script>
+<meta name="viewport" content="initial-scale=1.0, width=device-width" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700|Roboto+Condensed:400,700|Roboto:400,400i,700" rel="stylesheet">
+<link rel="stylesheet" id="default" href="http://www49.myfantasyleague.com/skins17/MFLBaseCSS.css" type="text/css"  />
+<link rel="stylesheet" id="skin" href="http://www49.myfantasyleague.com/skins17/MFL/MFL.css" type="text/css"  />
+<link rel="stylesheet" id="responsive" href="http://www49.myfantasyleague.com/skins17/MFL/responsive.css" type="text/css"  />
+<link rel="apple-touch-icon" href="http://www49.myfantasyleague.com/apple-touch-icon.png" />
+<link rel="shortcut icon" href="http://www49.myfantasyleague.com/favicon.ico" />
+<script type="text/javascript" src="http://www49.myfantasyleague.com/mfl_common.js"></script>
+<script type="text/javascript">
+<!--
+var league_id = '13522';
+var year = 2018;
+var xmlBaseURL = 'http://www49.myfantasyleague.com/fflnetdynamic2018/';
+var baseURLStatic = 'http://www49.myfantasyleague.com';
+var baseURLDynamic = 'http://www49.myfantasyleague.com';
+var currentServerTime = 1764402279;
+var completedWeek = 21;
+var liveScoringWeek = 21;
+var startWeek = 1;
+var endWeek = 17;
+var standingsEndWeek = "17";
+var h2h_setting = "YES";  
+var precision = 2;
+var thisProgram = "options_07";
+
+function Franchise (id, name, division, icon, logo, abbrev) {
+   this.id = id;
+   this.name = name;
+   this.division = division;
+   this.icon = icon;
+   this.logo = logo;
+   this.abbrev = abbrev;
+}
+var leagueAttributes = new Object();
+
+var franchiseDatabase = new Array();
+franchiseDatabase['fid_0000'] = new Franchise('0000', 'Commissioner', undefined, 'https://www.theleague.us/images/team_banners/the_league_commish.png', '');
+franchiseDatabase['fid_0001'] = new Franchise('0001', 'Pacific Pigskins', '00' ,'http://theleague.us/images/team_banners/pigskins2013_icon.png' ,'http://theleague.us/images/team_banners/pigskins2013.png' ,'PIGS');
+franchiseDatabase['fid_0002'] = new Franchise('0002', 'Da Dangsters', '00' ,'http://www.theleague.us/images/team_banners/da_dangsters_icon.png' ,'http://www.theleague.us/images/team_banners/da_dangsters.png' ,'DD');
+franchiseDatabase['fid_0010'] = new Franchise('0010', 'Computer Jocks', '00' ,'http://theleague.us/images/team_banners/computer_jocks_icon.png' ,'http://theleague.us/images/team_banners/computer_jocks.png' ,'CPUJ');
+franchiseDatabase['fid_0012'] = new Franchise('0012', 'Vitside Mafia', '00' ,'http://theleague.us/images/team_banners/vitside_mafia_icon.png' ,'http://theleague.us/images/team_banners/vitside_mafia.png' ,'VSM');
+franchiseDatabase['fid_0004'] = new Franchise('0004', 'The Art of War', '01' ,'http://theleague.us/images/team_banners/art_of_war_icon.png' ,'http://theleague.us/images/team_banners/art_of_war.png' ,'ART');
+franchiseDatabase['fid_0006'] = new Franchise('0006', 'LBer-DeCleaters', '01' ,'http://theleague.us/images/team_banners/lb_decleaters_icon.png' ,'http://theleague.us/images/team_banners/lb_decleaters.png' ,'LB');
+franchiseDatabase['fid_0013'] = new Franchise('0013', 'Gridiron Geeks', '01' ,'http://theleague.us/images/team_banners/gridiron_geeks_icon.png' ,'http://theleague.us/images/team_banners/gridiron_geeks.png' ,'GG');
+franchiseDatabase['fid_0011'] = new Franchise('0011', 'Under Siege', '01' ,'http://theleague.us/images/team_banners/undersiege_icon.png' ,'http://theleague.us/images/team_banners/undersiege.png' ,'UnSg');
+franchiseDatabase['fid_0003'] = new Franchise('0003', 'Maverick', '02' ,'http://www.theleague.us/images/team_banners/maverick_icon.png' ,'http://www.theleague.us/images/team_banners/maverick.png' ,'MAVS');
+franchiseDatabase['fid_0005'] = new Franchise('0005', 'The Mariachi Ninjas', '02' ,'http://theleague.us/images/team_banners/the_mariachi_ninjas_icon.png' ,'http://theleague.us/images/team_banners/the_mariachi_ninjas.png' ,'MNIN');
+franchiseDatabase['fid_0008'] = new Franchise('0008', 'Bring the Pain', '02' ,'http://theleague.us/images/team_banners/bring_the_pain_icon.png' ,'http://theleague.us/images/team_banners/bring_the_pain.png' ,'PAIN');
+franchiseDatabase['fid_0014'] = new Franchise('0014', 'Cowboy Up', '02' ,'http://theleague.us/images/team_banners/cowboy_up_icon.png' ,'http://theleague.us/images/team_banners/cowboy_up.png' ,'CBOY');
+franchiseDatabase['fid_0015'] = new Franchise('0015', 'Dark Magicians of Chaos', '03' ,'http://theleague.us/images/team_banners/dark_magicians_of_chaos_ico.png' ,'http://theleague.us/images/team_banners/dark_magicians_of_chaos.png' ,'DMOC');
+franchiseDatabase['fid_0007'] = new Franchise('0007', 'Fire Ready Aim', '03' ,'http://theleague.us/images/team_banners/fire_ready_aim_icon.png' ,'http://theleague.us/images/team_banners/fire_ready_aim.png' ,'FRA');
+franchiseDatabase['fid_0009'] = new Franchise('0009', 'Wascawy Wabbits', '03' ,'http://theleague.us/images/team_banners/wabbits_icon.png' ,'http://theleague.us/images/team_banners/wabbits.png' ,'WW');
+franchiseDatabase['fid_0016'] = new Franchise('0016', ' Running Down The Dream', '03' ,'http://theleague.us/images/team_banners/the_dream_icon.png' ,'http://theleague.us/images/team_banners/the_dream.png' ,'RDTD');
+leagueAttributes['Draft'] = true;
+leagueAttributes['Auction'] = true;
+leagueAttributes['MinStarters'] = 9;
+leagueAttributes['MaxStarters'] = 9;
+leagueAttributes['Franchises'] = 16;
+leagueAttributes['Divisions'] = new Array('Northwest', 'Southwest', 'Central', 'Eastern'); // This will be deprecated soon, use leagueDivisions instead
+leagueDivisions = new Object();
+leagueDivisions['00'] = { 'id' : '00', 'name' : 'Northwest' };
+leagueDivisions['01'] = { 'id' : '01', 'name' : 'Southwest' };
+leagueDivisions['02'] = { 'id' : '02', 'name' : 'Central' };
+leagueDivisions['03'] = { 'id' : '03', 'name' : 'Eastern' };
+
+function chat_window (url) {
+    var chatWindow = window.open(url,"chat_window","height=600,width=450,scrollbars=yes,toolbar=no,status=no,resizable=yes,menubar=no");
+    chatWindow.focus();
+}
+
+function live_draft_window (url) {
+    var liveDraftWindow = window.open(url,"live_draft_window","height=800,width=1060,scrollbars=yes,toolbar=no,status=no,resizable=yes,menubar=no");
+    liveDraftWindow.focus();
+}
+
+function live_auction_window (url) {
+    var liveAuctionWindow = window.open(url,"live_auction_window","height=700,width=1060,scrollbars=yes,toolbar=no,status=no,resizable=yes,menubar=no");
+    liveAuctionWindow.focus();
+}
+
+
+//-->
+</script>
+<link rev="MADE" href="mailto:support@myfantasyleague.com"  />
+</head>
+<body id="body_options_07"><noscript>
+  <img src="http://b.scorecardresearch.com/b?c1=2&amp;c2=6035210&amp;c3=&amp;c4=www.myfantasyleague.com&amp;c5=&amp;c6=&amp;c15=&amp;cv=1.3&amp;cj=1" style="display:none" width="0" height="0" alt="" />
+</noscript>
+<div class="myfantasyleague_menu" onclick=""><span>LEAGUE MENU</span><input id="sub0" type="checkbox"><label for="sub0"><span></span></label><ul>
+<li class="mfl-icon"><a class="no-sub" href="http://home.myfantasyleague.com"><img src="/images/mfl-logo-2017.png" alt="MyFantasyLeague.com"><span>MyFantasyLeague.com</span></a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/home/13522">Home</a></li>
+<li class="has-sub sub-default mm-myacct"><a>My Account</a><b aria-haspopup="true" aria-controls="p1"></b><input id="sub1" type="checkbox"><label for="sub1"><span></span></label>
+<ul id="p1">
+<li><a class="no-sub" href="https://www42.myfantasyleague.com/2025/dash" target="">MFL&nbsp;Dashboard</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/login?L=13522" target="">Login</a></li>
+<li><a class="no-sub" href="https://www42.myfantasyleague.com/2025/index" target="">Find&nbsp;A&nbsp;League</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-scores"><a>Scores</a><b aria-haspopup="true" aria-controls="p2"></b><input id="sub2" type="checkbox"><label for="sub2"><span></span></label>
+<ul id="p2">
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/ajax_ls?L=13522" target="">Live&nbsp;Scoring</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/standings?L=13522" target="">Standings</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=22" target="">Weekly&nbsp;Results</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=31" target="">Weekly&nbsp;Summary</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=101" target="">Power&nbsp;Rank</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=06" target="">Starting&nbsp;Lineups</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=15" target="">Fantasy&nbsp;Schedule</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=79" target="">Playoff&nbsp;Brackets</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/pro_schedule?L=13522" target="">NFL&nbsp;Schedule</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=207" target="">Fantasy&nbsp;Previews</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=177" target="">Fantasy&nbsp;Recaps</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-trans"><a>Transactions</a><b aria-haspopup="true" aria-controls="p3"></b><input id="sub3" type="checkbox"><label for="sub3"><span></span></label>
+<ul id="p3">
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=07" target="">Rosters</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=03" target="">Transactions</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=76" target="">Processed&nbsp;Waivers</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/locked_players?L=13522" target="">Locked&nbsp;Players</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-player"><a>Player Research</a><b aria-haspopup="true" aria-controls="p4"></b><input id="sub4" type="checkbox"><label for="sub4"><span></span></label>
+<ul id="p4">
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=08" target="">Top&nbsp;Performers/Player&nbsp;Stats</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=236" target="">Projected&nbsp;Stats</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/depth_chart?L=13522" target="">Fantasy&nbsp;Depth&nbsp;Charts</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=117" target="">Top&nbsp;Adds/Drops/Starters</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=81" target="">Points&nbsp;Allowed&nbsp;-&nbsp;By&nbsp;Position</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/reports?L=13522&R=FULLFA" target="">Complete&nbsp;Free&nbsp;Agent&nbsp;Listing</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/injury?L=13522" target="">NFL&nbsp;Injury&nbsp;Report</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/news_articles?L=13522&P=*" target="">Player&nbsp;News</a></li>
+<li><a class="no-sub" href="http://subscribe.myfantasyleague.com/" target="">Get&nbsp;Projection&nbsp;Sources</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/player_search?L=13522" target="">Player&nbsp;Search</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-draft"><a>Draft/Auction</a><b aria-haspopup="true" aria-controls="p5"></b><input id="sub5" type="checkbox"><label for="sub5"><span></span></label>
+<ul id="p5">
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=17" target="">Draft&nbsp;Results</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/reports?L=13522&R=ADP" target="">ADP&nbsp;Report</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=100" target="">Future&nbsp;Draft&nbsp;Picks</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=44" target="">Auction&nbsp;Results</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/reports?L=13522&R=AAV" target="">AAV&nbsp;Report</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-league"><a>League</a><b aria-haspopup="true" aria-controls="p6"></b><input id="sub6" type="checkbox"><label for="sub6"><span></span></label>
+<ul id="p6">
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/all_reports?L=13522" target="">All&nbsp;Reports</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=123" target="">League&nbsp;Calendar</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=09" target="">League&nbsp;Rules</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/accounting_report?L=13522" target="">Accounting</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=01" target="">Franchise&nbsp;Information</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/reports?L=13522&R=FSUMMARY" target="">Franchise&nbsp;Summary</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=122" target="">NFL&nbsp;Pool&nbsp;Results</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=120" target="">Survivor&nbsp;Pool</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=194" target="">League&nbsp;Champions</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-social"><a>Social</a><b aria-haspopup="true" aria-controls="p7"></b><input id="sub7" type="checkbox"><label for="sub7"><span></span></label>
+<ul id="p7">
+<li><a class="no-sub" href="https://www.fantasysharks.com/forum/viewforum.php?f=501" target="">MFL&nbsp;Community&nbsp;Forums</a></li>
+<li><a class="no-sub" href="https://twitter.com/MyFantasyLeague" target="">Follow&nbsp;Us&nbsp;On&nbsp;Twitter</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=167" target="">Refer&nbsp;A&nbsp;Friend&nbsp;And&nbsp;Save!</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-help"><a>Help</a><b aria-haspopup="true" aria-controls="p8"></b><input id="sub8" type="checkbox"><label for="sub8"><span></span></label>
+<ul id="p8">
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/support?L=13522" target="">Help&nbsp;Center</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/support?PROGRAM=options_07&L=13522" target="_blank">Help&nbsp;on&nbsp;this&nbsp;Page</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/site_news?L=13522" target="">What's&nbsp;New?</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/options?L=13522&O=07&PRINTER=1" target="">Printer&nbsp;Friendly&nbsp;Page</a></li>
+<li><a class="no-sub" href="http://www49.myfantasyleague.com/2018/api_info?L=13522" target="">Developer's&nbsp;API</a></li>
+</ul>
+</li>
+</ul></div>
+<table cellspacing="0" class="pageheader">
+<tr>
+<td rowspan="3" class="welcome"><b>Guest</b> (<a href="https://www49.myfantasyleague.com/2018/login?L=13522">Login</a>)</td>
+</tr>
+<tr>
+<td class="pagetitle">
+<h1>
+ <span>Rosters</span></h1></td></tr></table><div class="pagebody" id="options_07">
+<h3>Display: Full Format | <a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=105">Grid Format</a> | <a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=138">With Stats Format</a></h4>
+<span class="reportnavigation"><span class="reportnavigationheader">Show Rosters For Week:</span> <a href="options?L=13522&O=07&WEEK=1">1</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=2">2</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=3">3</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=4">4</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=5">5</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=6">6</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=7">7</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=8">8</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=9">9</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=10">10</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=11">11</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=12">12</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=13">13</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=14">14</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=15">15</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=16">16</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=17">17</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=18">18</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=19">19</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=20">20</a>
+&nbsp;|&nbsp;<a href="options?L=13522&O=07&WEEK=21">21</a>
+&nbsp;|&nbsp;<span class="currentweek">22</span>
+</span>
+<table align="center" class="two_column_layout">
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 7-9-0, PF: 1785.47"  class="franchise_0001 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0001&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/pigskins2013_icon.png" alt="Pacific Pigskins"  id="franchiseicon_0001" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12141');" title="Salary: $632,225, Years: 2, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_qb">Mariota, Marcus TEN QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12141&amp;YEAR=2018">196.92</a></td>
+<td class="week">8</td><td class="salary">$632,225</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13595');" title="Salary: $450,000, Years: 5, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_qb">Rudolph, Mason PIT QB</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">7</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13604');" title="Salary: $3,400,000, Years: 5, Tag: , Week 17: vs Cowboys Sun 10:00 a.m. PT" class="position_rb">Barkley, Saquon NYG RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13604&amp;YEAR=2018">317.55</a></td>
+<td class="week">9</td><td class="salary">$3,400,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12628');" title="Salary: $495,000, Years: 4, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_rb">Collins, Alex BAL RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12628&amp;YEAR=2018">97.35</a></td>
+<td class="week">10</td><td class="salary">$495,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13636');" title="Salary: $500,000, Years: 5, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_wr">Cain, Deon IND WR</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">9</td><td class="salary">$500,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13634');" title="Salary: $550,000, Years: 5, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_wr">Pettis, Dante SFO WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13634&amp;YEAR=2018">90.90</a></td>
+<td class="week">11</td><td class="salary">$550,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10500');" title="Salary: $514,250, Years: 3, Tag: , Week 17: Bye" class="position_wr">Pryor, Terrelle FA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10500&amp;YEAR=2018">45.10</a></td>
+<td class="week">-</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13168');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_wr">Reynolds, Josh LAR WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13168&amp;YEAR=2018">85.50</a></td>
+<td class="week">12</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11257');" title="Salary: $950,000, Years: 3, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_te">McDonald, Vance PIT TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11257&amp;YEAR=2018">133.00</a></td>
+<td class="week">7</td><td class="salary">$950,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0501');" title="Salary: $467,500, Years: 4, Tag: , Week 17: vs Dolphins Sun 10:00 a.m. PT" class="position_def">Bills, Buffalo BUF Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0501&amp;YEAR=2018">136.16</a></td>
+<td class="week">11</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0504');" title="Salary: $467,500, Years: 4, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_def">Patriots, New England NEP Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0504&amp;YEAR=2018">161.60</a></td>
+<td class="week">11</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0529');" title="Salary: $467,500, Years: 2, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_def">Saints, New Orleans NOS Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0529&amp;YEAR=2018">144.62</a></td>
+<td class="week">6</td><td class="salary">$467,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr><th colspan="6">12 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0001">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$18,807,309</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$28,223,784</th>
+<th>46</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$16,776,215</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For Pacific Pigskins:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 9-7-0, PF: 1900.36"  class="franchise_0002 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0002&amp;O=01"><img align="middle" src="http://www.theleague.us/images/team_banners/da_dangsters_icon.png" alt="Da Dangsters"  id="franchiseicon_0002" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','9064');" title="Salary: $1,650,000, Years: 3, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_qb">Flacco, Joe BAL QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9064&amp;YEAR=2018">161.10</a></td>
+<td class="week">10</td><td class="salary">$1,650,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13816');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_rb">Cannon, Trenton NYJ RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13816&amp;YEAR=2018">36.55</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12164');" title="Salary: $522,500, Years: 2, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_rb">Davis, Mike SEA RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12164&amp;YEAR=2018">111.30</a></td>
+<td class="week">7</td><td class="salary">$522,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13138');" title="Salary: $1,320,000, Years: 4, Tag: , Week 17: Bye" class="position_rb">Hunt, Kareem FA* RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13138&amp;YEAR=2018">210.70</a></td>
+<td class="week">-</td><td class="salary">$1,320,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13613');" title="Salary: $425,000, Years: 5, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_rb">Samuels, Jaylen PIT RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13613&amp;YEAR=2018">70.00</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13615');" title="Salary: $450,000, Years: 5, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_rb">Scarbrough, Bo SEA RB</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">7</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11886');" title="Salary: $1,800,000, Years: 1, Tag: , Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_rb">Williams, Damien KCC RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11886&amp;YEAR=2018">81.35</a></td>
+<td class="week">12</td><td class="salary">$1,800,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12665');" title="Salary: $825,000, Years: 4, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_wr">Allison, Geronimo GBP WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12665&amp;YEAR=2018">52.30</a></td>
+<td class="week">7</td><td class="salary">$825,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12650');" title="Salary: $1,391,500, Years: 3, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_wr">Boyd, Tyler CIN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12650&amp;YEAR=2018">183.10</a></td>
+<td class="week">9</td><td class="salary">$1,391,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13668');" title="Salary: $525,000, Years: 5, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_wr">Chark, D.J. JAC WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13668&amp;YEAR=2018">27.98</a></td>
+<td class="week">9</td><td class="salary">$525,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13653');" title="Salary: $425,000, Years: 5, Tag: , Week 17: vs Dolphins Sun 10:00 a.m. PT" class="position_wr">Foster, Robert BUF WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13653&amp;YEAR=2018">85.60</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12652');" title="Salary: $2,783,000, Years: 3, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_wr">Thomas, Michael NOS WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12652&amp;YEAR=2018">253.00</a></td>
+<td class="week">6</td><td class="salary">$2,783,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13391');" title="Salary: $467,500, Years: 4, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_te">Hollister, Jacob NEP TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13391&amp;YEAR=2018">9.20</a></td>
+<td class="week">11</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13299');" title="Salary: $495,000, Years: 4, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_te">Kittle, George SFO TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13299&amp;YEAR=2018">258.70</a></td>
+<td class="week">11</td><td class="salary">$495,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13772');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_te">Schultz, Dalton DAL TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13772&amp;YEAR=2018">23.60</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13718');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Chiefs Sun 1:25 p.m. PT" class="position_pk">Carlson, Daniel OAK PK</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13718&amp;YEAR=2018">95.30</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12860');" title="Salary: $467,500, Years: 4, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_pk">Fairbairn, Ka'imi HOU PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12860&amp;YEAR=2018">181.50</a></td>
+<td class="week">10</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10868');" title="Salary: $600,664, Years: 1, Tag: F, Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_pk">Zuerlein, Greg LAR PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10868&amp;YEAR=2018">136.20</a></td>
+<td class="week">12</td><td class="salary">$600,664</td><td class="contractyear">1</td><td class="contractinfo">F</tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0514');" title="Salary: $746,692, Years: 1, Tag: R2, Week 17: at Broncos Sun 1:25 p.m. PT" class="position_def">Chargers, Los Angeles LAC Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0514&amp;YEAR=2018">156.80</a></td>
+<td class="week">8</td><td class="salary">$746,692</td><td class="contractyear">1</td><td class="contractinfo">R2</tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0505');" title="Salary: $605,000, Years: 4, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_def">Jets, New York NYJ Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0505&amp;YEAR=2018">113.18</a></td>
+<td class="week">11</td><td class="salary">$605,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr><th colspan="6">20 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0002">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$15,543,075</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,317,431</th>
+<th>73</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,682,568</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 6-10-0, PF: 1420.35"  class="franchise_0010 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0010&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/computer_jocks_icon.png" alt="Computer Jocks"  id="franchiseicon_0010" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13424');" title="Salary: $425,000, Years: 3, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_qb">Hill, Taysom NOS QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13424&amp;YEAR=2018">41.00</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13114');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_qb">Kizer, DeShone GBP QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13114&amp;YEAR=2018">5.38</a></td>
+<td class="week">7</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12152');" title="Salary: $865,150, Years: 2, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_rb">Coleman, Tevin ATL RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12152&amp;YEAR=2018">169.60</a></td>
+<td class="week">8</td><td class="salary">$865,150</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13605');" title="Salary: $3,100,000, Years: 5, Tag: , Week 17: vs Eagles Sun 1:25 p.m. PT" class="position_rb">Guice, Derrius WAS RB</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">4</td><td class="salary">$3,100,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13608');" title="Salary: $2,600,000, Years: 5, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_rb">Penny, Rashaad SEA RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13608&amp;YEAR=2018">67.85</a></td>
+<td class="week">7</td><td class="salary">$2,600,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12636');" title="Salary: $544,500, Years: 3, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_rb">Smallwood, Wendell PHI RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12636&amp;YEAR=2018">97.39</a></td>
+<td class="week">9</td><td class="salary">$544,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11747');" title="Salary: $450,000, Years: 4, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_rb">White, James NEP RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11747&amp;YEAR=2018">211.35</a></td>
+<td class="week">11</td><td class="salary">$450,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12153');" title="Salary: $2,129,600, Years: 2, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_rb">Yeldon, T.J. JAC RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12153&amp;YEAR=2018">131.85</a></td>
+<td class="week">9</td><td class="salary">$2,129,600</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','10973');" title="Salary: $425,000, Years: 3, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_wr">Beasley, Cole DAL WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10973&amp;YEAR=2018">119.77</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13638');" title="Salary: $425,000, Years: 5, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_wr">Berrios, Braxton NEP WR</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13664');" title="Salary: $425,000, Years: 5, Tag: , Week 17: vs Eagles Sun 1:25 p.m. PT" class="position_wr">Quinn, Trey WAS WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13664&amp;YEAR=2018">19.56</a></td>
+<td class="week">4</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11681');" title="Salary: $425,000, Years: 4, Tag: , Week 17: vs Eagles Sun 1:25 p.m. PT" class="position_wr">Richardson, Paul WAS WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11681&amp;YEAR=2018">49.10</a></td>
+<td class="week">4</td><td class="salary">$425,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12177');" title="Salary: $425,000, Years: 3, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_wr">White, Kevin CHI WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12177&amp;YEAR=2018">11.20</a></td>
+<td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13193');" title="Salary: $770,000, Years: 4, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_te">Smith, Jonnu TEN TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13193&amp;YEAR=2018">63.80</a></td>
+<td class="week">8</td><td class="salary">$770,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','9686');" title="Salary: $450,000, Years: 5, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_pk">Succop, Ryan TEN PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9686&amp;YEAR=2018">124.50</a></td>
+<td class="week">8</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0510');" title="Salary: $514,250, Years: 3, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_def">Steelers, Pittsburgh PIT Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0510&amp;YEAR=2018">146.78</a></td>
+<td class="week">7</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr><th colspan="6">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0010">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$18,475,532</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,971,532</th>
+<th>60</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,028,467</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 5-11-0, PF: 1609.46"  class="franchise_0012 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0012&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/vitside_mafia_icon.png" alt="Vitside Mafia"  id="franchiseicon_0012" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13589');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Dolphins Sun 10:00 a.m. PT" class="position_qb">Allen, Josh BUF QB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13589&amp;YEAR=2018">228.06</a></td>
+<td class="week">11</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12611');" title="Salary: $998,250, Years: 3, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_qb">Goff, Jared LAR QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12611&amp;YEAR=2018">374.32</a></td>
+<td class="week">12</td><td class="salary">$998,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10697');" title="Salary: $825,000, Years: 2, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_qb">Tannehill, Ryan MIA QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10697&amp;YEAR=2018">175.96</a></td>
+<td class="week">11</td><td class="salary">$825,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','9898');" title="Salary: $2,000,000, Years: 1, Tag: , Week 17: at Packers Sun 10:00 a.m. PT" class="position_rb">Blount, LeGarrette DET RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9898&amp;YEAR=2018">79.00</a></td>
+<td class="week">6</td><td class="salary">$2,000,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11182');" title="Salary: $2,200,000, Years: 3, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_rb">Burkhead, Rex NEP RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11182&amp;YEAR=2018">39.20</a></td>
+<td class="week">11</td><td class="salary">$2,200,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13612');" title="Salary: $1,100,000, Years: 5, Tag: , Week 17: at Packers Sun 10:00 a.m. PT" class="position_rb">Johnson, Kerryon DET RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13612&amp;YEAR=2018">115.40</a></td>
+<td class="week">6</td><td class="salary">$1,100,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13144');" title="Salary: $467,500, Years: 4, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_rb">McGuire, Elijah NYJ RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13144&amp;YEAR=2018">71.65</a></td>
+<td class="week">11</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12175');" title="Salary: $3,394,050, Years: 2, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_wr">Cooper, Amari DAL WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12175&amp;YEAR=2018">178.00</a></td>
+<td class="week">8</td><td class="salary">$3,394,050</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11225');" title="Salary: $425,000, Years: 3, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_wr">Patterson, Cordarrelle NEP WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11225&amp;YEAR=2018">105.89</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13155');" title="Salary: $1,347,500, Years: 4, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_wr">Ross, John CIN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13155&amp;YEAR=2018">74.40</a></td>
+<td class="week">9</td><td class="salary">$1,347,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13793');" title="Salary: $500,000, Years: 5, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_wr">Valdes-Scantling, Marquez GBP WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13793&amp;YEAR=2018">92.63</a></td>
+<td class="week">7</td><td class="salary">$500,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13189');" title="Salary: $852,500, Years: 4, Tag: , Week 17: vs Cowboys Sun 10:00 a.m. PT" class="position_te">Engram, Evan NYG TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13189&amp;YEAR=2018">126.30</a></td>
+<td class="week">9</td><td class="salary">$852,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','8687');" title="Salary: $800,000, Years: 1, Tag: , Week 17: at Saints Sun 10:00 a.m. PT" class="position_te">Olsen, Greg CAR TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=8687&amp;YEAR=2018">80.10</a></td>
+<td class="week">4</td><td class="salary">$800,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0526');" title="Salary: $467,500, Years: 1, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_def">Falcons, Atlanta ATL Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0526&amp;YEAR=2018">93.00</a></td>
+<td class="week">8</td><td class="salary">$467,500</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0515');" title="Salary: $550,000, Years: 4, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_def">Seahawks, Seattle SEA Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0515&amp;YEAR=2018">157.84</a></td>
+<td class="week">7</td><td class="salary">$550,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr><th colspan="6">15 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0012">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$15,221,857</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><th colspan="6">Injured Reserve</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','8670');" title="Salary: $2,200,000, Years: 4, Tag: , Week 17: at Chiefs Sun 1:25 p.m. PT" class="position_rb">Lynch, Marshawn OAK RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=8670&amp;YEAR=2018">67.75</a></td>
+<td class="week">7</td><td class="salary">$2,200,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr><td align="center" colspan="6"><b class="warning">Warning!</b> Possible IR Rule Violation Above.</td></tr>
+<tr><th colspan="6">1 Total Player on IR</th></tr>
+<tr><th colspan="6">Taxi Squad</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13657');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_wr">Moore, J'Mon GBP WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13657&amp;YEAR=2018">3.56</a></td>
+<td class="week">7</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr><th colspan="6">1 Total Player on Taxi Squad</th></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$34,061,657</th>
+<th>47</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$10,938,342</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For Vitside Mafia:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 11-5-0, PF: 2120.91"  class="franchise_0004 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0004&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/art_of_war_icon.png" alt="The Art of War"  id="franchiseicon_0004" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','4925');" title="Salary: $5,445,000, Years: 2, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_qb">Brees, Drew NOS QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=4925&amp;YEAR=2018">367.98</a></td>
+<td class="week">6</td><td class="salary">$5,445,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13115');" title="Salary: $522,500, Years: 4, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_qb">Trubisky, Mitchell CHI QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13115&amp;YEAR=2018">311.02</a></td>
+<td class="week">5</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12637');" title="Salary: $650,000, Years: 3, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_rb">Barber, Peyton TBB RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12637&amp;YEAR=2018">135.30</a></td>
+<td class="week">5</td><td class="salary">$650,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12626');" title="Salary: $1,694,000, Years: 3, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_rb">Henry, Derrick TEN RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12626&amp;YEAR=2018">190.11</a></td>
+<td class="week">8</td><td class="salary">$1,694,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12634');" title="Salary: $574,750, Years: 3, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_rb">Howard, Jordan CHI RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12634&amp;YEAR=2018">165.00</a></td>
+<td class="week">5</td><td class="salary">$574,750</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12367');" title="Salary: $425,000, Years: 3, Tag: , Week 17: vs Dolphins Sun 10:00 a.m. PT" class="position_rb">Murphy, Marcus BUF RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12367&amp;YEAR=2018">40.52</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13616');" title="Salary: $575,000, Years: 5, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_rb">Walton, Mark CIN RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13616&amp;YEAR=2018">8.75</a></td>
+<td class="week">9</td><td class="salary">$575,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11671');" title="Salary: $3,733,455, Years: 1, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Evans, Mike TBB WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11671&amp;YEAR=2018">247.40</a></td>
+<td class="week">5</td><td class="salary">$3,733,455</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12647');" title="Salary: $1,089,000, Years: 3, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_wr">Fuller, Will HOU WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12647&amp;YEAR=2018">90.30</a></td>
+<td class="week">10</td><td class="salary">$1,089,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13156');" title="Salary: $880,000, Years: 4, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_wr">Smith-Schuster, JuJu PIT WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13156&amp;YEAR=2018">241.40</a></td>
+<td class="week">7</td><td class="salary">$880,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13637');" title="Salary: $525,000, Years: 5, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_wr">St. Brown, Equanimeous GBP WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13637&amp;YEAR=2018">43.80</a></td>
+<td class="week">7</td><td class="salary">$525,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13753');" title="Salary: $450,000, Years: 5, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_te">Akins, Jordan HOU TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13753&amp;YEAR=2018">39.50</a></td>
+<td class="week">10</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13188');" title="Salary: $1,210,000, Years: 4, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_te">Howard, O.J. TBB TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13188&amp;YEAR=2018">120.50</a></td>
+<td class="week">5</td><td class="salary">$1,210,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13680');" title="Salary: $600,000, Years: 5, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_te">Hurst, Hayden BAL TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13680&amp;YEAR=2018">35.30</a></td>
+<td class="week">10</td><td class="salary">$600,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12211');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_te">James, Jesse PIT TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12211&amp;YEAR=2018">84.30</a></td>
+<td class="week">7</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0521');" title="Salary: $544,500, Years: 1, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_def">Bears, Chicago CHI Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0521&amp;YEAR=2018">242.80</a></td>
+<td class="week">5</td><td class="salary">$544,500</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr><th colspan="6">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0004">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$13,851,911</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$33,335,791</th>
+<th>53</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$11,664,208</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For The Art of War:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 13-3-0, PF: 1949.82"  class="franchise_0006 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0006&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/lb_decleaters_icon.png" alt="LBer-DeCleaters"  id="franchiseicon_0006" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10700');" title="Salary: $964,975, Years: 2, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_qb">Cousins, Kirk MIN QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10700&amp;YEAR=2018">342.12</a></td>
+<td class="week">10</td><td class="salary">$964,975</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11193');" title="Salary: $675,000, Years: 5, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_rb">Bernard, Giovani CIN RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11193&amp;YEAR=2018">70.40</a></td>
+<td class="week">9</td><td class="salary">$675,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12171');" title="Salary: $565,675, Years: 2, Tag: , Week 17: at Seahawks Sun 1:25 p.m. PT" class="position_rb">Johnson, David ARI RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12171&amp;YEAR=2018">209.10</a></td>
+<td class="week">9</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13319');" title="Salary: $495,000, Years: 4, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_rb">Jones, Aaron GBP RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13319&amp;YEAR=2018">151.90</a></td>
+<td class="week">7</td><td class="salary">$495,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13614');" title="Salary: $500,000, Years: 5, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_rb">Lindsay, Phillip DEN RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13614&amp;YEAR=2018">202.13</a></td>
+<td class="week">10</td><td class="salary">$500,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13768');" title="Salary: $450,000, Years: 5, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_rb">Smith, Ito ATL RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13768&amp;YEAR=2018">77.45</a></td>
+<td class="week">8</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13139');" title="Salary: $605,000, Years: 4, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_rb">Williams, Jamaal GBP RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13139&amp;YEAR=2018">97.00</a></td>
+<td class="week">7</td><td class="salary">$605,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11675');" title="Salary: $1,427,497, Years: 1, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_wr">Adams, Davante GBP WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11675&amp;YEAR=2018">274.10</a></td>
+<td class="week">7</td><td class="salary">$1,427,497</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11674');" title="Salary: $3,001,405, Years: 1, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_wr">Cooks, Brandin LAR WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11674&amp;YEAR=2018">203.20</a></td>
+<td class="week">12</td><td class="salary">$3,001,405</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12188');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_wr">Dorsett, Phillip NEP WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12188&amp;YEAR=2018">65.90</a></td>
+<td class="week">11</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13646');" title="Salary: $1,000,000, Years: 5, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_wr">Gallup, Michael DAL WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13646&amp;YEAR=2018">81.20</a></td>
+<td class="week">8</td><td class="salary">$1,000,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13277');" title="Salary: $522,500, Years: 4, Tag: , Week 17: at Packers Sun 10:00 a.m. PT" class="position_wr">Golladay, Kenny DET WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13277&amp;YEAR=2018">172.10</a></td>
+<td class="week">6</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13645');" title="Salary: $525,000, Years: 5, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_wr">Smith, Tre'Quan NOS WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13645&amp;YEAR=2018">86.70</a></td>
+<td class="week">6</td><td class="salary">$525,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11228');" title="Salary: $665,500, Years: 3, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_wr">Woods, Robert LAR WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11228&amp;YEAR=2018">222.60</a></td>
+<td class="week">12</td><td class="salary">$665,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12676');" title="Salary: $665,500, Years: 3, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_te">Henry, Hunter LAC TE</a></td>
+<td class="points"> &dash; </td>
+<td class="week">8</td><td class="salary">$665,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0512');" title="Salary: $450,000, Years: 5, Tag: , Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_def">Chiefs, Kansas City KCC Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0512&amp;YEAR=2018">143.39</a></td>
+<td class="week">12</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr><th colspan="6">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0006">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$21,523,650</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$34,559,202</th>
+<th>58</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$10,440,797</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For LBer-DeCleaters:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 7-9-0, PF: 1536.73"  class="franchise_0013 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0013&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/gridiron_geeks_icon.png" alt="Gridiron Geeks"  id="franchiseicon_0013" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11642');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_qb">Bortles, Blake JAC QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11642&amp;YEAR=2018">199.22</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10313');" title="Salary: $2,325,000, Years: 3, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_qb">Dalton, Andy CIN QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10313&amp;YEAR=2018">216.54</a></td>
+<td class="week">9</td><td class="salary">$2,325,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13611');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_rb">Adams, Josh PHI RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13611&amp;YEAR=2018">76.65</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13850');" title="Salary: $625,000, Years: 5, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_rb">Edwards, Gus BAL RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13850&amp;YEAR=2018">88.30</a></td>
+<td class="week">10</td><td class="salary">$625,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13129');" title="Salary: $3,740,000, Years: 4, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_rb">Fournette, Leonard JAC RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13129&amp;YEAR=2018">103.90</a></td>
+<td class="week">9</td><td class="salary">$3,740,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13725');" title="Salary: $450,000, Years: 5, Tag: , Week 17: at Chiefs Sun 1:25 p.m. PT" class="position_rb">Warren, Chris OAK RB</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">7</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12930');" title="Salary: $514,250, Years: 3, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_wr">Anderson, Robby NYJ WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12930&amp;YEAR=2018">131.79</a></td>
+<td class="week">11</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12648');" title="Salary: $575,000, Years: 5, Tag: , Week 17: vs Eagles Sun 1:25 p.m. PT" class="position_wr">Doctson, Josh WAS WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12648&amp;YEAR=2018">87.20</a></td>
+<td class="week">4</td><td class="salary">$575,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10261');" title="Salary: $11,000,000, Years: 2, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_wr">Green, A.J. CIN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10261&amp;YEAR=2018">126.40</a></td>
+<td class="week">9</td><td class="salary">$11,000,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12443');" title="Salary: $425,000, Years: 4, Tag: , Week 17: vs Lions Sun 10:00 a.m. PT" class="position_wr">Kumerow, Jake GBP WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12443&amp;YEAR=2018">20.30</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13348');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_wr">Moore, David SEA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13348&amp;YEAR=2018">88.54</a></td>
+<td class="week">7</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13377');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_wr">Patrick, Tim DEN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13377&amp;YEAR=2018">48.70</a></td>
+<td class="week">10</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11227');" title="Salary: $650,000, Years: 4, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Stills, Kenny MIA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11227&amp;YEAR=2018">118.10</a></td>
+<td class="week">11</td><td class="salary">$650,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13631');" title="Salary: $1,150,000, Years: 5, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_wr">Washington, James PIT WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13631&amp;YEAR=2018">35.70</a></td>
+<td class="week">7</td><td class="salary">$1,150,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13880');" title="Salary: $425,000, Years: 5, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_te">Arnold, Dan NOS TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13880&amp;YEAR=2018">33.00</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','9474');" title="Salary: $514,250, Years: 2, Tag: , Week 17: at Chiefs Sun 1:25 p.m. PT" class="position_te">Cook, Jared OAK TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9474&amp;YEAR=2018">193.60</a></td>
+<td class="week">7</td><td class="salary">$514,250</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13382');" title="Salary: $467,500, Years: 4, Tag: , Week 17: at Seahawks Sun 1:25 p.m. PT" class="position_te">Seals-Jones, Ricky ARI TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13382&amp;YEAR=2018">74.30</a></td>
+<td class="week">9</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13909');" title="Salary: $425,000, Years: 1, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_pk">Maher, Brett DAL PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13909&amp;YEAR=2018">146.60</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13241');" title="Salary: $425,000, Years: 1, Tag: , Week 17: vs Cowboys Sun 10:00 a.m. PT" class="position_pk">Rosas, Aldrick NYG PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13241&amp;YEAR=2018">150.10</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0518');" title="Salary: $544,500, Years: 3, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_def">Eagles, Philadelphia PHI Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0518&amp;YEAR=2018">120.72</a></td>
+<td class="week">9</td><td class="salary">$544,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0520');" title="Salary: $550,000, Years: 4, Tag: , Week 17: vs Eagles Sun 1:25 p.m. PT" class="position_def">Redskins, Washington WAS Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0520&amp;YEAR=2018">150.59</a></td>
+<td class="week">4</td><td class="salary">$550,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr><th colspan="6">21 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0013">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$17,149,321</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$43,754,821</th>
+<th>80</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$1,245,178</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 8-8-0, PF: 1761.85"  class="franchise_0011 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0011&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/undersiege_icon.png" alt="Under Siege"  id="franchiseicon_0011" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','9431');" title="Salary: $3,962,750, Years: 3, Tag: , Week 17: at Packers Sun 10:00 a.m. PT" class="position_qb">Stafford, Matthew DET QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9431&amp;YEAR=2018">254.18</a></td>
+<td class="week">6</td><td class="salary">$3,962,750</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13364');" title="Salary: $2,025,000, Years: 5, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_rb">Carson, Chris SEA RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13364&amp;YEAR=2018">186.40</a></td>
+<td class="week">7</td><td class="salary">$2,025,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13726');" title="Salary: $450,000, Years: 5, Tag: , Week 17: at Seahawks Sun 1:25 p.m. PT" class="position_rb">Edmonds, Chase ARI RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13726&amp;YEAR=2018">49.54</a></td>
+<td class="week">9</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13134');" title="Salary: $797,500, Years: 4, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_rb">Foreman, D'Onta HOU RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13134&amp;YEAR=2018">9.20</a></td>
+<td class="week">10</td><td class="salary">$797,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13234');" title="Salary: $522,500, Years: 4, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_rb">Mack, Marlon IND RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13234&amp;YEAR=2018">165.35</a></td>
+<td class="week">9</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13130');" title="Salary: $3,410,000, Years: 4, Tag: , Week 17: at Saints Sun 10:00 a.m. PT" class="position_rb">McCaffrey, Christian CAR RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13130&amp;YEAR=2018">307.25</a></td>
+<td class="week">4</td><td class="salary">$3,410,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13163');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Godwin, Chris TBB WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13163&amp;YEAR=2018">155.70</a></td>
+<td class="week">5</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10729');" title="Salary: $6,800,000, Years: 2, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_wr">Hilton, T.Y. IND WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10729&amp;YEAR=2018">201.06</a></td>
+<td class="week">9</td><td class="salary">$6,800,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13176');" title="Salary: $990,000, Years: 4, Tag: , Week 17: vs Dolphins Sun 10:00 a.m. PT" class="position_wr">Jones, Zay BUF WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13176&amp;YEAR=2018">137.20</a></td>
+<td class="week">11</td><td class="salary">$990,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13157');" title="Salary: $715,000, Years: 4, Tag: , Week 17: at Saints Sun 10:00 a.m. PT" class="position_wr">Samuel, Curtis CAR WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13157&amp;YEAR=2018">123.57</a></td>
+<td class="week">4</td><td class="salary">$715,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12658');" title="Salary: $2,420,000, Years: 3, Tag: , Week 17: vs Cowboys Sun 10:00 a.m. PT" class="position_wr">Shepard, Sterling NYG WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12658&amp;YEAR=2018">150.31</a></td>
+<td class="week">9</td><td class="salary">$2,420,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13630');" title="Salary: $1,350,000, Years: 5, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_wr">Sutton, Courtland DEN WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13630&amp;YEAR=2018">115.30</a></td>
+<td class="week">10</td><td class="salary">$1,350,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12391');" title="Salary: $514,250, Years: 3, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_wr">Williams, Tyrell LAC WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12391&amp;YEAR=2018">117.30</a></td>
+<td class="week">8</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13671');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_te">Andrews, Mark BAL TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13671&amp;YEAR=2018">107.20</a></td>
+<td class="week">10</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12110');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_te">Brate, Cameron TBB TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12110&amp;YEAR=2018">92.90</a></td>
+<td class="week">5</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13190');" title="Salary: $577,500, Years: 4, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_te">Butt, Jake DEN TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13190&amp;YEAR=2018">16.50</a></td>
+<td class="week">10</td><td class="salary">$577,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13236');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_te">Everett, Gerald LAR TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13236&amp;YEAR=2018">86.60</a></td>
+<td class="week">12</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12833');" title="Salary: $467,500, Years: 4, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_te">Gathers, Rico DAL TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12833&amp;YEAR=2018">7.50</a></td>
+<td class="week">8</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','8153');" title="Salary: $510,000, Years: 1, Tag: R2, Week 17: at Rams Sun 1:25 p.m. PT" class="position_pk">Gould, Robbie SFO PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=8153&amp;YEAR=2018">147.90</a></td>
+<td class="week">11</td><td class="salary">$510,000</td><td class="contractyear">1</td><td class="contractinfo">R2</tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0509');" title="Salary: $514,250, Years: 3, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_def">Jaguars, Jacksonville JAC Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0509&amp;YEAR=2018">150.20</a></td>
+<td class="week">9</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr><th colspan="6">20 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0011">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$9,835,226</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$37,947,151</th>
+<th>73</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$7,052,848</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 4-12-0, PF: 1301.62"  class="franchise_0003 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0003&amp;O=01"><img align="middle" src="http://www.theleague.us/images/team_banners/maverick_icon.png" alt="Maverick"  id="franchiseicon_0003" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12616');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_qb">Brissett, Jacoby IND QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12616&amp;YEAR=2018">-0.62</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10695');" title="Salary: $7,000,000, Years: 1, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_qb">Luck, Andrew IND QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10695&amp;YEAR=2018">404.92</a></td>
+<td class="week">9</td><td class="salary">$7,000,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11761');" title="Salary: $622,242, Years: 1, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_rb">McKinnon, Jerick SFO RB</a></td>
+<td class="points"> &dash; </td>
+<td class="week">11</td><td class="salary">$622,242</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13153');" title="Salary: $2,530,000, Years: 4, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_wr">Davis, Corey TEN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13153&amp;YEAR=2018">151.10</a></td>
+<td class="week">8</td><td class="salary">$2,530,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11850');" title="Salary: $425,000, Years: 2, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_wr">Enunwa, Quincy NYJ WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11850&amp;YEAR=2018">67.90</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12645');" title="Salary: $600,000, Years: 5, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_wr">Treadwell, Laquon MIN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12645&amp;YEAR=2018">53.70</a></td>
+<td class="week">10</td><td class="salary">$600,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13158');" title="Salary: $550,000, Years: 4, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_wr">Westbrook, Dede JAC WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13158&amp;YEAR=2018">155.62</a></td>
+<td class="week">9</td><td class="salary">$550,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13192');" title="Salary: $715,000, Years: 4, Tag: , Week 17: at Ravens Sun 1:25 p.m. PT" class="position_te">Njoku, David CLE TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13192&amp;YEAR=2018">143.90</a></td>
+<td class="week">11</td><td class="salary">$715,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12317');" title="Salary: $425,000, Years: 2, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_te">Uzomah, C.J. CIN TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12317&amp;YEAR=2018">104.90</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11936');" title="Salary: $525,000, Years: 2, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_pk">Boswell, Chris PIT PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11936&amp;YEAR=2018">99.98</a></td>
+<td class="week">7</td><td class="salary">$525,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0530');" title="Salary: $425,000, Years: 4, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_def">49ers, San Francisco SFO Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0530&amp;YEAR=2018">67.67</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0502');" title="Salary: $425,000, Years: 3, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_def">Colts, Indianapolis IND Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0502&amp;YEAR=2018">147.02</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr><th colspan="6">12 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0003">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$15,893,000</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$30,560,242</th>
+<th>37</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$14,439,757</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 5-11-0, PF: 1472.58"  class="franchise_0005 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0005&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/the_mariachi_ninjas_icon.png" alt="The Mariachi Ninjas"  id="franchiseicon_0005" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12620');" title="Salary: $544,500, Years: 3, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_qb">Prescott, Dak DAL QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12620&amp;YEAR=2018">329.90</a></td>
+<td class="week">8</td><td class="salary">$544,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','7394');" title="Salary: $3,107,500, Years: 1, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_qb">Rivers, Philip LAC QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=7394&amp;YEAR=2018">349.02</a></td>
+<td class="week">8</td><td class="salary">$3,107,500</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13591');" title="Salary: $575,000, Years: 5, Tag: , Week 17: at Seahawks Sun 1:25 p.m. PT" class="position_qb">Rosen, Josh ARI QB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13591&amp;YEAR=2018">134.92</a></td>
+<td class="week">9</td><td class="salary">$575,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13617');" title="Salary: $1,200,000, Years: 5, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_rb">Freeman, Royce DEN RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13617&amp;YEAR=2018">90.80</a></td>
+<td class="week">10</td><td class="salary">$1,200,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13620');" title="Salary: $475,000, Years: 5, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_rb">Jackson, Justin LAC RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13620&amp;YEAR=2018">49.85</a></td>
+<td class="week">8</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11239');" title="Salary: $5,000,000, Years: 2, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_wr">Goodwin, Marquise SFO WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11239&amp;YEAR=2018">75.90</a></td>
+<td class="week">11</td><td class="salary">$5,000,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10271');" title="Salary: $9,500,000, Years: 2, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Jones, Julio ATL WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10271&amp;YEAR=2018">269.40</a></td>
+<td class="week">8</td><td class="salary">$9,500,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12176');" title="Salary: $2,495,625, Years: 2, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Parker, DeVante MIA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12176&amp;YEAR=2018">48.90</a></td>
+<td class="week">11</td><td class="salary">$2,495,625</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11951');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_wr">Snead, Willie BAL WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11951&amp;YEAR=2018">103.79</a></td>
+<td class="week">10</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','9912');" title="Salary: $625,000, Years: 2, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_te">Dickson, Ed SEA TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9912&amp;YEAR=2018">45.20</a></td>
+<td class="week">7</td><td class="salary">$625,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr><th colspan="6">10 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0005">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$12,457,918</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$36,546,218</th>
+<th>29</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$8,453,781</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For The Mariachi Ninjas:<br  />At Least 1 PK Are Required On Your Roster<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 9-7-0, PF: 1971.43"  class="franchise_0008 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0008&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/bring_the_pain_icon.png" alt="Bring the Pain"  id="franchiseicon_0008" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13592');" title="Salary: $475,000, Years: 5, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_qb">Darnold, Sam NYJ QB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13592&amp;YEAR=2018">202.40</a></td>
+<td class="week">11</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13593');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_qb">Jackson, Lamar BAL QB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13593&amp;YEAR=2018">169.54</a></td>
+<td class="week">10</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12140');" title="Salary: $665,500, Years: 2, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_qb">Winston, Jameis TBB QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12140&amp;YEAR=2018">233.78</a></td>
+<td class="week">5</td><td class="salary">$665,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12151');" title="Salary: $6,655,000, Years: 2, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_rb">Gordon, Melvin LAC RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12151&amp;YEAR=2018">238.00</a></td>
+<td class="week">8</td><td class="salary">$6,655,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13622');" title="Salary: $475,000, Years: 5, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_rb">Hines, Nyheim IND RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13622&amp;YEAR=2018">113.65</a></td>
+<td class="week">9</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12157');" title="Salary: $598,950, Years: 2, Tag: , Week 17: at Ravens Sun 1:25 p.m. PT" class="position_rb">Johnson, Duke CLE RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12157&amp;YEAR=2018">96.75</a></td>
+<td class="week">11</td><td class="salary">$598,950</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13662');" title="Salary: $500,000, Years: 5, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_wr">Coutee, Keke HOU WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13662&amp;YEAR=2018">48.70</a></td>
+<td class="week">10</td><td class="salary">$500,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12184');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Eagles Sun 1:25 p.m. PT" class="position_wr">Crowder, Jamison WAS WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12184&amp;YEAR=2018">68.90</a></td>
+<td class="week">4</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12505');" title="Salary: $425,000, Years: 2, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Humphries, Adam TBB WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12505&amp;YEAR=2018">155.38</a></td>
+<td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13633');" title="Salary: $1,075,000, Years: 5, Tag: , Week 17: at Seahawks Sun 1:25 p.m. PT" class="position_wr">Kirk, Christian ARI WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13633&amp;YEAR=2018">106.92</a></td>
+<td class="week">9</td><td class="salary">$1,075,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13164');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_wr">Kupp, Cooper LAR WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13164&amp;YEAR=2018">115.22</a></td>
+<td class="week">12</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10723');" title="Salary: $577,500, Years: 2, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Sanu, Mohamed ATL WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10723&amp;YEAR=2018">151.40</a></td>
+<td class="week">8</td><td class="salary">$577,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11247');" title="Salary: $7,738,400, Years: 1, Tag: F, Week 17: at Redskins Sun 1:25 p.m. PT" class="position_te">Ertz, Zach PHI TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11247&amp;YEAR=2018">280.30</a></td>
+<td class="week">9</td><td class="salary">$7,738,400</td><td class="contractyear">1</td><td class="contractinfo">F</tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11244');" title="Salary: $10,000,000, Years: 5, Tag: T, Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_te">Kelce, Travis KCC TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11244&amp;YEAR=2018">294.60</a></td>
+<td class="week">12</td><td class="salary">$10,000,000</td><td class="contractyear">5</td><td class="contractinfo">T</tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0507');" title="Salary: $467,500, Years: 4, Tag: , Week 17: at Ravens Sun 1:25 p.m. PT" class="position_def">Browns, Cleveland CLE Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0507&amp;YEAR=2018">123.07</a></td>
+<td class="week">11</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0517');" title="Salary: $495,000, Years: 4, Tag: , Week 17: vs Cowboys Sun 10:00 a.m. PT" class="position_def">Giants, New York NYG Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0517&amp;YEAR=2018">91.44</a></td>
+<td class="week">9</td><td class="salary">$495,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr><th colspan="6">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0008">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$10,128,500</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$41,839,525</th>
+<th>55</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$3,160,474</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For Bring the Pain:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 8-8-0, PF: 1543.75"  class="franchise_0014 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0014&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/cowboy_up_icon.png" alt="Cowboy Up"  id="franchiseicon_0014" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11760');" title="Salary: $622,242, Years: 1, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_qb">Garoppolo, Jimmy SFO QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11760&amp;YEAR=2018">58.02</a></td>
+<td class="week">11</td><td class="salary">$622,242</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12154');" title="Salary: $632,225, Years: 2, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_rb">Ajayi, Jay PHI RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12154&amp;YEAR=2018">39.65</a></td>
+<td class="week">9</td><td class="salary">$632,225</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11192');" title="Salary: $12,000,000, Years: 2, Tag: F, Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_rb">Bell, Le'Veon PIT RB</a></td>
+<td class="points"> &dash; </td>
+<td class="week">7</td><td class="salary">$12,000,000</td><td class="contractyear">2</td><td class="contractinfo">F</tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12625');" title="Salary: $4,114,000, Years: 3, Tag: , Week 17: at Giants Sun 10:00 a.m. PT" class="position_rb">Elliott, Ezekiel DAL RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12625&amp;YEAR=2018">271.35</a></td>
+<td class="week">8</td><td class="salary">$4,114,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11199');" title="Salary: $450,000, Years: 4, Tag: , Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_rb">Ware, Spencer KCC RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11199&amp;YEAR=2018">64.30</a></td>
+<td class="week">12</td><td class="salary">$450,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12186');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_wr">Diggs, Stefon MIN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12186&amp;YEAR=2018">215.30</a></td>
+<td class="week">10</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13666');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_wr">Fountain, Daurice IND WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13666&amp;YEAR=2018">0.00</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12205');" title="Salary: $798,600, Years: 2, Tag: , Week 17: at Saints Sun 10:00 a.m. PT" class="position_wr">Funchess, Devin CAR WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12205&amp;YEAR=2018">100.90</a></td>
+<td class="week">4</td><td class="salary">$798,600</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13658');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_wr">Lasley, Jordan BAL WR</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">10</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr><th colspan="6">9 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0014">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$13,356,333</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$33,439,076</th>
+<th>26</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$11,560,923</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For Cowboy Up:<br  />At Least 1 TE Are Required On Your Roster<br  />At Least 1 PK Are Required On Your Roster<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 5-11-0, PF: 1706.28"  class="franchise_0015 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0015&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/dark_magicians_of_chaos_ico.png" alt="Dark Magicians of Chaos"  id="franchiseicon_0015" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','9099');" title="Salary: $4,025,000, Years: 4, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_qb">Ryan, Matt ATL QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9099&amp;YEAR=2018">423.96</a></td>
+<td class="week">8</td><td class="salary">$4,025,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13113');" title="Salary: $907,500, Years: 4, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_qb">Watson, Deshaun HOU QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13113&amp;YEAR=2018">383.70</a></td>
+<td class="week">10</td><td class="salary">$907,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13610');" title="Salary: $1,400,000, Years: 5, Tag: , Week 17: at Ravens Sun 1:25 p.m. PT" class="position_rb">Chubb, Nick CLE RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13610&amp;YEAR=2018">179.50</a></td>
+<td class="week">11</td><td class="salary">$1,400,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13404');" title="Salary: $467,500, Years: 4, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_rb">Ekeler, Austin LAC RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13404&amp;YEAR=2018">139.55</a></td>
+<td class="week">8</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13606');" title="Salary: $2,200,000, Years: 5, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_rb">Jones, Ronald TBB RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13606&amp;YEAR=2018">15.45</a></td>
+<td class="week">5</td><td class="salary">$2,200,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','8673');" title="Salary: $467,500, Years: 2, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_wr">Ginn Jr., Ted NOS WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=8673&amp;YEAR=2018">44.03</a></td>
+<td class="week">6</td><td class="salary">$467,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13649');" title="Salary: $475,000, Years: 5, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_wr">Hamilton, DaeSean DEN WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13649&amp;YEAR=2018">52.23</a></td>
+<td class="week">10</td><td class="salary">$475,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','9075');" title="Salary: $625,000, Years: 3, Tag: , Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Jackson, DeSean TBB WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9075&amp;YEAR=2018">131.52</a></td>
+<td class="week">5</td><td class="salary">$625,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13639');" title="Salary: $625,000, Years: 5, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_wr">Miller, Anthony CHI WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13639&amp;YEAR=2018">107.89</a></td>
+<td class="week">5</td><td class="salary">$625,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13167');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_wr">Taylor, Taywan TEN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13167&amp;YEAR=2018">69.10</a></td>
+<td class="week">8</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11516');" title="Salary: $907,500, Years: 2, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_te">Doyle, Jack IND TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11516&amp;YEAR=2018">60.50</a></td>
+<td class="week">9</td><td class="salary">$907,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13672');" title="Salary: $675,000, Years: 5, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_te">Gesicki, Mike MIA TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13672&amp;YEAR=2018">40.20</a></td>
+<td class="week">11</td><td class="salary">$675,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13674');" title="Salary: $525,000, Years: 5, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_te">Goedert, Dallas PHI TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13674&amp;YEAR=2018">90.40</a></td>
+<td class="week">9</td><td class="salary">$525,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13679');" title="Salary: $425,000, Years: 5, Tag: , Week 17: at Patriots Sun 10:00 a.m. PT" class="position_te">Herndon, Chris NYJ TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13679&amp;YEAR=2018">113.83</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13678');" title="Salary: $450,000, Years: 5, Tag: , Week 17: at Saints Sun 10:00 a.m. PT" class="position_te">Thomas, Ian CAR TE</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13678&amp;YEAR=2018">81.30</a></td>
+<td class="week">4</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13303');" title="Salary: $467,500, Years: 2, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_pk">Elliott, Jake PHI PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13303&amp;YEAR=2018">128.10</a></td>
+<td class="week">9</td><td class="salary">$467,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0503');" title="Salary: $522,500, Years: 2, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_def">Dolphins, Miami MIA Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0503&amp;YEAR=2018">130.17</a></td>
+<td class="week">11</td><td class="salary">$522,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','0532');" title="Salary: $467,500, Years: 2, Tag: , Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_def">Texans, Houston HOU Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0532&amp;YEAR=2018">177.40</a></td>
+<td class="week">10</td><td class="salary">$467,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr><th colspan="6">18 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0015">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$15,491,635</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$31,646,635</th>
+<th>69</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$13,353,364</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 7-9-0, PF: 1855.43"  class="franchise_0007 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0007&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/fire_ready_aim_icon.png" alt="Fire Ready Aim"  id="franchiseicon_0007" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10699');" title="Salary: $425,000, Years: 3, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_qb">Foles, Nick PHI QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10699&amp;YEAR=2018">89.22</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10948');" title="Salary: $2,000,000, Years: 3, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_qb">Keenum, Case DEN QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10948&amp;YEAR=2018">250.90</a></td>
+<td class="week">10</td><td class="salary">$2,000,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12610');" title="Salary: $968,000, Years: 3, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_qb">Wentz, Carson PHI QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12610&amp;YEAR=2018">234.66</a></td>
+<td class="week">9</td><td class="salary">$968,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12630');" title="Salary: $574,750, Years: 3, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_rb">Drake, Kenyan MIA RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12630&amp;YEAR=2018">172.84</a></td>
+<td class="week">11</td><td class="salary">$574,750</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13607');" title="Salary: $1,600,000, Years: 5, Tag: , Week 17: vs Jets Sun 10:00 a.m. PT" class="position_rb">Michel, Sony NEP RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13607&amp;YEAR=2018">136.16</a></td>
+<td class="week">11</td><td class="salary">$1,600,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12261');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_rb">Montgomery, Ty BAL RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12261&amp;YEAR=2018">58.85</a></td>
+<td class="week">10</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','9308');" title="Salary: $425,000, Years: 2, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Amendola, Danny MIA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=9308&amp;YEAR=2018">101.69</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12814');" title="Salary: $675,000, Years: 3, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Grant, Jakeem MIA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12814&amp;YEAR=2018">84.69</a></td>
+<td class="week">11</td><td class="salary">$675,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12187');" title="Salary: $565,675, Years: 2, Tag: , Week 17: vs Cardinals Sun 1:25 p.m. PT" class="position_wr">Lockett, Tyler SEA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12187&amp;YEAR=2018">212.98</a></td>
+<td class="week">7</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12465');" title="Salary: $3,300,000, Years: 3, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_wr">Meredith, Cameron NOS WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12465&amp;YEAR=2018">19.90</a></td>
+<td class="week">6</td><td class="salary">$3,300,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13635');" title="Salary: $1,400,000, Years: 5, Tag: , Week 17: at Saints Sun 10:00 a.m. PT" class="position_wr">Moore, D.J. CAR WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13635&amp;YEAR=2018">134.03</a></td>
+<td class="week">4</td><td class="salary">$1,400,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11938');" title="Salary: $3,025,000, Years: 3, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_wr">Thielen, Adam MIN WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11938&amp;YEAR=2018">250.80</a></td>
+<td class="week">10</td><td class="salary">$3,025,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11705');" title="Salary: $3,025,000, Years: 3, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_te">Burton, Trey CHI TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11705&amp;YEAR=2018">147.10</a></td>
+<td class="week">5</td><td class="salary">$3,025,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10312');" title="Salary: $4,525,000, Years: 3, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_te">Rudolph, Kyle MIN TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10312&amp;YEAR=2018">151.40</a></td>
+<td class="week">10</td><td class="salary">$4,525,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','10976');" title="Salary: $544,500, Years: 1, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_pk">Tucker, Justin BAL PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10976&amp;YEAR=2018">170.90</a></td>
+<td class="week">10</td><td class="salary">$544,500</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0519');" title="Salary: $687,500, Years: 2, Tag: , Week 17: at Seahawks Sun 1:25 p.m. PT" class="position_def">Cardinals, Arizona ARI Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0519&amp;YEAR=2018">109.55</a></td>
+<td class="week">9</td><td class="salary">$687,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr><th colspan="6">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0007">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$11,049,817</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$35,355,917</th>
+<th>46</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$9,644,082</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 16-0-0, PF: 2453.05"  class="franchise_0009 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0009&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/wabbits_icon.png" alt="Wascawy Wabbits"  id="franchiseicon_0009" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13116');" title="Salary: $632,500, Years: 4, Tag: , Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_qb">Mahomes, Patrick KCC QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13116&amp;YEAR=2018">517.08</a></td>
+<td class="week">12</td><td class="salary">$632,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13290');" title="Salary: $495,000, Years: 4, Tag: , Week 17: at Vikings Sun 1:25 p.m. PT" class="position_rb">Cohen, Tarik CHI RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13290&amp;YEAR=2018">195.74</a></td>
+<td class="week">5</td><td class="salary">$495,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12632');" title="Salary: $425,000, Years: 3, Tag: , Week 17: vs Browns Sun 1:25 p.m. PT" class="position_rb">Dixon, Kenneth BAL RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12632&amp;YEAR=2018">49.90</a></td>
+<td class="week">10</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12150');" title="Salary: $5,989,500, Years: 2, Tag: , Week 17: vs 49ers Sun 1:25 p.m. PT" class="position_rb">Gurley, Todd LAR RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12150&amp;YEAR=2018">327.85</a></td>
+<td class="week">12</td><td class="salary">$5,989,500</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13132');" title="Salary: $1,100,000, Years: 4, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_rb">Kamara, Alvin NOS RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13132&amp;YEAR=2018">299.69</a></td>
+<td class="week">6</td><td class="salary">$1,100,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13131');" title="Salary: $2,420,000, Years: 4, Tag: , Week 17: at Steelers Sun 1:25 p.m. PT" class="position_rb">Mixon, Joe CIN RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13131&amp;YEAR=2018">211.15</a></td>
+<td class="week">9</td><td class="salary">$2,420,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11679');" title="Salary: $2,342,560, Years: 1, Tag: , Week 17: vs Cowboys Sun 10:00 a.m. PT" class="position_wr">Beckham, Odell NYG WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11679&amp;YEAR=2018">197.64</a></td>
+<td class="week">9</td><td class="salary">$2,342,560</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13640');" title="Salary: $500,000, Years: 5, Tag: , Week 17: at Ravens Sun 1:25 p.m. PT" class="position_wr">Callaway, Antonio CLE WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13640&amp;YEAR=2018">116.92</a></td>
+<td class="week">11</td><td class="salary">$500,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','12801');" title="Salary: $514,250, Years: 3, Tag: , Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_wr">Hill, Tyreek KCC WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12801&amp;YEAR=2018">296.89</a></td>
+<td class="week">12</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11672');" title="Salary: $525,000, Years: 3, Tag: , Week 17: at Texans Sun 10:00 a.m. PT" class="position_wr">Lee, Marqise JAC WR</a></td>
+<td class="points"> &dash; </td>
+<td class="week">9</td><td class="salary">$525,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11890');" title="Salary: $425,000, Years: 3, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Wilson, Albert MIA WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11890&amp;YEAR=2018">85.78</a></td>
+<td class="week">11</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12677');" title="Salary: $786,500, Years: 3, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_te">Hooper, Austin ATL TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12677&amp;YEAR=2018">163.00</a></td>
+<td class="week">8</td><td class="salary">$786,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','8416');" title="Salary: $1,000,000, Years: 3, Tag: , Week 17: vs Colts Sun 5:20 p.m. PT" class="position_te">Walker, Delanie TEN TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=8416&amp;YEAR=2018">9.20</a></td>
+<td class="week">8</td><td class="salary">$1,000,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12956');" title="Salary: $514,250, Years: 3, Tag: , Week 17: vs Panthers Sun 10:00 a.m. PT" class="position_pk">Lutz, Wil NOS PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12956&amp;YEAR=2018">160.00</a></td>
+<td class="week">6</td><td class="salary">$514,250</td><td class="contractyear">3</td><td class="contractinfo"></tr>
+<tr><th colspan="6">14 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0009">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$14,961,038</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,630,598</th>
+<th>45</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,369,401</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="6"><b class="warning">Warning!</b> Error - Invalid Roster For Wascawy Wabbits:<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption class="withfranchiseicon"><span><a title="Franchise home page, Record: 8-8-0, PF: 1660.14"  class="franchise_0016 " href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;F=0016&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/the_dream_icon.png" alt=" Running Down The Dream"  id="franchiseicon_0016" class="franchiseicon"  /></a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2018 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+<th class="contractinfo">Tag</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13125');" title="Salary: $522,500, Years: 4, Tag: , Week 17: at Rams Sun 1:25 p.m. PT" class="position_qb">Beathard, C.J. SFO QB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13125&amp;YEAR=2018">90.98</a></td>
+<td class="week">11</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13590');" title="Salary: $650,000, Years: 5, Tag: , Week 17: at Ravens Sun 1:25 p.m. PT" class="position_qb">Mayfield, Baker CLE QB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13590&amp;YEAR=2018">294.10</a></td>
+<td class="week">11</td><td class="salary">$650,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13621');" title="Salary: $575,000, Years: 5, Tag: , Week 17: at Bills Sun 10:00 a.m. PT" class="position_rb">Ballage, Kalen MIA RB</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13621&amp;YEAR=2018">31.73</a></td>
+<td class="week">11</td><td class="salary">$575,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13146');" title="Salary: $522,500, Years: 4, Tag: , Week 17: vs Bengals Sun 1:25 p.m. PT" class="position_rb">Conner, James PIT RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13146&amp;YEAR=2018">238.75</a></td>
+<td class="week">7</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13128');" title="Salary: $2,860,000, Years: 4, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_rb">Cook, Dalvin MIN RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13128&amp;YEAR=2018">122.00</a></td>
+<td class="week">10</td><td class="salary">$2,860,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','11390');" title="Salary: $675,000, Years: 2, Tag: , Week 17: vs Bears Sun 1:25 p.m. PT" class="position_rb">Murray, Latavius MIN RB</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11390&amp;YEAR=2018">115.40</a></td>
+<td class="week">10</td><td class="salary">$675,000</td><td class="contractyear">2</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','12181');" title="Salary: $467,500, Years: 4, Tag: , Week 17: at Redskins Sun 1:25 p.m. PT" class="position_wr">Agholor, Nelson PHI WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=12181&amp;YEAR=2018">133.40</a></td>
+<td class="week">9</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','10737');" title="Salary: $605,000, Years: 4, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_wr">Benjamin, Travis LAC WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=10737&amp;YEAR=2018">35.72</a></td>
+<td class="week">8</td><td class="salary">$605,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13629');" title="Salary: $2,300,000, Years: 5, Tag: , Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Ridley, Calvin ATL WR</a> (R) </td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13629&amp;YEAR=2018">176.30</a></td>
+<td class="week">8</td><td class="salary">$2,300,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13154');" title="Salary: $2,035,000, Years: 4, Tag: , Week 17: at Broncos Sun 1:25 p.m. PT" class="position_wr">Williams, Mike LAC WR</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13154&amp;YEAR=2018">158.70</a></td>
+<td class="week">8</td><td class="salary">$2,035,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','11695');" title="Salary: $1,427,497, Years: 1, Tag: , Week 17: at Titans Sun 5:20 p.m. PT" class="position_te">Ebron, Eric IND TE</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=11695&amp;YEAR=2018">222.20</a></td>
+<td class="week">9</td><td class="salary">$1,427,497</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13354');" title="Salary: $467,500, Years: 4, Tag: , Week 17: vs Raiders Sun 1:25 p.m. PT" class="position_pk">Butker, Harrison KCC PK</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=13354&amp;YEAR=2018">153.20</a></td>
+<td class="week">12</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','0511');" title="Salary: $1,100,000, Years: 4, Tag: , Week 17: vs Chargers Sun 1:25 p.m. PT" class="position_def">Broncos, Denver DEN Def</a></td>
+<td class="points"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=08&amp;PLAYER_ID=0511&amp;YEAR=2018">158.20</a></td>
+<td class="week">10</td><td class="salary">$1,100,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<tr><th colspan="6">13 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="http://www49.myfantasyleague.com/2018/options?L=13522&amp;O=142&amp;F=0016">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$18,885,208</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$33,092,706</th>
+<th>50</th>
+<th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$11,907,293</th><th>&nbsp;</th><th>&nbsp;</th></tr>
+</tbody></table></td>
+</tr>
+</table>
+<!-- MFL CHAT -->
+<script src="//nitrografixx.com/MFL-Chat/mflChat.js"></script>
+
+
+<script>
+///////////////////////////////////////////////////////////////////////////////////////
+//NOTES:
+// - This addon requires jQuery library 
+// - This addon needs to be placed in a home page message marked as header
+// - MFL's regular chat module must appear on the home page for this addon to function
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////
+// CUSTOM SETTINGS
+//////////////////////////
+var chatAddonInsertImage = true;
+var chatAddonInsertLink = true;
+var chatAddonCustomEmoji = true;
+var chatHideVideoLink = false;
+var chatBottomUp = false;
+var chatShowLapsedTime = true;
+var chatShowMore = true;
+var chatDefaultDisplayMessages = 10;
+var chatUseFranchiseIcons = true;
+var chatFranchiseIconHeight = 15;
+var chatImageMaxHeight = 160;
+var chatImageMaxWidth = 200;
+var chatElapsedTimeColor = "#888";
+var chatPopupWidth = 425;
+var chatPopupHeight = 450;
+
+
+var chatImagePath = '//nitrografixx.com/MFL-Chat/';
+var chatEmojiPath = '//nitrografixx.com/MFL-Chat/';
+var chatEmojiList = ({'bowtie':'bowtie.png','smile':'smile.png','laughing':'laughing.png','blush':'blush.png','smiley':'smiley.png','relaxed':'relaxed.png','smirk':'smirk.png','heart_eyes':'heart_eyes.png','kissing_heart':'kissing_heart.png','kissing_closed_eyes':'kissing_closed_eyes.png','flushed':'flushed.png','relieved':'relieved.png','satisfied':'satisfied.png','grin':'grin.png','wink':'wink.png','stuck_out_tongue_winking_eye':'stuck_out_tongue_winking_eye.png','stuck_out_tongue_closed_eyes':'stuck_out_tongue_closed_eyes.png','grinning':'grinning.png','kissing':'kissing.png','kissing_smiling_eyes':'kissing_smiling_eyes.png','stuck_out_tongue':'stuck_out_tongue.png','sleeping':'sleeping.png','worried':'worried.png','frowning':'frowning.png','anguished':'anguished.png','_open_mouth':'open_mouth.png','grimacing':'grimacing.png','confused':'confused.png','hushed':'hushed.png','expressionless':'expressionless.png','unamused':'unamused.png','sweat_smile':'sweat_smile.png','sweat':'sweat.png','weary':'weary.png','_pensive':'pensive.png','disappointed':'disappointed.png','confounded':'confounded.png','fearful':'fearful.png','cold_sweat':'cold_sweat.png','_persevere':'persevere.png','joy':'joy.png','astonished':'astonished.png','scream':'scream.png','neckbeard':'neckbeard.png','tired_face':'tired_face.png','angry':'angry.png','rage':'rage.png','triumph':'triumph.png','sleepy':'sleepy.png','yum':'yum.png','mask':'mask.png','sunglasses':'sunglasses.png','dizzy_face':'dizzy_face.png','imp':'imp.png','smiling_imp':'smiling_imp.png','neutral_face':'neutral_face.png','no_mouth':'no_mouth.png','innocent':'innocent.png','alien':'alien.png','ari':'ari.png','atl':'atl.png','bal':'bal.png','buf':'buf.png','car':'car.png','chi':'chi.png','cin':'cin.png','cle':'cle.png','dal':'dal.png','den':'den.png','det':'det.png','gbp':'gbp.png','hou':'hou.png','ind':'ind.png','jac':'jac.png','kcc':'kcc.png','lac':'lac.png','mia':'mia.png','min':'min.png','nep':'nep.png','nos':'nos.png','nyg':'nyg.png','nyj':'nyj.png','_oak':'oak.png','_phi':'phi.png','_pit':'pit.png','lar':'lar.png','sea':'sea.png','sfo':'sfo.png','tbb':'tbb.png','ten':'ten.png','was':'was.png','broken_heart':'broken_heart.png','boom':'boom.png','exclamation':'exclamation.png','question':'question.png','zzz':'zzz.png','fire':'fire.png','shit':'shit.png','thumbsup':'thumbsup.png','thumbsdown':'thumbsdown.png','_ok_hand':'ok_hand.png','facepunch':'facepunch.png','fist':'fist.png','v':'v.png','_pray':'pray.png','eyes':'eyes.png','speech_balloon':'speech_balloon.png','thought_balloon':'thought_balloon.png','sunny':'sunny.png','umbrella':'umbrella.png','cloud':'cloud.png','snowflake':'snowflake.png','snowman':'snowman.png','zap':'zap.png','four_leaf_clover':'four_leaf_clover.png','maple_leaf':'maple_leaf.png','jack_o_lantern':'jack_o_lantern.png','ghost':'ghost.png','santa':'santa.png','christmas_tree':'christmas_tree.png','bell':'bell.png','loudspeaker':'loudspeaker.png','hourglass':'hourglass.png','toilet':'toilet.png','hammer':'hammer.png','moneybag':'moneybag.png','football':'football.png','basketball':'basketball.png','soccer':'soccer.png','baseball':'baseball.png','tennis':'tennis.png','8ball':'8ball.png','rugby_football':'rugby_football.png','bowling':'bowling.png','golf':'golf.png','trophy':'trophy.png'});
+</script>
+
+<style>
+table#league_chat td:nth-child(2) {
+    max-width: 160px;
+    overflow: auto;
+}
+</style></div>
+</div>
+<div class="container-footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-4">
+        <div class="defending-champ">Defending League Champions
+          <br>
+          <a title="Owner: Jim Kubek" href="http://www59.myfantasyleague.com/2017/options?L=13522&amp;F=0007&amp;O=01"><img align="middle" src="http://theleague.us/images/team_banners/fire_ready_aim_icon.png" alt="Fire Ready Aim" id="franchiseicon_0007" class="franchiseicon">
+</a>
+        </div>
+        <span id="mfladdons"><a href="http://www.mfladdons.com">Site Designed by MFLaddons.com</a></span>
+      </div>
+      <div class="col-sm-8">
+        <div class="row">
+          <div class="col-sm-3">
+            <ul>
+              <li>Rules</li>
+              <li><a href="http://www49.myfantasyleague.com/2018/home/13522?MODULE=MESSAGE20">Constitution</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=09">League Scoring</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/home/13522?MODULE=MESSAGE18">Cap Hits</a></li>
+              <li><a href="https://drive.google.com/file/d/0B153AyPWE7R4cTRyX2I5Ulk2QnM/view?ths=true">2016 Tags</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul>
+              <li>Team Management</li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=02">Submit lineup</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/add_drop?L=13522">Add/drop</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=98">Practice squad</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=18">Injured reserve</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul>
+              <li>League</li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=07">Rosters</a></li>
+<li><a href="http://www49.myfantasyleague.com/2018/standings?L=13522">Standings</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=101">Rankings</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=15">Schedule</a></li>
+              
+      
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul>
+              <li>News</li>
+           <li><a href="http://www49.myfantasyleague.com/2018/news_articles?MYNEWS=1&L=13522">My Player News</a></li>
+              <li><a href="http://www49.myfantasyleague.com/2018/top?L=13522&SEARCHTYPE=ADVANCED&COUNT=30&CATEGORY=freeagent&POSITION=*&DISPLAY=points&TEAM=*">Free Agents</a></li>
+     <li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=17">2018 Draft</a></li>      
+<li><a href="http://www49.myfantasyleague.com/2018/options?L=13522&O=44">2018 Auction</a></li>
+              
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="//mfl.football/assets/js/global.js"></script>
+<style>
+#curr_auctions .btn-primary {display:none}
+</style>
+<script>
+$(document).ready(function() {
+  //make submit lineup simpler
+  $("#body_options_02 .reportnavigation:contains('Looking for lineup advice?')").remove();
+//Highlight ending auctions
+  $('#body_options_43 td .warning').parent().parent().addClass('auction-warning');
+
+});
+</script>
+
+<style>
+var commish = franchise_id == "0000";
+var northwest = franchise_id == "0001" || franchise_id == "0002" || franchise_id == "0010" || franchise_id == "0012";
+var southwwest = franchise_id == "0004" || franchise_id == "0006" || franchise_id == "0011" || franchise_id == "0013";
+var central = commish || franchise_id == "0003" || franchise_id == "0005" || franchise_id == "0008" || franchise_id == "0014";
+var east = franchise_id == "0007" || franchise_id == "0009" || franchise_id == "0015" || franchise_id == "0016";
+
+$('#division00').parent().parent().parent().addClass('hidden');
+$('#division01').parent().parent().parent().addClass('hidden');
+$('#division02').parent().parent().parent().addClass('hidden');
+$('#division03').parent().parent().parent().addClass('hidden');
+
+//Get NW Teams
+if (northwest) {
+    $('body').addClass('northwest');
+    $('#division00').parent().parent().parent().removeClass('hidden');
+};
+
+//Get SW Teams
+if (southwwest) {
+    $('body').addClass('southwwest');
+    $('#division01').parent().parent().parent().removeClass('hidden');
+};
+
+//Get Central Teams
+if (central) {
+    $('body').addClass('central');
+    $('#division02').parent().parent().parent().removeClass('hidden');
+};
+
+//Get East Teams
+if (east) {
+    $('body').addClass('east');
+    $('#division03').parent().parent().parent().removeClass('hidden');
+};
+</style></div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
+<tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
+<tr><td colspan="2" align="center">Page Generated Fri Nov 28 11:44:39 p.m. PT 2025</td></tr>
+<tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
+ - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
+- <button id="pmLink">Privacy Manager</button>
+</td></tr>
+<tr><td colspan="2" align="center"><b>Disclaimer:</b>  This site is not
+in any way affiliated with, endorsed or licensed by the
+National Football League, any NFL team or NFLPA member.
+</td></tr></table></div>
+<div id="player" class="mflModal" style="display:none"><div class="mflModal-content">
+<table class="report" align="center" cellspacing="1" style="margin-bottom:0px;">
+<caption><span id="modal_title_player"></span><button style="float:right; margin-top:5px; margin-right:5px;" onclick="hide_modal_player();">&#x2716;</button><button style="float:right; margin-top:5px; margin-right:5px;" onclick="window.location.assign(player_page_url);">&#x21F1;</button></caption>
+<tbody><tr class="oddtablerow"><td class="mflModal-body"><div id="modal_body_player" align="left"></div></td></tr>
+<tr class="oddtablerow"><td class="mflModal-body"><div align="center">&nbsp; <button onclick="hide_modal_player();">Close</button></div></td></tr>
+<tr class="oddtablerow"><td class="mflModal-body">&nbsp;</td></tr></tbody></table></div></div>
+<script type="text/javascript">
+var mfl_modal_player = document.getElementById("player");
+var player_page_url = "";
+
+function show_modal_player () {
+    mfl_modal_player.style.display = "block";
+}
+function hide_modal_player () {
+    mfl_modal_player.style.display = "none";
+}
+function ack_modal_player () {
+
+}
+</script>
+</body></html>

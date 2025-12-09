@@ -1,0 +1,111 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+
+export const prerender = true;
+---
+
+<TheLeagueLayout title="Contracts - Coming Soon | The League">
+  <div class="coming-soon-container">
+    <div class="coming-soon-content">
+      <h1>Contracts</h1>
+      <div class="coming-soon-message">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <h2>Coming Soon!</h2>
+        <p>The contracts page is currently under development. Check back soon for player contract management and submissions.</p>
+      </div>
+      <a href="/theleague" class="back-link">← Back to Home</a>
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .coming-soon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 2rem;
+  }
+
+  .coming-soon-content {
+    max-width: 600px;
+    text-align: center;
+  }
+
+  .coming-soon-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .coming-soon-message {
+    background: var(--content-bg, #fff);
+    padding: 3rem 2rem;
+    border-radius: 1rem;
+    border: 2px solid var(--primary-content-border-color, #e2e2e2);
+    margin-bottom: 2rem;
+  }
+
+  .icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    color: var(--secondary-color, #2e8743);
+  }
+
+  .coming-soon-message h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .coming-soon-message p {
+    font-size: 1.1rem;
+    color: var(--muted-text-color, #6b7280);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .back-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-btn-default-bg-color, #1c497c);
+    color: white;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .back-link:hover {
+    background: var(--primary-btn-hover-bg-color, #164066);
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  @media (max-width: 768px) {
+    .coming-soon-content h1 {
+      font-size: 2rem;
+    }
+
+    .coming-soon-message {
+      padding: 2rem 1.5rem;
+    }
+
+    .coming-soon-message h2 {
+      font-size: 1.5rem;
+    }
+
+    .coming-soon-message p {
+      font-size: 1rem;
+    }
+
+    .icon {
+      width: 60px;
+      height: 60px;
+    }
+  }
+</style>

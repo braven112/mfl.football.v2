@@ -1,0 +1,805 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+
+// Mock transaction data - in production this would come from the API
+const mockTransactions = [
+  {
+    id: 'TXN_1700000000000_abc123',
+    leagueId: '18202',
+    playerId: 'QB001',
+    playerName: 'Patrick Mahomes',
+    franchiseId: 'FRAN001',
+    oldContractYears: 2,
+    newContractYears: 3,
+    submittedBy: 'Team Owner',
+    submittedAt: new Date('2024-11-20T14:30:00'),
+    status: 'success' as const,
+    mflResponse: {
+      success: true,
+      message: 'Contract updated on MFL',
+      mflTransactionId: 'MFL_2024_001',
+    },
+    retryCount: 0,
+  },
+  {
+    id: 'TXN_1699999999999_def456',
+    leagueId: '18202',
+    playerId: 'RB001',
+    playerName: 'Jonathan Taylor',
+    franchiseId: 'FRAN002',
+    oldContractYears: 1,
+    newContractYears: 4,
+    submittedBy: 'Another Owner',
+    submittedAt: new Date('2024-11-19T10:15:00'),
+    status: 'failed' as const,
+    mflResponse: {
+      success: false,
+      message: 'Failed to push contract to MFL',
+      error: 'Network timeout',
+    },
+    retryCount: 0,
+  },
+];
+---
+
+<TheLeagueLayout title="Contract History">
+  <main class="view-container">
+    <section class="history-section">
+      <div class="section-header">
+        <h1>Contract Submission History</h1>
+        <p class="section-subtitle">View all contract submissions and their status</p>
+      </div>
+
+      <div class="controls-bar">
+        <div class="search-box">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search by player name, team, or transaction ID..."
+            class="search-input"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label for="statusFilter" class="filter-label">Filter by Status:</label>
+          <select id="statusFilter" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+            <option value="pending">Pending</option>
+            <option value="retry_pending">Retry Pending</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="transactionsList" class="transactions-container">
+        <p class="loading-text">Loading transaction history...</p>
+      </div>
+
+      <div id="failedTransactionsSection" class="failed-section" style="display: none;">
+        <h2>Failed Transactions Requiring Manual Review</h2>
+        <p class="section-info">These transactions failed to update on MFL and require manual intervention by an admin.</p>
+        <div id="failedTransactionsList" class="failed-transactions-list">
+          <!-- Failed transactions will be loaded here -->
+        </div>
+      </div>
+
+      <div id="statsSection" class="stats-section" style="display: none;">
+        <h2>Summary Statistics</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Total Submissions</span>
+            <span class="stat-value" id="totalCount">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Successful</span>
+            <span class="stat-value stat-value--success" id="successCount">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Failed</span>
+            <span class="stat-value stat-value--error" id="failedCount">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Pending</span>
+            <span class="stat-value stat-value--warning" id="pendingCount">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="application/json" id="transaction-data" set:html={JSON.stringify({
+    transactions: mockTransactions,
+  })}></script>
+
+  <script type="module">
+    // Load transaction data
+    const dataEl = document.getElementById('transaction-data');
+    const data = JSON.parse(dataEl?.textContent || '{"transactions": []}');
+    const transactions = data.transactions || [];
+
+    // Get DOM elements
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const transactionsList = document.getElementById('transactionsList');
+    const failedSection = document.getElementById('failedTransactionsSection');
+    const failedList = document.getElementById('failedTransactionsList');
+    const statsSection = document.getElementById('statsSection');
+    const totalCount = document.getElementById('totalCount');
+    const successCount = document.getElementById('successCount');
+    const failedCount = document.getElementById('failedCount');
+    const pendingCount = document.getElementById('pendingCount');
+
+    // Format date helper
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    // Render transactions
+    function renderTransactions(transactionsToShow) {
+      if (transactionsToShow.length === 0) {
+        transactionsList.innerHTML = '<p class="empty-text">No transactions found</p>';
+        return;
+      }
+
+      const html = transactionsToShow
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+        .map(
+          t => `
+        <div class="transaction-card transaction-card--${t.status}">
+          <div class="transaction-card-header">
+            <div class="transaction-card-title">
+              <h3 class="player-name">${t.playerName}</h3>
+              <span class="transaction-id">ID: ${t.id}</span>
+            </div>
+            <span class="transaction-badge transaction-badge--${t.status}">
+              ${t.status.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+
+          <div class="transaction-card-body">
+            <div class="transaction-detail">
+              <span class="detail-label">League</span>
+              <span class="detail-value">${t.leagueId}</span>
+            </div>
+            <div class="transaction-detail">
+              <span class="detail-label">Player ID</span>
+              <span class="detail-value">${t.playerId}</span>
+            </div>
+            <div class="transaction-detail">
+              <span class="detail-label">Contract Years</span>
+              <span class="detail-value">
+                <span class="contract-change">${t.oldContractYears} <span class="arrow">→</span> ${t.newContractYears}</span>
+              </span>
+            </div>
+            <div class="transaction-detail">
+              <span class="detail-label">Submitted By</span>
+              <span class="detail-value">${t.submittedBy}</span>
+            </div>
+            <div class="transaction-detail">
+              <span class="detail-label">Date</span>
+              <span class="detail-value">${formatDate(t.submittedAt)}</span>
+            </div>
+            <div class="transaction-detail">
+              <span class="detail-label">Attempts</span>
+              <span class="detail-value">${t.retryCount + 1}</span>
+            </div>
+          </div>
+
+          ${t.mflResponse ? `
+            <div class="transaction-response ${t.mflResponse.success ? 'success' : 'error'}">
+              <div class="response-label">MFL Response</div>
+              <div class="response-content">
+                <p>${t.mflResponse.message}</p>
+                ${t.mflResponse.mflTransactionId ? `<small>TXN ID: ${t.mflResponse.mflTransactionId}</small>` : ''}
+                ${t.mflResponse.error ? `<small class="error-text">Error: ${t.mflResponse.error}</small>` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          ${t.status === 'failed' ? `
+            <div class="transaction-actions">
+              <button class="btn btn-small btn-retry" onclick="retryTransaction('${t.id}')">
+                Retry
+              </button>
+              <button class="btn btn-small btn-manual" onclick="markManual('${t.id}')">
+                Mark as Manually Synced
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `
+        )
+        .join('');
+
+      transactionsList.innerHTML = html;
+    }
+
+    // Render failed transactions
+    function renderFailedTransactions(failedTransactions) {
+      if (failedTransactions.length === 0) {
+        failedSection.style.display = 'none';
+        return;
+      }
+
+      failedSection.style.display = 'block';
+
+      const html = failedTransactions
+        .map(
+          t => `
+        <div class="failed-transaction-item">
+          <div class="failed-transaction-header">
+            <div>
+              <strong>${t.playerName}</strong> - League ${t.leagueId}
+            </div>
+            <small>${formatDate(t.submittedAt)}</small>
+          </div>
+          <div class="failed-transaction-details">
+            <p><strong>Error:</strong> ${t.mflResponse?.error || 'Unknown error'}</p>
+            <p><strong>Submitted by:</strong> ${t.submittedBy}</p>
+            <p><strong>Change:</strong> ${t.oldContractYears} → ${t.newContractYears} years</p>
+          </div>
+        </div>
+      `
+        )
+        .join('');
+
+      failedList.innerHTML = html;
+    }
+
+    // Calculate and display stats
+    function updateStats(transactionsToCount) {
+      const total = transactionsToCount.length;
+      const successful = transactionsToCount.filter(t => t.status === 'success').length;
+      const failed = transactionsToCount.filter(t => t.status === 'failed').length;
+      const pending = transactionsToCount.filter(t => t.status === 'pending' || t.status === 'retry_pending').length;
+
+      totalCount.textContent = total;
+      successCount.textContent = successful;
+      failedCount.textContent = failed;
+      pendingCount.textContent = pending;
+
+      if (total > 0) {
+        statsSection.style.display = 'block';
+      }
+    }
+
+    // Filter transactions
+    function applyFilters() {
+      let filtered = transactions;
+
+      // Apply search filter
+      const searchTerm = searchInput?.value?.toLowerCase() || '';
+      if (searchTerm) {
+        filtered = filtered.filter(
+          t =>
+            t.playerName.toLowerCase().includes(searchTerm) ||
+            t.id.toLowerCase().includes(searchTerm) ||
+            t.submittedBy.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // Apply status filter
+      const statusValue = statusFilter?.value || '';
+      if (statusValue) {
+        filtered = filtered.filter(t => t.status === statusValue);
+      }
+
+      renderTransactions(filtered);
+      updateStats(transactions);
+
+      // Show failed transactions section
+      const failedTransactions = transactions.filter(t => t.status === 'failed');
+      renderFailedTransactions(failedTransactions);
+    }
+
+    // Event listeners
+    searchInput?.addEventListener('input', applyFilters);
+    statusFilter?.addEventListener('change', applyFilters);
+
+    // Retry transaction
+    window.retryTransaction = async (transactionId) => {
+      if (!confirm('Are you sure you want to retry this transaction?')) {
+        return;
+      }
+
+      const retryBtn = event?.target;
+      if (retryBtn) retryBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/contracts/retry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactionId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(`Retry failed: ${data.message}`);
+          return;
+        }
+
+        // Update UI with new status
+        alert(
+          data.success
+            ? `Retry successful! Transaction ${data.status}`
+            : `Retry failed. Attempt ${data.retryCount}/3. ${data.message}`
+        );
+
+        // Reload to show updated transaction
+        applyFilters();
+      } catch (error) {
+        alert('Network error during retry. Please try again.');
+        console.error('Retry error:', error);
+      } finally {
+        if (retryBtn) retryBtn.disabled = false;
+      }
+    };
+
+    // Mark as manually synced
+    window.markManual = async (transactionId) => {
+      if (!confirm('Mark this transaction as manually synced with MFL?')) {
+        return;
+      }
+
+      // TODO: Implement actual mark-as-synced API endpoint
+      // For now, this is a placeholder that would call:
+      // POST /api/contracts/mark-synced with { transactionId }
+      alert(
+        'This transaction has been marked as manually synced. Admin will confirm the update.'
+      );
+    };
+
+    // Initial render
+    applyFilters();
+  </script>
+
+  <style>
+    .view-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .history-section {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .section-header h1 {
+      font-size: 2rem;
+      color: var(--primary-color);
+      margin: 0;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: #666;
+      margin: 0;
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--primary-content-bg-color);
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 0.75rem;
+    }
+
+    @media (min-width: 768px) {
+      .controls-bar {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 1rem;
+      }
+    }
+
+    .search-box {
+      flex: 1;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .filter-label {
+      white-space: nowrap;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .filter-select {
+      padding: 0.75rem;
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .transactions-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .transaction-card {
+      background: var(--primary-content-bg-color);
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: var(--primary-content-boxshadow-size) var(--primary-content-boxshadow-color);
+    }
+
+    .transaction-card--success {
+      border-left: 4px solid var(--success-color);
+    }
+
+    .transaction-card--failed {
+      border-left: 4px solid var(--error-color);
+    }
+
+    .transaction-card--pending {
+      border-left: 4px solid var(--warning-color);
+    }
+
+    .transaction-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--primary-content-border-color);
+      background: #fafafa;
+    }
+
+    .transaction-card-title {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .player-name {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0;
+      color: #333;
+    }
+
+    .transaction-id {
+      font-size: 0.85rem;
+      color: #999;
+      font-family: monospace;
+    }
+
+    .transaction-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .transaction-badge--success {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .transaction-badge--failed {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .transaction-badge--pending {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .transaction-badge--retry_pending {
+      background-color: #dbeafe;
+      color: #0c4a6e;
+    }
+
+    .transaction-card-body {
+      padding: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .transaction-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .detail-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .contract-change {
+      font-weight: 500;
+      padding: 0.25rem 0.75rem;
+      background-color: #f3f4f6;
+      border-radius: 0.375rem;
+      font-family: monospace;
+    }
+
+    .arrow {
+      margin: 0 0.5rem;
+      color: #999;
+    }
+
+    .transaction-response {
+      padding: 1rem;
+      margin: 0 1.25rem 1rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .transaction-response.success {
+      background-color: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #166534;
+    }
+
+    .transaction-response.error {
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .response-label {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .response-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .response-content p {
+      margin: 0;
+    }
+
+    .response-content small {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+
+    .error-text {
+      color: var(--error-color);
+    }
+
+    .transaction-actions {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0 1.25rem 1.25rem 1.25rem;
+      border-top: 1px solid var(--primary-content-border-color);
+      padding-top: 1rem;
+    }
+
+    .btn {
+      padding: 0.625rem 1rem;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+    }
+
+    .btn-retry {
+      background-color: var(--warning-color);
+      color: white;
+    }
+
+    .btn-retry:hover {
+      background-color: #d97706;
+    }
+
+    .btn-manual {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-manual:hover {
+      background-color: #164066;
+    }
+
+    .failed-section {
+      background: var(--primary-content-bg-color);
+      border: 2px solid var(--error-color);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--primary-content-boxshadow-size) var(--primary-content-boxshadow-color);
+    }
+
+    .failed-section h2 {
+      color: var(--error-color);
+      margin-top: 0;
+      font-size: 1.25rem;
+    }
+
+    .section-info {
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+
+    .failed-transactions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .failed-transaction-item {
+      padding: 1rem;
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 0.5rem;
+    }
+
+    .failed-transaction-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      font-weight: 500;
+    }
+
+    .failed-transaction-details {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .failed-transaction-details p {
+      margin: 0.25rem 0;
+    }
+
+    .stats-section {
+      background: var(--primary-content-bg-color);
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--primary-content-boxshadow-size) var(--primary-content-boxshadow-color);
+    }
+
+    .stats-section h2 {
+      color: var(--primary-color);
+      margin-top: 0;
+      font-size: 1.25rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      background-color: #f9fafb;
+      border: 1px solid var(--primary-content-border-color);
+      border-radius: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .stat-value--success {
+      color: var(--success-color);
+    }
+
+    .stat-value--error {
+      color: var(--error-color);
+    }
+
+    .stat-value--warning {
+      color: var(--warning-color);
+    }
+
+    .loading-text,
+    .empty-text {
+      color: #999;
+      text-align: center;
+      padding: 2rem 1rem;
+      font-size: 1rem;
+    }
+
+    @media (max-width: 767px) {
+      .view-container {
+        padding: 1rem 0.75rem;
+      }
+
+      .section-header h1 {
+        font-size: 1.5rem;
+      }
+
+      .controls-bar {
+        padding: 1rem;
+      }
+
+      .transaction-card-body {
+        grid-template-columns: 1fr;
+      }
+
+      .transaction-card-header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .transaction-actions {
+        flex-direction: column;
+      }
+
+      .btn-small {
+        width: 100%;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</TheLeagueLayout>

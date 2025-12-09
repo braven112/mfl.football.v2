@@ -1,6 +1,6 @@
 /**
  * Pull core MFL feeds (rosters, players, salary adjustments, draft results, option07, transactions)
- * and write them into src/data/mfl-feeds/<year>/.
+ * and write them into data/<league>/mfl-feeds/<year>/.
  *
  * Caching strategy:
  * - Current year: Fetches daily (data changes throughout season)
@@ -34,6 +34,10 @@ if (!leagueId) {
 }
 const leagueKey = getNonEmpty(process.env.MFL_LEAGUE_SLUG) || leagueId;
 
+// Determine league name for output directory
+// MFL_LEAGUE_NAME env var or default based on league ID
+const leagueName = getNonEmpty(process.env.MFL_LEAGUE_NAME) || (leagueId === '19621' ? 'afl-fantasy' : 'theleague');
+
 const year = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SEASON) || new Date().getFullYear().toString();
 // Only include a week param when explicitly provided; otherwise let MFL serve latest/YTD.
 const week = getNonEmpty(process.env.MFL_WEEK) || null;
@@ -41,7 +45,7 @@ const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.c
 const mflUserId = getNonEmpty(process.env.MFL_USER_ID);
 const mflApiKey = getNonEmpty(process.env.MFL_APIKEY);
 
-const outDir = path.join('src', 'data', 'mfl-feeds', leagueKey, year);
+const outDir = path.join('data', leagueName, 'mfl-feeds', year);
 fs.mkdirSync(outDir, { recursive: true });
 const metaFile = path.join(outDir, 'fetch.meta.json');
 const rosterHistoryDir = path.join(outDir, 'roster-history');

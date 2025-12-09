@@ -1,0 +1,829 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import StandingsTable from '../../components/theleague/StandingsTable.astro';
+import ConferenceLeagueStandingsTable from '../../components/theleague/ConferenceLeagueStandingsTable.astro';
+import TierAllPlayStandingsTable from '../../components/theleague/TierAllPlayStandingsTable.astro';
+import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
+import YearSelector from '../../components/theleague/YearSelector.astro';
+import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
+import {
+  getDivisionStandings,
+  getConferenceStandings,
+  getTierAllPlayStandings,
+} from '../../utils/standings';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+// Get league context from URL
+const league = getLeagueContext(Astro.url);
+const baseUrl = getLeagueBaseUrl(league);
+
+// Import standings data
+const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+
+// Extract available years from the imported feeds
+const availableYears = Object.keys(standingsFeeds)
+  .map(path => {
+    const match = path.match(/\/(\d{4})\/standings\.json$/);
+    return match ? parseInt(match[1], 10) : null;
+  })
+  .filter((year): year is number => year !== null)
+  .sort((a, b) => b - a);
+
+// Get year from query parameter (default to latest year)
+const defaultYear = availableYears[0] || 2025;
+const requestedYear = Astro.url.searchParams.get('year');
+const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+
+// Validate that the requested year is available; redirect to default if not
+if (!availableYears.includes(selectedYear)) {
+  return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
+}
+
+// Get standings data for selected year
+const selectedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
+  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
+  | undefined;
+
+// Check if data is valid (has leagueStandings and no error)
+if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
+  return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
+}
+
+const franchises = selectedFeed.leagueStandings.franchise;
+
+// Calculate standings for all views
+const divisionStandings = getDivisionStandings(franchises, aflConfig);
+const conferenceAStandings = getConferenceStandings(franchises, aflConfig, 'A');
+const conferenceBStandings = getConferenceStandings(franchises, aflConfig, 'B');
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
+const nitTeams = [
+  ...conferenceAStandings.allTeams.filter(
+    team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
+  ),
+  ...conferenceBStandings.allTeams.filter(
+    team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12
+  ),
+]
+  .sort((a, b) => parseFloat(b.pwr || '0') - parseFloat(a.pwr || '0'))
+  .map((team, idx) => ({ ...team, nitRank: idx + 1 }));
+
+// Get view from query parameter (default to 'division')
+const view = (Astro.url.searchParams.get('view') ||
+  'division') as 'division' | 'league' | 'all_play';
+
+// AFL Fantasy is a new league, so no defending champions yet
+const defendingChampions: Record<string, string> = {};
+const previousYear = selectedYear - 1;
+
+// Get promotion/relegation playoff teams (Premier League 9-10 + D-League 3-4)
+const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
+const promoRegTeams = [
+  ...(premierLeague?.teams.slice(8, 10) || []), // Premier League ranks 9-10
+  ...(dLeague?.teams.slice(2, 4) || []), // D-League ranks 3-4
+].sort((a, b) => {
+  // Sort by all-play percentage (descending)
+  const aPct = parseFloat(a.all_play_pct || '0');
+  const bPct = parseFloat(b.all_play_pct || '0');
+  return bPct - aPct;
+});
+---
+
+<TheLeagueLayout title="AFL Fantasy Standings" year={selectedYear}>
+  <div class="standings-page">
+    <header class="standings-hero">
+      <div class="standings-hero__text">
+        {view === 'division' && (
+          <>
+            <h1 class="section-title">Division Standings</h1>
+            <p class="subtitle">Standings by division within the league</p>
+          </>
+        )}
+        {view === 'league' && (
+          <>
+            <h1 class="section-title">Playoff Standings</h1>
+            <p class="subtitle">Division winners are seeded 1-4</p>
+          </>
+        )}
+        {view === 'all_play' && (
+          <>
+            <h1 class="section-title">Premier League Standings</h1>
+            <p class="subtitle">Top 4 advance to playoffs • Bottom 2 relegated to D-League</p>
+          </>
+        )}
+      </div>
+      <div class="standings-hero__actions">
+        <StandingsViewSelector activeView={view} />
+      </div>
+    </header>
+
+    <div class="standings-filters">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
+    </div>
+
+    <main class="standings-content">
+      {view === 'division' && (
+        <div class="division-view">
+          {divisionStandings.map(division => (
+            <StandingsTable
+              teams={division.teams}
+              view="division"
+              showDivisionHeader={true}
+              divisionName={division.name}
+              defendingChampion={defendingChampions[division.name]}
+              defendingChampionYear={previousYear}
+              year={selectedYear}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'league' && (
+        <div class="league-view">
+          <ConferenceLeagueStandingsTable
+            conferenceName={conferenceAStandings.conference.name}
+            teams={conferenceAStandings.allTeams}
+            year={selectedYear}
+          />
+          <ConferenceLeagueStandingsTable
+            conferenceName={conferenceBStandings.conference.name}
+            teams={conferenceBStandings.allTeams}
+            year={selectedYear}
+          />
+
+          {nitTeams.length > 0 && (
+            <div class="nit-section">
+              <div class="nit-header">
+                <div class="nit-title-block">
+                  <p class="nit-label">Secondary Playoffs</p>
+                  <h2 class="nit-title">NIT Standings</h2>
+                  <p class="nit-subtitle">
+                    Teams outside the top 4 seeds, ranked by Power Rank
+                  </p>
+                </div>
+              </div>
+
+              <div class="nit-table-wrapper">
+                <table class="nit-table">
+                  <thead>
+                    <tr>
+                      <th class="col-rank">NIT Rank</th>
+                      <th class="col-team">Team</th>
+                      <th class="col-seed">Seed</th>
+                      <th class="col-record">Record</th>
+                      <th class="col-pwr">Power Rank</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nitTeams.map(team => {
+                      const [wins = '0', losses = '0'] = (team.h2hwlt || '0-0').split('-');
+                      return (
+                        <tr>
+                          <td class="col-rank">
+                            <span class="rank-badge">{team.nitRank}</span>
+                          </td>
+                          <td class="col-team">
+                            <div class="team-info">
+                              {team.teamIcon && (
+                                <img
+                                  src={team.teamIcon}
+                                  alt={team.teamName}
+                                  class="team-icon"
+                                  loading="lazy"
+                                />
+                              )}
+                              <div class="team-meta">
+                                <span class="team-name">{team.teamName}</span>
+                                <span class="team-division">Seed {team.seed || '—'} • Div {team.division}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="col-seed">{team.seed ?? '—'}</td>
+                          <td class="col-record">{wins}-{losses}</td>
+                          <td class="col-pwr">{team.pwr || '0'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === 'all_play' && (
+        <div class="all-play-view tier-grid">
+          {tierAllPlayStandings.map(tierGroup => (
+            <TierAllPlayStandingsTable
+              tierName={tierGroup.tier}
+              teams={tierGroup.teams}
+              year={selectedYear}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'all_play' && promoRegTeams.length === 4 && (
+        <div class="promo-reg-section">
+          <div class="promo-reg-header">
+            <img src="/assets/afl/premier.svg" alt="Premier League Logo" class="promo-reg-logo" />
+            <div class="promo-reg-text">
+              <h2 class="promo-reg-title">Promotion/Relegation playoff standings</h2>
+              <p class="promo-reg-subtitle">Top 2 will be in the Premier League next season.</p>
+            </div>
+          </div>
+
+          <div class="promo-reg-table-wrapper">
+            <table class="promo-reg-table">
+              <thead>
+                <tr>
+                  <th class="col-rank">Rank</th>
+                  <th class="col-team">Team</th>
+                  <th class="col-record">W</th>
+                  <th class="col-record">L</th>
+                  <th class="col-prize">Prize</th>
+                </tr>
+              </thead>
+              <tbody>
+                {promoRegTeams.map((team, index) => (
+                  <tr class={index + 1 <= 2 ? 'promoted' : 'relegated'}>
+                    <td class="col-rank">
+                      <span class="rank-badge">{index + 1}</span>
+                    </td>
+                    <td class="col-team">
+                      <div class="team-info">
+                        {team.teamIcon && (
+                          <img
+                            src={team.teamIcon}
+                            alt={team.teamName}
+                            class="team-icon"
+                            loading="lazy"
+                          />
+                        )}
+                        <span class="team-name">{team.teamName}</span>
+                      </div>
+                    </td>
+                    <td class="col-record">{team.all_play_wlt?.split('-')[0] || '0'}</td>
+                    <td class="col-record">{team.all_play_wlt?.split('-')[1] || '0'}</td>
+                    <td class="col-prize">
+                      <span class="prize-icon">{index + 1 <= 2 ? '⬆' : '⬇'}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </main>
+
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .standings-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .standings-hero {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+@media screen and (min-width: 600px) {
+  .standings-hero {
+    grid-template-columns: 1fr auto;
+  }
+}
+  .standings-hero__text h1 {
+    margin: 0;
+  }
+
+  .standings-hero__actions {
+    display: grid;
+    justify-content: center;
+  }
+
+  .standings-filters {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .card {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-md);
+    padding: var(--padding-lg);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: var(--box-shadow-lg);
+    position: relative;
+}
+
+  .standings-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary-color, #64748b);
+    margin: 0;
+  }
+
+  .standings-header-bar {
+    display: grid;
+
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+   @media (min-width: 550px) {
+     .standings-header-bar {
+    grid-template-columns: 1fr auto;
+        align-items: start;
+     }
+   }
+
+  .standings-header-content {
+    /* content naturally flows on the left */
+  }
+
+  .standings-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    justify-content: flex-end;
+  }
+
+  .standings-content {
+    margin-bottom: 3rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0;
+  }
+
+  .section-subtitle {
+    color: var(--color-text-secondary, #666);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  /* Division View */
+  .division-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  /* League View */
+  .league-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .playoff-section {
+    margin-bottom: 2rem;
+  }
+
+  /* All-Play View */
+  .all-play-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  /* Tier Grid - Side by Side */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .tier-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Info Section */
+  .standings-info {
+    margin-top: 3rem;
+    padding: 2rem;
+    background-color: var(--color-bg-secondary, #f5f5f5);
+    border-radius: 8px;
+  }
+
+  .standings-info h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .info-card {
+    background-color: var(--color-bg-primary, #fff);
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--color-primary, #2c3e50);
+  }
+
+  .info-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin: 0 0 1rem 0;
+  }
+
+  .info-card ul,
+  .info-card ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--color-text-secondary, #555);
+  }
+
+  .info-card li {
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card p {
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text-secondary, #555);
+  }
+
+  .tiebreaker-type {
+    font-weight: 600;
+    color: var(--color-text-primary, #1a1a1a);
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Promotion/Relegation Section */
+  .promo-reg-section {
+    margin-top: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  .promo-reg-header {
+    padding: 1.5rem 2rem;
+    background: #c41e3a;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .promo-reg-logo {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .promo-reg-text {
+    flex: 1;
+  }
+
+  .promo-reg-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-reg-subtitle {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .promo-reg-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .promo-reg-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .promo-reg-table thead {
+    background: var(--color-bg-secondary, #f8f9fa);
+    border-bottom: 2px solid var(--color-border, #dee2e6);
+  }
+
+  .promo-reg-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-reg-table .col-rank {
+    width: 80px;
+    text-align: center;
+  }
+
+  .promo-reg-table .col-team {
+    min-width: 200px;
+  }
+
+  .promo-reg-table .col-record {
+    width: 80px;
+    text-align: center;
+  }
+
+  .promo-reg-table .col-prize {
+    width: 100px;
+    text-align: center;
+  }
+
+  .promo-reg-table tbody tr {
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    transition: background-color 0.15s ease;
+  }
+
+  .promo-reg-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .promo-reg-table tbody tr.promoted {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%);
+  }
+
+  .promo-reg-table tbody tr.relegated {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
+  }
+
+  .promo-reg-table td {
+    padding: 1rem;
+  }
+
+  .promo-reg-table .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+
+  .promo-reg-table tr.promoted .rank-badge {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  .promo-reg-table tr.relegated .rank-badge {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .promo-reg-table .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .promo-reg-table .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .promo-reg-table .team-name {
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .promo-reg-table .col-record td {
+    font-weight: 600;
+    font-family: var(--font-mono, monospace);
+  }
+
+  .promo-reg-table .prize-icon {
+    font-size: 1.5rem;
+  }
+
+  .promo-reg-table tr.promoted .prize-icon {
+    color: #22c55e;
+  }
+
+  .promo-reg-table tr.relegated .prize-icon {
+    color: #ef4444;
+  }
+
+  /* NIT Section */
+  .nit-section {
+    margin-top: 2rem;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  .nit-header {
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #fff;
+  }
+
+  .nit-label {
+    margin: 0 0 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    opacity: 0.85;
+    color: #fff;
+  }
+
+  .nit-title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .nit-subtitle {
+    margin: 0.25rem 0 0;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .nit-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .nit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .nit-table thead {
+    background: var(--color-bg-secondary, #f8f9fa);
+    border-bottom: 2px solid var(--color-border, #e5e7eb);
+  }
+
+  .nit-table th {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .nit-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .nit-table .col-rank {
+    width: 90px;
+    text-align: center;
+  }
+
+  .nit-table .col-team {
+    min-width: 240px;
+  }
+
+  .nit-table .col-seed,
+  .nit-table .col-record,
+  .nit-table .col-pwr {
+    width: 120px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nit-table .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nit-table .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .nit-table .team-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .nit-table .team-name {
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .nit-table .team-division {
+    color: var(--text-secondary-color, #6b7280);
+    font-size: 0.9rem;
+  }
+
+  .nit-table .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    background: #0f172a;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .nit-table tbody tr:hover {
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  /* Responsive */
+  @media (max-width: 767px) {
+    .standings-page {
+      padding: 1rem 0.5rem;
+    }
+
+    .standings-header h1 {
+      font-size: 1.875rem;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .standings-info {
+      padding: 1rem;
+    }
+
+    .promo-reg-table .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .promo-reg-table .rank-badge {
+      width: 28px;
+      height: 28px;
+      font-size: 0.75rem;
+    }
+
+    .nit-table .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .nit-table .rank-badge {
+      width: 30px;
+      height: 30px;
+      font-size: 0.8rem;
+    }
+  }
+</style>

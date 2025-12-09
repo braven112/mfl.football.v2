@@ -1,0 +1,242 @@
+{
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2016",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2016/export?TYPE=rosters&L=13522&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2016/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2016/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-17T07:19:06.455Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-17T07:19:06.457Z"
+  },
+  "positions": {
+    "WR": {
+      "totalPlayers": 104,
+      "top3Average": 12138889,
+      "top5Average": 10598333.4,
+      "topPlayers": [
+        {
+          "id": "10271",
+          "name": "Jones, Julio",
+          "salary": 13000000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "9988",
+          "name": "Brown, Antonio",
+          "salary": 12416667,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "9823",
+          "name": "Bryant, Dez",
+          "salary": 11000000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "9118",
+          "name": "Nelson, Jordy",
+          "salary": 9500000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "9918",
+          "name": "Sanders, Emmanuel",
+          "salary": 7075000,
+          "franchiseId": "0006"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 19,
+      "top3Average": 1110333.33,
+      "top5Average": 1036200,
+      "topPlayers": [
+        {
+          "id": "0515",
+          "name": "Seahawks, Seattle",
+          "salary": 1331000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "0504",
+          "name": "Patriots, New England",
+          "salary": 1000000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0532",
+          "name": "Texans, Houston",
+          "salary": 1000000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "0512",
+          "name": "Chiefs, Kansas City",
+          "salary": 1000000,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "0524",
+          "name": "Vikings, Minnesota",
+          "salary": 850000,
+          "franchiseId": "0007"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 40,
+      "top3Average": 7400000,
+      "top5Average": 6110000,
+      "topPlayers": [
+        {
+          "id": "10273",
+          "name": "Newton, Cam",
+          "salary": 9000000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron",
+          "salary": 8500000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "9099",
+          "name": "Ryan, Matt",
+          "salary": 4700000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "4925",
+          "name": "Brees, Drew",
+          "salary": 4500000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "9064",
+          "name": "Flacco, Joe",
+          "salary": 3850000,
+          "franchiseId": "0013"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 79,
+      "top3Average": 5883643.67,
+      "top5Average": 5750186.2,
+      "topPlayers": [
+        {
+          "id": "11193",
+          "name": "Bernard, Giovani",
+          "salary": 5989500,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "10276",
+          "name": "Ingram, Mark",
+          "salary": 5671931,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "9448",
+          "name": "McCoy, LeSean",
+          "salary": 5600000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "12151",
+          "name": "Gordon, Melvin",
+          "salary": 5500000,
+          "franchiseId": "0008"
+        }
+          ,{
+            "id": "12150",
+            "name": "Gurley, Todd",
+            "salary": 4950000,
+            "franchiseId": "0007"
+          }
+        ]
+    },
+    "TE": {
+      "totalPlayers": 44,
+      "top3Average": 6857000,
+      "top5Average": 5754200,
+      "topPlayers": [
+        {
+          "id": "9902",
+          "name": "Gronkowski, Rob",
+          "salary": 7700000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "8687",
+          "name": "Olsen, Greg",
+          "salary": 7000000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "9925",
+          "name": "Graham, Jimmy",
+          "salary": 5871000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "8416",
+          "name": "Walker, Delanie",
+          "salary": 4200000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "9044",
+          "name": "Bennett, Martellus",
+          "salary": 4000000,
+          "franchiseId": "0002"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 16,
+      "top3Average": 546058.33,
+      "top5Average": 521635,
+      "topPlayers": [
+        {
+          "id": "9686",
+          "name": "Succop, Ryan",
+          "salary": 565675,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "2842",
+          "name": "Vinatieri, Adam",
+          "salary": 550000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "11947",
+          "name": "McManus, Brandon",
+          "salary": 522500,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "11960",
+          "name": "Catanzaro, Chandler",
+          "salary": 495000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "11945",
+          "name": "Santos, Cairo",
+          "salary": 475000,
+          "franchiseId": "0013"
+        }
+      ]
+    }
+  }
+}

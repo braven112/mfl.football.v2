@@ -1,0 +1,487 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfig from '../../../data/afl-fantasy/afl.config.json';
+import aggregatedAssets from '../../../data/afl-fantasy/afl.assets.json';
+
+export const prerender = false;
+
+type AssetEntry = {
+  type: string;
+  filename: string;
+  relativePath: string;
+  absoluteUrl: string;
+  extension?: string;
+};
+
+type TeamEntry = {
+  key: string;
+  slug: string;
+  id?: string;
+  name: string;
+  conference?: string;
+  division?: string;
+  tier?: string;
+  aliases?: string[];
+  psdAssets?: AssetEntry[];
+  assets: Record<string, AssetEntry[]>;
+};
+
+const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
+const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
+
+const formatBucketLabel = (bucket: string) =>
+  bucket === 'group-me'
+    ? 'Group Me'
+    : bucket
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, char => char.toUpperCase());
+
+const PSD_FOLDERS = ['psd', 'psds'];
+
+const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
+  const rawAssets = Object.fromEntries(
+    Object.entries(team.assets || {}).map(([folder, entries]) => [
+      folder,
+      entries.map(entry => ({
+        ...entry,
+        absoluteUrl: assetDomain
+          ? `${assetDomain}${entry.relativePath}`
+          : entry.relativePath,
+        extension: entry.extension
+      }))
+    ])
+  );
+  const psdAssets = PSD_FOLDERS.flatMap(folder => rawAssets[folder] as AssetEntry[] || []);
+  PSD_FOLDERS.forEach(folder => {
+    if (rawAssets[folder]) {
+      delete rawAssets[folder];
+    }
+  });
+  const assets = rawAssets;
+  return {
+    key: team.key,
+    slug: team.slug,
+    id: team.id,
+    name: team.name,
+    conference: team.conference,
+    division: team.division,
+    tier: team.tier,
+    aliases: team.aliases,
+    psdAssets,
+    assets,
+  };
+});
+
+// Get conference names
+const getConferenceName = (code: string) => {
+  const conf = leagueConfig.conferences.find(c => c.code === code);
+  return conf?.name || code;
+};
+
+// Get division name
+const getDivisionName = (conference: string, division: string) => {
+  const conf = leagueConfig.conferences.find(c => c.code === conference);
+  return conf?.divisionNames?.[division] || division;
+};
+---
+
+<TheLeagueLayout title="AFL Fantasy Asset Library">
+  <main class="league-gallery">
+    <header class="gallery-header">
+      <h1>AFL Fantasy Asset Library</h1>
+      <p>Team logos, banners, and graphics for all {leagueConfig.teams} teams</p>
+    </header>
+    {teamList.length === 0 ? (
+      <p class="empty-state">No team assets found. Drop images into <code>public/assets/afl</code> to populate this page.</p>
+    ) : (
+      <>
+        <div class="gallery-controls">
+          <label>
+            <span>Search teams</span>
+            <input
+              id="team-filter"
+              type="search"
+              placeholder="Search by name, ID, conference, tier, or division"
+              autocomplete="off"
+            />
+          </label>
+        </div>
+        <div class="team-grid">
+          {teamList.map((team) => (
+            <section
+              class="team-card"
+              id={team.slug}
+              data-name={team.name}
+              data-franchise-id={team.id || ''}
+              data-conference={team.conference || ''}
+              data-division={team.division || ''}
+              data-tier={team.tier || ''}
+              data-aliases={(team.aliases || []).join(' ')}
+            >
+              <div class="team-card__header">
+                <div class="team-card__info">
+                  <h2>{team.name}</h2>
+                  {team.id && <p class="team-id">Franchise ID: {team.id}</p>}
+
+                  <div class="team-meta">
+                    {team.tier && <span class="team-tier">{team.tier}</span>}
+                    {team.conference && (
+                      <span class="team-conference">
+                        {getConferenceName(team.conference)}
+                        {team.division && ` • ${getDivisionName(team.conference, team.division)}`}
+                      </span>
+                    )}
+                  </div>
+
+                  {team.psdAssets?.length ? (
+                    <div class="psd-links">
+                      {team.psdAssets.map(asset => (
+                        <a href={asset.absoluteUrl} target="_blank" rel="noopener noreferrer">
+                          {team.psdAssets!.length > 1 ? `Download PSD (${asset.filename})` : 'Download PSD'}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div class="asset-groups">
+                {Object.entries(team.assets).map(([folder, entries]) => (
+                  <div class="asset-group">
+                    <h3>{formatBucketLabel(folder)}</h3>
+                    <div class="asset-list">
+                      {(entries as AssetEntry[]).map((asset) => (
+                        <article class={`asset-card asset-card--${folder}`}>
+                          <img src={asset.relativePath} alt={`${team.name} ${folder}`} loading="lazy" />
+                          <div class="asset-meta">
+                            <p class="filename">{asset.filename}</p>
+                            <p class="asset-dimensions">Loading size…</p>
+                            <label>
+                              <span>URL</span>
+                              <input type="text" value={asset.absoluteUrl} readonly />
+                            </label>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </>
+    )}
+  </main>
+
+  {teamList.length > 0 && (
+    <script is:inline>
+      (() => {
+        const input = document.querySelector('#team-filter');
+        const grid = document.querySelector('.team-grid');
+        if (!input || !grid) return;
+        const cards = Array.from(grid.children);
+
+        const filterCards = (query) => {
+          const needle = query.trim().toLowerCase();
+          cards.forEach(card => {
+            const haystack = [
+              card.dataset.name,
+              card.dataset.franchiseId,
+              card.dataset.conference,
+              card.dataset.division,
+              card.dataset.tier,
+              card.dataset.aliases,
+              card.id,
+            ].join(' ').toLowerCase();
+            const match = needle === '' || haystack.includes(needle);
+            card.style.display = match ? '' : 'none';
+          });
+        };
+
+        const updateDimensions = (img) => {
+          const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+          if (!meta) return;
+          if (img.naturalWidth && img.naturalHeight) {
+            meta.textContent = `${img.naturalWidth} × ${img.naturalHeight}px`;
+          } else {
+            meta.textContent = 'Size unavailable';
+          }
+        };
+
+        const initDimensions = () => {
+          document.querySelectorAll('.asset-card img').forEach((img) => {
+            if (img.complete && img.naturalWidth) {
+              updateDimensions(img);
+            } else {
+              img.addEventListener('load', () => updateDimensions(img), { once: true });
+              img.addEventListener('error', () => {
+                const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+                if (meta) meta.textContent = 'Failed to load';
+              }, { once: true });
+            }
+          });
+        };
+
+        filterCards(input.value);
+        input.addEventListener('input', (event) => filterCards(event.target.value));
+        initDimensions();
+      })();
+    </script>
+  )}
+</TheLeagueLayout>
+
+<style>
+  :root {
+    --gallery-content-bg: #eeeeee;
+  }
+.league-gallery {
+  margin-top: 1rem;
+}
+.league-gallery {
+  display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 3rem;
+  }
+
+  .gallery-header {
+    background: var(--gallery-content-bg, #1f2937);
+    color: #fff;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .gallery-header p {
+    margin: 0.25rem 0 0;
+  }
+
+  .current-domain {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .gallery-controls {
+    display: grid;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .gallery-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .gallery-controls input[type="search"] {
+    padding: 1rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    font-size: 0.95rem;
+    background: #fff;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .team-card {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .team-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .team-card__header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .team-id {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .team-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .team-tier {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    background: var(--accent-link-hover-text-color, #b45309);
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .team-conference {
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .psd-links {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .psd-links a {
+    font-size: 0.9rem;
+    color: var(--accent-link-hover-text-color, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .asset-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .asset-group h3 {
+    margin: 0 0 0.5rem 0;
+    text-transform: capitalize;
+    font-size: 1rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .asset-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .asset-card {
+    border: 1px solid var(--content-border-color, #e2e2e2);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--gallery-content-bg, #eeeeee);
+  }
+
+  .asset-card img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    align-self: center;
+    object-fit: contain;
+  }
+
+  .asset-card--icons img {
+    width: min(100px, 100%);
+    height: auto;
+    align-self: center;
+    justify-self: center;
+    object-fit: contain;
+  }
+
+  .asset-card--psd .psd-preview {
+    width: 100%;
+    padding: 1rem;
+    border: 1px dashed var(--content-border-color, #d1d5db);
+    border-radius: 0.5rem;
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--accent-link-hover-text-color, #2563eb);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .asset-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--accent-link-hover-text-color, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .asset-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filename {
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .asset-dimensions {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  input[type="text"] {
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--content-border-color, #d1d5db);
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 0.85rem;
+    background: #fff;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    word-break: break-all;
+    text-overflow: ellipsis;
+  }
+
+  input[type="text"]:focus {
+    outline: 2px solid var(--primary-content-border-color, #2563eb);
+    border-color: transparent;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  @media (max-width: 600px) {
+    .team-card__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

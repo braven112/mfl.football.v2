@@ -10,10 +10,10 @@ console.log('3. Rosters page implementation\n');
 
 // Read the raw MFL feeds
 const rostersData = JSON.parse(
-  fs.readFileSync('src/data/mfl-feeds/2025/rosters.json', 'utf8')
+  fs.readFileSync('data/theleague/mfl-feeds/2025/rosters.json', 'utf8')
 );
 const adjustmentsData = JSON.parse(
-  fs.readFileSync('src/data/mfl-feeds/2025/salaryAdjustments.json', 'utf8')
+  fs.readFileSync('data/theleague/mfl-feeds/2025/salaryAdjustments.json', 'utf8')
 );
 
 // Read our processed salary data

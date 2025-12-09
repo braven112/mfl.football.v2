@@ -1,0 +1,245 @@
+{
+  "snapshot": "2025-12-05T10-50-56.148Z",
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2025",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2025/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2025/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1",
+      "sleeper": "cached",
+      "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
+    },
+    "fetchedAt": "2025-12-05T10:50:56.131Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-12-05T10:50:56.147Z"
+  },
+  "positions": {
+    "RB": {
+      "totalPlayers": 95,
+      "top3Average": 9350650,
+      "top5Average": 8610390,
+      "topPlayers": [
+        {
+          "id": "14073",
+          "name": "Jacobs, Josh",
+          "salary": 9927500,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "13604",
+          "name": "Barkley, Saquon",
+          "salary": 9124450,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "13130",
+          "name": "McCaffrey, Christian",
+          "salary": 9000000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "12626",
+          "name": "Henry, Derrick",
+          "salary": 8000000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "14802",
+          "name": "Taylor, Jonathan",
+          "salary": 7000000,
+          "franchiseId": "0009"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 132,
+      "top3Average": 9240555.33,
+      "top5Average": 8614333.2,
+      "topPlayers": [
+        {
+          "id": "14836",
+          "name": "Jefferson, Justin",
+          "salary": 9625833,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "14832",
+          "name": "Lamb, CeeDee",
+          "salary": 9625833,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "11675",
+          "name": "Adams, Davante",
+          "salary": 8470000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "14835",
+          "name": "Higgins, Tee",
+          "salary": 7750000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "14104",
+          "name": "Brown, A.J.",
+          "salary": 7600000,
+          "franchiseId": "0008"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 58,
+      "top3Average": 6966666.67,
+      "top5Average": 6518000,
+      "topPlayers": [
+        {
+          "id": "13772",
+          "name": "Schultz, Dalton",
+          "salary": 7150000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "13299",
+          "name": "Kittle, George",
+          "salary": 7000000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "13671",
+          "name": "Andrews, Mark",
+          "salary": 6750000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "14138",
+          "name": "Hockenson, T.J.",
+          "salary": 5940000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "11244",
+          "name": "Kelce, Travis",
+          "salary": 5750000,
+          "franchiseId": "0010"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 31,
+      "top3Average": 787917,
+      "top5Average": 731839.7,
+      "topPlayers": [
+        {
+          "id": "13354",
+          "name": "Butker, Harrison",
+          "salary": 871200,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "13303",
+          "name": "Elliott, Jake",
+          "salary": 750000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "12860",
+          "name": "Fairbairn, Ka'imi",
+          "salary": 742551,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "14244",
+          "name": "Gay, Matt",
+          "salary": 695447.5,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "12956",
+          "name": "Lutz, Wil",
+          "salary": 600000,
+          "franchiseId": "0002"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 32,
+      "top3Average": 1382672.67,
+      "top5Average": 1333603.6,
+      "topPlayers": [
+        {
+          "id": "0511",
+          "name": "Broncos, Denver",
+          "salary": 1425518,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "0523",
+          "name": "Packers, Green Bay",
+          "salary": 1375000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "0518",
+          "name": "Eagles, Philadelphia",
+          "salary": 1347500,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "0530",
+          "name": "49ers, San Francisco",
+          "salary": 1320000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0513",
+          "name": "Raiders, Las Vegas",
+          "salary": 1200000,
+          "franchiseId": "0001"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 55,
+      "top3Average": 11400821.33,
+      "top5Average": 9825492.8,
+      "topPlayers": [
+        {
+          "id": "13116",
+          "name": "Mahomes, Patrick",
+          "salary": 13510464,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "13589",
+          "name": "Allen, Josh",
+          "salary": 13167000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "13592",
+          "name": "Darnold, Sam",
+          "salary": 7525000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "14056",
+          "name": "Murray, Kyler",
+          "salary": 7525000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "14777",
+          "name": "Burrow, Joe",
+          "salary": 7400000,
+          "franchiseId": "0007"
+        }
+      ]
+    }
+  }
+}
