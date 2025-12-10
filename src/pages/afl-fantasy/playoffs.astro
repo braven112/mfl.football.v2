@@ -778,6 +778,14 @@ const grandTotal =
         ))}
       </div>
     )}
+
+    <div class="mfl-link-footer">
+      <p>
+        <a href={`${envHost}/${selectedYear}/options?L=${envLeagueId}&O=79`} target="_blank" rel="noopener noreferrer" class="mfl-link">
+          View MFL Playoff Bracket →
+        </a>
+      </p>
+    </div>
   </section>
 </TheLeagueLayout>
 
@@ -1305,6 +1313,31 @@ const grandTotal =
     background: #f8fafc;
     text-align: center;
     font-weight: 600;
+  }
+
+  .mfl-link-footer {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .mfl-link-footer p {
+    margin: 0;
+  }
+
+  .mfl-link {
+    color: var(--primary-color, #1c497c);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+
+  .mfl-link:hover {
+    color: var(--secondary-color, #2e8743);
+    text-decoration: underline;
   }
 
   @media (max-width: 1024px) {
