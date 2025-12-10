@@ -79,9 +79,7 @@ export function calculateDraftOrder(
     if (winner) {
       const winnerStanding = standings.find((t) => t.id === winner.franchiseId);
       if (winnerStanding) {
-        const overallNumber = pick.round === 1
-          ? 16 + pick.pickInRound
-          : 32 + pick.pickInRound;
+        const overallNumber = (pick.round - 1) * 16 + pick.pickInRound;
         draftPredictions.push(
           buildDraftPrediction(
             winnerStanding,

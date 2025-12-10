@@ -13,6 +13,7 @@ import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredict
 import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
 import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import type { DraftPrediction } from '../../types/standings';
 
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
@@ -112,6 +113,7 @@ if (bracketData) {
 // Calculate draft predictions
 let draftPredictions = [];
 let leagueWinnerId = '';
+let specialPickMap = new Map<string, DraftPrediction>();
 
 if (standingsData?.leagueStandings?.franchise) {
   // TODO: Determine league winner (champion playoff winner)
@@ -124,6 +126,13 @@ if (standingsData?.leagueStandings?.franchise) {
     teamConfigMap,
     leagueWinnerId,
     toiletBowlWinners
+  );
+
+  // Track special (compensatory) picks from bracket winners so we can override downstream
+  specialPickMap = new Map(
+    draftPredictions
+      .filter(p => p.isToiletBowlPick)
+      .map(p => [`${p.round}.${p.pickInRound}`, p])
   );
 }
 
@@ -152,9 +161,17 @@ const finalBase =
     : actualDraftPicks.length > 0
       ? actualDraftPicks
       : sortedPredictions;
-const finalPredictions = [...finalBase].sort(
-  (a, b) => a.overallPickNumber - b.overallPickNumber
-);
+const mergeSpecialPicks = (
+  base: DraftPrediction[],
+  specials: Map<string, DraftPrediction>
+) => {
+  const merged = new Map<string, DraftPrediction>();
+  base.forEach(p => merged.set(`${p.round}.${p.pickInRound}`, p));
+  specials.forEach((p, key) => merged.set(key, p));
+  return Array.from(merged.values()).sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+};
+
+const finalPredictions = mergeSpecialPicks(finalBase, specialPickMap);
 
 // History view: pick a year and show all draft picks with trade notes
 const historyYearParam = Astro.url.searchParams.get('year');
