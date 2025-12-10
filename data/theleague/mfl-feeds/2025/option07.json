@@ -27,7 +27,7 @@ var year = 2025;
 var xmlBaseURL = 'https://www49.myfantasyleague.com/fflnetdynamic2025/';
 var baseURLStatic = 'https://www49.myfantasyleague.com';
 var baseURLDynamic = 'https://www49.myfantasyleague.com';
-var currentServerTime = 1765260936;
+var currentServerTime = 1765338545;
 var completedWeek = 14;
 var liveScoringWeek = 14;
 var startWeek = 1;
@@ -201,7 +201,6 @@ function live_auction_window (url) {
 <td class="pagetitle">
 <h1>
  <span>Rosters</span></h1></td></tr></table><div class="pagebody" id="options_07">
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
@@ -482,7 +481,7 @@ var lu_addOptionalStarters = false;
               </a>
             </div>
 <div class="nav_button--button">
-          <a id="gmCentral" href="https://mflfootballv2.vercel.app/rosters">
+          <a id="gmCentral" href="https://mflfootballv2.vercel.app/theleague/rosters">
             <svg class="icon-banknote"><use xlink:href="#icon-banknote"></use></svg>
             <div class="svg-text">Roster/Salary</div>
           </a>
@@ -504,7 +503,7 @@ var lu_addOptionalStarters = false;
               </a>
             </div>
             <div class="nav_button--button">
-              <a href="https://mflfootballv2.vercel.app/standings">
+              <a href="https://mflfootballv2.vercel.app/theleague/standings">
                 <svg class="icon-numberone">
                   <use xlink:href="#icon-numberone"></use>
                 </svg>
@@ -533,7 +532,7 @@ var lu_addOptionalStarters = false;
               </a>
             </div>
             <div class="nav_button--button hidden-md prePlayoffs">
-              <a href="https://mflfootballv2.vercel.app/standings?view=league">
+              <a href="https://mflfootballv2.vercel.app/theleague/standings?view=league">
                 <svg class="icon-trophy"><use xlink:href="#icon-trophy"></use></svg>
                 <div class="svg-text">Playoffs</div>
               </a>
@@ -646,9 +645,9 @@ td#division03 h3::after {
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16610');" title="Salary: $522,500, Years: 4, Tag: , Week 15: at Steelers Mon 5:15 p.m. PT" class="position_rb">Wright, Jaylen MIA RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16610&amp;YEAR=2025">23.45</a></td>
 <td class="week">12</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16632');" title="Salary: $880,000, Years: 4, Tag: , Week 15: vs Ravens Sun 10:00 a.m. PT" class="position_wr">Burton, Jermaine CIN WR</a></td>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16632');" title="Salary: $880,000, Years: 4, Tag: , Week 15: Bye" class="position_wr">Burton, Jermaine FA WR</a></td>
 <td class="points"> &dash; </td>
-<td class="week">10</td><td class="salary">$880,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
+<td class="week">-</td><td class="salary">$880,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16617');" title="Salary: $1,485,000, Years: 4, Tag: , Week 15: at Patriots Sun 10:00 a.m. PT" class="position_wr">Coleman, Keon BUF WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16617&amp;YEAR=2025">75.68</a></td>
 <td class="week">7</td><td class="salary">$1,485,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
@@ -1045,7 +1044,7 @@ td#division03 h3::after {
 <tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14592');" title="Salary: $425,000, Years: 3, Tag: , Week 15: vs Browns Sun 10:00 a.m. PT" class="position_wr">Zaccheaus, Olamide CHI WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14592&amp;YEAR=2025">61.00</a></td>
 <td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
-<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13675');" title="Salary: $425,000, Years: 3, Tag: , Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_te">Conklin, Tyler LAC TE</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','13675');" title="Salary: $425,000, Years: 3, Tag: , Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_te">Conklin, Tyler LAC TE</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=13675&amp;YEAR=2025">15.70</a></td>
 <td class="week">12</td><td class="salary">$425,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
 <tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14871');" title="Salary: $425,000, Years: 1, Tag: , Week 15: vs Lions Sun 1:25 p.m. PT" class="position_te">Parkinson, Colby LAR TE</a></td>
@@ -1420,7 +1419,7 @@ td#division03 h3::after {
 <tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16614');" title="Salary: $3,850,000, Years: 4, Tag: , Week 15: at Texans Sun 10:00 a.m. PT" class="position_wr">Harrison Jr., Marvin ARI WR</a> (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16614&amp;YEAR=2025">105.40</a></td>
 <td class="week">8</td><td class="salary">$3,850,000</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17205');" title="Salary: $450,000, Years: 5, Tag: , Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_wr">Lambert-Smith, KeAndre LAC WR</a> (R)  (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17205');" title="Salary: $450,000, Years: 5, Tag: , Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_wr">Lambert-Smith, KeAndre LAC WR</a> (R) </td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17205&amp;YEAR=2025">7.17</a></td>
 <td class="week">12</td><td class="salary">$450,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
 <tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16194');" title="Salary: $756,250, Years: 3, Tag: , Week 15: vs Chargers Sun 10:00 a.m. PT" class="position_wr">Rice, Rashee KCC WR</a></td>
@@ -1511,7 +1510,7 @@ td#division03 h3::after {
 <tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16809');" title="Salary: $522,500, Years: 4, Tag: , Week 15: at Saints Sun 1:25 p.m. PT" class="position_wr">Coker, Jalen CAR WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16809&amp;YEAR=2025">39.40</a></td>
 <td class="week">14</td><td class="salary">$522,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13163');" title="Salary: $3,932,500, Years: 3, Tag: , Week 15: vs Falcons Thu 5:15 p.m. PT" class="position_wr">Godwin, Chris TBB WR</a> (<span class="warning injurystatus" title="Questionable">Q</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','13163');" title="Salary: $3,932,500, Years: 3, Tag: , Week 15: vs Falcons Thu 5:15 p.m. PT" class="position_wr">Godwin, Chris TBB WR</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=13163&amp;YEAR=2025">27.40</a></td>
 <td class="week">9</td><td class="salary">$3,932,500</td><td class="contractyear">3</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','16183');" title="Salary: $665,500, Years: 3, Tag: , Week 15: vs Commanders Sun 10:00 a.m. PT" class="position_wr">Hyatt, Jalin NYG WR</a></td>
@@ -1604,15 +1603,15 @@ td#division03 h3::after {
 <tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('13522','16169');" title="Salary: $1,936,000, Years: 3, Tag: , Week 15: vs Colts Sun 1:25 p.m. PT" class="position_rb">Charbonnet, Zach SEA RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=16169&amp;YEAR=2025">107.75</a></td>
 <td class="week">8</td><td class="salary">$1,936,000</td><td class="contractyear">3</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15713');" title="Salary: $565,675, Years: 2, Tag: , Week 15: at Bears Sun 10:00 a.m. PT" class="position_rb">Ford, Jerome CLE RB</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15713');" title="Salary: $565,675, Years: 2, Tag: , Week 15: at Bears Sun 10:00 a.m. PT" class="position_rb">Ford, Jerome CLE RB</a> (<span class="warning injurystatus" title="IR">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15713&amp;YEAR=2025">32.92</a></td>
 <td class="week">9</td><td class="salary">$565,675</td><td class="contractyear">2</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','17044');" title="Salary: $3,100,000, Years: 5, Tag: , Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_rb">Hampton, Omarion LAC RB</a> (R) </td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=17044&amp;YEAR=2025">76.10</a></td>
 <td class="week">12</td><td class="salary">$3,100,000</td><td class="contractyear">5</td><td class="contractinfo"></tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15260');" title="Salary: $425,000, Years: 1, Tag: , Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_rb">Patterson, Jaret LAC RB</a></td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','15260');" title="Salary: $425,000, Years: 1, Tag: , Week 15: Bye" class="position_rb">Patterson, Jaret FA RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=15260&amp;YEAR=2025">18.90</a></td>
-<td class="week">12</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
+<td class="week">-</td><td class="salary">$425,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14085');" title="Salary: $4,000,000, Years: 1, Tag: , Week 15: at 49ers Sun 1:25 p.m. PT" class="position_rb">Pollard, Tony TEN RB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14085&amp;YEAR=2025">116.15</a></td>
 <td class="week">10</td><td class="salary">$4,000,000</td><td class="contractyear">1</td><td class="contractinfo"></tr>
@@ -1765,7 +1764,7 @@ td#division03 h3::after {
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14779');" title="Salary: $3,818,534, Years: 1, Tag: R2, Week 15: at Chiefs Sun 10:00 a.m. PT" class="position_qb">Herbert, Justin LAC QB</a></td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14779&amp;YEAR=2025">275.14</a></td>
 <td class="week">12</td><td class="salary">$3,818,534</td><td class="contractyear">1</td><td class="contractinfo">R2</tr>
-<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14059');" title="Salary: $467,500, Years: 4, Tag: , Week 15: at Seahawks Sun 1:25 p.m. PT" class="position_qb">Jones, Daniel IND QB</a> (<span class="warning injurystatus" title="Out">O</span>)</td>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14059');" title="Salary: $467,500, Years: 4, Tag: , Week 15: at Seahawks Sun 1:25 p.m. PT" class="position_qb">Jones, Daniel IND QB</a> (<span class="warning injurystatus" title="IR">I</span>)</td>
 <td class="points"><a href="https://www49.myfantasyleague.com/2025/options?L=13522&amp;O=08&amp;PLAYER_ID=14059&amp;YEAR=2025">264.44</a></td>
 <td class="week">11</td><td class="salary">$467,500</td><td class="contractyear">4</td><td class="contractinfo"></tr>
 <tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('13522','14782');" title="Salary: $565,675, Years: 2, Tag: , Week 15: at Broncos Sun 1:25 p.m. PT" class="position_qb">Love, Jordan GBP QB</a></td>
@@ -2246,9 +2245,9 @@ $('body').addClass('regularSeason')}
 <!-- STANDINGS COLUMNS SETUP  -->
 <script src="https://mflscripts.com/mfl-apps/playoffs/standingsColumns.js"></script>
 
-<script src="https://mflfootballv2.vercel.app/assets/js/dist/league-tools.js"></script></div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
+<script src="https://mflfootballv2.vercel.app/assets/js/dist/theleague-tools.js"></script></div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
 <tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
-<tr><td colspan="2" align="center">Page Generated Mon Dec 8 10:15:36 p.m. PT 2025</td></tr>
+<tr><td colspan="2" align="center">Page Generated Tue Dec 9 7:49:05 p.m. PT 2025</td></tr>
 <tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
  - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
 - <button id="pmLink">Privacy Manager</button>

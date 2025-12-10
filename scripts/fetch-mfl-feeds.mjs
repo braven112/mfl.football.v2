@@ -189,8 +189,8 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
-    key: 'playoffBracket',
-    url: `${host}/${year}/export?TYPE=playoffBracket&L=${leagueId}&JSON=1`,
+    key: 'playoff-brackets',
+    url: null, // handled separately - fetches metadata + individual brackets
     parser: (t) => JSON.parse(t),
   },
   {
@@ -246,6 +246,170 @@ const writeOut = (key, data) => {
       console.log(`Archived rosters -> ${historyFile}`);
     }
   }
+};
+
+/**
+ * Generate predicted playoff brackets based on current standings
+ * Uses seed-based matchups for championship and toilet bowl brackets
+ */
+const generatePredictedBrackets = (standingsData) => {
+  // Predicted bracket metadata (matches MFL structure when no actual brackets exist)
+  const playoffBrackets = {
+    playoffBracket: [
+      {
+        startWeek: '15',
+        teamsInvolved: '7',
+        id: '1',
+        startWeekGames: '3',
+        bracketWinnerTitle: 'The League Champion',
+        name: 'The League Championship',
+      },
+      {
+        startWeek: '17',
+        teamsInvolved: '2',
+        name: 'The Consolation Bracket',
+        startWeekGames: '1',
+        bracketWinnerTitle: '3rd Place',
+        id: '2',
+      },
+      {
+        startWeek: '15',
+        id: '3',
+        bracketWinnerTitle: '5th Place',
+        name: "The Loser's Bracket",
+        startWeekGames: '1',
+        teamsInvolved: '5',
+      },
+      {
+        startWeek: '15',
+        name: 'The Toilet Bowl Challenge',
+        bracketWinnerTitle: 'Winner of pick 1.17',
+        startWeekGames: '3',
+        id: '5',
+        teamsInvolved: '7',
+      },
+      {
+        teamsInvolved: '2',
+        id: '6',
+        bracketWinnerTitle: 'Winner of pick 2.17',
+        name: 'The Toilet Bowl Consolation',
+        startWeekGames: '1',
+        startWeek: '17',
+      },
+      {
+        teamsInvolved: '4',
+        id: '7',
+        startWeekGames: '2',
+        name: 'The Toilet Bowl Consolation 2',
+        bracketWinnerTitle: 'Winner of pick 2.18',
+        startWeek: '16',
+      },
+    ],
+  };
+
+  // Predicted bracket structures (seed-based, no actual franchise_ids assigned yet)
+  const brackets = {
+    '1': {
+      playoffBracket: {
+        bracket_id: '1',
+        playoffRound: [
+          {
+            playoffGame: [
+              { home: { seed: '2' }, game_id: '1', away: { seed: '7' } },
+              { game_id: '2', home: { seed: '3' }, away: { seed: '6' } },
+              { away: { seed: '5' }, game_id: '3', home: { seed: '4' } },
+            ],
+            week: '15',
+          },
+          {
+            week: '16',
+            playoffGame: [
+              { away: { winner_of_game: '2' }, home: { winner_of_game: '1' }, game_id: '4' },
+              { away: { winner_of_game: '3' }, home: { seed: '1' }, game_id: '5' },
+            ],
+          },
+          {
+            playoffGame: { away: { winner_of_game: '4' }, game_id: '6', home: { winner_of_game: '5' } },
+            week: '17',
+          },
+        ],
+      },
+    },
+    '2': {
+      playoffBracket: {
+        playoffRound: { playoffGame: { away: { loser_of_game: '4', bracket: '1' }, home: { loser_of_game: '5', bracket: '1' }, game_id: '1' }, week: '17' },
+        bracket_id: '2',
+      },
+    },
+    '3': {
+      playoffBracket: {
+        playoffRound: [
+          { playoffGame: { game_id: '1', home: { seed: '8' }, away: { seed: '9' } }, week: '15' },
+          {
+            playoffGame: [
+              { game_id: '2', home: { bracket: '1', loser_of_game: '3' }, away: { winner_of_game: '1' } },
+              { game_id: '3', home: { loser_of_game: '2', bracket: '1' }, away: { loser_of_game: '1', bracket: '1' } },
+            ],
+            week: '16',
+          },
+          { playoffGame: { home: { winner_of_game: '3' }, game_id: '4', away: { winner_of_game: '2' } }, week: '17' },
+        ],
+        bracket_id: '3',
+      },
+    },
+    '5': {
+      playoffBracket: {
+        bracket_id: '5',
+        playoffRound: [
+          {
+            week: '15',
+            playoffGame: [
+              { game_id: '1', home: { seed: '2' }, away: { seed: '7' } },
+              { away: { seed: '6' }, game_id: '2', home: { seed: '3' } },
+              { away: { seed: '5' }, game_id: '3', home: { seed: '4' } },
+            ],
+          },
+          {
+            week: '16',
+            playoffGame: [
+              { away: { winner_of_game: '1' }, home: { seed: '1' }, game_id: '4' },
+              { away: { winner_of_game: '2' }, game_id: '5', home: { winner_of_game: '3' } },
+            ],
+          },
+          { playoffGame: { away: { winner_of_game: '4' }, game_id: '6', home: { winner_of_game: '5' } }, week: '17' },
+        ],
+      },
+    },
+    '6': {
+      playoffBracket: {
+        bracket_id: '6',
+        playoffRound: {
+          playoffGame: { away: { loser_of_game: '5', bracket: '5' }, game_id: '1', home: { bracket: '5', loser_of_game: '4' } },
+          week: '17',
+        },
+      },
+    },
+    '7': {
+      playoffBracket: {
+        bracket_id: '7',
+        playoffRound: [
+          {
+            week: '16',
+            playoffGame: [
+              { away: { loser_of_game: '2', bracket: '5' }, home: { loser_of_game: '3', bracket: '5' }, game_id: '1' },
+              { away: { bracket: '5', loser_of_game: '1' }, home: { loser_of_game: '1', bracket: '3' }, game_id: '2' },
+            ],
+          },
+          { playoffGame: { game_id: '3', home: { winner_of_game: '2' }, away: { winner_of_game: '1' } }, week: '17' },
+        ],
+      },
+    },
+  };
+
+  return {
+    playoffBrackets,
+    brackets,
+  };
 };
 
 const run = async () => {
@@ -329,6 +493,88 @@ const run = async () => {
       }),
     };
     writeOut('weekly-results', normalized);
+  }
+
+  // Fetch playoff brackets (metadata + individual bracket details)
+  // During playoffs: use real MFL data
+  // During regular season: generate predicted brackets from standings
+  try {
+    const bracketsMetaUrl = `${host}/${year}/export?TYPE=playoffBrackets&L=${leagueId}&JSON=1`;
+    console.log(`Fetching playoffBrackets metadata from ${bracketsMetaUrl}`);
+    const metaText = await fetchTextWithRetry(bracketsMetaUrl, 3, 1500);
+    const metaData = JSON.parse(metaText);
+
+    const bracketList = metaData?.playoffBrackets?.playoffBracket;
+    const brackets = Array.isArray(bracketList) ? bracketList : bracketList ? [bracketList] : [];
+
+    if (brackets.length > 0) {
+      console.log(`Found ${brackets.length} playoff brackets from MFL - using live data`);
+      const bracketDetails = {};
+
+      // Fetch each individual bracket by ID
+      for (const bracket of brackets) {
+        const bracketId = String(bracket.id);
+        const bracketUrl = `${host}/${year}/export?TYPE=playoffBracket&L=${leagueId}&BRACKET_ID=${bracketId}&JSON=1`;
+
+        try {
+          console.log(`Fetching playoffBracket ${bracketId} from ${bracketUrl}`);
+          const bracketText = await fetchTextWithRetry(bracketUrl, 3, 1500);
+          const bracketData = JSON.parse(bracketText);
+
+          // Check if we got valid bracket data (not an error)
+          if (!bracketData.error) {
+            bracketDetails[bracketId] = bracketData;
+          } else {
+            console.warn(`Bracket ${bracketId} returned error: ${bracketData.error?.$t || 'Unknown error'}`);
+          }
+
+          // Be polite to MFL servers
+          await delay(1000);
+        } catch (err) {
+          console.error(`Failed to fetch bracket ${bracketId}:`, err.message);
+        }
+      }
+
+      // Write consolidated playoff-brackets.json file with live MFL data
+      const consolidated = {
+        playoffBrackets: metaData.playoffBrackets,
+        brackets: bracketDetails,
+      };
+      writeOut('playoff-brackets', consolidated);
+    } else {
+      console.log('No playoff brackets from MFL yet - generating predicted brackets from standings');
+
+      // Generate predicted brackets based on current standings
+      const standingsFile = path.join(outDir, 'standings.json');
+      if (fs.existsSync(standingsFile)) {
+        try {
+          const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
+          const predicted = generatePredictedBrackets(standingsData);
+          writeOut('playoff-brackets', predicted);
+          console.log('Generated predicted playoff brackets based on current standings');
+        } catch (err) {
+          console.error('Failed to generate predicted brackets:', err.message);
+        }
+      } else {
+        console.log('No standings data available to generate predicted brackets');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch playoff brackets metadata:', err.message);
+
+    // Try to generate predicted brackets as fallback
+    const standingsFile = path.join(outDir, 'standings.json');
+    if (fs.existsSync(standingsFile)) {
+      try {
+        console.log('Generating predicted brackets as fallback');
+        const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
+        const predicted = generatePredictedBrackets(standingsData);
+        writeOut('playoff-brackets', predicted);
+        console.log('Generated predicted playoff brackets based on current standings');
+      } catch (genErr) {
+        console.error('Failed to generate predicted brackets:', genErr.message);
+      }
+    }
   }
 
   fs.writeFileSync(
