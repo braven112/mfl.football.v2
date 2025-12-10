@@ -1637,6 +1637,10 @@ const serializedConfig = JSON.stringify({
     color: var(--icon-btn-default-text-color);
   }
 
+  .view-tab__icon:has(use[href*="icon-banknote"]) {
+    transform: rotate(25deg);
+  }
+
   .view-tab[data-active="true"] .view-tab__icon {
     fill: var(--icon-btn-default-focus-color);
     color: var(--icon-btn-default-focus-color);
