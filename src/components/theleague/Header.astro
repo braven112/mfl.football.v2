@@ -31,6 +31,9 @@ const year = (Astro.props.year || envYear).toString();
 // Construct the MFL homepage URL using the context-aware league object.
 // This ensures the correct host and leagueId are always used.
 const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
+const submitLineupUrl = `https://${league.host}/${year}/lineup?L=${league.leagueId}`;
+const addDropUrl = `https://${league.host}/${year}/add_drop?L=${league.leagueId}`;
+const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 ---
 
 <div class="breadcrumb-bar">
@@ -147,7 +150,47 @@ const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
         </a>
         <div class="clearfix"></div>
       </div>
-      <div class="col right"></div>
+      <div class="col right">
+        <!-- Desktop Navigation Icons -->
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"} class="nav-icon-link" title="Roster/Salary">
+            <svg class="nav-icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-banknote"></use>
+            </svg>
+            <span class="nav-label">Roster/Salary</span>
+          </a>
+          <a href={submitLineupUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Submit lineup">
+            <svg class="nav-icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-submit"></use>
+            </svg>
+            <span class="nav-label">Submit lineup</span>
+          </a>
+          <a href={addDropUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Add/drop">
+            <svg class="nav-icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-user-plus"></use>
+            </svg>
+            <span class="nav-label">Add/drop</span>
+          </a>
+          <a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"} class="nav-icon-link" title="Standings">
+            <svg class="nav-icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-numberone"></use>
+            </svg>
+            <span class="nav-label">Standings</span>
+          </a>
+          <a href={liveScoringUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Live scoring">
+            <svg class="nav-icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-scoreboard"></use>
+            </svg>
+            <span class="nav-label">Live scoring</span>
+          </a>
+          <a href={isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs"} class="nav-icon-link" title="Playoffs">
+            <svg class="nav-icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-trophy"></use>
+            </svg>
+            <span class="nav-label">Playoffs</span>
+          </a>
+        </nav>
+      </div>
     </div>
   </div>
 
@@ -507,6 +550,49 @@ const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
   .logout-btn:hover {
     background: #fef2f2;
     color: #dc2626;
+  }
+
+  /* Desktop Navigation Icons */
+  .desktop-nav {
+    display: none;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .desktop-nav {
+      display: flex;
+    }
+  }
+
+  .nav-icon-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    color: var(--primary-color, #1c497c);
+    transition: color 0.2s ease;
+  }
+
+  .nav-icon-link:hover {
+    color: var(--secondary-color, #2e8743);
+  }
+
+  .nav-icon {
+    width: 32px;
+    height: 32px;
+    fill: currentColor;
+  }
+
+  .nav-icon:has(use[href*="icon-banknote"]) {
+    transform: rotate(25deg);
+  }
+
+  .nav-label {
+    font-size: 0.6rem;
+    font-weight: 500;
+    white-space: nowrap;
   }
 
   /* Elegant Animated Hamburger Button */
