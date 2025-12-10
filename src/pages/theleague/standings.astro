@@ -16,6 +16,9 @@ import leagueConfig from '../../data/theleague.config.json';
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
 });
+const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
+  eager: true,
+});
 
 // Extract available years from the imported feeds
 const availableYears = Object.keys(standingsFeeds)
@@ -45,6 +48,11 @@ const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selecte
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
   return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
 }
+
+const fetchMeta = fetchMetaFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/fetch.meta.json`] as
+  | { lastFetched?: string }
+  | undefined;
+const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
@@ -219,8 +227,13 @@ const defendingChampions = championsByYear[previousYear] || {};
           <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} />
         </div>
       )}
-    </main>
 
+      {lastFetched && (
+        <p class="data-disclaimer">
+          Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+        </p>
+      )}
+    </main>
   </div>
 </TheLeagueLayout>
 
@@ -437,5 +450,11 @@ const defendingChampions = championsByYear[previousYear] || {};
     .standings-info {
       padding: 1rem;
     }
+  }
+
+  .data-disclaimer {
+    margin: 1rem 0 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.95rem;
   }
 </style>
