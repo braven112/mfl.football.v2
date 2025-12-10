@@ -753,6 +753,11 @@ const grandTotal =
           View MFL Playoff Bracket →
         </a>
       </p>
+      {hasBrackets && (
+        <p class="data-disclaimer" id="live-scores-timestamp">
+          Scores updated: <span id="last-updated-time">Loading...</span>
+        </p>
+      )}
     </div>
   </section>
 </TheLeagueLayout>
@@ -1296,6 +1301,10 @@ const grandTotal =
     margin: 0;
   }
 
+  .mfl-link-footer p + p {
+    margin-top: 0.75rem;
+  }
+
   .mfl-link {
     color: var(--primary-color, #1c497c);
     text-decoration: none;
@@ -1306,6 +1315,12 @@ const grandTotal =
   .mfl-link:hover {
     color: var(--secondary-color, #2e8743);
     text-decoration: underline;
+  }
+
+  .data-disclaimer {
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.95rem;
+    font-style: italic;
   }
 
   @media (max-width: 1024px) {
@@ -1374,15 +1389,21 @@ const grandTotal =
 </script>
 
 {hasBrackets && (
-  <script is:inline>
+  <script define:vars={{ liveWeeks: weeksNeeded, leagueId: envLeagueId, host: envHost, year: selectedYear }}>
     (() => {
-      const liveWeeks = {JSON.stringify(weeksNeeded)};
-      const leagueId = "{envLeagueId}";
-      const host = "{envHost}";
-      const year = {selectedYear};
-
       const scoreNodes = Array.from(document.querySelectorAll('[data-live-week][data-live-team]'));
       if (!scoreNodes.length || !leagueId || !host || !year || !Array.isArray(liveWeeks)) return;
+
+      const updateTimestamp = () => {
+        const timestampEl = document.getElementById('last-updated-time');
+        if (timestampEl) {
+          const now = new Date();
+          timestampEl.textContent = now.toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+          });
+        }
+      };
 
       const updateScores = (liveData) => {
         liveData.forEach(({ week, scores }) => {
@@ -1396,6 +1417,7 @@ const grandTotal =
             }
           });
         });
+        updateTimestamp();
       };
 
       const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -1404,27 +1426,39 @@ const grandTotal =
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 5000);
         try {
-          const url = `${host}/${year}/export?TYPE=liveScoring&L=${leagueId}&W=${week}&JSON=1`;
+          const url = `/api/live-scoring?week=${week}&year=${year}&L=${leagueId}&host=${encodeURIComponent(host)}`;
           const res = await fetch(url, { signal: controller.signal });
           if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
           const data = await res.json();
-          const franchises = data?.liveScoring?.franchise
-            ? Array.isArray(data.liveScoring.franchise)
-              ? data.liveScoring.franchise
-              : [data.liveScoring.franchise]
-            : [];
-          const scores = {};
-          franchises.forEach(team => {
-            if (!team?.id) return;
-            scores[String(team.id)] = Number(team.score) || 0;
-          });
-          return { week, scores };
+          return { week: data.week, scores: data.scores };
         } catch (_err) {
           return null;
         } finally {
           clearTimeout(timer);
         }
       };
+
+      const isNFLGameTime = () => {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon, 4=Thu, 6=Sat
+        const hour = now.getHours();
+
+        // NFL games typically:
+        // Thursday: 8pm ET (20:00-23:59)
+        // Saturday (playoffs): 1pm-11pm ET (13:00-23:59)
+        // Sunday: 1pm-11pm ET (13:00-23:59)
+        // Monday: 8pm ET (20:00-23:59)
+
+        if (day === 0) return hour >= 13 && hour <= 23; // Sunday
+        if (day === 1) return hour >= 20 && hour <= 23; // Monday
+        if (day === 4) return hour >= 20 && hour <= 23; // Thursday
+        if (day === 6) return hour >= 13 && hour <= 23; // Saturday (playoffs)
+
+        return false;
+      };
+
+      let pollInterval = null;
+      let consecutiveNoUpdates = 0;
 
       const run = async () => {
         const results = [];
@@ -1433,16 +1467,75 @@ const grandTotal =
           if (res) results.push(res);
           await delay(750);
         }
-        if (results.length) updateScores(results);
+
+        if (results.length) {
+          const hadUpdates = results.some(r => Object.keys(r.scores).length > 0);
+          if (hadUpdates) {
+            consecutiveNoUpdates = 0;
+            updateScores(results);
+          } else {
+            consecutiveNoUpdates++;
+          }
+        } else {
+          consecutiveNoUpdates++;
+          updateTimestamp();
+        }
+
+        // Stop polling if no updates for 3 consecutive polls (games likely over)
+        if (consecutiveNoUpdates >= 3 && pollInterval) {
+          console.log('Stopping auto-refresh: no score updates detected');
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
       };
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', run, { once: true });
-      } else {
+      const startPolling = () => {
+        // Clear any existing interval
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+
+        // Initial fetch
         run();
+
+        // Only auto-poll during NFL game times
+        if (isNFLGameTime()) {
+          console.log('Starting auto-refresh (NFL game time detected)');
+          pollInterval = setInterval(() => {
+            if (!document.hidden) {
+              run();
+            }
+          }, 60000); // Poll every 60 seconds
+        } else {
+          console.log('Outside NFL game hours - manual refresh only');
+        }
+      };
+
+      // Stop polling when page becomes hidden (tab switched away)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && pollInterval) {
+          console.log('Pausing auto-refresh (tab hidden)');
+          clearInterval(pollInterval);
+          pollInterval = null;
+        } else if (!document.hidden && !pollInterval) {
+          console.log('Resuming auto-refresh (tab visible)');
+          startPolling();
+        }
+      });
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startPolling, { once: true });
+      } else {
+        startPolling();
       }
 
-      document.addEventListener('astro:after-swap', run);
+      document.addEventListener('astro:after-swap', () => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        startPolling();
+      });
     })();
   </script>
 )}
