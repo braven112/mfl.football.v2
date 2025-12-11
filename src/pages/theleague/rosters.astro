@@ -1552,31 +1552,35 @@ const serializedConfig = JSON.stringify({
 
 
 
+  /* Mobile: Stack team card content */
 
-
-  .team-card {
-    display: flex;
-    align-items: center;
-    gap: var(--padding-md);
-    padding: var(--padding-lg);
-    border-radius: 1rem;
+    .team-card {
+      display:grid;
+      padding-bottom: var(--padding-xxl);/* Make room for tabs below */
+      justify-items: center;
+      gap: var(--padding-md);
+          border-radius: 1rem;
     background: #fff;
     box-shadow: var(--box-shadow-lg);
     position: relative;
+    }
+
+
+  @media (min-width: 480px) {
+  .team-card {
+    display: flex;
+    align-items: center;
+flex-wrap: wrap;
+    padding: var(--padding-lg);
+    justify-content: center
+
   }
+    }
   .team-card.roster-card {
     box-shadow: none;
     border-radius: none;
   }
 
-  /* Mobile: Stack team card content */
-  @media (max-width: 767px) {
-    .team-card {
-      flex-wrap: wrap;
-      padding-bottom: var(--padding-xxl);/* Make room for tabs below */
-      justify-content: center;
-    }
-  }
 
   /* View Tabs */
   .view-tabs {
