@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2025-12-11T08:47:52.928Z"
+    "fetchedAt": "2025-12-11T08:59:55.655Z"
   },
   "players": [
     {
@@ -19527,19 +19527,61 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "FA",
+      "team": "LAC",
       "draftYear": 2021,
       "draftTeam": "FA",
       "birthdate": 945925200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15260_thumb.jpg",
       "externalIds": {
         "mfl": "15260",
-        "sleeper": null,
+        "sleeper": "7537",
         "gsis": null
       },
-      "sleeper": null,
-      "nflverse": null,
-      "gamesPlayed": null,
+      "sleeper": {
+        "id": "7537",
+        "fullName": "Jaret Patterson",
+        "team": "LAC",
+        "age": 25,
+        "height": "68",
+        "weight": "195",
+        "number": 32,
+        "college": "Buffalo",
+        "birthDate": "1999-12-23",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": null,
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 13,
+        "season": "2025",
+        "player": "Jaret Patterson",
+        "team": "LAC",
+        "position": "RB",
+        "offenseSnaps": 15,
+        "offenseSnapPct": 0.22,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "PattJa01",
+        "gamesPlayed": 4,
+        "gamesPlayedWeeks": [
+          8,
+          9,
+          10,
+          13
+        ]
+      },
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
