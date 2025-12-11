@@ -1,5 +1,5 @@
 /**
- * Pull core MFL feeds (rosters, players, salary adjustments, draft results, option07, transactions)
+ * Pull core MFL feeds (rosters, players, salary adjustments, draft results, transactions)
  * and write them into data/<league>/mfl-feeds/<year>/.
  *
  * Caching strategy:
@@ -155,11 +155,6 @@ const endpoints = [
     key: 'transactions',
     url: withWeek(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
-  },
-  {
-    key: 'option07',
-    url: `${host}/${year}/options?L=${leagueId}&O=07`,
-    parser: (t) => t, // HTML payload; keep raw
   },
   {
     key: 'tradeBait',
