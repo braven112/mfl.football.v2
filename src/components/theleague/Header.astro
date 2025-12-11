@@ -317,10 +317,16 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
   .theleague-header .row {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 980px) {
+    .theleague-header .row {
+      flex-wrap: nowrap;
+    }
   }
 
   .theleague-header .col.left {
@@ -336,6 +342,15 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     display: flex;
     align-items: center;
     margin-left: auto;
+    width: 100%;
+    order: 2;
+  }
+
+  @media (min-width: 980px) {
+    .theleague-header .col.right {
+      width: auto;
+      order: 0;
+    }
   }
 
   .league-link {
@@ -554,14 +569,36 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
   /* Desktop Navigation Icons */
   .desktop-nav {
-    display: none;
+    display: flex;
     align-items: center;
     gap: 1.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+    padding-bottom: 0.25rem;
   }
 
-  @media (min-width: 768px) {
+  .desktop-nav::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .desktop-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .desktop-nav::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.5);
+    border-radius: 3px;
+  }
+
+  .desktop-nav::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(148, 163, 184, 0.7);
+  }
+
+  @media (min-width: 900px) {
     .desktop-nav {
-      display: flex;
+      overflow-x: visible;
     }
   }
 
@@ -573,6 +610,8 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     text-decoration: none;
     color: var(--primary-color, #1c497c);
     transition: color 0.2s ease;
+    flex-shrink: 0;
+    min-width: 60px;
   }
 
   .nav-icon-link:hover {
