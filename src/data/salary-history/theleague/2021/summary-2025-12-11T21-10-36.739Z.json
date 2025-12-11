@@ -1,0 +1,245 @@
+{
+  "snapshot": "2025-12-11T21-10-36.739Z",
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2021",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2021/export?TYPE=rosters&L=13522&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2021/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2021/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1",
+      "sleeper": "cached",
+      "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2021.csv.gz"
+    },
+    "fetchedAt": "2025-12-11T21:10:36.712Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-12-11T21:10:36.729Z"
+  },
+  "positions": {
+    "Def": {
+      "totalPlayers": 31,
+      "top3Average": 1038889,
+      "top5Average": 872230.4,
+      "topPlayers": [
+        {
+          "id": "0516",
+          "name": "Cowboys, Dallas",
+          "salary": 1200000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "0502",
+          "name": "Colts, Indianapolis",
+          "salary": 1141667,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0509",
+          "name": "Jaguars, Jacksonville",
+          "salary": 775000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "0501",
+          "name": "Bills, Buffalo",
+          "salary": 622242.51,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "0504",
+          "name": "Patriots, New England",
+          "salary": 622242.51,
+          "franchiseId": "0001"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 49,
+      "top3Average": 5767666.67,
+      "top5Average": 4485600,
+      "topPlayers": [
+        {
+          "id": "10703",
+          "name": "Wilson, Russell",
+          "salary": 7895250,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "11644",
+          "name": "Carr, Derek",
+          "salary": 6382750,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "10700",
+          "name": "Cousins, Kirk",
+          "salary": 3025000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "9431",
+          "name": "Stafford, Matthew",
+          "salary": 3000000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "10273",
+          "name": "Newton, Cam",
+          "salary": 2125000,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 99,
+      "top3Average": 5354703.34,
+      "top5Average": 4796954,
+      "topPlayers": [
+        {
+          "id": "12625",
+          "name": "Elliott, Ezekiel",
+          "salary": 7000000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "13130",
+          "name": "McCaffrey, Christian",
+          "salary": 4538710.01,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "13604",
+          "name": "Barkley, Saquon",
+          "salary": 4525400,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "14071",
+          "name": "Montgomery, David",
+          "salary": 4114000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "13128",
+          "name": "Cook, Dalvin",
+          "salary": 3806660,
+          "franchiseId": "0016"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 58,
+      "top3Average": 6425000,
+      "top5Average": 4755000,
+      "topPlayers": [
+        {
+          "id": "12263",
+          "name": "Waller, Darren",
+          "salary": 9350000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "11247",
+          "name": "Ertz, Zach",
+          "salary": 5250000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "12678",
+          "name": "Higbee, Tyler",
+          "salary": 4675000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "15329",
+          "name": "Pitts, Kyle",
+          "salary": 2500000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "13772",
+          "name": "Schultz, Dalton",
+          "salary": 2000000,
+          "franchiseId": "0012"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 123,
+      "top3Average": 7000000,
+      "top5Average": 5905000,
+      "topPlayers": [
+        {
+          "id": "11222",
+          "name": "Allen, Keenan",
+          "salary": 7500000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "11671",
+          "name": "Evans, Mike",
+          "salary": 7500000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "11679",
+          "name": "Beckham, Odell",
+          "salary": 6000000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "11674",
+          "name": "Cooks, Brandin",
+          "salary": 5000000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "12181",
+          "name": "Agholor, Nelson",
+          "salary": 3525000,
+          "franchiseId": "0004"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 31,
+      "top3Average": 665747.5,
+      "top5Average": 603448.5,
+      "topPlayers": [
+        {
+          "id": "10868",
+          "name": "Zuerlein, Greg",
+          "salary": 800000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "12860",
+          "name": "Fairbairn, Ka'imi",
+          "salary": 622242.51,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "9686",
+          "name": "Succop, Ryan",
+          "salary": 575000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "11945",
+          "name": "Santos, Cairo",
+          "salary": 525000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "13832",
+          "name": "Sanders, Jason",
+          "salary": 495000,
+          "franchiseId": "0015"
+        }
+      ]
+    }
+  }
+}
