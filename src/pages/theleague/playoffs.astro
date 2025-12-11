@@ -185,6 +185,24 @@ const formatPlaceholder = (ref: any, slot: 'home' | 'away') => {
 };
 
 const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
+  // If franchise_id is explicitly provided, look up by ID first
+  if (ref?.franchise_id) {
+    const franchiseId = String(ref.franchise_id).padStart(4, '0');
+    const team = leagueStandings.find(t => t.id === franchiseId);
+    if (team) {
+      const assets = assetMap.get(franchiseId);
+      return {
+        ...team,
+        bracketSeed: ref.seed || 0,
+        originalSeed: team.seed || 0,
+        record: formatRecord(team.h2hwlt),
+        icon: assets?.icon || '',
+        banner: assets?.banner || '',
+        displayName: assets?.name || team.teamName,
+      };
+    }
+  }
+
   const sourceBracket = ref?.bracket ? String(ref.bracket) : bracketId;
   const seedMap = getSeedMapForBracket(sourceBracket);
 

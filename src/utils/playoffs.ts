@@ -33,6 +33,7 @@ const buildMflUrl = (
 
 type BracketRef = {
   seed?: number;
+  franchise_id?: string;
   winner_of_game?: string;
   loser_of_game?: string;
   bracket?: string;
@@ -95,6 +96,7 @@ const toNumber = (value: unknown) => {
 
 const normalizeRef = (ref: any = {}): BracketRef => ({
   seed: toNumber(ref.seed),
+  franchise_id: ref.franchise_id || ref.franchiseId,
   winner_of_game: ref.winner_of_game || ref.winnerOfGame,
   loser_of_game: ref.loser_of_game || ref.loserOfGame,
   bracket: ref.bracket,
