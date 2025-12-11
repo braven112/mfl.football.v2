@@ -31,10 +31,22 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 		<!-- Footer Navigation Columns -->
 		<div class="footer-nav">
 			<div class="footer-column">
-				<h4>Rules</h4>
+				<h4>Tools</h4>
 				<ul>
-					<li><a href="#">Constitution</a></li>
-					<li><a href="#">League Scoring</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"}>Roster/Salary</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/rosters?view=nextyear" : "/theleague/rosters?view=nextyear"}>Next Year Summary</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/calculator" : "/theleague/calculator"}>Extension Calculator</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/draft-predictor" : "/theleague/draft-predictor"}>Draft Order</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"}>Standings</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs"}>Playoffs</a></li>
+				</ul>
+			</div>
+			<div class="footer-column">
+				<h4>Advanced Reports</h4>
+				<ul>
+					<li><a href={isAFL ? "/afl-fantasy/salary" : "/theleague/salary"}>Salary Benchmarks</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/salary-history" : "/theleague/salary-history"}>Salary History</a></li>
+					<li><a href={isAFL ? "/afl-fantasy/mvp" : "/theleague/mvp"}>Salary-Adjusted MVPs</a></li>
 				</ul>
 			</div>
 			<div class="footer-column">
@@ -45,18 +57,10 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 				</ul>
 			</div>
 			<div class="footer-column">
-				<h4>League</h4>
+				<h4>Leagues</h4>
 				<ul>
-					<li><a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"}>Roster/Salary</a></li>
-					<li><a href={isAFL ? "/afl-fantasy/rosters?view=nextyear" : "/theleague/rosters?view=nextyear"}>Next Year Summary</a></li>
-					<li><a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"}>Standings</a></li>
-				</ul>
-			</div>
-			<div class="footer-column">
-				<h4>News</h4>
-				<ul>
-					<li><a href={isAFL ? "/afl-fantasy/draft-predictor" : "/theleague/draft-predictor"}>Draft Order</a></li>
-					{!isAFL && <li><a href="/theleague/draft-predictor?view=history">Draft History</a></li>}
+					<li><a href="https://theleague.us">TheLeague.us</a></li>
+					<li><a href="https://afl-fantasy.com">AFL Fantasy</a></li>
 				</ul>
 			</div>
 		</div>
