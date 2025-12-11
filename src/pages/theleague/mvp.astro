@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
+import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
 
 const playerModules = import.meta.glob(
   '../../data/mfl-player-salaries-*.json',
@@ -47,7 +48,8 @@ const franchiseLookup = new Map(
   efficiency: number,
   franchiseId?: string,
   team?: string,
-  positionLabel?: string
+  positionLabel?: string,
+  headshot?: string
 }>} */
 const overallCandidates: Array<{
   season: string,
@@ -59,7 +61,8 @@ const overallCandidates: Array<{
   efficiency: number,
   franchiseId?: string,
   team?: string,
-  positionLabel?: string
+  positionLabel?: string,
+  headshot?: string
 }> = [];
 const positionBuckets = new Map<string, Array<{
   season: string,
@@ -71,7 +74,8 @@ const positionBuckets = new Map<string, Array<{
   efficiency: number,
   franchiseId?: string,
   team?: string,
-  positionLabel?: string
+  positionLabel?: string,
+  headshot?: string
 }>>(positionLabels.map(({ key }) => [key, []]));
 Object.entries(playerModules).forEach(([path, mod]) => {
   const season = extractSeason(path);
@@ -94,6 +98,7 @@ Object.entries(playerModules).forEach(([path, mod]) => {
         efficiency: points / salary,
         franchiseId: player.franchiseId,
         team: player.team ?? '',
+        headshot: player.headshot ?? getPlayerImageUrl(player.id),
       };
     })
     .filter(Boolean);
@@ -126,6 +131,17 @@ Object.entries(playerModules).forEach(([path, mod]) => {
 });
 
 overallCandidates.sort((a, b) => Number(b.season) - Number(a.season));
+
+// Sort each position bucket by season (newest first)
+positionBuckets.forEach((bucket) => {
+  bucket.sort((a, b) => Number(b.season) - Number(a.season));
+});
+
+// Create a set of overall MVP player IDs for badge display
+const overallMvpIds = new Set(overallCandidates.map(p => `${p.id}-${p.season}`));
+
+// Get available positions for filter
+const availablePositions = [...positionLabels];
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -138,7 +154,19 @@ const formatCurrency = (value) => {
 const formatPoints = (value) =>
   Number.isFinite(value) ? value.toFixed(1) : '0.0';
 const getNflLogo = (team) => {
-  const code = (team ?? '').toUpperCase() || 'FA';
+  let code = (team ?? '').toUpperCase() || 'FA';
+  // Normalize team codes that don't match logo filenames
+  const teamCodeMap: Record<string, string> = {
+    'TBB': 'TB',  // Tampa Bay Buccaneers
+    'GBP': 'GB',  // Green Bay Packers
+    'NEP': 'NE',  // New England Patriots
+    'KCC': 'KC',  // Kansas City Chiefs
+    'SFO': 'SF',  // San Francisco 49ers
+    'NOS': 'NO',  // New Orleans Saints
+    'SDC': 'SD',  // San Diego Chargers (historical)
+    'JAC': 'JAX', // Jacksonville Jaguars
+  };
+  code = teamCodeMap[code] ?? code;
   return `/assets/nfl-logos/${code}.svg`;
 };
 ---
@@ -152,7 +180,20 @@ const getNflLogo = (team) => {
         by salary. Data refreshes whenever new salary snapshots are generated.
       </p>
     </header>
-    <div class="mvp-grid">
+
+    <div class="filters">
+      <div class="filter-group">
+        <label for="position-filter" class="filter-label">Position</label>
+        <select id="position-filter" class="filter-select">
+          <option value="all">All Positions</option>
+          {availablePositions.map(({ key, label }) => (
+            <option value={key}>{label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <div class="mvp-grid" id="overall-mvp-grid">
       {overallCandidates.length ? (
         overallCandidates.map((player) => {
           const franchise = player.franchiseId
@@ -160,28 +201,42 @@ const getNflLogo = (team) => {
             : null;
           const nflLogo = player.team ? getNflLogo(player.team) : null;
           return (
-            <article class="mvp-card">
+            <article class="mvp-card" data-year={player.season} data-position={player.position}>
               <header>
-                <p class="mvp-season">{player.season}</p>
-                {franchise?.icon && (
+                <div class="card-header-top">
+                  <p class="mvp-season">{player.season}</p>
+                  {franchise?.icon && (
+                    <img
+                      src={franchise.icon}
+                      alt={franchise?.name ?? 'Franchise'}
+                      class="franchise-icon"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+                <div class="player-info">
                   <img
-                    src={franchise.icon}
-                    alt={franchise?.name ?? 'Franchise'}
+                    src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                    alt={`${player.name} headshot`}
+                    class="player-headshot"
                     loading="lazy"
+                    onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
                   />
-                )}
-                <h2>{player.name}</h2>
-                        <p class="mvp-meta">
-                          {nflLogo && (
-                            <img
-                              src={nflLogo}
-                              alt={`${player.team ?? 'FA'} logo`}
-                              class="nfl-icon"
-                              loading="lazy"
-                            />
-                          )}
-                          <span>{player.position}</span>
-                        </p>
+                  <div>
+                    <h2>{player.name}</h2>
+                    <p class="mvp-meta">
+                      {nflLogo && (
+                        <img
+                          src={nflLogo}
+                          alt={`${player.team ?? 'FA'} logo`}
+                          class="nfl-icon"
+                          loading="lazy"
+                        />
+                      )}
+                      <span>{player.position}</span>
+                    </p>
+                  </div>
+                </div>
               </header>
               <dl>
                 <div>
@@ -194,7 +249,7 @@ const getNflLogo = (team) => {
                 </div>
                 <div>
                   <dt>Efficiency</dt>
-                  <dd>{(player.efficiency * 1_000_000).toFixed(2)} pts/MM</dd>
+                  <dd>{formatCurrency(1 / player.efficiency)} / pt</dd>
                 </div>
               </dl>
             </article>
@@ -218,29 +273,49 @@ const getNflLogo = (team) => {
                     ? franchiseLookup.get(player.franchiseId)
                     : null;
                   const nflLogo = player.team ? getNflLogo(player.team) : null;
+                  const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
                   return (
-                    <article class="mvp-card">
+                    <article class="mvp-card" data-year={player.season} data-position={player.position}>
                       <header>
-                        <p class="mvp-season">{player.season}</p>
-                        {franchise?.icon && (
+                        <div class="card-header-top">
+                          <div class="season-badge-row">
+                            <p class="mvp-season">{player.season}</p>
+                            {isLeagueMvp && (
+                              <span class="league-mvp-badge">League MVP</span>
+                            )}
+                          </div>
+                          {franchise?.icon && (
+                            <img
+                              src={franchise.icon}
+                              alt={franchise?.name ?? 'Franchise'}
+                              class="franchise-icon"
+                              loading="lazy"
+                            />
+                          )}
+                        </div>
+                        <div class="player-info">
                           <img
-                            src={franchise.icon}
-                            alt={franchise?.name ?? 'Franchise'}
+                            src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                            alt={`${player.name} headshot`}
+                            class="player-headshot"
                             loading="lazy"
+                            onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
                           />
-                        )}
-                        <h2>{player.name}</h2>
-                  <p class="mvp-meta">
-                    {nflLogo && (
-                      <img
-                        src={nflLogo}
-                        alt={`${player.team ?? 'FA'} logo`}
-                        class="nfl-icon"
-                        loading="lazy"
-                      />
-                    )}
-                    <span>{player.position}</span>
-                  </p>
+                          <div>
+                            <h2>{player.name}</h2>
+                            <p class="mvp-meta">
+                              {nflLogo && (
+                                <img
+                                  src={nflLogo}
+                                  alt={`${player.team ?? 'FA'} logo`}
+                                  class="nfl-icon"
+                                  loading="lazy"
+                                />
+                              )}
+                              <span>{player.position}</span>
+                            </p>
+                          </div>
+                        </div>
                       </header>
                       <dl>
                         <div>
@@ -253,7 +328,7 @@ const getNflLogo = (team) => {
                         </div>
                         <div>
                           <dt>Efficiency</dt>
-                          <dd>{(player.efficiency * 1_000_000).toFixed(2)} pts/MM</dd>
+                          <dd>{formatCurrency(1 / player.efficiency)} / pt</dd>
                         </div>
                       </dl>
                     </article>
@@ -277,6 +352,76 @@ const getNflLogo = (team) => {
     gap: 1.75rem;
   }
 
+  .filters {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.25rem;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+  }
+
+  .filter-select {
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    color: #1e293b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: fit-content;
+  }
+
+  .filter-select:hover {
+    border-color: #94a3b8;
+  }
+
+  .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .mvp-card.hidden {
+    display: none;
+  }
+
+  .season-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .league-mvp-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+  }
+
   .mvp-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
@@ -298,14 +443,37 @@ const getNflLogo = (team) => {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
 
-  .mvp-card header img {
+  .card-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .franchise-icon {
     width: 48px;
     height: 48px;
     border-radius: 0.5rem;
+    object-fit: contain;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .player-headshot {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
     object-fit: cover;
+    background: #f3f4f6;
+    flex-shrink: 0;
   }
 
   .mvp-season {
@@ -332,7 +500,7 @@ const getNflLogo = (team) => {
   dl {
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem;
   }
 
@@ -366,3 +534,63 @@ const getNflLogo = (team) => {
     color: #6b7280;
   }
 </style>
+
+<script>
+  function setupMvpFilters() {
+    const positionFilter = document.getElementById('position-filter') as HTMLSelectElement;
+    const overallGrid = document.getElementById('overall-mvp-grid');
+    const positionGroups = document.querySelectorAll('.position-group');
+
+    function applyFilters() {
+      const selectedPosition = positionFilter.value;
+
+      // When a position is selected, hide the overall MVP grid
+      if (overallGrid) {
+        if (selectedPosition === 'all') {
+          overallGrid.style.display = '';
+        } else {
+          overallGrid.style.display = 'none';
+        }
+      }
+
+      // Show only the selected position group, or all groups if "All Positions"
+      positionGroups.forEach((group) => {
+        const groupHeading = group.querySelector('h3');
+        const groupPosition = groupHeading?.textContent?.trim();
+
+        if (selectedPosition === 'all') {
+          (group as HTMLElement).style.display = '';
+        } else {
+          // Map position keys to labels for comparison
+          const positionMap: Record<string, string> = {
+            'QB': 'Quarterback',
+            'RB': 'Running Back',
+            'WR': 'Wide Receiver',
+            'TE': 'Tight End',
+            'PK': 'Kicker',
+            'Def': 'Defense/ST'
+          };
+
+          const selectedLabel = positionMap[selectedPosition];
+          if (groupPosition === selectedLabel) {
+            (group as HTMLElement).style.display = '';
+          } else {
+            (group as HTMLElement).style.display = 'none';
+          }
+        }
+      });
+    }
+
+    positionFilter?.addEventListener('change', applyFilters);
+  }
+
+  // Initialize on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMvpFilters);
+  } else {
+    setupMvpFilters();
+  }
+
+  // Re-run on page transitions (for Astro view transitions)
+  document.addEventListener('astro:after-swap', setupMvpFilters);
+</script>
