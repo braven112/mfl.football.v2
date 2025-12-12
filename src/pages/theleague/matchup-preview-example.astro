@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getTeamProjection } from '../../utils/projections';
+import { normalizeTeamCode, getNFLTeamLogo, getStadiumName } from '../../utils/nfl';
 
 export const prerender = true;
 
@@ -44,8 +45,8 @@ function getPlayerHeadshot(espnId: string) {
   return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
 }
 
-// Helper to get NFL team logo URL
-function getNFLTeamLogo(teamCode: string) {
+// Helper to normalize team codes (MFL to ESPN/Standard)
+function normalizeTeamCode(teamCode: string) {
   if (!teamCode) return '';
   const upper = teamCode.toUpperCase();
   const map: Record<string, string> = {
@@ -63,8 +64,55 @@ function getNFLTeamLogo(teamCode: string) {
     'CLV': 'CLE', // Cleveland
     'ARZ': 'ARI'  // Arizona
   };
-  const code = map[upper] || upper;
-  return `https://a.espncdn.com/i/teamlogos/nfl/500/${code}.png`;
+  return map[upper] || upper;
+}
+
+// Helper to get NFL team logo URL
+function getNFLTeamLogo(teamCode: string, variant?: 'dark') {
+  const code = normalizeTeamCode(teamCode);
+  if (!code) return '';
+  const path = variant === 'dark' ? '500-dark' : '500';
+  return `https://a.espncdn.com/i/teamlogos/nfl/${path}/${code}.png`;
+}
+
+// Helper to get Stadium Name
+function getStadiumName(teamCode: string) {
+  const code = normalizeTeamCode(teamCode);
+  const stadiums: Record<string, string> = {
+    'ARI': 'State Farm Stadium',
+    'ATL': 'Mercedes-Benz Stadium',
+    'BAL': 'M&T Bank Stadium',
+    'BUF': 'Highmark Stadium',
+    'CAR': 'Bank of America Stadium',
+    'CHI': 'Soldier Field',
+    'CIN': 'Paycor Stadium',
+    'CLE': 'Huntington Bank Field',
+    'DAL': 'AT&T Stadium',
+    'DEN': 'Empower Field at Mile High',
+    'DET': 'Ford Field',
+    'GB': 'Lambeau Field',
+    'HOU': 'NRG Stadium',
+    'IND': 'Lucas Oil Stadium',
+    'JAX': 'EverBank Stadium',
+    'KC': 'GEHA Field at Arrowhead Stadium',
+    'LAC': 'SoFi Stadium',
+    'LAR': 'SoFi Stadium',
+    'LV': 'Allegiant Stadium',
+    'MIA': 'Hard Rock Stadium',
+    'MIN': 'U.S. Bank Stadium',
+    'NE': 'Gillette Stadium',
+    'NO': 'Caesars Superdome',
+    'NYG': 'MetLife Stadium',
+    'NYJ': 'MetLife Stadium',
+    'PHI': 'Lincoln Financial Field',
+    'PIT': 'Acrisure Stadium',
+    'SEA': 'Lumen Field',
+    'SF': "Levi's Stadium",
+    'TB': 'Raymond James Stadium',
+    'TEN': 'Nissan Stadium',
+    'WSH': 'Northwest Stadium'
+  };
+  return stadiums[code] || '';
 }
 
 // Logic for Sunday Ticket Multi-View
@@ -89,6 +137,24 @@ const sundayTicketGames = (matchup.nflGames || [])
   .sort((a: any, b: any) => b.score - a.score);
 
 const multiViewGames = sundayTicketGames.slice(0, 4);
+
+// Helper to determine home/away status for matchups
+function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[]) {
+  const pTeam = normalizeTeamCode(playerTeam);
+  const oTeam = normalizeTeamCode(opponentTeam);
+
+  const game = games?.find((g: any) => {
+    const t1 = normalizeTeamCode(g.team1);
+    const t2 = normalizeTeamCode(g.team2);
+    return (t1 === pTeam && t2 === oTeam) || (t1 === oTeam && t2 === pTeam);
+  });
+  
+  if (!game) return { playerIsHome: false, label: 'vs' };
+
+  // Standard convention: team2 is home
+  const playerIsHome = normalizeTeamCode(game.team2) === pTeam;
+  return { playerIsHome, label: playerIsHome ? 'vs' : '@' };
+}
 ---
 
 <TheLeagueLayout title="Week 15 Playoff Preview | The League">
@@ -177,7 +243,9 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
     <div class="nfl-matchups-section">
       <h3 class="section-title">Key NFL Matchups to Watch</h3>
       <div class="matchups-grid">
-        {matchup.nflMatchups?.slice(0, 4).map((m: any) => (
+        {matchup.nflMatchups?.slice(0, 4).map((m: any) => {
+          const status = getHomeAwayStatus(m.nflTeam, m.opponent, matchup.nflGames);
+          return (
           <div class={`matchup-card ${m.isGoodMatchup ? 'favorable' : m.isToughMatchup ? 'difficult' : 'neutral'}`}>
             <div class="player-side">
               <img
@@ -201,21 +269,27 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
                 </div>
                 <div class="player-position">{m.position}</div>
               </div>
-              <img
-                src={getNFLTeamLogo(m.nflTeam)}
-                alt={m.nflTeam}
-                class="nfl-team-logo"
-                onerror="this.style.display='none'"
-              />
+              <div class="team-status-wrapper">
+                <img
+                  src={getNFLTeamLogo(m.nflTeam)}
+                  alt={m.nflTeam}
+                  class="nfl-team-logo-large"
+                  onerror="this.style.display='none'"
+                />
+                <span class="home-away-label">{status.playerIsHome ? 'Home' : 'Away'}</span>
+              </div>
             </div>
-            <div class="vs-indicator">vs</div>
+            <div class="vs-indicator">{status.label}</div>
             <div class="defense-side">
-              <img
-                src={getNFLTeamLogo(m.opponent)}
-                alt={m.opponent}
-                class="nfl-team-logo-large"
-                onerror="this.style.display='none'"
-              />
+              <div class="team-status-wrapper">
+                <img
+                  src={getNFLTeamLogo(m.opponent)}
+                  alt={m.opponent}
+                  class="nfl-team-logo-large"
+                  onerror="this.style.display='none'"
+                />
+                <span class="home-away-label">{!status.playerIsHome ? 'Home' : 'Away'}</span>
+              </div>
               <div class="defense-info">
                 <div class="opponent-team">{m.opponent}</div>
                 <div class="defense-rank">
@@ -227,7 +301,7 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
               {m.isGoodMatchup ? '✓ Favorable' : m.isToughMatchup ? '⚠ Tough' : ''}
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
 
@@ -245,9 +319,9 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
               <div class="multiview-rank">#{index + 1}</div>
               <img src="/assets/tv-logos/youtube-tv.png" alt="YouTube TV" class="multiview-card-logo" onerror="this.style.display='none'" />
               <div class="multiview-teams">
-                <img src={getNFLTeamLogo(game.team1)} alt={game.team1} class="team-logo-medium" />
+                <img src={getNFLTeamLogo(game.team1, 'dark')} alt={game.team1} class="team-logo-medium" />
                 <span class="vs-text-light">@</span>
-                <img src={getNFLTeamLogo(game.team2)} alt={game.team2} class="team-logo-medium" />
+                <img src={getNFLTeamLogo(game.team2, 'dark')} alt={game.team2} class="team-logo-medium" />
               </div>
               <div class="multiview-score">
                 <span class="score-value">{game.score.toFixed(1)}</span>
@@ -284,7 +358,7 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
                     onerror="this.style.display='none'"
                   />
                   <span class="team-code">{game.team1}</span>
-                  <span class="vs-text">vs</span>
+                  <span class="vs-text">@</span>
                   <span class="team-code">{game.team2}</span>
                   <img
                     src={getNFLTeamLogo(game.team2)}
@@ -316,10 +390,18 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
                     <span class="detail-icon" title={game.channel}>📺</span>
                   )}
                 </div>
-                <div class="game-detail-item">
-                  <span class="detail-icon">{game.weather}</span>
-                  <span class="detail-text">{game.temp} · {game.conditions}</span>
-                </div>
+                {(game.stadium || getStadiumName(game.team2)) && (
+                  <div class="game-detail-item">
+                    <span class="detail-icon">🏟️</span>
+                    <span class="detail-text">{game.stadium || getStadiumName(game.team2)}</span>
+                  </div>
+                )}
+                {game.weather && game.weather !== 'Unknown' && (
+                  <div class="game-detail-item">
+                    <span class="detail-icon">{game.weather}</span>
+                    <span class="detail-text">{game.temp} · {game.conditions}</span>
+                  </div>
+                )}
               </div>
               <div class="game-players">
                 {game.players.map((player: any) => (
@@ -585,7 +667,7 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
 
   .matchup-card {
     display: grid;
-    grid-template-columns: 1fr auto 1fr auto;
+    grid-template-columns: 2fr auto 1fr .75fr;
     align-items: center;
     gap: 1rem;
     padding: 1.25rem;
@@ -684,6 +766,26 @@ const multiViewGames = sundayTicketGames.slice(0, 4);
     font-size: 0.875rem;
     color: var(--muted-text-color, #6b7280);
     font-weight: 500;
+  }
+
+  .team-status-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    flex-shrink: 0;
+  }
+
+  .home-away-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #1f2937;
+    background: #f3f4f6;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e5e7eb;
+    margin-top: 0.25rem;
   }
 
   .nfl-team-logo {
