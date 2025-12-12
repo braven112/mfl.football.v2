@@ -1,0 +1,2872 @@
+{
+  "year": 2024,
+  "week": 15,
+  "schedule": {
+    "SFO": "LAR",
+    "LAR": "SFO",
+    "CLE": "KCC",
+    "KCC": "CLE",
+    "TEN": "CIN",
+    "CIN": "TEN",
+    "NOS": "WSH",
+    "WSH": "NOS",
+    "NYG": "BAL",
+    "BAL": "NYG",
+    "CAR": "DAL",
+    "DAL": "CAR",
+    "JAC": "NYJ",
+    "NYJ": "JAC",
+    "HOU": "MIA",
+    "MIA": "HOU",
+    "DEN": "IND",
+    "IND": "DEN",
+    "DET": "BUF",
+    "BUF": "DET",
+    "PHI": "PIT",
+    "PIT": "PHI",
+    "ARI": "NEP",
+    "NEP": "ARI",
+    "LAC": "TBB",
+    "TBB": "LAC",
+    "SEA": "GBP",
+    "GBP": "SEA",
+    "MIN": "CHI",
+    "CHI": "MIN",
+    "LVR": "ATL",
+    "ATL": "LVR"
+  },
+  "gameDetails": {
+    "LAR_vs_SFO": {
+      "time": "5:15 PM PST",
+      "day": "Thu",
+      "channel": "Prime Video",
+      "channelLogo": "prime-video.png",
+      "weather": "☀️",
+      "temp": "61°",
+      "conditions": "Sunny",
+      "venue": {
+        "name": "Levi's Stadium",
+        "city": "Santa Clara",
+        "state": "CA",
+        "indoor": false
+      }
+    },
+    "CLE_vs_KCC": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "CBS",
+      "channelLogo": "cbs-nfl-us.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "Huntington Bank Field",
+        "city": "Cleveland",
+        "state": "OH",
+        "indoor": false
+      }
+    },
+    "CIN_vs_TEN": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "FOX",
+      "channelLogo": "fox.png",
+      "weather": "☀️",
+      "temp": "56°",
+      "conditions": "Sunny",
+      "venue": {
+        "name": "Nissan Stadium",
+        "city": "Nashville",
+        "state": "TN",
+        "indoor": false
+      }
+    },
+    "NOS_vs_WSH": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "FOX",
+      "channelLogo": "fox.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "Caesars Superdome",
+        "city": "New Orleans",
+        "state": "LA",
+        "indoor": true
+      }
+    },
+    "BAL_vs_NYG": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "CBS",
+      "channelLogo": "cbs-nfl-us.png",
+      "weather": "☀️",
+      "temp": "36°",
+      "conditions": "Sunny",
+      "venue": {
+        "name": "MetLife Stadium",
+        "city": "East Rutherford",
+        "state": "NJ",
+        "indoor": false
+      }
+    },
+    "CAR_vs_DAL": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "FOX",
+      "channelLogo": "fox.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "Bank of America Stadium",
+        "city": "Charlotte",
+        "state": "NC",
+        "indoor": false
+      }
+    },
+    "JAC_vs_NYJ": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "FOX",
+      "channelLogo": "fox.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "EverBank Stadium",
+        "city": "Jacksonville",
+        "state": "FL",
+        "indoor": false
+      }
+    },
+    "HOU_vs_MIA": {
+      "time": "10:00 AM PST",
+      "day": "Sun",
+      "channel": "CBS",
+      "channelLogo": "cbs-nfl-us.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "NRG Stadium",
+        "city": "Houston",
+        "state": "TX",
+        "indoor": true
+      }
+    },
+    "DEN_vs_IND": {
+      "time": "1:25 PM PST",
+      "day": "Sun",
+      "channel": "CBS",
+      "channelLogo": "cbs-nfl-us.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "Empower Field at Mile High",
+        "city": "Denver",
+        "state": "CO",
+        "indoor": false
+      }
+    },
+    "BUF_vs_DET": {
+      "time": "1:25 PM PST",
+      "day": "Sun",
+      "channel": "CBS",
+      "channelLogo": "cbs-nfl-us.png",
+      "weather": "🏟️",
+      "temp": "72°",
+      "conditions": "Dome",
+      "venue": {
+        "name": "Ford Field",
+        "city": "Detroit",
+        "state": "MI",
+        "indoor": true
+      }
+    },
+    "PHI_vs_PIT": {
+      "time": "1:25 PM PST",
+      "day": "Sun",
+      "channel": "FOX",
+      "channelLogo": "fox.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "Lincoln Financial Field",
+        "city": "Philadelphia",
+        "state": "PA",
+        "indoor": false
+      }
+    },
+    "ARI_vs_NEP": {
+      "time": "1:25 PM PST",
+      "day": "Sun",
+      "channel": "CBS",
+      "channelLogo": "cbs-nfl-us.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "State Farm Stadium",
+        "city": "Glendale",
+        "state": "AZ",
+        "indoor": true
+      }
+    },
+    "LAC_vs_TBB": {
+      "time": "1:25 PM PST",
+      "day": "Sun",
+      "channel": "FOX",
+      "channelLogo": "fox.png",
+      "weather": "☀️",
+      "temp": "--",
+      "conditions": "Unknown",
+      "venue": {
+        "name": "SoFi Stadium",
+        "city": "Inglewood",
+        "state": "CA",
+        "indoor": true
+      }
+    },
+    "GBP_vs_SEA": {
+      "time": "5:20 PM PST",
+      "day": "Sun",
+      "channel": "NBC",
+      "channelLogo": "nbc.png",
+      "weather": "🌧️",
+      "temp": "56°",
+      "conditions": "Slight Chance Light Rain",
+      "venue": {
+        "name": "Lumen Field",
+        "city": "Seattle",
+        "state": "WA",
+        "indoor": false
+      }
+    },
+    "CHI_vs_MIN": {
+      "time": "5:00 PM PST",
+      "day": "Mon",
+      "channel": "ABC",
+      "channelLogo": "abc.png",
+      "weather": "🏟️",
+      "temp": "72°",
+      "conditions": "Dome",
+      "venue": {
+        "name": "U.S. Bank Stadium",
+        "city": "Minneapolis",
+        "state": "MN",
+        "indoor": true
+      }
+    },
+    "ATL_vs_LVR": {
+      "time": "5:30 PM PST",
+      "day": "Mon",
+      "channel": "ESPN",
+      "channelLogo": "espn.png",
+      "weather": "🏟️",
+      "temp": "72°",
+      "conditions": "Dome",
+      "venue": {
+        "name": "Allegiant Stadium",
+        "city": "Las Vegas",
+        "state": "NV",
+        "indoor": true
+      }
+    }
+  },
+  "defensiveRankings": {
+    "QB": {
+      "DET": 3,
+      "BUF": 5,
+      "PIT": 7,
+      "PHI": 9,
+      "BAL": 11,
+      "GBP": 13,
+      "MIN": 15,
+      "KCC": 17,
+      "LAC": 19,
+      "HOU": 21,
+      "TBB": 24,
+      "CIN": 26,
+      "NOS": 28,
+      "CLE": 30,
+      "SEA": 23,
+      "DAL": 25,
+      "ARI": 27,
+      "IND": 29,
+      "WAS": 20,
+      "ATL": 22,
+      "NYG": 14,
+      "CHI": 16,
+      "TEN": 18,
+      "CAR": 31,
+      "JAC": 32,
+      "LVR": 12,
+      "LAR": 8,
+      "SFO": 10,
+      "DEN": 6,
+      "MIA": 4,
+      "NEP": 2,
+      "NYJ": 1
+    },
+    "RB": {
+      "PIT": 2,
+      "DET": 4,
+      "BUF": 6,
+      "PHI": 8,
+      "GBP": 9,
+      "BAL": 11,
+      "MIN": 13,
+      "LAR": 12,
+      "KCC": 15,
+      "SFO": 17,
+      "DAL": 19,
+      "NOS": 21,
+      "CLE": 23,
+      "TEN": 25,
+      "MIA": 27,
+      "CAR": 29,
+      "JAC": 31,
+      "ARI": 14,
+      "LAC": 16,
+      "DEN": 18,
+      "HOU": 20,
+      "TBB": 22,
+      "WAS": 24,
+      "ATL": 26,
+      "CHI": 28,
+      "IND": 30,
+      "SEA": 10,
+      "CIN": 7,
+      "NYG": 5,
+      "LVR": 3,
+      "NYJ": 1,
+      "NEP": 32
+    },
+    "WR": {
+      "PIT": 1,
+      "BUF": 3,
+      "DET": 5,
+      "PHI": 7,
+      "MIN": 9,
+      "GBP": 11,
+      "BAL": 13,
+      "SFO": 15,
+      "KCC": 17,
+      "LAR": 19,
+      "SEA": 21,
+      "DAL": 23,
+      "NOS": 27,
+      "TBB": 25,
+      "HOU": 29,
+      "CLE": 31,
+      "MIA": 6,
+      "DEN": 8,
+      "CIN": 10,
+      "LAC": 12,
+      "TEN": 14,
+      "ARI": 16,
+      "WAS": 18,
+      "ATL": 20,
+      "CHI": 22,
+      "IND": 24,
+      "CAR": 26,
+      "NYG": 28,
+      "JAC": 30,
+      "LVR": 32,
+      "NYJ": 4,
+      "NEP": 2
+    },
+    "TE": {
+      "BUF": 2,
+      "PIT": 4,
+      "DET": 6,
+      "PHI": 8,
+      "MIN": 10,
+      "LAR": 12,
+      "GBP": 14,
+      "BAL": 16,
+      "KCC": 18,
+      "SFO": 20,
+      "TBB": 24,
+      "DAL": 22,
+      "NOS": 26,
+      "SEA": 28,
+      "HOU": 30,
+      "CLE": 32,
+      "DEN": 5,
+      "MIA": 7,
+      "CIN": 9,
+      "LAC": 11,
+      "TEN": 13,
+      "WAS": 15,
+      "ARI": 17,
+      "ATL": 19,
+      "CHI": 24,
+      "IND": 21,
+      "CAR": 23,
+      "NYG": 25,
+      "JAC": 27,
+      "LVR": 29,
+      "NYJ": 3,
+      "NEP": 1
+    }
+  },
+  "injuries": {
+    "9694": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "10413": {
+      "status": "Out",
+      "details": "Groin",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "10775": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "10868": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "11150": {
+      "status": "Doubtful",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "11247": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "11281": {
+      "status": "Questionable",
+      "details": "Back",
+      "expectedReturn": "Dec 7, 2025"
+    },
+    "11313": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "11348": {
+      "status": "Holdout",
+      "details": "Personal",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "11367": {
+      "status": "Questionable",
+      "details": "Ribs",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "11644": {
+      "status": "RETIRED",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "11675": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "11706": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "11728": {
+      "status": "Questionable",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "11768": {
+      "status": "IR-PUP",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "11872": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "12083": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "12175": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12276": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12287": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12292": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 16, 2025"
+    },
+    "12301": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12317": {
+      "status": "Questionable",
+      "details": "Abdomen",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "12325": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12361": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "12378": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "12394": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "12589": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "12610": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12678": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 18, 2025"
+    },
+    "12686": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "12688": {
+      "status": "IR-R",
+      "details": "Neck",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "12738": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12742": {
+      "status": "RETIRED",
+      "details": "Personal",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12754": {
+      "status": "IR",
+      "details": "Quadriceps",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12776": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12783": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12791": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12801": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12952": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "12988": {
+      "status": "Questionable",
+      "details": "Ribs",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13066": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13113": {
+      "status": "IR-PUP",
+      "details": "Achilles",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "13115": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13130": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13131": {
+      "status": "IR-NFI",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13132": {
+      "status": "Questionable",
+      "details": "Knee - MCL",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13146": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13154": {
+      "status": "Holdout",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13155": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 16, 2025"
+    },
+    "13157": {
+      "status": "IR",
+      "details": "Elbow",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "13168": {
+      "status": "IR",
+      "details": "Hip",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13176": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13192": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13214": {
+      "status": "Questionable",
+      "details": "Chest",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "13216": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13224": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13230": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13250": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "13256": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "13281": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "13284": {
+      "status": "IR",
+      "details": "Pelvis",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13288": {
+      "status": "Questionable",
+      "details": "Lower Body",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13296": {
+      "status": "IR",
+      "details": "Quadriceps",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13308": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "13315": {
+      "status": "IR-R",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13316": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13319": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13348": {
+      "status": "IR",
+      "details": "Elbow",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "13404": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13414": {
+      "status": "Out",
+      "details": "Shoulder",
+      "expectedReturn": "Nov 9, 2025"
+    },
+    "13610": {
+      "status": "Questionable",
+      "details": "Ribs",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13629": {
+      "status": "IR",
+      "details": "Lower Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13637": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "13671": {
+      "status": "Questionable",
+      "details": "Lower Body",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13678": {
+      "status": "Questionable",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13684": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13685": {
+      "status": "IR",
+      "details": "Triceps",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13687": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13694": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13695": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 27, 2025"
+    },
+    "13697": {
+      "status": "IR",
+      "details": "Groin",
+      "expectedReturn": "Dec 20, 2025"
+    },
+    "13700": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13702": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "13703": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13707": {
+      "status": "Questionable",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13717": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13730": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13736": {
+      "status": "IR",
+      "details": "Quadriceps",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13743": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13748": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13759": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13776": {
+      "status": "IR-R",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13777": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13798": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13806": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "13818": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Nov 9, 2025"
+    },
+    "13832": {
+      "status": "IR-R",
+      "details": "Hip",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "13840": {
+      "status": "Questionable",
+      "details": "Shin",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "13920": {
+      "status": "IR",
+      "details": "Concussion",
+      "expectedReturn": "Jan 10, 2026"
+    },
+    "13926": {
+      "status": "IR",
+      "details": "Chest",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13930": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "13987": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "13998": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14056": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14059": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14060": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14073": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14079": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14083": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14086": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Dec 27, 2025"
+    },
+    "14108": {
+      "status": "IR",
+      "details": "Chest",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "14113": {
+      "status": "IR",
+      "details": "Calf",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "14121": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14138": {
+      "status": "Questionable",
+      "details": "Shin",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14141": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Oct 5, 2025"
+    },
+    "14147": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14155": {
+      "status": "IR-R",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14158": {
+      "status": "IR",
+      "details": "Biceps",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "14162": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14169": {
+      "status": "IR",
+      "details": "Ribs",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "14179": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14186": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "14199": {
+      "status": "IR-NFI",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14221": {
+      "status": "Questionable",
+      "details": "Hand",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14223": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14225": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14228": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 7, 2025"
+    },
+    "14238": {
+      "status": "Questionable",
+      "details": "Knee - MCL",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14253": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 7, 2025"
+    },
+    "14257": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14266": {
+      "status": "Questionable",
+      "details": "Knee - ACL",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14267": {
+      "status": "Questionable",
+      "details": "Hand",
+      "expectedReturn": "Sep 21, 2025"
+    },
+    "14269": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14286": {
+      "status": "IR",
+      "details": "Abdomen",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14315": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "14328": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14341": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14452": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Jan 10, 2026"
+    },
+    "14486": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14489": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14518": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14543": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "14548": {
+      "status": "Questionable",
+      "details": "Thumb",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14555": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14558": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14592": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14670": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14675": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14727": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Jan 10, 2026"
+    },
+    "14779": {
+      "status": "Questionable",
+      "details": "Hand",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14798": {
+      "status": "Questionable",
+      "details": "Neck",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14800": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 8, 2026"
+    },
+    "14811": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14817": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14835": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14840": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL + MCL",
+      "expectedReturn": "Dec 22, 2025"
+    },
+    "14841": {
+      "status": "Questionable",
+      "details": "Toe",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "14852": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14859": {
+      "status": "Questionable",
+      "details": "Thumb",
+      "expectedReturn": "Sep 28, 2025"
+    },
+    "14875": {
+      "status": "IR-R",
+      "details": "Neck",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14878": {
+      "status": "IR-R",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14890": {
+      "status": "IR",
+      "details": "Biceps",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14891": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "14900": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14902": {
+      "status": "IR",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14903": {
+      "status": "IR-R",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14906": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Nov 30, 2025"
+    },
+    "14907": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14923": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14927": {
+      "status": "Questionable",
+      "details": "Back",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14929": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "14933": {
+      "status": "IR",
+      "details": "Shoulder - Labrum",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14953": {
+      "status": "Questionable",
+      "details": "Hip",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14956": {
+      "status": "IR",
+      "details": "Quadriceps",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "14971": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "14983": {
+      "status": "IR",
+      "details": "Hip",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "14992": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Oct 19, 2025"
+    },
+    "14995": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15002": {
+      "status": "Out",
+      "details": "Pectoral",
+      "expectedReturn": "Feb 16, 2025"
+    },
+    "15007": {
+      "status": "Questionable",
+      "details": "Lower Leg",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15026": {
+      "status": "Out",
+      "details": "Knee",
+      "expectedReturn": "Feb 16, 2025"
+    },
+    "15124": {
+      "status": "Questionable",
+      "details": "Calf",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15151": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15238": {
+      "status": "Out",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15254": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15283": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15286": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15293": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15296": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15301": {
+      "status": "IR-R",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15303": {
+      "status": "IR",
+      "details": "Wrist",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15319": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15330": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15339": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "15341": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15351": {
+      "status": "IR-PUP",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15353": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 27, 2025"
+    },
+    "15355": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15361": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15363": {
+      "status": "Questionable",
+      "details": "Thumb",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15364": {
+      "status": "IR",
+      "details": "Pectoral",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15376": {
+      "status": "IR-R",
+      "details": "Ribs",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15380": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15382": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15385": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15386": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15391": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "15398": {
+      "status": "IR",
+      "details": "Back",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15402": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15407": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15411": {
+      "status": "RETIRED",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15417": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15421": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15422": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 27, 2025"
+    },
+    "15433": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15450": {
+      "status": "Out",
+      "details": "Achilles",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15456": {
+      "status": "IR",
+      "details": "Pectoral",
+      "expectedReturn": "Dec 20, 2025"
+    },
+    "15468": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15469": {
+      "status": "IR",
+      "details": "Pectoral",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15491": {
+      "status": "Questionable",
+      "details": "Hand",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15499": {
+      "status": "IR",
+      "details": "Back",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15510": {
+      "status": "IR-PUP",
+      "details": "Achilles",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15565": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15586": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15595": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15604": {
+      "status": "IR-R",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15626": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "15699": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "15708": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15713": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15723": {
+      "status": "IR-R",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15734": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15751": {
+      "status": "Out",
+      "details": "Knee - PCL",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15753": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15758": {
+      "status": "RETIRED",
+      "details": "Hip",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15783": {
+      "status": "Questionable",
+      "details": "Arm",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15799": {
+      "status": "Questionable",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15802": {
+      "status": "Out",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15806": {
+      "status": "Out",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15811": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15813": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15819": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15829": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "15833": {
+      "status": "Questionable",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15845": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15849": {
+      "status": "IR",
+      "details": "Hip",
+      "expectedReturn": "Dec 29, 2025"
+    },
+    "15852": {
+      "status": "Questionable",
+      "details": "Groin",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15855": {
+      "status": "IR-NFI",
+      "details": "Back",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15858": {
+      "status": "IR-PUP",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15859": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15862": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15867": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15869": {
+      "status": "Questionable",
+      "details": "Elbow",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15871": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15876": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15879": {
+      "status": "Questionable",
+      "details": "Achilles",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15890": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15891": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15913": {
+      "status": "Questionable",
+      "details": "Toe",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15915": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "15920": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "15923": {
+      "status": "IR",
+      "details": "Elbow",
+      "expectedReturn": "Jan 10, 2026"
+    },
+    "15929": {
+      "status": "IR",
+      "details": "Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "15941": {
+      "status": "IR-R",
+      "details": "Quadriceps",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15951": {
+      "status": "Questionable",
+      "details": "Groin",
+      "expectedReturn": "Sep 28, 2025"
+    },
+    "15959": {
+      "status": "IR-R",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15970": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "15975": {
+      "status": "IR",
+      "details": "Groin",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "15984": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16007": {
+      "status": "IR-PUP",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16016": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16063": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16075": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16077": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16094": {
+      "status": "IR",
+      "details": "Concussion",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16113": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16135": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "16144": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16149": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16152": {
+      "status": "IR",
+      "details": "Orbital",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16167": {
+      "status": "Questionable",
+      "details": "Ribs",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "16170": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16171": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16174": {
+      "status": "Questionable",
+      "details": "Groin",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16175": {
+      "status": "IR",
+      "details": "Thumb",
+      "expectedReturn": "Dec 20, 2025"
+    },
+    "16184": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16186": {
+      "status": "Questionable",
+      "details": "Achilles",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16191": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16192": {
+      "status": "Questionable",
+      "details": "Hip",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16195": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16199": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16204": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL + MCL",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16214": {
+      "status": "IR",
+      "details": "Back",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16216": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "16222": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16227": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16230": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16231": {
+      "status": "IR-R",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16233": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16243": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Oct 26, 2025"
+    },
+    "16244": {
+      "status": "Out",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16254": {
+      "status": "IR",
+      "details": "Pectoral",
+      "expectedReturn": "Jan 17, 2026"
+    },
+    "16257": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16261": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16267": {
+      "status": "Questionable",
+      "details": "Hip",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16276": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16293": {
+      "status": "IR",
+      "details": "Triceps",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16298": {
+      "status": "IR-R",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16299": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16308": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16314": {
+      "status": "Out",
+      "details": "Hip",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16316": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16317": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16319": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16320": {
+      "status": "Questionable",
+      "details": "Chest",
+      "expectedReturn": "Oct 25, 2025"
+    },
+    "16327": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16349": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "16352": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16361": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16362": {
+      "status": "IR-PUP",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16363": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16370": {
+      "status": "Out",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16371": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16374": {
+      "status": "Questionable",
+      "details": "Shoulder",
+      "expectedReturn": "Sep 14, 2025"
+    },
+    "16379": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16380": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16385": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16413": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16433": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Nov 23, 2025"
+    },
+    "16436": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16438": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 16, 2025"
+    },
+    "16447": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16455": {
+      "status": "IR-R",
+      "details": "Groin",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16472": {
+      "status": "IR-NFI",
+      "details": "Migraine",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16474": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16476": {
+      "status": "IR-R",
+      "details": "Hip",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16484": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "16486": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16492": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16515": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16519": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16527": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16557": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16581": {
+      "status": "Out",
+      "details": "Elbow",
+      "expectedReturn": "Dec 20, 2025"
+    },
+    "16583": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16588": {
+      "status": "Questionable",
+      "details": "Back",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "16589": {
+      "status": "RETIRED",
+      "details": "Lower Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16594": {
+      "status": "IR",
+      "details": "Knee - Meniscus",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16596": {
+      "status": "IR",
+      "details": "Knee - MCL",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16597": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16604": {
+      "status": "IR-R",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16608": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 27, 2025"
+    },
+    "16614": {
+      "status": "Questionable",
+      "details": "Heel",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16615": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16616": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16625": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16627": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16631": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16634": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16635": {
+      "status": "IR",
+      "details": "Collarbone",
+      "expectedReturn": "Dec 20, 2025"
+    },
+    "16636": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16640": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16645": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16649": {
+      "status": "Questionable",
+      "details": "Toe",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16652": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16655": {
+      "status": "Questionable",
+      "details": "Oblique",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "16659": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Oct 5, 2025"
+    },
+    "16665": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16671": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16672": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16677": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16678": {
+      "status": "Questionable",
+      "details": "Thumb",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16679": {
+      "status": "Questionable",
+      "details": "Quadriceps",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16683": {
+      "status": "Questionable",
+      "details": "Lower Back",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16695": {
+      "status": "Questionable",
+      "details": "Heel",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16701": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16706": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16708": {
+      "status": "Out",
+      "details": "Neck",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16711": {
+      "status": "IR-R",
+      "details": "Elbow",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16713": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16717": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16732": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16733": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16736": {
+      "status": "IR",
+      "details": "Hip",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16740": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16748": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Oct 20, 2025"
+    },
+    "16751": {
+      "status": "IR",
+      "details": "Lower Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16756": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16759": {
+      "status": "IR-R",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16760": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "16774": {
+      "status": "IR",
+      "details": "Biceps",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16780": {
+      "status": "IR",
+      "details": "Pectoral",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16793": {
+      "status": "Questionable",
+      "details": "Illness",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16799": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16803": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Nov 2, 2025"
+    },
+    "16806": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16821": {
+      "status": "IR",
+      "details": "Ribs",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16838": {
+      "status": "IR",
+      "details": "Upper Body",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16860": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "16874": {
+      "status": "Questionable",
+      "details": "Eye",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "16889": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16896": {
+      "status": "IR",
+      "details": "Knee - ACL + MCL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "16907": {
+      "status": "IR",
+      "details": "Back",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "16922": {
+      "status": "IR-R",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16925": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16926": {
+      "status": "IR-R",
+      "details": "Back",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16928": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16956": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 28, 2025"
+    },
+    "16957": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16962": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16975": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "16982": {
+      "status": "IR-PUP",
+      "details": "Knee - ACL",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17000": {
+      "status": "IR-R",
+      "details": "Lower Leg",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17041": {
+      "status": "IR-NFI",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17045": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17046": {
+      "status": "Questionable",
+      "details": "Abdomen",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17047": {
+      "status": "Questionable",
+      "details": "Calf",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17053": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17063": {
+      "status": "IR",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17074": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17075": {
+      "status": "Questionable",
+      "details": "Wrist",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17077": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 7, 2025"
+    },
+    "17082": {
+      "status": "Questionable",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17087": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17090": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "17091": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 25, 2025"
+    },
+    "17096": {
+      "status": "Questionable",
+      "details": "Foot",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17098": {
+      "status": "IR",
+      "details": "Shin",
+      "expectedReturn": "Dec 18, 2025"
+    },
+    "17106": {
+      "status": "Out",
+      "details": "Neck",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17108": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17113": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17114": {
+      "status": "IR-R",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17117": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17121": {
+      "status": "Questionable",
+      "details": "Ribs",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17129": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17130": {
+      "status": "IR",
+      "details": "Lower Leg",
+      "expectedReturn": "Dec 20, 2025"
+    },
+    "17136": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17137": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 15, 2025"
+    },
+    "17142": {
+      "status": "Questionable",
+      "details": "Knee",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17143": {
+      "status": "Out",
+      "details": "Shoulder",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17147": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17150": {
+      "status": "IR",
+      "details": "Leg",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17151": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17152": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17153": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "17158": {
+      "status": "IR",
+      "details": "Hip",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17159": {
+      "status": "Questionable",
+      "details": "Concussion",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17162": {
+      "status": "IR",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17166": {
+      "status": "IR",
+      "details": "Lower Body",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17168": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17179": {
+      "status": "IR",
+      "details": "Achilles",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17180": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17195": {
+      "status": "IR-NFI",
+      "details": "Knee - ACL",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17206": {
+      "status": "IR-PUP",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17208": {
+      "status": "Out",
+      "details": "Neck",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17210": {
+      "status": "IR-NFI",
+      "details": "Personal",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17216": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17217": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17218": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17223": {
+      "status": "IR",
+      "details": "Forearm",
+      "expectedReturn": "Jan 4, 2026"
+    },
+    "17225": {
+      "status": "IR-R",
+      "details": "Lower Body",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17231": {
+      "status": "IR-PUP",
+      "details": "Back",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17237": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17243": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Dec 27, 2025"
+    },
+    "17245": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17248": {
+      "status": "IR",
+      "details": "Ankle",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17249": {
+      "status": "IR",
+      "details": "Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17250": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17267": {
+      "status": "IR",
+      "details": "Foot",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17268": {
+      "status": "IR-R",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17273": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Sep 7, 2025"
+    },
+    "17284": {
+      "status": "IR",
+      "details": "Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17286": {
+      "status": "IR",
+      "details": "Knee",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17294": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Oct 26, 2025"
+    },
+    "17296": {
+      "status": "Questionable",
+      "details": "Undisclosed",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17303": {
+      "status": "IR-R",
+      "details": "Neck",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17343": {
+      "status": "Questionable",
+      "details": "Ankle",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17346": {
+      "status": "IR",
+      "details": "Undisclosed",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17350": {
+      "status": "Questionable",
+      "details": "Quadriceps",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17357": {
+      "status": "IR",
+      "details": "Lower Leg",
+      "expectedReturn": "Feb 9, 2026"
+    },
+    "17359": {
+      "status": "Suspended",
+      "details": "Suspension",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "17362": {
+      "status": "IR",
+      "details": "Hamstring",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17366": {
+      "status": "IR-R",
+      "details": "Quadriceps",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17374": {
+      "status": "Questionable",
+      "details": "Toe",
+      "expectedReturn": "Dec 14, 2025"
+    },
+    "17378": {
+      "status": "IR",
+      "details": "Neck",
+      "expectedReturn": "Dec 28, 2025"
+    },
+    "17382": {
+      "status": "Out",
+      "details": "Undisclosed",
+      "expectedReturn": "Nov 2, 2025"
+    },
+    "17388": {
+      "status": "Out",
+      "details": "Coach's Decision",
+      "expectedReturn": "Dec 21, 2025"
+    },
+    "17421": {
+      "status": "Out",
+      "details": "Knee - ACL",
+      "expectedReturn": "Feb 9, 2026"
+    }
+  },
+  "fetchedAt": "2025-12-12T17:48:50.536Z",
+  "sources": {
+    "schedule": "ESPN API",
+    "weather": "Weather.gov API",
+    "rankings": "cached",
+    "injuries": "MFL API"
+  }
+}

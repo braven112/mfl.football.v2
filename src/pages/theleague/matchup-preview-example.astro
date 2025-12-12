@@ -1,0 +1,1189 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getTeamProjection } from '../../utils/projections';
+
+export const prerender = true;
+
+// Load the NFL-enhanced matchup story
+import storyData from '../../../data/theleague/test-matchup-story-nfl.json';
+
+// Load MFL data for real projections
+import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
+import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
+
+// Calculate real projections from MFL data
+const homeProjection = getTeamProjection('0013', rostersData, projectedScoresData);
+const awayProjection = getTeamProjection('0015', rostersData, projectedScoresData);
+
+// Mock matchup data (now using real projections from MFL API)
+const matchup = {
+  week: 15,
+  home: {
+    id: '0013',
+    name: 'Gridiron Geeks',
+    record: '10-8',
+    seed: 4,
+    projection: homeProjection // Real projection from MFL
+  },
+  away: {
+    id: '0015',
+    name: 'Dark Magicians of Chaos',
+    record: '14-4',
+    seed: 5,
+    projection: awayProjection // Real projection from MFL
+  },
+  story: storyData.story,
+  nflMatchups: storyData.nflMatchups,
+  nflGames: storyData.nflGames,
+  bracket: 'Playoffs - First Round'
+};
+
+// Helper to get ESPN player headshot URL
+function getPlayerHeadshot(espnId: string) {
+  if (!espnId) return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
+}
+
+// Helper to get NFL team logo URL
+function getNFLTeamLogo(teamCode: string) {
+  if (!teamCode) return '';
+  const upper = teamCode.toUpperCase();
+  const map: Record<string, string> = {
+    'WAS': 'WSH', // Washington
+    'JAC': 'JAX', // Jacksonville
+    'GBP': 'GB',  // Green Bay
+    'KCC': 'KC',  // Kansas City
+    'NEP': 'NE',  // New England
+    'NOS': 'NO',  // New Orleans
+    'SFO': 'SF',  // San Francisco
+    'TBB': 'TB',  // Tampa Bay
+    'LVR': 'LV',  // Las Vegas
+    'HST': 'HOU', // Houston
+    'BLT': 'BAL', // Baltimore
+    'CLV': 'CLE', // Cleveland
+    'ARZ': 'ARI'  // Arizona
+  };
+  const code = map[upper] || upper;
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${code}.png`;
+}
+
+// Logic for Sunday Ticket Multi-View
+function getGameScore(game: any) {
+  if (!game.players) return 0;
+  return game.players.reduce((total: number, p: any) => total + (p.projectedPoints || 0), 0);
+}
+
+function isSundayTicket(game: any) {
+  const day = game.day || '';
+  const time = game.time || '';
+  // Only include Sunday games
+  if (!day.includes('Sun')) return false;
+
+  // Filter for the 10am PT (1pm ET) window only
+  return time.startsWith('10:'); // e.g., "10:00 AM PT"
+}
+
+const sundayTicketGames = (matchup.nflGames || [])
+  .filter(isSundayTicket)
+  .map((game: any) => ({ ...game, score: getGameScore(game) }))
+  .sort((a: any, b: any) => b.score - a.score);
+
+const multiViewGames = sundayTicketGames.slice(0, 4);
+---
+
+<TheLeagueLayout title="Week 15 Playoff Preview | The League">
+  <div class="matchup-preview-container">
+    <!-- Scoreboard Header -->
+    <div class="scoreboard-header">
+      <div class="bracket-label">{matchup.bracket}</div>
+      <div class="week-label">Week {matchup.week}</div>
+
+      <div class="matchup-scoreboard">
+        <!-- Away Team (Left) -->
+        <div class="team away-team">
+          <div class="team-icon-container">
+            <img
+              src={`/assets/theleague/icons/${matchup.away.id}.png`}
+              alt={matchup.away.name}
+              class="team-icon"
+            />
+          </div>
+          <div class="team-info">
+            <div class="team-name">{matchup.away.name}</div>
+            <div class="team-record">
+              <span class="seed">#{matchup.away.seed} Seed</span>
+              <span class="separator">•</span>
+              <span class="record">{matchup.away.record}</span>
+            </div>
+          </div>
+          <div class="team-projection">
+            <div class="projection-label">Proj</div>
+            <div class="projection-value">{matchup.away.projection.toFixed(1)}</div>
+          </div>
+        </div>
+
+        <!-- VS Divider -->
+        <div class="vs-divider">
+          <span class="at-symbol">@</span>
+        </div>
+
+        <!-- Home Team (Right) -->
+        <div class="team home-team">
+          <div class="team-projection">
+            <div class="projection-label">Proj</div>
+            <div class="projection-value">{matchup.home.projection.toFixed(1)}</div>
+          </div>
+          <div class="team-info">
+            <div class="team-name">{matchup.home.name}</div>
+            <div class="team-record">
+              <span class="seed">#{matchup.home.seed} Seed</span>
+              <span class="separator">•</span>
+              <span class="record">{matchup.home.record}</span>
+            </div>
+          </div>
+          <div class="team-icon-container">
+            <img
+              src={`/assets/theleague/icons/${matchup.home.id}.png`}
+              alt={matchup.home.name}
+              class="team-icon"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Story Content -->
+    <div class="story-content">
+      <h2 class="story-title">Matchup Preview</h2>
+      <div class="story-text">
+        {matchup.story.split('\n\n').map((paragraph: string) => (
+          <p>{paragraph}</p>
+        ))}
+      </div>
+      <div class="story-meta">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ai-icon">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
+          <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
+          <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        <span>AI-generated preview powered by Claude</span>
+      </div>
+    </div>
+
+    <!-- Key NFL Matchups -->
+    <div class="nfl-matchups-section">
+      <h3 class="section-title">Key NFL Matchups to Watch</h3>
+      <div class="matchups-grid">
+        {matchup.nflMatchups?.slice(0, 4).map((m: any) => (
+          <div class={`matchup-card ${m.isGoodMatchup ? 'favorable' : m.isToughMatchup ? 'difficult' : 'neutral'}`}>
+            <div class="player-side">
+              <img
+                src={getPlayerHeadshot(m.espnId)}
+                alt={m.name}
+                class="player-headshot"
+                onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+              />
+              <div class="player-info">
+                <div class="player-name">
+                  {m.name}
+                  {m.injury && (
+                    <span class={`injury-badge injury-${m.injury.status.toLowerCase().replace(/[^a-z]/g, '')}`} title={`${m.injury.status}: ${m.injury.details}`}>
+                      {m.injury.status === 'Questionable' ? 'Q' :
+                       m.injury.status === 'Doubtful' ? 'D' :
+                       m.injury.status === 'Out' ? 'O' :
+                       m.injury.status.startsWith('IR') ? 'IR' :
+                       m.injury.status}
+                    </span>
+                  )}
+                </div>
+                <div class="player-position">{m.position}</div>
+              </div>
+              <img
+                src={getNFLTeamLogo(m.nflTeam)}
+                alt={m.nflTeam}
+                class="nfl-team-logo"
+                onerror="this.style.display='none'"
+              />
+            </div>
+            <div class="vs-indicator">vs</div>
+            <div class="defense-side">
+              <img
+                src={getNFLTeamLogo(m.opponent)}
+                alt={m.opponent}
+                class="nfl-team-logo-large"
+                onerror="this.style.display='none'"
+              />
+              <div class="defense-info">
+                <div class="opponent-team">{m.opponent}</div>
+                <div class="defense-rank">
+                  #{m.defenseRank} vs {m.position}
+                </div>
+              </div>
+            </div>
+            <div class={`matchup-indicator ${m.isGoodMatchup ? 'good' : m.isToughMatchup ? 'tough' : ''}`}>
+              {m.isGoodMatchup ? '✓ Favorable' : m.isToughMatchup ? '⚠ Tough' : ''}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Sunday Ticket Multi-View -->
+    {multiViewGames.length > 0 && (
+      <div class="multiview-section">
+        <div class="multiview-header">
+          <h3 class="section-title">Sunday Ticket Multi-View</h3>
+        </div>
+        <p class="section-subtitle">Top 4 games ranked by fantasy impact for your 10am PT quad-box</p>
+        
+        <div class="multiview-grid">
+          {multiViewGames.map((game: any, index: number) => (
+            <div class="multiview-card">
+              <div class="multiview-rank">#{index + 1}</div>
+              <img src="/assets/tv-logos/youtube-tv.png" alt="YouTube TV" class="multiview-card-logo" onerror="this.style.display='none'" />
+              <div class="multiview-teams">
+                <img src={getNFLTeamLogo(game.team1)} alt={game.team1} class="team-logo-medium" />
+                <span class="vs-text-light">@</span>
+                <img src={getNFLTeamLogo(game.team2)} alt={game.team2} class="team-logo-medium" />
+              </div>
+              <div class="multiview-score">
+                <span class="score-value">{game.score.toFixed(1)}</span>
+                <span class="score-label">Proj Pts</span>
+              </div>
+              <div class="multiview-info">
+                {game.playerCount} Fantasy Players · {game.time}
+              </div>
+            </div>
+          ))}
+          {Array.from({ length: 4 - multiViewGames.length }).map(() => (
+            <div class="multiview-card">
+              <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- NFL Game Schedule -->
+    {matchup.nflGames && matchup.nflGames.length > 0 && (
+      <div class="nfl-games-section">
+        <h3 class="section-title">NFL Schedule - Week {matchup.week}</h3>
+        <p class="section-subtitle">Games ordered by player involvement from both teams</p>
+        <div class="games-list">
+          {matchup.nflGames.map((game: any) => (
+            <div class="game-card">
+              <div class="game-header">
+                <div class="game-teams">
+                  <img
+                    src={getNFLTeamLogo(game.team1)}
+                    alt={game.team1}
+                    class="nfl-team-logo-large"
+                    onerror="this.style.display='none'"
+                  />
+                  <span class="team-code">{game.team1}</span>
+                  <span class="vs-text">vs</span>
+                  <span class="team-code">{game.team2}</span>
+                  <img
+                    src={getNFLTeamLogo(game.team2)}
+                    alt={game.team2}
+                    class="nfl-team-logo-large"
+                    onerror="this.style.display='none'"
+                  />
+                </div>
+                <div class="player-count-badge">
+                  {game.playerCount} {game.playerCount === 1 ? 'player' : 'players'}
+                </div>
+              </div>
+              <div class="game-details">
+                <div class="game-detail-item">
+                  <span class="detail-icon">🕐</span>
+                  <span class="detail-text">{game.day} {game.time}</span>
+                </div>
+                <div class="game-detail-item">
+                  {game.channelLogo ? (
+                    <div class="network-logo-wrapper">
+                      <img
+                        src={`/assets/tv-logos/${game.channelLogo}`}
+                        alt={game.channel}
+                        class={`network-logo ${game.channel.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}`}
+                      />
+                      <span class="tooltip">{game.channel}</span>
+                    </div>
+                  ) : (
+                    <span class="detail-icon" title={game.channel}>📺</span>
+                  )}
+                </div>
+                <div class="game-detail-item">
+                  <span class="detail-icon">{game.weather}</span>
+                  <span class="detail-text">{game.temp} · {game.conditions}</span>
+                </div>
+              </div>
+              <div class="game-players">
+                {game.players.map((player: any) => (
+                  <div class="game-player">
+                    <img
+                      src={getPlayerHeadshot(player.espnId)}
+                      alt={player.name}
+                      class="player-headshot-small"
+                      onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                    />
+                    <div class="player-info-wrapper">
+                      <div class="player-header">
+                        <div class="player-text">
+                          <strong>{player.name}</strong> ({player.position}, {player.nflTeam})
+                        </div>
+                        <div class="player-points">
+                          Proj: <strong>{player.projectedPoints ?? '--'}</strong>
+                        </div>
+                      </div>
+                      <div class="player-fantasy-meta">
+                        <span class="fantasy-label">Roster:</span>
+                        <img src={`/assets/theleague/icons/${player.fantasyTeamId}.png`} alt="Fantasy Team" class="fantasy-team-logo-tiny" onerror="this.style.display='none'" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .matchup-preview-container {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  /* Scoreboard Header */
+  .scoreboard-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .bracket-label {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .week-label {
+    text-align: center;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  .matchup-scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* Team Styles */
+  .team {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .away-team {
+    flex-direction: row;
+  }
+
+  .home-team {
+    flex-direction: row-reverse;
+  }
+
+  .team-icon-container {
+    flex-shrink: 0;
+  }
+
+  .team-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .team-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .away-team .team-info {
+    text-align: left;
+  }
+
+  .home-team .team-info {
+    text-align: right;
+  }
+
+  .team-name {
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.25rem;
+  }
+
+  .team-record {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .home-team .team-record {
+    justify-content: flex-end;
+  }
+
+  .seed {
+    font-weight: 600;
+  }
+
+  .separator {
+    opacity: 0.5;
+  }
+
+  .team-projection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+  }
+
+  .projection-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .projection-value {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* VS Divider */
+  .vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .at-symbol {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  /* Story Content */
+  .story-content {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .story-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .story-text {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-color, #1f2937);
+  }
+
+  .story-text p {
+    margin: 0 0 1rem 0;
+  }
+
+  .story-text p:last-child {
+    margin-bottom: 0;
+    font-weight: 600;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .story-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--primary-content-border-color, #e2e2e2);
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .ai-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+  }
+
+  /* NFL Matchups Section */
+  .nfl-matchups-section {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .matchups-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .matchup-card {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 2px solid;
+    background: var(--content-bg, #fff);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .matchup-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .matchup-card.favorable {
+    border-color: #10b981;
+    background: linear-gradient(to bottom, rgba(16, 185, 129, 0.05), transparent);
+  }
+
+  .matchup-card.difficult {
+    border-color: #ef4444;
+    background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), transparent);
+  }
+
+  .matchup-card.neutral {
+    border-color: var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .player-side {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .player-headshot {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    background: #f3f4f6;
+  }
+
+  .player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+  }
+
+  .player-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-color, #1f2937);
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .injury-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+    cursor: help;
+  }
+
+  .injury-questionable {
+    background: #fbbf24;
+    color: #78350f;
+  }
+
+  .injury-doubtful {
+    background: #fb923c;
+    color: #7c2d12;
+  }
+
+  .injury-out {
+    background: #ef4444;
+    color: white;
+  }
+
+  .injury-ir,
+  .injury-irr,
+  .injury-irnfi,
+  .injury-irpup {
+    background: #991b1b;
+    color: white;
+  }
+
+  .player-position {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .nfl-team-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .defense-side {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nfl-team-logo-large {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+  }
+
+  .vs-indicator {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted-text-color, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .defense-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+  }
+
+  .opponent-team {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--text-color, #1f2937);
+  }
+
+  .defense-rank {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .matchup-indicator {
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+  }
+
+  .matchup-indicator.good {
+    color: #059669;
+    background: rgba(16, 185, 129, 0.1);
+  }
+
+  .matchup-indicator.tough {
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  /* Multi-View Section */
+  .multiview-section {
+    position: relative;
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .multiview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .multiview-section .section-title {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .multiview-section .section-subtitle {
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+
+
+  .multiview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    background: #111;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    border: 4px solid #333;
+  }
+
+  .multiview-card {
+    background: #222;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    gap: 0.5rem;
+    min-height: 140px;
+  }
+
+  .multiview-rank {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: #ef4444;
+    color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+  }
+
+  .multiview-card-logo {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 70px;
+    height: auto;
+    opacity: 0.8;
+  }
+
+  .redzone-logo {
+    width: 140px;
+    max-width: 90%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .multiview-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-logo-medium {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+
+  .vs-text-light {
+    color: #888;
+    font-weight: 600;
+  }
+
+  .multiview-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .score-value {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .score-label {
+    color: #888;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+  }
+
+  .multiview-info {
+    color: #aaa;
+    font-size: 0.75rem;
+  }
+
+  @media (max-width: 768px) {
+    .multiview-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* NFL Games Section */
+  .nfl-games-section {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .section-subtitle {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    margin: -0.75rem 0 1.5rem 0;
+  }
+
+  .games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .game-card {
+    border: 1px solid #cccccc;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: var(--content-bg, #fff);
+    transition: box-shadow 0.2s;
+  }
+
+  .game-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .game-details {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .game-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .detail-icon {
+    font-size: 1.125rem;
+  }
+
+  .network-logo-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .network-logo {
+    height: 1.5rem;
+    width: auto;
+    object-fit: contain;
+    cursor: help;
+  }
+  .network-logo.ESPN {
+    height: .9rem;
+  }
+
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.375rem 0.625rem;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: 0.375rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+  }
+
+  .network-logo-wrapper:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .detail-text {
+    color: var(--text-color, #1f2937);
+    font-weight: 500;
+  }
+
+  .game-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+  }
+
+ 
+
+  .team-code {
+    font-size: 1rem;
+    color: var(--text-color, #1f2937);
+  }
+
+  .vs-text {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .player-count-badge {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .game-players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .game-player {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .player-headshot-small {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 0.375rem;
+    background: #f3f4f6;
+  }
+
+  .player-info-wrapper {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .player-points {
+    font-size: 0.875rem;
+    color: var(--text-color, #1f2937);
+    white-space: nowrap;
+  }
+
+  .player-fantasy-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .fantasy-team-logo-tiny {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    object-fit: contain;
+  }
+
+  .player-text {
+    font-size: 0.875rem;
+    color: var(--text-color, #1f2937);
+  }
+
+  .player-text strong {
+    font-weight: 600;
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    .matchup-scoreboard {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .team {
+      width: 100%;
+    }
+
+    .home-team {
+      flex-direction: row;
+    }
+
+    .home-team .team-info {
+      text-align: left;
+    }
+
+    .home-team .team-record {
+      justify-content: flex-start;
+    }
+
+    .vs-divider {
+      width: 100%;
+      padding: 0.5rem 0;
+    }
+
+    .team-icon {
+      width: 56px;
+      height: 56px;
+    }
+
+    .team-name {
+      font-size: 1rem;
+    }
+
+    .projection-value {
+      font-size: 1.25rem;
+    }
+
+    .story-content {
+      padding: 1.5rem;
+    }
+
+    .story-title {
+      font-size: 1.25rem;
+    }
+
+    .matchup-card {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .player-side,
+    .defense-side {
+      justify-content: center;
+    }
+
+    .vs-indicator {
+      display: none;
+    }
+
+    .matchup-indicator {
+      order: -1;
+    }
+
+    .player-headshot {
+      width: 60px;
+      height: 60px;
+    }
+
+    .nfl-team-logo-large {
+      width: 60px;
+      height: 60px;
+    }
+
+    .game-header {
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .game-teams {
+      flex-wrap: wrap;
+    }
+
+    .nfl-games-section,
+    .nfl-matchups-section {
+      padding: 1.5rem;
+    }
+  }
+</style>

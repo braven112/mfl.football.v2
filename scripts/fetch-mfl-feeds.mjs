@@ -193,6 +193,11 @@ const endpoints = [
     url: withAuth(`${host}/${year}/export?TYPE=assets&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
+  {
+    key: 'projectedScores',
+    url: withWeek(`${host}/${year}/export?TYPE=projectedScores&L=${leagueId}&JSON=1`),
+    parser: (t) => JSON.parse(t),
+  },
 ];
 
 const fetchText = async (url) => {
