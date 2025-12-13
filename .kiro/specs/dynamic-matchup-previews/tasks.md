@@ -24,14 +24,14 @@
   - **Property 22: URL shareability**
   - **Validates: Requirements 7.5**
 
-- [-] 3. Create reusable Sunday Ticket Multi-View component
+- [x] 3. Create reusable Sunday Ticket Multi-View component
   - Extract existing multiview logic into standalone component
   - Implement tab interface for early/late time slots
   - Add support for different game count scenarios (1-4 games + RedZone)
   - Create responsive grid layout with proper fallbacks
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 3.1 Write property test for Sunday Ticket game count handling
+- [x] 3.1 Write property test for Sunday Ticket game count handling
   - **Property 7: Sunday Ticket game count handling**
   - **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
