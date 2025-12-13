@@ -183,6 +183,11 @@ export async function fetchLeagueData(options: FetchOptions): Promise<void> {
       url: withAuth(`${host}/${year}/export?TYPE=assets&L=${leagueId}&JSON=1`),
       parser: (t: string) => JSON.parse(t),
     },
+    {
+      key: 'schedule',
+      url: withWeek(`${host}/${year}/export?TYPE=schedule&L=${leagueId}&JSON=1`),
+      parser: (t: string) => JSON.parse(t),
+    },
   ];
 
   // Fetch helper

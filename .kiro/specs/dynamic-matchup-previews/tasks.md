@@ -6,11 +6,11 @@
   - Create game state management utilities
   - _Requirements: 1.1, 8.1, 9.1_
 
-- [ ]* 1.1 Write property test for data model validation
+- [x] 1.1 Write property test for data model validation
   - **Property 23: Starting lineup indication**
   - **Validates: Requirements 8.1**
 
-- [ ] 2. Implement matchup navigation and routing system
+- [x] 2. Implement matchup navigation and routing system
   - Create MatchupSelector component with dropdown/modal interface
   - Implement URL routing for different matchups with query parameters
   - Add matchup switching functionality with state management
@@ -24,14 +24,14 @@
   - **Property 22: URL shareability**
   - **Validates: Requirements 7.5**
 
-- [ ] 3. Create reusable Sunday Ticket Multi-View component
+- [-] 3. Create reusable Sunday Ticket Multi-View component
   - Extract existing multiview logic into standalone component
   - Implement tab interface for early/late time slots
   - Add support for different game count scenarios (1-4 games + RedZone)
   - Create responsive grid layout with proper fallbacks
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ]* 3.1 Write property test for Sunday Ticket game count handling
+- [ ] 3.1 Write property test for Sunday Ticket game count handling
   - **Property 7: Sunday Ticket game count handling**
   - **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
@@ -215,5 +215,25 @@
   - Test full matchup navigation, lineup optimization, and injury management flows
   - Verify cross-component interactions and state management
 
-- [ ] 17. Final Checkpoint - Complete system validation
+- [x] 17. Implement MFL API schedule integration for accurate playoff brackets
+  - Replace algorithmic matchup generation with real MFL API schedule data
+  - Add MFL API schedule endpoint integration for week 15 playoff bracket
+  - Implement playoff bracket detection and labeling (e.g., "Bracket 3 Playoff Game")
+  - Validate that Pacific Pigskins vs Midwestside Connection appears as expected playoff matchup
+  - Add error handling for MFL API schedule failures with fallback to current algorithm
+  - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
+
+- [ ]* 17.1 Write property test for MFL schedule data validation
+  - **Property 35: MFL schedule data validation**
+  - **Validates: Requirements 11.1, 11.3**
+
+- [ ]* 17.2 Write property test for playoff bracket identification
+  - **Property 36: Playoff bracket identification**
+  - **Validates: Requirements 11.2, 11.4**
+
+- [ ]* 17.3 Write unit test for specific playoff matchup validation
+  - Test that Pacific Pigskins (0001) vs Midwestside Connection (0011) appears as Bracket 3 playoff game in week 15
+  - **Validates: Requirements 11.2**
+
+- [ ] 18. Final Checkpoint - Complete system validation
   - Ensure all tests pass, ask the user if questions arise.

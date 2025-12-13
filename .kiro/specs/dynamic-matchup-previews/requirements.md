@@ -19,6 +19,9 @@ The Dynamic Matchup Previews feature provides comprehensive weekly matchup analy
 - **Lineup_Optimization**: Analysis comparing starting players to bench alternatives
 - **Player_Status**: Injury designation (Healthy, Questionable, Doubtful, Out, IR)
 - **IR_Eligible**: A player who is injured but not yet placed on the Injured Reserve list
+- **Playoff_Bracket**: The tournament structure for fantasy league playoffs, typically starting in week 15
+- **MFL_Schedule_Endpoint**: The MyFantasyLeague API endpoint that provides official weekly matchup data
+- **Bracket_Game**: A playoff matchup with specific seeding and bracket positioning information
 
 ## Requirements
 
@@ -144,3 +147,15 @@ The Dynamic Matchup Previews feature provides comprehensive weekly matchup analy
 3. WHEN a player is injured but not on IR THEN the Matchup_System SHALL determine if they are IR-eligible using league rules
 4. WHEN an IR-eligible injured player is identified THEN the Matchup_System SHALL provide a one-click button to move the player to IR status
 5. WHEN IR actions are taken THEN the Matchup_System SHALL update the roster status immediately through the MFL_API
+
+### Requirement 11
+
+**User Story:** As a fantasy league administrator, I want the system to pull accurate playoff bracket information from the MFL API, so that matchups display correct playoff seeding and bracket positioning.
+
+#### Acceptance Criteria
+
+1. WHEN displaying week 15 matchups THEN the Matchup_System SHALL retrieve the official playoff schedule from the MFL_API
+2. WHEN Pacific Pigskins (team ID 0001) plays Midwestside Connection (team ID 0011) in week 15 THEN the Matchup_System SHALL display this as a "Bracket 3 Playoff Game"
+3. WHEN retrieving playoff bracket data THEN the Matchup_System SHALL use the MFL_API schedule endpoint to determine actual matchups rather than generating them algorithmically
+4. WHEN playoff games are identified THEN the Matchup_System SHALL display appropriate playoff branding and bracket information
+5. WHEN the MFL_API provides playoff bracket data THEN the Matchup_System SHALL validate that all expected playoff matchups are correctly represented

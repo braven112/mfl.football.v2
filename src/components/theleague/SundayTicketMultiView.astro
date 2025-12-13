@@ -1,0 +1,452 @@
+---
+import { getNFLTeamLogo } from '../../utils/nfl';
+
+export interface Props {
+  games: NFLGame[];
+  timeSlot?: 'early' | 'late' | 'both';
+  maxGames?: number;
+  showTabs?: boolean;
+}
+
+interface NFLGame {
+  id?: string;
+  team1: string;
+  team2: string;
+  players: any[];
+  playerCount?: number;
+  day?: string;
+  time: string;
+  score?: number;
+  projectedPoints?: number;
+  actualPoints?: number;
+}
+
+const { games = [], timeSlot = 'both', maxGames = 4, showTabs = true } = Astro.props;
+
+// Helper to calculate game score from players
+function getGameScore(game: NFLGame): number {
+  if (!game.players) return game.score || game.projectedPoints || 0;
+  return game.players.reduce((total: number, p: any) => {
+    const points = parseFloat(p.projectedPoints) || 0;
+    return total + points;
+  }, 0);
+}
+
+// Helper to determine if game is in Sunday Ticket window
+function isSundayTicket(game: NFLGame): boolean {
+  const day = game.day || '';
+  const time = game.time || '';
+  // Only include Sunday games
+  if (!day.includes('Sun')) return false;
+  
+  // Filter for the 10am PT (1pm ET) window only for early slot
+  return time.startsWith('10:'); // e.g., "10:00 AM PT"
+}
+
+// Helper to determine if game is in late time slot
+function isLateTimeSlot(game: NFLGame): boolean {
+  const day = game.day || '';
+  const time = game.time || '';
+  // Only include Sunday games
+  if (!day.includes('Sun')) return false;
+  
+  // Filter for the 1pm PT (4pm ET) window for late slot
+  return time.startsWith('1:') || time.startsWith('13:'); // e.g., "1:00 PM PT"
+}
+
+// Process games and add scores
+const gamesWithScores = games.map((game: NFLGame) => {
+  const score = getGameScore(game);
+  return { ...game, score };
+}).sort((a: NFLGame, b: NFLGame) => (b.score || 0) - (a.score || 0));
+
+// Filter games by time slot
+let earlyGames: NFLGame[] = [];
+let lateGames: NFLGame[] = [];
+
+if (timeSlot === 'early' || timeSlot === 'both') {
+  earlyGames = gamesWithScores.filter(isSundayTicket).slice(0, maxGames);
+}
+
+if (timeSlot === 'late' || timeSlot === 'both') {
+  lateGames = gamesWithScores.filter(isLateTimeSlot).slice(0, maxGames);
+}
+
+// Determine if we should show tabs
+const shouldShowTabs = showTabs && timeSlot === 'both' && (earlyGames.length > 0 && lateGames.length > 0);
+
+// For single time slot or when not showing tabs, use the appropriate games
+let displayGames: NFLGame[] = [];
+if (!shouldShowTabs) {
+  if (timeSlot === 'early') {
+    displayGames = earlyGames;
+  } else if (timeSlot === 'late') {
+    displayGames = lateGames;
+  } else {
+    // 'both' but not showing tabs - prioritize early games, then late
+    displayGames = [...earlyGames, ...lateGames].slice(0, maxGames);
+  }
+}
+
+// Helper to render multiview grid
+function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
+  return games;
+}
+---
+
+{(displayGames.length > 0 || shouldShowTabs) && (
+  <div class="multiview-section">
+    <div class="multiview-header">
+      <h3 class="section-title">Sunday Ticket Multi-View</h3>
+      <img src="/assets/tv-logos/youtube-tv-black.png" alt="YouTube TV" class="youtube-tv-logo" onerror="this.style.display='none'" />
+    </div>
+    
+    {shouldShowTabs ? (
+      <div class="multiview-tabs-container">
+        <div class="multiview-tabs">
+          <button class="multiview-tab active" data-tab="early">
+            <span class="tab-time" data-time-pt="10:00 AM PST">10:00 AM PT</span>
+            <span class="tab-label">Early Games</span>
+          </button>
+          <button class="multiview-tab" data-tab="late">
+            <span class="tab-time" data-time-pt="1:00 PM PST">1:00 PM PT</span>
+            <span class="tab-label">Late Games</span>
+          </button>
+        </div>
+        
+        <div class="multiview-content">
+          <div class="multiview-tab-panel active" data-panel="early">
+            <p class="section-subtitle" id="sunday-ticket-subtitle-early">Top 4 early games ranked by fantasy impact for your quad-box</p>
+            <div class="multiview-grid">
+              {earlyGames.map((game: NFLGame, index: number) => (
+                <div class="multiview-card">
+                  <div class="multiview-rank">#{index + 1}</div>
+                  <div class="multiview-teams">
+                    <img src={getNFLTeamLogo(game.team1, 'dark')} alt={game.team1} class="team-logo-medium" />
+                    <span class="vs-text-light">@</span>
+                    <img src={getNFLTeamLogo(game.team2, 'dark')} alt={game.team2} class="team-logo-medium" />
+                  </div>
+                  <div class="multiview-score">
+                    <span class="score-value">{(game.score || 0).toFixed(1)}</span>
+                    <span class="score-label">Proj Pts</span>
+                  </div>
+                  <div class="multiview-info">
+                    {game.players?.length || game.playerCount || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
+                  </div>
+                </div>
+              ))}
+              {Array.from({ length: maxGames - earlyGames.length }).map(() => (
+                <div class="multiview-card">
+                  <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div class="multiview-tab-panel" data-panel="late">
+            <p class="section-subtitle" id="sunday-ticket-subtitle-late">Top 4 late games ranked by fantasy impact for your quad-box</p>
+            <div class="multiview-grid">
+              {lateGames.map((game: NFLGame, index: number) => (
+                <div class="multiview-card">
+                  <div class="multiview-rank">#{index + 1}</div>
+                  <div class="multiview-teams">
+                    <img src={getNFLTeamLogo(game.team1, 'dark')} alt={game.team1} class="team-logo-medium" />
+                    <span class="vs-text-light">@</span>
+                    <img src={getNFLTeamLogo(game.team2, 'dark')} alt={game.team2} class="team-logo-medium" />
+                  </div>
+                  <div class="multiview-score">
+                    <span class="score-value">{(game.score || 0).toFixed(1)}</span>
+                    <span class="score-label">Proj Pts</span>
+                  </div>
+                  <div class="multiview-info">
+                    {game.players?.length || game.playerCount || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
+                  </div>
+                </div>
+              ))}
+              {Array.from({ length: maxGames - lateGames.length }).map(() => (
+                <div class="multiview-card">
+                  <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div>
+        <p class="section-subtitle" id="sunday-ticket-subtitle">Top {maxGames} games ranked by fantasy impact for your quad-box</p>
+        <div class="multiview-grid">
+          {displayGames.map((game: NFLGame, index: number) => (
+            <div class="multiview-card">
+              <div class="multiview-rank">#{index + 1}</div>
+              <div class="multiview-teams">
+                <img src={getNFLTeamLogo(game.team1, 'dark')} alt={game.team1} class="team-logo-medium" />
+                <span class="vs-text-light">@</span>
+                <img src={getNFLTeamLogo(game.team2, 'dark')} alt={game.team2} class="team-logo-medium" />
+              </div>
+              <div class="multiview-score">
+                <span class="score-value">{(game.score || 0).toFixed(1)}</span>
+                <span class="score-label">Proj Pts</span>
+              </div>
+              <div class="multiview-info">
+                {game.players?.length || game.playerCount || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
+              </div>
+            </div>
+          ))}
+          {Array.from({ length: maxGames - displayGames.length }).map(() => (
+            <div class="multiview-card">
+              <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+<script>
+  // Tab switching functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.multiview-tab');
+    const panels = document.querySelectorAll('.multiview-tab-panel');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function(this: HTMLElement) {
+        const targetTab = this.getAttribute('data-tab');
+        
+        // Remove active class from all tabs and panels
+        tabs.forEach(t => t.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding panel
+        this.classList.add('active');
+        const targetPanel = document.querySelector(`[data-panel="${targetTab}"]`);
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  /* Multi-View Section */
+  .multiview-section {
+    position: relative;
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .multiview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .youtube-tv-logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    opacity: 0.85;
+  }
+
+  .multiview-section .section-title {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .section-subtitle {
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  /* Tab Interface */
+  .multiview-tabs-container {
+    margin-top: 1rem;
+  }
+
+  .multiview-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .multiview-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .multiview-tab:hover {
+    color: var(--primary-link-default-text-color, #1c497c);
+    background: rgba(28, 73, 124, 0.05);
+  }
+
+  .multiview-tab.active {
+    color: var(--primary-link-default-text-color, #1c497c);
+    border-bottom-color: var(--primary-link-default-text-color, #1c497c);
+    font-weight: 600;
+  }
+
+  .tab-time {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .tab-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .multiview-content {
+    position: relative;
+  }
+
+  .multiview-tab-panel {
+    display: none;
+  }
+
+  .multiview-tab-panel.active {
+    display: block;
+  }
+
+  /* Grid Layout */
+  .multiview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    background: #111;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    border: 4px solid #333;
+  }
+
+  .multiview-card {
+    background: #222;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    gap: 0.5rem;
+    min-height: 140px;
+  }
+
+  .multiview-rank {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: #ef4444;
+    color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+  }
+
+  .redzone-logo {
+    width: 140px;
+    max-width: 90%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .multiview-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-logo-medium {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+
+  .vs-text-light {
+    color: #888;
+    font-weight: 600;
+  }
+
+  .multiview-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .score-value {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .score-label {
+    color: #888;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+  }
+
+  .multiview-info {
+    color: #aaa;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .multiview-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .multiview-tabs {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .multiview-tab {
+      flex-direction: row;
+      justify-content: space-between;
+      padding: 1rem;
+      border-bottom: 1px solid var(--primary-content-border-color, #e2e2e2);
+      border-radius: 0;
+    }
+
+    .multiview-tab:last-child {
+      border-bottom: none;
+    }
+
+    .multiview-tab.active {
+      border-bottom-color: transparent;
+      background: rgba(28, 73, 124, 0.1);
+    }
+  }
+
+  /* Fallback for no games */
+  .multiview-section:empty {
+    display: none;
+  }
+</style>

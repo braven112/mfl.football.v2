@@ -1,17 +1,24 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import MatchupSelector from '../../components/theleague/MatchupSelector.astro';
+import SundayTicketMultiView from '../../components/theleague/SundayTicketMultiView.astro';
 import { getTeamProjection } from '../../utils/projections';
 import { normalizeTeamCode, getNFLTeamLogo, getStadiumName } from '../../utils/nfl';
+import { parseMatchupParams, resolveCurrentMatchup } from '../../utils/matchup-routing';
+import type { Matchup, FantasyTeam, NFLGame } from '../../types/matchup-previews';
 
-export const prerender = true;
+export const prerender = false; // Enable server-side rendering for URL parameter handling
 
 // Load the NFL-enhanced matchup story
 import storyData from '../../../data/theleague/test-matchup-story-nfl.json';
 
-// Load MFL data for real projections
+// Load MFL data for real projections and team data
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
 import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
 import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
+import leagueData from '../../../data/theleague/mfl-feeds/2025/league.json';
+import weeklyResults from '../../../data/theleague/mfl-feeds/2025/weekly-results.json';
+import leagueAssets from '../../data/theleague.assets.json';
 
 // Load AI-generated fantasy-contextual NFL game blurbs
 import matchupBlurbsData from '../../../data/theleague/matchup-nfl-blurbs-0013-0015.json';
@@ -169,29 +176,185 @@ function buildNFLGamesFromRosters(homeTeamId: string, awayTeamId: string) {
   });
 }
 
-const realNFLGames = buildNFLGamesFromRosters('0013', '0015');
+// Generate multiple matchups for navigation using real MFL playoff bracket data
+async function generateAllMatchups(week: number): Promise<Matchup[]> {
+  // Import MFL schedule integration
+  const { getWeeklyMatchupsWithMFL } = await import('../../utils/matchup-service');
+  
+  try {
+    // Use MFL schedule integration to get real playoff bracket matchups
+    const matchups = await getWeeklyMatchupsWithMFL(week, {
+      leagueId: '13522',
+      year: '2025',
+      enablePlayoffBrackets: true,
+    });
+    
+    if (matchups && matchups.length > 0) {
+      console.log(`✅ Loaded ${matchups.length} matchups from MFL playoff bracket data for week ${week}`);
+      return matchups;
+    }
+  } catch (error) {
+    console.warn('Failed to load MFL schedule data, falling back to algorithmic generation:', error);
+  }
+  
+  // Fallback to algorithmic generation if MFL integration fails
+  console.log('Using fallback matchup generation');
+  
+  // Get real team data from MFL league data
+  const franchises = leagueData.league.franchises.franchise;
+  
+  // Create team lookup with assets
+  const teamLookup = new Map();
+  franchises.forEach((franchise: any) => {
+    // Find matching assets
+    const assetTeam = leagueAssets.teams.find((team: any) => team.id === franchise.id);
+    
+    teamLookup.set(franchise.id, {
+      id: franchise.id,
+      name: franchise.name,
+      ownerName: assetTeam?.name || franchise.name, // Use asset name if available
+      abbrev: franchise.abbrev,
+      icon: franchise.icon,
+      division: franchise.division,
+    });
+  });
 
-// Matchup data (now using real data from MFL API)
+  const matchups: Matchup[] = [];
+  
+  // Generate matchups using a rotating schedule algorithm
+  // This creates more realistic weekly matchups
+  const teamIds = Array.from(teamLookup.keys()).sort();
+  const matchupCount = Math.floor(teamIds.length / 2);
+  
+  // Create weekly rotation based on week number
+  const rotationOffset = (week - 1) % (teamIds.length - 1);
+  
+  for (let i = 0; i < matchupCount; i++) {
+    let homeIndex, awayIndex;
+    
+    if (i === 0) {
+      // First team stays fixed, opponent rotates
+      homeIndex = 0;
+      awayIndex = 1 + rotationOffset;
+    } else {
+      // Other teams pair up in rotating fashion
+      homeIndex = i;
+      awayIndex = teamIds.length - i + rotationOffset;
+    }
+    
+    // Wrap around if needed
+    awayIndex = awayIndex % teamIds.length;
+    if (awayIndex === homeIndex) {
+      awayIndex = (awayIndex + 1) % teamIds.length;
+    }
+    
+    const homeTeamId = teamIds[homeIndex];
+    const awayTeamId = teamIds[awayIndex];
+    
+    if (!homeTeamId || !awayTeamId) continue;
+    
+    const homeTeamData = teamLookup.get(homeTeamId);
+    const awayTeamData = teamLookup.get(awayTeamId);
+    
+    if (!homeTeamData || !awayTeamData) continue;
+    
+    // Get real projections from MFL data
+    const homeProjection = getTeamProjection(homeTeamId, rostersData, projectedScoresData);
+    const awayProjection = getTeamProjection(awayTeamId, rostersData, projectedScoresData);
+    
+    // Build NFL games for this matchup
+    const nflGames = buildNFLGamesFromRosters(homeTeamId, awayTeamId);
+    
+    const homeTeam: FantasyTeam = {
+      id: homeTeamData.id,
+      name: homeTeamData.name,
+      ownerName: homeTeamData.ownerName,
+      projectedPoints: homeProjection,
+    };
+    
+    const awayTeam: FantasyTeam = {
+      id: awayTeamData.id,
+      name: awayTeamData.name,
+      ownerName: awayTeamData.ownerName,
+      projectedPoints: awayProjection,
+    };
+    
+    const matchup: Matchup = {
+      id: `matchup-${i + 1}`,
+      week,
+      homeTeam,
+      awayTeam,
+      nflGames: nflGames || [],
+      gameState: 'pre-game',
+      projectedTotal: homeProjection + awayProjection,
+      analysis: `This ${week >= 15 ? 'playoff' : 'regular season'} matchup features ${awayTeam.name} visiting ${homeTeam.name}. Both teams are looking to make a statement in Week ${week}.`,
+      lastUpdated: new Date(),
+    };
+    
+    matchups.push(matchup);
+  }
+  
+  return matchups;
+}
+
+// Get URL parameters and resolve current matchup
+const url = Astro.url;
+const routeParams = parseMatchupParams(url);
+const week = routeParams.week || 15;
+
+// Generate all available matchups
+const allMatchups = await generateAllMatchups(week);
+
+// Ensure allMatchups is an array
+if (!Array.isArray(allMatchups)) {
+  console.error('allMatchups is not an array:', allMatchups);
+  throw new Error('Failed to generate matchups - invalid data structure');
+}
+
+console.log(`Generated ${allMatchups.length} matchups for week ${week}`);
+
+// Resolve current matchup from URL parameters
+let currentMatchup = resolveCurrentMatchup(allMatchups, routeParams);
+
+// If no matchup found, redirect to first available matchup
+if (!currentMatchup && allMatchups.length > 0) {
+  const defaultMatchup = allMatchups[0];
+  const redirectUrl = new URL(url);
+  redirectUrl.searchParams.set('matchup', defaultMatchup.id);
+  redirectUrl.searchParams.set('week', week.toString());
+  
+  return Astro.redirect(redirectUrl.toString());
+}
+
+// If still no matchup, show error
+if (!currentMatchup) {
+  throw new Error('No matchups available for this week');
+}
+
+// Build NFL games for the current matchup
+const realNFLGames = buildNFLGamesFromRosters(currentMatchup.homeTeam.id, currentMatchup.awayTeam.id);
+
+// Legacy matchup object for compatibility with existing code
 const matchup = {
-  week: 15,
+  week: currentMatchup.week,
   home: {
-    id: '0013',
-    name: 'Gridiron Geeks',
-    record: '10-8',
+    id: currentMatchup.homeTeam.id,
+    name: currentMatchup.homeTeam.name,
+    record: '10-8', // Mock data - would come from MFL in real implementation
     seed: 4,
-    projection: homeProjection // Real projection from MFL
+    projection: currentMatchup.homeTeam.projectedPoints || 0
   },
   away: {
-    id: '0015',
-    name: 'Dark Magicians of Chaos',
-    record: '14-4',
+    id: currentMatchup.awayTeam.id,
+    name: currentMatchup.awayTeam.name,
+    record: '14-4', // Mock data - would come from MFL in real implementation
     seed: 5,
-    projection: awayProjection // Real projection from MFL
+    projection: currentMatchup.awayTeam.projectedPoints || 0
   },
   story: storyData.story,
   nflMatchups: storyData.nflMatchups,
-  nflGames: realNFLGames, // Real NFL games from rosters
-  bracket: 'Playoffs - First Round'
+  nflGames: realNFLGames.length > 0 ? realNFLGames : currentMatchup.nflGames,
+  bracket: week >= 15 ? 'Playoffs - First Round' : 'Regular Season'
 };
 
 // Helper to get ESPN player headshot URL
@@ -200,38 +363,19 @@ function getPlayerHeadshot(espnId: string) {
   return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
 }
 
-// Logic for Sunday Ticket Multi-View
-function getGameScore(game: any) {
-  if (!game.players) return 0;
-  const score = game.players.reduce((total: number, p: any) => {
-    const points = parseFloat(p.projectedPoints) || 0;
-    return total + points;
-  }, 0);
-  return score;
-}
-
-function isSundayTicket(game: any) {
-  const day = game.day || '';
-  const time = game.time || '';
-  // Only include Sunday games
-  if (!day.includes('Sun')) return false;
-
-  // Filter for the 10am PT (1pm ET) window only
-  return time.startsWith('10:'); // e.g., "10:00 AM PT"
-}
-
-// Calculate scores for all NFL games and sort by projected points
-const gamesWithScores = (matchup.nflGames || [])
-  .map((game: any) => {
-    const score = getGameScore(game);
-    return { ...game, score };
-  })
-  .sort((a: any, b: any) => b.score - a.score);
-
-// Filter for Sunday Ticket games (10am PT Sunday)
-const sundayTicketGames = gamesWithScores.filter(isSundayTicket);
-
-const multiViewGames = sundayTicketGames.slice(0, 4);
+// Prepare games for Sunday Ticket Multi-View component
+const nflGamesForMultiView = (matchup.nflGames || []).map((game: any) => ({
+  id: `${game.team1}-${game.team2}`,
+  team1: game.team1,
+  team2: game.team2,
+  players: game.players || [],
+  playerCount: game.playerCount || (game.players?.length || 0),
+  day: game.day || 'Sun',
+  time: game.time || '10:00 AM PST',
+  score: game.score,
+  projectedPoints: game.projectedPoints,
+  actualPoints: game.actualPoints
+}));
 
 // Helper to get matchup data for a specific player
 function getPlayerMatchupData(playerName: string, nflMatchups: any[]) {
@@ -274,8 +418,15 @@ function getGameNews(team1: string, team2: string) {
 }
 ---
 
-<TheLeagueLayout title="Week 15 Playoff Preview | The League">
+<TheLeagueLayout title={`Week ${week} ${week >= 15 ? 'Playoff' : 'Regular Season'} Preview | The League`}>
   <div class="matchup-preview-container">
+    <!-- Matchup Navigation -->
+    <MatchupSelector 
+      currentMatchup={currentMatchup}
+      availableMatchups={allMatchups}
+      week={week}
+    />
+
     <!-- Scoreboard Header -->
     <div class="scoreboard-header">
       <div class="bracket-label">{matchup.bracket}</div>
@@ -336,40 +487,12 @@ function getGameNews(team1: string, team2: string) {
     </div>
 
     <!-- Sunday Ticket Multi-View -->
-    {multiViewGames.length > 0 && (
-      <div class="multiview-section">
-        <div class="multiview-header">
-          <h3 class="section-title">Sunday Ticket Multi-View</h3>
-          <img src="/assets/tv-logos/youtube-tv-black.png" alt="YouTube TV" class="youtube-tv-logo" onerror="this.style.display='none'" />
-        </div>
-        <p class="section-subtitle" id="sunday-ticket-subtitle">Top 4 games ranked by fantasy impact for your quad-box</p>
-        
-        <div class="multiview-grid">
-          {multiViewGames.map((game: any, index: number) => (
-            <div class="multiview-card">
-              <div class="multiview-rank">#{index + 1}</div>
-              <div class="multiview-teams">
-                <img src={getNFLTeamLogo(game.team1, 'dark')} alt={game.team1} class="team-logo-medium" />
-                <span class="vs-text-light">@</span>
-                <img src={getNFLTeamLogo(game.team2, 'dark')} alt={game.team2} class="team-logo-medium" />
-              </div>
-              <div class="multiview-score">
-                <span class="score-value">{game.score.toFixed(1)}</span>
-                <span class="score-label">Proj Pts</span>
-              </div>
-              <div class="multiview-info">
-                {game.players?.length || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
-              </div>
-            </div>
-          ))}
-          {Array.from({ length: 4 - multiViewGames.length }).map(() => (
-            <div class="multiview-card">
-              <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
+    <SundayTicketMultiView 
+      games={nflGamesForMultiView}
+      timeSlot="both"
+      maxGames={4}
+      showTabs={true}
+    />
 
     <!-- NFL Game Schedule -->
     {matchup.nflGames && matchup.nflGames.length > 0 && (
@@ -494,6 +617,29 @@ function getGameNews(team1: string, team2: string) {
     )}
   </div>
 
+  <script is:inline define:vars={{ currentMatchup, allMatchups, week }}>
+    // Initialize matchup state management
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle matchup change events from the MatchupSelector
+      document.addEventListener('matchupchange', function(event) {
+        const { matchupId } = event.detail;
+        if (matchupId) {
+          // Update URL and reload page with new matchup
+          const url = new URL(window.location.href);
+          url.searchParams.set('matchup', matchupId);
+          url.searchParams.set('week', week.toString());
+          window.location.href = url.toString();
+        }
+      });
+
+      // Handle browser back/forward navigation
+      window.addEventListener('popstate', function() {
+        // Reload page to reflect URL changes
+        window.location.reload();
+      });
+    });
+  </script>
+
   <script is:inline define:vars={{ broadcastMappings }}>
     // Convert all game times from PT to user's local timezone and handle international broadcasts
     function convertTimesToLocalTimezone() {
@@ -546,12 +692,16 @@ function getGameNews(team1: string, team2: string) {
       });
 
       // Update Sunday Ticket subtitle with local time
-      const subtitle = document.getElementById('sunday-ticket-subtitle');
-      if (subtitle) {
+      const subtitles = document.querySelectorAll('[id^="sunday-ticket-subtitle"]');
+      subtitles.forEach(subtitle => {
         const localTime = convertPTTimeToLocal('10:00 AM PST');
         const timeOnly = localTime.split(' ')[0]; // Get just "10:00" part
-        subtitle.textContent = `Top 4 games ranked by fantasy impact for your ${timeOnly} quad-box`;
-      }
+        const currentText = subtitle.textContent || '';
+        if (currentText.includes('Top 4') || currentText.includes('Top')) {
+          const gameCount = currentText.match(/Top (\d+)/)?.[1] || '4';
+          subtitle.textContent = `Top ${gameCount} games ranked by fantasy impact for your ${timeOnly} quad-box`;
+        }
+      });
     }
 
     // Handle international broadcasts
@@ -830,141 +980,7 @@ function getGameNews(team1: string, team2: string) {
     object-fit: contain;
   }
 
-  /* Multi-View Section */
-  .multiview-section {
-    position: relative;
-    background: var(--content-bg, #fff);
-    border-radius: 1rem;
-    padding: 2rem;
-    margin-top: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
 
-  .multiview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .youtube-tv-logo {
-    height: 32px;
-    width: auto;
-    object-fit: contain;
-    opacity: 0.85;
-  }
-
-  .multiview-section .section-title {
-    margin: 0;
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  .multiview-section .section-subtitle {
-    margin: 0 0 1.5rem 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
-  }
-
-
-
-  .multiview-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    background: #111;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    border: 4px solid #333;
-  }
-
-  .multiview-card {
-    background: #222;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    gap: 0.5rem;
-    min-height: 140px;
-  }
-
-  .multiview-rank {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    background: #ef4444;
-    color: white;
-    font-weight: 700;
-    font-size: 0.75rem;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-  }
-
-  .multiview-card-logo {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 70px;
-    height: auto;
-    opacity: 0.8;
-  }
-
-  .redzone-logo {
-    width: 140px;
-    max-width: 90%;
-    height: auto;
-    object-fit: contain;
-  }
-
-  .multiview-teams {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .team-logo-medium {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-  }
-
-  .vs-text-light {
-    color: #888;
-    font-weight: 600;
-  }
-
-  .multiview-score {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 1;
-  }
-
-  .score-value {
-    color: #fff;
-    font-size: 1.25rem;
-    font-weight: 700;
-  }
-
-  .score-label {
-    color: #888;
-    font-size: 0.625rem;
-    text-transform: uppercase;
-  }
-
-  .multiview-info {
-    color: #aaa;
-    font-size: 0.75rem;
-  }
-
-  @media (max-width: 768px) {
-    .multiview-grid {
-      grid-template-columns: 1fr;
-    }
-  }
 
   /* NFL Games Section */
   .nfl-games-section {

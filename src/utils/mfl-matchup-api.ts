@@ -82,6 +82,23 @@ interface MFLLeagueResponse {
 }
 
 /**
+ * Raw MFL schedule response
+ */
+interface MFLScheduleResponse {
+  schedule: {
+    weeklySchedule: Array<{
+      week: string;
+      matchup: Array<{
+        franchise: Array<{
+          id: string;
+          isHome?: string;
+        }>;
+      }>;
+    }>;
+  };
+}
+
+/**
  * Create MFL API client
  */
 export class MFLMatchupApiClient {
@@ -190,7 +207,7 @@ export class MFLMatchupApiClient {
    * Fetch roster data for all teams
    */
   async getRosters(week?: number): Promise<Record<string, string[]>> {
-    const params = week ? { W: week.toString() } : {};
+    const params: Record<string, string> = week ? { W: week.toString() } : {};
     const url = this.buildUrl('rosters', params);
     const response = await this.makeRequest<MFLRosterResponse>(url);
 
@@ -317,6 +334,14 @@ export class MFLMatchupApiClient {
    */
   isPlayerIReligible(player: FantasyPlayer): boolean {
     return player.injuryStatus === 'Out' && !player.isStarting;
+  }
+
+  /**
+   * Fetch fantasy schedule for a specific week
+   */
+  async getFantasySchedule(week: number): Promise<MFLScheduleResponse> {
+    const url = this.buildUrl('schedule', { W: week.toString() });
+    return this.makeRequest<MFLScheduleResponse>(url);
   }
 
   /**

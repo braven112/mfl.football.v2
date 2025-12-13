@@ -205,6 +205,16 @@ export interface ScoreUpdate {
 }
 
 /**
+ * Playoff bracket information
+ */
+export interface PlayoffBracketInfo {
+  bracketId: string;
+  bracketName: string;
+  gameType: 'playoff' | 'regular' | 'consolation' | 'toilet-bowl';
+  bracketLabel: string;
+}
+
+/**
  * Main matchup interface
  */
 export interface Matchup {
@@ -218,4 +228,5 @@ export interface Matchup {
   actualTotal?: number;
   analysis: string;
   lastUpdated: Date;
+  bracketInfo?: PlayoffBracketInfo;
 }
