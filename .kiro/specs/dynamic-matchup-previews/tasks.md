@@ -16,11 +16,11 @@
   - Add matchup switching functionality with state management
   - _Requirements: 1.5, 7.1, 7.2, 7.5_
 
-- [ ]* 2.1 Write property test for matchup navigation
+- [x] 2.1 Write property test for matchup navigation
   - **Property 4: Matchup navigation completeness**
   - **Validates: Requirements 1.5, 7.2**
 
-- [ ]* 2.2 Write property test for URL shareability
+- [x] 2.2 Write property test for URL shareability
   - **Property 22: URL shareability**
   - **Validates: Requirements 7.5**
 

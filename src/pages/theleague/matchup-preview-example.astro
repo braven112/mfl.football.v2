@@ -699,7 +699,7 @@ function getGameNews(team1: string, team2: string) {
         const currentText = subtitle.textContent || '';
         if (currentText.includes('Top 4') || currentText.includes('Top')) {
           const gameCount = currentText.match(/Top (\d+)/)?.[1] || '4';
-          subtitle.textContent = `Top ${gameCount} games ranked by fantasy impact for your ${timeOnly} quad-box`;
+          subtitle.textContent = `Top ${gameCount} games ranked by fantasy impact for your quad-box`;
         }
       });
     }
