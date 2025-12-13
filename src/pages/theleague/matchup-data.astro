@@ -1,0 +1,99 @@
+---
+import { getTeamProjection } from '../../utils/projections';
+import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
+import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
+import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
+import assetsData from '../../../data/theleague/assets.json';
+
+export const prerender = false;
+
+// Get Pigskins (0001) vs Midwestside Connection (0011) data
+const pigskinProjection = getTeamProjection('0001', rostersData, projectedScoresData);
+const midwestsideProjection = getTeamProjection('0011', rostersData, projectedScoresData);
+
+// Get rosters
+const pigskinRoster = rostersData.rosters.franchise.find((f: any) => f.id === '0001');
+const midwestsideRoster = rostersData.rosters.franchise.find((f: any) => f.id === '0011');
+
+// Build player maps
+const playerMap = new Map();
+const playersList = Array.isArray(playersData.players.player)
+  ? playersData.players.player
+  : [playersData.players.player];
+playersList.forEach((p: any) => playerMap.set(p.id, p));
+
+const projMap = new Map();
+const projList = Array.isArray(projectedScoresData.projectedScores.playerScore)
+  ? projectedScoresData.projectedScores.playerScore
+  : [projectedScoresData.projectedScores.playerScore];
+projList.forEach((p: any) => projMap.set(p.id, parseFloat(p.score) || 0));
+
+// Get top players for each team
+function getTopPlayers(roster: any, count: number) {
+  if (!roster?.player) return [];
+  
+  const players = Array.isArray(roster.player) ? roster.player : [roster.player];
+  return players
+    .filter((p: any) => p.status === 'ROSTER')
+    .map((p: any) => {
+      const playerInfo = playerMap.get(p.id);
+      const projection = projMap.get(p.id) || 0;
+      return {
+        id: p.id,
+        name: playerInfo?.name || 'Unknown',
+        position: playerInfo?.position || 'N/A',
+        nflTeam: playerInfo?.team || 'N/A',
+        projectedPoints: projection
+      };
+    })
+    .sort((a, b) => b.projectedPoints - a.projectedPoints)
+    .slice(0, count);
+}
+
+const pigskinTopPlayers = getTopPlayers(pigskinRoster, 5);
+const midwestsideTopPlayers = getTopPlayers(midwestsideRoster, 5);
+
+const matchupData = {
+  week: 15,
+  pigskins: {
+    name: 'Pacific Pigskins',
+    projection: pigskinProjection,
+    topPlayers: pigskinTopPlayers
+  },
+  midwestside: {
+    name: 'Midwestside Connection', 
+    projection: midwestsideProjection,
+    topPlayers: midwestsideTopPlayers
+  }
+};
+---
+
+<html>
+<head>
+  <title>Matchup Data</title>
+</head>
+<body>
+  <h1>Week 15: Pacific Pigskins vs Midwestside Connection</h1>
+  
+  <h2>Team Projections</h2>
+  <p>Pacific Pigskins: {matchupData.pigskins.projection.toFixed(1)} points</p>
+  <p>Midwestside Connection: {matchupData.midwestside.projection.toFixed(1)} points</p>
+  
+  <h2>Pacific Pigskins Top Players</h2>
+  <ul>
+    {matchupData.pigskins.topPlayers.map((player: any) => (
+      <li>{player.name} ({player.position}, {player.nflTeam}) - {player.projectedPoints.toFixed(1)} pts</li>
+    ))}
+  </ul>
+  
+  <h2>Midwestside Connection Top Players</h2>
+  <ul>
+    {matchupData.midwestside.topPlayers.map((player: any) => (
+      <li>{player.name} ({player.position}, {player.nflTeam}) - {player.projectedPoints.toFixed(1)} pts</li>
+    ))}
+  </ul>
+  
+  <h2>Raw Data for Analysis</h2>
+  <pre>{JSON.stringify(matchupData, null, 2)}</pre>
+</body>
+</html>

@@ -1437,7 +1437,7 @@ const grandTotal =
 {hasBrackets && (
   <script is:inline>
     (() => {
-      const liveWeeks = {JSON.stringify(weeksNeeded)};
+      const liveWeeks = JSON.parse('{JSON.stringify(weeksNeeded)}');
       const leagueId = "{envLeagueId}";
       const host = "{envHost}";
       const year = {selectedYear};

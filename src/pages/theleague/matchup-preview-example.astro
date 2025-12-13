@@ -11,12 +11,167 @@ import storyData from '../../../data/theleague/test-matchup-story-nfl.json';
 // Load MFL data for real projections
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
 import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
+import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
+
+// Load AI-generated fantasy-contextual NFL game blurbs
+import matchupBlurbsData from '../../../data/theleague/matchup-nfl-blurbs-0013-0015.json';
+
+// Load NFL schedule for game details
+import nflSchedule from '../../../data/theleague/nfl-cache/week15-2025.json';
+
+// Load international broadcast mappings
+import broadcastMappings from '../../../data/theleague/broadcast-mappings.json';
+
+// Load ESPN news articles
+import nflNewsData from '../../../data/theleague/nfl-news-week15.json';
 
 // Calculate real projections from MFL data
 const homeProjection = getTeamProjection('0013', rostersData, projectedScoresData);
 const awayProjection = getTeamProjection('0015', rostersData, projectedScoresData);
 
-// Mock matchup data (now using real projections from MFL API)
+// Build real NFL games data from rosters
+function buildNFLGamesFromRosters(homeTeamId: string, awayTeamId: string) {
+  // Get rosters for both teams
+  const homeRoster = rostersData.rosters.franchise.find((f: any) => f.id === homeTeamId);
+  const awayRoster = rostersData.rosters.franchise.find((f: any) => f.id === awayTeamId);
+
+  if (!homeRoster || !awayRoster) return [];
+
+  // Build player maps
+  const playerMap = new Map();
+  const playersList = Array.isArray(playersData.players.player)
+    ? playersData.players.player
+    : [playersData.players.player];
+  playersList.forEach((p: any) => playerMap.set(p.id, p));
+
+  const projMap = new Map();
+  const projList = Array.isArray(projectedScoresData.projectedScores.playerScore)
+    ? projectedScoresData.projectedScores.playerScore
+    : [projectedScoresData.projectedScores.playerScore];
+  projList.forEach((p: any) => projMap.set(p.id, parseFloat(p.score) || 0));
+
+  // Group players by NFL team
+  const nflGamesMap = new Map();
+
+  function addPlayer(playerId: string, fantasyTeamId: string) {
+    const player = playerMap.get(playerId);
+    if (!player) return;
+
+    const nflTeam = normalizeTeamCode(player.team);
+    const projection = projMap.get(playerId) || 0;
+
+    if (!nflGamesMap.has(nflTeam)) {
+      nflGamesMap.set(nflTeam, { team: nflTeam, players: [] });
+    }
+
+    nflGamesMap.get(nflTeam).players.push({
+      id: playerId,
+      name: player.name,
+      position: player.position,
+      nflTeam,
+      projectedPoints: projection,
+      fantasyTeamId,
+      espnId: player.espn_id || ''
+    });
+  }
+
+  // Add all players from both teams
+  const homePlayers = Array.isArray(homeRoster.player) ? homeRoster.player : [homeRoster.player];
+  const awayPlayers = Array.isArray(awayRoster.player) ? awayRoster.player : [awayRoster.player];
+
+  homePlayers.forEach((p: any) => addPlayer(p.id, homeTeamId));
+  awayPlayers.forEach((p: any) => addPlayer(p.id, awayTeamId));
+
+  // Match NFL teams to create games
+  const schedule = nflSchedule.schedule || {};
+  const gameDetails = nflSchedule.gameDetails || {};
+  const processedGames = new Set();
+  const games: any[] = [];
+
+  Object.entries(schedule).forEach(([teamCode, opponentCode]) => {
+    const team1 = normalizeTeamCode(teamCode as string);
+    const team2 = normalizeTeamCode(opponentCode as string);
+    const key = [team1, team2].sort().join('-');
+
+    if (processedGames.has(key)) return;
+    processedGames.add(key);
+
+    // Get players for both teams
+    const team1Data = nflGamesMap.get(team1);
+    const team2Data = nflGamesMap.get(team2);
+    const allPlayers = [
+      ...(team1Data?.players || []),
+      ...(team2Data?.players || [])
+    ];
+
+    if (allPlayers.length === 0) return; // No fantasy players in this game
+
+    // Get game details
+    const detailKey1 = `${team1}_vs_${team2}`;
+    const detailKey2 = `${team2}_vs_${team1}`;
+    const details = (gameDetails as any)[detailKey1] || (gameDetails as any)[detailKey2] || {};
+
+    games.push({
+      team1,
+      team2,
+      players: allPlayers,
+      playerCount: allPlayers.length,
+      day: details.day || 'Sun',
+      time: details.time || '10:00 AM PST',
+      channel: details.channel || '',
+      channelLogo: details.channelLogo || '',
+      weather: details.weather || '',
+      temp: details.temp || '',
+      conditions: details.conditions || ''
+    });
+  });
+
+  // Sort games: chronologically first, then by fantasy impact for same-time games
+  return games.sort((a, b) => {
+    // Helper to convert time to sortable format
+    const getTimeValue = (game: any) => {
+      const dayOrder: Record<string, number> = { 'Thu': 0, 'Fri': 1, 'Sat': 2, 'Sun': 3, 'Mon': 4, 'Tue': 5, 'Wed': 6 };
+      const dayValue = dayOrder[game.day as string] ?? 3; // Default to Sunday
+
+      // Parse time like "10:00 AM PST" or "5:15 PM PST"
+      const timeMatch = game.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) return dayValue * 10000; // Day only if no time
+
+      let hours = parseInt(timeMatch[1]);
+      const minutes = parseInt(timeMatch[2]);
+      const period = timeMatch[3].toUpperCase();
+
+      // Convert to 24-hour format
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+
+      // Return combined value: day * 10000 + hours * 100 + minutes
+      return dayValue * 10000 + hours * 100 + minutes;
+    };
+
+    // Helper to calculate fantasy score
+    const getFantasyScore = (game: any) => {
+      return game.players.reduce((total: number, p: any) => {
+        return total + (parseFloat(p.projectedPoints) || 0);
+      }, 0);
+    };
+
+    const timeA = getTimeValue(a);
+    const timeB = getTimeValue(b);
+
+    // If times are different, sort chronologically
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    // If times are the same, sort by fantasy impact (descending)
+    return getFantasyScore(b) - getFantasyScore(a);
+  });
+}
+
+const realNFLGames = buildNFLGamesFromRosters('0013', '0015');
+
+// Matchup data (now using real data from MFL API)
 const matchup = {
   week: 15,
   home: {
@@ -35,7 +190,7 @@ const matchup = {
   },
   story: storyData.story,
   nflMatchups: storyData.nflMatchups,
-  nflGames: storyData.nflGames,
+  nflGames: realNFLGames, // Real NFL games from rosters
   bracket: 'Playoffs - First Round'
 };
 
@@ -48,7 +203,11 @@ function getPlayerHeadshot(espnId: string) {
 // Logic for Sunday Ticket Multi-View
 function getGameScore(game: any) {
   if (!game.players) return 0;
-  return game.players.reduce((total: number, p: any) => total + (p.projectedPoints || 0), 0);
+  const score = game.players.reduce((total: number, p: any) => {
+    const points = parseFloat(p.projectedPoints) || 0;
+    return total + points;
+  }, 0);
+  return score;
 }
 
 function isSundayTicket(game: any) {
@@ -61,29 +220,57 @@ function isSundayTicket(game: any) {
   return time.startsWith('10:'); // e.g., "10:00 AM PT"
 }
 
-const sundayTicketGames = (matchup.nflGames || [])
-  .filter(isSundayTicket)
-  .map((game: any) => ({ ...game, score: getGameScore(game) }))
+// Calculate scores for all NFL games and sort by projected points
+const gamesWithScores = (matchup.nflGames || [])
+  .map((game: any) => {
+    const score = getGameScore(game);
+    return { ...game, score };
+  })
   .sort((a: any, b: any) => b.score - a.score);
+
+// Filter for Sunday Ticket games (10am PT Sunday)
+const sundayTicketGames = gamesWithScores.filter(isSundayTicket);
 
 const multiViewGames = sundayTicketGames.slice(0, 4);
 
-// Helper to determine home/away status for matchups
-function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[]) {
-  const pTeam = normalizeTeamCode(playerTeam);
-  const oTeam = normalizeTeamCode(opponentTeam);
+// Helper to get matchup data for a specific player
+function getPlayerMatchupData(playerName: string, nflMatchups: any[]) {
+  if (!nflMatchups) return null;
 
-  const game = games?.find((g: any) => {
-    const t1 = normalizeTeamCode(g.team1);
-    const t2 = normalizeTeamCode(g.team2);
-    return (t1 === pTeam && t2 === oTeam) || (t1 === oTeam && t2 === pTeam);
-  });
-  
-  if (!game) return { playerIsHome: false, label: 'vs' };
+  return nflMatchups.find((m: any) => m.name === playerName) || null;
+}
 
-  // Standard convention: team2 is home
-  const playerIsHome = normalizeTeamCode(game.team2) === pTeam;
-  return { playerIsHome, label: playerIsHome ? 'vs' : '@' };
+// Helper to get AI blurb for a game
+function getGameBlurb(team1: string, team2: string) {
+  const matchupKey = `${normalizeTeamCode(team1)} @ ${normalizeTeamCode(team2)}`;
+  const matchupKeyReverse = `${normalizeTeamCode(team2)} @ ${normalizeTeamCode(team1)}`;
+
+  const blurb = matchupBlurbsData.blurbs?.find((b: any) =>
+    b.nflMatchup === matchupKey || b.nflMatchup === matchupKeyReverse
+  );
+
+  return blurb || null;
+}
+
+// Helper to get ESPN news for a game
+function getGameNews(team1: string, team2: string) {
+  const t1 = normalizeTeamCode(team1);
+  const t2 = normalizeTeamCode(team2);
+
+  // Get news for both teams (top article from each)
+  const team1News = (nflNewsData.teams as any)?.[t1]?.[0];
+  const team2News = (nflNewsData.teams as any)?.[t2]?.[0];
+
+  // Return the most recent article
+  if (!team1News && !team2News) return null;
+  if (!team1News) return team2News;
+  if (!team2News) return team1News;
+
+  // Compare published dates and return most recent
+  const date1 = new Date(team1News.published);
+  const date2 = new Date(team2News.published);
+
+  return date1 > date2 ? team1News : team2News;
 }
 ---
 
@@ -148,106 +335,19 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
       </div>
     </div>
 
-    <!-- Story Content -->
-    <div class="story-content">
-      <h2 class="story-title">Matchup Preview</h2>
-      <div class="story-text">
-        {matchup.story.split('\n\n').map((paragraph: string) => (
-          <p>{paragraph}</p>
-        ))}
-      </div>
-      <div class="story-meta">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ai-icon">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline>
-          <polyline points="7.5 19.79 7.5 14.6 3 12"></polyline>
-          <polyline points="21 12 16.5 14.6 16.5 19.79"></polyline>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-        <span>AI-generated preview powered by Claude</span>
-      </div>
-    </div>
-
-    <!-- Key NFL Matchups -->
-    <div class="nfl-matchups-section">
-      <h3 class="section-title">Key NFL Matchups to Watch</h3>
-      <div class="matchups-grid">
-        {matchup.nflMatchups?.slice(0, 4).map((m: any) => {
-          const status = getHomeAwayStatus(m.nflTeam, m.opponent, matchup.nflGames);
-          return (
-          <div class={`matchup-card ${m.isGoodMatchup ? 'favorable' : m.isToughMatchup ? 'difficult' : 'neutral'}`}>
-            <div class="player-side">
-              <img
-                src={getPlayerHeadshot(m.espnId)}
-                alt={m.name}
-                class="player-headshot"
-                onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
-              />
-              <div class="player-info">
-                <div class="player-name">
-                  {m.name}
-                  {m.injury && (
-                    <span class={`injury-badge injury-${m.injury.status.toLowerCase().replace(/[^a-z]/g, '')}`} title={`${m.injury.status}: ${m.injury.details}`}>
-                      {m.injury.status === 'Questionable' ? 'Q' :
-                       m.injury.status === 'Doubtful' ? 'D' :
-                       m.injury.status === 'Out' ? 'O' :
-                       m.injury.status.startsWith('IR') ? 'IR' :
-                       m.injury.status}
-                    </span>
-                  )}
-                </div>
-                <div class="player-position">{m.position}</div>
-              </div>
-              <div class="team-status-wrapper">
-                <img
-                  src={getNFLTeamLogo(m.nflTeam)}
-                  alt={m.nflTeam}
-                  class="nfl-team-logo-large"
-                  onerror="this.style.display='none'"
-                />
-                <span class="home-away-label">{status.playerIsHome ? 'Home' : 'Away'}</span>
-              </div>
-            </div>
-            <div class="vs-indicator">{status.label}</div>
-            <div class="defense-side">
-              <div class="team-status-wrapper">
-                <img
-                  src={getNFLTeamLogo(m.opponent)}
-                  alt={m.opponent}
-                  class="nfl-team-logo-large"
-                  onerror="this.style.display='none'"
-                />
-                <span class="home-away-label">{!status.playerIsHome ? 'Home' : 'Away'}</span>
-              </div>
-              <div class="defense-info">
-                <div class="opponent-team">{m.opponent}</div>
-                <div class="defense-rank">
-                  #{m.defenseRank} vs {m.position}
-                </div>
-              </div>
-            </div>
-            <div class={`matchup-indicator ${m.isGoodMatchup ? 'good' : m.isToughMatchup ? 'tough' : ''}`}>
-              {m.isGoodMatchup ? '✓ Favorable' : m.isToughMatchup ? '⚠ Tough' : ''}
-            </div>
-          </div>
-        )})}
-      </div>
-    </div>
-
     <!-- Sunday Ticket Multi-View -->
     {multiViewGames.length > 0 && (
       <div class="multiview-section">
         <div class="multiview-header">
           <h3 class="section-title">Sunday Ticket Multi-View</h3>
+          <img src="/assets/tv-logos/youtube-tv-black.png" alt="YouTube TV" class="youtube-tv-logo" onerror="this.style.display='none'" />
         </div>
-        <p class="section-subtitle">Top 4 games ranked by fantasy impact for your 10am PT quad-box</p>
+        <p class="section-subtitle" id="sunday-ticket-subtitle">Top 4 games ranked by fantasy impact for your quad-box</p>
         
         <div class="multiview-grid">
           {multiViewGames.map((game: any, index: number) => (
             <div class="multiview-card">
               <div class="multiview-rank">#{index + 1}</div>
-              <img src="/assets/tv-logos/youtube-tv.png" alt="YouTube TV" class="multiview-card-logo" onerror="this.style.display='none'" />
               <div class="multiview-teams">
                 <img src={getNFLTeamLogo(game.team1, 'dark')} alt={game.team1} class="team-logo-medium" />
                 <span class="vs-text-light">@</span>
@@ -258,7 +358,7 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
                 <span class="score-label">Proj Pts</span>
               </div>
               <div class="multiview-info">
-                {game.playerCount} Fantasy Players · {game.time}
+                {game.players?.length || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
               </div>
             </div>
           ))}
@@ -304,9 +404,9 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
               <div class="game-details">
                 <div class="game-detail-item">
                   <span class="detail-icon">🕐</span>
-                  <span class="detail-text">{game.day} {game.time}</span>
+                  <span class="detail-text">{game.day} <span class="game-time-display" data-time-pt={game.time} data-day={game.day}>{game.time}</span></span>
                 </div>
-                <div class="game-detail-item">
+                <div class="game-detail-item" data-us-channel={game.channel}>
                   {game.channelLogo ? (
                     <div class="network-logo-wrapper">
                       <img
@@ -314,10 +414,10 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
                         alt={game.channel}
                         class={`network-logo ${game.channel.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}`}
                       />
-                      <span class="tooltip">{game.channel}</span>
+                      <span class="tooltip channel-text">{game.channel}</span>
                     </div>
                   ) : (
-                    <span class="detail-icon" title={game.channel}>📺</span>
+                    <span class="detail-icon channel-text" title={game.channel}>📺 {game.channel}</span>
                   )}
                 </div>
                 {(game.stadium || getStadiumName(game.team2)) && (
@@ -329,13 +429,18 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
                 {game.weather && game.weather !== 'Unknown' && (
                   <div class="game-detail-item">
                     <span class="detail-icon">{game.weather}</span>
-                    <span class="detail-text">{game.temp} · {game.conditions}</span>
+                    <span class="detail-text">
+                      <span class="temperature-display" data-temp-f={game.temp}>{game.temp}</span> · {game.conditions}
+                    </span>
                   </div>
                 )}
               </div>
               <div class="game-players">
-                {game.players.map((player: any) => (
-                  <div class="game-player">
+                {game.players.map((player: any) => {
+                  const matchupData = getPlayerMatchupData(player.name, matchup.nflMatchups);
+                  const matchupQuality = matchupData?.isGoodMatchup ? 'favorable' : matchupData?.isToughMatchup ? 'tough' : 'neutral';
+                  return (
+                  <div class={`game-player ${matchupQuality}`}>
                     <img
                       src={getPlayerHeadshot(player.espnId)}
                       alt={player.name}
@@ -346,25 +451,206 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
                       <div class="player-header">
                         <div class="player-text">
                           <strong>{player.name}</strong> ({player.position}, {player.nflTeam})
+                          {matchupData && (
+                            <span class="player-matchup-info">
+                              vs {matchupData.opponent} (#{matchupData.defenseRank} vs {matchupData.position})
+                            </span>
+                          )}
                         </div>
                         <div class="player-points">
-                          Proj: <strong>{player.projectedPoints ?? '--'}</strong>
+                            
+                        
+                        
+                      
+                          {matchupData && (
+                            <span class={`matchup-indicator-inline ${matchupData.isGoodMatchup ? 'good' : matchupData.isToughMatchup ? 'tough' : ''}`}>
+                              {matchupData.isGoodMatchup ? '✓' : matchupData.isToughMatchup ? '⚠' : ''}
+                            </span>
+                          )}
+                          Proj: <strong>{player.projectedPoints ?? '--'}</strong><img src={`/assets/theleague/icons/${player.fantasyTeamId}.png`} alt="Fantasy Team" class="fantasy-team-logo-tiny" onerror="this.style.display='none'" />
                         </div>
                       </div>
-                      <div class="player-fantasy-meta">
-                        <span class="fantasy-label">Roster:</span>
-                        <img src={`/assets/theleague/icons/${player.fantasyTeamId}.png`} alt="Fantasy Team" class="fantasy-team-logo-tiny" onerror="this.style.display='none'" />
-                      </div>
+
                     </div>
                   </div>
-                ))}
+                )})}
+
               </div>
+              {(() => {
+                const blurb = getGameBlurb(game.team1, game.team2);
+                return blurb ? (
+                  <div class="game-blurb">
+                    <div class="blurb-content">
+                      <div class="blurb-label">Matchup Analysis</div>
+                      <div class="blurb-text">{blurb.blurb}</div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
             </div>
           ))}
         </div>
       </div>
     )}
   </div>
+
+  <script is:inline define:vars={{ broadcastMappings }}>
+    // Convert all game times from PT to user's local timezone and handle international broadcasts
+    function convertTimesToLocalTimezone() {
+      const userTimezoneShort = new Date().toLocaleTimeString('en-us', {
+        timeZoneName: 'short'
+      }).split(' ')[2];
+
+      // Convert PT time string to user's local time
+      function convertPTTimeToLocal(ptTimeString) {
+        // Parse time like "10:00 AM PST" or "1:25 PM PST"
+        const match = ptTimeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!match) return ptTimeString;
+
+        let [_, hours, minutes, period] = match;
+        hours = parseInt(hours);
+        minutes = parseInt(minutes);
+
+        // Convert to 24-hour format
+        if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+        if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+
+        // Use next Sunday as the reference date for games
+        const today = new Date();
+        const daysUntilSunday = (7 - today.getDay()) % 7;
+        const nextSunday = new Date(today);
+        nextSunday.setDate(today.getDate() + daysUntilSunday);
+
+        // Create date string for PT time
+        const ptDateString = `${nextSunday.getFullYear()}-${String(nextSunday.getMonth() + 1).padStart(2, '0')}-${String(nextSunday.getDate()).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+
+        // Parse as PT time and convert to local
+        const ptDate = new Date(ptDateString + '-08:00'); // PT is UTC-8 (PST)
+
+        // Format in user's timezone
+        const localTimeString = ptDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        return `${localTimeString} ${userTimezoneShort}`;
+      }
+
+      // Update all game time displays
+      document.querySelectorAll('.game-time-display').forEach(function(el) {
+        const ptTime = el.getAttribute('data-time-pt');
+        if (ptTime) {
+          el.textContent = convertPTTimeToLocal(ptTime);
+        }
+      });
+
+      // Update Sunday Ticket subtitle with local time
+      const subtitle = document.getElementById('sunday-ticket-subtitle');
+      if (subtitle) {
+        const localTime = convertPTTimeToLocal('10:00 AM PST');
+        const timeOnly = localTime.split(' ')[0]; // Get just "10:00" part
+        subtitle.textContent = `Top 4 games ranked by fantasy impact for your ${timeOnly} quad-box`;
+      }
+    }
+
+    // Handle international broadcasts
+    function updateBroadcastInfo() {
+      // Check for query string override first
+      const urlParams = new URLSearchParams(window.location.search);
+      const countryParam = urlParams.get('country');
+
+      let countryCode = 'US'; // default
+
+      if (countryParam) {
+        // Use query string override (e.g., ?country=CA or ?country=AU)
+        countryCode = countryParam.toUpperCase();
+        console.log(`🌍 Using query string country override: ${countryCode}`);
+      } else {
+        // Detect country from timezone
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        // Simple timezone-based country detection
+        if (timezone.includes('Toronto') || timezone.includes('Vancouver') || timezone.includes('Montreal') || timezone.includes('Edmonton')) {
+          countryCode = 'CA';
+        } else if (timezone.includes('Sydney') || timezone.includes('Melbourne') || timezone.includes('Brisbane')) {
+          countryCode = 'AU';
+        }
+      }
+
+      // Get country-specific mappings
+      const countryData = broadcastMappings.countries[countryCode];
+      if (!countryData) return;
+
+      // Update all broadcast displays
+      document.querySelectorAll('[data-us-channel]').forEach(function(el) {
+        const usChannel = el.getAttribute('data-us-channel');
+
+        if (countryCode === 'US') {
+          // Keep US channel as-is
+          return;
+        }
+
+        // Map to international channel
+        const internationalChannel = countryData.mapping[usChannel] || countryData.mapping.default;
+        const channelInfo = countryData.channels[internationalChannel];
+
+        if (channelInfo) {
+          // Update channel text
+          const channelText = el.querySelector('.channel-text');
+          if (channelText) {
+            channelText.textContent = channelInfo.name;
+          }
+
+          // Update channel logo if present
+          const channelImg = el.querySelector('.network-logo');
+          if (channelImg && channelInfo.logo) {
+            channelImg.src = '/assets/tv-logos/' + channelInfo.logo;
+            channelImg.alt = channelInfo.name;
+          }
+        }
+      });
+
+      // Convert temperatures to Celsius for CA/AU
+      if (countryCode === 'CA' || countryCode === 'AU') {
+        convertTemperaturesToCelsius();
+      }
+
+      // Show country indicator
+      console.log(`📺 Showing broadcasts for: ${countryData.name} (${countryCode})`);
+    }
+
+    // Convert Fahrenheit to Celsius
+    function convertTemperaturesToCelsius() {
+      document.querySelectorAll('.temperature-display').forEach(function(el) {
+        const tempF = el.getAttribute('data-temp-f');
+        if (!tempF) return;
+
+        // Extract numeric value from string like "72°F" or "10°F"
+        const match = tempF.match(/(\d+)°F/);
+        if (!match) return;
+
+        const fahrenheit = parseInt(match[1]);
+        const celsius = Math.round((fahrenheit - 32) * 5 / 9);
+
+        // Update display with Celsius
+        el.textContent = `${celsius}°C`;
+      });
+
+      console.log('🌡️ Converted temperatures to Celsius');
+    }
+
+    // Run on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        convertTimesToLocalTimezone();
+        updateBroadcastInfo();
+      });
+    } else {
+      convertTimesToLocalTimezone();
+      updateBroadcastInfo();
+    }
+  </script>
 </TheLeagueLayout>
 
 <style>
@@ -521,63 +807,12 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
     font-weight: 700;
   }
 
-  /* Story Content */
-  .story-content {
-    background: var(--content-bg, #fff);
-    border-radius: 1rem;
-    padding: 2rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .story-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary-link-default-text-color, #1c497c);
-    margin: 0 0 1.5rem 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
-  }
-
-  .story-text {
-    font-size: 1rem;
-    line-height: 1.7;
-    color: var(--text-color, #1f2937);
-  }
-
-  .story-text p {
-    margin: 0 0 1rem 0;
-  }
-
-  .story-text p:last-child {
-    margin-bottom: 0;
-    font-weight: 600;
-    color: var(--primary-link-default-text-color, #1c497c);
-  }
-
-  .story-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--primary-content-border-color, #e2e2e2);
-    font-size: 0.875rem;
-    color: var(--muted-text-color, #6b7280);
-  }
+  
 
   .ai-icon {
     width: 16px;
     height: 16px;
     opacity: 0.6;
-  }
-
-  /* NFL Matchups Section */
-  .nfl-matchups-section {
-    background: var(--content-bg, #fff);
-    border-radius: 1rem;
-    padding: 2rem;
-    margin-top: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .section-title {
@@ -589,197 +824,10 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
     border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
   }
 
-  .matchups-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .matchup-card {
-    display: grid;
-    grid-template-columns: 2fr auto 1fr .75fr;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem;
-    border-radius: 0.75rem;
-    border: 2px solid;
-    background: var(--content-bg, #fff);
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  .matchup-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  .matchup-card.favorable {
-    border-color: #10b981;
-    background: linear-gradient(to bottom, rgba(16, 185, 129, 0.05), transparent);
-  }
-
-  .matchup-card.difficult {
-    border-color: #ef4444;
-    background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), transparent);
-  }
-
-  .matchup-card.neutral {
-    border-color: var(--primary-content-border-color, #e2e2e2);
-  }
-
-  .player-side {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .player-headshot {
-    width: 70px;
-    height: 70px;
-    object-fit: cover;
-    border-radius: 0.5rem;
-    background: #f3f4f6;
-  }
-
-  .player-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-  }
-
-  .player-name {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--text-color, #1f2937);
-    line-height: 1.2;
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  .injury-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.625rem;
-    font-weight: 700;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    text-transform: uppercase;
-    cursor: help;
-  }
-
-  .injury-questionable {
-    background: #fbbf24;
-    color: #78350f;
-  }
-
-  .injury-doubtful {
-    background: #fb923c;
-    color: #7c2d12;
-  }
-
-  .injury-out {
-    background: #ef4444;
-    color: white;
-  }
-
-  .injury-ir,
-  .injury-irr,
-  .injury-irnfi,
-  .injury-irpup {
-    background: #991b1b;
-    color: white;
-  }
-
-  .player-position {
-    font-size: 0.875rem;
-    color: var(--muted-text-color, #6b7280);
-    font-weight: 500;
-  }
-
-  .team-status-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.125rem;
-    flex-shrink: 0;
-  }
-
-  .home-away-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    font-weight: 800;
-    color: #1f2937;
-    background: #f3f4f6;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    border: 1px solid #e5e7eb;
-    margin-top: 0.25rem;
-  }
-
-  .nfl-team-logo {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-  }
-
-  .defense-side {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
   .nfl-team-logo-large {
     width: 72px;
     height: 72px;
     object-fit: contain;
-  }
-
-  .vs-indicator {
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--muted-text-color, #6b7280);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .defense-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-  }
-
-  .opponent-team {
-    font-weight: 700;
-    font-size: 1.125rem;
-    color: var(--text-color, #1f2937);
-  }
-
-  .defense-rank {
-    font-size: 0.875rem;
-    color: var(--muted-text-color, #6b7280);
-    font-weight: 500;
-  }
-
-  .matchup-indicator {
-    text-align: center;
-    font-size: 0.875rem;
-    font-weight: 600;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-  }
-
-  .matchup-indicator.good {
-    color: #059669;
-    background: rgba(16, 185, 129, 0.1);
-  }
-
-  .matchup-indicator.tough {
-    color: #dc2626;
-    background: rgba(239, 68, 68, 0.1);
   }
 
   /* Multi-View Section */
@@ -797,6 +845,13 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+  }
+
+  .youtube-tv-logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    opacity: 0.85;
   }
 
   .multiview-section .section-title {
@@ -933,13 +988,18 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
   }
 
   .game-card {
-    border: 1px solid #cccccc;
     border-radius: 0.75rem;
-    padding: 1rem;
     background: var(--content-bg, #fff);
     transition: box-shadow 0.2s;
   }
-
+  @media screen and (min-width: 500px) {
+    
+  
+    .game-card {
+    border: 1px solid #cccccc;
+      padding: 1rem;
+  }
+}
   .game-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -968,6 +1028,34 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
     align-items: center;
     gap: 0.5rem;
     font-size: 0.875rem;
+  }
+
+  .game-blurb {
+    padding: 0.875rem 1rem;
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--primary-content-border-color, #e2e2e2);
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  .blurb-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .blurb-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .blurb-text {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-color, #1f2937);
+    font-weight: 400;
   }
 
   .detail-icon {
@@ -1071,6 +1159,18 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
     padding: 0.5rem;
     border-radius: 0.5rem;
     background: rgba(0, 0, 0, 0.02);
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .game-player.favorable {
+    background: rgba(16, 185, 129, 0.08);
+    border-left-color: #10b981;
+  }
+
+  .game-player.tough {
+    background: rgba(239, 68, 68, 0.08);
+    border-left-color: #ef4444;
   }
 
   .player-headshot-small {
@@ -1100,6 +1200,9 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
     font-size: 0.875rem;
     color: var(--text-color, #1f2937);
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem
   }
 
   .player-fantasy-meta {
@@ -1111,8 +1214,8 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
   }
 
   .fantasy-team-logo-tiny {
-    width: 16px;
-    height: 16px;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 2px;
     object-fit: contain;
   }
@@ -1120,10 +1223,33 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
   .player-text {
     font-size: 0.875rem;
     color: var(--text-color, #1f2937);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .player-text strong {
     font-weight: 600;
+  }
+
+  .player-matchup-info {
+    font-size: 0.75rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .matchup-indicator-inline {
+    font-size: 0.875rem;
+    margin-right: 0.375rem;
+  }
+
+  .matchup-indicator-inline.good {
+    color: #059669;
+  }
+
+  .matchup-indicator-inline.tough {
+    color: #dc2626;
   }
 
   /* Mobile Responsive */
@@ -1175,29 +1301,6 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
       font-size: 1.25rem;
     }
 
-    .matchup-card {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    .player-side,
-    .defense-side {
-      justify-content: center;
-    }
-
-    .vs-indicator {
-      display: none;
-    }
-
-    .matchup-indicator {
-      order: -1;
-    }
-
-    .player-headshot {
-      width: 60px;
-      height: 60px;
-    }
-
     .nfl-team-logo-large {
       width: 60px;
       height: 60px;
@@ -1213,8 +1316,7 @@ function getHomeAwayStatus(playerTeam: string, opponentTeam: string, games: any[
       flex-wrap: wrap;
     }
 
-    .nfl-games-section,
-    .nfl-matchups-section {
+    .nfl-games-section {
       padding: 1.5rem;
     }
   }

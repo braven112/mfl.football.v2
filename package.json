@@ -15,6 +15,9 @@
     "build:apps": "astro build",
     "prebuild": "npm run update:salary:all",
     "fetch:all": "echo 'TODO: Create scripts/fetch-all-feeds.mjs'",
+    "fetch:espn:schedule": "node scripts/fetch-espn-schedule.mjs",
+    "fetch:weather": "node scripts/enrich-schedule-with-weather.mjs",
+    "fetch:schedule:current": "node scripts/fetch-espn-schedule.mjs --week 15 --year 2025 && node scripts/enrich-schedule-with-weather.mjs --week 15 --year 2025",
     "sync:all": "pnpm run sync:theleague && pnpm run sync:afl",
     "sync:theleague": "node scripts/sync-theleague-assets.mjs",
     "sync:afl": "node scripts/sync-afl-asset-urls.mjs && node scripts/sync-afl-assets.mjs",
@@ -48,6 +51,7 @@
     "vitest": "^1.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2"
+    "@anthropic-ai/sdk": "^0.71.2",
+    "node-fetch": "^3.3.2"
   }
 }
