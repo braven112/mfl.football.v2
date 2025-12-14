@@ -156,7 +156,7 @@ export function formatPlayerDisplay(player: FantasyPlayer): string {
 }
 
 /**
- * Get time slot from game time
+ * Get time slot from game time with enhanced timezone handling
  */
 export function getTimeSlotFromGameTime(gameTime: Date): 'early' | 'late' {
   const hour = gameTime.getUTCHours();
@@ -165,12 +165,35 @@ export function getTimeSlotFromGameTime(gameTime: Date): 'early' | 'late' {
   // Early games typically start at 10 AM PT (18:00 UTC) / 1 PM ET (18:00 UTC)
   // Late games typically start at 1 PM PT (21:00 UTC) / 4 PM ET (21:00 UTC) or later
   
-  // This is a simplified version - in production you'd want proper timezone handling
-  if (hour < 20) { // Before 8 PM UTC (roughly 1 PM ET / 10 AM PT)
+  // Enhanced timezone handling - account for DST
+  const isDST = isPacificDaylightTime(gameTime);
+  const ptOffset = isDST ? 7 : 8; // PDT is UTC-7, PST is UTC-8
+  const ptHour = (hour - ptOffset + 24) % 24;
+  
+  // Early slot: 10 AM PT (morning games)
+  // Late slot: 1 PM PT and later (afternoon/evening games)
+  if (ptHour < 13) { // Before 1 PM PT
     return 'early';
   } else {
     return 'late';
   }
+}
+
+/**
+ * Check if Pacific Daylight Time is in effect
+ */
+function isPacificDaylightTime(date: Date): boolean {
+  // Simple DST check - in production you'd want a more robust solution
+  const month = date.getMonth();
+  const day = date.getDate();
+  
+  // DST roughly March to November
+  if (month < 2 || month > 10) return false;
+  if (month > 2 && month < 10) return true;
+  
+  // March and November need day-specific checks
+  // This is simplified - actual DST rules are more complex
+  return month === 2 ? day > 7 : day < 7;
 }
 
 /**

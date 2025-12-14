@@ -5,6 +5,7 @@ import SundayTicketMultiView from '../../components/theleague/SundayTicketMultiV
 import { getTeamProjection } from '../../utils/projections';
 import { normalizeTeamCode, getNFLTeamLogo, getStadiumName } from '../../utils/nfl';
 import { parseMatchupParams, resolveCurrentMatchup } from '../../utils/matchup-routing';
+import { getCalendarIcon } from '../../utils/timezone-utils';
 import type { Matchup, FantasyTeam, NFLGame } from '../../types/matchup-previews';
 
 export const prerender = false; // Enable server-side rendering for URL parameter handling
@@ -526,7 +527,7 @@ function getGameNews(team1: string, team2: string) {
               </div>
               <div class="game-details">
                 <div class="game-detail-item">
-                  <span class="detail-icon">🕐</span>
+                  <span class="detail-icon">🗓️</span>
                   <span class="detail-text">{game.day} <span class="game-time-display" data-time-pt={game.time} data-day={game.day}>{game.time}</span></span>
                 </div>
                 <div class="game-detail-item" data-us-channel={game.channel}>
@@ -641,37 +642,52 @@ function getGameNews(team1: string, team2: string) {
   </script>
 
   <script is:inline define:vars={{ broadcastMappings }}>
-    // Convert all game times from PT to user's local timezone and handle international broadcasts
+    // Enhanced timezone handling for multiple matchups with calendar icons
     function convertTimesToLocalTimezone() {
       const userTimezoneShort = new Date().toLocaleTimeString('en-us', {
         timeZoneName: 'short'
       }).split(' ')[2];
 
-      // Convert PT time string to user's local time
-      function convertPTTimeToLocal(ptTimeString) {
+      // Get user timezone info
+      function getUserTimezone() {
+        const date = new Date();
+        const timeZoneShort = date.toLocaleTimeString('en-US', {
+          timeZoneName: 'short'
+        }).split(' ')[2] || 'PST';
+        
+        return {
+          abbreviation: timeZoneShort,
+          offset: -date.getTimezoneOffset() / 60
+        };
+      }
+
+      // Convert PT time string to user's local time with enhanced timezone handling
+      function convertPTTimeToLocal(ptTimeString, gameDate) {
+        const userTz = getUserTimezone();
+        
         // Parse time like "10:00 AM PST" or "1:25 PM PST"
         const match = ptTimeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (!match) return ptTimeString;
+        if (!match) {
+          return ptTimeString;
+        }
 
         let [_, hours, minutes, period] = match;
-        hours = parseInt(hours);
-        minutes = parseInt(minutes);
+        let hour24 = parseInt(hours);
+        const min = parseInt(minutes);
 
         // Convert to 24-hour format
-        if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
-        if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
+        if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
 
-        // Use next Sunday as the reference date for games
-        const today = new Date();
-        const daysUntilSunday = (7 - today.getDay()) % 7;
-        const nextSunday = new Date(today);
-        nextSunday.setDate(today.getDate() + daysUntilSunday);
-
-        // Create date string for PT time
-        const ptDateString = `${nextSunday.getFullYear()}-${String(nextSunday.getMonth() + 1).padStart(2, '0')}-${String(nextSunday.getDate()).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-
-        // Parse as PT time and convert to local
-        const ptDate = new Date(ptDateString + '-08:00'); // PT is UTC-8 (PST)
+        // Use provided date or next Sunday as reference
+        const referenceDate = gameDate || getNextSunday();
+        
+        // Create PT date (PT is UTC-8 in standard time, UTC-7 in daylight time)
+        const ptOffset = isPacificDaylightTime(referenceDate) ? -7 : -8;
+        const utcHour = hour24 - ptOffset;
+        
+        const ptDate = new Date(referenceDate);
+        ptDate.setUTCHours(utcHour, min, 0, 0);
 
         // Format in user's timezone
         const localTimeString = ptDate.toLocaleTimeString('en-US', {
@@ -680,7 +696,64 @@ function getGameNews(team1: string, team2: string) {
           hour12: true
         });
 
-        return `${localTimeString} ${userTimezoneShort}`;
+        return `${localTimeString} ${userTz.abbreviation}`;
+      }
+
+      // Get timezone-specific copy for early games
+      function getEarlyGameCopy() {
+        const userTz = getUserTimezone();
+        
+        // Pacific timezone shows "10 AM PT"
+        if (userTz.abbreviation.includes('P')) {
+          return '10 AM PT';
+        }
+        
+        // Eastern timezone shows "1 PM ET"  
+        if (userTz.abbreviation.includes('E')) {
+          return '1 PM ET';
+        }
+        
+        // For other timezones, convert 10 AM PT to local time
+        return convertPTTimeToLocal('10:00 AM PST');
+      }
+
+      // Get timezone-specific copy for late games
+      function getLateGameCopy() {
+        const userTz = getUserTimezone();
+        
+        // Pacific timezone shows "1 PM PT"
+        if (userTz.abbreviation.includes('P')) {
+          return '1 PM PT';
+        }
+        
+        // Eastern timezone shows "4 PM ET"
+        if (userTz.abbreviation.includes('E')) {
+          return '4 PM ET';
+        }
+        
+        // For other timezones, convert 1 PM PT to local time
+        return convertPTTimeToLocal('1:00 PM PST');
+      }
+
+      // Helper functions
+      function getNextSunday() {
+        const today = new Date();
+        const daysUntilSunday = (7 - today.getDay()) % 7;
+        const nextSunday = new Date(today);
+        nextSunday.setDate(today.getDate() + daysUntilSunday);
+        return nextSunday;
+      }
+
+      function isPacificDaylightTime(date) {
+        const month = date.getMonth();
+        const day = date.getDate();
+        
+        // DST roughly March to November
+        if (month < 2 || month > 10) return false;
+        if (month > 2 && month < 10) return true;
+        
+        // March and November need day-specific checks (simplified)
+        return month === 2 ? day > 7 : day < 7;
       }
 
       // Update all game time displays
@@ -691,17 +764,55 @@ function getGameNews(team1: string, team2: string) {
         }
       });
 
-      // Update Sunday Ticket subtitle with local time
+      // Update Sunday Ticket subtitle with timezone-specific copy
       const subtitles = document.querySelectorAll('[id^="sunday-ticket-subtitle"]');
       subtitles.forEach(subtitle => {
-        const localTime = convertPTTimeToLocal('10:00 AM PST');
-        const timeOnly = localTime.split(' ')[0]; // Get just "10:00" part
         const currentText = subtitle.textContent || '';
         if (currentText.includes('Top 4') || currentText.includes('Top')) {
           const gameCount = currentText.match(/Top (\d+)/)?.[1] || '4';
           subtitle.textContent = `Top ${gameCount} games ranked by fantasy impact for your quad-box`;
         }
       });
+
+      // Update time slot tabs with timezone-specific labels
+      updateTimeSlotTabs();
+    }
+
+    // Update time slot tab labels with timezone-specific copy
+    function updateTimeSlotTabs() {
+      const userTz = getUserTimezone();
+      
+      function getUserTimezone() {
+        const date = new Date();
+        const timeZoneShort = date.toLocaleTimeString('en-US', {
+          timeZoneName: 'short'
+        }).split(' ')[2] || 'PST';
+        
+        return { abbreviation: timeZoneShort };
+      }
+
+      function getEarlyGameCopy() {
+        const userTz = getUserTimezone();
+        return userTz.abbreviation.includes('P') ? '10 AM PT' : 
+               userTz.abbreviation.includes('E') ? '1 PM ET' : '10 AM PT';
+      }
+
+      function getLateGameCopy() {
+        const userTz = getUserTimezone();
+        return userTz.abbreviation.includes('P') ? '1 PM PT' : 
+               userTz.abbreviation.includes('E') ? '4 PM ET' : '1 PM PT';
+      }
+      
+      const earlyTabLabel = document.querySelector('[data-tab="early"] .tab-label');
+      const lateTabLabel = document.querySelector('[data-tab="late"] .tab-label');
+      
+      if (earlyTabLabel) {
+        earlyTabLabel.textContent = `Early Games (${getEarlyGameCopy()})`;
+      }
+      
+      if (lateTabLabel) {
+        lateTabLabel.textContent = `Late Games (${getLateGameCopy()})`;
+      }
     }
 
     // Handle international broadcasts

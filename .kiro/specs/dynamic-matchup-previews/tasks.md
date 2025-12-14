@@ -35,17 +35,17 @@
   - **Property 7: Sunday Ticket game count handling**
   - **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
-- [ ]* 3.2 Write property test for time slot tab separation
+- [x] 3.2 Write property test for time slot tab separation
   - **Property 8: Time slot tab separation**
   - **Validates: Requirements 3.5**
 
-- [ ] 4. Implement time zone handling and calendar icons
+- [x] 4. Implement time zone handling and calendar icons
   - Update existing timezone conversion logic for multiple matchups
   - Replace clock icons with calendar icons throughout the interface
   - Add timezone-specific copy updates (10 AM PT vs 1 PM ET)
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ]* 4.1 Write property test for time zone display accuracy
+- [x] 4.1 Write property test for time zone display accuracy
   - **Property 5: Time zone display accuracy**
   - **Validates: Requirements 2.1, 2.2, 2.4**
 
@@ -63,7 +63,7 @@
   - **Property 25: Lineup accordion functionality**
   - **Validates: Requirements 8.4, 8.5**
 
-- [ ] 6. Implement player status indicators and optimization detection
+- [-] 6. Implement player status indicators and optimization detection
   - Create PlayerStatusIndicator component with starting/bench badges
   - Implement LineupOptimizer for detecting bench upgrades
   - Add visual indicators for lineup optimization opportunities
