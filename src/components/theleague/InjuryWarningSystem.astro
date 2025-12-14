@@ -1,0 +1,495 @@
+---
+/**
+ * InjuryWarningSystem Component
+ * Comprehensive injury management system for matchup previews
+ * Handles pulsating animations, IR eligibility, and lineup warnings
+ */
+
+import InjuryManager from './InjuryManager.astro';
+import type { FantasyPlayer, LineupOptimization, Matchup } from '../../types/matchup-previews';
+import { createLineupOptimizer } from '../../utils/lineup-optimizer';
+
+export interface Props {
+  matchup: Matchup;
+  leagueId?: string;
+  year?: string;
+  showSummary?: boolean;
+  className?: string;
+}
+
+const { 
+  matchup, 
+  leagueId = '13522', 
+  year = new Date().getFullYear().toString(),
+  showSummary = true,
+  className = '' 
+} = Astro.props;
+
+// Create lineup optimizer to analyze injury issues
+const optimizer = createLineupOptimizer(leagueId, year);
+
+// Get all players from both teams
+const allPlayers: FantasyPlayer[] = [];
+matchup.nflGames.forEach(game => {
+  allPlayers.push(...game.players);
+});
+
+// Group players by team
+const homeTeamPlayers = allPlayers.filter(p => p.fantasyTeamId === matchup.homeTeam.id);
+const awayTeamPlayers = allPlayers.filter(p => p.fantasyTeamId === matchup.awayTeam.id);
+
+// Analyze optimizations for both teams
+const homeOptimizations = optimizer.analyzeRoster(homeTeamPlayers, {
+  teamId: matchup.homeTeam.id,
+  week: matchup.week,
+  positions: { QB: [], RB: [], WR: [], TE: [], FLEX: [], K: [], DEF: [] },
+  bench: [],
+  totalProjected: 0,
+  optimizationOpportunities: []
+});
+
+const awayOptimizations = optimizer.analyzeRoster(awayTeamPlayers, {
+  teamId: matchup.awayTeam.id,
+  week: matchup.week,
+  positions: { QB: [], RB: [], WR: [], TE: [], FLEX: [], K: [], DEF: [] },
+  bench: [],
+  totalProjected: 0,
+  optimizationOpportunities: []
+});
+
+const allOptimizations = [...homeOptimizations, ...awayOptimizations];
+
+// Filter for critical injury issues
+const criticalInjuries = allOptimizations.filter(opt => 
+  (opt.type === 'injury_warning' || opt.type === 'ir_eligible') && 
+  opt.severity === 'high'
+);
+
+const injuryWarnings = allOptimizations.filter(opt => opt.type === 'injury_warning');
+const irEligible = allOptimizations.filter(opt => opt.type === 'ir_eligible');
+
+// Get players with serious injuries who are starting
+const seriouslyInjuredStarters = allPlayers.filter(player => 
+  player.isStarting && 
+  (player.injuryStatus === 'Out' || player.injuryStatus === 'Doubtful' || player.injuryStatus === 'IR')
+);
+
+const containerClasses = [
+  'injury-warning-system',
+  criticalInjuries.length > 0 ? 'has-critical' : '',
+  seriouslyInjuredStarters.length > 0 ? 'has-serious-injuries' : '',
+  className
+].filter(Boolean).join(' ');
+---
+
+<div class={containerClasses}>
+  <!-- Summary Section -->
+  {showSummary && (criticalInjuries.length > 0 || seriouslyInjuredStarters.length > 0) && (
+    <div class="injury-summary">
+      <div class="summary-header">
+        <span class="summary-icon">🚨</span>
+        <h3 class="summary-title">Lineup Alerts</h3>
+        <span class="alert-count">{criticalInjuries.length + seriouslyInjuredStarters.length}</span>
+      </div>
+      
+      <div class="summary-content">
+        {criticalInjuries.length > 0 && (
+          <div class="summary-item critical">
+            <span class="item-icon">⚠️</span>
+            <span class="item-text">
+              {criticalInjuries.length} critical lineup {criticalInjuries.length === 1 ? 'issue' : 'issues'}
+            </span>
+          </div>
+        )}
+        
+        {seriouslyInjuredStarters.length > 0 && (
+          <div class="summary-item serious">
+            <span class="item-icon">🏥</span>
+            <span class="item-text">
+              {seriouslyInjuredStarters.length} injured {seriouslyInjuredStarters.length === 1 ? 'starter' : 'starters'}
+            </span>
+          </div>
+        )}
+        
+        {irEligible.length > 0 && (
+          <div class="summary-item ir">
+            <span class="item-icon">➡️</span>
+            <span class="item-text">
+              {irEligible.length} IR eligible {irEligible.length === 1 ? 'player' : 'players'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+
+  <!-- Individual Player Injury Managers -->
+  <div class="player-injury-managers">
+    {seriouslyInjuredStarters.map(player => {
+      const playerOptimizations = allOptimizations.filter(opt => 
+        opt.startingPlayer.id === player.id
+      );
+      
+      return (
+        <div class="player-injury-container" key={player.id}>
+          <div class="player-header">
+            <div class="player-info">
+              <span class="player-name">{player.name}</span>
+              <span class="player-position">({player.position})</span>
+              <span class="team-indicator">
+                {player.fantasyTeamId === matchup.homeTeam.id ? matchup.homeTeam.name : matchup.awayTeam.name}
+              </span>
+            </div>
+            <div class="injury-status-badge" data-status={player.injuryStatus.toLowerCase()}>
+              {player.injuryStatus}
+            </div>
+          </div>
+          
+          <InjuryManager 
+            player={player}
+            optimizations={playerOptimizations}
+            leagueId={leagueId}
+            year={year}
+          />
+        </div>
+      );
+    })}
+  </div>
+
+  <!-- Quick Actions Bar -->
+  {(injuryWarnings.length > 0 || irEligible.length > 0) && (
+    <div class="quick-actions-bar">
+      <div class="actions-header">
+        <span class="actions-icon">🔧</span>
+        <span class="actions-title">Quick Actions</span>
+      </div>
+      
+      <div class="actions-buttons">
+        {injuryWarnings.length > 0 && (
+          <a 
+            href={`https://www${leagueId.slice(-2)}.myfantasyleague.com/${year}/options?L=${leagueId}&O=07`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="action-button lineup-fixes"
+          >
+            <span class="button-icon">🔧</span>
+            <span class="button-text">Fix All Lineups</span>
+          </a>
+        )}
+        
+        {irEligible.length > 0 && (
+          <a 
+            href={`https://www${leagueId.slice(-2)}.myfantasyleague.com/${year}/freeagency?L=${leagueId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="action-button ir-management"
+          >
+            <span class="button-icon">🏥</span>
+            <span class="button-text">Manage IR</span>
+          </a>
+        )}
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .injury-warning-system {
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    margin: 1rem 0;
+  }
+
+  .injury-warning-system.has-critical {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+  }
+
+  .injury-warning-system.has-serious-injuries {
+    animation: pulse-system 3s infinite;
+  }
+
+  .injury-summary {
+    background: linear-gradient(135deg, #fef2f2 0%, #fef7f7 100%);
+    border-bottom: 1px solid #fecaca;
+    padding: 1rem;
+  }
+
+  .summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-icon {
+    font-size: 1.25rem;
+    animation: pulse-icon 2s infinite;
+  }
+
+  .summary-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #dc2626;
+    margin: 0;
+    flex: 1;
+  }
+
+  .alert-count {
+    background: #dc2626;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 1.5rem;
+    text-align: center;
+  }
+
+  .summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .summary-item.critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .summary-item.serious {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .summary-item.ir {
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .item-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .player-injury-managers {
+    padding: 1rem;
+  }
+
+  .player-injury-container {
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .player-injury-container:last-child {
+    margin-bottom: 0;
+  }
+
+  .player-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .player-name {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .player-position {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  .team-indicator {
+    color: #9ca3af;
+    font-size: 0.8125rem;
+    font-style: italic;
+  }
+
+  .injury-status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .injury-status-badge[data-status="out"] {
+    background: #dc2626;
+    color: white;
+  }
+
+  .injury-status-badge[data-status="doubtful"] {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .injury-status-badge[data-status="ir"] {
+    background: #7c3aed;
+    color: white;
+  }
+
+  .quick-actions-bar {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem;
+  }
+
+  .actions-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .actions-icon {
+    font-size: 1rem;
+  }
+
+  .actions-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .actions-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .action-button {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .action-button.lineup-fixes {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+  }
+
+  .action-button.lineup-fixes:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  }
+
+  .action-button.ir-management {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(139, 92, 246, 0.3);
+  }
+
+  .action-button.ir-management:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+  }
+
+  .button-icon {
+    font-size: 0.875rem;
+  }
+
+  /* Animations */
+  @keyframes pulse-system {
+    0%, 100% {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+    }
+    50% {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+  }
+
+  @keyframes pulse-icon {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .injury-summary,
+    .player-injury-managers,
+    .quick-actions-bar {
+      padding: 0.75rem;
+    }
+
+    .summary-header {
+      gap: 0.375rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-title {
+      font-size: 1rem;
+    }
+
+    .summary-content {
+      gap: 0.375rem;
+    }
+
+    .summary-item {
+      padding: 0.375rem;
+      font-size: 0.8125rem;
+    }
+
+    .player-header {
+      padding: 0.5rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .player-info {
+      gap: 0.375rem;
+    }
+
+    .actions-buttons {
+      gap: 0.5rem;
+    }
+
+    .action-button {
+      padding: 0.375rem 0.5rem;
+      font-size: 0.75rem;
+    }
+  }
+</style>

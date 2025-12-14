@@ -58,7 +58,8 @@ export function generateInjuryWarningMessage(player: FantasyPlayer): string {
  * Generate IR eligibility message
  */
 export function generateIREligibilityMessage(player: FantasyPlayer): string {
-  return `${player.name} (${player.position}) is Out and eligible for IR`;
+  const status = player.injuryStatus === 'IR' ? 'on NFL IR' : player.injuryStatus;
+  return `${player.name} (${player.position}) is ${status} and eligible for IR`;
 }
 
 /**

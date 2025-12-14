@@ -22,6 +22,11 @@ The Dynamic Matchup Previews feature provides comprehensive weekly matchup analy
 - **Playoff_Bracket**: The tournament structure for fantasy league playoffs, typically starting in week 15
 - **MFL_Schedule_Endpoint**: The MyFantasyLeague API endpoint that provides official weekly matchup data
 - **Bracket_Game**: A playoff matchup with specific seeding and bracket positioning information
+- **Player_Headshot**: A player's profile photo from either ESPN or MFL databases
+- **Universal_Player_Model**: A standardized player data structure used across all system components
+- **ESPN_Headshot**: Player photo from ESPN's database using ESPN player ID
+- **MFL_Headshot**: Player photo from MyFantasyLeague's database using MFL player ID
+- **Headshot_Fallback**: The system's approach to finding the best available player photo
 
 ## Requirements
 
@@ -159,3 +164,27 @@ The Dynamic Matchup Previews feature provides comprehensive weekly matchup analy
 3. WHEN retrieving playoff bracket data THEN the Matchup_System SHALL use the MFL_API schedule endpoint to determine actual matchups rather than generating them algorithmically
 4. WHEN playoff games are identified THEN the Matchup_System SHALL display appropriate playoff branding and bracket information
 5. WHEN the MFL_API provides playoff bracket data THEN the Matchup_System SHALL validate that all expected playoff matchups are correctly represented
+
+### Requirement 12
+
+**User Story:** As a fantasy team owner, I want to see high-quality player headshots from the best available source, so that I can easily identify players in matchup previews.
+
+#### Acceptance Criteria
+
+1. WHEN displaying any player THEN the Matchup_System SHALL use the Universal_Player_Model with standardized headshot data across all components
+2. WHEN a player has both ESPN_Headshot and MFL_Headshot available THEN the Matchup_System SHALL prioritize the highest quality image using intelligent fallback logic
+3. WHEN a player currently shows the "no photo available" placeholder THEN the Matchup_System SHALL check both ESPN and MFL databases for available headshots
+4. WHEN neither ESPN nor MFL has a player headshot THEN the Matchup_System SHALL display a consistent fallback image with the player's initials or position
+5. WHEN player headshot data is updated THEN the Matchup_System SHALL refresh all player displays to use the enhanced Universal_Player_Model
+
+### Requirement 13
+
+**User Story:** As a system architect, I want a universal player model with MFL as the authoritative injury data source, so that player information is consistent across all leagues and applications.
+
+#### Acceptance Criteria
+
+1. WHEN creating the Universal_Player_Model THEN the Matchup_System SHALL define shared player properties (name, position, height, weight, college, draft info, headshot, injury status) that are consistent across all leagues
+2. WHEN fetching injury status data THEN the Matchup_System SHALL use MFL_API as the primary and authoritative source, with Sleeper data only as fallback when MFL fetch fails
+3. WHEN displaying injury status THEN the Matchup_System SHALL use a consistent visual format across all leagues: parentheses with single letter abbreviations (Q, O, D, IR)
+4. WHEN implementing injury status display THEN the Matchup_System SHALL create a reusable component that handles league-specific IR eligibility rules while maintaining visual consistency
+5. WHEN the Universal_Player_Model is used THEN the Matchup_System SHALL ensure all player displays across rosters, matchup previews, and other components use the same data structure and injury information

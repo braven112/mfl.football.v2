@@ -1,0 +1,224 @@
+---
+/**
+ * PlayerStatusIndicator Component
+ * Displays starting/bench badges and injury status indicators for fantasy players
+ */
+
+import type { FantasyPlayer } from '../../types/matchup-previews';
+
+export interface Props {
+  player: FantasyPlayer;
+  showOptimization?: boolean;
+  className?: string;
+}
+
+const { player, showOptimization = true, className = '' } = Astro.props;
+
+// Determine badge type and styling
+const isStarting = player.isStarting;
+const hasInjury = player.injuryStatus !== 'Healthy';
+const isSerious = player.injuryStatus === 'Out' || player.injuryStatus === 'Doubtful' || player.injuryStatus === 'IR';
+const hasUpgrade = player.benchUpgrade?.hasUpgrade;
+
+// Generate CSS classes for styling
+const badgeClasses = [
+  'player-status-badge',
+  isStarting ? 'starting' : 'bench',
+  hasInjury ? 'injured' : '',
+  isSerious && isStarting ? 'serious-injury' : '',
+  className
+].filter(Boolean).join(' ');
+
+// Removed injuryClasses since we're using simple text styling now
+---
+
+<div class={`player-status-container ${className}`}>
+  <!-- Starting/Bench Badge -->
+  <div class={badgeClasses}>
+    <span class="badge-text">
+      {isStarting ? 'START' : 'BENCH'}
+    </span>
+    {isStarting && (
+      <span class="starting-icon">⭐</span>
+    )}
+  </div>
+
+  <!-- Injury Status Indicator - Simple red text following existing design convention -->
+  {hasInjury && (
+    <span class="injury-status-simple" title={`${player.name} is ${player.injuryStatus}`}>
+      ({player.injuryStatus === 'Out' && 'O'})
+      ({player.injuryStatus === 'Doubtful' && 'D'})
+      ({player.injuryStatus === 'Questionable' && 'Q'})
+      ({player.injuryStatus === 'IR' && 'IR'})
+    </span>
+  )}
+
+  <!-- Bench Upgrade Indicator -->
+  {showOptimization && hasUpgrade && !isStarting && (
+    <div class="upgrade-indicator" title={`Better option available: +${player.benchUpgrade?.pointsDifference?.toFixed(1)} pts`}>
+      <span class="upgrade-icon">📈</span>
+      <span class="upgrade-text">UPGRADE</span>
+    </div>
+  )}
+
+  <!-- IR Eligible Indicator -->
+  {player.isIReligible && (
+    <div class="ir-eligible-indicator" title={`${player.name} is eligible for IR`}>
+      <span class="ir-icon">🏥</span>
+      <span class="ir-text">IR ELIGIBLE</span>
+    </div>
+  )}
+</div>
+
+<style>
+  .player-status-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .player-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    transition: all 0.2s ease;
+  }
+
+  .player-status-badge.starting {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3);
+  }
+
+  .player-status-badge.bench {
+    background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(107, 114, 128, 0.3);
+  }
+
+  .player-status-badge.injured {
+    border: 2px solid #f59e0b;
+  }
+
+  .player-status-badge.serious-injury {
+    border: 2px solid #ef4444;
+    animation: pulse-border 2s infinite;
+    position: relative;
+  }
+
+  .player-status-badge.serious-injury::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: inherit;
+    background: linear-gradient(45deg, #ef4444, #dc2626, #ef4444);
+    z-index: -1;
+    animation: pulse-glow 2s infinite;
+  }
+
+  .starting-icon {
+    font-size: 0.875rem;
+  }
+
+  .injury-status-simple {
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-left: 0.25rem;
+  }
+
+  .upgrade-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid #6ee7b7;
+    cursor: help;
+  }
+
+  .ir-eligible-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: rgba(168, 85, 247, 0.1);
+    color: #7c3aed;
+    border: 1px solid #c4b5fd;
+    cursor: help;
+  }
+
+  .injury-icon,
+  .upgrade-icon,
+  .ir-icon {
+    font-size: 0.875rem;
+  }
+
+  /* Animations */
+  @keyframes pulse-border {
+    0%, 100% {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.02);
+    }
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .player-status-container {
+      gap: 0.375rem;
+    }
+
+    .player-status-badge,
+    .upgrade-indicator,
+    .ir-eligible-indicator {
+      font-size: 0.625rem;
+      padding: 0.1875rem 0.375rem;
+    }
+
+    .injury-status-simple {
+      font-size: 0.75rem;
+    }
+
+    .starting-icon,
+    .upgrade-icon,
+    .ir-icon {
+      font-size: 0.75rem;
+    }
+  }
+</style>

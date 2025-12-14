@@ -1,0 +1,483 @@
+---
+/**
+ * InjuryManager Component
+ * Handles injury warnings, IR eligibility detection, and one-click IR moves
+ */
+
+import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
+import { generateLineupActionUrl, generateIREligibilityMessage } from '../../utils/matchup-preview-utils';
+
+export interface Props {
+  player: FantasyPlayer;
+  optimizations: LineupOptimization[];
+  leagueId?: string;
+  year?: string;
+  showIRButton?: boolean;
+  className?: string;
+}
+
+const { 
+  player, 
+  optimizations, 
+  leagueId = '13522', 
+  year = new Date().getFullYear().toString(),
+  showIRButton = true,
+  className = '' 
+} = Astro.props;
+
+// Find relevant optimizations for this player
+const injuryWarning = optimizations.find(opt => 
+  opt.type === 'injury_warning' && opt.startingPlayer.id === player.id
+);
+
+const irEligible = optimizations.find(opt => 
+  opt.type === 'ir_eligible' && opt.startingPlayer.id === player.id
+);
+
+// Determine if we should show injury warnings
+const showInjuryWarning = injuryWarning && player.isStarting;
+const showIREligible = irEligible && player.injuryStatus === 'IR';
+
+// Generate action URLs
+const lineupUrl = generateLineupActionUrl(leagueId, player.fantasyTeamId, year);
+const irMoveUrl = `https://www${leagueId.slice(-2)}.myfantasyleague.com/${year}/freeagency?L=${leagueId}&F=${player.fantasyTeamId}&PLAYER=${player.id}&TYPE=moveToIR`;
+
+// Determine severity for styling
+const isHighSeverity = injuryWarning?.severity === 'high' || player.injuryStatus === 'Out' || player.injuryStatus === 'IR';
+const isMediumSeverity = injuryWarning?.severity === 'medium' || player.injuryStatus === 'Doubtful';
+
+const containerClasses = [
+  'injury-manager',
+  showInjuryWarning ? 'has-warning' : '',
+  showIREligible ? 'ir-eligible' : '',
+  isHighSeverity ? 'high-severity' : '',
+  isMediumSeverity ? 'medium-severity' : '',
+  className
+].filter(Boolean).join(' ');
+---
+
+{(showInjuryWarning || showIREligible) && (
+  <div class={containerClasses}>
+    <!-- Injury Warning Section -->
+    {showInjuryWarning && (
+      <div class="injury-warning-section">
+        <div class="warning-header">
+          <span class="warning-icon">⚠️</span>
+          <span class="warning-title">Lineup Warning</span>
+          {isHighSeverity && (
+            <span class="severity-badge high">Critical</span>
+          )}
+          {isMediumSeverity && (
+            <span class="severity-badge medium">Caution</span>
+          )}
+        </div>
+        
+        <div class="warning-message">
+          {injuryWarning?.message}
+        </div>
+
+        <div class="warning-actions">
+          <a 
+            href={lineupUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="action-button lineup-link"
+            title="Open lineup page to make changes"
+          >
+            <span class="button-icon">🔧</span>
+            <span class="button-text">Fix Lineup</span>
+          </a>
+        </div>
+      </div>
+    )}
+
+    <!-- IR Eligible Section -->
+    {showIREligible && (
+      <div class="ir-eligible-section">
+        <div class="ir-header">
+          <span class="ir-icon">🏥</span>
+          <span class="ir-title">IR Eligible</span>
+          <span class="severity-badge ir">Action Available</span>
+        </div>
+        
+        <div class="ir-message">
+          {generateIREligibilityMessage(player)}
+        </div>
+
+        <div class="ir-actions">
+          {showIRButton && (
+            <button 
+              class="action-button ir-move-button"
+              data-player-id={player.id}
+              data-franchise-id={player.fantasyTeamId}
+              data-player-name={player.name}
+              title={`Move ${player.name} to IR`}
+            >
+              <span class="button-icon">➡️</span>
+              <span class="button-text">Move to IR</span>
+            </button>
+          )}
+          
+          <a 
+            href={lineupUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="action-button lineup-link secondary"
+            title="Open lineup page for manual IR move"
+          >
+            <span class="button-icon">🔗</span>
+            <span class="button-text">Manual Move</span>
+          </a>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+<style>
+  .injury-manager {
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    margin-top: 0.5rem;
+  }
+
+  .injury-manager.has-warning {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.1);
+  }
+
+  .injury-manager.high-severity {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+    animation: pulse-warning 2s infinite;
+  }
+
+  .injury-manager.ir-eligible {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.1);
+  }
+
+  .injury-warning-section,
+  .ir-eligible-section {
+    padding: 0.75rem;
+  }
+
+  .injury-warning-section + .ir-eligible-section {
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .warning-header,
+  .ir-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .warning-icon,
+  .ir-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .warning-title,
+  .ir-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    flex: 1;
+  }
+
+  .severity-badge {
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .severity-badge.high {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .severity-badge.medium {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .severity-badge.ir {
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .warning-message,
+  .ir-message {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+  }
+
+  .warning-actions,
+  .ir-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .action-button {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .action-button.lineup-link {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+  }
+
+  .action-button.lineup-link:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .action-button.lineup-link.secondary {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(107, 114, 128, 0.3);
+  }
+
+  .action-button.lineup-link.secondary:hover {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    box-shadow: 0 2px 6px rgba(107, 114, 128, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .action-button.ir-move-button {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+  }
+
+  .action-button.ir-move-button:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .action-button.ir-move-button:disabled {
+    background: #9ca3af;
+    color: #6b7280;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .button-icon {
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .button-text {
+    font-size: 0.8125rem;
+  }
+
+  /* Animations */
+  @keyframes pulse-warning {
+    0%, 100% {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+    }
+    50% {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .injury-warning-section,
+    .ir-eligible-section {
+      padding: 0.5rem;
+    }
+
+    .warning-header,
+    .ir-header {
+      gap: 0.375rem;
+      margin-bottom: 0.375rem;
+    }
+
+    .warning-title,
+    .ir-title {
+      font-size: 0.8125rem;
+    }
+
+    .warning-message,
+    .ir-message {
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .warning-actions,
+    .ir-actions {
+      gap: 0.375rem;
+    }
+
+    .action-button {
+      padding: 0.375rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .button-text {
+      font-size: 0.75rem;
+    }
+
+    .severity-badge {
+      font-size: 0.625rem;
+      padding: 0.0625rem 0.25rem;
+    }
+  }
+
+  /* Loading state for IR button */
+  .ir-move-button.loading {
+    position: relative;
+    color: transparent;
+  }
+
+  .ir-move-button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
+<script>
+  // Handle one-click IR moves
+  document.addEventListener('DOMContentLoaded', () => {
+    const irButtons = document.querySelectorAll('.ir-move-button');
+    
+    irButtons.forEach(button => {
+      button.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const btn = e.currentTarget as HTMLButtonElement;
+        const playerId = btn.dataset.playerId;
+        const franchiseId = btn.dataset.franchiseId;
+        const playerName = btn.dataset.playerName;
+        
+        if (!playerId || !franchiseId) {
+          console.error('Missing player or franchise ID for IR move');
+          return;
+        }
+
+        // Confirm action
+        const confirmed = confirm(`Move ${playerName} to IR? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        // Show loading state
+        btn.disabled = true;
+        btn.classList.add('loading');
+        const originalText = btn.querySelector('.button-text')?.textContent;
+        const buttonText = btn.querySelector('.button-text');
+        if (buttonText) buttonText.textContent = 'Moving...';
+
+        try {
+          // Make API call to move player to IR
+          const response = await fetch('/api/move-to-ir', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              playerId,
+              franchiseId,
+            }),
+          });
+
+          if (response.ok) {
+            // Success - update UI
+            btn.classList.remove('loading');
+            btn.classList.add('success');
+            if (buttonText) buttonText.textContent = 'Moved to IR';
+            
+            // Hide the IR eligible section after a delay
+            setTimeout(() => {
+              const irSection = btn.closest('.ir-eligible-section');
+              if (irSection) {
+                irSection.style.opacity = '0.5';
+                irSection.style.pointerEvents = 'none';
+              }
+            }, 1000);
+
+            // Show success message
+            const successMsg = document.createElement('div');
+            successMsg.className = 'success-message';
+            successMsg.textContent = `${playerName} has been moved to IR`;
+            successMsg.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: #10b981;
+              color: white;
+              padding: 0.75rem 1rem;
+              border-radius: 0.5rem;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              z-index: 1000;
+              font-size: 0.875rem;
+              font-weight: 600;
+            `;
+            document.body.appendChild(successMsg);
+            
+            setTimeout(() => {
+              successMsg.remove();
+            }, 3000);
+
+          } else {
+            throw new Error(`Failed to move player to IR: ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error('Error moving player to IR:', error);
+          
+          // Reset button state
+          btn.disabled = false;
+          btn.classList.remove('loading');
+          if (buttonText && originalText) buttonText.textContent = originalText;
+          
+          // Show error message
+          alert(`Failed to move ${playerName} to IR. Please try using the manual link or contact support.`);
+        }
+      });
+    });
+  });
+</script>

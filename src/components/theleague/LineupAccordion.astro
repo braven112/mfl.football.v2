@@ -1,0 +1,630 @@
+---
+/**
+ * LineupAccordion Component
+ * Collapsible interface showing full starting lineups for both teams
+ * Sorts players by starters first, then bench to eliminate individual badges
+ */
+
+import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
+import type { FantasyPlayer, StartingLineup } from '../../types/matchup-previews';
+
+interface Props {
+  homeLineup: StartingLineup;
+  awayLineup: StartingLineup;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamIcon?: string;
+  awayTeamIcon?: string;
+  isExpanded?: boolean;
+  className?: string;
+}
+
+const { 
+  homeLineup, 
+  awayLineup, 
+  homeTeamName, 
+  awayTeamName,
+  homeTeamIcon,
+  awayTeamIcon,
+  isExpanded = false,
+  className = ''
+} = Astro.props;
+
+// Helper to get ESPN player headshot URL
+function getPlayerHeadshot(player: FantasyPlayer): string {
+  // Use espnId if available, otherwise fall back to MFL photo
+  const espnId = (player as any).espnId;
+  if (espnId) {
+    return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
+  }
+  return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+}
+
+// Helper to sort players: starters first (by position), then bench (alphabetically)
+function sortPlayersForDisplay(players: FantasyPlayer[]): { starters: FantasyPlayer[], bench: FantasyPlayer[] } {
+  const starters = players.filter(p => p.isStarting);
+  const bench = players.filter(p => !p.isStarting);
+  
+  // Position order for starters
+  const positionOrder = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF'];
+  
+  // Sort starters by position, then by name
+  starters.sort((a, b) => {
+    const posA = positionOrder.indexOf(a.position);
+    const posB = positionOrder.indexOf(b.position);
+    
+    if (posA !== posB) {
+      return (posA === -1 ? 999 : posA) - (posB === -1 ? 999 : posB);
+    }
+    
+    return a.name.localeCompare(b.name);
+  });
+  
+  // Sort bench alphabetically by name
+  bench.sort((a, b) => a.name.localeCompare(b.name));
+  
+  return { starters, bench };
+}
+
+// Get all players from lineup positions and bench
+function getAllPlayersFromLineup(lineup: StartingLineup): FantasyPlayer[] {
+  const allPlayers: FantasyPlayer[] = [];
+  
+  // Add all starting players from positions
+  Object.values(lineup.positions).forEach(positionPlayers => {
+    allPlayers.push(...positionPlayers);
+  });
+  
+  // Add bench players
+  allPlayers.push(...lineup.bench);
+  
+  return allPlayers;
+}
+
+// Process both team lineups
+const homeAllPlayers = getAllPlayersFromLineup(homeLineup);
+const awayAllPlayers = getAllPlayersFromLineup(awayLineup);
+
+const homeSorted = sortPlayersForDisplay(homeAllPlayers);
+const awaySorted = sortPlayersForDisplay(awayAllPlayers);
+
+// Calculate summary stats
+const homeStarterCount = homeSorted.starters.length;
+const homeBenchCount = homeSorted.bench.length;
+const awayStarterCount = awaySorted.starters.length;
+const awayBenchCount = awaySorted.bench.length;
+
+const homeProjectedTotal = homeLineup.totalProjected;
+const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
+  .filter(p => p.isStarting)
+  .reduce((sum, p) => sum + (p.projectedPoints || 0), 0);
+---
+
+<div class={`lineup-accordion ${className}`}>
+  <!-- Accordion Header -->
+  <button 
+    class="accordion-header" 
+    data-accordion-toggle="lineup-accordion"
+    aria-expanded={isExpanded}
+    aria-controls="lineup-content"
+  >
+    <div class="accordion-title">
+      <span class="accordion-icon">👥</span>
+      <span class="accordion-text">Starting Lineups</span>
+      <span class="accordion-summary">
+        {homeStarterCount + awayStarterCount} starters, {homeBenchCount + awayBenchCount} bench
+      </span>
+    </div>
+    <div class="accordion-chevron">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+      </svg>
+    </div>
+  </button>
+
+  <!-- Accordion Content -->
+  <div 
+    id="lineup-content" 
+    class={`accordion-content ${isExpanded ? 'expanded' : 'collapsed'}`}
+    aria-hidden={!isExpanded}
+  >
+    <div class="lineup-container">
+      <!-- Away Team Lineup -->
+      <div class="team-lineup">
+        <div class="team-header">
+          {awayTeamIcon && (
+            <img 
+              src={awayTeamIcon} 
+              alt={awayTeamName}
+              class="team-icon-small"
+            />
+          )}
+          <div class="team-info">
+            <h4 class="team-name">{awayTeamName}</h4>
+            <div class="team-stats">
+              <span class="projected-total">Proj: {awayProjectedTotal.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Starters Section -->
+        <div class="player-section">
+          <div class="section-header">
+            <h5 class="section-title">Starters ({awayStarterCount})</h5>
+          </div>
+          <div class="players-list">
+            {awaySorted.starters.map((player) => (
+              <div class="player-row starter">
+                <img
+                  src={getPlayerHeadshot(player)}
+                  alt={player.name}
+                  class="player-headshot"
+                  onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                />
+                <div class="player-info">
+                  <div class="player-name">{player.name}</div>
+                  <div class="player-details">
+                    <span class="position-team">{player.position}, {player.nflTeam}</span>
+                    {player.projectedPoints && (
+                      <span class="projected-points">Proj: {player.projectedPoints.toFixed(1)}</span>
+                    )}
+                  </div>
+                </div>
+                <div class="player-status">
+                  <PlayerStatusIndicator 
+                    player={player} 
+                    showOptimization={false}
+                    className="minimal"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Bench Section -->
+        {awaySorted.bench.length > 0 && (
+          <div class="player-section">
+            <div class="section-header">
+              <h5 class="section-title">Bench ({awayBenchCount})</h5>
+            </div>
+            <div class="players-list bench-list">
+              {awaySorted.bench.map((player) => (
+                <div class="player-row bench">
+                  <img
+                    src={getPlayerHeadshot(player)}
+                    alt={player.name}
+                    class="player-headshot"
+                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                  />
+                  <div class="player-info">
+                    <div class="player-name">{player.name}</div>
+                    <div class="player-details">
+                      <span class="position-team">{player.position}, {player.nflTeam}</span>
+                      {player.projectedPoints && (
+                        <span class="projected-points">Proj: {player.projectedPoints.toFixed(1)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div class="player-status">
+                    <PlayerStatusIndicator 
+                      player={player} 
+                      showOptimization={false}
+                      className="minimal"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <!-- Home Team Lineup -->
+      <div class="team-lineup">
+        <div class="team-header">
+          {homeTeamIcon && (
+            <img 
+              src={homeTeamIcon} 
+              alt={homeTeamName}
+              class="team-icon-small"
+            />
+          )}
+          <div class="team-info">
+            <h4 class="team-name">{homeTeamName}</h4>
+            <div class="team-stats">
+              <span class="projected-total">Proj: {homeProjectedTotal.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Starters Section -->
+        <div class="player-section">
+          <div class="section-header">
+            <h5 class="section-title">Starters ({homeStarterCount})</h5>
+          </div>
+          <div class="players-list">
+            {homeSorted.starters.map((player) => (
+              <div class="player-row starter">
+                <img
+                  src={getPlayerHeadshot(player)}
+                  alt={player.name}
+                  class="player-headshot"
+                  onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                />
+                <div class="player-info">
+                  <div class="player-name">{player.name}</div>
+                  <div class="player-details">
+                    <span class="position-team">{player.position}, {player.nflTeam}</span>
+                    {player.projectedPoints && (
+                      <span class="projected-points">Proj: {player.projectedPoints.toFixed(1)}</span>
+                    )}
+                  </div>
+                </div>
+                <div class="player-status">
+                  <PlayerStatusIndicator 
+                    player={player} 
+                    showOptimization={false}
+                    className="minimal"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Bench Section -->
+        {homeSorted.bench.length > 0 && (
+          <div class="player-section">
+            <div class="section-header">
+              <h5 class="section-title">Bench ({homeBenchCount})</h5>
+            </div>
+            <div class="players-list bench-list">
+              {homeSorted.bench.map((player) => (
+                <div class="player-row bench">
+                  <img
+                    src={getPlayerHeadshot(player)}
+                    alt={player.name}
+                    class="player-headshot"
+                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                  />
+                  <div class="player-info">
+                    <div class="player-name">{player.name}</div>
+                    <div class="player-details">
+                      <span class="position-team">{player.position}, {player.nflTeam}</span>
+                      {player.projectedPoints && (
+                        <span class="projected-points">Proj: {player.projectedPoints.toFixed(1)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div class="player-status">
+                    <PlayerStatusIndicator 
+                      player={player} 
+                      showOptimization={false}
+                      className="minimal"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Accordion functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const accordionButton = document.querySelector('[data-accordion-toggle="lineup-accordion"]');
+    const accordionContent = document.getElementById('lineup-content');
+    
+    if (accordionButton && accordionContent) {
+      accordionButton.addEventListener('click', function() {
+        const isExpanded = accordionButton.getAttribute('aria-expanded') === 'true';
+        const newExpanded = !isExpanded;
+        
+        // Update aria attributes
+        accordionButton.setAttribute('aria-expanded', newExpanded.toString());
+        accordionContent.setAttribute('aria-hidden', (!newExpanded).toString());
+        
+        // Toggle classes
+        if (newExpanded) {
+          accordionContent.classList.remove('collapsed');
+          accordionContent.classList.add('expanded');
+        } else {
+          accordionContent.classList.remove('expanded');
+          accordionContent.classList.add('collapsed');
+        }
+        
+        // Rotate chevron
+        const chevron = accordionButton.querySelector('.accordion-chevron');
+        if (chevron) {
+          chevron.style.transform = newExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+      });
+    }
+  });
+</script>
+
+<style>
+  .lineup-accordion {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--primary-content-border-color, #e2e2e2);
+    border-radius: 0.75rem;
+    margin: 1.5rem 0;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Accordion Header */
+  .accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: var(--content-bg, #fff);
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .accordion-header:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .accordion-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .accordion-icon {
+    font-size: 1.125rem;
+  }
+
+  .accordion-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+  }
+
+  .accordion-summary {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    margin-left: 0.5rem;
+  }
+
+  .accordion-chevron {
+    transition: transform 0.2s ease;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  /* Accordion Content */
+  .accordion-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+  }
+
+  .accordion-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .accordion-content.expanded {
+    max-height: 2000px; /* Large enough to accommodate content */
+    opacity: 1;
+  }
+
+  /* Lineup Container */
+  .lineup-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding: 0 1.25rem 1.5rem;
+    border-top: 1px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  /* Team Lineup */
+  .team-lineup {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .team-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .team-icon-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.25rem;
+    object-fit: contain;
+  }
+
+  .team-info {
+    flex: 1;
+  }
+
+  .team-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    margin: 0 0 0.25rem 0;
+  }
+
+  .team-stats {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .projected-total {
+    font-weight: 500;
+  }
+
+  /* Player Sections */
+  .player-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .section-header {
+    margin-bottom: 0.25rem;
+  }
+
+  .section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  /* Players List */
+  .players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .bench-list {
+    opacity: 0.85;
+  }
+
+  /* Player Row */
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s;
+  }
+
+  .player-row:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .player-row.starter {
+    background: rgba(16, 185, 129, 0.04);
+    border-left: 2px solid #10b981;
+  }
+
+  .player-row.bench {
+    background: rgba(0, 0, 0, 0.02);
+    border-left: 2px solid #d1d5db;
+  }
+
+  .player-headshot {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.25rem;
+    object-fit: cover;
+    background: #f3f4f6;
+    flex-shrink: 0;
+  }
+
+  .player-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .player-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    line-height: 1.2;
+    margin-bottom: 0.125rem;
+  }
+
+  .player-details {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .position-team {
+    font-weight: 500;
+  }
+
+  .projected-points {
+    font-weight: 500;
+    color: var(--text-color, #1f2937);
+  }
+
+  .player-status {
+    flex-shrink: 0;
+  }
+
+  /* Minimal status indicators for accordion */
+  :global(.player-status-container.minimal) {
+    gap: 0.25rem;
+  }
+
+  :global(.player-status-container.minimal .player-status-badge) {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  :global(.player-status-container.minimal .injury-status-simple) {
+    font-size: 0.625rem;
+  }
+
+  :global(.player-status-container.minimal .upgrade-indicator) {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  :global(.player-status-container.minimal .ir-eligible-indicator) {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    .lineup-container {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .accordion-title {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+
+    .accordion-summary {
+      margin-left: 0;
+    }
+
+    .player-row {
+      gap: 0.5rem;
+      padding: 0.375rem;
+    }
+
+    .player-headshot {
+      width: 28px;
+      height: 28px;
+    }
+
+    .player-name {
+      font-size: 0.8125rem;
+    }
+
+    .player-details {
+      font-size: 0.6875rem;
+      gap: 0.375rem;
+    }
+  }
+</style>

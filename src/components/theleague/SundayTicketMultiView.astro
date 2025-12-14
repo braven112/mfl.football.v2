@@ -23,12 +23,22 @@ interface NFLGame {
 
 const { games = [], timeSlot = 'both', maxGames = 4, showTabs = true } = Astro.props;
 
-// Helper to calculate game score from players
+// Helper to calculate game score from players (starters only)
 function getGameScore(game: NFLGame): number {
   if (!game.players) return game.score || game.projectedPoints || 0;
+  
+  // Only count starters for fantasy impact calculation
   return game.players.reduce((total: number, p: any) => {
-    const points = parseFloat(p.projectedPoints) || 0;
-    return total + points;
+    // Check if player is starting (we need to determine this from the player data)
+    // For now, we'll assume all players have an isStarting property
+    // This should be enhanced with the same logic used in the main page
+    const isStarting = p.isStarting ?? true; // Default to true if not specified for backward compatibility
+    
+    if (isStarting) {
+      const points = parseFloat(p.projectedPoints) || 0;
+      return total + points;
+    }
+    return total;
   }, 0);
 }
 
@@ -60,16 +70,24 @@ const gamesWithScores = games.map((game: NFLGame) => {
   return { ...game, score };
 }).sort((a: NFLGame, b: NFLGame) => (b.score || 0) - (a.score || 0));
 
-// Filter games by time slot
+// Filter games by time slot and exclude games with zero fantasy impact
+// Games with no starters (zero projected points) are considered unimportant
+// RedZone will fill the next available slot (max 1 RedZone per time slot)
 let earlyGames: NFLGame[] = [];
 let lateGames: NFLGame[] = [];
 
 if (timeSlot === 'early' || timeSlot === 'both') {
-  earlyGames = gamesWithScores.filter(isSundayTicket).slice(0, maxGames);
+  // Only include games with fantasy impact (score > 0) and limit to maxGames
+  earlyGames = gamesWithScores
+    .filter(game => isSundayTicket(game) && (game.score || 0) > 0)
+    .slice(0, maxGames);
 }
 
 if (timeSlot === 'late' || timeSlot === 'both') {
-  lateGames = gamesWithScores.filter(isLateTimeSlot).slice(0, maxGames);
+  // Only include games with fantasy impact (score > 0) and limit to maxGames
+  lateGames = gamesWithScores
+    .filter(game => isLateTimeSlot(game) && (game.score || 0) > 0)
+    .slice(0, maxGames);
 }
 
 // Determine if we should show tabs
@@ -84,7 +102,9 @@ if (!shouldShowTabs) {
     displayGames = lateGames;
   } else {
     // 'both' but not showing tabs - prioritize early games, then late
-    displayGames = [...earlyGames, ...lateGames].slice(0, maxGames);
+    // Only include games with fantasy impact
+    const allGamesWithImpact = [...earlyGames, ...lateGames].filter(game => (game.score || 0) > 0);
+    displayGames = allGamesWithImpact.slice(0, maxGames);
   }
 }
 
@@ -116,7 +136,7 @@ function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
         
         <div class="multiview-content">
           <div class="multiview-tab-panel active" data-panel="early">
-            <p class="section-subtitle" id="sunday-ticket-subtitle-early">Top 4 early games ranked by fantasy impact for your quad-box</p>
+            <p class="section-subtitle" id="sunday-ticket-subtitle-early">Top early games with fantasy impact for your quad-box</p>
             <div class="multiview-grid">
               {earlyGames.map((game: NFLGame, index: number) => (
                 <div class="multiview-card">
@@ -131,20 +151,28 @@ function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
                     <span class="score-label">Proj Pts</span>
                   </div>
                   <div class="multiview-info">
-                    {game.players?.length || game.playerCount || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
+                    {game.playerCount || 0} Starters · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
                   </div>
                 </div>
               ))}
-              {Array.from({ length: maxGames - earlyGames.length }).map(() => (
+              {/* Show RedZone in the next slot if there are fewer games than maxGames */}
+              {earlyGames.length < maxGames && (
                 <div class="multiview-card">
+                  <div class="multiview-rank">#{earlyGames.length + 1}</div>
                   <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+                </div>
+              )}
+              {/* Fill any remaining slots with empty cards (no duplicate RedZone) */}
+              {Array.from({ length: Math.max(0, maxGames - earlyGames.length - 1) }).map(() => (
+                <div class="multiview-card multiview-card-empty">
+                  {/* Empty slot - no duplicate RedZone */}
                 </div>
               ))}
             </div>
           </div>
           
           <div class="multiview-tab-panel" data-panel="late">
-            <p class="section-subtitle" id="sunday-ticket-subtitle-late">Top 4 late games ranked by fantasy impact for your quad-box</p>
+            <p class="section-subtitle" id="sunday-ticket-subtitle-late">Top late games with fantasy impact for your quad-box</p>
             <div class="multiview-grid">
               {lateGames.map((game: NFLGame, index: number) => (
                 <div class="multiview-card">
@@ -159,13 +187,21 @@ function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
                     <span class="score-label">Proj Pts</span>
                   </div>
                   <div class="multiview-info">
-                    {game.players?.length || game.playerCount || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
+                    {game.playerCount || 0} Starters · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
                   </div>
                 </div>
               ))}
-              {Array.from({ length: maxGames - lateGames.length }).map(() => (
+              {/* Show RedZone in the next slot if there are fewer games than maxGames */}
+              {lateGames.length < maxGames && (
                 <div class="multiview-card">
+                  <div class="multiview-rank">#{lateGames.length + 1}</div>
                   <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+                </div>
+              )}
+              {/* Fill any remaining slots with empty cards (no duplicate RedZone) */}
+              {Array.from({ length: Math.max(0, maxGames - lateGames.length - 1) }).map(() => (
+                <div class="multiview-card multiview-card-empty">
+                  {/* Empty slot - no duplicate RedZone */}
                 </div>
               ))}
             </div>
@@ -174,7 +210,7 @@ function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
       </div>
     ) : (
       <div>
-        <p class="section-subtitle" id="sunday-ticket-subtitle">Top {maxGames} games ranked by fantasy impact for your quad-box</p>
+        <p class="section-subtitle" id="sunday-ticket-subtitle">Top games with fantasy impact for your quad-box</p>
         <div class="multiview-grid">
           {displayGames.map((game: NFLGame, index: number) => (
             <div class="multiview-card">
@@ -189,13 +225,21 @@ function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
                 <span class="score-label">Proj Pts</span>
               </div>
               <div class="multiview-info">
-                {game.players?.length || game.playerCount || 0} Fantasy Players · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
+                {game.playerCount || 0} Starters · <span class="game-time-display" data-time-pt={game.time}>{game.time}</span>
               </div>
             </div>
           ))}
-          {Array.from({ length: maxGames - displayGames.length }).map(() => (
+          {/* Show RedZone in the next slot if there are fewer games than maxGames */}
+          {displayGames.length < maxGames && (
             <div class="multiview-card">
+              <div class="multiview-rank">#{displayGames.length + 1}</div>
               <img src="/assets/tv-logos/nfl-red-zone.png" alt="NFL RedZone" class="redzone-logo" onerror="this.style.display='none'" />
+            </div>
+          )}
+          {/* Fill any remaining slots with empty cards (no duplicate RedZone) */}
+          {Array.from({ length: Math.max(0, maxGames - displayGames.length - 1) }).map(() => (
+            <div class="multiview-card multiview-card-empty">
+              {/* Empty slot - no duplicate RedZone */}
             </div>
           ))}
         </div>
@@ -353,6 +397,12 @@ function renderMultiViewGrid(games: NFLGame[], containerId?: string) {
     position: relative;
     gap: 0.5rem;
     min-height: 140px;
+  }
+
+  .multiview-card-empty {
+    background: #111;
+    border: 2px dashed #333;
+    opacity: 0.3;
   }
 
   .multiview-rank {

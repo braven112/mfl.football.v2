@@ -49,11 +49,11 @@
   - **Property 5: Time zone display accuracy**
   - **Validates: Requirements 2.1, 2.2, 2.4**
 
-- [ ]* 4.2 Write property test for calendar icon usage
+- [-] 4.2 Write property test for calendar icon usage
   - **Property 6: Calendar icon usage**
   - **Validates: Requirements 2.3**
 
-- [ ] 5. Build lineup accordion component
+- [x] 5. Build lineup accordion component
   - Create collapsible LineupAccordion component near scoreboard
   - Implement starting lineup display for both teams
   - Add minimal space usage when collapsed with full roster view when expanded
@@ -63,17 +63,17 @@
   - **Property 25: Lineup accordion functionality**
   - **Validates: Requirements 8.4, 8.5**
 
-- [-] 6. Implement player status indicators and optimization detection
+- [x] 6. Implement player status indicators and optimization detection
   - Create PlayerStatusIndicator component with starting/bench badges
   - Implement LineupOptimizer for detecting bench upgrades
   - Add visual indicators for lineup optimization opportunities
   - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ]* 6.1 Write property test for lineup optimization detection
+- [x] 6.1 Write property test for lineup optimization detection
   - **Property 24: Lineup optimization detection**
   - **Validates: Requirements 8.2, 8.3**
 
-- [ ] 7. Create injury management and warning system
+- [x] 7. Create injury management and warning system
   - Implement pulsating animation effects for injured starters (Out/Doubtful/IR)
   - Add InjuryManager component with IR eligibility detection
   - Create direct links to submit lineup page for corrections
@@ -215,6 +215,36 @@
   - Test full matchup navigation, lineup optimization, and injury management flows
   - Verify cross-component interactions and state management
 
+- [x] 16.2 Clean up NFL Schedule player list layout
+  - Sort players by starters first, then bench players in NFL games section
+  - Remove individual START/BENCH badges since grouping makes status clear
+  - Add section headers for "Starters (N)" and "Bench (N)" groups
+  - Implement visual distinction with color-coded borders and backgrounds
+  - Create compact-clean status indicators that hide redundant badges
+  - _Requirements: Visual clarity, reduced clutter, better user scanning_
+
+- [x] 16.3 Simplify player group headers styling
+  - Remove background color and border from starters/bench headers
+  - Keep only colored text (green for starters, grey for bench)
+  - Remove left padding/indentation from player lists
+  - Create cleaner, more minimal section headers
+  - _Requirements: Further visual simplification_
+
+- [x] 16.4 Fix projected scores accuracy with MFL API
+  - Investigate discrepancy between displayed projections and MFL livescoring API
+  - Compare current projection source with MFL submit lineup API data
+  - Update projection data source to match official MFL scoring
+  - Ensure projected scores align with what users see in MFL interface
+  - Set projected points to 0 for players on IR or Out (they can't play)
+  - _Requirements: Data accuracy, user trust_
+
+- [x] 16.5 Move upgrade suggestions to matchup analysis
+  - Remove upgrade indicator buttons from individual player displays
+  - Integrate lineup optimization suggestions into game-level "Matchup Analysis" section
+  - Generate intelligent talking points about potential lineup improvements
+  - Include bench upgrade recommendations in analysis text
+  - _Requirements: Cleaner player display, contextual optimization advice_
+
 - [x] 17. Implement MFL API schedule integration for accurate playoff brackets
   - Replace algorithmic matchup generation with real MFL API schedule data
   - Add MFL API schedule endpoint integration for week 15 playoff bracket
@@ -235,5 +265,64 @@
   - Test that Pacific Pigskins (0001) vs Midwestside Connection (0011) appears as Bracket 3 playoff game in week 15
   - **Validates: Requirements 11.2**
 
-- [ ] 18. Final Checkpoint - Complete system validation
+- [ ] 18. Enhance player headshot system with universal model
+  - Create Universal Player Model with standardized headshot handling
+  - Implement intelligent headshot fallback system (ESPN → MFL → placeholder)
+  - Update all player components to use the universal model
+  - Audit existing players using "no photo available" and find better sources
+  - Add headshot quality detection and optimization
+  - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+
+- [ ]* 18.1 Write property test for headshot fallback logic
+  - **Property 37: Headshot fallback logic**
+  - **Validates: Requirements 12.2, 12.3**
+
+- [ ]* 18.2 Write property test for universal player model consistency
+  - **Property 38: Universal player model consistency**
+  - **Validates: Requirements 12.1, 12.5**
+
+- [ ] 19. Implement Universal Player Model with MFL Injury Data
+  - Create scalable player data service architecture for multi-league support
+  - Integrate MFL as authoritative source for injury status across all leagues
+  - Replace existing Sleeper injury data with MFL data in rosters page
+  - Create reusable injury status display component with league-specific rules
+  - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
+
+- [ ] 19.1 Create Universal Player Service Architecture
+  - Create `src/services/player/` directory structure
+  - Implement `UniversalPlayerModel.ts` with shared player properties
+  - Create `PlayerDataService.ts` for MFL data fetching and caching
+  - Add build-time MFL injury data fetching for all leagues
+  - _Requirements: 13.1, 13.2_
+
+- [x] 19.2 Integrate MFL Injury Data as Primary Source
+  - Replace Sleeper injury data with MFL injury data in rosters page
+  - Update `buildSeasonPayload` function to use MFL injury status
+  - Add fallback to Sleeper data only when MFL fetch fails
+  - Ensure injury status is fetched once and shared across all league implementations
+  - _Requirements: 13.2, 13.3_
+
+- [ ] 19.3 Create Reusable Injury Status Display Component
+  - Create base `InjuryStatusDisplay` component using universal player model
+  - Implement consistent visual format: parentheses + letter (e.g., "(Q)", "(O)", "(IR)")
+  - Create league-specific wrappers for IR eligibility rules (The League vs AFL Fantasy)
+  - Update all existing injury status displays to use new component
+  - _Requirements: 13.4, 13.5_
+
+- [ ] 19.4 Update Existing Implementations
+  - Update matchup preview page to use universal player model
+  - Update rosters page to use new MFL injury data integration
+  - Update all player status indicators to use reusable component
+  - Ensure consistent injury status display across entire application
+  - _Requirements: 13.3, 13.4, 13.5_
+
+- [ ]* 19.5 Write property test for universal player model consistency
+  - **Property 39: Universal player model consistency**
+  - **Validates: Requirements 13.1, 13.5**
+
+- [ ]* 19.6 Write property test for MFL injury data integration
+  - **Property 40: MFL injury data integration**
+  - **Validates: Requirements 13.2, 13.3**
+
+- [ ] 20. Final Checkpoint - Complete system validation
   - Ensure all tests pass, ask the user if questions arise.

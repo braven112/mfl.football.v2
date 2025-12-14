@@ -1,0 +1,297 @@
+---
+/**
+ * LineupOptimizationIndicator Component
+ * Visual indicators for lineup optimization opportunities
+ */
+
+import type { LineupOptimization } from '../../types/matchup-previews';
+
+export interface Props {
+  optimizations: LineupOptimization[];
+  showDetails?: boolean;
+  className?: string;
+}
+
+const { optimizations, showDetails = false, className = '' } = Astro.props;
+
+// Filter and categorize optimizations
+const criticalIssues = optimizations.filter(opt => opt.severity === 'high');
+const mediumIssues = optimizations.filter(opt => opt.severity === 'medium');
+const lowIssues = optimizations.filter(opt => opt.severity === 'low');
+
+const injuryWarnings = optimizations.filter(opt => opt.type === 'injury_warning');
+const benchUpgrades = optimizations.filter(opt => opt.type === 'bench_upgrade');
+const irEligible = optimizations.filter(opt => opt.type === 'ir_eligible');
+
+const hasCriticalIssues = criticalIssues.length > 0;
+const hasAnyIssues = optimizations.length > 0;
+
+// Generate summary text
+const getSummaryText = () => {
+  if (!hasAnyIssues) return 'Lineup looks good';
+  
+  const parts = [];
+  if (injuryWarnings.length > 0) {
+    parts.push(`${injuryWarnings.length} injury ${injuryWarnings.length === 1 ? 'warning' : 'warnings'}`);
+  }
+  if (benchUpgrades.length > 0) {
+    parts.push(`${benchUpgrades.length} bench ${benchUpgrades.length === 1 ? 'upgrade' : 'upgrades'}`);
+  }
+  if (irEligible.length > 0) {
+    parts.push(`${irEligible.length} IR ${irEligible.length === 1 ? 'eligible' : 'eligible'}`);
+  }
+  
+  return parts.join(', ');
+};
+
+const summaryText = getSummaryText();
+---
+
+<div class={`lineup-optimization-indicator ${className}`}>
+  <!-- Summary Badge -->
+  <div class={`optimization-summary ${hasCriticalIssues ? 'critical' : hasAnyIssues ? 'warning' : 'good'}`}>
+    <span class="summary-icon">
+      {hasCriticalIssues && '🚨'}
+      {!hasCriticalIssues && hasAnyIssues && '⚠️'}
+      {!hasAnyIssues && '✅'}
+    </span>
+    <span class="summary-text">{summaryText}</span>
+    {hasAnyIssues && (
+      <span class="issue-count">{optimizations.length}</span>
+    )}
+  </div>
+
+  <!-- Detailed Issues (if enabled) -->
+  {showDetails && hasAnyIssues && (
+    <div class="optimization-details">
+      {criticalIssues.map(issue => (
+        <div class="optimization-item critical">
+          <span class="issue-icon">
+            {issue.type === 'injury_warning' && '🚫'}
+            {issue.type === 'bench_upgrade' && '📈'}
+            {issue.type === 'ir_eligible' && '🏥'}
+          </span>
+          <span class="issue-text">{issue.message}</span>
+          {issue.pointsDifference && (
+            <span class="points-diff">+{issue.pointsDifference.toFixed(1)}</span>
+          )}
+        </div>
+      ))}
+      
+      {mediumIssues.map(issue => (
+        <div class="optimization-item medium">
+          <span class="issue-icon">
+            {issue.type === 'injury_warning' && '⚠️'}
+            {issue.type === 'bench_upgrade' && '📊'}
+            {issue.type === 'ir_eligible' && '🏥'}
+          </span>
+          <span class="issue-text">{issue.message}</span>
+          {issue.pointsDifference && (
+            <span class="points-diff">+{issue.pointsDifference.toFixed(1)}</span>
+          )}
+        </div>
+      ))}
+      
+      {lowIssues.map(issue => (
+        <div class="optimization-item low">
+          <span class="issue-icon">
+            {issue.type === 'injury_warning' && '❓'}
+            {issue.type === 'bench_upgrade' && '📋'}
+            {issue.type === 'ir_eligible' && '🏥'}
+          </span>
+          <span class="issue-text">{issue.message}</span>
+          {issue.pointsDifference && (
+            <span class="points-diff">+{issue.pointsDifference.toFixed(1)}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+
+  <!-- Action Links -->
+  {hasAnyIssues && (
+    <div class="optimization-actions">
+      {optimizations[0]?.actionUrl && (
+        <a 
+          href={optimizations[0].actionUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="action-link"
+        >
+          Fix Lineup →
+        </a>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .lineup-optimization-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .optimization-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .optimization-summary.good {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid #6ee7b7;
+  }
+
+  .optimization-summary.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid #fcd34d;
+  }
+
+  .optimization-summary.critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    animation: pulse-critical 2s infinite;
+  }
+
+  .summary-icon {
+    font-size: 1rem;
+  }
+
+  .summary-text {
+    flex: 1;
+  }
+
+  .issue-count {
+    background: currentColor;
+    color: white;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 1.25rem;
+    text-align: center;
+  }
+
+  .optimization-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .optimization-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .optimization-item.critical {
+    background: rgba(239, 68, 68, 0.05);
+    border-left: 3px solid #ef4444;
+  }
+
+  .optimization-item.medium {
+    background: rgba(245, 158, 11, 0.05);
+    border-left: 3px solid #f59e0b;
+  }
+
+  .optimization-item.low {
+    background: rgba(59, 130, 246, 0.05);
+    border-left: 3px solid #3b82f6;
+  }
+
+  .issue-icon {
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .issue-text {
+    flex: 1;
+    color: #374151;
+  }
+
+  .points-diff {
+    font-weight: 700;
+    color: #059669;
+    font-size: 0.75rem;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+  }
+
+  .optimization-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .action-link:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Animations */
+  @keyframes pulse-critical {
+    0%, 100% {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: #fca5a5;
+    }
+    50% {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+    }
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .optimization-summary {
+      font-size: 0.8125rem;
+      padding: 0.375rem 0.625rem;
+    }
+
+    .optimization-item {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.375rem;
+    }
+
+    .action-link {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .summary-icon,
+    .issue-icon {
+      font-size: 0.875rem;
+    }
+  }
+</style>

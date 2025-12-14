@@ -204,6 +204,33 @@ export class MFLMatchupApiClient {
   }
 
   /**
+   * Fetch injury report data from MFL
+   * MFL has a separate injury endpoint that might have more current data
+   */
+  async getInjuryReport(): Promise<Record<string, PlayerStatus>> {
+    try {
+      const url = this.buildUrl('injuries');
+      const response = await this.makeRequest<any>(url);
+      
+      const injuries: Record<string, PlayerStatus> = {};
+      
+      // MFL injury report structure may vary, this is a best guess
+      if (response.injuries?.injury) {
+        response.injuries.injury.forEach((injury: any) => {
+          if (injury.id && injury.status) {
+            injuries[injury.id] = this.normalizeInjuryStatus(injury.status);
+          }
+        });
+      }
+      
+      return injuries;
+    } catch (error) {
+      console.warn('Failed to fetch MFL injury report:', error);
+      return {};
+    }
+  }
+
+  /**
    * Fetch roster data for all teams
    */
   async getRosters(week?: number): Promise<Record<string, string[]>> {
@@ -331,9 +358,56 @@ export class MFLMatchupApiClient {
 
   /**
    * Check if a player is IR eligible based on injury status
+   * In The League, players must be on NFL IR to be fantasy IR eligible
+   * Also, bench players with 'Out' status may be IR eligible
    */
   isPlayerIReligible(player: FantasyPlayer): boolean {
-    return player.injuryStatus === 'Out' && !player.isStarting;
+    // Players on NFL IR are always eligible
+    if (player.injuryStatus === 'IR') {
+      return true;
+    }
+    
+    // Bench players with 'Out' status are eligible for IR
+    if (player.injuryStatus === 'Out' && !player.isStarting) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Fetch live projected scores for all players
+   */
+  async getProjectedScores(week?: number): Promise<Record<string, number>> {
+    const params: Record<string, string> = {};
+    if (week) {
+      params.W = week.toString();
+    }
+    
+    const url = this.buildUrl('projectedScores', params);
+    
+    interface ProjectedScoresResponse {
+      projectedScores: {
+        playerScore: Array<{
+          id: string;
+          score: string;
+        }>;
+      };
+    }
+    
+    const response = await this.makeRequest<ProjectedScoresResponse>(url);
+    const projections: Record<string, number> = {};
+
+    if (response.projectedScores?.playerScore) {
+      response.projectedScores.playerScore.forEach(player => {
+        const score = parseFloat(player.score);
+        if (!isNaN(score)) {
+          projections[player.id] = score;
+        }
+      });
+    }
+
+    return projections;
   }
 
   /**

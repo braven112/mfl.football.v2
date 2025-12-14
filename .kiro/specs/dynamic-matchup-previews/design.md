@@ -128,6 +128,57 @@ sequenceDiagram
 - **Purpose**: Real-time score updates throughout game days
 - **Features**: Sunday live updates, daily refresh cycles, analysis stability
 
+#### 11. PlayerHeadshotManager
+- **Purpose**: Manages player headshot retrieval and fallback logic
+- **Props**: `player: FantasyPlayer`, `size?: 'small' | 'medium' | 'large'`, `quality?: 'high' | 'medium' | 'low'`
+- **Features**: Intelligent source selection, quality optimization, caching, error handling
+
+#### 12. UniversalPlayerCard
+- **Purpose**: Standardized player display component using the universal player model
+- **Props**: `player: FantasyPlayer`, `displayMode?: 'compact' | 'detailed' | 'minimal'`
+- **Features**: Consistent headshot display, cross-platform compatibility, responsive design
+
+#### 13. HeadshotFallbackSystem
+- **Purpose**: Handles headshot source prioritization and fallback logic
+- **Interface**:
+  ```typescript
+  interface HeadshotFallbackConfig {
+    sources: ('espn' | 'mfl' | 'generated')[];
+    qualityThreshold: 'high' | 'medium' | 'low';
+    cacheTimeout: number;
+    enablePlaceholderGeneration: boolean;
+  }
+  ```
+
+#### 14. UniversalPlayerService
+- **Purpose**: Centralized service for managing player data across all leagues with MFL as authoritative injury source
+- **Location**: `src/services/player/PlayerDataService.ts`
+- **Interface**:
+  ```typescript
+  interface UniversalPlayerService {
+    getPlayer(playerId: string): Promise<FantasyPlayer>;
+    getPlayers(playerIds: string[]): Promise<FantasyPlayer[]>;
+    refreshInjuryData(): Promise<void>;
+    getCachedInjuryStatus(playerId: string): PlayerStatus | null;
+  }
+  ```
+- **Features**: 
+  - MFL API integration as primary injury data source
+  - Sleeper fallback for injury data when MFL fails
+  - Build-time data fetching and caching
+  - Cross-league data consistency
+  - Scalable architecture for multiple user leagues
+
+#### 15. InjuryStatusDisplay
+- **Purpose**: Reusable component for consistent injury status display across all leagues
+- **Props**: `player: FantasyPlayer`, `leagueRules?: LeagueIRRules`, `className?: string`
+- **Features**:
+  - Consistent visual format: parentheses + letter (Q, O, D, IR)
+  - League-specific IR eligibility logic
+  - Tooltip with detailed injury information
+  - Accessibility compliance
+  ```
+
 ### Data Models
 
 #### Matchup Interface
@@ -166,26 +217,71 @@ interface NFLGame {
 }
 ```
 
-#### FantasyPlayer Interface
+#### FantasyPlayer Interface (Universal Player Model)
 ```typescript
 interface FantasyPlayer {
+  // Universal properties (shared across all leagues)
   id: string;
   name: string;
   position: string;
   nflTeam: string;
-  fantasyTeamId: string;
-  projectedPoints?: number;
-  actualPoints?: number;
+  injuryStatus: 'Healthy' | 'Questionable' | 'Doubtful' | 'Out' | 'IR'; // MFL as authoritative source
+  injuryBodyPart?: string; // Additional injury detail from MFL
+  headshot: PlayerHeadshot; // Enhanced headshot data with intelligent fallback
+  externalIds?: PlayerExternalIds; // Cross-platform player identification
+  
+  // Physical attributes (universal)
+  height?: string;
+  weight?: number;
+  birthdate?: string;
+  college?: string;
+  draftYear?: number;
+  draftRound?: number;
+  draftPick?: number;
+  draftTeam?: string;
+  
+  // League-specific properties (vary by league implementation)
+  fantasyTeamId: string; // Specific to each league
+  projectedPoints?: number; // League-specific scoring
+  actualPoints?: number; // League-specific scoring
+  salary?: number; // Only in salary cap leagues
+  contractYears?: number; // Only in dynasty leagues
+  isStarting: boolean; // League-specific lineup status
+  
+  // Contextual data (varies by usage)
   matchupData?: PlayerMatchupData;
   newsUpdates?: PlayerNews[];
-  isStarting: boolean;
-  injuryStatus: 'Healthy' | 'Questionable' | 'Doubtful' | 'Out' | 'IR';
-  isIReligible?: boolean;
+  isIReligible?: boolean; // League-specific IR rules
   benchUpgrade?: {
     hasUpgrade: boolean;
     upgradePlayer?: FantasyPlayer;
     pointsDifference?: number;
   };
+}
+```
+
+#### PlayerHeadshot Interface
+```typescript
+interface PlayerHeadshot {
+  primary: string; // Best available headshot URL
+  espnUrl?: string; // ESPN headshot URL
+  mflUrl?: string; // MFL headshot URL
+  fallbackUrl: string; // Guaranteed fallback image
+  quality: 'high' | 'medium' | 'low' | 'placeholder';
+  source: 'espn' | 'mfl' | 'generated' | 'placeholder';
+  lastUpdated?: Date;
+}
+```
+
+#### PlayerExternalIds Interface
+```typescript
+interface PlayerExternalIds {
+  mfl?: string; // MyFantasyLeague player ID
+  espn?: string; // ESPN player ID
+  sleeper?: string; // Sleeper player ID
+  gsis?: string; // NFL GSIS ID
+  rotowire?: string; // Rotowire player ID
+  cbs?: string; // CBS Sports player ID
 }
 ```
 
@@ -398,6 +494,30 @@ Property 31: One-click IR management
 *For any* IR-eligible player, a functional button should be provided to move them to IR status immediately
 **Validates: Requirements 10.4, 10.5**
 
+Property 37: Headshot fallback logic
+*For any* player without an ESPN headshot, the system should check MFL database and provide appropriate fallback before showing placeholder
+**Validates: Requirements 12.2, 12.3**
+
+Property 38: Universal player model consistency
+*For any* player displayed across different components, the headshot and player data should be consistent and use the same Universal Player Model
+**Validates: Requirements 12.1, 12.5**
+
+Property 39: Universal player model consistency
+*For any* player across all leagues and applications, the shared properties (name, position, height, weight, college, draft info, headshot, injury status) should be identical and sourced from the Universal Player Model
+**Validates: Requirements 13.1, 13.5**
+
+Property 40: MFL injury data integration
+*For any* player's injury status, the system should prioritize MFL API data as the authoritative source, falling back to Sleeper data only when MFL fetch fails
+**Validates: Requirements 13.2, 13.3**
+
+Property 41: Injury status display consistency
+*For any* player with injury status across all leagues, the visual format should be consistent parentheses with single letter abbreviations (Q, O, D, IR)
+**Validates: Requirements 13.3, 13.4**
+
+Property 42: League-specific IR eligibility rules
+*For any* injured player, the IR eligibility determination should follow league-specific rules while maintaining consistent visual display
+**Validates: Requirements 13.4, 13.5**
+
 ## Error Handling
 
 ### Data Availability Errors
@@ -449,7 +569,7 @@ The system will implement property-based testing using **fast-check** for JavaSc
 
 - **Minimum 100 iterations** per property test to ensure thorough coverage
 - **Smart generators** that create realistic test data within valid input spaces
-- **Comprehensive property coverage** for all 34 identified correctness properties
+- **Comprehensive property coverage** for all 42 identified correctness properties
 - **Integration with existing test framework** for seamless CI/CD execution
 
 Each property-based test will be tagged with comments explicitly referencing the design document property using the format: `**Feature: dynamic-matchup-previews, Property N: [property description]**`
