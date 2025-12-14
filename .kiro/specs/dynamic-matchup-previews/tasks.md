@@ -49,7 +49,7 @@
   - **Property 5: Time zone display accuracy**
   - **Validates: Requirements 2.1, 2.2, 2.4**
 
-- [-] 4.2 Write property test for calendar icon usage
+- [x] 4.2 Write property test for calendar icon usage
   - **Property 6: Calendar icon usage**
   - **Validates: Requirements 2.3**
 
@@ -59,7 +59,7 @@
   - Add minimal space usage when collapsed with full roster view when expanded
   - _Requirements: 8.4, 8.5_
 
-- [ ]* 5.1 Write property test for lineup accordion functionality
+- [x] 5.1 Write property test for lineup accordion functionality
   - **Property 25: Lineup accordion functionality**
   - **Validates: Requirements 8.4, 8.5**
 
