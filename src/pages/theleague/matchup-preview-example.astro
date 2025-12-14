@@ -638,7 +638,7 @@ function getEnhancedMatchupAnalysis(game: any): string {
     enhancedAnalysis += ` Lineup optimization: ${topSuggestion}.`;
   }
 
-  return enhancedAnalysis || `${game.team1} vs ${game.team2} features ${game.playerCount} fantasy players from both teams.`;
+  return enhancedAnalysis || `${game.team1} vs ${game.team2} matchup analysis.`;
 }
 
 // Helper to get ESPN news for a game
@@ -756,30 +756,52 @@ function getGameNews(team1: string, team2: string) {
         <h3 class="section-title">NFL Schedule - Week {matchup.week}</h3>
         <p class="section-subtitle">Games ordered by player involvement from both teams</p>
         <div class="games-list">
-          {matchup.nflGames.map((game: any) => (
-            <div class="game-card">
-              <div class="game-header">
-                <div class="game-teams">
-                  <img
-                    src={getNFLTeamLogo(game.team1)}
-                    alt={game.team1}
-                    class="nfl-team-logo-large"
-                    onerror="this.style.display='none'"
-                  />
-                  <span class="team-code">{game.team1}</span>
-                  <span class="vs-text">@</span>
-                  <span class="team-code">{game.team2}</span>
-                  <img
-                    src={getNFLTeamLogo(game.team2)}
-                    alt={game.team2}
-                    class="nfl-team-logo-large"
-                    onerror="this.style.display='none'"
-                  />
-                </div>
-                <div class="player-count-badge">
-                  {game.playerCount} {game.playerCount === 1 ? 'player' : 'players'}
-                </div>
-              </div>
+          {matchup.nflGames.map((game: any, gameIndex: number) => {
+            // Check if this game has any starters
+            const hasStarters = game.players.some((player: any) => {
+              const enhancedPlayer = enhancePlayerWithStatus(player);
+              return enhancedPlayer.isStarting;
+            });
+            
+            return (
+              <div class={`game-card ${hasStarters ? 'has-starters' : 'no-starters'}`}>
+                <!-- Always visible game header with accordion toggle -->
+                <button 
+                  class="game-accordion-header" 
+                  data-game-toggle={`game-${gameIndex}`}
+                  aria-expanded={hasStarters}
+                  aria-controls={`game-content-${gameIndex}`}
+                >
+                  <div class="game-teams">
+                    <img
+                      src={getNFLTeamLogo(game.team1)}
+                      alt={game.team1}
+                      class="nfl-team-logo-large"
+                      onerror="this.style.display='none'"
+                    />
+                    <span class="team-code">{game.team1}</span>
+                    <span class="vs-text">@</span>
+                    <span class="team-code">{game.team2}</span>
+                    <img
+                      src={getNFLTeamLogo(game.team2)}
+                      alt={game.team2}
+                      class="nfl-team-logo-large"
+                      onerror="this.style.display='none'"
+                    />
+                  </div>
+                  <div class="accordion-chevron">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
+
+                <!-- Collapsible game content -->
+                <div 
+                  id={`game-content-${gameIndex}`}
+                  class={`game-accordion-content ${hasStarters ? 'expanded' : 'collapsed'}`}
+                  aria-hidden={!hasStarters}
+                >
               <div class="game-details">
                 <div class="game-detail-item">
                   <span class="detail-icon">🗓️</span>
@@ -972,8 +994,10 @@ function getGameNews(team1: string, team2: string) {
                   </div>
                 ) : null;
               })()}
-            </div>
-          ))}
+                </div> <!-- Close game-accordion-content -->
+              </div> <!-- Close game-card -->
+            );
+          })}
         </div>
       </div>
     )}
@@ -998,6 +1022,29 @@ function getGameNews(team1: string, team2: string) {
       window.addEventListener('popstate', function() {
         // Reload page to reflect URL changes
         window.location.reload();
+      });
+
+      // Handle game accordion functionality
+      document.querySelectorAll('[data-game-toggle]').forEach(button => {
+        button.addEventListener('click', function() {
+          const gameId = this.getAttribute('data-game-toggle');
+          const content = document.getElementById(`game-content-${gameId.split('-')[1]}`);
+          const isExpanded = this.getAttribute('aria-expanded') === 'true';
+          const newExpanded = !isExpanded;
+          
+          // Update aria attributes
+          this.setAttribute('aria-expanded', newExpanded.toString());
+          content.setAttribute('aria-hidden', (!newExpanded).toString());
+          
+          // Toggle classes
+          if (newExpanded) {
+            content.classList.remove('collapsed');
+            content.classList.add('expanded');
+          } else {
+            content.classList.remove('expanded');
+            content.classList.add('collapsed');
+          }
+        });
       });
     });
   </script>
@@ -1492,6 +1539,58 @@ function getGameNews(team1: string, team2: string) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
+  /* Game Accordion Styles */
+  .game-card.no-starters {
+    opacity: 0.8;
+  }
+
+  /* Game Accordion Header */
+  .game-accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: left;
+  }
+
+  .game-accordion-header:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+
+
+  .accordion-chevron {
+    transition: transform 0.2s ease;
+    color: var(--muted-text-color, #6b7280);
+    display: flex;
+    align-items: center;
+  }
+
+  .game-accordion-header[aria-expanded="true"] .accordion-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Game Accordion Content */
+  .game-accordion-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+  }
+
+  .game-accordion-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .game-accordion-content.expanded {
+    max-height: 2000px; /* Large enough to accommodate content */
+    opacity: 1;
+  }
+
   .game-header {
     display: flex;
     justify-content: space-between;
@@ -1625,14 +1724,7 @@ function getGameNews(team1: string, team2: string) {
     font-weight: 500;
   }
 
-  .player-count-badge {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-    color: white;
-    padding: 0.375rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
+
 
   .game-players {
     display: flex;
