@@ -379,6 +379,27 @@ Object.entries(playersFeeds).forEach(([path, mod]) => {
   });
 });
 
+// Load MFL injury data for current season (week 15)
+const currentWeek = 15;
+let mflInjuryData = {};
+try {
+  // Use static import for build compatibility
+  const injuryDataModule = await import('../../../data/theleague/live-injury-data-week-15.json');
+  if (injuryDataModule.default?.injuries) {
+    mflInjuryData = injuryDataModule.default.injuries;
+    console.log(`✅ Loaded ${Object.keys(mflInjuryData).length} player injuries from MFL API (week ${currentWeek})`);
+
+    // Debug: Check if Geno Smith (ID: 11150) is in the injury data
+    if (mflInjuryData['11150']) {
+      console.log('🔍 Geno Smith (11150) injury data loaded:', mflInjuryData['11150']);
+    } else {
+      console.log('⚠️  Geno Smith (11150) NOT found in MFL injury data');
+    }
+  }
+} catch (error) {
+  console.warn(`Live injury data not available for week ${currentWeek}:`, error.message);
+}
+
 const recordsBySeason = {};
 Object.entries(standingsFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
@@ -471,7 +492,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
     const draftPick = parseDraft(feedPlayer?.draft_pick);
     const draftTeam = (player.draftTeam ?? feedPlayer?.draft_team ?? '').toUpperCase() || null;
 
-    return {
+    const playerObj = {
       id: player.id,
       name: player.name,
       position: player.position ?? 'N/A',
@@ -501,8 +522,8 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       experience: player.sleeper?.experience ?? null,
       depthChartPosition: player.sleeper?.depthChartPosition ?? null,
       depthChartOrder: player.sleeper?.depthChartOrder ?? null,
-      injuryStatus: player.sleeper?.injuryStatus ?? null,
-      injuryBodyPart: player.sleeper?.injuryBodyPart ?? null,
+      injuryStatus: mflInjuryData[player.id]?.injuryStatus ?? player.sleeper?.injuryStatus ?? null,
+      injuryBodyPart: mflInjuryData[player.id]?.injuryBodyPart ?? player.sleeper?.injuryBodyPart ?? null,
       sleeperId: player.sleeper?.id ?? null,
       sleeperFullName: player.sleeper?.fullName ?? null,
       sleeperPosition: player.sleeper?.position ?? null,
@@ -518,6 +539,20 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       depthChartAhead: player.depthChartAhead ?? null,
       tradeBait: tradeBaitPlayerIds.has(String(player.id)),
     };
+
+    // Debug: Log Geno Smith specifically
+    if (player.id === '11150') {
+      console.log('🔍 Geno Smith player object after processing:', {
+        id: playerObj.id,
+        name: playerObj.name,
+        injuryStatus: playerObj.injuryStatus,
+        injuryBodyPart: playerObj.injuryBodyPart,
+        mflInjury: mflInjuryData[player.id],
+        sleeperInjury: player.sleeper?.injuryStatus
+      });
+    }
+
+    return playerObj;
   });
 
   const grouped = {};

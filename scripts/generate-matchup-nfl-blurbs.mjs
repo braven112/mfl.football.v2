@@ -53,11 +53,166 @@ function normalizeTeamCode(teamCode) {
 /**
  * Build the matchup context: which fantasy players are in which NFL games
  */
-function buildMatchupContext() {
+async function buildMatchupContext() {
   const rosters = loadJson('rosters.json');
   const players = loadJson('players.json');
-  const projections = loadJson('projectedScores.json');
   const franchises = loadJson('league.json').league.franchises.franchise;
+  
+  // Load live MFL data (same as main matchup preview page)
+  let liveProjections = {};
+  let mflInjuryData = {};
+  
+  try {
+    // Use JavaScript wrapper to avoid TypeScript import issues
+    const { getMFLData } = await import('./mfl-api-wrapper.js');
+    
+    console.log('🔄 Fetching live data from MFL API...');
+    const { injuryData, projections } = await getMFLData('13522', '2025', week);
+    
+    mflInjuryData = injuryData;
+    liveProjections = projections;
+    
+    console.log(`✅ Loaded live injury data for ${Object.keys(mflInjuryData).length} players from MFL API`);
+    console.log(`✅ Loaded live projections for ${Object.keys(liveProjections).length} players from MFL API`);
+    
+  } catch (error) {
+    console.warn('Failed to load MFL live data, using fallback:', error);
+    
+    // Fallback to static projections if live fetch fails
+    const projections = loadJson('projectedScores.json');
+    const projList = Array.isArray(projections.projectedScores.playerScore)
+      ? projections.projectedScores.playerScore
+      : [projections.projectedScores.playerScore];
+    projList.forEach(p => {
+      if (p.id && p.score) {
+        liveProjections[p.id] = parseFloat(p.score) || 0;
+      }
+    });
+    console.log(`📁 Using static projections for ${Object.keys(liveProjections).length} players as fallback`);
+  }
+  
+  // Load live injury data (same source as main page)
+  let realInjuryData = new Map();
+  
+  try {
+    // Try to load live injury data first
+    const liveInjuryPath = path.join(root, `data/theleague/live-injury-data-week-${week}.json`);
+    
+    if (fs.existsSync(liveInjuryPath)) {
+      const liveInjuryData = JSON.parse(fs.readFileSync(liveInjuryPath, 'utf8'));
+      
+      if (liveInjuryData.injuries) {
+        Object.entries(liveInjuryData.injuries).forEach(([playerId, injuryInfo]) => {
+          realInjuryData.set(playerId, {
+            injuryStatus: injuryInfo.injuryStatus,
+            injuryBodyPart: injuryInfo.injuryBodyPart || ''
+          });
+        });
+        console.log(`✅ Loaded live injury data for ${realInjuryData.size} players (week ${week})`);
+      }
+    } else {
+      // Fallback to MFL player salaries data
+      const playerSalariesPath = path.join(root, 'src/data/mfl-player-salaries-2025.json');
+      if (fs.existsSync(playerSalariesPath)) {
+        const playerSalariesData = JSON.parse(fs.readFileSync(playerSalariesPath, 'utf8'));
+        if (playerSalariesData?.players) {
+          playerSalariesData.players.forEach(player => {
+            if (player.id && player.sleeper?.injuryStatus) {
+              realInjuryData.set(player.id, {
+                injuryStatus: player.sleeper.injuryStatus,
+                injuryBodyPart: player.sleeper.injuryBodyPart
+              });
+            }
+          });
+        }
+        console.log(`📁 Using fallback injury data from MFL player salaries for ${realInjuryData.size} players`);
+      }
+    }
+  } catch (error) {
+    console.warn('Could not load injury data:', error);
+  }
+  
+  // Convert MFL injury data to lookup map (same logic as main page)
+  const injuryData = new Map();
+  Object.entries(mflInjuryData).forEach(([playerId, playerData]) => {
+    if (playerData.injuryStatus) {
+      injuryData.set(playerId, {
+        injuryStatus: playerData.injuryStatus,
+        injuryBodyPart: playerData.injuryBodyPart || ''
+      });
+    }
+  });
+  
+  // Merge with real injury data from MFL player salaries (same as main page)
+  realInjuryData.forEach((injuryInfo, playerId) => {
+    injuryData.set(playerId, injuryInfo);
+  });
+  
+  // Debug: Look for Geno Smith in live MFL data
+  let genoFound = false;
+  Object.entries(mflInjuryData).forEach(([playerId, playerData]) => {
+    if (playerData.name && playerData.name.includes('Geno') && playerData.name.includes('Smith')) {
+      console.log(`🔍 Found Geno Smith in MFL API: ID ${playerId}, Name: ${playerData.name}`);
+      console.log(`   Live Injury Status: ${playerData.injuryStatus || 'Healthy'}`);
+      genoFound = true;
+    }
+  });
+  if (!genoFound) {
+    console.log(`⚠️  Geno Smith not found in MFL API data`);
+  }
+  
+  // Load live starting lineup data (same as main page)
+  let startingLineups = new Map();
+  
+  try {
+    // Try to load live starting lineup data first
+    const liveLineupsPath = path.join(root, `data/theleague/live-starting-lineups-week-${week}.json`);
+    
+    if (fs.existsSync(liveLineupsPath)) {
+      const liveData = JSON.parse(fs.readFileSync(liveLineupsPath, 'utf8'));
+      
+      if (liveData.lineups) {
+        Object.entries(liveData.lineups).forEach(([playerId, lineupData]) => {
+          startingLineups.set(playerId, {
+            isStarting: lineupData.isStarting,
+            franchiseId: lineupData.franchiseId,
+            week: lineupData.week
+          });
+        });
+        console.log(`✅ Loaded live starting lineup data for ${startingLineups.size} players (week ${week})`);
+      }
+    } else {
+      // Fallback to static weekly results data
+      const weeklyResultsPath = path.join(root, 'data/theleague/mfl-feeds/2025/weekly-results-raw.json');
+      
+      if (fs.existsSync(weeklyResultsPath)) {
+        const weeklyResults = JSON.parse(fs.readFileSync(weeklyResultsPath, 'utf8'));
+        const weekData = weeklyResults.find(w => 
+          w.weeklyResults?.matchup?.[0]?.franchise?.[0]?.week === week ||
+          w.weeklyResults?.week === week
+        );
+        
+        if (weekData?.weeklyResults?.matchup) {
+          weekData.weeklyResults.matchup.forEach(matchup => {
+            matchup.franchise?.forEach(franchise => {
+              if (franchise.player) {
+                franchise.player.forEach(player => {
+                  startingLineups.set(player.id, {
+                    isStarting: player.status === 'starter',
+                    franchiseId: franchise.id,
+                    week: parseInt(week)
+                  });
+                });
+              }
+            });
+          });
+        }
+        console.log(`📁 Using fallback starting lineup data for ${startingLineups.size} players`);
+      }
+    }
+  } catch (error) {
+    console.warn('Could not load starting lineup data:', error);
+  }
 
   // Get team names
   const homeTeam = franchises.find(f => f.id === homeTeamId);
@@ -73,11 +228,11 @@ function buildMatchupContext() {
     : [players.players.player];
   playersList.forEach(p => playerMap.set(p.id, p));
 
+  // Use live projections from MFL API (same as main page)
   const projMap = new Map();
-  const projList = Array.isArray(projections.projectedScores.playerScore)
-    ? projections.projectedScores.playerScore
-    : [projections.projectedScores.playerScore];
-  projList.forEach(p => projMap.set(p.id, parseFloat(p.score) || 0));
+  Object.entries(liveProjections).forEach(([id, score]) => {
+    projMap.set(id, score);
+  });
 
   // Build player lists by NFL game
   const nflGames = new Map();
@@ -85,9 +240,35 @@ function buildMatchupContext() {
   function addPlayer(playerId, fantasyTeamId, fantasyTeamName) {
     const player = playerMap.get(playerId);
     if (!player) return;
+    
+    // Only include starters in the analysis
+    const lineupData = startingLineups.get(playerId);
+    if (!lineupData || !lineupData.isStarting) {
+      return; // Skip bench players
+    }
 
     const nflTeam = normalizeTeamCode(player.team);
-    const projection = projMap.get(playerId) || 0;
+    let projection = projMap.get(playerId) || 0;
+    
+    // Apply injury status rule: Out, Doubtful, or IR players get 0 projected points
+    const playerInjuryData = injuryData.get(playerId);
+    
+    // Debug: Check Geno Smith specifically
+    if (player.name.includes('Smith') && player.name.includes('Geno')) {
+      console.log(`🔍 Geno Smith debug:`);
+      console.log(`   Player ID: ${playerId}`);
+      console.log(`   Original projection: ${projMap.get(playerId) || 0}`);
+      console.log(`   Injury data found: ${playerInjuryData ? 'YES' : 'NO'}`);
+      if (playerInjuryData) {
+        console.log(`   Injury status: ${playerInjuryData.injuryStatus}`);
+      }
+    }
+    
+    // Apply same injury logic as main page: Out, Doubtful, IR players get 0 projected points
+    if (playerInjuryData?.injuryStatus && ['Out', 'Doubtful', 'IR'].includes(playerInjuryData.injuryStatus)) {
+      projection = 0;
+      console.log(`🏥 Setting ${player.name} projection to 0 due to injury status: ${playerInjuryData.injuryStatus}`);
+    }
 
     if (!nflGames.has(nflTeam)) {
       nflGames.set(nflTeam, []);
@@ -100,7 +281,9 @@ function buildMatchupContext() {
       nflTeam,
       projection,
       fantasyTeamId,
-      fantasyTeamName
+      fantasyTeamName,
+      isStarting: true, // All players in this analysis are starters
+      injuryStatus: playerInjuryData?.injuryStatus || 'Healthy'
     });
   }
 
@@ -193,25 +376,76 @@ function getMatchupGames(context) {
 function buildPrompt(context, games, matchupStory) {
   const systemPrompt = `You are writing contextual NFL game analysis for a fantasy football matchup between ${context.homeTeam.name} and ${context.awayTeam.name}.
 
-CRITICAL RULES:
-- NEVER mention players not listed in the data for that specific game
-- NEVER use "strategy" language - use outcome/impact language instead
-- Focus ONLY on the players actually playing in THIS game
-- Analyze potential outcomes, not strategies
+🚨 ABSOLUTE CRITICAL RULES - PLAYER RESTRICTIONS:
+- You can ONLY mention players explicitly listed in the "homePlayers" and "awayPlayers" arrays for each specific NFL game
+- NEVER mention any player not in those exact lists
+- NEVER reference players from other NFL games
+- NEVER mention players from other fantasy teams not in this matchup
+- NEVER mention bench players - ALL players in the lists are STARTERS ONLY
+- If you mention a player name, it MUST appear in the provided player list for that game
+
+ANALYSIS PRIORITY ORDER:
+1. DEFENSIVE MATCHUP ANALYSIS: Focus on key players vs opponent defense rankings (e.g., "McCaffrey vs #4 run defense", "Jefferson vs #28 pass defense")
+2. KEY PLAYER PROJECTIONS: Highlight top projected players with position-appropriate language (see thresholds below)
+3. MAJOR LINEUP OPTIMIZATION: Only flag if starter has 10+ point projection difference vs bench alternative
+4. INJURY CONCERNS: Note injured starters only if significantly impactful to game outcome
+
+PROJECTION LANGUAGE GUIDELINES:
+HIGH PROJECTIONS - Use "explosive/elite/massive" language ONLY for:
+- QB: 30+ points (anything less is "solid" or "decent")
+- RB/WR: 25+ points (anything less is "good" or "solid") 
+- TE: 20+ points (anything less is "reliable" or "steady")
+- K: 20+ points (anything less is "consistent" or "solid")
+- DEF: 20+ points (anything less is "dependable" or "steady")
+
+LOW PROJECTIONS - Use "concerning/limited/minimal" language for:
+- QB: Under 15 points = "limited QB production" or "concerning projection"
+- RB/WR/TE: Under 10 points = "minimal impact" or "limited upside"
+- K: Under 3 points = "concerning kicker floor" or "minimal scoring"
+- DEF: Under 5 points = "limited defensive upside" or "concerning floor"
+
+Examples with PROJECTION language:
+- Sam Darnold 20.7 pts = "projected for solid QB production" (NOT "explosive" - under 30)
+- Saquon Barkley 16.5 pts = "projects reliable RB output" (NOT "elite" - under 25)
+- DeAndre Hopkins 3.3 pts = "projects minimal WR impact" (under 10 - concerning)
+- Cade Stover 2.3 pts = "expected limited TE production" (under 10 - concerning)
+
+WRONG: "Barkley brings 16.5 points" (sounds like already happened)
+RIGHT: "Barkley projected for 16.5 points" (clearly a projection)
 
 Each blurb must:
-- Focus on the fantasy implications of THIS specific NFL game
-- Reference ONLY the players shown in the game data
-- Be 150-200 characters (player names shown separately, don't repeat)
-- Analyze the potential impact/outcome for the matchup
-- Avoid words like "strategy", "lineup", "game plan" - use "potential", "impact", "outcome" instead`;
+- Be 100-150 characters (longer than before for better analysis)
+- Prioritize defensive matchup rankings as the primary insight
+- Reference ONLY the players shown in the specific game's player lists
+- Focus on opponent defense rankings vs player positions as main talking point
+- Include specific defensive rankings when available (e.g., "#4 vs RB", "#28 vs WR")
+- If no players are listed for a game, focus on general game context without player names`;
 
-  const gamesData = games.map(g => ({
-    nflMatchup: `${g.nflTeam1} @ ${g.nflTeam2}`,
-    homePlayers: g.homePlayers.map(p => `${p.name} (${p.position}, proj: ${p.projection.toFixed(1)})`),
-    awayPlayers: g.awayPlayers.map(p => `${p.name} (${p.position}, proj: ${p.projection.toFixed(1)})`),
-    gameInfo: `${g.day} ${g.time}${g.channel ? ', ' + g.channel : ''}`
-  }));
+  // Enhanced game data with lineup analysis context
+  const gamesData = games.map(g => {
+    // Analyze lineup issues for this game
+    const lineupIssues = [];
+    const injuryIssues = [];
+    
+    // Group players by team and analyze
+    const teamGroups = {};
+    [...g.homePlayers, ...g.awayPlayers].forEach(player => {
+      if (!teamGroups[player.fantasyTeamId]) {
+        teamGroups[player.fantasyTeamId] = { starters: [], bench: [] };
+      }
+      // For now, assume all players in the data are starters (we'd need starting lineup data to be more accurate)
+      teamGroups[player.fantasyTeamId].starters.push(player);
+    });
+
+    return {
+      nflMatchup: `${g.nflTeam1} @ ${g.nflTeam2}`,
+      homePlayers: g.homePlayers.map(p => `${p.name} (${p.position}, proj: ${p.projection.toFixed(1)})`),
+      awayPlayers: g.awayPlayers.map(p => `${p.name} (${p.position}, proj: ${p.projection.toFixed(1)})`),
+      gameInfo: `${g.day} ${g.time}${g.channel ? ', ' + g.channel : ''}`,
+      topProjection: Math.max(...[...g.homePlayers, ...g.awayPlayers].map(p => p.projection)),
+      playerCount: g.homePlayers.length + g.awayPlayers.length
+    };
+  });
 
   const userPrompt = `FANTASY MATCHUP:
 ${context.homeTeam.name} vs ${context.awayTeam.name}
@@ -223,23 +457,66 @@ NFL GAMES WITH FANTASY PLAYERS:
 ${JSON.stringify(gamesData, null, 2)}
 
 Generate a contextual analysis for each NFL game. Each blurb should:
-1. Focus on fantasy implications (player names are shown separately)
-2. Highlight what to watch for in this game
-3. Be 150-200 chars total
-4. Explain why this game matters to the matchup outcome
-5. Provide strategic insight or game flow analysis
-6. Tie to the matchup narrative (playoff implications, must-win, etc.)
+
+🚨 CRITICAL PLAYER AND DATA RESTRICTIONS: 
+- You can ONLY mention players from the "homePlayers" and "awayPlayers" arrays for each specific game
+- NEVER mention players not in those exact lists
+- ALL players provided are STARTERS ONLY - no bench players included
+- NEVER INVENT OR MAKE UP PROJECTION NUMBERS - use ONLY the exact projections provided in the data
+- If you mention a projection, it MUST match the exact number shown in the player data
+- Focus analysis on starting players and their matchups only
+- If a player name is not in the provided lists, DO NOT mention them
+
+PRIORITY 1 - DEFENSIVE MATCHUP ANALYSIS: Focus on key players facing specific defense rankings (e.g., "McCaffrey vs #4 run defense")
+PRIORITY 2 - KEY PLAYER PROJECTIONS: Use position-appropriate language based on projection thresholds
+PRIORITY 3 - MAJOR LINEUP ISSUES: Only flag lineup optimization for 10+ point projection differences
+PRIORITY 4 - INJURY IMPACT: Note injured starters only if significantly game-changing
+
+PROJECTION LANGUAGE RULES:
+HIGH THRESHOLDS (use "explosive/elite/massive"):
+- QB 30+ pts | RB/WR 25+ pts | TE 20+ pts | K 20+ pts | DEF 20+ pts
+
+NORMAL RANGE (use "solid/decent/reliable"):
+- QB 15-29 pts | RB/WR/TE 10-24 pts | K 3-19 pts | DEF 5-19 pts
+
+LOW THRESHOLDS (use "concerning/limited/minimal"):
+- QB <15 pts | RB/WR/TE <10 pts | K <3 pts | DEF <5 pts
+
+NEVER use explosive language below high thresholds!
+ALWAYS call out concerning projections below low thresholds!
+
+Requirements:
+- 100-150 characters (longer for better defensive analysis)
+- Focus primarily on defensive matchup rankings vs player positions
+- ONLY mention players explicitly listed in each game's homePlayers/awayPlayers arrays
+- NEVER INVENT PROJECTION NUMBERS - use only the exact projections provided in the data
+- ALWAYS use PROJECTION language: "projected for", "projects to", "expected to score"
+- NEVER use past tense or imply results already happened: NO "scored", "brought", "delivered"
+- Include specific defensive rankings when discussing matchups (e.g., "#4 vs RB", "#28 vs WR")
+- Prioritize opponent defense quality as the main talking point
+- If you mention a projection number, it MUST exactly match the data provided
+- If no players are provided for a game, write general analysis without any player names
+
+🚨 ABSOLUTELY CRITICAL: 
+- NEVER INVENT, GUESS, OR MAKE UP ANY PROJECTION NUMBERS
+- If a player shows "proj: 0.0" then they have ZERO projected points
+- If a player shows "proj: 16.5" then use exactly 16.5, not 16.0 or 17.0
+- ONLY use the exact projection numbers shown in the player data
+- If you mention any projection number, it MUST exactly match what's provided
+- ALWAYS use PROJECTION language - "projected for", "projects to", "expected", NOT past tense
+- NEVER imply players have already scored points - these are FUTURE projections
 
 Return JSON only (no markdown):
 [
   {
-    "nflMatchup": "SF @ LAR",
-    "blurb": "High-scoring divisional battle could swing the matchup. Weather favorable, pace should be fast. This game will likely determine who gets the scoring edge.",
-    "chars": 152
+    "nflMatchup": "SF @ LAR", 
+    "blurb": "McCaffrey projected for 22.1 points vs #4 run defense - tough matchup. Kupp projects 15.3 points vs #28 pass defense.",
+    "chars": 125
   }
 ]
 
-Constraints: Array of objects only. Fields: nflMatchup, blurb (150-200 chars), chars. No extra text.`;
+Constraints: Array of objects only. Fields: nflMatchup, blurb (100-150 chars), chars. No extra text.
+NEVER make up projection numbers - use ONLY the exact numbers provided in the player data!`;
 
   return { systemPrompt, userPrompt };
 }
@@ -269,7 +546,7 @@ async function callModel(systemPrompt, userPrompt) {
 /**
  * Post-process AI response
  */
-function postProcess(raw, games) {
+function postProcess(raw, gamesWithPlayers) {
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
@@ -289,7 +566,7 @@ function postProcess(raw, games) {
     return [];
   }
 
-  // Match blurbs to games and validate
+  // Match blurbs to games and validate (use filtered games with players)
   return parsed
     .map(item => {
       const matchup = item.nflMatchup || '';
@@ -301,7 +578,7 @@ function postProcess(raw, games) {
         return null;
       }
 
-      const game = games.find(g =>
+      const game = gamesWithPlayers.find(g =>
         matchup.includes(g.nflTeam1) && matchup.includes(g.nflTeam2)
       );
 
@@ -329,7 +606,7 @@ async function main() {
   console.log(`   ${homeTeamId} vs ${awayTeamId} (Week ${week})\n`);
 
   // Build context
-  const context = buildMatchupContext();
+  const context = await buildMatchupContext();
   console.log(`📊 Fantasy Teams:`);
   console.log(`   Home: ${context.homeTeam.name}`);
   console.log(`   Away: ${context.awayTeam.name}\n`);
@@ -351,12 +628,30 @@ async function main() {
     matchupStory = storyData.story;
   }
 
+  // Filter games to only include those with players (skip games with no starters to save API costs)
+  const gamesWithPlayers = games.filter(g => 
+    g.homePlayers.length > 0 || g.awayPlayers.length > 0
+  );
+
+  console.log(`💰 Cost optimization: Analyzing ${gamesWithPlayers.length} games with players (skipping ${games.length - gamesWithPlayers.length} games with no starters)`);
+
   // Generate blurbs
-  const { systemPrompt, userPrompt } = buildPrompt(context, games, matchupStory);
+  const { systemPrompt, userPrompt } = buildPrompt(context, gamesWithPlayers, matchupStory);
+  
+  // Debug: Show what data is being sent to AI
+  console.log('🔍 Sample game data being sent to AI:');
+  if (gamesWithPlayers.length > 0) {
+    const sampleGame = gamesWithPlayers.find(g => g.awayPlayers.some(p => p.name.includes('Smith')));
+    if (sampleGame) {
+      console.log(`   Game: ${sampleGame.nflTeam1} @ ${sampleGame.nflTeam2}`);
+      console.log(`   Away Players: ${sampleGame.awayPlayers.map(p => `${p.name} (proj: ${p.projection})`).join(', ')}`);
+    }
+  }
+  
   console.log('🤖 Calling Claude API...\n');
 
   const raw = await callModel(systemPrompt, userPrompt);
-  const blurbs = postProcess(raw, games);
+  const blurbs = postProcess(raw, gamesWithPlayers);
 
   // Save output
   const output = {
