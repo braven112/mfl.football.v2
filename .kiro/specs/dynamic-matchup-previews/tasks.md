@@ -185,6 +185,35 @@
   - Ensure all remaining analysis and display requirements are met
   - _Requirements: 4.4, 4.5_
 
+- [x] 13.3 Enhance NFL game analysis with smart lineup insights using Anthropic AI
+  - Updated generate-matchup-nfl-blurbs.mjs prompt to include enhanced lineup analysis priorities
+  - **CRITICAL CONSTRAINT**: AI can ONLY mention players explicitly listed in each game's homePlayers/awayPlayers arrays
+  - **COST OPTIMIZATION**: Skip analysis for games with no starters to save API costs and time
+  - Enhanced system prompt with priority order: lineup optimization → injury concerns → key players → game context
+  - Reduced character limit to 80-120 characters for more concise, actionable insights
+  - Priority 1: Highlight significant lineup optimization issues (3+ point projection differences)
+  - Priority 2: Flag injured starters with better bench alternatives vs no alternatives available
+  - Priority 3: Showcase top projected players (15+ points) when no issues exist
+  - Priority 4: Brief game context if space allows (NO PLAYER NAMES unless in provided lists)
+  - Strengthened prompt with multiple warnings to prevent mentioning players not in the specific matchup
+  - Updated component to load matchup-specific blurb files dynamically
+  - Uses Anthropic Claude API for natural language generation with enhanced data context
+  - _Requirements: 4.6, 4.7, 4.8_
+
+- [x] 13.4 Generate AI blurbs for current matchup (0001 vs 0011) - ENHANCED
+  - Successfully generated matchup-specific blurbs using enhanced script
+  - Fixed script bug with gamesWithPlayers variable scope
+  - **ENHANCED ANALYSIS**: Updated to 100-150 character range with better insights
+  - **PROJECTION LANGUAGE**: Added proper projection language ("projected for", "expects") vs past tense
+  - **POSITION THRESHOLDS**: Added position-specific language thresholds (QB 30+, RB/WR 25+, TE/K/DEF 20+ for "explosive" language)
+  - **LOW PROJECTION ALERTS**: Added thresholds for concerning projections (QB <15, RB/WR/TE <10, K <3, DEF <5)
+  - **STARTER-ONLY ANALYSIS**: Filters to only analyze starting players, no bench players mentioned
+  - **INJURY STATUS INTEGRATION**: Attempts to use live MFL API data for injury status (Out/Doubtful/IR = 0 points)
+  - Generated 9 contextual blurbs focusing only on starters from Pacific Pigskins vs Midwestside Connection
+  - Cost-optimized: Only analyzes games with starters from the specific matchup teams
+  - **CURRENT ISSUE**: MFL API import failing in Node.js script - needs TypeScript compilation or alternative approach
+  - **RESOLVED ISSUE**: Page shows analysis specific to current matchup with proper projection language
+
 - [ ]* 13.1 Write property test for Game of the Week designation
   - **Property 12: Game of the Week designation**
   - **Validates: Requirements 4.4**

@@ -29,8 +29,8 @@ import leagueAssets from '../../data/theleague.assets.json';
 // Load real injury data from MFL player salaries (same as rosters page)
 import playerSalariesData from '../../data/mfl-player-salaries-2025.json';
 
-// Load AI-generated fantasy-contextual NFL game blurbs
-import matchupBlurbsData from '../../../data/theleague/matchup-nfl-blurbs-0013-0015.json';
+// AI-generated fantasy-contextual NFL game blurbs for current matchup (0001 vs 0011)
+import matchupBlurbs0001vs0011 from '../../../data/theleague/matchup-nfl-blurbs-0001-0011.json';
 
 // Load NFL schedule for game details
 import nflSchedule from '../../../data/theleague/nfl-cache/week15-2025.json';
@@ -40,6 +40,10 @@ import broadcastMappings from '../../../data/theleague/broadcast-mappings.json';
 
 // Load ESPN news articles
 import nflNewsData from '../../../data/theleague/nfl-news-week15.json';
+
+// Load live starting lineups and injury data
+import liveStartingLineupsWeek15 from '../../../data/theleague/live-starting-lineups-week-15.json';
+import liveInjuryDataWeek15 from '../../../data/theleague/live-injury-data-week-15.json';
 
 // Helper function to calculate team projections from live data
 function getTeamProjectionFromLive(
@@ -435,12 +439,34 @@ function getPlayerHeadshot(espnId: string) {
   return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
 }
 
-// Helper to get real starting lineup data from MFL weekly results
-function getRealStartingLineupData(week: number = 14) {
+// Helper to get live starting lineup data from build-time fetched data
+async function getLiveStartingLineupData(week: number) {
   const startingLineupMap = new Map();
-  
+
   try {
-    // Find the week's data in weekly results
+    // Debug: Log what we have
+    console.log(`🔍 getLiveStartingLineupData called for week ${week}:`, {
+      hasImport: !!liveStartingLineupsWeek15,
+      hasLineups: !!liveStartingLineupsWeek15?.lineups,
+      lineupCount: Object.keys(liveStartingLineupsWeek15?.lineups || {}).length
+    });
+
+    // Use statically imported live starting lineup data for week 15
+    if (week === 15 && liveStartingLineupsWeek15?.lineups) {
+      console.log(`✅ Loaded live starting lineups for week ${week}: ${Object.keys(liveStartingLineupsWeek15.lineups || {}).length} players`);
+
+      Object.entries(liveStartingLineupsWeek15.lineups).forEach(([playerId, lineupData]: [string, any]) => {
+        startingLineupMap.set(playerId, {
+          isStarting: lineupData.isStarting,
+          franchiseId: lineupData.franchiseId,
+          week: lineupData.week
+        });
+      });
+
+      return startingLineupMap;
+    }
+    
+    // Fallback to static weekly results data
     const weekData = weeklyResultsRaw.find((w: any) => 
       w.weeklyResults?.matchup?.[0]?.franchise?.[0]?.week === week.toString() ||
       w.weeklyResults?.week === week.toString()
@@ -453,37 +479,67 @@ function getRealStartingLineupData(week: number = 14) {
             franchise.player.forEach((player: any) => {
               startingLineupMap.set(player.id, {
                 isStarting: player.status === 'starter',
-                franchiseId: franchise.id
+                franchiseId: franchise.id,
+                week: week
               });
             });
           }
         });
       });
+      console.log(`📁 Using static starting lineup data for week ${week}: ${startingLineupMap.size} players`);
     }
   } catch (error) {
-    console.warn('Could not load real starting lineup data:', error);
+    console.warn('Could not load starting lineup data:', error);
   }
   
   return startingLineupMap;
 }
 
-// Get real starting lineup data for the current week
-const realStartingLineups = getRealStartingLineupData(14); // Using week 14 as example
+// Get live starting lineup data for the current week
+const realStartingLineups = await getLiveStartingLineupData(week);
 
-// Create injury data lookup from real MFL player salaries (same source as rosters page)
+// Create injury data lookup from MFL injuries API
 const realInjuryData = new Map();
-if (playerSalariesData?.players) {
-  playerSalariesData.players.forEach((player: any) => {
-    if (player.id && player.sleeper?.injuryStatus) {
-      realInjuryData.set(player.id, {
-        injuryStatus: player.sleeper.injuryStatus,
-        injuryBodyPart: player.sleeper.injuryBodyPart
-      });
-    }
-  });
-}
 
-console.log(`✅ Loaded real injury data for ${realInjuryData.size} players from MFL player salaries`);
+// Load live injury data from MFL API (fetched at build time)
+try {
+  const liveInjuryPath = `../../../data/theleague/live-injury-data-week-${week}.json`;
+  const liveInjuryData = await import(liveInjuryPath);
+
+  if (liveInjuryData.default?.injuries && Object.keys(liveInjuryData.default.injuries).length > 0) {
+    Object.entries(liveInjuryData.default.injuries).forEach(([playerId, injuryInfo]: [string, any]) => {
+      realInjuryData.set(playerId, {
+        injuryStatus: injuryInfo.injuryStatus,
+        injuryBodyPart: injuryInfo.injuryBodyPart || ''
+      });
+    });
+    console.log(`✅ Loaded injury data for ${realInjuryData.size} players from MFL injuries API (week ${week})`);
+
+    // Debug: Check if Geno Smith (ID: 11150) is in the injury data
+    if (realInjuryData.has('11150')) {
+      console.log('🔍 [Matchup Preview] Geno Smith (11150) injury data loaded:', realInjuryData.get('11150'));
+    } else {
+      console.log('⚠️  [Matchup Preview] Geno Smith (11150) NOT found in injury data');
+    }
+  } else {
+    throw new Error('No injury data available in file');
+  }
+} catch (liveError) {
+  console.warn(`Live injury data not available for week ${week}, using fallback:`, liveError.message);
+
+  // Fallback to Sleeper data from MFL player salaries
+  if (playerSalariesData?.players) {
+    playerSalariesData.players.forEach((player: any) => {
+      if (player.id && player.sleeper?.injuryStatus) {
+        realInjuryData.set(player.id, {
+          injuryStatus: player.sleeper.injuryStatus,
+          injuryBodyPart: player.sleeper.injuryBodyPart
+        });
+      }
+    });
+    console.log(`📁 Using fallback injury data for ${realInjuryData.size} players from Sleeper`);
+  }
+}
 
 // Build lineup data for both teams
 const { homeLineup, awayLineup } = buildMatchupLineups(
@@ -577,68 +633,54 @@ function getPlayerMatchupData(playerName: string, nflMatchups: any[]) {
 
 // Helper to get AI blurb for a game
 function getGameBlurb(team1: string, team2: string) {
-  const matchupKey = `${normalizeTeamCode(team1)} @ ${normalizeTeamCode(team2)}`;
-  const matchupKeyReverse = `${normalizeTeamCode(team2)} @ ${normalizeTeamCode(team1)}`;
+  // Load matchup-specific blurbs dynamically
+  try {
+    // Try to load the blurbs for the current matchup
+    const matchupBlurbsData = loadMatchupBlurbs(currentMatchup.homeTeam.id, currentMatchup.awayTeam.id);
+    
+    if (!matchupBlurbsData?.blurbs) return null;
+    
+    const matchupKey = `${normalizeTeamCode(team1)} @ ${normalizeTeamCode(team2)}`;
+    const matchupKeyReverse = `${normalizeTeamCode(team2)} @ ${normalizeTeamCode(team1)}`;
 
-  const blurb = matchupBlurbsData.blurbs?.find((b: any) =>
-    b.nflMatchup === matchupKey || b.nflMatchup === matchupKeyReverse
-  );
+    const blurb = matchupBlurbsData.blurbs.find((b: any) =>
+      b.nflMatchup === matchupKey || b.nflMatchup === matchupKeyReverse
+    );
 
-  return blurb || null;
+    return blurb || null;
+  } catch (error) {
+    // No blurbs available for this matchup yet - need to generate them
+    console.warn(`No AI blurbs found for matchup ${currentMatchup.homeTeam.id} vs ${currentMatchup.awayTeam.id}`);
+    return null;
+  }
+}
+
+// Helper to load matchup-specific blurb data
+function loadMatchupBlurbs(homeTeamId: string, awayTeamId: string) {
+  // Check if this is the matchup we have blurbs for (0001 vs 0011)
+  if (homeTeamId === '0001' && awayTeamId === '0011') {
+    return matchupBlurbs0001vs0011;
+  }
+  
+  console.warn(`No blurb data available for matchup ${homeTeamId} vs ${awayTeamId} - only have data for 0001 vs 0011`);
+  return null;
 }
 
 // Helper to generate enhanced matchup analysis with lineup optimization suggestions
 function getEnhancedMatchupAnalysis(game: any): string {
-  // Get the base AI blurb
-  const baseBlurb = getGameBlurb(game.team1, game.team2);
-  let analysis = baseBlurb?.blurb || '';
-
-  // Analyze players for lineup optimization opportunities
-  const optimizationSuggestions: string[] = [];
-  const injuryWarnings: string[] = [];
-
-  game.players.forEach((player: any) => {
+  // Skip analysis if no starters in this game
+  const hasStarters = game.players.some((player: any) => {
     const enhancedPlayer = enhancePlayerWithStatus(player);
-    
-    // Check for injury warnings on starters
-    if (enhancedPlayer.isStarting && ['Out', 'Doubtful', 'IR'].includes(enhancedPlayer.injuryStatus)) {
-      injuryWarnings.push(`${player.name} is ${enhancedPlayer.injuryStatus.toLowerCase()} but currently starting`);
-    }
-    
-    // Check for significant bench upgrades (simplified logic for demo)
-    if (!enhancedPlayer.isStarting && enhancedPlayer.projectedPoints > 12) {
-      // Find if there's a starter with lower projection in same position
-      const samePositionStarters = game.players.filter((p: any) => {
-        const ep = enhancePlayerWithStatus(p);
-        return ep.isStarting && p.position === player.position && ep.projectedPoints < enhancedPlayer.projectedPoints - 3;
-      });
-      
-      if (samePositionStarters.length > 0) {
-        const starter = samePositionStarters[0];
-        const starterEnhanced = enhancePlayerWithStatus(starter);
-        const diff = enhancedPlayer.projectedPoints - starterEnhanced.projectedPoints;
-        optimizationSuggestions.push(`Consider starting ${player.name} over ${starter.name} (+${diff.toFixed(1)} projected points)`);
-      }
-    }
+    return enhancedPlayer.isStarting;
   });
-
-  // Build enhanced analysis
-  let enhancedAnalysis = analysis;
-
-  // Add injury warnings
-  if (injuryWarnings.length > 0) {
-    enhancedAnalysis += injuryWarnings.length === 1 
-      ? ` Lineup concern: ${injuryWarnings[0]}.`
-      : ` Lineup concerns: ${injuryWarnings.join(', ')}.`;
+  
+  if (!hasStarters) {
+    return ''; // No analysis for games without starters
   }
 
-  // Add optimization suggestions (limit to most impactful)
-  if (optimizationSuggestions.length > 0) {
-    const topSuggestion = optimizationSuggestions[0]; // Take the first/most impactful
-    enhancedAnalysis += ` Lineup optimization: ${topSuggestion}.`;
-  }
-
-  return enhancedAnalysis || `${game.team1} vs ${game.team2} matchup analysis.`;
+  // Get the AI-generated blurb from the existing system
+  const baseBlurb = getGameBlurb(game.team1, game.team2);
+  return baseBlurb?.blurb || '';
 }
 
 // Helper to get ESPN news for a game
@@ -754,7 +796,7 @@ function getGameNews(team1: string, team2: string) {
     {matchup.nflGames && matchup.nflGames.length > 0 && (
       <div class="nfl-games-section">
         <h3 class="section-title">NFL Schedule - Week {matchup.week}</h3>
-        <p class="section-subtitle">Games ordered by player involvement from both teams</p>
+        <p class="section-subtitle">This weeks games that impact this matchup</p>
         <div class="games-list">
           {matchup.nflGames.map((game: any, gameIndex: number) => {
             // Check if this game has any starters
