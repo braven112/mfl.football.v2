@@ -1754,25 +1754,9 @@ function getGameNews(team1: string, team2: string) {
     padding: 0.1875rem 0.375rem;
   }
 
-  /* Clean compact indicators without start/bench badges or upgrade buttons */
+  /* Clean compact indicators - elements are conditionally rendered, no need to hide with CSS */
   :global(.player-status-container.compact-clean) {
     gap: 0.25rem;
-  }
-
-  :global(.player-status-container.compact-clean .player-status-badge) {
-    display: none; /* Hide start/bench badges since grouping makes it clear */
-  }
-
-  :global(.player-status-container.compact-clean .upgrade-indicator) {
-    display: none; /* Hide upgrade buttons - will be moved to matchup analysis */
-  }
-
-  :global(.player-status-container.compact-clean .injury-status-simple) {
-    display: none; /* Hide injury status since it's now inline with player name */
-  }
-
-  :global(.player-status-container.compact-clean .ir-eligible-indicator) {
-    display: none; /* Hide IR indicator since injury status is now inline with player name */
   }
 
   .player-header {

@@ -14,6 +14,9 @@ export interface Props {
 
 const { player, showOptimization = true, className = '' } = Astro.props;
 
+// Determine if we're in compact-clean mode (no badges/indicators)
+const isCompactClean = className.includes('compact-clean');
+
 // Determine badge type and styling
 const isStarting = player.isStarting;
 const hasInjury = player.injuryStatus !== 'Healthy';
@@ -28,23 +31,23 @@ const badgeClasses = [
   isSerious && isStarting ? 'serious-injury' : '',
   className
 ].filter(Boolean).join(' ');
-
-// Removed injuryClasses since we're using simple text styling now
 ---
 
 <div class={`player-status-container ${className}`}>
-  <!-- Starting/Bench Badge -->
-  <div class={badgeClasses}>
-    <span class="badge-text">
-      {isStarting ? 'START' : 'BENCH'}
-    </span>
-    {isStarting && (
-      <span class="starting-icon">⭐</span>
-    )}
-  </div>
+  {!isCompactClean && (
+    <!-- Starting/Bench Badge (only shown when not in compact-clean mode) -->
+    <div class={badgeClasses}>
+      <span class="badge-text">
+        {isStarting ? 'START' : 'BENCH'}
+      </span>
+      {isStarting && (
+        <span class="starting-icon">⭐</span>
+      )}
+    </div>
+  )}
 
-  <!-- Injury Status Indicator - Simple red text following existing design convention -->
-  {hasInjury && (
+  {!isCompactClean && hasInjury && (
+    <!-- Injury Status Indicator - Simple red text (only when not compact-clean) -->
     <span class="injury-status-simple" title={`${player.name} is ${player.injuryStatus}`}>
       ({player.injuryStatus === 'Out' && 'O'})
       ({player.injuryStatus === 'Doubtful' && 'D'})
@@ -53,16 +56,16 @@ const badgeClasses = [
     </span>
   )}
 
-  <!-- Bench Upgrade Indicator -->
-  {showOptimization && hasUpgrade && !isStarting && (
+  {!isCompactClean && showOptimization && hasUpgrade && !isStarting && (
+    <!-- Bench Upgrade Indicator (only when not compact-clean) -->
     <div class="upgrade-indicator" title={`Better option available: +${player.benchUpgrade?.pointsDifference?.toFixed(1)} pts`}>
       <span class="upgrade-icon">📈</span>
       <span class="upgrade-text">UPGRADE</span>
     </div>
   )}
 
-  <!-- IR Eligible Indicator -->
-  {player.isIReligible && (
+  {!isCompactClean && player.isIReligible && (
+    <!-- IR Eligible Indicator (only when not compact-clean) -->
     <div class="ir-eligible-indicator" title={`${player.name} is eligible for IR`}>
       <span class="ir-icon">🏥</span>
       <span class="ir-text">IR ELIGIBLE</span>
