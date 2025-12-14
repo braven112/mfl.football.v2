@@ -178,9 +178,10 @@
   - **Property 18: Analysis injury status reflection**
   - **Validates: Requirements 6.4**
 
-- [ ] 13. Add remaining game features and polish
+- [x] 13. Add remaining game features and polish
   - Implement "Game of the Week" designation for highest projected points
-  - Add player count displays with roster icons
+  - Player count displays implemented via section headers (Starters/Bench counts) and SundayTicketMultiView
+  - Removed redundant player count badge from accordion headers to reduce visual clutter
   - Ensure all remaining analysis and display requirements are met
   - _Requirements: 4.4, 4.5_
 
