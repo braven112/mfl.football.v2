@@ -248,43 +248,62 @@ const { links, title = "On This Page" } = Astro.props;
     // Observer options
     const observerOptions = {
       root: null,
-      rootMargin: '-2rem 0px -66%',
-      threshold: 0
+      rootMargin: '-100px 0px -60%',
+      threshold: [0, 0.1, 0.25, 0.5, 0.75, 1]
     };
 
     // Track if user is manually scrolling (not via click)
     let isManualScroll = true;
     let scrollTimeout: number | null = null;
 
+    // Track all visible sections
+    const visibleSections = new Set<string>();
+
     const observer = new IntersectionObserver((entries) => {
+      // Update visible sections
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const id = entry.target.id;
-
-          // Update active link
-          links.forEach(link => {
-            const linkId = link.getAttribute('data-anchor-link');
-            if (linkId === id) {
-              link.classList.add('active');
-
-              // Scroll link into view in the nav if needed
-              link.scrollIntoView({
-                block: 'nearest',
-                behavior: 'smooth'
-              });
-
-              // Update URL hash if user is manually scrolling (not clicking links)
-              if (isManualScroll) {
-                // Use replaceState to avoid adding to browser history
-                const newUrl = `${window.location.pathname}#${id}`;
-                window.history.replaceState(null, '', newUrl);
-              }
-            } else {
-              link.classList.remove('active');
-            }
-          });
+          visibleSections.add(entry.target.id);
+        } else {
+          visibleSections.delete(entry.target.id);
         }
       });
+
+      // Find the topmost visible section
+      let activeId: string | null = null;
+      for (const section of sections) {
+        if (visibleSections.has(section.id)) {
+          activeId = section.id;
+          break;
+        }
+      }
+
+      // Update active link and URL
+      if (activeId) {
+        links.forEach(link => {
+          const linkId = link.getAttribute('data-anchor-link');
+          if (linkId === activeId) {
+            link.classList.add('active');
+
+            // Scroll link into view in the nav if needed
+            link.scrollIntoView({
+              block: 'nearest',
+              behavior: 'smooth'
+            });
+
+            // Update URL hash if user is manually scrolling (not clicking links)
+            if (isManualScroll) {
+              // Use replaceState to avoid adding to browser history
+              const newUrl = `${window.location.pathname}#${activeId}`;
+              if (window.location.hash !== `#${activeId}`) {
+                window.history.replaceState(null, '', newUrl);
+              }
+            }
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
     }, observerOptions);
 
     // Observe all sections
