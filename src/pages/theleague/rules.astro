@@ -1,5 +1,36 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import AnchorNav from '../../components/theleague/AnchorNav.astro';
+
+// Define all the section links for the anchor navigation
+const sectionLinks = [
+  { id: 'league-information', label: 'League Information' },
+  { id: 'important-dates', label: 'Important Dates' },
+  { id: 'division-setup', label: 'Division Setup' },
+  { id: 'team-rosters', label: 'Team Rosters' },
+  { id: 'injured-reserve', label: 'Injured Reserve' },
+  { id: 'starting-rosters', label: 'Starting Rosters' },
+  { id: 'salary-caps-contracts', label: 'Salary Caps & Contracts' },
+  { id: 'rookie-salaries', label: 'Rookie Salaries' },
+  { id: 'trades', label: 'Trades' },
+  { id: 'player-tags', label: 'Player Tags' },
+  { id: 'veteran-extensions', label: 'Veteran Extensions' },
+  { id: 'rookie-extensions', label: 'Rookie Extensions' },
+  { id: 'first-round-team-option', label: '1st Round Team Option' },
+  { id: 'compensatory-picks', label: 'Compensatory Picks' },
+  { id: 'rookie-draft', label: 'Rookie Draft' },
+  { id: 'free-agent-bidding', label: 'Free Agent Bidding' },
+  { id: 'in-season-free-agent-blind-bidding-process', label: 'In-Season Free Agent Bidding' },
+  { id: 'waiving-players', label: 'Waiving Players' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'scoring-errors', label: 'Scoring Errors' },
+  { id: 'game-tiebreakers', label: 'Game Tiebreakers' },
+  { id: 'standings-tiebreakers', label: 'Standings Tiebreakers' },
+  { id: 'playoff-structure', label: 'Playoff Structure' },
+  { id: 'payouts', label: 'Payouts' },
+  { id: 'replacement-owners', label: 'Replacement Owners' },
+  { id: 'rule-changes', label: 'Rule Changes' },
+];
 ---
 
 <TheLeagueLayout title="League Rules & Constitution">
@@ -9,39 +40,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <h1 class="section-title">League Rules & Constitution</h1>
         <p class="subtitle">Official rulebook for The League dynasty/salary cap fantasy football league</p>
       </div>
-      <nav class="jump-nav">
-        <label for="sectionSelect"><strong>Jump to Section:</strong></label>
-        <select id="sectionSelect" onchange="location = this.value;">
-          <option value="#">Select a section...</option>
-          <option value="#league-information">League Information</option>
-          <option value="#important-dates">Important Dates</option>
-          <option value="#division-setup">Division Setup</option>
-          <option value="#team-rosters">Team Rosters</option>
-          <option value="#injured-reserve">Injured Reserve</option>
-          <option value="#starting-rosters">Starting Rosters</option>
-          <option value="#salary-caps-contracts">Salary Caps &amp; Contracts</option>
-          <option value="#rookie-salaries">Rookie Salaries</option>
-          <option value="#trades">Trades</option>
-          <option value="#player-tags">Player Tags</option>
-          <option value="#veteran-extensions">Veteran Extensions</option>
-          <option value="#rookie-extensions">Rookie Extensions</option>
-          <option value="#first-round-team-option">1st round Team Option</option>
-          <option value="#compensatory-picks">Compensatory Picks</option>
-          <option value="#rookie-draft">Rookie Draft</option>
-          <option value="#free-agent-bidding">Free Agent Bidding</option>
-          <option value="#in-season-free-agent-blind-bidding-process">In-Season Free Agent Bidding</option>
-          <option value="#waiving-players">Waiving Players</option>
-          <option value="#schedule">Schedule</option>
-          <option value="#scoring-errors">Scoring Errors</option>
-          <option value="#game-tiebreakers">Game Tiebreakers</option>
-          <option value="#standings-tiebreakers">Standings Tiebreakers</option>
-          <option value="#playoff-structure">Playoff Structure</option>
-          <option value="#payouts">Payouts</option>
-          <option value="#replacement-owners">Replacement Owners</option>
-          <option value="#rule-changes">Rule Changes</option>
-        </select>
-      </nav>
     </header>
+
+    <!-- Anchor Navigation -->
+    <AnchorNav links={sectionLinks} title="Quick Navigation" />
 
     <main id="consitution" class="constitution-wrapper">
       <h2 id="league-information">League Information</h2>
@@ -1072,27 +1074,28 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 </TheLeagueLayout>
 
 <style>
+  /* Smooth scrolling for the entire page */
+  html {
+    scroll-behavior: smooth;
+  }
+
   .rules-page {
     display: grid;
     gap: var(--padding-lg);
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
   }
 
   .rules-hero {
     display: grid;
     justify-content: center;
-    align-items: start;
-    gap: 1.5rem;
+    align-items: center;
     padding: 2rem;
     background: #fff;
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-  }
-
-  @media screen and (min-width: 768px) {
-    .rules-hero {
-      grid-template-columns: 1fr auto;
-      align-items: center;
-    }
+    text-align: center;
   }
 
   .rules-hero__text h1 {
@@ -1109,36 +1112,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   .subtitle {
     font-size: 1rem;
     color: var(--text-secondary-color, #64748b);
-    margin: 0;
-  }
-
-  .jump-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
-  }
-
-  @media screen and (min-width: 768px) {
-    .jump-nav {
-      flex-direction: row;
-      align-items: center;
-      gap: 1rem;
-    }
-  }
-
-  .jump-nav label {
-    font-weight: 600;
-    color: var(--color-text-primary, #1a1a1a);
-  }
-
-  #sectionSelect {
-    padding: 8px;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    cursor: pointer;
-    min-width: 200px;
+    margin: 0.5rem 0 0;
   }
 
   .constitution-wrapper {
@@ -1150,17 +1124,30 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     text-wrap: pretty;
   }
 
+  /* Make room for anchor nav on larger screens */
+  @media (min-width: 1280px) {
+    .constitution-wrapper {
+      max-width: calc(100% - 280px);
+      padding: 2.5rem;
+    }
+  }
+
   .constitution-wrapper h2 {
     text-align: left;
     margin: 2rem 0 1rem;
     font-size: 1.75rem;
     font-weight: 700;
     color: var(--color-text-primary, #1a1a1a);
-    scroll-margin-top: 2rem;
+    scroll-margin-top: 120px;
+    transition: color 0.2s ease;
   }
 
   .constitution-wrapper h2:first-child {
     margin-top: 0;
+  }
+
+  .constitution-wrapper h2:target {
+    color: #3b82f6;
   }
 
   .constitution-wrapper h3 {
@@ -1172,7 +1159,13 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     border-bottom-color: #ddd;
     font-size: 1.35rem;
     font-weight: 600;
-    scroll-margin-top: 2rem;
+    scroll-margin-top: 120px;
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+  }
+
+  .constitution-wrapper h3:target {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
   }
 
   .emphasize {

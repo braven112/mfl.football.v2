@@ -1,0 +1,318 @@
+---
+export interface AnchorLink {
+  id: string;
+  label: string;
+}
+
+interface Props {
+  links: AnchorLink[];
+  title?: string;
+}
+
+const { links, title = "On This Page" } = Astro.props;
+---
+
+<aside class="anchor-nav" id="anchorNav">
+  <nav class="anchor-nav__container">
+    <h3 class="anchor-nav__title">{title}</h3>
+    <ul class="anchor-nav__list" id="anchorNavList">
+      {links.map((link) => (
+        <li class="anchor-nav__item">
+          <a
+            href={`#${link.id}`}
+            class="anchor-nav__link"
+            data-anchor-link={link.id}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</aside>
+
+<style>
+  .anchor-nav {
+    position: fixed;
+    top: 120px;
+    right: max(2rem, calc((100vw - 1400px) / 2));
+    width: 240px;
+    max-height: calc(100vh - 160px);
+    z-index: 100;
+    opacity: 0;
+    transform: translateX(20px);
+    animation: slideIn 0.4s ease-out 0.2s forwards;
+  }
+
+  @keyframes slideIn {
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .anchor-nav__container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    backdrop-filter: blur(8px);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .anchor-nav__container:hover {
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+
+  .anchor-nav__title {
+    margin: 0 0 1rem 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+
+  .anchor-nav__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: calc(100vh - 260px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+  }
+
+  /* Custom scrollbar */
+  .anchor-nav__list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .anchor-nav__list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .anchor-nav__list::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 2px;
+  }
+
+  .anchor-nav__list::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+
+  .anchor-nav__item {
+    margin: 0;
+  }
+
+  .anchor-nav__link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    border-radius: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .anchor-nav__link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, #3b82f6, #2563eb);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .anchor-nav__link:hover {
+    color: #1e293b;
+    background: rgba(59, 130, 246, 0.05);
+    transform: translateX(2px);
+  }
+
+  .anchor-nav__link:hover::before {
+    transform: scaleY(1);
+  }
+
+  .anchor-nav__link.active {
+    color: #1e40af;
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
+    font-weight: 600;
+  }
+
+  .anchor-nav__link.active::before {
+    transform: scaleY(1);
+  }
+
+  /* Pulse animation for active link */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .anchor-nav__link.active::after {
+    content: '';
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    background: #3b82f6;
+    border-radius: 50%;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Hide on smaller screens */
+  @media (max-width: 1280px) {
+    .anchor-nav {
+      display: none;
+    }
+  }
+
+  /* Adjust positioning for very large screens */
+  @media (min-width: 1800px) {
+    .anchor-nav {
+      right: calc((100vw - 1600px) / 2);
+    }
+  }
+</style>
+
+<script>
+  // Smooth scroll behavior with custom easing
+  function smoothScrollTo(targetId: string) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    const targetPosition = target.getBoundingClientRect().top + window.pageYOffset;
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition - 100; // 100px offset for breathing room
+    const duration = 800; // milliseconds
+    let start: number | null = null;
+
+    // Easing function for smooth animation
+    function easeInOutCubic(t: number): number {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function animation(currentTime: number) {
+      if (start === null) start = currentTime;
+      const timeElapsed = currentTime - start;
+      const progress = Math.min(timeElapsed / duration, 1);
+      const ease = easeInOutCubic(progress);
+
+      window.scrollTo(0, startPosition + distance * ease);
+
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    }
+
+    requestAnimationFrame(animation);
+  }
+
+  // Intersection Observer for active link tracking
+  function initializeAnchorNav() {
+    const links = document.querySelectorAll('.anchor-nav__link');
+    const sections = Array.from(links).map(link => {
+      const id = link.getAttribute('data-anchor-link');
+      return id ? document.getElementById(id) : null;
+    }).filter(Boolean) as HTMLElement[];
+
+    if (sections.length === 0) return;
+
+    // Observer options
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -66%',
+      threshold: 0
+    };
+
+    // Track active section
+    let activeSection: string | null = null;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+
+          // Update active link
+          links.forEach(link => {
+            const linkId = link.getAttribute('data-anchor-link');
+            if (linkId === id) {
+              link.classList.add('active');
+              activeSection = id;
+
+              // Scroll link into view in the nav if needed
+              link.scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth'
+              });
+            } else {
+              link.classList.remove('active');
+            }
+          });
+        }
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    sections.forEach(section => observer.observe(section));
+
+    // Click handlers for smooth scrolling
+    links.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('data-anchor-link');
+        if (targetId) {
+          smoothScrollTo(targetId);
+
+          // Update URL without jumping
+          history.replaceState(null, '', `#${targetId}`);
+        }
+      });
+    });
+
+    // Handle direct hash navigation on page load
+    if (window.location.hash) {
+      const targetId = window.location.hash.slice(1);
+      setTimeout(() => {
+        smoothScrollTo(targetId);
+      }, 100);
+    }
+  }
+
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAnchorNav);
+  } else {
+    initializeAnchorNav();
+  }
+
+  // Re-initialize on Astro page transitions
+  document.addEventListener('astro:after-swap', initializeAnchorNav);
+</script>
