@@ -33,9 +33,9 @@ const { links, title = "On This Page" } = Astro.props;
 
 <style>
   .anchor-nav {
-    position: fixed;
+    position: sticky;
     top: 120px;
-    right: max(2rem, calc((100vw - 1400px) / 2));
+    align-self: flex-start;
     width: 240px;
     max-height: calc(100vh - 160px);
     z-index: 100;
@@ -235,7 +235,7 @@ const { links, title = "On This Page" } = Astro.props;
     requestAnimationFrame(animation);
   }
 
-  // Intersection Observer for active link tracking
+  // Intersection Observer for active link tracking and URL hash updates
   function initializeAnchorNav() {
     const links = document.querySelectorAll('.anchor-nav__link');
     const sections = Array.from(links).map(link => {
@@ -248,12 +248,13 @@ const { links, title = "On This Page" } = Astro.props;
     // Observer options
     const observerOptions = {
       root: null,
-      rootMargin: '-100px 0px -66%',
+      rootMargin: '-120px 0px -66%',
       threshold: 0
     };
 
-    // Track active section
-    let activeSection: string | null = null;
+    // Track if user is manually scrolling (not via click)
+    let isManualScroll = true;
+    let scrollTimeout: number | null = null;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -265,13 +266,19 @@ const { links, title = "On This Page" } = Astro.props;
             const linkId = link.getAttribute('data-anchor-link');
             if (linkId === id) {
               link.classList.add('active');
-              activeSection = id;
 
               // Scroll link into view in the nav if needed
               link.scrollIntoView({
                 block: 'nearest',
                 behavior: 'smooth'
               });
+
+              // Update URL hash if user is manually scrolling (not clicking links)
+              if (isManualScroll) {
+                // Use replaceState to avoid adding to browser history
+                const newUrl = `${window.location.pathname}#${id}`;
+                window.history.replaceState(null, '', newUrl);
+              }
             } else {
               link.classList.remove('active');
             }
@@ -289,10 +296,24 @@ const { links, title = "On This Page" } = Astro.props;
         e.preventDefault();
         const targetId = link.getAttribute('data-anchor-link');
         if (targetId) {
+          // Disable automatic hash updates during click-based scrolling
+          isManualScroll = false;
+
+          // Clear any existing timeout
+          if (scrollTimeout !== null) {
+            clearTimeout(scrollTimeout);
+          }
+
           smoothScrollTo(targetId);
 
-          // Update URL without jumping
+          // Update URL immediately when clicking
           history.replaceState(null, '', `#${targetId}`);
+
+          // Re-enable automatic hash updates after scroll animation completes
+          scrollTimeout = window.setTimeout(() => {
+            isManualScroll = true;
+            scrollTimeout = null;
+          }, 1000); // 1000ms matches our 800ms animation + buffer
         }
       });
     });

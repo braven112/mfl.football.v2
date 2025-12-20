@@ -42,10 +42,8 @@ const sectionLinks = [
       </div>
     </header>
 
-    <!-- Anchor Navigation -->
-    <AnchorNav links={sectionLinks} title="Quick Navigation" />
-
-    <main id="consitution" class="constitution-wrapper">
+    <div class="content-with-nav">
+      <main id="consitution" class="constitution-wrapper">
       <h2 id="league-information">League Information</h2>
       <ul>
         <li>The Official League Web Site is <a href="http://theleague.us">theleague.us</a></li>
@@ -1070,6 +1068,10 @@ const sectionLinks = [
       <!-- Back to Top Button -->
       <button id="backToTop">⬆ Back to Top</button>
     </main>
+
+    <!-- Anchor Navigation -->
+    <AnchorNav links={sectionLinks} title="Quick Navigation" />
+    </div>
   </div>
 </TheLeagueLayout>
 
@@ -1115,6 +1117,19 @@ const sectionLinks = [
     margin: 0.5rem 0 0;
   }
 
+  /* Content and nav layout */
+  .content-with-nav {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (min-width: 1280px) {
+    .content-with-nav {
+      grid-template-columns: 1fr 280px;
+    }
+  }
+
   .constitution-wrapper {
     font-size: 1.1rem;
     padding: 2rem;
@@ -1122,12 +1137,11 @@ const sectionLinks = [
     border-radius: 1rem;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     text-wrap: pretty;
+    min-width: 0;
   }
 
-  /* Make room for anchor nav on larger screens */
   @media (min-width: 1280px) {
     .constitution-wrapper {
-      max-width: calc(100% - 280px);
       padding: 2.5rem;
     }
   }
