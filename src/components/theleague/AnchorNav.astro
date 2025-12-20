@@ -34,10 +34,10 @@ const { links, title = "On This Page" } = Astro.props;
 <style>
   .anchor-nav {
     position: sticky;
-    top: 120px;
+    top: 1rem;
     align-self: flex-start;
     width: 240px;
-    max-height: calc(100vh - 160px);
+    max-height: calc(100vh - 2rem);
     z-index: 100;
     opacity: 0;
     transform: translateX(20px);
@@ -208,7 +208,7 @@ const { links, title = "On This Page" } = Astro.props;
 
     const targetPosition = target.getBoundingClientRect().top + window.pageYOffset;
     const startPosition = window.pageYOffset;
-    const distance = targetPosition - startPosition - 100; // 100px offset for breathing room
+    const distance = targetPosition - startPosition - 32; // 2rem (32px) offset for breathing room
     const duration = 800; // milliseconds
     let start: number | null = null;
 
@@ -248,7 +248,7 @@ const { links, title = "On This Page" } = Astro.props;
     // Observer options
     const observerOptions = {
       root: null,
-      rootMargin: '-120px 0px -66%',
+      rootMargin: '-2rem 0px -66%',
       threshold: 0
     };
 
