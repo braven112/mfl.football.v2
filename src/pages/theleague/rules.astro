@@ -1064,9 +1064,6 @@ const sectionLinks = [
         <li>Any unforeseen rule situation not specifically covered in the constitution will be determined by the league
           commish.</li>
       </ul>
-
-      <!-- Back to Top Button -->
-      <button id="backToTop">⬆ Back to Top</button>
     </main>
 
     <!-- Anchor Navigation -->
@@ -1273,27 +1270,6 @@ const sectionLinks = [
     text-align: left;
   }
 
-  /* Back to Top Button */
-  #backToTop {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 15px;
-    font-size: 1rem;
-    background-color: #1c497c;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    z-index: 1000;
-    display: none;
-    transition: opacity 0.3s;
-  }
-
-  #backToTop:hover {
-    background-color: #123456;
-  }
-
   /* Responsive */
   @media (max-width: 767px) {
     .constitution-wrapper {
@@ -1314,25 +1290,3 @@ const sectionLinks = [
     }
   }
 </style>
-
-<script>
-  // Show the button when user scrolls down
-  window.onscroll = function () {
-    const button = document.getElementById("backToTop");
-    if (button) {
-      if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
-        button.style.display = "block";
-      } else {
-        button.style.display = "none";
-      }
-    }
-  };
-
-  // Smooth scroll to top function
-  const backToTopButton = document.getElementById("backToTop");
-  if (backToTopButton) {
-    backToTopButton.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  }
-</script>

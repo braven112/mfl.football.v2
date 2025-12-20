@@ -12,7 +12,8 @@ interface Props {
 const { links, title = "On This Page" } = Astro.props;
 ---
 
-<aside class="anchor-nav" id="anchorNav">
+<!-- Desktop Navigation -->
+<aside class="anchor-nav anchor-nav--desktop" id="anchorNav">
   <nav class="anchor-nav__container">
     <h3 class="anchor-nav__title">{title}</h3>
     <ul class="anchor-nav__list" id="anchorNavList">
@@ -30,6 +31,48 @@ const { links, title = "On This Page" } = Astro.props;
     </ul>
   </nav>
 </aside>
+
+<!-- Mobile FAB and Modal -->
+<div class="anchor-nav--mobile">
+  <!-- FAB Button -->
+  <button class="anchor-fab" id="anchorFab" aria-label="Open navigation menu">
+    <svg class="anchor-fab__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+    <span class="anchor-fab__label" id="fabLabel">Menu</span>
+  </button>
+
+  <!-- Modal Overlay -->
+  <div class="anchor-modal" id="anchorModal">
+    <div class="anchor-modal__backdrop" id="anchorModalBackdrop"></div>
+    <div class="anchor-modal__content">
+      <div class="anchor-modal__header">
+        <h3 class="anchor-modal__title">{title}</h3>
+        <button class="anchor-modal__close" id="anchorModalClose" aria-label="Close menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <ul class="anchor-modal__list">
+        {links.map((link) => (
+          <li class="anchor-modal__item">
+            <a
+              href={`#${link.id}`}
+              class="anchor-modal__link"
+              data-anchor-link-mobile={link.id}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</div>
 
 <style>
   .anchor-nav {
@@ -185,9 +228,13 @@ const { links, title = "On This Page" } = Astro.props;
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  /* Hide on smaller screens */
-  @media (max-width: 1280px) {
-    .anchor-nav {
+  /* Desktop only - hide on mobile */
+  .anchor-nav--desktop {
+    display: block;
+  }
+
+  @media (max-width: 1279px) {
+    .anchor-nav--desktop {
       display: none;
     }
   }
@@ -197,6 +244,208 @@ const { links, title = "On This Page" } = Astro.props;
     .anchor-nav {
       right: calc((100vw - 1600px) / 2);
     }
+  }
+
+  /* ============================================
+     MOBILE NAVIGATION (FAB + Modal)
+     ============================================ */
+
+  /* Hide mobile nav on desktop */
+  .anchor-nav--mobile {
+    display: none;
+  }
+
+  @media (max-width: 1279px) {
+    .anchor-nav--mobile {
+      display: block;
+    }
+  }
+
+  /* FAB Button */
+  .anchor-fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .anchor-fab:hover {
+    transform: scale(1.05);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 20px 25px -5px rgba(59, 130, 246, 0.4);
+  }
+
+  .anchor-fab:active {
+    transform: scale(0.95);
+  }
+
+  .anchor-fab__icon {
+    flex-shrink: 0;
+    margin-top: -.5rem;
+  }
+
+  .anchor-fab__label {
+    position: absolute;
+    bottom: 10px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+
+  /* Modal */
+  .anchor-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .anchor-modal.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .anchor-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .anchor-modal__content {
+    position: relative;
+    width: 100%;
+    max-height: 80vh;
+    background: white;
+    border-radius: 1.5rem 1.5rem 0 0;
+    box-shadow:
+      0 -4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .anchor-modal.is-open .anchor-modal__content {
+    transform: translateY(0);
+  }
+
+  .anchor-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+
+  .anchor-modal__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .anchor-modal__close {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .anchor-modal__close:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .anchor-modal__close:active {
+    transform: scale(0.95);
+  }
+
+  .anchor-modal__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .anchor-modal__item {
+    margin: 0;
+  }
+
+  .anchor-modal__link {
+    display: block;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4b5563;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .anchor-modal__link:hover {
+    background: #f9fafb;
+    color: #1f2937;
+    border-left-color: #3b82f6;
+  }
+
+  .anchor-modal__link:active {
+    background: #f3f4f6;
+  }
+
+  .anchor-modal__link.active {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
+    color: #1e40af;
+    border-left-color: #3b82f6;
+    font-weight: 600;
+  }
+
+  .anchor-modal__link.active::after {
+    content: '✓';
+    position: absolute;
+    right: 1.5rem;
+    color: #3b82f6;
+    font-weight: 700;
   }
 </style>
 
@@ -355,4 +604,101 @@ const { links, title = "On This Page" } = Astro.props;
 
   // Re-initialize on Astro page transitions
   document.addEventListener('astro:after-swap', initializeAnchorNav);
+
+  // ============================================
+  // MOBILE NAVIGATION
+  // ============================================
+
+  function initializeMobileNav() {
+    const fab = document.getElementById('anchorFab');
+    const modal = document.getElementById('anchorModal');
+    const modalBackdrop = document.getElementById('anchorModalBackdrop');
+    const modalClose = document.getElementById('anchorModalClose');
+    const mobileLinks = document.querySelectorAll('.anchor-modal__link');
+    const desktopLinks = document.querySelectorAll('.anchor-nav__link');
+
+    if (!fab || !modal || !modalBackdrop || !modalClose) return;
+
+    // Open modal
+    function openModal() {
+      modal?.classList.add('is-open');
+      document.body.style.overflow = 'hidden'; // Lock body scroll
+    }
+
+    // Close modal
+    function closeModal() {
+      modal?.classList.remove('is-open');
+      document.body.style.overflow = ''; // Restore body scroll
+    }
+
+    // FAB click handler
+    fab.addEventListener('click', openModal);
+
+    // Close button click handler
+    modalClose.addEventListener('click', closeModal);
+
+    // Backdrop click handler
+    modalBackdrop.addEventListener('click', closeModal);
+
+    // Link click handlers
+    mobileLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('data-anchor-link-mobile');
+        if (targetId) {
+          // Close modal first
+          closeModal();
+
+          // Wait for modal close animation, then scroll
+          setTimeout(() => {
+            smoothScrollTo(targetId);
+            history.replaceState(null, '', `#${targetId}`);
+          }, 300); // Match modal close animation duration
+        }
+      });
+    });
+
+    // Sync active state from desktop to mobile
+    // Use MutationObserver to watch for class changes on desktop links
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const desktopLink = mutation.target as HTMLElement;
+          const linkId = desktopLink.getAttribute('data-anchor-link');
+
+          if (linkId) {
+            const mobileLink = document.querySelector(`[data-anchor-link-mobile="${linkId}"]`);
+
+            if (desktopLink.classList.contains('active')) {
+              mobileLink?.classList.add('active');
+            } else {
+              mobileLink?.classList.remove('active');
+            }
+          }
+        }
+      });
+    });
+
+    // Observe all desktop links for class changes
+    desktopLinks.forEach(link => {
+      observer.observe(link, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Handle escape key to close modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal?.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
+  }
+
+  // Initialize mobile nav
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeMobileNav);
+  } else {
+    initializeMobileNav();
+  }
+
+  // Re-initialize on Astro page transitions
+  document.addEventListener('astro:after-swap', initializeMobileNav);
 </script>
