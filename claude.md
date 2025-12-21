@@ -69,6 +69,70 @@ Toilet Bowl Structure:
 - After draft occurs: Display who was actually picked by each team
 - Once 2026 NFL season starts (September): Automatically updates to show 2027 projections
 
+## UI/UX Conventions
+
+### Team Name Display Standards
+
+**IMPORTANT:** All team names across the entire application must use the `chooseTeamName()` utility function to ensure consistent display and prevent UI overflow issues.
+
+#### Implementation
+
+**Location:** `src/utils/team-names.ts`
+
+```typescript
+import { chooseTeamName } from '../../utils/team-names';
+
+// When displaying team names
+const displayName = chooseTeamName([
+  team.teamName,           // Primary team name from MFL
+  assets?.name || '',      // Asset/custom name
+  ...(assets?.aliases || []) // Team aliases
+]);
+```
+
+#### Rules
+
+1. **Maximum Length:** 15 characters
+2. **Selection Priority:**
+   - Filter all candidates to those ≤15 characters
+   - Choose the **longest** name that fits within the limit
+   - If all names exceed 15 chars, truncate the shortest one
+3. **Applies to ALL Leagues:**
+   - `theleague` (dynasty league)
+   - `afl-fantasy` (AFL fantasy league)
+   - Any future leagues added to the platform
+
+#### Why This Matters
+
+- Prevents text overflow in matchup cards, brackets, and roster displays
+- Ensures consistent team name presentation across all pages
+- Handles edge cases where team names are very long (e.g., "Dark Magicians of Chaos" → "Dark Magicians")
+
+#### Where to Use
+
+Apply `chooseTeamName()` when:
+- Building seed maps for playoffs
+- Resolving team data in bracket views
+- Displaying team names in any UI component (matchups, rosters, standings, etc.)
+- Creating team-related data structures
+
+**Example from playoff brackets:**
+```typescript
+// src/utils/playoffs.ts - buildSeedMaps()
+displayName: chooseTeamName([
+  team.teamName,
+  assetMap.get(team.id)?.name || '',
+  ...(assetMap.get(team.id)?.aliases || []),
+])
+
+// src/pages/theleague/playoffs.astro - resolveTeam()
+displayName: chooseTeamName([
+  team.teamName,
+  assets?.name || '',
+  ...(assets?.aliases || []),
+])
+```
+
 ## References
 - **MFL API Documentation:** See [MFL-API.md](MFL-API.md) for comprehensive API reference organized by feature area
 - MFL API Explorer: https://www49.myfantasyleague.com/2025/options?L=13522&O=79

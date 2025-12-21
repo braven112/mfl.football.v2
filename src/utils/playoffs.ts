@@ -3,6 +3,7 @@
  */
 
 import type { TeamStanding } from '../types/standings';
+import { chooseTeamName } from './team-names';
 
 const DEFAULT_HOST =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
@@ -37,6 +38,7 @@ type BracketRef = {
   winner_of_game?: string;
   loser_of_game?: string;
   bracket?: string;
+  points?: string | number;
 };
 
 export type NormalizedGame = {
@@ -100,6 +102,7 @@ const normalizeRef = (ref: any = {}): BracketRef => ({
   winner_of_game: ref.winner_of_game || ref.winnerOfGame,
   loser_of_game: ref.loser_of_game || ref.loserOfGame,
   bracket: ref.bracket,
+  points: ref.points,
 });
 
 const normalizeGames = (round: any): NormalizedGame[] => {
@@ -275,19 +278,6 @@ export const buildSeedMaps = (
     }
   >
 ): SeedMaps => {
-  const chooseClosestName = (candidates: string[]) => {
-    const unique = Array.from(new Set(candidates.filter(Boolean)));
-    if (unique.length === 0) return '';
-    return unique.reduce((best, current) => {
-      const target = 9; // aim for concise but readable short names
-      const bestDiff = Math.abs(best.length - target);
-      const currentDiff = Math.abs(current.length - target);
-      if (currentDiff < bestDiff) return current;
-      if (currentDiff === bestDiff && current.length > best.length) return current;
-      return best;
-    }, unique[0]);
-  };
-
   const seededTeams: SeededTeam[] = leagueStandings
     .filter(team => team.seed)
     .map(team => ({
@@ -297,7 +287,7 @@ export const buildSeedMaps = (
       record: formatRecord(team.h2hwlt),
       icon: assetMap.get(team.id)?.icon || '',
       banner: assetMap.get(team.id)?.banner || '',
-      displayName: chooseClosestName([
+      displayName: chooseTeamName([
         team.teamName,
         assetMap.get(team.id)?.name || '',
         ...(assetMap.get(team.id)?.aliases || []),

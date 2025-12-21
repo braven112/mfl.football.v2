@@ -13,6 +13,7 @@ import {
   type SeededTeam,
   type NormalizedBracket,
 } from '../../utils/playoffs';
+import { chooseTeamName } from '../../utils/team-names';
 import leagueConfig from '../../data/theleague.config.json';
 
 export const prerender = false;
@@ -198,7 +199,11 @@ const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
         record: formatRecord(team.h2hwlt),
         icon: assets?.icon || '',
         banner: assets?.banner || '',
-        displayName: assets?.name || team.teamName,
+        displayName: chooseTeamName([
+          team.teamName,
+          assets?.name || '',
+          ...(assets?.aliases || []),
+        ]),
       };
     }
   }
@@ -281,13 +286,15 @@ const buildBracketViews = () => {
           awayTeam?.displayName ||
           awayTeam?.teamName ||
           formatPlaceholder(game.away, 'away');
-        const homeScoreValue = homeTeam?.id ? getScoreForTeam(round.week, homeTeam.id) : undefined;
-        const awayScoreValue = awayTeam?.id ? getScoreForTeam(round.week, awayTeam.id) : undefined;
 
-        const homeScore =
-          homeTeam?.id && typeof homeScoreValue === 'number' ? homeScoreValue : undefined;
-        const awayScore =
-          awayTeam?.id && typeof awayScoreValue === 'number' ? awayScoreValue : undefined;
+        // Use bracket scores first (official final scores), fallback to weekly results
+        const bracketHomeScore = game.home?.points ? Number(game.home.points) : undefined;
+        const bracketAwayScore = game.away?.points ? Number(game.away.points) : undefined;
+        const weeklyHomeScore = homeTeam?.id ? getScoreForTeam(round.week, homeTeam.id) : undefined;
+        const weeklyAwayScore = awayTeam?.id ? getScoreForTeam(round.week, awayTeam.id) : undefined;
+
+        const homeScore = bracketHomeScore ?? weeklyHomeScore;
+        const awayScore = bracketAwayScore ?? weeklyAwayScore;
 
         const homeRemaining = homeTeam?.id ? getRemainingSeconds(round.week, homeTeam.id) : 0;
         const awayRemaining = awayTeam?.id ? getRemainingSeconds(round.week, awayTeam.id) : 0;
@@ -295,12 +302,16 @@ const buildBracketViews = () => {
         const hasHomeScore = typeof homeScore === 'number' && homeScore > 0;
         const hasAwayScore = typeof awayScore === 'number' && awayScore > 0;
         const hasAnyScore = hasHomeScore || hasAwayScore;
+        const hasBracketScores = (bracketHomeScore !== undefined || bracketAwayScore !== undefined);
 
         let status: MatchupView['status'] = 'scheduled';
-        if (scoresAvailable) {
+        if (scoresAvailable || hasBracketScores) {
           if ((homeRemaining > 0 || awayRemaining > 0) && hasAnyScore) {
             status = 'live';
           } else if (homeRemaining === 0 && awayRemaining === 0 && hasAnyScore) {
+            status = 'final';
+          } else if (hasBracketScores && hasAnyScore) {
+            // If we have bracket scores but no remaining time data, assume final
             status = 'final';
           }
         }
