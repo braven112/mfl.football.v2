@@ -690,9 +690,9 @@ const grandTotal =
             {bracket.roundsView.length === 0 ? (
               <div class="bracket-missing">Bracket data not available for this season.</div>
             ) : (
-              <div class="bracket-scroll" aria-label={`${bracket.name || 'Bracket'} rounds`}>
+              <div class="bracket-scroll" data-bracket-id={bracket.id} aria-label={`${bracket.name || 'Bracket'} rounds`}>
                 {bracket.roundsView.map((round, roundIdx) => (
-                  <div class="bracket-round">
+                  <div class="bracket-round" data-week={bracket.rounds[roundIdx]?.week ?? roundIdx + 1}>
                     <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
                     {round.map(game => (
                       <div class="matchup-card" data-status={game.status}>
@@ -768,6 +768,15 @@ const grandTotal =
                       </div>
                     ))}
                   </div>
+                ))}
+              </div>
+              <div class="scroll-indicators" data-bracket-id={bracket.id}>
+                {bracket.roundsView.map((_, roundIdx) => (
+                  <button
+                    class="scroll-indicator"
+                    data-round-index={roundIdx}
+                    aria-label={`Go to week ${bracket.rounds[roundIdx]?.week ?? roundIdx + 1}`}
+                  />
                 ))}
               </div>
             )}
@@ -901,7 +910,7 @@ const grandTotal =
 
   .brackets-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: 1fr;
     gap: 1.25rem;
   }
 
@@ -1093,20 +1102,26 @@ const grandTotal =
 
   .bracket-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+
+
+    display: grid;
+  }
+
+  @media screen and (min-width: 768px) {
+    .bracket-card {
+          border: 1px solid #e2e8f0;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    grid-column: 1 / -1;
-  }
+        padding: 1rem;
+    }
+  
 
   .bracket-card--championship {
     background: linear-gradient(180deg, #f8fafc 0%, #ffffff 50%);
     border-color: rgba(28, 73, 124, 0.35);
     box-shadow: 0 12px 30px rgba(28, 73, 124, 0.15);
   }
+}
 
 
   .bracket-header {
@@ -1156,10 +1171,67 @@ const grandTotal =
     padding-bottom: 0.25rem;
   }
 
+  /* Mobile snap scrolling */
+  @media (max-width: 768px) {
+    .bracket-scroll {
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      gap: 0;
+      grid-auto-columns: 100%;
+      padding-bottom: 3rem; /* Space for scroll indicators */
+    }
+
+    .bracket-scroll::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+
+    .bracket-round {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      margin: 0 0.5rem;
+    }
+  }
+
   .bracket-round {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    justify-content: center;
+  }
+
+  /* Scroll indicators */
+  .scroll-indicators {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0 0.5rem;
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 70%, transparent);
+    z-index: 10;
+  }
+
+  @media (max-width: 768px) {
+    .scroll-indicators {
+      display: flex;
+    }
+  }
+
+  .scroll-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .scroll-indicator.active {
+    background: #1c497c;
+    width: 24px;
+    border-radius: 4px;
   }
 
   .round-label {
@@ -1169,14 +1241,20 @@ const grandTotal =
     margin: 0 0 0.35rem 0.25rem;
   }
 
+  /* ========================================
+   * Matchup Cards - All Breakpoints
+   * ======================================== */
+
+  /* Base matchup card container */
   .matchup-card {
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cccccc;
     border-radius: 12px;
     padding: 0.75rem;
+    padding-right: 1rem;
     position: relative;
-    display: grid;
-    row-gap: 0.6rem;
+    display: block;
+    padding-right: 1rem;
   }
 
   .matchup-card[data-status='live'] {
@@ -1192,10 +1270,10 @@ const grandTotal =
     border-style: dashed;
   }
 
+  /* Team rows */
   .team-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     gap: 0.75rem;
   }
 
@@ -1210,10 +1288,11 @@ const grandTotal =
     min-width: 0;
   }
 
+  /* Team identity */
   .team-name {
     margin: 0;
     font-weight: 800;
-    font-size: 0.98rem;
+    font-size: 0.75rem;
     color: #0f172a;
     white-space: nowrap;
     overflow: hidden;
@@ -1251,6 +1330,7 @@ const grandTotal =
     min-width: 1rem;
   }
 
+  /* Scores */
   .score {
     font-weight: 800;
     font-size: 1.05rem;
@@ -1259,6 +1339,7 @@ const grandTotal =
     text-align: right;
   }
 
+  /* Game status */
   .matchup-status {
     display: flex;
     justify-content: space-between;
@@ -1297,6 +1378,57 @@ const grandTotal =
     font-weight: 700;
     color: #1c497c;
   }
+
+
+
+  /* Matchup card mobile adjustments - 768px */
+  @media (max-width: 768px) {
+
+    .team-row {
+      gap: 0.5rem;
+    }
+
+    .team-info {
+      gap: 0.4rem;
+    }
+
+    .team-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .seed-badge {
+      padding: 0.15rem 0.4rem;
+      font-size: 0.7rem;
+      min-width: 0.8rem;
+    }
+
+    .team-name {
+      font-size: 0.85rem;
+      max-width: 120px;
+    }
+
+    .team-record {
+      font-size: 0.7rem;
+    }
+
+    .score {
+      font-size: 0.9rem;
+      min-width: 2.8rem;
+    }
+
+    .matchup-status {
+      margin-top: 0.25rem;
+      font-size: 0.7rem;
+    }
+
+    .status-pill {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+    }
+  }
+
+  /* ======================================== */
 
   .empty-state {
     background: #fff;
@@ -1370,17 +1502,13 @@ const grandTotal =
     }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 767px) {
     .playoff-page {
       padding: 1.25rem 1rem;
     }
 
     .bracket-scroll {
-      grid-auto-columns: minmax(220px, 1fr);
-    }
-
-    .team-name {
-      max-width: 150px;
+      grid-auto-columns: minmax(300px, 1fr);
     }
 
     .view-tabs {
@@ -1388,7 +1516,22 @@ const grandTotal =
       justify-content: flex-start;
       flex-wrap: wrap;
     }
+  }
 
+  /* Other mobile adjustments */
+  @media (max-width: 768px) {
+    .round-label {
+      font-size: 0.85rem;
+      margin: 0 0 0.25rem 0.15rem;
+    }
+
+    .bracket-title {
+      font-size: 1.1rem;
+    }
+
+    .bracket-meta {
+      font-size: 0.8rem;
+    }
   }
 </style>
 <script>
@@ -1415,6 +1558,102 @@ const grandTotal =
   }
 
   document.addEventListener('astro:after-swap', setupPlayoffSelectors);
+</script>
+
+<script>
+  // Mobile snap scrolling and auto-scroll to current week
+  function setupMobileScrolling() {
+    const bracketScrolls = document.querySelectorAll('.bracket-scroll');
+    if (!bracketScrolls.length) return;
+
+    // Get current week (you can adjust this logic based on your needs)
+    const getCurrentWeek = () => {
+      // Simple logic: return current NFL week (roughly December = week 15-17)
+      const now = new Date();
+      const month = now.getMonth(); // 0-11
+      const day = now.getDate();
+
+      // Rough estimate: September = week 1, increase ~1 week per week
+      // This is a simple approximation
+      let estimatedWeek = 1;
+      if (month === 11) { // December
+        if (day < 8) estimatedWeek = 14;
+        else if (day < 15) estimatedWeek = 15;
+        else if (day < 22) estimatedWeek = 16;
+        else estimatedWeek = 17;
+      }
+
+      return estimatedWeek;
+    };
+
+    const currentWeek = getCurrentWeek();
+
+    bracketScrolls.forEach(scrollContainer => {
+      const rounds = Array.from(scrollContainer.querySelectorAll('.bracket-round')) as HTMLElement[];
+      const bracketId = (scrollContainer as HTMLElement).dataset.bracketId;
+      const indicators = Array.from(
+        document.querySelectorAll(
+          `.scroll-indicators[data-bracket-id="${bracketId}"] .scroll-indicator`
+        )
+      ) as HTMLElement[];
+
+      if (!rounds.length) return;
+
+      // Find the round to scroll to
+      let targetRoundIndex = 0;
+      const firstWeek = parseInt(rounds[0]?.dataset.week || '1') || 1;
+
+      // If current week is >= first playoff week, find the matching week
+      if (currentWeek >= firstWeek) {
+        const matchingRound = rounds.findIndex(
+          round => parseInt(round.dataset.week || '0') === currentWeek
+        );
+        targetRoundIndex = matchingRound >= 0 ? matchingRound : 0;
+      }
+      // Otherwise default to first week (index 0)
+
+      // Update indicators
+      const updateIndicators = () => {
+        const scrollLeft = scrollContainer.scrollLeft;
+        const roundWidth = rounds[0]?.offsetWidth || 0;
+        const activeIndex = Math.round(scrollLeft / roundWidth);
+
+        indicators.forEach((indicator, idx) => {
+          indicator.classList.toggle('active', idx === activeIndex);
+        });
+      };
+
+      // Scroll to target round on load
+      setTimeout(() => {
+        const targetRound = rounds[targetRoundIndex];
+        if (targetRound) {
+          targetRound.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+        }
+        updateIndicators();
+      }, 100);
+
+      // Update indicators on scroll
+      scrollContainer.addEventListener('scroll', updateIndicators, { passive: true });
+
+      // Handle indicator clicks
+      indicators.forEach((indicator, idx) => {
+        indicator.addEventListener('click', () => {
+          const targetRound = rounds[idx];
+          if (targetRound) {
+            targetRound.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+          }
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMobileScrolling);
+  } else {
+    setupMobileScrolling();
+  }
+
+  document.addEventListener('astro:after-swap', setupMobileScrolling);
 </script>
 
 {hasBrackets && (
