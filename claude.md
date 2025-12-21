@@ -70,15 +70,26 @@ Toilet Bowl Structure:
 - Once 2026 NFL season starts (September): Automatically updates to show 2027 projections
 
 ## References
-- MFL API: https://www49.myfantasyleague.com/2025/options?L=13522&O=79
+- **MFL API Documentation:** See [MFL-API.md](MFL-API.md) for comprehensive API reference organized by feature area
+- MFL API Explorer: https://www49.myfantasyleague.com/2025/options?L=13522&O=79
 - Available MFL APIs: https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522
-- **assets API:** `TYPE=assets` - Shows draft picks owned by each team. Requires authentication (MFL_USER_ID cookie)
-- **playoffBracket API:** `TYPE=playoffBracket` - Shows playoff bracket structure with toilet bowl tournament results
-- **draftResults API:** `TYPE=draftResults` - Shows who was picked with trade history in comments
 - Standings page: Uses existing wild card tiebreaker logic (in reverse for draft order)
 
 ## API Endpoint Status
-- ✅ draftResults - Already fetched in fetch-mfl-feeds.mjs
-- ✅ standings - Already fetched in fetch-mfl-feeds.mjs
-- ❌ assets - NOT currently fetched (NEEDS TO BE ADDED)
-- ❌ playoffBracket - NOT currently fetched (NEEDS TO BE ADDED)
+- ✅ draftResults - Fetched in fetch-mfl-feeds.mjs
+- ✅ standings - Fetched in fetch-mfl-feeds.mjs
+- ✅ assets - Fetched in fetch-mfl-feeds.mjs (requires APIKEY authentication)
+- ✅ playoffBracket - Fetched in fetch-mfl-feeds.mjs
+- ✅ playoffBrackets - Fetched in fetch-mfl-feeds.mjs
+- ✅ rosters - Fetched in fetch-mfl-feeds.mjs, mfl-matchup-api.ts
+- ✅ players - Fetched in fetch-mfl-feeds.mjs
+- ✅ projectedScores - Fetched in fetch-mfl-feeds.mjs, mfl-matchup-api.ts
+- ✅ weeklyResults - Fetched in fetch-mfl-feeds.mjs
+- ✅ transactions - Fetched in fetch-mfl-feeds.mjs
+- ✅ tradeBait - Fetched in fetch-mfl-feeds.mjs
+- ✅ league - Fetched in fetch-mfl-feeds.mjs
+- ✅ salaryAdjustments - Fetched in fetch-mfl-feeds.mjs
+- ✅ liveScoring - Used in api/live-scoring.ts
+- ✅ injuries - Used in mfl-matchup-api.ts
+
+For detailed parameter information, authentication requirements, and usage examples, see [MFL-API.md](MFL-API.md).
