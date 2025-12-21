@@ -91,6 +91,33 @@ const isHistoricalDataCached = () => {
   }
 };
 
+const isPlayoffDataFresh = () => {
+  const playoffFile = path.join(outDir, 'playoff-brackets.json');
+
+  if (!fs.existsSync(playoffFile)) {
+    return false; // File doesn't exist, need to fetch
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(playoffFile, 'utf8'));
+
+    // Check if we have a lastFetched timestamp
+    if (!data.lastFetched) {
+      return false; // No timestamp, need to fetch
+    }
+
+    const lastFetched = new Date(data.lastFetched);
+    const now = new Date();
+    const hoursSinceLastFetch = (now - lastFetched) / (1000 * 60 * 60);
+
+    // Consider fresh if fetched within last hour
+    return hoursSinceLastFetch < 1;
+  } catch (err) {
+    console.warn('Error checking playoff data freshness:', err.message);
+    return false; // Error reading file, need to fetch
+  }
+};
+
 const withWeek = (baseUrl) => (week ? `${baseUrl}&W=${week}` : baseUrl);
 
 const withAuth = (baseUrl) => {
@@ -496,13 +523,15 @@ const run = async () => {
   }
 
   // Fetch playoff brackets (metadata + individual bracket details)
-  // During playoffs: use real MFL data
-  // During regular season: generate predicted brackets from standings
+  // Cache for 1 hour to catch post-game updates
   try {
-    const bracketsMetaUrl = `${host}/${year}/export?TYPE=playoffBrackets&L=${leagueId}&JSON=1`;
-    console.log(`Fetching playoffBrackets metadata from ${bracketsMetaUrl}`);
-    const metaText = await fetchTextWithRetry(bracketsMetaUrl, 3, 1500);
-    const metaData = JSON.parse(metaText);
+    if (isPlayoffDataFresh() && !force) {
+      console.log('Playoff bracket data is fresh (< 1 hour old), skipping fetch');
+    } else {
+      const bracketsMetaUrl = `${host}/${year}/export?TYPE=playoffBrackets&L=${leagueId}&JSON=1`;
+      console.log(`Fetching playoffBrackets metadata from ${bracketsMetaUrl}`);
+      const metaText = await fetchTextWithRetry(bracketsMetaUrl, 3, 1500);
+      const metaData = JSON.parse(metaText);
 
     const bracketList = metaData?.playoffBrackets?.playoffBracket;
     const brackets = Array.isArray(bracketList) ? bracketList : bracketList ? [bracketList] : [];
@@ -535,12 +564,14 @@ const run = async () => {
         }
       }
 
-      // Write consolidated playoff-brackets.json file with live MFL data
+      // Write consolidated playoff-brackets.json file with live MFL data + timestamp
       const consolidated = {
         playoffBrackets: metaData.playoffBrackets,
         brackets: bracketDetails,
+        lastFetched: new Date().toISOString(),
       };
       writeOut('playoff-brackets', consolidated);
+      console.log('Updated playoff bracket data with fresh MFL data');
     } else {
       console.log('No playoff brackets from MFL yet - generating predicted brackets from standings');
 
@@ -550,6 +581,7 @@ const run = async () => {
         try {
           const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
           const predicted = generatePredictedBrackets(standingsData);
+          predicted.lastFetched = new Date().toISOString();
           writeOut('playoff-brackets', predicted);
           console.log('Generated predicted playoff brackets based on current standings');
         } catch (err) {
@@ -558,6 +590,7 @@ const run = async () => {
       } else {
         console.log('No standings data available to generate predicted brackets');
       }
+    }
     }
   } catch (err) {
     console.error('Failed to fetch playoff brackets metadata:', err.message);
@@ -569,6 +602,7 @@ const run = async () => {
         console.log('Generating predicted brackets as fallback');
         const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
         const predicted = generatePredictedBrackets(standingsData);
+        predicted.lastFetched = new Date().toISOString();
         writeOut('playoff-brackets', predicted);
         console.log('Generated predicted playoff brackets based on current standings');
       } catch (genErr) {
