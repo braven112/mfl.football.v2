@@ -31,16 +31,36 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const data = await response.json();
-    const franchises = data?.liveScoring?.franchise
-      ? Array.isArray(data.liveScoring.franchise)
+
+    // Extract franchises from either structure:
+    // 1. liveScoring.franchise (direct franchise array)
+    // 2. liveScoring.matchup (franchises nested in matchups)
+    let franchises: any[] = [];
+
+    if (data?.liveScoring?.franchise) {
+      // Direct franchise array structure
+      franchises = Array.isArray(data.liveScoring.franchise)
         ? data.liveScoring.franchise
-        : [data.liveScoring.franchise]
-      : [];
+        : [data.liveScoring.franchise];
+    } else if (data?.liveScoring?.matchup) {
+      // Matchup-based structure - flatten franchises from all matchups
+      const matchups = Array.isArray(data.liveScoring.matchup)
+        ? data.liveScoring.matchup
+        : [data.liveScoring.matchup];
+
+      franchises = matchups.flatMap((matchup: any) => {
+        if (!matchup?.franchise) return [];
+        return Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
+      });
+    }
 
     const scores: Record<string, number> = {};
+    const remaining: Record<string, number> = {};
+
     franchises.forEach((team: any) => {
       if (team?.id) {
         scores[String(team.id)] = Number(team.score) || 0;
+        remaining[String(team.id)] = Number(team.gameSecondsRemaining) || 0;
       }
     });
 
@@ -48,6 +68,7 @@ export const GET: APIRoute = async ({ url }) => {
       JSON.stringify({
         week: Number(week),
         scores,
+        remaining,
       }),
       {
         status: 200,
@@ -64,6 +85,7 @@ export const GET: APIRoute = async ({ url }) => {
         error: 'Failed to fetch live scoring',
         week: Number(week),
         scores: {},
+        remaining: {},
       }),
       {
         status: 500,

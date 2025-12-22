@@ -715,7 +715,7 @@ const grandTotal =
                             </div>
                           </div>
                           <div
-                            class="score"
+                            class={`score ${game.status === 'final' && typeof game.scores.home === 'number' && typeof game.scores.away === 'number' && game.scores.home < game.scores.away ? 'score-losing' : ''}`}
                             data-live-week={game.week}
                             data-live-team={game.home.team?.id || ''}
                           >
@@ -742,7 +742,7 @@ const grandTotal =
                             </div>
                           </div>
                           <div
-                            class="score"
+                            class={`score ${game.status === 'final' && typeof game.scores.home === 'number' && typeof game.scores.away === 'number' && game.scores.away < game.scores.home ? 'score-losing' : ''}`}
                             data-live-week={game.week}
                             data-live-team={game.away.team?.id || ''}
                           >
@@ -792,9 +792,15 @@ const grandTotal =
         </a>
       </p>
       {hasBrackets && (
-        <p class="data-disclaimer" id="live-scores-timestamp">
-          Scores updated: <span id="last-updated-time">Loading...</span>
-        </p>
+        <div class="live-scores-status">
+          <p class="data-disclaimer" id="live-scores-timestamp">
+            Scores updated: <span id="last-updated-time">Loading...</span>
+          </p>
+          <div class="refresh-progress-container">
+            <div class="refresh-progress-bar" id="refresh-progress-bar"></div>
+          </div>
+          <p class="refresh-countdown" id="refresh-countdown">Next update in <span id="refresh-seconds">60</span>s</p>
+        </div>
       )}
     </div>
   </section>
@@ -1221,7 +1227,7 @@ const grandTotal =
 
   .scroll-indicator {
     width: 8px;
-    height: 8px;
+    height: 16px;
     border-radius: 50%;
     background: #cbd5e1;
     transition: all 0.3s ease;
@@ -1337,6 +1343,14 @@ const grandTotal =
     color: #0f172a;
     min-width: 3.4rem;
     text-align: right;
+  }
+
+  .score-live {
+    font-weight: 800;
+  }
+
+  .score-losing {
+    font-weight: 300;
   }
 
   /* Game status */
@@ -1674,7 +1688,7 @@ const grandTotal =
       };
 
       const updateScores = (liveData) => {
-        liveData.forEach(({ week, scores }) => {
+        liveData.forEach(({ week, scores, remaining }) => {
           scoreNodes.forEach(node => {
             const nodeWeek = Number(node.getAttribute('data-live-week'));
             const teamId = node.getAttribute('data-live-team');
@@ -1684,6 +1698,78 @@ const grandTotal =
               node.textContent = val.toFixed(2);
             }
           });
+
+          // Update status badges for this week's matchups
+          if (remaining) {
+            const matchupCards = Array.from(document.querySelectorAll('.matchup-card'));
+            matchupCards.forEach(card => {
+              // Find score nodes within this matchup card
+              const cardScores = Array.from(card.querySelectorAll('[data-live-week][data-live-team]'));
+              if (cardScores.length === 0) return;
+
+              // Check if this card has scores for the current week
+              const cardWeek = Number(cardScores[0]?.getAttribute('data-live-week'));
+              if (cardWeek !== week) return;
+
+              // Check if any team in this matchup has time remaining
+              const hasTimeRemaining = cardScores.some(scoreNode => {
+                const teamId = scoreNode.getAttribute('data-live-team');
+                return teamId && remaining[teamId] > 0;
+              });
+
+              // Check if both teams have scores
+              const hasScores = cardScores.every(scoreNode => {
+                const teamId = scoreNode.getAttribute('data-live-team');
+                return teamId && teamId in scores && typeof scores[teamId] === 'number';
+              });
+
+              // Update status
+              const statusPill = card.querySelector('.status-pill');
+              if (hasTimeRemaining && hasScores) {
+                card.setAttribute('data-status', 'live');
+                if (statusPill) {
+                  statusPill.className = 'status-pill status-live';
+                  statusPill.textContent = 'Live';
+                }
+                // Live games: both scores bold
+                cardScores.forEach(scoreNode => {
+                  console.log('Adding score-live class to:', scoreNode);
+                  scoreNode.classList.add('score-live');
+                  scoreNode.classList.remove('score-losing');
+                });
+              } else if (!hasTimeRemaining && hasScores) {
+                card.setAttribute('data-status', 'final');
+                if (statusPill) {
+                  statusPill.className = 'status-pill status-final';
+                  statusPill.textContent = 'Final';
+                }
+                // Final games: losing score lighter
+                if (cardScores.length === 2) {
+                  const team1Id = cardScores[0].getAttribute('data-live-team');
+                  const team2Id = cardScores[1].getAttribute('data-live-team');
+                  const team1Score = team1Id ? scores[team1Id] : 0;
+                  const team2Score = team2Id ? scores[team2Id] : 0;
+
+                  // Remove live class from both
+                  cardScores.forEach(scoreNode => scoreNode.classList.remove('score-live'));
+
+                  console.log('Final game - Team1:', team1Score, 'Team2:', team2Score);
+                  if (team1Score > team2Score) {
+                    console.log('Adding score-losing to team 2');
+                    cardScores[1].classList.add('score-losing'); // Losing team
+                    cardScores[0].classList.remove('score-losing'); // Winner
+                  } else if (team2Score > team1Score) {
+                    console.log('Adding score-losing to team 1');
+                    cardScores[0].classList.add('score-losing'); // Losing team
+                    cardScores[1].classList.remove('score-losing'); // Winner
+                  } else {
+                    // Tie - remove losing class from both
+                    cardScores.forEach(scoreNode => scoreNode.classList.remove('score-losing'));
+                  }
+                }
+              }
+            });
+          }
         });
         updateTimestamp();
       };
@@ -1698,7 +1784,7 @@ const grandTotal =
           const res = await fetch(url, { signal: controller.signal });
           if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
           const data = await res.json();
-          return { week: data.week, scores: data.scores };
+          return { week: data.week, scores: data.scores, remaining: data.remaining || {} };
         } catch (_err) {
           return null;
         } finally {
@@ -1804,6 +1890,9 @@ const grandTotal =
         }
         startPolling();
       });
+
+      // Expose manual refresh function for testing
+      window.refreshPlayoffScores = run;
     })();
   </script>
 )}
