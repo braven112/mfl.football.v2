@@ -694,9 +694,20 @@ const grandTotal =
                 {bracket.roundsView.map((round, roundIdx) => (
                   <div class="bracket-round" data-week={bracket.rounds[roundIdx]?.week ?? roundIdx + 1}>
                     <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
-                    {round.map(game => (
-                      <div class="matchup-card" data-status={game.status}>
-                        <div class="team-row">
+                    {round.map(game => {
+                      const homeId = game.home.team?.id || '';
+                      const liveScoreUrl = homeId
+                        ? `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}&FRANCHISE=${homeId}`
+                        : `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}`;
+                      return (
+                      <a
+                        href={liveScoreUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="matchup-card-link"
+                      >
+                        <div class="matchup-card" data-status={game.status}>
+                          <div class="team-row">
                           <div class="team-info">
                             <span class="seed-badge">{game.home.seedLabel || '—'}</span>
                             {game.home.icon ? (
@@ -773,7 +784,9 @@ const grandTotal =
                           )}
                         </div>
                       </div>
-                    ))}
+                      </a>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -1252,6 +1265,26 @@ const grandTotal =
    * Matchup Cards - All Breakpoints
    * ======================================== */
 
+  /* Matchup card link wrapper */
+  .matchup-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .matchup-card-link:hover {
+    transform: translateY(-2px);
+  }
+
+  .matchup-card-link:hover .matchup-card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .matchup-card-link:active {
+    transform: translateY(0);
+  }
+
   /* Base matchup card container */
   .matchup-card {
     background: #f8fafc;
@@ -1259,6 +1292,7 @@ const grandTotal =
     border-radius: 12px;
     padding: 0.75rem;
     padding-right: 1rem;
+    transition: box-shadow 0.15s ease;
     position: relative;
     display: block;
     padding-right: 1rem;
