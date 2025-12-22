@@ -1,0 +1,11 @@
+@use "./globals" as *;
+
+//
+// Franchise Icon Styles
+// Controls the display of franchise icons across different pages
+//
+
+// Weekly recap page - larger icons
+#body_weekly .franchiseicon {
+  width: 300px;
+}
