@@ -751,11 +751,18 @@ const grandTotal =
                         </div>
 
                         <div class="matchup-status">
-                          <span class={`status-pill status-${game.status}`}>
-                            {game.status === 'live' && 'Live'}
-                            {game.status === 'final' && 'Final'}
-                            {game.status === 'scheduled' && 'Scheduled'}
-                          </span>
+                          <div class="status-left">
+                            <span class={`status-pill status-${game.status}`}>
+                              {game.status === 'live' && 'Live'}
+                              {game.status === 'final' && 'Final'}
+                              {game.status === 'scheduled' && 'Scheduled'}
+                            </span>
+                            <div class="matchup-refresh-progress">
+                              <div class="refresh-progress-container">
+                                <div class="refresh-progress-bar" data-week={game.week}></div>
+                              </div>
+                            </div>
+                          </div>
                           {game.winnerId && (
                             <span class="winner-flag">
                               Winner:{' '}
@@ -792,15 +799,9 @@ const grandTotal =
         </a>
       </p>
       {hasBrackets && (
-        <div class="live-scores-status">
-          <p class="data-disclaimer" id="live-scores-timestamp">
-            Scores updated: <span id="last-updated-time">Loading...</span>
-          </p>
-          <div class="refresh-progress-container">
-            <div class="refresh-progress-bar" id="refresh-progress-bar"></div>
-          </div>
-          <p class="refresh-countdown" id="refresh-countdown">Next update in <span id="refresh-seconds">60</span>s</p>
-        </div>
+        <p class="data-disclaimer" id="live-scores-timestamp">
+          Scores updated: <span id="last-updated-time">Loading...</span>
+        </p>
       )}
     </div>
   </section>
@@ -1353,6 +1354,34 @@ const grandTotal =
     font-weight: 300;
   }
 
+  .score-updated {
+    animation: scoreFlash 0.6s ease-out;
+  }
+
+  .score-checked {
+    animation: scoreFlicker 0.3s ease-in-out;
+  }
+
+  @keyframes scoreFlash {
+    0%, 100% {
+      background-color: transparent;
+      transform: scale(1);
+    }
+    50% {
+      background-color: rgba(46, 135, 67, 0.2);
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes scoreFlicker {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
   /* Game status */
   .matchup-status {
     display: flex;
@@ -1496,6 +1525,70 @@ const grandTotal =
     color: var(--text-secondary-color, #64748b);
     font-size: 0.95rem;
     font-style: italic;
+  }
+
+  /* Status left section with Live badge and progress bar */
+  .status-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  /* Matchup refresh progress bar */
+  .matchup-refresh-progress {
+    display: none;
+    align-items: center;
+    flex: 1;
+    max-width: 150px;
+  }
+
+  /* Only show progress bar on live cards */
+  .matchup-card[data-status='live'] .matchup-refresh-progress {
+    display: flex;
+  }
+
+  .refresh-progress-container {
+    flex: 1;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .refresh-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #1c497c, #2e8743);
+    border-radius: 3px;
+    transition: width 1s linear;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .refresh-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
   }
 
   @media (max-width: 1024px) {
@@ -1676,6 +1769,9 @@ const grandTotal =
       const scoreNodes = Array.from(document.querySelectorAll('[data-live-week][data-live-team]'));
       if (!scoreNodes.length || !leagueId || !host || !year || !Array.isArray(liveWeeks)) return;
 
+      let countdownInterval = null;
+      let secondsRemaining = 60;
+
       const updateTimestamp = () => {
         const timestampEl = document.getElementById('last-updated-time');
         if (timestampEl) {
@@ -1687,6 +1783,39 @@ const grandTotal =
         }
       };
 
+      const startCountdown = () => {
+        // Clear any existing countdown
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+        }
+
+        secondsRemaining = 60;
+        const progressBars = Array.from(document.querySelectorAll('.refresh-progress-bar'));
+
+        if (progressBars.length === 0) return;
+
+        // Update immediately
+        progressBars.forEach(bar => {
+          bar.style.width = '100%';
+        });
+
+        countdownInterval = setInterval(() => {
+          secondsRemaining--;
+
+          if (secondsRemaining <= 0) {
+            secondsRemaining = 60;
+          }
+
+          const percentage = (secondsRemaining / 60) * 100;
+
+          // Update all progress bars
+          const currentBars = Array.from(document.querySelectorAll('.refresh-progress-bar'));
+          currentBars.forEach(bar => {
+            bar.style.width = `${percentage}%`;
+          });
+        }, 1000);
+      };
+
       const updateScores = (liveData) => {
         liveData.forEach(({ week, scores, remaining }) => {
           scoreNodes.forEach(node => {
@@ -1695,7 +1824,19 @@ const grandTotal =
             if (nodeWeek !== week || !teamId) return;
             const val = scores[teamId];
             if (typeof val === 'number') {
-              node.textContent = val.toFixed(2);
+              const oldValue = node.textContent;
+              const newValue = val.toFixed(2);
+
+              // Update the text if it changed
+              if (oldValue !== newValue) {
+                node.textContent = newValue;
+              }
+
+              // Always show that the score was checked with opacity fade
+              node.classList.add('score-checked');
+              setTimeout(() => {
+                node.classList.remove('score-checked');
+              }, 300);
             }
           });
 
@@ -1835,11 +1976,18 @@ const grandTotal =
           updateTimestamp();
         }
 
+        // Restart countdown after each refresh
+        startCountdown();
+
         // Stop polling if no updates for 3 consecutive polls (games likely over)
         if (consecutiveNoUpdates >= 3 && pollInterval) {
           console.log('Stopping auto-refresh: no score updates detected');
           clearInterval(pollInterval);
           pollInterval = null;
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
         }
       };
 
@@ -1871,6 +2019,10 @@ const grandTotal =
           console.log('Pausing auto-refresh (tab hidden)');
           clearInterval(pollInterval);
           pollInterval = null;
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
         } else if (!document.hidden && !pollInterval) {
           console.log('Resuming auto-refresh (tab visible)');
           startPolling();
