@@ -1999,19 +1999,39 @@ const grandTotal =
 
         if (results.length) {
           const hadUpdates = results.some(r => Object.keys(r.scores).length > 0);
+
+          // Check if any games have time remaining (are actually in progress)
+          const hasGamesInProgress = results.some(r =>
+            r.remaining && Object.values(r.remaining).some(seconds => seconds > 0)
+          );
+
           if (hadUpdates) {
             consecutiveNoUpdates = 0;
             updateScores(results);
           } else {
             consecutiveNoUpdates++;
           }
+
+          // Stop polling if no games are in progress
+          if (!hasGamesInProgress && pollInterval) {
+            console.log('Stopping auto-refresh: all games are final');
+            clearInterval(pollInterval);
+            pollInterval = null;
+            if (countdownInterval) {
+              clearInterval(countdownInterval);
+              countdownInterval = null;
+            }
+            return;
+          }
         } else {
           consecutiveNoUpdates++;
           updateTimestamp();
         }
 
-        // Restart countdown after each refresh
-        startCountdown();
+        // Restart countdown after each refresh (only if still polling)
+        if (pollInterval) {
+          startCountdown();
+        }
 
         // Stop polling if no updates for 3 consecutive polls (games likely over)
         if (consecutiveNoUpdates >= 3 && pollInterval) {
@@ -2025,18 +2045,42 @@ const grandTotal =
         }
       };
 
-      const startPolling = () => {
+      const startPolling = async () => {
         // Clear any existing interval
         if (pollInterval) {
           clearInterval(pollInterval);
         }
 
-        // Initial fetch
-        run();
+        // Initial fetch to check game status
+        const results = [];
+        for (const wk of liveWeeks) {
+          const res = await fetchLiveWeek(wk);
+          if (res) results.push(res);
+          await delay(750);
+        }
+
+        // Check if any games are in progress
+        const hasGamesInProgress = results.some(r =>
+          r.remaining && Object.values(r.remaining).some(seconds => seconds > 0)
+        );
+
+        // Update scores with initial data
+        if (results.length) {
+          updateScores(results);
+        } else {
+          updateTimestamp();
+        }
+
+        // Only start polling if games are in progress
+        if (!hasGamesInProgress) {
+          console.log('All games are final - no auto-refresh needed');
+          return;
+        }
 
         // Only auto-poll during NFL game times
         if (isNFLGameTime()) {
-          console.log('Starting auto-refresh (NFL game time detected)');
+          console.log('Starting auto-refresh (games in progress detected)');
+          startCountdown();
           pollInterval = setInterval(() => {
             if (!document.hidden) {
               run();
