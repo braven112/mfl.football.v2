@@ -14,6 +14,8 @@ import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
 import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 import type { DraftPrediction } from '../../types/standings';
+import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
+import { getAuthUser } from '../../utils/auth';
 
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
@@ -263,6 +265,26 @@ const normalizeNflTeamCode = (code = '') => {
 
 const historyPlayerLookup = buildPlayerLookup(historyPlayersData);
 
+// Team personalization: URL params + cookie integration
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+const cookiePreference = getTheLeaguePreference(Astro.cookies);
+const authUser = getAuthUser(Astro.request);
+
+// If myteam param is provided, update the cookie
+if (myTeamParam) {
+  setTheLeaguePreference(Astro.cookies, myTeamParam);
+}
+
+// Resolve which team to highlight/filter by (priority: myteam → franchise → cookie → auth → null)
+const selectedTeamId = resolveTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  authUserFranchise: authUser?.franchiseId,
+  defaultTeam: '', // No default for draft predictor - user might not have picks
+});
+
 const buildHistoryRows = (
   resultsData: any,
   teamConfigs: Map<string, { id: string; name: string; icon: string; banner: string }>,
@@ -310,10 +332,14 @@ const buildHistoryRows = (
 
 const historyRows = buildHistoryRows(historyResultsData, teamConfigMap, historyPlayerLookup);
 const historyTeamParam = Astro.url.searchParams.get('team');
+
+// Default history team filter to user's preferred team (if they have one)
+const defaultHistoryTeam = selectedTeamId && teamConfigMap.has(selectedTeamId) ? selectedTeamId : 'all';
 const historyTeam =
   historyTeamParam && historyTeamParam !== 'all' && teamConfigMap.has(historyTeamParam)
     ? historyTeamParam
-    : 'all';
+    : defaultHistoryTeam;
+
 const filteredHistoryRows = historyRows.filter((row) =>
   historyTeam === 'all' ? true : row.franchiseId === historyTeam
 );
@@ -337,10 +363,10 @@ const filteredHistoryRows = historyRows.filter((row) =>
       {sortedPredictions.length > 0 ? (
         <>
           {view === 'projected' && (
-            <DraftPredictorGrid predictions={sortedPredictions} />
+            <DraftPredictorGrid predictions={sortedPredictions} userTeamId={selectedTeamId} />
           )}
           {view === 'final' && finalPredictions.length > 0 && (
-            <DraftPredictorGrid predictions={finalPredictions} />
+            <DraftPredictorGrid predictions={finalPredictions} userTeamId={selectedTeamId} />
           )}
           {view === 'final' && finalPredictions.length === 0 && (
             <div class="draft-predictor-loading">

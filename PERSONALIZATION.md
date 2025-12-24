@@ -3,6 +3,36 @@
 ## Overview
 Create a persistent, league-wide team preference system using cookies to personalize the user experience across both TheLeague and AFL Fantasy leagues.
 
+## Visual Design Standards
+
+**Preferred Team Highlighting Color**: `#2e743d` (Forest Green)
+
+All personalization features must use this standard green color for consistency:
+
+```css
+/* Standard preferred team highlighting */
+.preferred-team {
+  background-color: #2e743d12;  /* 12% opacity green background */
+  border-left: 3px solid #2e743d;  /* Solid green left border */
+  font-weight: 600;
+}
+
+.preferred-team:hover {
+  background-color: #2e743d36;  /* 36% opacity green on hover */
+}
+
+.preferred-team-text {
+  color: #2e743d;  /* Green text for team names */
+}
+```
+
+**Applied to:**
+- Standings tables (row highlighting)
+- Draft predictor grids (pick highlighting)
+- Any future personalization features
+
+**Why green?**: Provides clear visual distinction without overwhelming the interface, and maintains accessibility standards for color contrast.
+
 ## Cookie Structure
 
 **Two separate cookies** to support users who participate in one or both leagues:
@@ -84,11 +114,12 @@ When determining which team to display:
 
 ### 2. Standings Page (`/theleague/standings`)
 **Status**: ✅ Implemented (Phase 2 - Dec 2025)
-- Highlights preferred team with indigo border and background
+- Highlights preferred team with green border and background
 - Works across all 3 views (Division, League, All-Play)
 - Dual parameter system (`?myteam` and `?franchise`)
 - **Location**: Line ~74-94 in standings.astro
 - **Components**: StandingsTable.astro, LeagueStandingsTable.astro
+- **Styling**: Uses standard green color (#2e743d)
 
 ### 3. Playoff Predictor (`/theleague/playoff-predictor`)
 **Priority**: High
@@ -105,9 +136,14 @@ When determining which team to display:
 - **High value**: Auto-show relevant bracket without manual switching
 
 ### 5. Draft Order/Predictor (`/theleague/draft-predictor`)
-**Priority**: Medium
-- Default to showing user's picks
-- Highlight trade opportunities involving user's picks
+**Status**: ✅ Implemented (Phase 2 - Dec 2025)
+- Highlights user's picks with green border and background
+- History view defaults to user's team filter
+- Works across all 3 views (Projected, Final, History)
+- Dual parameter system (`?myteam` and `?franchise`)
+- **Location**: Line ~266-323 in draft-predictor.astro
+- **Components**: DraftPredictorGrid.astro
+- **Styling**: Uses standard green color (#2e743d)
 - **Use case**: Quick access to personal draft capital
 
 ## AFL Fantasy Integration Points
