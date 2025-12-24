@@ -12,13 +12,15 @@ export interface Props {
   totalRounds?: number; // Default 3 for theLeague, 9 for AFL Fantasy
   teamsPerConference?: number; // Default 16 for theLeague, 12 for AFL Fantasy
   hasCompensatoryPicks?: boolean; // Default true for theLeague, false for AFL Fantasy
+  championshipDetermined?: boolean; // Whether overall championship has been decided
 }
 
 const {
   predictions,
   totalRounds = 3,
   teamsPerConference = 16,
-  hasCompensatoryPicks = true
+  hasCompensatoryPicks = true,
+  championshipDetermined = false
 } = Astro.props;
 
 // Sort predictions by overall pick number
@@ -38,7 +40,13 @@ const formatTeamName = (name: string) => {
   return normalized;
 };
 
-const championUnknown = !sortedPredictions.some((p) => p.isLeagueWinner);
+// Check if this conference has the champion
+const hasChampion = sortedPredictions.some((p) => p.isLeagueWinner);
+
+// Show "Reserved for Champ" only if championship hasn't been determined yet
+// If championship is determined but this conference doesn't have the champion, show normal styling
+const showChampionReserved = !championshipDetermined;
+
 const isChampionPick = (pick: DraftPrediction) => pick.pickInRound === teamsPerConference;
 
 // Group picks by round dynamically
@@ -77,8 +85,8 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                 {
                   'draft-pick--league-winner': pick.isLeagueWinner,
                   'draft-pick--toilet-bowl': pick.isToiletBowlPick,
-                  'draft-pick--champion': isChampionPick(pick),
-                  'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
+                  'draft-pick--champion': isChampionPick(pick) && hasChampion,
+                  'draft-pick--champion-tbd': isChampionPick(pick) && showChampionReserved,
                 },
               ]}
               title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
@@ -105,8 +113,8 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                 <div class="draft-pick__number">
                   {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
                 </div>
-                {isChampionPick(pick) && (
-                  <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
+                {isChampionPick(pick) && (showChampionReserved || hasChampion) && (
+                  <div class="draft-pick__label">{showChampionReserved ? 'Reserved for Champ' : 'League Champion'}</div>
                 )}
               </div>
             </div>
@@ -546,7 +554,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
 
     .draft-pick__name {
       font-size: 0.625rem;
-      -webkit-line-clamp: 1;
+      -webkit-line-clamp: 3;
     }
 
     .draft-pick__number {

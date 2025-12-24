@@ -39,7 +39,7 @@ let nitResults = new Map<string, Array<{ franchiseId: string; finishPosition: nu
 
 try {
   playoffBracketsData = JSON.parse(fs.readFileSync(playoffBracketsPath, 'utf-8'));
-  conferenceChampions = parseConferenceChampions(playoffBracketsData);
+  conferenceChampions = parseConferenceChampions(playoffBracketsData, teamConfigMap);
   nitResults = parseNITResults(playoffBracketsData, teamConfigMap);
 } catch (error) {
   // Playoff brackets may not exist yet - use empty data
@@ -99,6 +99,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
             totalRounds={9}
             teamsPerConference={12}
             hasCompensatoryPicks={false}
+            championshipDetermined={conferenceChampions.size > 0}
           />
         </div>
       )}
@@ -111,6 +112,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
             totalRounds={9}
             teamsPerConference={12}
             hasCompensatoryPicks={false}
+            championshipDetermined={conferenceChampions.size > 0}
           />
         </div>
       )}

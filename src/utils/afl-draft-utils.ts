@@ -277,26 +277,32 @@ export function getMockNITResults(): Map<string, NITResult[]> {
 }
 
 /**
- * Parse conference champions from playoff bracket data
+ * Parse league champion from playoff bracket data
+ * The overall league champion gets the 12th pick in their conference
  * Returns map of conference code ('A' or 'B') to champion franchise ID
  */
-export function parseConferenceChampions(playoffBracketsData: any): Map<string, string> {
+export function parseConferenceChampions(
+  playoffBracketsData: any,
+  teamConfigs: Map<string, TeamConfig>
+): Map<string, string> {
   const champions = new Map<string, string>();
 
   if (!playoffBracketsData?.brackets) {
     return champions;
   }
 
-  // Bracket 2 is AL Championship (Conference A)
-  const alChampion = getWinnerOfBracket(playoffBracketsData.brackets['2']);
-  if (alChampion) {
-    champions.set('A', alChampion);
-  }
+  // Bracket 1 is the overall league championship (AL vs NL)
+  // The winner gets the 12th pick in their conference
+  const leagueChampion = getWinnerOfBracket(playoffBracketsData.brackets['1']);
 
-  // Bracket 3 is NL Championship (Conference B)
-  const nlChampion = getWinnerOfBracket(playoffBracketsData.brackets['3']);
-  if (nlChampion) {
-    champions.set('B', nlChampion);
+  if (leagueChampion) {
+    // Determine which conference the champion belongs to
+    const teamConfig = teamConfigs.get(leagueChampion);
+    const conference = teamConfig?.conference;
+
+    if (conference === 'A' || conference === 'B') {
+      champions.set(conference, leagueChampion);
+    }
   }
 
   return champions;
