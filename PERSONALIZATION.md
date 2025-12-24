@@ -75,7 +75,7 @@ When determining which team to display:
 ## The League Integration Points
 
 ### 1. Rosters Page (`/theleague/rosters`)
-**Status**: ✅ Implemented (Phase 1 - Dec 2024)
+**Status**: ✅ Implemented (Phase 1 - Dec 2025)
 - Default to user's preferred franchise via cookie
 - Dual parameter system (`?myteam` and `?franchise`)
 - Priority order: myteam → franchise → cookie → auth → default
@@ -83,10 +83,12 @@ When determining which team to display:
 - **Tests**: 31 passing tests (23 unit + 8 E2E)
 
 ### 2. Standings Page (`/theleague/standings`)
-**Priority**: High
-- Highlight preferred team in standings table
-- Show my team's division first on the page
-- **Use case**: Quick visual reference to user's team performance
+**Status**: ✅ Implemented (Phase 2 - Dec 2025)
+- Highlights preferred team with indigo border and background
+- Works across all 3 views (Division, League, All-Play)
+- Dual parameter system (`?myteam` and `?franchise`)
+- **Location**: Line ~74-94 in standings.astro
+- **Components**: StandingsTable.astro, LeagueStandingsTable.astro
 
 ### 3. Playoff Predictor (`/theleague/playoff-predictor`)
 **Priority**: High
@@ -95,9 +97,11 @@ When determining which team to display:
 - **Use case**: Focus on games that matter to user's team
 
 ### 4. Playoff Brackets (`/theleague/playoffs`)
-**Priority**: High
-- **Championship vs Toilet Bowl toggle**: Default to bracket containing user's team
-- Highlight user's team path through bracket
+**Status**: ✅ Implemented (Phase 2 - Dec 2025)
+- Auto-selects bracket containing user's team (Championship or Toilet Bowl)
+- Dual parameter system (`?myteam` and `?franchise`)
+- Intelligently defaults to correct tab based on team's playoff seeding
+- **Location**: Line ~94-131 in playoffs.astro
 - **High value**: Auto-show relevant bracket without manual switching
 
 ### 5. Draft Order/Predictor (`/theleague/draft-predictor`)

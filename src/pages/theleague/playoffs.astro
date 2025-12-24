@@ -15,6 +15,12 @@ import {
 } from '../../utils/playoffs';
 import { chooseTeamName } from '../../utils/team-names';
 import leagueConfig from '../../data/theleague.config.json';
+import { getAuthUser } from '../../utils/auth';
+import {
+  getTheLeaguePreference,
+  setTheLeaguePreference,
+  resolveTeamSelection,
+} from '../../utils/team-preferences';
 
 export const prerender = false;
 
@@ -85,6 +91,45 @@ const assetMap = new Map(
 
 const seedMaps = buildSeedMaps(leagueStandings, assetMap);
 
+// Get authenticated user and cookie preference
+const authUser = getAuthUser(Astro.request);
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+
+// If myteam param exists, set the cookie preference
+if (myTeamParam) {
+  setTheLeaguePreference(Astro.cookies, myTeamParam);
+}
+
+// Get cookie preference
+const cookiePreference = getTheLeaguePreference(Astro.cookies);
+
+// Resolve which team to highlight
+const preferredTeamId = resolveTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  authUserFranchise: authUser?.franchiseId,
+  defaultTeam: undefined,
+}) || undefined;
+
+// Determine which bracket contains the preferred team
+let defaultView: TabView = 'winners'; // Default to championship bracket
+if (preferredTeamId) {
+  // Check if team is in championship seeds (top 7)
+  const isInChampionship = Array.from(seedMaps.championshipSeeds.values())
+    .some(team => team.id === preferredTeamId);
+  // Check if team is in toilet bowl (bottom 7)
+  const isInToilet = Array.from(seedMaps.toiletSeeds.values())
+    .some(team => team.id === preferredTeamId);
+
+  if (isInToilet) {
+    defaultView = 'toilet';
+  } else if (isInChampionship) {
+    defaultView = 'winners';
+  }
+}
+
 // Use cached playoff bracket metadata only to avoid live fetch latency
 let bracketMetas: Array<{ id: string; name?: string; startWeek?: number; teamsInvolved?: number }> =
   fallbackBracketMetas;
@@ -127,7 +172,7 @@ const sortedBrackets: NormalizedBracket[] = [
 const availableViews: TabView[] = ['winners', 'toilet', 'prizes'];
 const tabView: TabView = availableViews.includes(requestedView as TabView)
   ? (requestedView as TabView)
-  : 'winners';
+  : defaultView;
 
 const availableModes: BracketMode[] = ['projected', 'clean'];
 const bracketMode: BracketMode = availableModes.includes(requestedMode as BracketMode)
