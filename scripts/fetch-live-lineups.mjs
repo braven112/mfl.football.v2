@@ -236,7 +236,12 @@ function normalizeInjuryStatus(status) {
   if (!status) return 'Healthy';
 
   const normalized = status.toLowerCase().trim();
-  
+
+  // Handle IR variants (IR-PUP, IR-R, IR-NFI, etc.)
+  if (normalized.startsWith('ir-') || normalized.startsWith('ir ')) {
+    return 'IR';
+  }
+
   switch (normalized) {
     case 'out':
     case 'o':
@@ -250,6 +255,12 @@ function normalizeInjuryStatus(status) {
     case 'ir':
     case 'injured reserve':
       return 'IR';
+    case 'suspended':
+      return 'Suspended';
+    case 'retired':
+      return 'Retired';
+    case 'holdout':
+      return 'Holdout';
     default:
       return 'Healthy';
   }
