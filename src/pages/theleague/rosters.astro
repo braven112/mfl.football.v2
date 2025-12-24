@@ -746,7 +746,8 @@ const calculateYearTotals = (
             : 'ACTIVE';
         const percent = getCapPercent(tag, isCurrent);
         const baseSalary = parseNumber(player.salary ?? 0);
-        const salaryForYear = baseSalary; // use the explicit salary provided for that season
+        // Apply 10% annual salary escalation for multi-year contracts
+        const salaryForYear = baseSalary * Math.pow(1.10, index);
         return sum + (salaryForYear * percent || 0);
       }
       return sum;
@@ -1008,16 +1009,6 @@ const serializedConfig = JSON.stringify({
             </tr>
           </thead>
           <tfoot>
-            <tr class="roster-totals">
-              <td data-column="player" class="roster-totals__label">Total Salary</td>
-              <td data-column="years"></td>
-              <td data-column="actions"></td>
-              {SALARY_YEARS.map((year, index) => (
-                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
-                  {formatCurrency(initialYearTotals[index] ?? 0)}
-                </td>
-              ))}
-            </tr>
             <tr class="roster-totals roster-totals--dead">
               <td data-column="player" class="roster-totals__label">Dead Money</td>
               <td data-column="years"></td>
@@ -1025,6 +1016,16 @@ const serializedConfig = JSON.stringify({
               {SALARY_YEARS.map((year, index) => (
                 <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`}>
                   {formatCurrency(initialDeadMoney[index] ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr class="roster-totals">
+              <td data-column="player" class="roster-totals__label">Total Salary</td>
+              <td data-column="years"></td>
+              <td data-column="actions"></td>
+              {SALARY_YEARS.map((year, index) => (
+                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
+                  {formatCurrency((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))}
                 </td>
               ))}
             </tr>
@@ -4381,7 +4382,8 @@ flex-wrap: wrap;
       const totals = calculateCapCharges(rows);
       const capThisYearBase = Number(getTeamData().seasonData?.metadata?.capLimit ?? capLimit) || 0;
       yearTotalCells.forEach((cell, index) => {
-        if (cell) cell.textContent = formatCurrency.format(totals[index] ?? 0);
+        // Include dead money in total salary to match MFL presentation
+        if (cell) cell.textContent = formatCurrency.format((totals[index] ?? 0) + (deadMoney[index] ?? 0));
         if (dmTotalCells[index]) dmTotalCells[index].textContent = formatCurrency.format(deadMoney[index] ?? 0);
         if (capLimitCells[index]) capLimitCells[index].textContent = formatCurrency.format(capThisYearBase);
         if (capSpaceCells[index])
@@ -4413,10 +4415,11 @@ flex-wrap: wrap;
             const baseSalary = Number(player.salary ?? 0);
 
             // If there's an extension, calculate salary for this year with 10% increases
-            let salaryForYear = baseSalary;
+            // Otherwise, apply 10% annual salary escalation for multi-year contracts
+            let salaryForYear = baseSalary * Math.pow(1.10, index);
             if (action && action.type === 'extension' && action.salaryBreakdown) {
               const yearKey = `year${index}`;
-              salaryForYear = Number(action.salaryBreakdown[yearKey] ?? baseSalary);
+              salaryForYear = Number(action.salaryBreakdown[yearKey] ?? salaryForYear);
             }
 
             return sum + (salaryForYear * percent || 0);

@@ -63,16 +63,21 @@ export interface CapPlayer {
 
 /**
  * Calculate cap charges for each salary year
+ * Applies 10% annual salary escalation for multi-year contracts
  * @param rows - List of players on roster
  * @returns Array of cap charges, one per year in SALARY_YEARS
  */
 export const calculateCapCharges = (rows: CapPlayer[] = []): number[] =>
   SALARY_YEARS.map((_, index) =>
     rows.reduce((sum, player) => {
-      if ((player.contractYears ?? 0) > index) {
+      const contractYears = parseNumber(player.contractYears ?? 0);
+      if (contractYears > index) {
         const isCurrent = index === 0;
         const percent = getCapPercent(player.displayTag ?? 'ACTIVE', isCurrent);
-        return sum + (parseNumber(player.salary) * percent || 0);
+        const baseSalary = parseNumber(player.salary);
+        // Apply 10% annual salary escalation for multi-year contracts
+        const salaryForYear = baseSalary * Math.pow(1.10, index);
+        return sum + (salaryForYear * percent || 0);
       }
       return sum;
     }, 0)
