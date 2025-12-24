@@ -2,15 +2,24 @@
 /**
  * DraftPredictorGrid - Grid display of all draft picks organized by round
  * Shows picks grouped by round with Compensatory picks marked as TBD
+ * Configurable for different league formats (theLeague vs AFL Fantasy)
  */
 
 import type { DraftPrediction } from '../../types/standings';
 
 export interface Props {
   predictions: DraftPrediction[];
+  totalRounds?: number; // Default 3 for theLeague, 9 for AFL Fantasy
+  teamsPerConference?: number; // Default 16 for theLeague, 12 for AFL Fantasy
+  hasCompensatoryPicks?: boolean; // Default true for theLeague, false for AFL Fantasy
 }
 
-const { predictions } = Astro.props;
+const {
+  predictions,
+  totalRounds = 3,
+  teamsPerConference = 16,
+  hasCompensatoryPicks = true
+} = Astro.props;
 
 // Sort predictions by overall pick number
 const sortedPredictions = [...predictions].sort(
@@ -30,350 +39,232 @@ const formatTeamName = (name: string) => {
 };
 
 const championUnknown = !sortedPredictions.some((p) => p.isLeagueWinner);
-const isChampionPick = (pick: DraftPrediction) => pick.pickInRound === 16;
+const isChampionPick = (pick: DraftPrediction) => pick.pickInRound === teamsPerConference;
 
-// Group picks by round
-const picksByRound = {
-  1: sortedPredictions.filter((p) => p.round === 1),
-  2: sortedPredictions.filter((p) => p.round === 2),
-  3: sortedPredictions.filter((p) => p.round === 3),
-};
+// Group picks by round dynamically
+const picksByRound: Record<number, DraftPrediction[]> = {};
+for (let round = 1; round <= totalRounds; round++) {
+  picksByRound[round] = sortedPredictions.filter((p) => p.round === round);
+}
 
-// Check which Compensatory picks have assignments
-const specialPicksAssigned = {
+// Check which Compensatory picks have assignments (only for theLeague)
+const specialPicksAssigned = hasCompensatoryPicks ? {
   '1.17': sortedPredictions.some((p) => p.round === 1 && p.pickInRound === 17),
   '2.17': sortedPredictions.some((p) => p.round === 2 && p.pickInRound === 17),
   '2.18': sortedPredictions.some((p) => p.round === 2 && p.pickInRound === 18),
-};
+} : {};
 ---
 
 <div class="draft-rounds-container">
-  <!-- Round 1 -->
-  <div class="draft-round">
-    <h3 class="draft-round__title">Round 1 (Picks 1-16 + Compensatory 1.17)</h3>
-    <div class="draft-round__picks">
-      {
-        picksByRound[1].map((pick) => (
-          <div
-            class:list={[
-              'draft-pick',
-              {
-                'draft-pick--league-winner': pick.isLeagueWinner,
-                'draft-pick--toilet-bowl': pick.isToiletBowlPick,
-                'draft-pick--champion': isChampionPick(pick),
-                'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
-              },
-            ]}
-            title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
-          >
-            <div class="draft-pick__content">
-              <div class="draft-pick__icon-container">
-                {pick.teamIcon && (
-                  <img
-                    src={pick.teamIcon}
-                    alt={pick.teamName}
-                    class="draft-pick__icon"
-                  />
-                )}
-                {pick.isTraded && pick.originalTeamIcon && (
-                  <img
-                    src={pick.originalTeamIcon}
-                    alt={pick.originalTeamName}
-                    class="draft-pick__icon draft-pick__icon--original"
-                    title={`Originally owned by ${pick.originalTeamName}`}
-                  />
+  {Object.entries(picksByRound).map(([roundNum, roundPicks]) => {
+    const round = parseInt(roundNum);
+    const startPick = (round - 1) * teamsPerConference + 1;
+    const endPick = round * teamsPerConference;
+    const roundTitle = hasCompensatoryPicks && round === 1
+      ? `Round ${round} (Picks ${startPick}-${endPick} + Compensatory ${round}.17)`
+      : hasCompensatoryPicks && round === 2
+      ? `Round ${round} (Picks ${startPick}-${endPick} + Compensatory ${round}.17, ${round}.18)`
+      : `Round ${round} (Picks ${startPick}-${endPick})`;
+
+    return (
+      <div class="draft-round">
+        <h3 class="draft-round__title">{roundTitle}</h3>
+        <div class="draft-round__picks">
+          {roundPicks.map((pick) => (
+            <div
+              class:list={[
+                'draft-pick',
+                {
+                  'draft-pick--league-winner': pick.isLeagueWinner,
+                  'draft-pick--toilet-bowl': pick.isToiletBowlPick,
+                  'draft-pick--champion': isChampionPick(pick),
+                  'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
+                },
+              ]}
+              title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
+            >
+              <div class="draft-pick__content">
+                <div class="draft-pick__icon-container">
+                  {pick.teamIcon && (
+                    <img
+                      src={pick.teamIcon}
+                      alt={pick.teamName}
+                      class="draft-pick__icon"
+                    />
+                  )}
+                  {pick.isTraded && pick.originalTeamIcon && (
+                    <img
+                      src={pick.originalTeamIcon}
+                      alt={pick.originalTeamName}
+                      class="draft-pick__icon draft-pick__icon--original"
+                      title={`Originally owned by ${pick.originalTeamName}`}
+                    />
+                  )}
+                </div>
+                <div class="draft-pick__name">{formatTeamName(pick.teamName)}</div>
+                <div class="draft-pick__number">
+                  {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
+                </div>
+                {isChampionPick(pick) && (
+                  <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
                 )}
               </div>
-              <div class="draft-pick__name">{formatTeamName(pick.teamName)}</div>
-              <div class="draft-pick__number">
-                {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
-              </div>
-              {isChampionPick(pick) && (
-                <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
-              )}
             </div>
-          </div>
-        ))
-      }
+          ))}
 
-      <!-- Special Pick 1.17 if not assigned -->
-      {!specialPicksAssigned['1.17'] && (
-        <div class="draft-pick draft-pick--tbd draft-pick--special">
-          <div class="draft-pick__content">
-            <div class="draft-pick__name">TBD</div>
-            <div class="draft-pick__number">1.17</div>
-            <div class="draft-pick__label">Toilet Bowl</div>
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
-
-  <!-- Round 2 -->
-  <div class="draft-round">
-    <h3 class="draft-round__title">Round 2 (Picks 17-32 + Compensatory 2.17, 2.18)</h3>
-    <div class="draft-round__picks">
-      {
-        picksByRound[2].map((pick) => (
-          <div
-            class:list={[
-              'draft-pick',
-              {
-                'draft-pick--league-winner': pick.isLeagueWinner,
-                'draft-pick--toilet-bowl': pick.isToiletBowlPick,
-                'draft-pick--champion': isChampionPick(pick),
-                'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
-              },
-            ]}
-            title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
-          >
-            <div class="draft-pick__content">
-              <div class="draft-pick__icon-container">
-                {pick.teamIcon && (
-                  <img
-                    src={pick.teamIcon}
-                    alt={pick.teamName}
-                    class="draft-pick__icon"
-                  />
-                )}
-                {pick.isTraded && pick.originalTeamIcon && (
-                  <img
-                    src={pick.originalTeamIcon}
-                    alt={pick.originalTeamName}
-                    class="draft-pick__icon draft-pick__icon--original"
-                    title={`Originally owned by ${pick.originalTeamName}`}
-                  />
-                )}
+          {/* Compensatory picks for theLeague only */}
+          {hasCompensatoryPicks && round === 1 && !specialPicksAssigned['1.17'] && (
+            <div class="draft-pick draft-pick--tbd draft-pick--special">
+              <div class="draft-pick__content">
+                <div class="draft-pick__name">TBD</div>
+                <div class="draft-pick__number">1.17</div>
+                <div class="draft-pick__label">Toilet Bowl</div>
               </div>
-              <div class="draft-pick__name">{pick.teamName}</div>
-              <div class="draft-pick__number">
-                {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
-              </div>
-              {isChampionPick(pick) && (
-                <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
-              )}
             </div>
-          </div>
-        ))
-      }
-
-      <!-- Compensatory Picks 2.17 and 2.18 if not assigned -->
-      {!specialPicksAssigned['2.17'] && (
-        <div class="draft-pick draft-pick--tbd draft-pick--special">
-          <div class="draft-pick__content">
-            <div class="draft-pick__name">TBD</div>
-            <div class="draft-pick__number">2.17</div>
-            <div class="draft-pick__label">Consolation</div>
-          </div>
-        </div>
-      )}
-      {!specialPicksAssigned['2.18'] && (
-        <div class="draft-pick draft-pick--tbd draft-pick--special">
-          <div class="draft-pick__content">
-            <div class="draft-pick__name">TBD</div>
-            <div class="draft-pick__number">2.18</div>
-            <div class="draft-pick__label">Consolation</div>
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
-
-  <!-- Round 3 -->
-  <div class="draft-round">
-    <h3 class="draft-round__title">Round 3 (Picks 33-48)</h3>
-    <div class="draft-round__picks">
-      {
-        picksByRound[3].map((pick) => (
-          <div
-            class:list={[
-              'draft-pick',
-              {
-                'draft-pick--league-winner': pick.isLeagueWinner,
-                'draft-pick--toilet-bowl': pick.isToiletBowlPick,
-                'draft-pick--champion': isChampionPick(pick),
-                'draft-pick--champion-tbd': championUnknown && isChampionPick(pick),
-              },
-            ]}
-            title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
-          >
-            <div class="draft-pick__content">
-              <div class="draft-pick__icon-container">
-                {pick.teamIcon && (
-                  <img
-                    src={pick.teamIcon}
-                    alt={pick.teamName}
-                    class="draft-pick__icon"
-                  />
-                )}
-                {pick.isTraded && pick.originalTeamIcon && (
-                  <img
-                    src={pick.originalTeamIcon}
-                    alt={pick.originalTeamName}
-                    class="draft-pick__icon draft-pick__icon--original"
-                    title={`Originally owned by ${pick.originalTeamName}`}
-                  />
-                )}
+          )}
+          {hasCompensatoryPicks && round === 2 && !specialPicksAssigned['2.17'] && (
+            <div class="draft-pick draft-pick--tbd draft-pick--special">
+              <div class="draft-pick__content">
+                <div class="draft-pick__name">TBD</div>
+                <div class="draft-pick__number">2.17</div>
+                <div class="draft-pick__label">Consolation</div>
               </div>
-              <div class="draft-pick__name">{pick.teamName}</div>
-              <div class="draft-pick__number">
-                {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
-              </div>
-              {isChampionPick(pick) && (
-                <div class="draft-pick__label">{championUnknown ? 'Reserved for Champ' : 'League Champion'}</div>
-              )}
             </div>
-          </div>
-        ))
-      }
-    </div>
-  </div>
+          )}
+          {hasCompensatoryPicks && round === 2 && !specialPicksAssigned['2.18'] && (
+            <div class="draft-pick draft-pick--tbd draft-pick--special">
+              <div class="draft-pick__content">
+                <div class="draft-pick__name">TBD</div>
+                <div class="draft-pick__number">2.18</div>
+                <div class="draft-pick__label">Consolation</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  })}
 
   <!-- Legend -->
-
   <div class="draft-round">
     <h3 class="draft-round__title">Legend</h3>
     <div class="draft-round__picks">
-      <!-- Champion placeholders grouped -->
-      <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
-        <div class="draft-pick__content">
-          <div class="draft-pick__icon-container">
-            <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
-              <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
-              <rect x="4" y="42" width="56" height="8" rx="2" fill="currentColor" opacity="0.15"/>
-            </svg>
+      {/* Champion placeholders - one for each round */}
+      {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => (
+        <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
+          <div class="draft-pick__content">
+            <div class="draft-pick__icon-container">
+              <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
+                <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
+                <rect x="4" y="42" width="56" height="8" rx="2" fill="currentColor" opacity="0.15"/>
+              </svg>
+            </div>
+            <div class="draft-pick__name">League Champion</div>
+            <div class="draft-pick__number">{round}.{String(teamsPerConference).padStart(2, '0')}</div>
+            <div class="draft-pick__label">Reserved</div>
           </div>
-          <div class="draft-pick__name">League Champion</div>
-          <div class="draft-pick__number">1.16</div>
-          <div class="draft-pick__label">Reserved</div>
         </div>
-      </div>
-      <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
-        <div class="draft-pick__content">
-          <div class="draft-pick__icon-container">
-            <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
-              <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
-              <rect x="4" y="42" width="56" height="8" rx="2" fill="currentColor" opacity="0.15"/>
-            </svg>
-          </div>
-          <div class="draft-pick__name">League Champion</div>
-          <div class="draft-pick__number">2.16</div>
-          <div class="draft-pick__label">Reserved</div>
-        </div>
-      </div>
-      <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
-        <div class="draft-pick__content">
-          <div class="draft-pick__icon-container">
-            <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
-              <path d="M8 22l10 8 8-14 8 14 10-8 4 20H4l4-20z" fill="currentColor"/>
-            </svg>
-          </div>
-          <div class="draft-pick__name">League Champion</div>
-          <div class="draft-pick__number">3.16</div>
-          <div class="draft-pick__label">Reserved</div>
-        </div>
-      </div>
+      ))}
 
-      <!-- Pick 1.17 -->
-      {
-        sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17) ? (
-          <div class="draft-pick draft-pick--toilet-bowl">
-            <div class="draft-pick__content">
-              <div class="draft-pick__icon-container">
-                {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamIcon && (
+      {/* Compensatory picks for theLeague only */}
+      {hasCompensatoryPicks && (
+        <>
+          {/* Pick 1.17 */}
+          {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17) ? (
+            <div class="draft-pick draft-pick--toilet-bowl">
+              <div class="draft-pick__content">
+                <div class="draft-pick__icon-container">
+                  {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamIcon && (
+                    <img
+                      src={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamIcon}
+                      alt={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamName}
+                      class="draft-pick__icon"
+                    />
+                  )}
+                  {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.isTraded &&
+                    sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamIcon && (
+                    <img
+                      src={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamIcon}
+                      alt={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamName}
+                      class="draft-pick__icon draft-pick__icon--original"
+                      title={`Originally owned by ${sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamName}`}
+                    />
+                  )}
+                </div>
+                <div class="draft-pick__name">
+                  {formatTeamName(sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamName || '')}
+                </div>
+                <div class="draft-pick__number">1.17</div>
+                <div class="draft-pick__label">Toilet Bowl</div>
+              </div>
+            </div>
+          ) : (
+            <div class="draft-pick draft-pick--tbd draft-pick--special">
+              <div class="draft-pick__content">
+                <div class="draft-pick__name">TBD</div>
+                <div class="draft-pick__number">1.17</div>
+                <div class="draft-pick__label">Toilet Bowl</div>
+              </div>
+            </div>
+          )}
+
+          {/* Pick 2.17 */}
+          {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17) ? (
+            <div class="draft-pick draft-pick--toilet-bowl">
+              <div class="draft-pick__content">
+                {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamIcon && (
                   <img
-                    src={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamIcon}
-                    alt={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamName}
+                    src={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamIcon}
+                    alt={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamName}
                     class="draft-pick__icon"
                   />
                 )}
-                {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.isTraded &&
-                  sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamIcon && (
+                <div class="draft-pick__name">
+                  {formatTeamName(sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamName || '')}
+                </div>
+                <div class="draft-pick__number">2.17</div>
+                <div class="draft-pick__label">Consolation</div>
+              </div>
+            </div>
+          ) : (
+            <div class="draft-pick draft-pick--tbd draft-pick--special">
+              <div class="draft-pick__content">
+                <div class="draft-pick__name">TBD</div>
+                <div class="draft-pick__number">2.17</div>
+                <div class="draft-pick__label">Consolation</div>
+              </div>
+            </div>
+          )}
+
+          {/* Pick 2.18 */}
+          {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18) ? (
+            <div class="draft-pick draft-pick--toilet-bowl">
+              <div class="draft-pick__content">
+                {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamIcon && (
                   <img
-                    src={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamIcon}
-                    alt={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamName}
-                    class="draft-pick__icon draft-pick__icon--original"
-                    title={`Originally owned by ${sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamName}`}
+                    src={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamIcon}
+                    alt={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName}
+                    class="draft-pick__icon"
                   />
                 )}
+                <div class="draft-pick__name">
+                  {formatTeamName(sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName || '')}
+                </div>
+                <div class="draft-pick__number">2.18</div>
+                <div class="draft-pick__label">Consolation</div>
               </div>
-              <div class="draft-pick__name">
-                {formatTeamName(sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamName || '')}
+            </div>
+          ) : (
+            <div class="draft-pick draft-pick--tbd draft-pick--special">
+              <div class="draft-pick__content">
+                <div class="draft-pick__name">TBD</div>
+                <div class="draft-pick__number">2.18</div>
+                <div class="draft-pick__label">Consolation</div>
               </div>
-              <div class="draft-pick__number">1.17</div>
-              <div class="draft-pick__label">Toilet Bowl</div>
             </div>
-          </div>
-        ) : (
-          <div class="draft-pick draft-pick--tbd draft-pick--special">
-            <div class="draft-pick__content">
-              <div class="draft-pick__name">TBD</div>
-              <div class="draft-pick__number">1.17</div>
-              <div class="draft-pick__label">Toilet Bowl</div>
-            </div>
-          </div>
-        )
-      }
-
-      <!-- Pick 2.17 -->
-      {
-        sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17) ? (
-          <div class="draft-pick draft-pick--toilet-bowl">
-            <div class="draft-pick__content">
-              {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamIcon && (
-                <img
-                  src={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamIcon}
-                  alt={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamName}
-                  class="draft-pick__icon"
-                />
-              )}
-              <div class="draft-pick__name">
-                {formatTeamName(sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamName || '')}
-              </div>
-              <div class="draft-pick__number">2.17</div>
-              <div class="draft-pick__label">Consolation</div>
-            </div>
-          </div>
-        ) : (
-          <div class="draft-pick draft-pick--tbd draft-pick--special">
-            <div class="draft-pick__content">
-              <div class="draft-pick__name">TBD</div>
-              <div class="draft-pick__number">2.17</div>
-              <div class="draft-pick__label">Consolation</div>
-            </div>
-          </div>
-        )
-      }
-
-      <!-- Pick 2.18 -->
-      {
-        sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18) ? (
-          <div class="draft-pick draft-pick--toilet-bowl">
-            <div class="draft-pick__content">
-              {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamIcon && (
-                <img
-                  src={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamIcon}
-                  alt={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName}
-                  class="draft-pick__icon"
-                />
-              )}
-              <div class="draft-pick__name">
-                {formatTeamName(sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName || '')}
-              </div>
-              <div class="draft-pick__number">2.18</div>
-              <div class="draft-pick__label">Consolation</div>
-            </div>
-          </div>
-        ) : (
-          <div class="draft-pick draft-pick--tbd draft-pick--special">
-            <div class="draft-pick__content">
-              <div class="draft-pick__name">TBD</div>
-              <div class="draft-pick__number">2.18</div>
-              <div class="draft-pick__label">Consolation</div>
-            </div>
-          </div>
-        )
-      }
+          )}
+        </>
+      )}
     </div>
   </div>
 
@@ -524,6 +415,8 @@ const specialPicksAssigned = {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    min-height: 2rem;
+    align-content: center;
   }
 
   .draft-pick__number {

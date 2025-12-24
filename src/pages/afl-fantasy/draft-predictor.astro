@@ -1,0 +1,381 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import DraftPredictorGrid from '../../components/theleague/DraftPredictorGrid.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults } from '../../utils/afl-draft-utils';
+import fs from 'fs';
+import path from 'path';
+
+export const prerender = true;
+
+// Load AFL Fantasy data
+const currentYear = new Date().getFullYear();
+const standingsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'standings.json');
+const playoffBracketsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'playoff-brackets.json');
+
+const standingsData = JSON.parse(fs.readFileSync(standingsPath, 'utf-8'));
+const standings = Array.isArray(standingsData.leagueStandings.franchise)
+  ? standingsData.leagueStandings.franchise
+  : [standingsData.leagueStandings.franchise];
+
+// Build team config map with conference info
+const teamConfigMap = new Map(
+  aflConfig.teams.map(team => [
+    team.franchiseId,
+    {
+      id: team.franchiseId,
+      name: team.name,
+      icon: team.icon,
+      banner: team.banner,
+      conference: team.conference
+    }
+  ])
+);
+
+// Load playoff bracket data and parse conference champions and NIT results
+let playoffBracketsData;
+let conferenceChampions = new Map<string, string>();
+let nitResults = new Map<string, Array<{ franchiseId: string; finishPosition: number }>>();
+
+try {
+  playoffBracketsData = JSON.parse(fs.readFileSync(playoffBracketsPath, 'utf-8'));
+  conferenceChampions = parseConferenceChampions(playoffBracketsData);
+  nitResults = parseNITResults(playoffBracketsData, teamConfigMap);
+} catch (error) {
+  // Playoff brackets may not exist yet - use empty data
+  console.warn('Playoff brackets not available yet, using empty data for champions and NIT results');
+}
+
+// Calculate draft order for both conferences
+const draftOrders = calculateAFLDraftOrder(
+  standings,
+  teamConfigMap,
+  conferenceChampions,
+  nitResults
+);
+
+const nextYear = currentYear + 1;
+
+// Get both conference orders (we'll switch between them client-side)
+const alOrder = draftOrders.find(order => order.conference === 'American League');
+const nlOrder = draftOrders.find(order => order.conference === 'National League');
+---
+
+<TheLeagueLayout title={`AFL Fantasy - ${nextYear} Draft Predictor`}>
+  <section class="draft-predictor-page">
+    <header class="draft-predictor-header">
+      <div>
+        <h1 class="draft-predictor-title">{nextYear} Draft Order</h1>
+        <p class="draft-predictor-subtitle">
+          Projected draft order for {nextYear} based on {currentYear} season standings
+        </p>
+      </div>
+
+      <!-- Conference Tabs -->
+      <div class="conference-tabs">
+        <a
+          href="?conference=AL"
+          class="conference-tab"
+          data-conference="AL"
+        >
+          American League
+        </a>
+        <a
+          href="?conference=NL"
+          class="conference-tab"
+          data-conference="NL"
+        >
+          National League
+        </a>
+      </div>
+    </header>
+
+    <div class="draft-predictor-content">
+      {/* American League */}
+      {alOrder && alOrder.picks.length > 0 && (
+        <div class="conference-order" data-conference="AL">
+          <DraftPredictorGrid
+            predictions={alOrder.picks}
+            totalRounds={9}
+            teamsPerConference={12}
+            hasCompensatoryPicks={false}
+          />
+        </div>
+      )}
+
+      {/* National League */}
+      {nlOrder && nlOrder.picks.length > 0 && (
+        <div class="conference-order" data-conference="NL">
+          <DraftPredictorGrid
+            predictions={nlOrder.picks}
+            totalRounds={9}
+            teamsPerConference={12}
+            hasCompensatoryPicks={false}
+          />
+        </div>
+      )}
+    </div>
+
+    <div class="draft-predictor-info">
+      <div class="info-card">
+        <h3>How It Works</h3>
+        <ul>
+          <li>
+            <strong>Two Separate Drafts:</strong> Each conference (AL & NL) holds its own 12-team draft
+          </li>
+          <li>
+            <strong>9 Rounds:</strong> Each conference drafts 9 rounds (108 total picks per conference)
+          </li>
+          <li>
+            <strong>Base Order (Picks 1-11):</strong> Determined by reverse standings (worst record gets pick 1)
+          </li>
+          <li>
+            <strong>Pick 12:</strong> Conference champion always receives the 12th pick (last in round)
+          </li>
+          <li>
+            <strong>NIT Bonus Points:</strong> Top 5 NIT finishers get +1.5 points to improve Round 1 position
+          </li>
+          <li>
+            <strong>Points System:</strong> Base points range from 12 (worst) to 1 (champion), then add NIT bonus
+          </li>
+          <li>
+            <strong>Round 1 Only:</strong> Reordered by total points (highest points = pick 1 = best pick)
+          </li>
+          <li>
+            <strong>Rounds 2-9:</strong> Follow the Round 1 order
+          </li>
+          <li>
+            <strong>Tiebreakers:</strong> Uses same wild card tiebreaker rules as standings (Power Rank, PF, All-Play %, VP, PA)
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .draft-predictor-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .draft-predictor-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    justify-items: center;
+    align-items: center;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (min-width: 550px) {
+    .draft-predictor-header {
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      justify-items: start;
+    }
+  }
+
+  .draft-predictor-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .draft-predictor-subtitle {
+    margin: 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 1rem;
+  }
+
+  .conference-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f8fafc;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+  }
+
+  .conference-tab {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    color: #64748b;
+    background: transparent;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .conference-tab:hover {
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .conference-tab.active {
+    background: #c41e3a;
+    color: white;
+    box-shadow: 0 2px 4px rgba(196, 30, 58, 0.2);
+  }
+
+  .draft-predictor-content {
+    min-height: 400px;
+  }
+
+  .conference-order {
+    display: none;
+  }
+
+  .conference-order.active {
+    display: block;
+  }
+
+  .draft-predictor-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #64748b;
+    font-size: 1.125rem;
+  }
+
+  .draft-predictor-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--padding-md);
+  }
+
+  .info-card {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  .info-card h3 {
+    margin: 0 0 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    list-style: disc;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.925rem;
+    line-height: 1.6;
+  }
+
+  .info-card li {
+    margin-bottom: 0.75rem;
+  }
+
+  .info-card li strong {
+    color: var(--text-primary-color, #111827);
+  }
+
+  @media (max-width: 767px) {
+    .draft-predictor-title {
+      font-size: 1.5rem;
+    }
+
+    .draft-predictor-subtitle {
+      font-size: 0.925rem;
+    }
+
+    .draft-predictor-header {
+      grid-template-columns: 1fr;
+    }
+
+    .conference-tabs {
+      width: 100%;
+    }
+
+    .conference-tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .draft-predictor-info {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // Handle conference tab switching
+  function initConferenceTabs() {
+    const tabs = document.querySelectorAll('.conference-tab');
+    const conferenceOrders = document.querySelectorAll('.conference-order');
+
+    // Get initial conference from URL or default to AL
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialConference = urlParams.get('conference') || 'AL';
+
+    // Function to show active conference
+    function showConference(conference: string) {
+      // Update tabs
+      tabs.forEach(tab => {
+        const tabConference = tab.getAttribute('data-conference');
+        if (tabConference === conference) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      // Update conference orders
+      conferenceOrders.forEach(order => {
+        const orderConference = order.getAttribute('data-conference');
+        if (orderConference === conference) {
+          order.classList.add('active');
+        } else {
+          order.classList.remove('active');
+        }
+      });
+    }
+
+    // Show initial conference
+    showConference(initialConference);
+
+    // Add click handlers
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const conference = tab.getAttribute('data-conference');
+        if (conference) {
+          // Update URL without reloading
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('conference', conference);
+          window.history.pushState({}, '', newUrl);
+
+          // Show selected conference
+          showConference(conference);
+        }
+      });
+    });
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const conference = urlParams.get('conference') || 'AL';
+      showConference(conference);
+    });
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initConferenceTabs);
+  } else {
+    initConferenceTabs();
+  }
+</script>
