@@ -10,9 +10,10 @@ export interface Props {
   defendingChampion?: string;
   defendingChampionYear?: number;
   year?: number;
+  preferredTeamId?: string;
 }
 
-const { teams, view, showDivisionHeader = false, divisionName = '', defendingChampion = '', defendingChampionYear, year = new Date().getFullYear() } = Astro.props;
+const { teams, view, showDivisionHeader = false, divisionName = '', defendingChampion = '', defendingChampionYear, year = new Date().getFullYear(), preferredTeamId } = Astro.props;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -119,8 +120,14 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
           const playoffStatus = getPlayoffStatus(team);
           const gamesBack = view === 'division' ? calculateGamesBack(team, teams) : 0;
 
+          const isPreferredTeam = preferredTeamId && team.id === preferredTeamId;
+
           return (
-            <tr key={team.id} class={`row-${index % 2 === 0 ? 'even' : 'odd'}`}>
+            <tr
+              class={`row-${index % 2 === 0 ? 'even' : 'odd'}${isPreferredTeam ? ' preferred-team' : ''}`}
+              data-preferred={isPreferredTeam ? 'true' : undefined}
+              data-team-id={team.id}
+            >
               {view === 'league' && (
                 <td class="col-seed">
                   <span class="seed-badge">#{team.seed}</span>
@@ -397,6 +404,21 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     display: inline-block;
+  }
+
+  /* Preferred team highlighting */
+  tr.preferred-team {
+    background-color: #2e743d12 !important;
+    border-left: 3px solid #2e743d;
+    font-weight: 600;
+  }
+
+  tr.preferred-team:hover {
+    background-color: #2e743d36 !important;
+  }
+
+  tr.preferred-team .team-name {
+    color: #2e743d;
   }
 
   /* Responsive */

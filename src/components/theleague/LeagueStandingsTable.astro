@@ -4,9 +4,10 @@ import type { TeamStanding } from '../../types/standings';
 export interface Props {
   teams: TeamStanding[];
   year?: number;
+  preferredTeamId?: string;
 }
 
-const { teams, year = new Date().getFullYear() } = Astro.props;
+const { teams, year = new Date().getFullYear(), preferredTeamId } = Astro.props;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -78,9 +79,14 @@ function getRowColor(seed: number | undefined): string {
           const nextTeam = teams[index + 1];
           const nextTier = nextTeam ? getRowColor(nextTeam.seed) : '';
           const isTierBoundary = rowColor !== nextTier && nextTeam;
+          const isPreferredTeam = preferredTeamId && team.id === preferredTeamId;
 
           return (
-            <tr class={`league-row ${rowColor} ${isTierBoundary ? 'tier-boundary' : ''}`}>
+            <tr
+              class={`league-row ${rowColor} ${isTierBoundary ? 'tier-boundary' : ''}${isPreferredTeam ? ' preferred-team' : ''}`}
+              data-preferred={isPreferredTeam ? 'true' : undefined}
+              data-team-id={team.id}
+            >
               <td class="col-seed">
                 <span class="seed-number">#{team.seed}</span>
               </td>
@@ -296,6 +302,21 @@ function getRowColor(seed: number | undefined): string {
     font-weight: 700;
     font-size: 1rem;
     display: inline-block;
+  }
+
+  /* Preferred team highlighting */
+  tr.preferred-team {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+    border-left: 3px solid #6366f1;
+    font-weight: 600;
+  }
+
+  tr.preferred-team:hover {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+  }
+
+  tr.preferred-team .team-name {
+    color: #6366f1;
   }
 
   /* Responsive */

@@ -11,6 +11,12 @@ import {
 } from '../../utils/standings';
 import type { DivisionStandings } from '../types/standings';
 import leagueConfig from '../../data/theleague.config.json';
+import { getAuthUser } from '../../utils/auth';
+import {
+  getTheLeaguePreference,
+  setTheLeaguePreference,
+  resolveTeamSelection,
+} from '../../utils/team-preferences';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -64,6 +70,28 @@ const allPlayStandings = getAllPlayStandings(franchises, leagueConfig);
 // Get view from query parameter (default to 'division')
 const view = (Astro.url.searchParams.get('view') ||
   'division') as 'division' | 'league' | 'all_play';
+
+// Get authenticated user and cookie preference
+const authUser = getAuthUser(Astro.request);
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+
+// If myteam param exists, set the cookie preference
+if (myTeamParam) {
+  setTheLeaguePreference(Astro.cookies, myTeamParam);
+}
+
+// Get cookie preference
+const cookiePreference = getTheLeaguePreference(Astro.cookies);
+
+// Resolve which team to highlight (undefined if no preference)
+const preferredTeamId = resolveTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  authUserFranchise: authUser?.franchiseId,
+  defaultTeam: undefined, // Don't default if no preference
+}) || undefined;
 
 // Division Champions by Year (previous year's defending champs)
 const championsByYear: Record<number, Record<string, string>> = {
@@ -211,6 +239,7 @@ const defendingChampions = championsByYear[previousYear] || {};
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
+              preferredTeamId={preferredTeamId}
             />
           ))}
         </div>
@@ -218,13 +247,13 @@ const defendingChampions = championsByYear[previousYear] || {};
 
       {view === 'league' && (
         <div class="league-view">
-          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} />
+          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} preferredTeamId={preferredTeamId} />
         </div>
       )}
 
       {view === 'all_play' && (
         <div class="all-play-view">
-          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} />
+          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} preferredTeamId={preferredTeamId} />
         </div>
       )}
 
