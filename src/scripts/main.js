@@ -1,6 +1,7 @@
 import { fixFranchiseIcons, shouldSkipFranchiseIcons } from './features/franchiseIcons.js';
 import { fixPlayoffTableLabels } from './features/projected-playoff.js';
 import { updateFranchiseLinks } from './features/franchiseLinks.js';
+import { initializeTeamPreferences } from './shared/teamPreferences.js';
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
@@ -75,9 +76,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   //
   // --------------------------
-  // Update Franchise Links
+  // Update Franchise Links & Team Preferences
   // --------------------------
   //
+  // Initialize team preferences (reads URL params, checks cookies)
+  const displayTeam = initializeTeamPreferences('theleague');
+  
+  // Update MFL links to include myteam parameter
   updateFranchiseLinks();
 
   //

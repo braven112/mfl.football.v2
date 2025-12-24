@@ -1,4 +1,6 @@
 import { fixFranchiseIcons, shouldSkipFranchiseIcons } from './features/franchiseIcons.js';
+import { updateAFLFranchiseLinks } from './features/aflFranchiseLinks.js';
+import { initializeTeamPreferences } from './shared/teamPreferences.js';
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
@@ -63,4 +65,15 @@ document.addEventListener('DOMContentLoaded', () => {
       fixFranchiseIcons();
     }
   }
+
+  //
+  // --------------------------
+  // Update AFL Franchise Links & Team Preferences
+  // --------------------------
+  //
+  // Initialize team preferences (reads URL params, checks cookies)
+  const displayTeam = initializeTeamPreferences('afl');
+  
+  // Update MFL links to include myteam parameter
+  updateAFLFranchiseLinks();
 });
