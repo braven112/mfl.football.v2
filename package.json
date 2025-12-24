@@ -28,7 +28,11 @@
     "update:salary": "MFL_LEAGUE_SLUG=theleague node scripts/update-salary-averages.mjs",
     "update:salary:afl": "MFL_LEAGUE_ID=19621 MFL_LEAGUE_SLUG=afl node scripts/update-salary-averages.mjs",
     "update:salary:all": "pnpm run update:salary && pnpm run update:salary:afl",
-    "test": "pnpm --filter './packages/*' test",
+    "test": "pnpm run test:unit && pnpm run test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "node tests/e2e-cookie-test.mjs",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "type-check": "pnpm --filter './packages/*' type-check",
     "clean": "pnpm --parallel --filter './packages/*' clean"
   },

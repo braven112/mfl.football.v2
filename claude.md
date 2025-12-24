@@ -1,3 +1,20 @@
+# MFL Football v2 - Feature Documentation
+
+## Team Personalization
+
+For details on the team preference cookie system and personalization features across both leagues, see [PERSONALIZATION.md](./PERSONALIZATION.md).
+
+Key features:
+- Persistent cookie-based team/conference preferences per league
+- Dual URL parameter system:
+  - `?myteam=0001` - Sets user's team preference cookie (from MFL context)
+  - `?franchise=0005` - View-only mode (doesn't update preference)
+- Cross-page team context retention
+- Smart fallback: cookie → auth user → default (0001)
+- Integration points across TheLeague and AFL Fantasy
+
+---
+
 # Draft Pick Predictor Feature
 
 ## Overview

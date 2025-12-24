@@ -38,6 +38,11 @@ import tradeBait2025Data from '../../../data/theleague/mfl-feeds/2025/tradeBait.
 import { calculateDraftOrder, buildActualDraftPicks } from '../../utils/draft-utils';
 import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
+import {
+  getTheLeaguePreference,
+  setTheLeaguePreference,
+  resolveTeamSelection,
+} from '../../utils/team-preferences';
 
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -696,22 +701,29 @@ const knownTeamIds = new Set([
 const authUser = getAuthUser(Astro.request);
 const isLoggedIn = !!authUser;
 const userFranchiseId = normalizeFranchiseId(authUser?.franchiseId);
-const urlFranchiseId = normalizeFranchiseId(
-  Astro.url?.searchParams?.get('franchise') ??
-    Astro.url?.searchParams?.get('team') ??
-    Astro.url?.searchParams?.get('franchiseId') ??
-    null
-);
 
-// Default to user's franchise if logged in, otherwise first team
-const defaultTeamId =
-  (urlFranchiseId && knownTeamIds.has(urlFranchiseId) ? urlFranchiseId : null) ||
-  (isLoggedIn && userFranchiseId && knownTeamIds.has(userFranchiseId)
-    ? userFranchiseId
-    : null) ||
-  teamsList[0]?.id ||
-  rosterTeamIds[0] ||
-  (Object.keys(rostersBySeason[defaultSeason]?.teams ?? {})[0] ?? 'FA');
+// Get URL parameters for team preference
+const myTeamParam = Astro.url?.searchParams?.get('myteam');
+const franchiseParam = Astro.url?.searchParams?.get('franchise') ??
+  Astro.url?.searchParams?.get('team') ??
+  Astro.url?.searchParams?.get('franchiseId');
+
+// If myteam param exists, set the cookie preference
+if (myTeamParam) {
+  setTheLeaguePreference(Astro.cookies, myTeamParam);
+}
+
+// Get cookie preference
+const cookiePreference = getTheLeaguePreference(Astro.cookies);
+
+// Resolve which team to display using priority order
+const defaultTeamId = resolveTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  authUserFranchise: userFranchiseId,
+  defaultTeam: teamsList[0]?.id || rosterTeamIds[0] || '0001',
+});
 
 const initialSeasonData = rostersBySeason[defaultSeason] ?? { teams: {} };
 const initialTeamData =
