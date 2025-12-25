@@ -229,21 +229,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         <li><a href={isAFL ? "/afl-fantasy/salary" : "/theleague/salary"}>Salary Benchmarks</a></li>
         <li><a href={isAFL ? "/afl-fantasy/salary-history" : "/theleague/salary-history"}>Salary History</a></li>
         <li><a href={isAFL ? "/afl-fantasy/mvp" : "/theleague/mvp"}>Salary-Adjusted MVPs</a></li>
-
-        <li><hr /></li>
-
-        <!-- External Links -->
-        {!isAFL && (
-          <>
-            <li class="nav-section-title">Community</li>
-            <li>
-              <a href="https://theleague.us/forum/index.php"> Message Board </a>
-            </li>
-          </>
-        )}
-        <li class="nav-section-title">Leagues</li>
-        <li><a href="https://theleague.us">TheLeague.us</a></li>
-        <li><a href="https://afl-fantasy.com">AFL Fantasy</a></li>
       </ul>
     </div>
   </nav>
