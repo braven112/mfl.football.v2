@@ -867,8 +867,6 @@ const grandTotal =
 
 <style>
   .playoff-page {
-    padding: clamp(1.5rem, 2vw, 2.5rem) clamp(1rem, 1.5vw, 1.75rem);
-    background: var(--primary-page-bg, #f1f1f1);
     color: var(--primary-text-color, #0f172a);
   }
 
@@ -977,6 +975,9 @@ const grandTotal =
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.25rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 1rem;
   }
 
   .prizes-card {
@@ -1689,9 +1690,6 @@ const grandTotal =
   }
 
   @media (max-width: 767px) {
-    .playoff-page {
-      padding: 1.25rem 1rem;
-    }
 
     .bracket-scroll {
       grid-auto-columns: minmax(300px, 1fr);
