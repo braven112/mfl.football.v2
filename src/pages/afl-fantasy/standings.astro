@@ -83,8 +83,26 @@ const preferredTeamId = resolveAFLTeamSelection({
   defaultTeam: '0001',
 });
 
+// Map division code to human-readable name
+function getDivisionName(divisionCode: string): string {
+  // Find the conference that contains this division
+  const conference = aflConfig.conferences.find(conf =>
+    conf.divisions.includes(divisionCode)
+  );
+
+  // Return the mapped name or fall back to the code
+  if (conference?.divisionNames) {
+    const divisionNames = conference.divisionNames as any;
+    return divisionNames[divisionCode] || divisionCode;
+  }
+  return divisionCode;
+}
+
 // Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises, aflConfig);
+const divisionStandings = getDivisionStandings(franchises, aflConfig).map(division => ({
+  ...division,
+  name: getDivisionName(division.name), // Map "00" → "North", etc.
+}));
 const conferenceAStandings = getConferenceStandings(franchises, aflConfig, 'A');
 const conferenceBStandings = getConferenceStandings(franchises, aflConfig, 'B');
 const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
@@ -103,9 +121,19 @@ const nitTeams = [
 const view = (Astro.url.searchParams.get('view') ||
   'division') as 'division' | 'league' | 'all_play';
 
-// AFL Fantasy is a new league, so no defending champions yet
-const defendingChampions: Record<string, string> = {};
+// Division Champions by Year (defending champions from previous season)
+const championsByYear: Record<number, Record<string, string>> = {
+  2024: {
+    'North': 'Fullybaked',
+    'South': 'Avenging Amish',
+    'East': 'Balls Deep',
+    'West': 'The Boondock Saints',
+  },
+};
+
+// Get previous year's champions (defending champs for selected year)
 const previousYear = selectedYear - 1;
+const defendingChampions = championsByYear[previousYear] || {};
 
 // Get promotion/relegation playoff teams (Premier League 9-10 + D-League 3-4)
 const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
