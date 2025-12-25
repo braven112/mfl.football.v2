@@ -1,0 +1,156 @@
+---
+import {
+  getAFLPreference,
+  setAFLPreference,
+  getAFLTeamData,
+  resolveAFLTeamSelection,
+} from '../../utils/team-preferences';
+
+// Get URL parameters
+const myTeamParam = Astro.url.searchParams.get('myteam');
+
+// If myteam parameter is provided, set the cookie
+let setCookieResult = null;
+if (myTeamParam) {
+  const teamData = getAFLTeamData(myTeamParam);
+  if (teamData) {
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+    setCookieResult = {
+      teamId: myTeamParam,
+      teamData,
+      message: 'Cookie set successfully',
+    };
+  } else {
+    setCookieResult = {
+      teamId: myTeamParam,
+      teamData: null,
+      message: 'Team not found',
+    };
+  }
+}
+
+// Read the cookie
+const cookiePreference = getAFLPreference(Astro.cookies);
+
+// Resolve team selection
+const preferredTeamId = resolveAFLTeamSelection({
+  cookiePreference: cookiePreference?.franchiseId,
+  defaultTeam: '0001',
+});
+
+// Get the resolved team data
+const resolvedTeamData = getAFLTeamData(preferredTeamId);
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AFL Cookie Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #c41e3a;
+    }
+    .section {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #002244;
+    }
+    pre {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    .success {
+      color: #28a745;
+      font-weight: bold;
+    }
+    .error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    .info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      border-radius: 0.25rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    a {
+      color: #c41e3a;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 AFL Fantasy Cookie Test</h1>
+
+  <div class="info">
+    <strong>Test URLs:</strong>
+    <ul>
+      <li><a href="/afl-fantasy/test-cookie?myteam=0001">Set to Team 0001</a></li>
+      <li><a href="/afl-fantasy/test-cookie?myteam=0002">Set to Team 0002</a></li>
+      <li><a href="/afl-fantasy/test-cookie?myteam=0003">Set to Team 0003</a></li>
+      <li><a href="/afl-fantasy/test-cookie">View current cookie</a></li>
+    </ul>
+  </div>
+
+  {setCookieResult && (
+    <div class="section">
+      <h2>🔄 Cookie Set Operation</h2>
+      <p class={setCookieResult.teamData ? 'success' : 'error'}>
+        {setCookieResult.message}
+      </p>
+      <pre>{JSON.stringify(setCookieResult, null, 2)}</pre>
+    </div>
+  )}
+
+  <div class="section">
+    <h2>📖 Current Cookie Value</h2>
+    {cookiePreference ? (
+      <pre>{JSON.stringify(cookiePreference, null, 2)}</pre>
+    ) : (
+      <p class="error">No cookie found</p>
+    )}
+  </div>
+
+  <div class="section">
+    <h2>✅ Resolved Team Selection</h2>
+    <p><strong>Preferred Team ID:</strong> {preferredTeamId}</p>
+    {resolvedTeamData ? (
+      <pre>{JSON.stringify(resolvedTeamData, null, 2)}</pre>
+    ) : (
+      <p class="error">Team data not found for ID: {preferredTeamId}</p>
+    )}
+  </div>
+
+  <div class="section">
+    <h2>🔍 Debug Info</h2>
+    <ul>
+      <li><strong>URL myteam param:</strong> {myTeamParam || 'none'}</li>
+      <li><strong>Cookie exists:</strong> {cookiePreference ? 'Yes' : 'No'}</li>
+      <li><strong>Cookie franchise ID:</strong> {cookiePreference?.franchiseId || 'none'}</li>
+      <li><strong>Resolved team ID:</strong> {preferredTeamId}</li>
+    </ul>
+  </div>
+</body>
+</html>

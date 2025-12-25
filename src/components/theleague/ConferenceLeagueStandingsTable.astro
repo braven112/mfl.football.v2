@@ -5,9 +5,10 @@ export interface Props {
   conferenceName: string;
   teams: TeamStanding[];
   year?: number;
+  preferredTeamId?: string;
 }
 
-const { conferenceName, teams, year = new Date().getFullYear() } = Astro.props;
+const { conferenceName, teams, year = new Date().getFullYear(), preferredTeamId } = Astro.props;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -75,8 +76,12 @@ function getRowColor(seed: number | undefined): string {
           const nextTier = nextTeam ? getRowColor(nextTeam.conferenceSeed) : '';
           const isTierBoundary = rowColor !== nextTier && nextTeam;
 
+          // Add preferred team class
+          const isPreferredTeam = preferredTeamId && team.id === preferredTeamId;
+          const preferredClass = isPreferredTeam ? 'preferred-team' : '';
+
           return (
-            <tr class={`conference-row ${rowColor} ${isTierBoundary ? 'tier-boundary' : ''}`}>
+            <tr class={`conference-row ${rowColor} ${isTierBoundary ? 'tier-boundary' : ''} ${preferredClass}`}>
               <td class="col-seed">
                 <span class="seed-number">#{team.conferenceSeed}</span>
               </td>
@@ -284,6 +289,16 @@ function getRowColor(seed: number | undefined): string {
     font-weight: 700;
     font-size: 1rem;
     display: inline-block;
+  }
+
+  /* Preferred Team Highlighting */
+  tbody tr.preferred-team {
+    background-color: #2e743d12 !important;
+    border-left: 3px solid #2e743d;
+  }
+
+  tbody tr.preferred-team:hover {
+    background-color: #2e743d36 !important;
   }
 
   /* Responsive */

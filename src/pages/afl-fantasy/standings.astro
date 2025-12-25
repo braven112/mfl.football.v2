@@ -11,6 +11,12 @@ import {
   getConferenceStandings,
   getTierAllPlayStandings,
 } from '../../utils/standings';
+import {
+  getAFLPreference,
+  setAFLPreference,
+  getAFLTeamData,
+  resolveAFLTeamSelection,
+} from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 // Get league context from URL
@@ -52,6 +58,30 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 }
 
 const franchises = selectedFeed.leagueStandings.franchise;
+
+// Team Preference Cookie Integration
+// Get URL parameters for team preference
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+
+// Get current cookie preference
+const cookiePreference = getAFLPreference(Astro.cookies);
+
+// If myteam parameter is provided, update the cookie preference
+if (myTeamParam) {
+  const teamData = getAFLTeamData(myTeamParam);
+  if (teamData) {
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+  }
+}
+
+// Resolve which team to highlight using priority order
+const preferredTeamId = resolveAFLTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  defaultTeam: '0001',
+});
 
 // Calculate standings for all views
 const divisionStandings = getDivisionStandings(franchises, aflConfig);
@@ -138,6 +168,7 @@ const promoRegTeams = [
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
+              preferredTeamId={preferredTeamId}
             />
           ))}
         </div>
@@ -149,11 +180,13 @@ const promoRegTeams = [
             conferenceName={conferenceAStandings.conference.name}
             teams={conferenceAStandings.allTeams}
             year={selectedYear}
+            preferredTeamId={preferredTeamId}
           />
           <ConferenceLeagueStandingsTable
             conferenceName={conferenceBStandings.conference.name}
             teams={conferenceBStandings.allTeams}
             year={selectedYear}
+            preferredTeamId={preferredTeamId}
           />
 
           {nitTeams.length > 0 && (

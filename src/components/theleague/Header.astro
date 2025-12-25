@@ -1,6 +1,7 @@
 ---
 import { getLeagueContext } from '../../utils/league-context';
 import MyTeamWidget from './MyTeamWidget.astro';
+import AFLMyTeamWidget from '../afl-fantasy/MyTeamWidget.astro';
 
 interface Props {
   host?: string;
@@ -50,7 +51,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       </nav>
     </div>
     <div class="breadcrumb-right">
-      {!isAFL && <MyTeamWidget />}
+      {isAFL ? <AFLMyTeamWidget /> : <MyTeamWidget />}
       <!-- Hamburger Menu Button (moved to top bar) -->
       <button
         class="hamburger-btn"
@@ -253,7 +254,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         <li><a href={`https://${league.host}/${new Date().getFullYear()}/lineup?L=${league.leagueId}`}>Submit Lineup</a></li>
         <li><a href={`https://${league.host}/${new Date().getFullYear()}/add_drop?L=${league.leagueId}`}>Add/Drops</a></li>
         <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=18`}>Injured Reserve</a></li>
-        <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=98`}>Practice Squad</a></li>
+        {!isAFL && <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=98`}>Practice Squad</a></li>}
         <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=133`}>Trade Block</a></li>
         <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=05`}>Trades</a></li>
       </ul>

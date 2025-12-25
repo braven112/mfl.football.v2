@@ -15,8 +15,23 @@ import {
   type NormalizedBracket,
 } from '../../utils/playoffs';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import {
+  setAFLPreference,
+  getAFLTeamData,
+} from '../../utils/team-preferences';
 
 export const prerender = false;
+
+// Team Preference Cookie Integration
+const myTeamParam = Astro.url.searchParams.get('myteam');
+
+// If myteam parameter is provided, update the cookie preference
+if (myTeamParam) {
+  const teamData = getAFLTeamData(myTeamParam);
+  if (teamData) {
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+  }
+}
 
 const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';

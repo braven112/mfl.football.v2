@@ -5,6 +5,7 @@
 
 import type { AstroCookies } from 'astro';
 import leagueAssets from '../data/theleague.assets.json';
+import aflAssets from '../../data/afl-fantasy/afl.assets.json';
 
 /**
  * TheLeague team preference structure
@@ -74,9 +75,8 @@ export function validateFranchiseId(franchiseId: string, league: 'theleague' | '
     // Check if franchise ID exists in theleague assets
     return leagueAssets.teams.some(team => team.id === normalized);
   } else {
-    // AFL validation would go here when we implement AFL support
-    // For now, return false as we're only implementing TheLeague in Phase 1
-    return false;
+    // Check if franchise ID exists in AFL assets
+    return aflAssets.teams.some(team => team.id === normalized);
   }
 }
 
@@ -151,8 +151,22 @@ export function clearTheLeaguePreference(cookies: AstroCookies): void {
 }
 
 /**
+ * Get AFL team data by franchise ID
+ */
+export function getAFLTeamData(franchiseId: string): { conference: string; tier: string } | null {
+  const normalized = normalizeFranchiseId(franchiseId);
+  const team = aflAssets.teams.find(t => t.id === normalized);
+
+  if (!team) return null;
+
+  return {
+    conference: team.conference,
+    tier: team.tier,
+  };
+}
+
+/**
  * Get AFL preference from cookie
- * Note: AFL support will be implemented in Phase 3
  */
 export function getAFLPreference(cookies: AstroCookies): AFLPreference | null {
   try {
@@ -167,7 +181,18 @@ export function getAFLPreference(cookies: AstroCookies): AFLPreference | null {
       return null;
     }
 
-    return preference;
+    // Validate franchise ID exists in AFL
+    if (!validateFranchiseId(preference.franchiseId, 'afl')) {
+      clearAFLPreference(cookies);
+      return null;
+    }
+
+    return {
+      franchiseId: normalizeFranchiseId(preference.franchiseId),
+      conferenceId: preference.conferenceId,
+      competitionId: preference.competitionId,
+      lastUpdated: preference.lastUpdated,
+    };
   } catch (error) {
     clearAFLPreference(cookies);
     return null;
@@ -176,7 +201,6 @@ export function getAFLPreference(cookies: AstroCookies): AFLPreference | null {
 
 /**
  * Set AFL preference cookie
- * Note: AFL support will be implemented in Phase 3
  */
 export function setAFLPreference(
   cookies: AstroCookies,
@@ -185,6 +209,12 @@ export function setAFLPreference(
   competitionId: string
 ): void {
   const normalized = normalizeFranchiseId(franchiseId);
+
+  // Validate before setting
+  if (!validateFranchiseId(normalized, 'afl')) {
+    console.warn(`[team-preferences] Invalid AFL franchise ID: ${franchiseId}`);
+    return;
+  }
 
   const preference: AFLPreference = {
     franchiseId: normalized,
@@ -244,6 +274,45 @@ export function resolveTeamSelection(params: {
     if (candidate) {
       const normalized = normalizeFranchiseId(candidate);
       if (validateFranchiseId(normalized, 'theleague')) {
+        return normalized;
+      }
+    }
+  }
+
+  // Final fallback
+  return '0001';
+}
+
+/**
+ * Get AFL team selection based on priority order
+ * Priority: myteam param → franchise param → cookie → default
+ */
+export function resolveAFLTeamSelection(params: {
+  myTeamParam?: string | null;
+  franchiseParam?: string | null;
+  cookiePreference?: string | null;
+  defaultTeam?: string;
+}): string {
+  const {
+    myTeamParam,
+    franchiseParam,
+    cookiePreference,
+    defaultTeam = '0001',
+  } = params;
+
+  // Priority order
+  const candidates = [
+    myTeamParam,
+    franchiseParam,
+    cookiePreference,
+    defaultTeam,
+  ];
+
+  // Find first valid candidate
+  for (const candidate of candidates) {
+    if (candidate) {
+      const normalized = normalizeFranchiseId(candidate);
+      if (validateFranchiseId(normalized, 'afl')) {
         return normalized;
       }
     }

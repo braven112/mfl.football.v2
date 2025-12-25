@@ -3,10 +3,17 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import DraftPredictorGrid from '../../components/theleague/DraftPredictorGrid.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults } from '../../utils/afl-draft-utils';
+import {
+  getAFLPreference,
+  setAFLPreference,
+  getAFLTeamData,
+  resolveAFLTeamSelection,
+} from '../../utils/team-preferences';
 import fs from 'fs';
 import path from 'path';
 
-export const prerender = true;
+// Note: This page is server-rendered (not prerendered) to support team preferences
+// export const prerender = true;
 
 // Load AFL Fantasy data
 const currentYear = new Date().getFullYear();
@@ -31,6 +38,31 @@ const teamConfigMap = new Map(
     }
   ])
 );
+
+// Team Preference Cookie Integration
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+const cookiePreference = getAFLPreference(Astro.cookies);
+
+// If myteam parameter is provided, update the cookie preference
+if (myTeamParam) {
+  const teamData = getAFLTeamData(myTeamParam);
+  if (teamData) {
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+  }
+}
+
+// Resolve which team to highlight using priority order
+const preferredTeamId = resolveAFLTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  defaultTeam: '0001',
+});
+
+// Get preferred team's conference for default view
+const preferredTeamConfig = teamConfigMap.get(preferredTeamId);
+const preferredConference = preferredTeamConfig?.conference || 'A';
 
 // Load playoff bracket data and parse conference champions and NIT results
 let playoffBracketsData;
@@ -62,6 +94,11 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
 ---
 
 <TheLeagueLayout title={`AFL Fantasy - ${nextYear} Draft Predictor`}>
+  <script is:inline define:vars={{ preferredConference }}>
+    // Set preferred conference on body for client-side script
+    document.body.setAttribute('data-preferred-conference', preferredConference === 'A' ? 'AL' : 'NL');
+  </script>
+
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>
@@ -100,6 +137,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
             teamsPerConference={12}
             hasCompensatoryPicks={false}
             championshipDetermined={conferenceChampions.size > 0}
+            userTeamId={preferredTeamId}
           />
         </div>
       )}
@@ -113,6 +151,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
             teamsPerConference={12}
             hasCompensatoryPicks={false}
             championshipDetermined={conferenceChampions.size > 0}
+            userTeamId={preferredTeamId}
           />
         </div>
       )}
@@ -319,9 +358,10 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     const tabs = document.querySelectorAll('.conference-tab');
     const conferenceOrders = document.querySelectorAll('.conference-order');
 
-    // Get initial conference from URL or default to AL
+    // Get initial conference from URL or use preferred conference from server
     const urlParams = new URLSearchParams(window.location.search);
-    const initialConference = urlParams.get('conference') || 'AL';
+    const preferredConf = document.body.getAttribute('data-preferred-conference') || 'AL';
+    const initialConference = urlParams.get('conference') || preferredConf;
 
     // Function to show active conference
     function showConference(conference: string) {
