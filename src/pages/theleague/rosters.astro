@@ -1800,23 +1800,24 @@ flex-wrap: wrap;
     margin-bottom: 0.5rem;
   }
 
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--padding-md);
+     row-gap: var(--padding-lg);
+    }
+  
+  
+  @media (min-width: 1200px) {
   .chart-grid {
-    display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--padding-md);
-    row-gap: var(--padding-lg);
+
   }
+}
 
   /* Full width for single-child chart grids (like Franchise Tag Options) */
   .chart-grid:has(> :only-child) {
     grid-template-columns: 1fr;
-  }
-
-  @media (max-width: 767px) {
-    .chart-grid {
-      grid-template-columns: 1fr;
-      overflow: auto;
-    }
   }
 
   :global(.chart-card) {
