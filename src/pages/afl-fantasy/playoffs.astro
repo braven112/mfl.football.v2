@@ -1,10 +1,8 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
-import ConferenceStandingsTable from '../../components/theleague/ConferenceStandingsTable.astro';
 import { getConferenceStandings } from '../../utils/standings';
 import {
-  buildSeedMaps,
   // fetchLiveScoring, // moved to lazy client fetch (disabled for SSR perf)
   // fetchPlayoffBracket,
   // fetchPlayoffBrackets,
@@ -14,16 +12,20 @@ import {
   type SeededTeam,
   type NormalizedBracket,
 } from '../../utils/playoffs';
+import { chooseTeamName } from '../../utils/team-names';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import {
+  getAFLPreference,
   setAFLPreference,
   getAFLTeamData,
+  resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 
 export const prerender = false;
 
 // Team Preference Cookie Integration
 const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
 
 // If myteam parameter is provided, update the cookie preference
 if (myTeamParam) {
@@ -33,9 +35,20 @@ if (myTeamParam) {
   }
 }
 
+// Get cookie preference
+const cookiePreference = getAFLPreference(Astro.cookies);
+
+// Resolve which team to use for auto-selecting bracket
+const preferredTeamId = resolveAFLTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  defaultTeam: undefined,
+}) || undefined;
+
 const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';
-const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
+const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '19621';
 
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
   eager: true,
@@ -101,20 +114,125 @@ const assetMap = new Map(
   ])
 );
 
-// Combine both conferences for seed maps
-const allPlayoffTeams = [
-  ...conferenceAStandings.divisionWinners,
-  ...conferenceAStandings.wildCards,
-  ...conferenceBStandings.divisionWinners,
-  ...conferenceBStandings.wildCards,
+// Create conference-specific seed maps for AFL structure
+// AL Conference (Bracket 2): Seeds 1-4 based on conferenceSeed
+const alConferenceTeams = [...conferenceAStandings.divisionWinners, ...conferenceAStandings.wildCards];
+const alSeeds = new Map(
+  alConferenceTeams.map(team => [
+    team.conferenceSeed,
+    {
+      ...team,
+      seed: team.conferenceSeed,
+      bracketSeed: team.conferenceSeed,
+      originalSeed: team.conferenceSeed,
+      record: formatRecord(team.h2hwlt),
+      icon: assetMap.get(team.id)?.icon || '',
+      banner: assetMap.get(team.id)?.banner || '',
+      displayName: chooseTeamName([
+        team.teamName,
+        assetMap.get(team.id)?.name || '',
+        ...(assetMap.get(team.id)?.aliases || []),
+      ]),
+    }
+  ])
+);
+
+// NL Conference (Bracket 3): Seeds 1-4 based on conferenceSeed
+const nlConferenceTeams = [...conferenceBStandings.divisionWinners, ...conferenceBStandings.wildCards];
+const nlSeeds = new Map(
+  nlConferenceTeams.map(team => [
+    team.conferenceSeed,
+    {
+      ...team,
+      seed: team.conferenceSeed,
+      bracketSeed: team.conferenceSeed,
+      originalSeed: team.conferenceSeed,
+      record: formatRecord(team.h2hwlt),
+      icon: assetMap.get(team.id)?.icon || '',
+      banner: assetMap.get(team.id)?.banner || '',
+      displayName: chooseTeamName([
+        team.teamName,
+        assetMap.get(team.id)?.name || '',
+        ...(assetMap.get(team.id)?.aliases || []),
+      ]),
+    }
+  ])
+);
+
+// NIT/Toilet Bowl (Brackets 6-9): Non-playoff teams
+const allConferenceTeams = [
+  ...conferenceAStandings.allTeams,
+  ...conferenceBStandings.allTeams,
 ];
-const seedMaps = buildSeedMaps(allPlayoffTeams, assetMap);
+const playoffTeamIds = new Set([...alConferenceTeams.map(t => t.id), ...nlConferenceTeams.map(t => t.id)]);
+const nitTeams = allConferenceTeams
+  .filter(team => !playoffTeamIds.has(team.id))
+  .sort((a, b) => {
+    // Sort by record (worst to best for NIT)
+    const aWins = parseInt(a.h2hwlt.split('-')[0]);
+    const bWins = parseInt(b.h2hwlt.split('-')[0]);
+    if (aWins !== bWins) return aWins - bWins;
+
+    const aAllPlay = parseFloat(a.all_play_pct);
+    const bAllPlay = parseFloat(b.all_play_pct);
+    if (aAllPlay !== bAllPlay) return aAllPlay - bAllPlay;
+
+    const aPF = parseFloat(a.pf);
+    const bPF = parseFloat(b.pf);
+    return aPF - bPF;
+  });
+
+const nitSeeds = new Map(
+  nitTeams.map((team, idx) => [
+    idx + 1,
+    {
+      ...team,
+      seed: idx + 1,
+      bracketSeed: idx + 1,
+      originalSeed: idx + 1,
+      record: formatRecord(team.h2hwlt),
+      icon: assetMap.get(team.id)?.icon || '',
+      banner: assetMap.get(team.id)?.banner || '',
+      displayName: chooseTeamName([
+        team.teamName,
+        assetMap.get(team.id)?.name || '',
+        ...(assetMap.get(team.id)?.aliases || []),
+      ]),
+    }
+  ])
+);
+
+// For overall championship bracket (Bracket 1), use conference winners
+const championshipSeeds = new Map([
+  ...Array.from(alSeeds.entries()).filter(([seed]) => seed <= 2),
+  ...Array.from(nlSeeds.entries()).filter(([seed]) => seed <= 2).map(([seed, team]) => [seed + 2, team] as [number, typeof team]),
+]);
+
+// Store all teams for auto-bracket selection
+const playoffTeamsWithSeeds = [...alConferenceTeams, ...nlConferenceTeams];
+const toiletBowlTeams = nitTeams;
+
+// Determine which bracket contains the preferred team
+let defaultView: TabView = 'winners'; // Default to championship bracket
+if (preferredTeamId) {
+  // Check if team is in championship/playoff brackets (seeds 1-8)
+  const isInChampionship = playoffTeamsWithSeeds.some(team => team.id === preferredTeamId);
+
+  // Check if team is in toilet bowl (seeds 10+)
+  const isInToilet = toiletBowlTeams.some(team => team.id === preferredTeamId);
+
+  if (isInToilet) {
+    defaultView = 'toilet';
+  } else if (isInChampionship) {
+    defaultView = 'winners';
+  }
+}
 
 // Use cached playoff bracket metadata only to avoid live fetch latency
 let bracketMetas: Array<{ id: string; name?: string; startWeek?: number; teamsInvolved?: number }> =
   fallbackBracketMetas;
 
-const fallbackBracketIds = ['1', '3', '2', '5', '6', '7'];
+const fallbackBracketIds = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const bracketIdsToFetch =
   bracketMetas.length > 0 ? bracketMetas.map(b => b.id) : fallbackBracketMetas.length > 0 ? fallbackBracketMetas.map((b: any) => b.id) : fallbackBracketIds;
 
@@ -141,7 +259,7 @@ const normalizedBrackets: NormalizedBracket[] = bracketIdsToFetch.map(id => {
   };
 });
 
-const bracketOrder = ['1', '3', '2', '5', '6', '7'];
+const bracketOrder = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const sortedBrackets: NormalizedBracket[] = [
   ...bracketOrder
     .map(id => normalizedBrackets.find(b => b.id === id))
@@ -152,15 +270,15 @@ const sortedBrackets: NormalizedBracket[] = [
 const availableViews: TabView[] = ['winners', 'toilet', 'prizes'];
 const tabView: TabView = availableViews.includes(requestedView as TabView)
   ? (requestedView as TabView)
-  : 'winners';
+  : defaultView;
 
 const availableModes: BracketMode[] = ['projected', 'clean'];
 const bracketMode: BracketMode = availableModes.includes(requestedMode as BracketMode)
   ? (requestedMode as BracketMode)
   : 'projected';
 
-const winnersSet = new Set(['1', '2', '3']);
-const toiletSet = new Set(['5', '6', '7']);
+const winnersSet = new Set(['1', '2', '3', '4', '5']);
+const toiletSet = new Set(['6', '7', '8', '9']);
 
 const weeksNeeded = Array.from(
   new Set(sortedBrackets.flatMap(bracket => bracket.rounds.map(round => round.week)).filter(Boolean))
@@ -194,9 +312,16 @@ weeklyResultsEntries.forEach(([week, result]) => {
 const resolvedGames = new Map<string, { winner?: SeededTeam; loser?: SeededTeam }>();
 
 const getSeedMapForBracket = (bracketId: string) => {
-  if (bracketId === '3') return seedMaps.playInSeeds;
-  if (['5', '6', '7'].includes(bracketId)) return seedMaps.toiletSeeds;
-  return seedMaps.championshipSeeds;
+  // AFL structure:
+  // Bracket 1: AFL Championship (uses top 2 from each conference)
+  // Bracket 2: AL Championship (uses AL conference seeds 1-4)
+  // Bracket 3: NL Championship (uses NL conference seeds 1-4)
+  // Brackets 4-5: Placement games (uses conference seeds)
+  // Brackets 6-9: NIT brackets (uses NIT standings)
+  if (bracketId === '2') return alSeeds; // AL Championship
+  if (bracketId === '3') return nlSeeds; // NL Championship
+  if (['6', '7', '8', '9'].includes(bracketId)) return nitSeeds; // NIT
+  return championshipSeeds; // AFL Championship and placement games
 };
 
 const formatPlaceholder = (ref: any, slot: 'home' | 'away') => {
@@ -211,17 +336,56 @@ const formatPlaceholder = (ref: any, slot: 'home' | 'away') => {
 };
 
 const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
+  // If franchise_id is present, MFL has resolved the team - use it directly
+  if (ref?.franchise_id) {
+    const franchiseId = String(ref.franchise_id);
+    // Try to find in playoff teams first
+    const playoffTeam = playoffTeamsWithSeeds.find(t => t.id === franchiseId);
+    if (playoffTeam) {
+      return {
+        ...playoffTeam,
+        seed: playoffTeam.conferenceSeed,
+        bracketSeed: playoffTeam.conferenceSeed,
+        originalSeed: playoffTeam.conferenceSeed,
+        record: formatRecord(playoffTeam.h2hwlt),
+        icon: assetMap.get(franchiseId)?.icon || '',
+        banner: assetMap.get(franchiseId)?.banner || '',
+        displayName: chooseTeamName([
+          playoffTeam.teamName,
+          assetMap.get(franchiseId)?.name || '',
+          ...(assetMap.get(franchiseId)?.aliases || []),
+        ]),
+      };
+    }
+    // Try NIT teams
+    const nitTeam = toiletBowlTeams.find(t => t.id === franchiseId);
+    if (nitTeam) {
+      return {
+        ...nitTeam,
+        seed: nitTeam.conferenceSeed || 0,
+        bracketSeed: nitTeam.conferenceSeed || 0,
+        originalSeed: nitTeam.conferenceSeed || 0,
+        record: formatRecord(nitTeam.h2hwlt),
+        icon: assetMap.get(franchiseId)?.icon || '',
+        banner: assetMap.get(franchiseId)?.banner || '',
+        displayName: chooseTeamName([
+          nitTeam.teamName,
+          assetMap.get(franchiseId)?.name || '',
+          ...(assetMap.get(franchiseId)?.aliases || []),
+        ]),
+      };
+    }
+  }
+
   const sourceBracket = ref?.bracket ? String(ref.bracket) : bracketId;
   const seedMap = getSeedMapForBracket(sourceBracket);
 
+  // Try to resolve from the bracket-specific seed map
   if (ref?.seed && seedMap.has(ref.seed)) {
     return seedMap.get(ref.seed);
   }
 
-  if (ref?.seed && seedMaps.playInSeeds.has(ref.seed)) {
-    return seedMaps.playInSeeds.get(ref.seed);
-  }
-
+  // Resolve winner/loser references from previous games
   if (ref?.winner_of_game || ref?.loser_of_game) {
     const key = `${sourceBracket}-${ref.winner_of_game || ref.loser_of_game}`;
     const result = resolvedGames.get(key);
@@ -289,13 +453,14 @@ const buildBracketViews = () => {
           awayTeam?.displayName ||
           awayTeam?.teamName ||
           formatPlaceholder(game.away, 'away');
-        const homeScoreValue = homeTeam?.id ? getScoreForTeam(round.week, homeTeam.id) : undefined;
-        const awayScoreValue = awayTeam?.id ? getScoreForTeam(round.week, awayTeam.id) : undefined;
+        // Dual-source score fetching: playoff API → weekly results fallback
+        const bracketHomeScore = game.home?.points ? Number(game.home.points) : undefined;
+        const bracketAwayScore = game.away?.points ? Number(game.away.points) : undefined;
+        const weeklyHomeScore = homeTeam?.id ? getScoreForTeam(round.week, homeTeam.id) : undefined;
+        const weeklyAwayScore = awayTeam?.id ? getScoreForTeam(round.week, awayTeam.id) : undefined;
 
-        const homeScore =
-          homeTeam?.id && typeof homeScoreValue === 'number' ? homeScoreValue : undefined;
-        const awayScore =
-          awayTeam?.id && typeof awayScoreValue === 'number' ? awayScoreValue : undefined;
+        const homeScore = bracketHomeScore ?? weeklyHomeScore;
+        const awayScore = bracketAwayScore ?? weeklyAwayScore;
 
         const homeRemaining = homeTeam?.id ? getRemainingSeconds(round.week, homeTeam.id) : 0;
         const awayRemaining = awayTeam?.id ? getRemainingSeconds(round.week, awayTeam.id) : 0;
@@ -303,12 +468,16 @@ const buildBracketViews = () => {
         const hasHomeScore = typeof homeScore === 'number' && homeScore > 0;
         const hasAwayScore = typeof awayScore === 'number' && awayScore > 0;
         const hasAnyScore = hasHomeScore || hasAwayScore;
+        const hasBracketScores = (bracketHomeScore !== undefined || bracketAwayScore !== undefined);
 
         let status: MatchupView['status'] = 'scheduled';
-        if (scoresAvailable) {
+        if (scoresAvailable || hasBracketScores) {
           if ((homeRemaining > 0 || awayRemaining > 0) && hasAnyScore) {
             status = 'live';
           } else if (homeRemaining === 0 && awayRemaining === 0 && hasAnyScore) {
+            status = 'final';
+          } else if (hasBracketScores && hasAnyScore) {
+            // If we have bracket scores but no remaining time data, assume final
             status = 'final';
           }
         }
@@ -545,27 +714,6 @@ const grandTotal =
       </div>
     </div>
 
-    <!-- Conference Playoff Standings -->
-    {tabView === 'winners' && (
-      <div class="conference-standings-section">
-        <h2 class="section-heading">Playoff Seeding</h2>
-        <div class="conferences-grid">
-          <ConferenceStandingsTable
-            conferenceName={conferenceAStandings.conference.name}
-            divisionWinners={conferenceAStandings.divisionWinners}
-            wildCards={conferenceAStandings.wildCards}
-            year={selectedYear}
-          />
-          <ConferenceStandingsTable
-            conferenceName={conferenceBStandings.conference.name}
-            divisionWinners={conferenceBStandings.divisionWinners}
-            wildCards={conferenceBStandings.wildCards}
-            year={selectedYear}
-          />
-        </div>
-      </div>
-    )}
-
     {tabView !== 'prizes' && !hasBrackets && (
       <div class="empty-state">
         <p>Brackets are not available for this season yet. Check back once playoff seeds are set.</p>
@@ -712,8 +860,19 @@ const grandTotal =
                 {bracket.roundsView.map((round, roundIdx) => (
                   <div class="bracket-round">
                     <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
-                    {round.map(game => (
-                      <div class="matchup-card" data-status={game.status}>
+                    {round.map(game => {
+                      const homeId = game.home.team?.id || '';
+                      const liveScoreUrl = homeId
+                        ? `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}&FRANCHISE=${homeId}`
+                        : `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}`;
+                      return (
+                      <a
+                        href={liveScoreUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="matchup-card-link"
+                      >
+                        <div class="matchup-card" data-status={game.status}>
                         <div class="team-row">
                           <div class="team-info">
                             <span class="seed-badge">{game.home.seedLabel || '—'}</span>
@@ -769,11 +928,18 @@ const grandTotal =
                         </div>
 
                         <div class="matchup-status">
-                          <span class={`status-pill status-${game.status}`}>
-                            {game.status === 'live' && 'Live'}
-                            {game.status === 'final' && 'Final'}
-                            {game.status === 'scheduled' && 'Scheduled'}
-                          </span>
+                          <div class="status-left">
+                            <span class={`status-pill status-${game.status}`}>
+                              {game.status === 'live' && 'Live'}
+                              {game.status === 'final' && 'Final'}
+                              {game.status === 'scheduled' && 'Scheduled'}
+                            </span>
+                            <div class="matchup-refresh-progress">
+                              <div class="refresh-progress-container">
+                                <div class="refresh-progress-bar" data-week={game.week}></div>
+                              </div>
+                            </div>
+                          </div>
                           {game.winnerId && (
                             <span class="winner-flag">
                               Winner:{' '}
@@ -784,7 +950,9 @@ const grandTotal =
                           )}
                         </div>
                       </div>
-                    ))}
+                      </a>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -800,6 +968,11 @@ const grandTotal =
           View MFL Playoff Bracket →
         </a>
       </p>
+      {hasBrackets && (
+        <p class="data-disclaimer" id="live-scores-timestamp">
+          Scores updated: <span id="last-updated-time">Loading...</span>
+        </p>
+      )}
     </div>
   </section>
 </TheLeagueLayout>
@@ -1163,10 +1336,11 @@ const grandTotal =
   .bracket-scroll {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(260px, 1fr);
+    grid-auto-columns: minmax(350px, 1fr);
     gap: 0.9rem;
     overflow-x: auto;
     padding-bottom: 0.25rem;
+    align-items: center;
   }
 
   .bracket-round {
@@ -1180,6 +1354,25 @@ const grandTotal =
     font-size: 0.95rem;
     color: #1c497c;
     margin: 0 0 0.35rem 0.25rem;
+  }
+
+  .matchup-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .matchup-card-link:hover {
+    transform: translateY(-2px);
+  }
+
+  .matchup-card-link:hover .matchup-card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .matchup-card-link:active {
+    transform: translateY(0);
   }
 
   .matchup-card {
@@ -1272,6 +1465,42 @@ const grandTotal =
     text-align: right;
   }
 
+  .score-live {
+    font-weight: 800;
+  }
+
+  .score-losing {
+    font-weight: 300;
+  }
+
+  .score-updated {
+    animation: scoreFlash 0.6s ease-out;
+  }
+
+  .score-checked {
+    animation: scoreFlicker 0.3s ease-in-out;
+  }
+
+  @keyframes scoreFlash {
+    0%, 100% {
+      background-color: transparent;
+      transform: scale(1);
+    }
+    50% {
+      background-color: rgba(46, 135, 67, 0.2);
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes scoreFlicker {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
   .matchup-status {
     display: flex;
     justify-content: space-between;
@@ -1309,6 +1538,69 @@ const grandTotal =
   .winner-flag {
     font-weight: 700;
     color: #1c497c;
+  }
+
+  .status-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  /* Matchup refresh progress bar */
+  .matchup-refresh-progress {
+    display: none;
+    align-items: center;
+    flex: 1;
+    max-width: 150px;
+  }
+
+  /* Only show progress bar on live cards */
+  .matchup-card[data-status='live'] .matchup-refresh-progress {
+    display: flex;
+  }
+
+  .refresh-progress-container {
+    flex: 1;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .refresh-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #1c497c, #2e8743);
+    border-radius: 3px;
+    transition: width 1s linear;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .refresh-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
   }
 
   .empty-state {
@@ -1450,28 +1742,155 @@ const grandTotal =
 </script>
 
 {hasBrackets && (
-  <script is:inline>
+  <script define:vars={{ liveWeeks: weeksNeeded, leagueId: envLeagueId, host: envHost, year: selectedYear }}>
     (() => {
-      const liveWeeks = JSON.parse('{JSON.stringify(weeksNeeded)}');
-      const leagueId = "{envLeagueId}";
-      const host = "{envHost}";
-      const year = {selectedYear};
-
       const scoreNodes = Array.from(document.querySelectorAll('[data-live-week][data-live-team]'));
       if (!scoreNodes.length || !leagueId || !host || !year || !Array.isArray(liveWeeks)) return;
 
+      let countdownInterval = null;
+      let secondsRemaining = 60;
+
+      const updateTimestamp = () => {
+        const timestampEl = document.getElementById('last-updated-time');
+        if (timestampEl) {
+          const now = new Date();
+          timestampEl.textContent = now.toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+          });
+        }
+      };
+
+      const startCountdown = () => {
+        // Clear any existing countdown
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+        }
+
+        secondsRemaining = 60;
+        const progressBars = Array.from(document.querySelectorAll('.refresh-progress-bar'));
+
+        if (progressBars.length === 0) return;
+
+        // Update immediately
+        progressBars.forEach(bar => {
+          bar.style.width = '100%';
+        });
+
+        countdownInterval = setInterval(() => {
+          secondsRemaining--;
+
+          if (secondsRemaining <= 0) {
+            secondsRemaining = 60;
+          }
+
+          const percentage = (secondsRemaining / 60) * 100;
+
+          // Update all progress bars
+          const currentBars = Array.from(document.querySelectorAll('.refresh-progress-bar'));
+          currentBars.forEach(bar => {
+            bar.style.width = `${percentage}%`;
+          });
+        }, 1000);
+      };
+
       const updateScores = (liveData) => {
-        liveData.forEach(({ week, scores }) => {
+        liveData.forEach(({ week, scores, remaining }) => {
           scoreNodes.forEach(node => {
             const nodeWeek = Number(node.getAttribute('data-live-week'));
             const teamId = node.getAttribute('data-live-team');
             if (nodeWeek !== week || !teamId) return;
             const val = scores[teamId];
             if (typeof val === 'number') {
-              node.textContent = val.toFixed(2);
+              const oldValue = node.textContent;
+              const newValue = val.toFixed(2);
+
+              // Update the text if it changed
+              if (oldValue !== newValue) {
+                node.textContent = newValue;
+              }
+
+              // Always show that the score was checked with opacity fade
+              node.classList.add('score-checked');
+              setTimeout(() => {
+                node.classList.remove('score-checked');
+              }, 300);
             }
           });
+
+          // Update status badges for this week's matchups
+          if (remaining) {
+            const matchupCards = Array.from(document.querySelectorAll('.matchup-card'));
+            matchupCards.forEach(card => {
+              // Find score nodes within this matchup card
+              const cardScores = Array.from(card.querySelectorAll('[data-live-week][data-live-team]'));
+              if (cardScores.length === 0) return;
+
+              // Check if this card has scores for the current week
+              const cardWeek = Number(cardScores[0]?.getAttribute('data-live-week'));
+              if (cardWeek !== week) return;
+
+              // Check if any team in this matchup has time remaining
+              const hasTimeRemaining = cardScores.some(scoreNode => {
+                const teamId = scoreNode.getAttribute('data-live-team');
+                return teamId && remaining[teamId] > 0;
+              });
+
+              // Check if both teams have scores
+              const hasScores = cardScores.every(scoreNode => {
+                const teamId = scoreNode.getAttribute('data-live-team');
+                return teamId && teamId in scores && typeof scores[teamId] === 'number';
+              });
+
+              // Update status
+              const statusPill = card.querySelector('.status-pill');
+              if (hasTimeRemaining && hasScores) {
+                card.setAttribute('data-status', 'live');
+                if (statusPill) {
+                  statusPill.className = 'status-pill status-live';
+                  statusPill.textContent = 'Live';
+                }
+                // Live games: both scores bold
+                cardScores.forEach(scoreNode => {
+                  console.log('Adding score-live class to:', scoreNode);
+                  scoreNode.classList.add('score-live');
+                  scoreNode.classList.remove('score-losing');
+                });
+              } else if (!hasTimeRemaining && hasScores) {
+                card.setAttribute('data-status', 'final');
+                if (statusPill) {
+                  statusPill.className = 'status-pill status-final';
+                  statusPill.textContent = 'Final';
+                }
+                // Final games: losing score lighter
+                if (cardScores.length === 2) {
+                  const team1Id = cardScores[0].getAttribute('data-live-team');
+                  const team2Id = cardScores[1].getAttribute('data-live-team');
+                  const team1Score = team1Id ? scores[team1Id] : 0;
+                  const team2Score = team2Id ? scores[team2Id] : 0;
+
+                  // Remove live class from both
+                  cardScores.forEach(scoreNode => scoreNode.classList.remove('score-live'));
+
+                  console.log('Final game - Team1:', team1Score, 'Team2:', team2Score);
+                  if (team1Score > team2Score) {
+                    console.log('Adding score-losing to team 2');
+                    cardScores[1].classList.add('score-losing'); // Losing team
+                    cardScores[0].classList.remove('score-losing'); // Winner
+                  } else if (team2Score > team1Score) {
+                    console.log('Adding score-losing to team 1');
+                    cardScores[0].classList.add('score-losing'); // Losing team
+                    cardScores[1].classList.remove('score-losing'); // Winner
+                  } else {
+                    // Tie - remove losing class from both
+                    cardScores.forEach(scoreNode => scoreNode.classList.remove('score-losing'));
+                  }
+                }
+              }
+            });
+          }
         });
+        updateTimestamp();
       };
 
       const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -1480,27 +1899,39 @@ const grandTotal =
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 5000);
         try {
-          const url = `${host}/${year}/export?TYPE=liveScoring&L=${leagueId}&W=${week}&JSON=1`;
+          const url = `/api/live-scoring?week=${week}&year=${year}&L=${leagueId}&host=${encodeURIComponent(host)}`;
           const res = await fetch(url, { signal: controller.signal });
           if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
           const data = await res.json();
-          const franchises = data?.liveScoring?.franchise
-            ? Array.isArray(data.liveScoring.franchise)
-              ? data.liveScoring.franchise
-              : [data.liveScoring.franchise]
-            : [];
-          const scores = {};
-          franchises.forEach(team => {
-            if (!team?.id) return;
-            scores[String(team.id)] = Number(team.score) || 0;
-          });
-          return { week, scores };
+          return { week: data.week, scores: data.scores, remaining: data.remaining || {} };
         } catch (_err) {
           return null;
         } finally {
           clearTimeout(timer);
         }
       };
+
+      const isNFLGameTime = () => {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon, 4=Thu, 6=Sat
+        const hour = now.getHours();
+
+        // NFL games typically:
+        // Thursday: 8pm ET (20:00-23:59)
+        // Saturday (playoffs): 1pm-11pm ET (13:00-23:59)
+        // Sunday: 1pm-11pm ET (13:00-23:59)
+        // Monday: 8pm ET (20:00-23:59)
+
+        if (day === 0) return hour >= 13 && hour <= 23; // Sunday
+        if (day === 1) return hour >= 20 && hour <= 23; // Monday
+        if (day === 4) return hour >= 20 && hour <= 23; // Thursday
+        if (day === 6) return hour >= 13 && hour <= 23; // Saturday (playoffs)
+
+        return false;
+      };
+
+      let pollInterval = null;
+      let consecutiveNoUpdates = 0;
 
       const run = async () => {
         const results = [];
@@ -1509,16 +1940,133 @@ const grandTotal =
           if (res) results.push(res);
           await delay(750);
         }
-        if (results.length) updateScores(results);
+
+        if (results.length) {
+          const hadUpdates = results.some(r => Object.keys(r.scores).length > 0);
+
+          // Check if any games have time remaining (are actually in progress)
+          const hasGamesInProgress = results.some(r =>
+            r.remaining && Object.values(r.remaining).some(seconds => seconds > 0)
+          );
+
+          if (hadUpdates) {
+            consecutiveNoUpdates = 0;
+            updateScores(results);
+          } else {
+            consecutiveNoUpdates++;
+          }
+
+          // Stop polling if no games are in progress
+          if (!hasGamesInProgress && pollInterval) {
+            console.log('Stopping auto-refresh: all games are final');
+            clearInterval(pollInterval);
+            pollInterval = null;
+            if (countdownInterval) {
+              clearInterval(countdownInterval);
+              countdownInterval = null;
+            }
+            return;
+          }
+        } else {
+          consecutiveNoUpdates++;
+          updateTimestamp();
+        }
+
+        // Restart countdown after each refresh (only if still polling)
+        if (pollInterval) {
+          startCountdown();
+        }
+
+        // Stop polling if no updates for 3 consecutive polls (games likely over)
+        if (consecutiveNoUpdates >= 3 && pollInterval) {
+          console.log('Stopping auto-refresh: no score updates detected');
+          clearInterval(pollInterval);
+          pollInterval = null;
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+        }
       };
 
+      const startPolling = async () => {
+        // Clear any existing interval
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+
+        // Initial fetch to check game status
+        const results = [];
+        for (const wk of liveWeeks) {
+          const res = await fetchLiveWeek(wk);
+          if (res) results.push(res);
+          await delay(750);
+        }
+
+        // Check if any games are in progress
+        const hasGamesInProgress = results.some(r =>
+          r.remaining && Object.values(r.remaining).some(seconds => seconds > 0)
+        );
+
+        // Update scores with initial data
+        if (results.length) {
+          updateScores(results);
+        } else {
+          updateTimestamp();
+        }
+
+        // Only start polling if games are in progress
+        if (!hasGamesInProgress) {
+          console.log('All games are final - no auto-refresh needed');
+          return;
+        }
+
+        // Only auto-poll during NFL game times
+        if (isNFLGameTime()) {
+          console.log('Starting auto-refresh (games in progress detected)');
+          startCountdown();
+          pollInterval = setInterval(() => {
+            if (!document.hidden) {
+              run();
+            }
+          }, 60000); // Poll every 60 seconds
+        } else {
+          console.log('Outside NFL game hours - manual refresh only');
+        }
+      };
+
+      // Stop polling when page becomes hidden (tab switched away)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && pollInterval) {
+          console.log('Pausing auto-refresh (tab hidden)');
+          clearInterval(pollInterval);
+          pollInterval = null;
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+        } else if (!document.hidden && !pollInterval) {
+          console.log('Resuming auto-refresh (tab visible)');
+          startPolling();
+        }
+      });
+
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', run, { once: true });
+        document.addEventListener('DOMContentLoaded', startPolling, { once: true });
       } else {
-        run();
+        startPolling();
       }
 
-      document.addEventListener('astro:after-swap', run);
+      document.addEventListener('astro:after-swap', () => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        startPolling();
+      });
+
+      // Expose manual refresh function for testing
+      window.refreshPlayoffScores = run;
     })();
   </script>
 )}
