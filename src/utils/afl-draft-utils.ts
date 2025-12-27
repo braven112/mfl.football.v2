@@ -43,12 +43,12 @@ export function calculateAFLDraftOrder(
   nitResults: Map<string, NITResult[]> // conference code -> top 5 NIT finishers
 ): ConferenceDraftOrder[] {
   // Group teams by conference
-  const conferenceA = standings.filter(team => teamConfigs.get(team.id)?.conference === 'A');
-  const conferenceB = standings.filter(team => teamConfigs.get(team.id)?.conference === 'B');
+  const conferenceA = standings.filter(team => teamConfigs.get(team.id)?.conference === '00');
+  const conferenceB = standings.filter(team => teamConfigs.get(team.id)?.conference === '01');
 
   const conferences = [
-    { code: 'A', name: 'American League', teams: conferenceA },
-    { code: 'B', name: 'National League', teams: conferenceB }
+    { code: '00', name: 'American League', teams: conferenceA },
+    { code: '01', name: 'National League', teams: conferenceB }
   ];
 
   return conferences.map(({ code, name, teams }) => {
@@ -271,15 +271,15 @@ function buildAFLDraftPrediction(
  */
 export function getMockNITResults(): Map<string, NITResult[]> {
   return new Map([
-    ['A', []],
-    ['B', []]
+    ['00', []],
+    ['01', []]
   ]);
 }
 
 /**
  * Parse league champion from playoff bracket data
  * The overall league champion gets the 12th pick in their conference
- * Returns map of conference code ('A' or 'B') to champion franchise ID
+ * Returns map of conference code ('00' or '01') to champion franchise ID
  */
 export function parseConferenceChampions(
   playoffBracketsData: any,
@@ -300,7 +300,7 @@ export function parseConferenceChampions(
     const teamConfig = teamConfigs.get(leagueChampion);
     const conference = teamConfig?.conference;
 
-    if (conference === 'A' || conference === 'B') {
+    if (conference === '00' || conference === '01') {
       champions.set(conference, leagueChampion);
     }
   }
@@ -425,7 +425,7 @@ export function parseNITResults(
     const teamConfig = teamConfigs.get(finisher.franchiseId);
     const conference = teamConfig?.conference;
 
-    if (conference === 'A' || conference === 'B') {
+    if (conference === '00' || conference === '01') {
       const conferenceResults = results.get(conference) || [];
       conferenceResults.push({
         franchiseId: finisher.franchiseId,

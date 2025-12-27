@@ -118,7 +118,7 @@ export function getAFLPreferenceFromCookie() {
     
     return {
       franchiseId: preference.franchiseId,
-      conferenceId: preference.conferenceId, // "A" or "B"
+      conferenceId: preference.conferenceId, // "00" (American League) or "01" (National League)
       competitionId: preference.competitionId, // "Premier League" or "D-League"
       lastUpdated: preference.lastUpdated,
     };
@@ -135,7 +135,7 @@ export function getAFLPreferenceFromCookie() {
  * Note: This is a fallback. Server-side cookie setting is preferred.
  * Requires conference and competition IDs - these should come from team data lookup
  * @param {string} franchiseId - The franchise ID to store
- * @param {string} conferenceId - The conference ID ("A" or "B")
+ * @param {string} conferenceId - The conference ID ("00" for American League or "01" for National League)
  * @param {string} competitionId - The competition/tier ("Premier League" or "D-League")
  */
 export function setAFLFranchiseIdCookie(franchiseId, conferenceId, competitionId) {

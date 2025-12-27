@@ -78,11 +78,7 @@ const getConferenceName = (code: string) => {
   return conf?.name || code;
 };
 
-// Get division name
-const getDivisionName = (conference: string, division: string) => {
-  const conf = leagueConfig.conferences.find(c => c.code === conference);
-  return conf?.divisionNames?.[division] || division;
-};
+// Division names are now stored directly on teams, no transformation needed
 ---
 
 <TheLeagueLayout title="AFL Fantasy Asset Library">
@@ -128,7 +124,7 @@ const getDivisionName = (conference: string, division: string) => {
                     {team.conference && (
                       <span class="team-conference">
                         {getConferenceName(team.conference)}
-                        {team.division && ` • ${getDivisionName(team.conference, team.division)}`}
+                        {team.division && ` • ${team.division}`}
                       </span>
                     )}
                   </div>

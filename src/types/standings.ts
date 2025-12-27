@@ -98,7 +98,7 @@ export interface DraftPrediction {
   toiletBowlType?: 'winner' | 'consolation' | 'consolation2';
   isLeagueWinner: boolean;
   predictedPickRank?: number; // For comparison/ranking
-  conference?: string; // For AFL Fantasy two-conference system ('A' or 'B')
+  conference?: string; // For AFL Fantasy two-conference system ('00' or '01')
 }
 
 export interface ToiletBowlResult {

@@ -62,7 +62,7 @@ const preferredTeamId = resolveAFLTeamSelection({
 
 // Get preferred team's conference for default view
 const preferredTeamConfig = teamConfigMap.get(preferredTeamId);
-const preferredConference = preferredTeamConfig?.conference || 'A';
+const preferredConference = preferredTeamConfig?.conference || '00';
 
 // Load playoff bracket data and parse conference champions and NIT results
 let playoffBracketsData;
@@ -96,7 +96,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
 <TheLeagueLayout title={`AFL Fantasy - ${nextYear} Draft Predictor`}>
   <script is:inline define:vars={{ preferredConference }}>
     // Set preferred conference on body for client-side script
-    document.body.setAttribute('data-preferred-conference', preferredConference === 'A' ? 'AL' : 'NL');
+    document.body.setAttribute('data-preferred-conference', preferredConference === '00' ? 'AL' : 'NL');
   </script>
 
   <section class="draft-predictor-page">

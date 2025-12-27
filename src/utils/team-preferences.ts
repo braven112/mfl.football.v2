@@ -20,7 +20,7 @@ export interface TheLeaguePreference {
  */
 export interface AFLPreference {
   franchiseId: string;
-  conferenceId: string; // "A" or "B"
+  conferenceId: string; // "00" (American League) or "01" (National League)
   competitionId: string; // "Premier League" or "D-League"
   lastUpdated: string;
 }
