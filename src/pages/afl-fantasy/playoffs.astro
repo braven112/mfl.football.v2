@@ -684,9 +684,7 @@ const grandTotal =
     <header class="playoff-hero">
       <div>
         <h1 class="hero-title">Playoff Brackets</h1>
-        <p class="hero-subtitle">
-          Track championship and consolation paths. Switch views to see Winners, Toilet, or Prizes.
-        </p>
+      
       </div>
       <div class="view-selector">
         <button class={`view-tab ${tabView === 'winners' ? 'active' : ''}`} data-view="winners" title="Winners">
@@ -856,11 +854,16 @@ const grandTotal =
             {bracket.roundsView.length === 0 ? (
               <div class="bracket-missing">Bracket data not available for this season.</div>
             ) : (
-              <div class="bracket-scroll" aria-label={`${bracket.name || 'Bracket'} rounds`}>
-                {bracket.roundsView.map((round, roundIdx) => (
-                  <div class="bracket-round">
-                    <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
-                    {round.map(game => {
+              <>
+                {/* Earlier rounds (or all rounds if less than 4) */}
+                <div class="bracket-scroll" data-bracket-id={bracket.id} aria-label={`${bracket.name || 'Bracket'} rounds`}>
+                  {(bracket.roundsView.length >= 4
+                    ? bracket.roundsView.slice(0, -1)
+                    : bracket.roundsView
+                  ).map((round, roundIdx) => (
+                    <div class="bracket-round" data-week={bracket.rounds[roundIdx]?.week ?? roundIdx + 1}>
+                      <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
+                      {round.map(game => {
                       const homeId = game.home.team?.id || '';
                       const liveScoreUrl = homeId
                         ? `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}&FRANCHISE=${homeId}`
@@ -956,6 +959,122 @@ const grandTotal =
                   </div>
                 ))}
               </div>
+              <div class="scroll-indicators" data-bracket-id={bracket.id}>
+                {(bracket.roundsView.length >= 4
+                  ? bracket.roundsView.slice(0, -1)
+                  : bracket.roundsView
+                ).map((_, roundIdx) => (
+                  <button
+                    class="scroll-indicator"
+                    data-round-index={roundIdx}
+                    aria-label={`Go to week ${bracket.rounds[roundIdx]?.week ?? roundIdx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Championship game below earlier rounds (if 4+ rounds) */}
+              {bracket.roundsView.length >= 4 && (
+                <div class="championship-highlight">
+                  <h2 class="bracket-title">NIT Championship</h2>
+                  <p class="round-label">Week 18</p>
+                  <div class="championship-game">
+                    {bracket.roundsView[bracket.roundsView.length - 1].map(game => {
+                      const homeId = game.home.team?.id || '';
+                      const liveScoreUrl = homeId
+                        ? `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}&FRANCHISE=${homeId}`
+                        : `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}`;
+                      return (
+                      <a
+                        href={liveScoreUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="matchup-card-link"
+                      >
+                        <div class="matchup-card" data-status={game.status}>
+                          <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.home.seedLabel || '—'}</span>
+                            {game.home.icon ? (
+                              <img
+                                src={game.home.icon}
+                                alt={`${game.home.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.home.label}</div>
+                              {game.home.record && <div class="team-record">{game.home.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class={`score ${game.status === 'final' && typeof game.scores.home === 'number' && typeof game.scores.away === 'number' && game.scores.home < game.scores.away ? 'score-losing' : ''}`}
+                            data-live-week={game.week}
+                            data-live-team={game.home.team?.id || ''}
+                          >
+                            {typeof game.scores.home === 'number' ? game.scores.home.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.away.seedLabel || '—'}</span>
+                            {game.away.icon ? (
+                              <img
+                                src={game.away.icon}
+                                alt={`${game.away.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.away.label}</div>
+                              {game.away.record && <div class="team-record">{game.away.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class={`score ${game.status === 'final' && typeof game.scores.home === 'number' && typeof game.scores.away === 'number' && game.scores.away < game.scores.home ? 'score-losing' : ''}`}
+                            data-live-week={game.week}
+                            data-live-team={game.away.team?.id || ''}
+                          >
+                            {typeof game.scores.away === 'number' ? game.scores.away.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="matchup-status">
+                          <div class="status-left">
+                            <span class={`status-pill status-${game.status}`}>
+                              {game.status === 'live' && 'Live'}
+                              {game.status === 'final' && 'Final'}
+                              {game.status === 'scheduled' && 'Scheduled'}
+                            </span>
+                            <div class="matchup-refresh-progress">
+                              <div class="refresh-progress-container">
+                                <div class="refresh-progress-bar" data-week={game.week}></div>
+                              </div>
+                            </div>
+                          </div>
+                          {game.winnerId && (
+                            <span class="winner-flag">
+                              Winner:{' '}
+                              {game.winnerId === game.home.team?.id
+                                ? game.home.label
+                                : game.away.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </article>
         ))}
@@ -1087,8 +1206,11 @@ const grandTotal =
 
   .brackets-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: 1fr;
     gap: 1.25rem;
+    padding: 1.25rem;
+    background: white;
+    border-radius: 1rem;
   }
 
   .prizes-card {
@@ -1278,20 +1400,7 @@ const grandTotal =
 
 
   .bracket-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    grid-column: 1 / -1;
-  }
-
-  .bracket-card--championship {
-    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 50%);
-    border-color: rgba(28, 73, 124, 0.35);
-    box-shadow: 0 12px 30px rgba(28, 73, 124, 0.15);
+    display: grid;
   }
 
 
@@ -1333,20 +1442,61 @@ const grandTotal =
     white-space: nowrap;
   }
 
+  /* Championship highlight section */
+  .championship-highlight {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #0ea5e9;
+    border-radius: 12px;
+  }
+
+  .championship-label {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0c4a6e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+
   .bracket-scroll {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(350px, 1fr);
+    grid-auto-columns: minmax(260px, 1fr);
     gap: 0.9rem;
     overflow-x: auto;
     padding-bottom: 0.25rem;
-    align-items: center;
+  }
+
+  /* Mobile snap scrolling */
+  @media (max-width: 768px) {
+    .bracket-scroll {
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      gap: 0;
+      grid-auto-columns: 100%;
+      padding-bottom: 3rem; /* Space for scroll indicators */
+    }
+
+    .bracket-scroll::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+
+    .bracket-round {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      margin: 0 0.5rem;
+    }
   }
 
   .bracket-round {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    justify-content: center;
   }
 
   .round-label {
@@ -1419,7 +1569,7 @@ const grandTotal =
   .team-name {
     margin: 0;
     font-weight: 800;
-    font-size: 0.98rem;
+    font-size: 0.75rem;
     color: #0f172a;
     white-space: nowrap;
     overflow: hidden;
@@ -1665,17 +1815,91 @@ const grandTotal =
     }
   }
 
-  @media (max-width: 640px) {
-    .playoff-page {
-      padding: 1.25rem 1rem;
+  /* Matchup card mobile adjustments - 768px */
+  @media (max-width: 768px) {
+
+    .team-row {
+      gap: 0.5rem;
     }
 
-    .bracket-scroll {
-      grid-auto-columns: minmax(220px, 1fr);
+    .team-info {
+      gap: 0.4rem;
+    }
+
+    .team-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .seed-badge {
+      padding: 0.15rem 0.4rem;
+      font-size: 0.7rem;
+      min-width: 0.8rem;
     }
 
     .team-name {
-      max-width: 150px;
+      font-size: 0.85rem;
+      max-width: 120px;
+    }
+
+    .team-record {
+      font-size: 0.7rem;
+    }
+
+    .score {
+      font-size: 0.9rem;
+      min-width: 2.8rem;
+    }
+
+    .matchup-status {
+      margin-top: 0.25rem;
+      font-size: 0.7rem;
+    }
+
+    .status-pill {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+    }
+  }
+
+  /* Scroll indicators */
+  .scroll-indicators {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0 0.5rem;
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 70%, transparent);
+    z-index: 10;
+  }
+
+  @media (max-width: 768px) {
+    .scroll-indicators {
+      display: flex;
+    }
+  }
+
+  .scroll-indicator {
+    width: 8px;
+    height: 16px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .scroll-indicator.active {
+    background: #1c497c;
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 767px) {
+
+    .bracket-scroll {
+      grid-auto-columns: minmax(300px, 1fr);
     }
 
     .view-tabs {
@@ -1683,7 +1907,22 @@ const grandTotal =
       justify-content: flex-start;
       flex-wrap: wrap;
     }
+  }
 
+  /* Other mobile adjustments */
+  @media (max-width: 768px) {
+    .round-label {
+      font-size: 0.85rem;
+      margin: 0 0 0.25rem 0.15rem;
+    }
+
+    .bracket-title {
+      font-size: 1.1rem;
+    }
+
+    .bracket-meta {
+      font-size: 0.8rem;
+    }
   }
 
   /* Conference Standings Section */
@@ -1739,6 +1978,102 @@ const grandTotal =
   }
 
   document.addEventListener('astro:after-swap', setupPlayoffSelectors);
+</script>
+
+<script>
+  // Mobile snap scrolling and auto-scroll to current week
+  function setupMobileScrolling() {
+    const bracketScrolls = document.querySelectorAll('.bracket-scroll');
+    if (!bracketScrolls.length) return;
+
+    // Get current week (you can adjust this logic based on your needs)
+    const getCurrentWeek = () => {
+      // Simple logic: return current NFL week (roughly December = week 15-17)
+      const now = new Date();
+      const month = now.getMonth(); // 0-11
+      const day = now.getDate();
+
+      // Rough estimate: September = week 1, increase ~1 week per week
+      // This is a simple approximation
+      let estimatedWeek = 1;
+      if (month === 11) { // December
+        if (day < 8) estimatedWeek = 14;
+        else if (day < 15) estimatedWeek = 15;
+        else if (day < 22) estimatedWeek = 16;
+        else estimatedWeek = 17;
+      }
+
+      return estimatedWeek;
+    };
+
+    const currentWeek = getCurrentWeek();
+
+    bracketScrolls.forEach(scrollContainer => {
+      const rounds = Array.from(scrollContainer.querySelectorAll('.bracket-round')) as HTMLElement[];
+      const bracketId = (scrollContainer as HTMLElement).dataset.bracketId;
+      const indicators = Array.from(
+        document.querySelectorAll(
+          `.scroll-indicators[data-bracket-id="${bracketId}"] .scroll-indicator`
+        )
+      ) as HTMLElement[];
+
+      if (!rounds.length) return;
+
+      // Find the round to scroll to
+      let targetRoundIndex = 0;
+      const firstWeek = parseInt(rounds[0]?.dataset.week || '1') || 1;
+
+      // If current week is >= first playoff week, find the matching week
+      if (currentWeek >= firstWeek) {
+        const matchingRound = rounds.findIndex(
+          round => parseInt(round.dataset.week || '0') === currentWeek
+        );
+        targetRoundIndex = matchingRound >= 0 ? matchingRound : 0;
+      }
+      // Otherwise default to first week (index 0)
+
+      // Update indicators
+      const updateIndicators = () => {
+        const scrollLeft = scrollContainer.scrollLeft;
+        const roundWidth = rounds[0]?.offsetWidth || 0;
+        const activeIndex = Math.round(scrollLeft / roundWidth);
+
+        indicators.forEach((indicator, idx) => {
+          indicator.classList.toggle('active', idx === activeIndex);
+        });
+      };
+
+      // Scroll to target round on load
+      setTimeout(() => {
+        const targetRound = rounds[targetRoundIndex];
+        if (targetRound) {
+          targetRound.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+        }
+        updateIndicators();
+      }, 100);
+
+      // Update indicators on scroll
+      scrollContainer.addEventListener('scroll', updateIndicators, { passive: true });
+
+      // Handle indicator clicks
+      indicators.forEach((indicator, idx) => {
+        indicator.addEventListener('click', () => {
+          const targetRound = rounds[idx];
+          if (targetRound) {
+            targetRound.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+          }
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMobileScrolling);
+  } else {
+    setupMobileScrolling();
+  }
+
+  document.addEventListener('astro:after-swap', setupMobileScrolling);
 </script>
 
 {hasBrackets && (
