@@ -88,9 +88,46 @@ Toilet Bowl Structure:
 
 ## UI/UX Conventions
 
-### Team Name Display Standards
+### Team Name Display Standards - 4-Tier System
 
 **IMPORTANT:** All team names across the entire application must use the `chooseTeamName()` utility function to ensure consistent display and prevent UI overflow issues.
+
+#### 4-Tier Naming Structure
+
+Each team in both leagues has 4 name variants stored in config files:
+
+1. **Full Name** (any length) - Official team name from config
+   - Example: `"Dark Magicians of Chaos"`
+   - Used for: Full displays, headers, official contexts
+
+2. **Medium Name** (≤15 chars) - `nameMedium` field in config
+   - Example: `"Dark Magicians"`
+   - Used for: Playoff brackets, matchup cards, roster displays (DEFAULT)
+
+3. **Short Name** (≤10 chars) - `nameShort` field in config
+   - Example: `"DMOC"`
+   - Used for: Mobile views, tight spaces, compact displays
+
+4. **Abbreviation** (2-6 chars) - `abbrev` field from MFL API
+   - Example: `"DMOC"` (TheLeague), `"SMOKE"` (AFL)
+   - Used for: Ultra-compact displays, tables, scoreboards
+
+#### Config File Structure
+
+**Location:**
+- TheLeague: `src/data/theleague.config.json`
+- AFL Fantasy: `data/afl-fantasy/afl.config.json`
+
+```json
+{
+  "franchiseId": "0015",
+  "name": "Dark Magicians of Chaos",
+  "nameMedium": "Dark Magicians",
+  "nameShort": "DMOC",
+  "abbrev": "DMOC",
+  "aliases": ["Dark Magicians", "Dark Magician", "DMC"]
+}
+```
 
 #### Implementation
 
@@ -99,7 +136,18 @@ Toilet Bowl Structure:
 ```typescript
 import { chooseTeamName } from '../../utils/team-names';
 
-// When displaying team names
+// NEW OBJECT FORMAT (Recommended)
+// Pass all available name options and specify context
+const displayName = chooseTeamName({
+  fullName: team.name,
+  nameMedium: assets?.nameMedium,
+  nameShort: assets?.nameShort,
+  abbrev: assets?.abbrev,
+  mflTeamName: team.teamName,
+  aliases: assets?.aliases
+}, 'default'); // Context: 'default' | 'short' | 'abbrev'
+
+// LEGACY ARRAY FORMAT (Still supported for backward compatibility)
 const displayName = chooseTeamName([
   team.teamName,           // Primary team name from MFL
   assets?.name || '',      // Asset/custom name
@@ -107,23 +155,61 @@ const displayName = chooseTeamName([
 ]);
 ```
 
-#### Rules
+#### Context-Aware Display
 
-1. **Maximum Length:** 15 characters
-2. **Selection Priority:**
-   - Filter all candidates to those ≤15 characters
-   - Choose the **longest** name that fits within the limit
-   - If all names exceed 15 chars, truncate the shortest one
-3. **Applies to ALL Leagues:**
-   - `theleague` (dynasty league)
-   - `afl-fantasy` (AFL fantasy league)
-   - Any future leagues added to the platform
+**IMPORTANT:** Pages must specify the appropriate context based on available space:
+
+```typescript
+// Default context (≤15 chars) - For playoff brackets, matchup cards
+const bracketName = chooseTeamName({
+  fullName: team.name,
+  nameMedium: assets?.nameMedium,
+  nameShort: assets?.nameShort,
+  abbrev: assets?.abbrev
+}); // Returns: "Dark Magicians"
+
+// Short context (≤10 chars) - For mobile views, tight spaces
+const mobileName = chooseTeamName({
+  fullName: team.name,
+  nameMedium: assets?.nameMedium,
+  nameShort: assets?.nameShort,
+  abbrev: assets?.abbrev
+}, 'short'); // Returns: "DMOC"
+
+// Abbrev context - For ultra-compact displays
+const compactName = chooseTeamName({
+  fullName: team.name,
+  nameMedium: assets?.nameMedium,
+  nameShort: assets?.nameShort,
+  abbrev: assets?.abbrev
+}, 'abbrev'); // Returns: "DMOC"
+```
+
+#### Selection Logic
+
+The function automatically selects the best name based on context:
+
+**Default Context (≤15 chars):**
+1. Use `nameMedium` if available and ≤15 chars
+2. Fallback to longest valid option from `[fullName, mflTeamName, aliases]`
+3. If all exceed limit, truncate shortest to 15 chars
+
+**Short Context (≤10 chars):**
+1. Use `nameShort` if available and ≤10 chars
+2. Fallback to `abbrev` if available
+3. Fallback to longest valid option from `[nameMedium, fullName, mflTeamName, aliases]`
+4. If all exceed limit, truncate shortest to 10 chars
+
+**Abbrev Context:**
+1. Use `abbrev` if available
+2. Fallback to `nameShort`
 
 #### Why This Matters
 
-- Prevents text overflow in matchup cards, brackets, and roster displays
-- Ensures consistent team name presentation across all pages
-- Handles edge cases where team names are very long (e.g., "Dark Magicians of Chaos" → "Dark Magicians")
+- **Prevents UI overflow** in matchup cards, brackets, and roster displays
+- **Ensures consistency** across all pages and device sizes
+- **Optimizes readability** for different display contexts
+- **Handles edge cases** where team names are very long
 
 #### Where to Use
 
@@ -132,23 +218,49 @@ Apply `chooseTeamName()` when:
 - Resolving team data in bracket views
 - Displaying team names in any UI component (matchups, rosters, standings, etc.)
 - Creating team-related data structures
+- **Mobile responsive layouts** (use `'short'` context)
+- **Compact tables** (use `'abbrev'` context)
 
-**Example from playoff brackets:**
+#### Migration Examples
+
+**Before (Legacy):**
 ```typescript
-// src/utils/playoffs.ts - buildSeedMaps()
 displayName: chooseTeamName([
   team.teamName,
   assetMap.get(team.id)?.name || '',
   ...(assetMap.get(team.id)?.aliases || []),
 ])
-
-// src/pages/theleague/playoffs.astro - resolveTeam()
-displayName: chooseTeamName([
-  team.teamName,
-  assets?.name || '',
-  ...(assets?.aliases || []),
-])
 ```
+
+**After (New Format):**
+```typescript
+displayName: chooseTeamName({
+  fullName: assetMap.get(team.id)?.name || team.teamName,
+  nameMedium: assetMap.get(team.id)?.nameMedium,
+  nameShort: assetMap.get(team.id)?.nameShort,
+  abbrev: assetMap.get(team.id)?.abbrev,
+  mflTeamName: team.teamName,
+  aliases: assetMap.get(team.id)?.aliases
+})
+```
+
+#### Special Cases
+
+**Fire Ready Aim (0007):**
+- Full: "Fire Ready Aim"
+- Medium: "Fire Ready" (custom)
+- Short: "FRA" (custom abbreviation)
+- MFL Abbrev: "FIRE"
+
+**Vitside Mafia (0012):**
+- Full: "Vitside Mafia"
+- Medium: "Vitside" (custom)
+- Short: "Vit" (custom abbreviation)
+- MFL Abbrev: "VIT"
+
+#### Backward Compatibility
+
+✅ **Legacy array format still works!** Existing code continues to function without changes. The new object format is recommended for new implementations and provides more flexibility for responsive designs.
 
 ## References
 - **MFL API Documentation:** See [MFL-API.md](MFL-API.md) for comprehensive API reference organized by feature area
