@@ -153,11 +153,11 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       <div class="col right">
         <!-- Desktop Navigation Icons -->
         <nav class="desktop-nav" aria-label="Main navigation">
-          <a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"} class="nav-icon-link" title="Roster/Salary">
+          <a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
             <svg class="nav-icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-banknote"></use>
+              <use href={`/assets/icons/sprite.svg#icon-${isAFL ? "helmet" : "banknote"}`}></use>
             </svg>
-            <span class="nav-label">Roster/Salary</span>
+            <span class="nav-label">{isAFL ? "Rosters" : "Roster/Salary"}</span>
           </a>
           <a href={submitLineupUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Submit lineup">
             <svg class="nav-icon" aria-hidden="true">
@@ -212,7 +212,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       <ul class="nav-links">
         <!-- Dynamic League Pages -->
         <li class="nav-section-title">Tools</li>
-        <li><a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"}>Roster/Salary</a></li>
+        <li><a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"}>{isAFL ? "Rosters" : "Roster/Salary"}</a></li>
         <li><a href={isAFL ? "/afl-fantasy/rosters?view=nextyear" : "/theleague/rosters?view=nextyear"}>Next Year Summary</a></li>
         <li><a href={isAFL ? "/afl-fantasy/calculator" : "/theleague/calculator"}>Extension Calculator</a></li>
         <li><a href={isAFL ? "/afl-fantasy/draft-predictor" : "/theleague/draft-predictor"}>Draft Order</a></li>
