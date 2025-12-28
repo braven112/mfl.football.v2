@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
-import { getConferenceStandings } from '../../utils/standings';
+import { getConferenceStandings, getTierAllPlayStandings } from '../../utils/standings';
 import {
   // fetchLiveScoring, // moved to lazy client fetch (disabled for SSR perf)
   // fetchPlayoffBracket,
@@ -596,15 +596,18 @@ const filteredBrackets = bracketViews.filter(bracket => {
 });
 const hasBrackets = filteredBrackets.length > 0;
 
-const REGULAR_SEASON_WEEKS = 14;
-const WEEKLY_HIGH_PAYOUT = 3;
-const placementPayouts = {
-  champion: 300,
-  second: 150,
-  third: 100,
-  fourth: 50,
-  fifth: 45,
-  sixth: 25,
+// AFL Payout Structure (different from The League)
+const aflPayouts = {
+  leagueChampionship: 300,
+  conferenceChampionship: 150,
+  divisionChampionship: 150, // per division
+  wildCard: 100, // per wild card
+  premierChampion: 225,
+  premier2nd: 150,
+  premier3rd: 100,
+  premier4th: 50,
+  dLeagueChampion: 50,
+  nitChampion: 50,
 };
 
 const franchiseLookup = new Map(
@@ -620,6 +623,7 @@ const getTeamDisplay = (franchiseId?: string) => {
     id,
     name: asset?.name || franchise?.name || franchise?.franchise_name || `Franchise ${id}`,
     icon: asset?.icon,
+    tier: asset?.tier,
   };
 };
 
@@ -641,78 +645,204 @@ const findFinalGame = (bracketId: string) => {
   return { winnerId, loserId, game };
 };
 
-const playoffPlacements = (() => {
-  const champGame = findFinalGame('1');
-  const thirdGame = findFinalGame('2');
-  const fifthGame = findFinalGame('3');
-
-  return [
-    { label: 'Champion', amount: placementPayouts.champion, teamId: champGame?.winnerId },
-    { label: '2nd Place', amount: placementPayouts.second, teamId: champGame?.loserId },
-    { label: '3rd Place', amount: placementPayouts.third, teamId: thirdGame?.winnerId },
-    { label: '4th Place', amount: placementPayouts.fourth, teamId: thirdGame?.loserId },
-    { label: '5th Place', amount: placementPayouts.fifth, teamId: fifthGame?.winnerId },
-    { label: '6th Place', amount: placementPayouts.sixth, teamId: fifthGame?.loserId },
-  ];
-})();
-
-const weeklyHighs = await Promise.all(
-  Array.from({ length: REGULAR_SEASON_WEEKS }, async (_, idx) => {
-    const week = idx + 1;
-    // Use cached weekly results if available; otherwise mark as missing
-    const cachedKey = `../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`;
-    const cachedFeed = weeklyResultsFeeds[cachedKey] as
-      | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
-      | undefined;
-    const cachedWeek = cachedFeed?.weeks?.find(entry => entry.week === week);
-    const scoresRaw = cachedWeek?.scores;
-    const entries =
-      scoresRaw
-        ? Object.entries(scoresRaw as Record<string, number>)
-        : [];
-    if (entries.length === 0) return { week, franchiseId: undefined, score: undefined };
-    const [franchiseId, score] = entries.reduce(
-      (best, current) => ((current[1] ?? 0) > (best[1] ?? 0) ? current : best),
-      entries[0]
-    );
-    return { week, franchiseId: String(franchiseId), score: typeof score === 'number' ? score : undefined };
-  })
-);
-
-const weeklyHighTotal = weeklyHighs.filter(w => w.franchiseId && typeof w.score === 'number').length * WEEKLY_HIGH_PAYOUT;
+// Get Premier League and D-League standings
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
+const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
 
 type PrizeLine = {
   label: string;
   amount: number;
   teamId?: string;
-  score?: number;
-  week?: number;
+  category?: 'playoff' | 'premier' | 'other';
+  isOfficial?: boolean;
 };
 
-const placementPrizeLines: PrizeLine[] = playoffPlacements.map(entry => ({
-  label: entry.label,
-  amount: entry.amount,
-  teamId: entry.teamId,
-}));
+// Determine what's official based on current state
+// Division/Wild Card are official after Week 14 (when playoffs start)
+// Premier/D-League are official after Week 17
+// Bracket-based prizes are official when the bracket game is complete
 
-const weeklyPrizeLines: PrizeLine[] = weeklyHighs.map(entry => ({
-  label: `Week ${entry.week} High Score`,
-  amount: entry.franchiseId ? WEEKLY_HIGH_PAYOUT : 0,
-  teamId: entry.franchiseId,
-  score: entry.score,
-  week: entry.week,
-}));
+// Helper to check if we're past a certain week
+const getCurrentWeek = () => {
+  // Get the latest completed week from weekly results data
+  const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`] as
+    | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
+    | undefined;
 
+  if (weeklyResultsFeed?.weeks && weeklyResultsFeed.weeks.length > 0) {
+    // Return the highest week number that has been completed
+    return Math.max(...weeklyResultsFeed.weeks.map(w => w.week));
+  }
+  return 0;
+};
+
+const currentWeek = getCurrentWeek();
+const isDivisionWildCardOfficial = currentWeek >= 14; // After Week 14 ends
+const isPremierDLeagueOfficial = currentWeek >= 17; // After Week 17 ends
+const isTrulyFinal = currentWeek >= 18; // All prizes are final after Week 18 (end of season)
+
+// Calculate playoff-based prizes
+const playoffPrizes: PrizeLine[] = [];
+
+// League Championship (Bracket 1 winner)
+const leagueChampGame = findFinalGame('1');
+if (leagueChampGame?.winnerId) {
+  playoffPrizes.push({
+    label: 'League Championship',
+    amount: aflPayouts.leagueChampionship,
+    teamId: leagueChampGame.winnerId,
+    category: 'playoff',
+    isOfficial: true, // Official when winner exists
+  });
+}
+
+// Conference Championships (Bracket 2 = AL, Bracket 3 = NL)
+const alChampGame = findFinalGame('2');
+const nlChampGame = findFinalGame('3');
+if (alChampGame?.winnerId) {
+  playoffPrizes.push({
+    label: 'AL Conference Championship',
+    amount: aflPayouts.conferenceChampionship,
+    teamId: alChampGame.winnerId,
+    category: 'playoff',
+    isOfficial: true, // Official when winner exists
+  });
+}
+if (nlChampGame?.winnerId) {
+  playoffPrizes.push({
+    label: 'NL Conference Championship',
+    amount: aflPayouts.conferenceChampionship,
+    teamId: nlChampGame.winnerId,
+    category: 'playoff',
+    isOfficial: true, // Official when winner exists
+  });
+}
+
+// Division Championships (4 divisions)
+// AL Conference divisions
+conferenceAStandings.divisionWinners.forEach(winner => {
+  playoffPrizes.push({
+    label: `AL ${winner.division} Division Championship`,
+    amount: aflPayouts.divisionChampionship,
+    teamId: winner.id,
+    category: 'playoff',
+    isOfficial: isDivisionWildCardOfficial,
+  });
+});
+
+// NL Conference divisions
+conferenceBStandings.divisionWinners.forEach(winner => {
+  playoffPrizes.push({
+    label: `NL ${winner.division} Division Championship`,
+    amount: aflPayouts.divisionChampionship,
+    teamId: winner.id,
+    category: 'playoff',
+    isOfficial: isDivisionWildCardOfficial,
+  });
+});
+
+// Wild Cards (2 per conference)
+const wildCards = [
+  ...conferenceAStandings.wildCards,
+  ...conferenceBStandings.wildCards,
+];
+wildCards.forEach(wildCard => {
+  playoffPrizes.push({
+    label: 'Wild Card',
+    amount: aflPayouts.wildCard,
+    teamId: wildCard.id,
+    category: 'playoff',
+    isOfficial: isDivisionWildCardOfficial,
+  });
+});
+
+// NIT Champion (find which NIT bracket has a winner)
+const nitBrackets = ['6', '7', '8', '9'];
+let nitChampionId: string | undefined;
+for (const bracketId of nitBrackets) {
+  const nitChampGame = findFinalGame(bracketId);
+  if (nitChampGame?.winnerId) {
+    nitChampionId = nitChampGame.winnerId;
+    break;
+  }
+}
+if (nitChampionId) {
+  playoffPrizes.push({
+    label: 'NIT Champion',
+    amount: aflPayouts.nitChampion,
+    teamId: nitChampionId,
+    category: 'other',
+    isOfficial: true, // Official when winner exists
+  });
+}
+
+// Premier League prizes
+const premierPrizes: PrizeLine[] = [];
+if (premierLeague?.teams) {
+  if (premierLeague.teams[0]) {
+    premierPrizes.push({
+      label: 'Premier League Champion',
+      amount: aflPayouts.premierChampion,
+      teamId: premierLeague.teams[0].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+  if (premierLeague.teams[1]) {
+    premierPrizes.push({
+      label: 'Premier League 2nd Place',
+      amount: aflPayouts.premier2nd,
+      teamId: premierLeague.teams[1].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+  if (premierLeague.teams[2]) {
+    premierPrizes.push({
+      label: 'Premier League 3rd Place',
+      amount: aflPayouts.premier3rd,
+      teamId: premierLeague.teams[2].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+  if (premierLeague.teams[3]) {
+    premierPrizes.push({
+      label: 'Premier League 4th Place',
+      amount: aflPayouts.premier4th,
+      teamId: premierLeague.teams[3].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+}
+
+// D-League Champion
+if (dLeague?.teams?.[0]) {
+  premierPrizes.push({
+    label: 'D-League Champion',
+    amount: aflPayouts.dLeagueChampion,
+    teamId: dLeague.teams[0].id,
+    category: 'premier',
+    isOfficial: isPremierDLeagueOfficial,
+  });
+}
+
+// Combine all prizes
+const allPrizes = [...playoffPrizes, ...premierPrizes];
+
+// Calculate team totals
 const prizeTotalsByTeam = new Map<
   string,
   {
     team: ReturnType<typeof getTeamDisplay>;
-    titles: string[];
+    titles: Array<{ label: string; isOfficial: boolean }>;
     total: number;
   }
 >();
 
-const addPrize = (teamId: string | undefined, amount: number, title: string) => {
+const addPrize = (teamId: string | undefined, amount: number, title: string, isOfficial: boolean) => {
   if (!teamId) return;
   const id = String(teamId);
   const entry = prizeTotalsByTeam.get(id) || {
@@ -720,17 +850,15 @@ const addPrize = (teamId: string | undefined, amount: number, title: string) => 
     titles: [],
     total: 0,
   };
-  entry.titles.push(title);
+  entry.titles.push({ label: title, isOfficial });
   entry.total += amount;
   prizeTotalsByTeam.set(id, entry);
 };
 
-placementPrizeLines.forEach(line => addPrize(line.teamId, line.amount, line.label));
-weeklyPrizeLines.forEach(line => addPrize(line.teamId, line.amount, `Week ${line.week} High Score`));
+allPrizes.forEach(prize => addPrize(prize.teamId, prize.amount, prize.label, prize.isOfficial ?? true));
 
 const prizeSummary = Array.from(prizeTotalsByTeam.values()).sort((a, b) => b.total - a.total);
-const grandTotal =
-  placementPrizeLines.reduce((sum, p) => sum + p.amount, 0) + weeklyHighTotal;
+const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 ---
 
 <TheLeagueLayout title="Playoff Brackets">
@@ -778,7 +906,7 @@ const grandTotal =
           <div>
             <h2>Prizes</h2>
             <p class="prizes-subtitle">
-              {placementPrizeLines.some(p => !p.teamId) ? 'Projected prize money — awaiting final results' : 'Final prize money'}
+              {isTrulyFinal ? 'Final prize money' : 'Projected prize money — some results not yet final'}
             </p>
           </div>
           <div class="prizes-total">
@@ -787,17 +915,56 @@ const grandTotal =
           </div>
         </div>
         <div class="prizes-body">
+          <section class="prize-section prize-section--totals">
+            <header class="prize-section__header">
+              <h3>{isTrulyFinal ? 'Team Totals' : 'Projected Team Totals'}</h3>
+            </header>
+            <ul class="team-total-list">
+              {prizeSummary.length === 0 ? (
+                <li class="prize-row">No payouts calculated yet.</li>
+              ) : (
+                prizeSummary.map(entry => (
+                  <li class={`prize-row${!isTrulyFinal ? ' prize-row--projected' : ''}`}>
+                    <div class="prize-row__left">
+                      <div class="icon-thumb">
+                        {entry.team?.icon ? (
+                          <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
+                        ) : (
+                          <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                        )}
+                      </div>
+                      <div class="prize-row__info">
+                        <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
+                        <p class="prize-titles">
+                          {entry.titles.length === 0 ? '—' : entry.titles.map((title, idx) => (
+                            <>
+                              <span class={title.isOfficial ? '' : 'title-projected'}>{title.label}</span>
+                              {idx < entry.titles.length - 1 && <span class="title-separator"> · </span>}
+                            </>
+                          ))}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="prize-row__amount">
+                      <span>${entry.total}</span>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
+
           <div class="prizes-grid-top">
             <section class="prize-section">
               <header class="prize-section__header">
-                <h3>Season Payouts</h3>
-                <span class="section-total">${placementPrizeLines.reduce((sum, p) => sum + p.amount, 0)}</span>
+                <h3>Playoff & Conference Payouts</h3>
+                <span class="section-total">${playoffPrizes.reduce((sum, p) => sum + p.amount, 0)}</span>
               </header>
               <ul class="prize-list">
-                {placementPrizeLines.map(line => {
+                {playoffPrizes.map(line => {
                   const team = getTeamDisplay(line.teamId);
                   return (
-                    <li class="prize-row">
+                    <li class={`prize-row ${!line.isOfficial ? 'prize-row--projected' : ''}`}>
                       <div class="prize-row__left">
                         <div class="icon-thumb">
                           {team?.icon ? (
@@ -820,69 +987,49 @@ const grandTotal =
               </ul>
             </section>
 
-            <section class="prize-section prize-section--totals">
+            <section class="prize-section">
               <header class="prize-section__header">
-                <h3>Team Totals</h3>
+                <h3>Premier League / D-League</h3>
+                <span class="section-total">${premierPrizes.reduce((sum, p) => sum + p.amount, 0)}</span>
               </header>
-              <ul class="team-total-list">
-                {prizeSummary.length === 0 ? (
-                  <li class="prize-row">No payouts calculated yet.</li>
-                ) : (
-                  prizeSummary.map(entry => (
-                    <li class="prize-row">
+              <ul class="prize-list">
+                {premierPrizes.map(line => {
+                  const team = getTeamDisplay(line.teamId);
+                  return (
+                    <li class={`prize-row ${!line.isOfficial ? 'prize-row--projected' : ''}`}>
                       <div class="prize-row__left">
                         <div class="icon-thumb">
-                          {entry.team?.icon ? (
-                            <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
+                          {team?.icon ? (
+                            <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
                           ) : (
                             <div class="icon-thumb--placeholder" aria-hidden="true"></div>
                           )}
                         </div>
                         <div class="prize-row__info">
-                          <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
-                          <p class="prize-titles">{entry.titles.join(' · ') || '—'}</p>
+                          <p class="prize-label">{line.label}</p>
+                          <p class="prize-team">{team?.name ?? 'TBD'}</p>
                         </div>
                       </div>
                       <div class="prize-row__amount">
-                        <span>${entry.total}</span>
+                        <span>${line.amount}</span>
                       </div>
                     </li>
-                  ))
-                )}
+                  );
+                })}
               </ul>
             </section>
           </div>
 
-          <section class="prize-section">
-            <header class="prize-section__header">
-              <h3>Weekly High Scores (Weeks 1–14)</h3>
-              <span class="section-total">${weeklyHighTotal}</span>
-            </header>
-            <ul class="prize-list">
-              {weeklyPrizeLines.map(line => {
-                const team = getTeamDisplay(line.teamId);
-                return (
-                  <li class="prize-row">
-                    <div class="prize-row__left">
-                      <div class="week-badge">W{line.week}</div>
-                      <div class="prize-row__info">
-                        <p class="prize-label">{line.label}</p>
-                        <p class="prize-team">
-                          {team?.name ?? 'TBD'}
-                          {typeof line.score === 'number' && (
-                            <span class="prize-score"> · {line.score.toFixed(2)} pts</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div class="prize-row__amount">
-                      <span>{line.teamId ? `$${line.amount}` : '$0'}</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <div class="prizes-legend">
+            <p class="legend-item">
+              <span class="legend-marker legend-marker--final"></span>
+              <span class="legend-text"><strong>Regular text</strong> = Final results</span>
+            </p>
+            <p class="legend-item">
+              <span class="legend-marker legend-marker--projected"></span>
+              <span class="legend-text"><em>Italic text with dashed border</em> = Projected (not yet final)</span>
+            </p>
+          </div>
         </div>
       </div>
     ) : hasBrackets && (
@@ -1368,6 +1515,65 @@ const grandTotal =
     border: 1px solid #e2e8f0;
   }
 
+  .prize-row--projected {
+    opacity: 0.8;
+    border-style: dashed;
+  }
+
+  .prize-row--projected .prize-label,
+  .prize-row--projected .prize-team,
+  .prize-row--projected .prize-row__amount {
+    font-style: italic;
+  }
+
+  .prizes-legend {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.5rem 0;
+  }
+
+  .legend-item:first-child {
+    padding-top: 0;
+  }
+
+  .legend-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .legend-marker {
+    display: inline-block;
+    width: 60px;
+    height: 20px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .legend-marker--final {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+  }
+
+  .legend-marker--projected {
+    border: 1px dashed #cbd5e1;
+    background: #fff;
+    opacity: 0.8;
+  }
+
+  .legend-text {
+    font-size: 0.9rem;
+    color: #475569;
+  }
+
   .prize-row__left {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1441,6 +1647,14 @@ const grandTotal =
     margin: 0;
     color: #64748b;
     font-size: 0.9rem;
+  }
+
+  .title-projected {
+    font-style: italic;
+  }
+
+  .title-separator {
+    font-style: normal;
   }
 
   .team-total-list {
