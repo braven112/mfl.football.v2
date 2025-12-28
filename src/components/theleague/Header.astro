@@ -1,7 +1,5 @@
 ---
 import { getLeagueContext } from '../../utils/league-context';
-import MyTeamWidget from './MyTeamWidget.astro';
-import AFLMyTeamWidget from '../afl-fantasy/MyTeamWidget.astro';
 
 interface Props {
   host?: string;
@@ -40,30 +38,25 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
 <div class="breadcrumb-bar">
   <div class="breadcrumb-container">
-    <div class="breadcrumb-left">
-      <nav aria-label="Breadcrumb">
-        <ul class="breadcrumb-list">
-          <li>
-            <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
-              ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
-          </li>
-        </ul>
-      </nav>
-    </div>
-    <div class="breadcrumb-right">
-      {isAFL ? <AFLMyTeamWidget /> : <MyTeamWidget />}
-      <!-- Hamburger Menu Button (moved to top bar) -->
-      <button
-        class="hamburger-btn"
-        id="hamburger-btn"
-        aria-label="Toggle menu"
-        aria-expanded="false"
-      >
-        <span class="hamburger-box">
-          <span class="hamburger-inner"></span>
-        </span>
-      </button>
-    </div>
+    <nav aria-label="Breadcrumb">
+      <ul class="breadcrumb-list">
+        <li>
+          <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
+            ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
+        </li>
+      </ul>
+    </nav>
+    <!-- Hamburger Menu Button (moved to top bar) -->
+    <button
+      class="hamburger-btn"
+      id="hamburger-btn"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+    >
+      <span class="hamburger-box">
+        <span class="hamburger-inner"></span>
+      </span>
+    </button>
   </div>
 </div>
 
@@ -225,38 +218,25 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         <li><a href={isAFL ? "/afl-fantasy/draft-predictor" : "/theleague/draft-predictor"}>Draft Order</a></li>
         <li><a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"}>Standings</a></li>
         <li><a href={isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs"}>Playoffs</a></li>
-        <li><a href={isAFL ? "/afl-fantasy/rules" : "/theleague/rules"}>Rules</a></li>
         <li class="nav-section-title">Advanced Reports</li>
         <li><a href={isAFL ? "/afl-fantasy/salary" : "/theleague/salary"}>Salary Benchmarks</a></li>
         <li><a href={isAFL ? "/afl-fantasy/salary-history" : "/theleague/salary-history"}>Salary History</a></li>
         <li><a href={isAFL ? "/afl-fantasy/mvp" : "/theleague/mvp"}>Salary-Adjusted MVPs</a></li>
-      </ul>
-    </div>
-  </nav>
 
-  <!-- Team Widget Mobile Menu (shares overlay with hamburger) -->
-  <nav class="team-menu" id="team-menu">
-    <div class="team-menu-overlay" id="team-menu-overlay"></div>
-    <div class="team-menu-content">
-      <button class="nav-close-btn" id="team-menu-close-btn" aria-label="Close team menu">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-      <ul class="nav-links" id="team-menu-links">
-        <li class="nav-section-title">Team Management</li>
-        <li><a href={`https://${league.host}/${new Date().getFullYear()}/lineup?L=${league.leagueId}`}>Submit Lineup</a></li>
-        <li><a href={`https://${league.host}/${new Date().getFullYear()}/add_drop?L=${league.leagueId}`}>Add/Drops</a></li>
-        <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=18`}>Injured Reserve</a></li>
-        {!isAFL && <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=98`}>Practice Squad</a></li>}
-        <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=133`}>Trade Block</a></li>
-        <li><a href={`https://${league.host}/${new Date().getFullYear()}/options?L=${league.leagueId}&O=05`}>Trades</a></li>
+        <li><hr /></li>
+
+        <!-- External Links -->
+        {!isAFL && (
+          <>
+            <li class="nav-section-title">Community</li>
+            <li>
+              <a href="https://theleague.us/forum/index.php"> Message Board </a>
+            </li>
+          </>
+        )}
+        <li class="nav-section-title">Leagues</li>
+        <li><a href="https://theleague.us">TheLeague.us</a></li>
+        <li><a href="https://afl-fantasy.com">AFL Fantasy</a></li>
       </ul>
     </div>
   </nav>
@@ -277,19 +257,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     display: flex;
     align-items: center;
     justify-content: space-between;
-  }
-
-  .breadcrumb-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-  }
-
-  .breadcrumb-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
   }
 
   .breadcrumb-list {
@@ -339,7 +306,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       0 2px 6px rgba(0, 0, 0, 0.05)
     );
     padding: 1rem 0 1.25rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
   }
 
   .theleague-header .container {
@@ -350,16 +317,10 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
   .theleague-header .row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 980px) {
-    .theleague-header .row {
-      flex-wrap: nowrap;
-    }
+    gap: 0.5rem;
   }
 
   .theleague-header .col.left {
@@ -375,15 +336,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     display: flex;
     align-items: center;
     margin-left: auto;
-    width: 100%;
-    order: 2;
-  }
-
-  @media (min-width: 980px) {
-    .theleague-header .col.right {
-      width: auto;
-      order: 0;
-    }
   }
 
   .league-link {
@@ -602,37 +554,14 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
   /* Desktop Navigation Icons */
   .desktop-nav {
-    display: flex;
+    display: none;
     align-items: center;
     gap: 1.5rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
-    padding-bottom: 1.25rem;
-    margin-bottom: -1rem;
   }
 
-  .desktop-nav::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  .desktop-nav::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .desktop-nav::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.5);
-    border-radius: 3px;
-  }
-
-  .desktop-nav::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(148, 163, 184, 0.7);
-  }
-
-  @media (min-width: 900px) {
+  @media (min-width: 768px) {
     .desktop-nav {
-      overflow-x: visible;
+      display: flex;
     }
   }
 
@@ -644,8 +573,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     text-decoration: none;
     color: var(--primary-color, #1c497c);
     transition: color 0.2s ease;
-    flex-shrink: 0;
-    min-width: 60px;
   }
 
   .nav-icon-link:hover {
@@ -840,7 +767,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   }
 
   .nav-links a:hover {
-    color: var(--secondary-color, #2e8743);
+    color: var(--primary-link-hover-text-color, #b22222);
   }
 
   .nav-links a svg {
@@ -853,56 +780,6 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     border: none;
     border-top: 1px solid #e5e5e5;
     margin: 1rem 0;
-  }
-
-  /* Team Widget Mobile Menu (same styles as nav-menu) */
-  .team-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    z-index: 999;
-    pointer-events: none;
-  }
-
-  .team-menu.active {
-    pointer-events: auto;
-  }
-
-  .team-menu-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .team-menu.active .team-menu-overlay {
-    opacity: 1;
-  }
-
-  .team-menu-content {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 320px;
-    max-width: 85vw;
-    background: var(--primary-content-bg-color, #ffffff);
-    padding: 2rem 1.5rem;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 1000;
-    overflow-y: auto;
-  }
-
-  .team-menu.active .team-menu-content {
-    transform: translateX(0);
   }
 
   /* Close button */
@@ -960,64 +837,34 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 </style>
 
 <script>
-  // Menu management - handles both hamburger and team widget menus
+  // Simple hamburger menu
   const hamburgerBtn = document.getElementById("hamburger-btn");
   const navMenu = document.getElementById("nav-menu");
   const navOverlay = document.getElementById("nav-overlay");
   const navCloseBtn = document.getElementById("nav-close-btn");
 
-  const teamMenu = document.getElementById("team-menu");
-  const teamMenuOverlay = document.getElementById("team-menu-overlay");
-  const teamMenuCloseBtn = document.getElementById("team-menu-close-btn");
-
-  function closeAllMenus() {
-    navMenu?.classList.remove("active");
-    hamburgerBtn?.classList.remove("active");
-    hamburgerBtn?.setAttribute("aria-expanded", "false");
-
-    teamMenu?.classList.remove("active");
-
-    document.body.style.overflow = "";
-  }
-
-  function toggleNavMenu() {
-    // Close team menu if open
-    teamMenu?.classList.remove("active");
-
+  function toggleMenu() {
     const isActive = navMenu?.classList.toggle("active");
     hamburgerBtn?.classList.toggle("active");
     hamburgerBtn?.setAttribute("aria-expanded", isActive ? "true" : "false");
     document.body.style.overflow = isActive ? "hidden" : "";
   }
 
-  function toggleTeamMenu() {
-    // Close nav menu if open
+  function closeMenu() {
     navMenu?.classList.remove("active");
     hamburgerBtn?.classList.remove("active");
     hamburgerBtn?.setAttribute("aria-expanded", "false");
-
-    const isActive = teamMenu?.classList.toggle("active");
-    document.body.style.overflow = isActive ? "hidden" : "";
+    document.body.style.overflow = "";
   }
 
-  // Hamburger menu events
-  hamburgerBtn?.addEventListener("click", toggleNavMenu);
-  navOverlay?.addEventListener("click", closeAllMenus);
-  navCloseBtn?.addEventListener("click", closeAllMenus);
-
-  // Team menu events
-  teamMenuOverlay?.addEventListener("click", closeAllMenus);
-  teamMenuCloseBtn?.addEventListener("click", closeAllMenus);
-
-  // Make team widget trigger available globally for MyTeamWidget to use
-  (window as any).toggleTeamMenu = toggleTeamMenu;
+  hamburgerBtn?.addEventListener("click", toggleMenu);
+  navOverlay?.addEventListener("click", closeMenu);
+  navCloseBtn?.addEventListener("click", closeMenu);
 
   // Close on escape key
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      if (navMenu?.classList.contains("active") || teamMenu?.classList.contains("active")) {
-        closeAllMenus();
-      }
+    if (e.key === "Escape" && navMenu?.classList.contains("active")) {
+      closeMenu();
     }
   });
 </script>
