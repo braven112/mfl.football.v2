@@ -85,6 +85,9 @@ const assetMap = new Map(
       banner: team.banner,
       aliases: team.aliases || [],
       name: team.name,
+      nameMedium: team.nameMedium,
+      nameShort: team.nameShort,
+      abbrev: team.abbrev,
     },
   ])
 );
@@ -244,11 +247,14 @@ const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
         record: formatRecord(team.h2hwlt),
         icon: assets?.icon || '',
         banner: assets?.banner || '',
-        displayName: chooseTeamName([
-          team.teamName,
-          assets?.name || '',
-          ...(assets?.aliases || []),
-        ]),
+        displayName: chooseTeamName({
+          fullName: assets?.name || team.teamName,
+          nameMedium: assets?.nameMedium,
+          nameShort: assets?.nameShort,
+          abbrev: assets?.abbrev,
+          mflTeamName: team.teamName,
+          aliases: assets?.aliases,
+        }),
       };
     }
   }
@@ -528,17 +534,16 @@ const weeklyPrizeLines: PrizeLine[] = weeklyHighs.map(entry => ({
   week: entry.week,
 }));
 
-const prizeTotalsByTeam = new Map<
-  string,
-  {
-    team: ReturnType<typeof getTeamDisplay>;
-    titles: string[];
-    total: number;
-  }
->();
+type PrizeTeamEntry = {
+  team: ReturnType<typeof getTeamDisplay>;
+  titles: string[];
+  total: number;
+};
 
-const addPrize = (teamId: string | undefined, amount: number, title: string) => {
-  if (!teamId) return;
+const prizeTotalsByTeam = new Map<string, PrizeTeamEntry>();
+
+const addPrize = (teamId: string | undefined, amount: number, title: string): void => {
+  if (!teamId) return undefined;
   const id = String(teamId);
   const entry = prizeTotalsByTeam.get(id) || {
     team: getTeamDisplay(id),
@@ -1387,7 +1392,7 @@ const grandTotal =
 
   .seed-badge {
     display: inline-flex;
-    align-items: center;s
+    align-items: center;
     justify-content: center;
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
