@@ -619,6 +619,35 @@ const grandTotal =
           </div>
         </div>
         <div class="prizes-body">
+          <section class="prize-section--totals">
+            <ul class="team-total-list">
+              {prizeSummary.length === 0 ? (
+                <li class="prize-row">No payouts calculated yet.</li>
+              ) : (
+                prizeSummary.map(entry => (
+                  <li class="prize-row">
+                    <div class="prize-row__left">
+                      <div class="icon-thumb">
+                        {entry.team?.icon ? (
+                          <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
+                        ) : (
+                          <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                        )}
+                      </div>
+                      <div class="prize-row__info">
+                        <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
+                        <p class="prize-titles">{entry.titles.join(' · ') || '—'}</p>
+                      </div>
+                    </div>
+                    <div class="prize-row__amount">
+                      <span>${entry.total}</span>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
+
           <div class="prizes-grid-top">
             <section class="prize-section">
               <header class="prize-section__header">
@@ -652,40 +681,7 @@ const grandTotal =
               </ul>
             </section>
 
-            <section class="prize-section prize-section--totals">
-              <header class="prize-section__header">
-                <h3>Team Totals</h3>
-              </header>
-              <ul class="team-total-list">
-                {prizeSummary.length === 0 ? (
-                  <li class="prize-row">No payouts calculated yet.</li>
-                ) : (
-                  prizeSummary.map(entry => (
-                    <li class="prize-row">
-                      <div class="prize-row__left">
-                        <div class="icon-thumb">
-                          {entry.team?.icon ? (
-                            <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
-                          ) : (
-                            <div class="icon-thumb--placeholder" aria-hidden="true"></div>
-                          )}
-                        </div>
-                        <div class="prize-row__info">
-                          <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
-                          <p class="prize-titles">{entry.titles.join(' · ') || '—'}</p>
-                        </div>
-                      </div>
-                      <div class="prize-row__amount">
-                        <span>${entry.total}</span>
-                      </div>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </section>
-          </div>
-
-          <section class="prize-section">
+            <section class="prize-section">
             <header class="prize-section__header">
               <h3>Weekly High Scores (Weeks 1–14)</h3>
               <span class="section-total">${weeklyHighTotal}</span>
@@ -715,6 +711,7 @@ const grandTotal =
               })}
             </ul>
           </section>
+          </div>
         </div>
       </div>
     ) : hasBrackets && (
@@ -1010,7 +1007,7 @@ const grandTotal =
   }
 
   .prizes-total {
-    background: #0ea5e9;
+    background: #e2e8ef;
     color: #0b172a;
     padding: 0.65rem 0.9rem;
     border-radius: 10px;

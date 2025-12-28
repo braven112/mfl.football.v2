@@ -915,10 +915,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
           </div>
         </div>
         <div class="prizes-body">
-          <section class="prize-section prize-section--totals">
-            <header class="prize-section__header">
-              <h3>{isTrulyFinal ? 'Team Totals' : 'Projected Team Totals'}</h3>
-            </header>
+          <section class="prize-section--totals">
             <ul class="team-total-list">
               {prizeSummary.length === 0 ? (
                 <li class="prize-row">No payouts calculated yet.</li>
@@ -1439,7 +1436,7 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
   .prizes-total {
-    background: #0ea5e9;
+    background: #e2e8ef;
     color: #0b172a;
     padding: 0.65rem 0.9rem;
     border-radius: 10px;
