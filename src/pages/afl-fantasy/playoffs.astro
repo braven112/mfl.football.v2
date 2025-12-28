@@ -168,18 +168,10 @@ const playoffTeamIds = new Set([...alConferenceTeams.map(t => t.id), ...nlConfer
 const nitTeams = allConferenceTeams
   .filter(team => !playoffTeamIds.has(team.id))
   .sort((a, b) => {
-    // Sort by record (worst to best for NIT)
-    const aWins = parseInt(a.h2hwlt.split('-')[0]);
-    const bWins = parseInt(b.h2hwlt.split('-')[0]);
-    if (aWins !== bWins) return aWins - bWins;
-
-    const aAllPlay = parseFloat(a.all_play_pct);
-    const bAllPlay = parseFloat(b.all_play_pct);
-    if (aAllPlay !== bAllPlay) return aAllPlay - bAllPlay;
-
-    const aPF = parseFloat(a.pf);
-    const bPF = parseFloat(b.pf);
-    return aPF - bPF;
+    // Sort by Power Rank (highest to lowest for NIT seeding)
+    const aPower = parseFloat(a.pwr);
+    const bPower = parseFloat(b.pwr);
+    return bPower - aPower; // Descending order (highest power rank = seed 1)
   });
 
 const nitSeeds = new Map(
@@ -309,7 +301,7 @@ weeklyResultsEntries.forEach(([week, result]) => {
   }
 });
 
-const resolvedGames = new Map<string, { winner?: SeededTeam; loser?: SeededTeam }>();
+const resolvedGames = new Map<string, { home?: SeededTeam; away?: SeededTeam; winner?: SeededTeam; loser?: SeededTeam }>();
 
 const getSeedMapForBracket = (bracketId: string) => {
   // AFL structure:
@@ -339,14 +331,42 @@ const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
   // If franchise_id is present, MFL has resolved the team - use it directly
   if (ref?.franchise_id) {
     const franchiseId = String(ref.franchise_id);
+    // Use the seed from the MFL bracket API if available
+    let apiSeed = ref?.seed ? Number(ref.seed) : undefined;
+
+    // If no seed but we have a reference to another bracket's game, look up the seed from there
+    if (!apiSeed && (ref?.winner_of_game || ref?.loser_of_game) && ref?.bracket) {
+      const sourceBracket = String(ref.bracket);
+      const gameRef = ref.winner_of_game || ref.loser_of_game;
+      const key = `${sourceBracket}-${gameRef}`;
+      const result = resolvedGames.get(key);
+
+      // Try to get from winner/loser first (for final games)
+      let teamFromGame = ref.winner_of_game ? result?.winner : result?.loser;
+
+      // If not found (game not final yet), check home/away teams
+      if (!teamFromGame && result) {
+        if (result.home?.id === franchiseId) {
+          teamFromGame = result.home;
+        } else if (result.away?.id === franchiseId) {
+          teamFromGame = result.away;
+        }
+      }
+
+      if (teamFromGame?.id === franchiseId) {
+        apiSeed = teamFromGame.originalSeed;
+      }
+    }
+
     // Try to find in playoff teams first
     const playoffTeam = playoffTeamsWithSeeds.find(t => t.id === franchiseId);
     if (playoffTeam) {
+      const seedToUse = apiSeed ?? playoffTeam.conferenceSeed;
       return {
         ...playoffTeam,
-        seed: playoffTeam.conferenceSeed,
-        bracketSeed: playoffTeam.conferenceSeed,
-        originalSeed: playoffTeam.conferenceSeed,
+        seed: seedToUse,
+        bracketSeed: seedToUse,
+        originalSeed: seedToUse,
         record: formatRecord(playoffTeam.h2hwlt),
         icon: assetMap.get(franchiseId)?.icon || '',
         banner: assetMap.get(franchiseId)?.banner || '',
@@ -360,11 +380,27 @@ const resolveTeam = (ref: any, bracketId: string): SeededTeam | undefined => {
     // Try NIT teams
     const nitTeam = toiletBowlTeams.find(t => t.id === franchiseId);
     if (nitTeam) {
+      // For NIT brackets (6-9):
+      // - Bracket 6: Use MFL API seed from bracket data
+      // - Brackets 7-9: Use seed from resolvedGames lookup (from bracket 6)
+      // - Fallback: Use nitSeeds from standings as backup
+      let seedToUse = apiSeed;
+
+      // Fall back to nitSeeds from standings if API/resolvedGames lookup failed
+      if (!seedToUse) {
+        for (const [seed, team] of nitSeeds.entries()) {
+          if (team.id === franchiseId) {
+            seedToUse = seed;
+            break;
+          }
+        }
+      }
+
       return {
         ...nitTeam,
-        seed: nitTeam.conferenceSeed || 0,
-        bracketSeed: nitTeam.conferenceSeed || 0,
-        originalSeed: nitTeam.conferenceSeed || 0,
+        seed: seedToUse || 0,
+        bracketSeed: seedToUse || 0,
+        originalSeed: seedToUse || 0,
         record: formatRecord(nitTeam.h2hwlt),
         icon: assetMap.get(franchiseId)?.icon || '',
         banner: assetMap.get(franchiseId)?.banner || '',
@@ -482,20 +518,38 @@ const buildBracketViews = () => {
           }
         }
 
-        let winnerId: string | undefined;
-        if (
-          homeTeam?.id &&
-          awayTeam?.id &&
-          homeScore !== undefined &&
-          awayScore !== undefined &&
-          homeScore !== awayScore
-        ) {
-          winnerId = homeScore > awayScore ? homeTeam.id : awayTeam.id;
-          const loserId = winnerId === homeTeam.id ? awayTeam.id : homeTeam.id;
+        // Store both teams in resolvedGames as soon as they're resolved
+        // This preserves seed information even for scheduled games
+        if (homeTeam?.id && awayTeam?.id) {
+          const existingEntry = resolvedGames.get(`${bracket.id}-${game.id}`);
+
+          // Determine winner/loser if game is final
+          let winner: SeededTeam | undefined = existingEntry?.winner;
+          let loser: SeededTeam | undefined = existingEntry?.loser;
+
+          if (
+            homeScore !== undefined &&
+            awayScore !== undefined &&
+            homeScore !== awayScore
+          ) {
+            const winnerId = homeScore > awayScore ? homeTeam.id : awayTeam.id;
+            winner = winnerId === homeTeam.id ? homeTeam : awayTeam;
+            loser = winnerId === homeTeam.id ? awayTeam : homeTeam;
+          }
+
+          // Store teams (and winner/loser if determined)
           resolvedGames.set(`${bracket.id}-${game.id}`, {
-            winner: winnerId === homeTeam.id ? homeTeam : awayTeam,
-            loser: winnerId === homeTeam.id ? awayTeam : homeTeam,
+            home: homeTeam,
+            away: awayTeam,
+            winner,
+            loser,
           });
+        }
+
+        let winnerId: string | undefined;
+        const gameResult = resolvedGames.get(`${bracket.id}-${game.id}`);
+        if (gameResult?.winner) {
+          winnerId = gameResult.winner.id;
         }
 
         return {
@@ -1603,7 +1657,7 @@ const grandTotal =
     background: #e2e8f0;
     color: #0f172a;
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.65rem;
     min-width: 1rem;
   }
 
