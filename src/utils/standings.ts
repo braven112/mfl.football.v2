@@ -175,8 +175,18 @@ function wildCardTiebreaker(teams: TeamStanding[]): TeamStanding[] {
 export function enrichTeamStanding(franchise: StandingsFranchise, config: LeagueConfig): TeamStanding {
   const teamConfig = getTeamConfig(franchise.id, config);
 
+  // Normalize h2hwlt field - construct from separate fields if needed (for older MFL data)
+  let h2hwlt = (franchise as any).h2hwlt;
+  if (!h2hwlt && (franchise as any).h2hw !== undefined && (franchise as any).h2hl !== undefined) {
+    const wins = (franchise as any).h2hw || '0';
+    const losses = (franchise as any).h2hl || '0';
+    const ties = (franchise as any).h2ht || '0';
+    h2hwlt = `${wins}-${losses}-${ties}`;
+  }
+
   return {
     ...franchise,
+    h2hwlt: h2hwlt || '0-0-0',
     teamName: teamConfig?.name || franchise.fname,
     division: teamConfig?.division || 'Unknown',
     teamIcon: teamConfig?.icon || '',
