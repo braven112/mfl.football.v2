@@ -18,13 +18,48 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
+/**
+ * Calculate current NFL week based on season start
+ */
+function getCurrentNFLWeek(seasonYear = 2025) {
+  const seasonConfigs = {
+    2024: new Date('2024-09-05T20:20:00-04:00'),
+    2025: new Date('2025-09-04T20:20:00-04:00'),
+    2026: new Date('2026-09-10T20:20:00-04:00'),
+  };
+
+  let week1Start = seasonConfigs[seasonYear];
+  if (!week1Start) {
+    // Fallback: assume first Thursday of September
+    const sept1 = new Date(seasonYear, 8, 1);
+    const dayOfWeek = sept1.getDay();
+    const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
+    week1Start = new Date(seasonYear, 8, 1 + daysUntilThursday, 20, 20);
+  }
+
+  const now = new Date();
+  if (now < week1Start) return 1; // Default to week 1 if before season
+
+  const msSinceStart = now.getTime() - week1Start.getTime();
+  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(weeksSinceStart + 1, 22); // Cap at 22 weeks
+}
+
+function getCurrentSeasonYear() {
+  const now = new Date();
+  return now.getFullYear();
+}
+
 // Parse command line args
 const args = process.argv.slice(2);
 const weekIndex = args.indexOf('--week');
 const yearIndex = args.indexOf('--year');
 
-const week = weekIndex !== -1 ? args[weekIndex + 1] : '15';
-const year = yearIndex !== -1 ? args[yearIndex + 1] : '2025';
+const currentYear = getCurrentSeasonYear();
+const currentWeek = getCurrentNFLWeek(currentYear);
+
+const week = weekIndex !== -1 ? args[weekIndex + 1] : String(currentWeek);
+const year = yearIndex !== -1 ? args[yearIndex + 1] : String(currentYear);
 
 /**
  * Stadium coordinates for NFL venues

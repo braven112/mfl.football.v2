@@ -14,6 +14,7 @@ import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
 import collegeLogos from '../../data/college-logos.json';
 import type { ChartSlice } from '../scripts/chart-utils';
+import { getCurrentWeek } from '../../utils/current-week';
 import {
   parseNumber,
   currencyFormatter,
@@ -384,12 +385,12 @@ Object.entries(playersFeeds).forEach(([path, mod]) => {
   });
 });
 
-// Load MFL injury data for current season (week 15)
-const currentWeek = 15;
+// Load MFL injury data for current season (dynamically determined week)
+const currentWeek = getCurrentWeek();
 let mflInjuryData = {};
 try {
-  // Use static import for build compatibility
-  const injuryDataModule = await import('../../../data/theleague/live-injury-data-week-15.json');
+  // Use dynamic import based on current NFL week
+  const injuryDataModule = await import(`../../../data/theleague/live-injury-data-week-${currentWeek}.json`);
   if (injuryDataModule.default?.injuries) {
     mflInjuryData = injuryDataModule.default.injuries;
     console.log(`✅ Loaded ${Object.keys(mflInjuryData).length} player injuries from MFL API (week ${currentWeek})`);

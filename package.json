@@ -18,7 +18,7 @@
     "fetch:all": "echo 'TODO: Create scripts/fetch-all-feeds.mjs'",
     "fetch:espn:schedule": "node scripts/fetch-espn-schedule.mjs",
     "fetch:weather": "node scripts/enrich-schedule-with-weather.mjs",
-    "fetch:schedule:current": "node scripts/fetch-espn-schedule.mjs --week 15 --year 2025 && node scripts/enrich-schedule-with-weather.mjs --week 15 --year 2025",
+    "fetch:schedule:current": "node scripts/fetch-espn-schedule.mjs && node scripts/enrich-schedule-with-weather.mjs",
     "sync:all": "pnpm run sync:theleague && pnpm run sync:afl",
     "sync:theleague": "node scripts/sync-theleague-assets.mjs",
     "sync:afl": "node scripts/sync-afl-asset-urls.mjs && node scripts/sync-afl-assets.mjs",
