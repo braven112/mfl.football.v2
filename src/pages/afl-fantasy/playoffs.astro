@@ -1462,6 +1462,56 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     gap: 1rem;
   }
 
+  @media (max-width: 768px) {
+    .prizes-grid-top {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .prizes-card {
+      padding: 0.75rem;
+    }
+
+    .prize-section {
+      padding: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+    }
+
+    .prize-section__header {
+      margin-bottom: 0.5rem;
+      padding: 0 0.25rem;
+    }
+
+    .prize-section__header h3 {
+      font-size: 0.95rem;
+    }
+
+    .section-total {
+      font-size: 0.9rem;
+    }
+
+    .prize-row {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    .icon-thumb,
+    .icon-thumb--placeholder {
+      width: 40px;
+      height: 40px;
+    }
+
+    .prize-label {
+      font-size: 0.9rem;
+    }
+
+    .prize-team {
+      font-size: 0.85rem;
+    }
+  }
+
   .prize-section {
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -1573,8 +1623,8 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
 
   .prize-row__left {
     display: grid;
-    grid-template-columns: 1fr auto;
-        align-items: center;
+    grid-template-columns: auto 1fr;
+    align-items: center;
     gap: 0.65rem;
   }
 
