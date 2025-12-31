@@ -13,6 +13,7 @@ import {
   type NormalizedBracket,
 } from '../../utils/playoffs';
 import { chooseTeamName } from '../../utils/team-names';
+import { getCurrentWeekForYear } from '../../utils/current-week';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import {
   getAFLPreference,
@@ -663,21 +664,8 @@ type PrizeLine = {
 // Premier/D-League are official after Week 17
 // Bracket-based prizes are official when the bracket game is complete
 
-// Helper to check if we're past a certain week
-const getCurrentWeek = () => {
-  // Get the latest completed week from weekly results data
-  const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`] as
-    | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
-    | undefined;
-
-  if (weeklyResultsFeed?.weeks && weeklyResultsFeed.weeks.length > 0) {
-    // Return the highest week number that has been completed
-    return Math.max(...weeklyResultsFeed.weeks.map(w => w.week));
-  }
-  return 0;
-};
-
-const currentWeek = getCurrentWeek();
+// Use centralized week utility based on NFL calendar
+const currentWeek = getCurrentWeekForYear(selectedYear);
 const isDivisionWildCardOfficial = currentWeek >= 14; // After Week 14 ends
 const isPremierDLeagueOfficial = currentWeek >= 17; // After Week 17 ends
 const isTrulyFinal = currentWeek >= 18; // All prizes are final after Week 18 (end of season)
@@ -760,11 +748,19 @@ wildCards.forEach(wildCard => {
 // NIT Champion (find which NIT bracket has a winner)
 const nitBrackets = ['6', '7', '8', '9'];
 let nitChampionId: string | undefined;
+let nitFinalists: string[] = []; // Track teams still competing for NIT
 for (const bracketId of nitBrackets) {
   const nitChampGame = findFinalGame(bracketId);
   if (nitChampGame?.winnerId) {
     nitChampionId = nitChampGame.winnerId;
     break;
+  } else if (nitChampGame?.game) {
+    // Game exists but no winner yet - these teams are still competing
+    const homeId = nitChampGame.game.home.team?.id;
+    const awayId = nitChampGame.game.away.team?.id;
+    if (homeId) nitFinalists.push(homeId);
+    if (awayId) nitFinalists.push(awayId);
+    break; // Only track finalists from the first unfinished championship game
   }
 }
 if (nitChampionId) {
@@ -920,33 +916,41 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
               {prizeSummary.length === 0 ? (
                 <li class="prize-row">No payouts calculated yet.</li>
               ) : (
-                prizeSummary.map(entry => (
-                  <li class={`prize-row${!isTrulyFinal ? ' prize-row--projected' : ''}`}>
-                    <div class="prize-row__left">
-                      <div class="icon-thumb">
-                        {entry.team?.icon ? (
-                          <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
-                        ) : (
-                          <div class="icon-thumb--placeholder" aria-hidden="true"></div>
-                        )}
+                prizeSummary.map(entry => {
+                  // Mark team as projected ONLY if they're in NIT finals or have any non-official prizes
+                  // Don't use isTrulyFinal here - that's for the page-level heading only
+                  const hasNonOfficialPrize = entry.titles.some(t => !t.isOfficial);
+                  const isNITFinalist = entry.team?.id ? nitFinalists.includes(entry.team.id) : false;
+                  const isProjected = hasNonOfficialPrize || isNITFinalist;
+
+                  return (
+                    <li class={`prize-row${isProjected ? ' prize-row--projected' : ''}`}>
+                      <div class="prize-row__left">
+                        <div class="icon-thumb">
+                          {entry.team?.icon ? (
+                            <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
+                          ) : (
+                            <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                          )}
+                        </div>
+                        <div class="prize-row__info">
+                          <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
+                          <p class="prize-titles">
+                            {entry.titles.length === 0 ? '—' : entry.titles.map((title, idx) => (
+                              <>
+                                <span class={title.isOfficial ? '' : 'title-projected'}>{title.label}</span>
+                                {idx < entry.titles.length - 1 && <span class="title-separator"> · </span>}
+                              </>
+                            ))}
+                          </p>
+                        </div>
                       </div>
-                      <div class="prize-row__info">
-                        <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
-                        <p class="prize-titles">
-                          {entry.titles.length === 0 ? '—' : entry.titles.map((title, idx) => (
-                            <>
-                              <span class={title.isOfficial ? '' : 'title-projected'}>{title.label}</span>
-                              {idx < entry.titles.length - 1 && <span class="title-separator"> · </span>}
-                            </>
-                          ))}
-                        </p>
+                      <div class="prize-row__amount">
+                        <span>${entry.total}</span>
                       </div>
-                    </div>
-                    <div class="prize-row__amount">
-                      <span>${entry.total}</span>
-                    </div>
-                  </li>
-                ))
+                    </li>
+                  );
+                })
               )}
             </ul>
           </section>
