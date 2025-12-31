@@ -7,11 +7,13 @@
 
 // Weekly recap page - larger icons
 #body_weekly .franchiseicon {
-  width: 300px;
+    max-width: 300px;
+    width: 100%;
 }
 
 #body_options_79 .franchiseicon {
     max-width: 400px;
+    width: 100%;
 }
 //show the commish icon
 img#franchiseicon_0000 {
