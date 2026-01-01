@@ -849,7 +849,7 @@ const transactionsKey = Object.keys(transactionsFeeds).find(
 );
 const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
 
-if (standingsData?.leagueStandings?.franchise && bracketData) {
+if (standingsData?.leagueStandings?.franchise) {
   // Build team config map with icons and banners
   const teamConfigMap = new Map(
     teamsList.map((team) => [
@@ -863,8 +863,10 @@ if (standingsData?.leagueStandings?.franchise && bracketData) {
     ])
   );
 
-  // Extract toilet bowl winners from bracket
-  toiletBowlWinners = extractToiletBowlWinners(bracketData);
+  // Extract toilet bowl winners from bracket (optional - only needed for special picks)
+  if (bracketData) {
+    toiletBowlWinners = extractToiletBowlWinners(bracketData);
+  }
 
   // TODO: Determine league winner (needs to be fetched from playoff results)
   const leagueWinnerId = '';
@@ -964,37 +966,59 @@ const serializedConfig = JSON.stringify({
             </button>
           </div>
         </div>
+        <div class="team-card__navigation">
+          <button
+            class="team-nav-toggle"
+            data-accordion-toggle="team-nav"
+            aria-expanded="false"
+            aria-controls="team-nav-content"
+            aria-label="Toggle team navigation"
+          >
+            <div class="team-nav-toggle__chevron">
+              <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </div>
+          </button>
+
+          <div
+            id="team-nav-content"
+            class="team-nav-accordion__content collapsed"
+            aria-hidden="true"
+          >
+            <div class="team-icon-nav">
+              {divisionOrder.map((division) => {
+                const divisionTeams = teamsList.filter(team => team.division === division);
+                return divisionTeams.length > 0 ? (
+                  <div class="division-group">
+                    <div class="division-label">{division}</div>
+                    <div class="division-teams">
+                      {divisionTeams.map((team) => (
+                        <button
+                          class="team-icon-btn"
+                          data-team-id={team.id}
+                          data-active={team.id === defaultTeamId}
+                          title={team.name}
+                          aria-label={`View ${team.name} roster`}
+                        >
+                          {team.icon && (
+                            <img
+                              src={team.icon}
+                              alt={`${team.name} icon`}
+                              class="team-icon-img"
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </div>
     </div>
     <div class="roster-controls">
-      <div class="team-icon-nav">
-        {divisionOrder.map((division) => {
-          const divisionTeams = teamsList.filter(team => team.division === division);
-          return divisionTeams.length > 0 ? (
-            <div class="division-group">
-              <div class="division-label">{division}</div>
-              <div class="division-teams">
-                {divisionTeams.map((team) => (
-                  <button
-                    class="team-icon-btn"
-                    data-team-id={team.id}
-                    data-active={team.id === defaultTeamId}
-                    title={team.name}
-                    aria-label={`View ${team.name} roster`}
-                  >
-                    {team.icon && (
-                      <img
-                        src={team.icon}
-                        alt={`${team.name} icon`}
-                        class="team-icon-img"
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null;
-        })}
-      </div>
       <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
       <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
     </div>
@@ -1520,7 +1544,6 @@ const serializedConfig = JSON.stringify({
   background-color: var(--card-bg-color);
   box-shadow: var(--box-shadow-lg);
   border-radius: 1rem;
-  padding: var(--padding-lg);
   width: 100%;
   margin: 0 auto;
 }
@@ -1596,8 +1619,125 @@ const serializedConfig = JSON.stringify({
   .team-icon-img {
     width: 100%;
     height: 100%;
+    max-width: 42px;
+    max-height: 42px;
     object-fit: contain;
   }
+
+/* ========================================
+   TEAM CARD NAVIGATION (INTEGRATED)
+   ======================================== */
+
+/* Navigation Container - spans full width at bottom of team-card */
+.team-card__navigation {
+  flex-basis: 100%; /* Force full width in flex layout */
+  width: 100%;
+  position: relative;
+  order: 10; /* Ensure it appears last in flex layout */
+}
+
+/* Minimal Toggle Button - just a small arrow at bottom of card */
+.team-nav-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--padding-sm);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  position: absolute;
+  top: -2rem;
+}
+
+.team-nav-toggle:hover {
+  opacity: 0.6;
+}
+
+.team-nav-toggle:focus {
+  border-radius: 4px;
+}
+
+/* Chevron Icon - rotates to point down when collapsed */
+.team-nav-toggle__chevron {
+  transition: transform 0.3s ease;
+  color: var(--muted-text-color, #9ca3af);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.team-nav-toggle:hover .team-nav-toggle__chevron {
+  opacity: 1;
+}
+
+.team-nav-toggle[aria-expanded="true"] .team-nav-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+/* Accordion Content */
+.team-nav-accordion__content {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+.team-nav-accordion__content.expanded {
+  max-height: 600px;
+  opacity: 1;
+  margin-top: var(--padding-md);
+}
+
+.team-nav-accordion__content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* Restore original team-icon-nav styling when expanded */
+.team-card__navigation .team-icon-nav {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--padding-lg);
+  justify-content: center;
+  align-items: center;
+  background-color: var(--card-bg-color);
+  box-shadow: var(--box-shadow-lg);
+  border-radius: 1rem;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Tablet: 2x2 grid */
+@media (min-width: 768px) {
+  .team-card__navigation .team-icon-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop: all in one row */
+@media (min-width: 1200px) {
+  .team-card__navigation .team-icon-nav {
+    grid-template-columns: repeat(4, auto);
+  }
+
+  .team-nav-accordion__content.expanded {
+    max-height: 400px; /* Single row on desktop */
+  }
+}
+
+/* Responsive: Mobile */
+@media (max-width: 767px) {
+  .team-nav-accordion__content.expanded {
+    max-height: 800px; /* Stacked divisions on mobile */
+  }
+}
+
+/* Hide roster-controls (now empty except hidden inputs) */
+.roster-controls {
+  display: none;
+}
 
 
 
@@ -1619,9 +1759,10 @@ const serializedConfig = JSON.stringify({
   .team-card {
     display: flex;
     align-items: center;
-flex-wrap: wrap;
-    padding: var(--padding-lg);
-    justify-content: center
+    flex-wrap: wrap;
+    padding-inline: var(--padding-lg);
+    justify-content: center;
+    padding-block: var(--padding-lg) var(--padding-md);
 
   }
     }
@@ -1635,8 +1776,8 @@ flex-wrap: wrap;
   .view-tabs {
     position: absolute;
     right: var(--padding-lg);
-    top: 50%;
-    transform: translateY(-50%);
+    top: var(--padding-lg);
+    transform: none;
     display: flex;
     gap: 0.5rem;
   }
@@ -3220,6 +3361,67 @@ flex-wrap: wrap;
       switchView(tab.dataset.view);
     });
   });
+
+  /**
+   * Team Navigation Accordion
+   * Manages collapse/expand state with localStorage persistence
+   */
+  (function initTeamNavAccordion() {
+    const STORAGE_KEY = 'roster-team-nav-collapsed';
+    const toggleButton = document.querySelector('[data-accordion-toggle="team-nav"]');
+    const accordionContent = document.getElementById('team-nav-content');
+
+    if (!toggleButton || !accordionContent) return;
+
+    // Set accordion state
+    const setAccordionState = (expanded) => {
+      toggleButton.setAttribute('aria-expanded', expanded.toString());
+      accordionContent.setAttribute('aria-hidden', (!expanded).toString());
+
+      if (expanded) {
+        accordionContent.classList.remove('collapsed');
+        accordionContent.classList.add('expanded');
+      } else {
+        accordionContent.classList.remove('expanded');
+        accordionContent.classList.add('collapsed');
+      }
+
+      // Save to localStorage
+      try {
+        localStorage.setItem(STORAGE_KEY, (!expanded).toString());
+      } catch (e) {
+        console.error('Failed to save accordion state:', e);
+      }
+    };
+
+    // Load initial state from localStorage
+    try {
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      if (savedState !== null) {
+        // Restore saved state: 'true' = collapsed, 'false' = expanded
+        const isCollapsed = savedState === 'true';
+        setAccordionState(!isCollapsed);
+      }
+      // If no saved state, leave as HTML default (collapsed)
+    } catch (e) {
+      console.error('Failed to load accordion state:', e);
+    }
+
+    // Toggle handler
+    const toggleAccordion = () => {
+      const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+      setAccordionState(!isExpanded);
+    };
+
+    // Event listeners
+    toggleButton.addEventListener('click', toggleAccordion);
+    toggleButton.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleAccordion();
+      }
+    });
+  })();
 
   // Modal Management
   const modal = document.getElementById('contract-modal');
