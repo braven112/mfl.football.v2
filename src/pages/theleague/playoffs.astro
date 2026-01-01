@@ -878,7 +878,7 @@ const grandTotal =
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 20px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--box-shadow-lg);
     margin-bottom: 1rem;
   }
 
@@ -903,7 +903,7 @@ const grandTotal =
     padding: 0.9rem 1.1rem;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--box-shadow-lg);
     margin-bottom: 1rem;
   }
 
@@ -977,6 +977,7 @@ const grandTotal =
     padding: 1.25rem;
     background: white;
     border-radius: 1rem;
+     box-shadow: var(--box-shadow-lg);
   }
 
   .prizes-card {
@@ -984,7 +985,8 @@ const grandTotal =
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     padding: 1.25rem;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--box-shadow-lg);
+
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -1004,7 +1006,8 @@ const grandTotal =
   }
 
   .prizes-total {
-    background: #e2e8ef;
+    background: var(--accent-content-bg-color);
+    border: 1px solid var(--accent-content-border-color);
     color: #0b172a;
     padding: 0.65rem 0.9rem;
     border-radius: 10px;
@@ -1176,6 +1179,7 @@ const grandTotal =
     align-items: flex-start;
     gap: 1rem;
     margin-bottom: 1rem;
+     box-shadow: var(--box-shadow-lg);
   }
 
   .bracket-label {
@@ -1559,6 +1563,7 @@ const grandTotal =
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     text-align: center;
+     box-shadow: var(--box-shadow-lg);
   }
 
   .mfl-link-footer p {
