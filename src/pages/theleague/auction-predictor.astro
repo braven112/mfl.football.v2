@@ -23,6 +23,7 @@ import leagueAssets from '../../data/theleague.assets.json';
 import AuctionControlPanel from '../../components/theleague/AuctionControlPanel.astro';
 import AuctionPlayerTable from '../../components/theleague/AuctionPlayerTable.astro';
 import FranchiseTagPanel from '../../components/theleague/FranchiseTagPanel.astro';
+import TeamCapAnalysis from '../../components/theleague/TeamCapAnalysis.astro';
 
 // Import MFL data feeds
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
@@ -446,6 +447,7 @@ interface InitialData {
   players: PlayerValuation[];
   allMFLPlayers: typeof allMFLPlayers; // All MFL players with formatted names for rankings import
   teams: TeamCapSituation[];
+  teamCapSituations: TeamCapSituation[];
   franchiseTags: FranchiseTagPrediction[];
   market: MarketAnalysis;
   marketSummary: typeof marketSummary;
@@ -463,6 +465,7 @@ const initialData: InitialData = {
   players: untaggedAvailablePlayers,
   allMFLPlayers, // Add all players for rankings matching
   teams: teamCapSituations,
+  teamCapSituations: teamCapSituations, // Also add as teamCapSituations for clarity
   franchiseTags: franchiseTagPredictions,
   market: marketAnalysis,
   marketSummary,
@@ -521,22 +524,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
       <!-- Team Cap Analysis View -->
       <div class="view-content hidden" data-view="teams">
-        <div class="team-cap-container">
-          <p class="placeholder-text">
-            🚧 Team cap analysis component coming soon. Shows cap space, needs, and championship windows.
-          </p>
-          <div class="sample-data">
-            <h3>Sample Team Cap Space (2026):</h3>
-            <ul>
-              {teamCapSituations.slice(0, 5).map(team => (
-                <li>
-                  <strong>{team.teamName}:</strong> ${(team.projectedCapSpace2026 / 1_000_000).toFixed(1)}M cap, 
-                  ${(team.discretionarySpending / 1_000_000).toFixed(1)}M discretionary
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <TeamCapAnalysis />
       </div>
 
       <!-- Market Analysis View -->
@@ -746,6 +734,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       allMFLPlayers: any[]; // All MFL players with formatted names for rankings matching
       teams: any[];
       franchiseTags: any[];
+      teamCapSituations: any[];
       market: any;
       marketSummary: any;
       championshipWindows: any[];
@@ -822,6 +811,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         allMFLPlayers: data.allMFLPlayers || [], // Add all MFL players for rankings matching
         teams: data.teams || [],
         franchiseTags: data.franchiseTags || [],
+        teamCapSituations: data.teamCapSituations || [],
         market: data.market || {},
         marketSummary: data.marketSummary || {},
         championshipWindows: data.championshipWindows || [],
@@ -1740,6 +1730,302 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     };
 
     // =============================================================================
+    // TEAM CAP ANALYSIS - Render team cap cards with championship windows
+    // =============================================================================
+
+    /**
+     * Render team cap analysis grid
+     */
+    const renderTeamCapGrid = () => {
+      const grid = document.getElementById('team-cap-grid');
+      if (!grid) return;
+
+      grid.innerHTML = state.teamCapSituations.map(capSituation => {
+        const window = state.championshipWindows.find(w => w.franchiseId === capSituation.franchiseId);
+        const override = state.overrides.championshipWindowOverrides.get(capSituation.franchiseId);
+        
+        // Determine effective window (override or original)
+        const effectiveWindow = override || window?.window || 'neutral';
+        const isOverride = !!override;
+        
+        // Cap space classification
+        const capSpace = capSituation.projectedCapSpace2026;
+        const capClass = capSpace > 30_000_000 ? 'cap-high' : 
+                         capSpace > 10_000_000 ? 'cap-medium' : 'cap-low';
+        const capAmountClass = capSpace > 0 ? 'positive' : 
+                               capSpace > -5_000_000 ? 'neutral' : 'negative';
+        
+        // Format currency
+        const formatCurrency = (amount: number) => {
+          return `$${(amount / 1_000_000).toFixed(1)}M`;
+        };
+        
+        // Get team logo
+        const teamLogo = getTeamLogo(capSituation.franchiseId);
+        
+        // Sort positional needs by priority
+        const sortedNeeds = [...capSituation.positionalNeeds].sort((a, b) => {
+          const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+          return priorityOrder[a.priority] - priorityOrder[b.priority];
+        });
+        
+        // Get top 3 needs
+        const topNeeds = sortedNeeds.slice(0, 3);
+        
+        return `
+          <div class="team-cap-card ${effectiveWindow} ${capClass}" data-franchise-id="${capSituation.franchiseId}">
+            <!-- Card Header -->
+            <div class="cap-card-header">
+              <div class="cap-team-header">
+                <div class="cap-team-logo-container">
+                  <img src="${teamLogo}" alt="${capSituation.teamName}" class="cap-team-logo" />
+                </div>
+                <div class="cap-team-info">
+                  <h3 class="cap-team-name">${capSituation.teamName}</h3>
+                  <span class="window-badge ${effectiveWindow} ${isOverride ? 'override' : ''}">
+                    ${isOverride ? '⚙️ ' : ''}${effectiveWindow.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="cap-space-main">
+                <div class="cap-amount ${capAmountClass}">
+                  ${formatCurrency(capSpace)}
+                </div>
+                <span class="cap-label">Available</span>
+              </div>
+            </div>
+            
+            <!-- Card Body -->
+            <div class="cap-card-body">
+              <div class="cap-stats-grid">
+                <div class="cap-stat-item">
+                  <span class="cap-stat-label">Committed</span>
+                  <span class="cap-stat-value">${formatCurrency(capSituation.committedSalaries)}</span>
+                </div>
+                <div class="cap-stat-item">
+                  <span class="cap-stat-label">Dead Money</span>
+                  <span class="cap-stat-value">${formatCurrency(capSituation.deadMoney)}</span>
+                </div>
+                <div class="cap-stat-item">
+                  <span class="cap-stat-label">Expiring</span>
+                  <span class="cap-stat-value">${formatCurrency(capSituation.totalExpiringValue)}</span>
+                </div>
+                <div class="cap-stat-item">
+                  <span class="cap-stat-label">Discretionary</span>
+                  <span class="cap-stat-value">${formatCurrency(capSituation.discretionarySpending)}</span>
+                </div>
+              </div>
+              
+              ${topNeeds.length > 0 ? `
+                <div class="positional-needs">
+                  <div class="needs-label">Top Positional Needs</div>
+                  <div class="needs-badges">
+                    ${topNeeds.map(need => `
+                      <span class="need-badge ${need.priority}">${need.position}</span>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              <button class="expand-toggle" data-franchise-id="${capSituation.franchiseId}">
+                <span class="expand-text">View Details</span>
+                <span class="expand-icon">▼</span>
+              </button>
+              
+              <!-- Expandable Details -->
+              <div class="cap-details" data-franchise-id="${capSituation.franchiseId}">
+                ${window ? `
+                  <div class="detail-section">
+                    <h4>Championship Window Analysis</h4>
+                    <ul class="detail-list">
+                      <li><strong>Score:</strong> ${window.score}/100 (${(window.confidence * 100).toFixed(0)}% confidence)</li>
+                      ${window.reasoning.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                  </div>
+                ` : ''}
+                
+                ${capSituation.expiringContracts.length > 0 ? `
+                  <div class="detail-section">
+                    <h4>Expiring Contracts (${capSituation.expiringContracts.length})</h4>
+                    <ul class="detail-list">
+                      ${capSituation.expiringContracts.slice(0, 5).map(contract => `
+                        <li>${contract.playerName} (${contract.position}): ${formatCurrency(contract.salary)}</li>
+                      `).join('')}
+                      ${capSituation.expiringContracts.length > 5 ? `<li><em>...and ${capSituation.expiringContracts.length - 5} more</em></li>` : ''}
+                    </ul>
+                  </div>
+                ` : ''}
+                
+                ${sortedNeeds.length > 0 ? `
+                  <div class="detail-section">
+                    <h4>All Positional Needs</h4>
+                    <ul class="detail-list">
+                      ${sortedNeeds.map(need => `
+                        <li>
+                          <strong>${need.position}</strong> (${need.priority}): 
+                          ${need.currentDepth} → target ${need.targetAcquisitions}
+                        </li>
+                      `).join('')}
+                    </ul>
+                  </div>
+                ` : ''}
+                
+                <button class="btn btn-secondary" style="margin-top: 1rem; width: 100%;" data-action="override-window" data-franchise-id="${capSituation.franchiseId}">
+                  ${isOverride ? '⚙️ Change Window Override' : 'Override Championship Window'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Add click handlers for expand toggles
+      grid.querySelectorAll('.expand-toggle').forEach(button => {
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const btn = e.currentTarget as HTMLButtonElement;
+          const franchiseId = btn.dataset.franchiseId;
+          const card = btn.closest('.team-cap-card');
+          const details = grid.querySelector(`.cap-details[data-franchise-id="${franchiseId}"]`);
+          
+          if (card && details) {
+            const isExpanded = details.classList.contains('visible');
+            details.classList.toggle('visible');
+            btn.classList.toggle('expanded');
+            card.classList.toggle('expanded');
+            
+            const expandText = btn.querySelector('.expand-text');
+            if (expandText) {
+              expandText.textContent = isExpanded ? 'View Details' : 'Hide Details';
+            }
+          }
+        });
+      });
+      
+      // Add click handlers for override buttons
+      grid.querySelectorAll('[data-action="override-window"]').forEach(button => {
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const btn = e.currentTarget as HTMLButtonElement;
+          const franchiseId = btn.dataset.franchiseId;
+          if (franchiseId) {
+            showWindowOverrideModal(franchiseId);
+          }
+        });
+      });
+    };
+
+    /**
+     * Show championship window override modal
+     */
+    const showWindowOverrideModal = (franchiseId: string) => {
+      const modal = document.getElementById('window-override-modal');
+      if (!modal) return;
+      
+      const capSituation = state.teamCapSituations.find(t => t.franchiseId === franchiseId);
+      const window = state.championshipWindows.find(w => w.franchiseId === franchiseId);
+      const currentOverride = state.overrides.championshipWindowOverrides.get(franchiseId);
+      
+      if (!capSituation || !window) return;
+      
+      const modalTitle = document.getElementById('modal-window-team-name');
+      const modalBody = document.getElementById('window-modal-body');
+      
+      if (!modalTitle || !modalBody) return;
+      
+      modalTitle.textContent = `${capSituation.teamName} - Championship Window`;
+      
+      const currentWindow = currentOverride || window.window;
+      
+      modalBody.innerHTML = `
+        <div class="window-options">
+          <div class="window-option ${currentWindow === 'contending' ? 'selected' : ''}" data-window="contending">
+            <div class="window-option-header">
+              <span class="window-option-name">🏆 Contending</span>
+              <span class="window-badge contending">CONTENDING</span>
+            </div>
+            <p class="window-option-desc">Team has a competitive roster and should be aggressive in acquiring talent.</p>
+          </div>
+          
+          <div class="window-option ${currentWindow === 'neutral' ? 'selected' : ''}" data-window="neutral">
+            <div class="window-option-header">
+              <span class="window-option-name">⚖️ Neutral</span>
+              <span class="window-badge neutral">NEUTRAL</span>
+            </div>
+            <p class="window-option-desc">Team is in a transition phase, neither fully contending nor rebuilding.</p>
+          </div>
+          
+          <div class="window-option ${currentWindow === 'rebuilding' ? 'selected' : ''}" data-window="rebuilding">
+            <div class="window-option-header">
+              <span class="window-option-name">🔧 Rebuilding</span>
+              <span class="window-badge rebuilding">REBUILDING</span>
+            </div>
+            <p class="window-option-desc">Team should focus on draft picks and youth over expensive veterans.</p>
+          </div>
+        </div>
+        
+        ${window.reasoning.length > 0 ? `
+          <div class="detail-section">
+            <h4>Original Analysis</h4>
+            <ul class="detail-list">
+              <li><strong>Calculated Window:</strong> ${window.window.toUpperCase()}</li>
+              <li><strong>Score:</strong> ${window.score}/100</li>
+              ${window.reasoning.map(r => `<li>${r}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+        
+        <div class="modal-actions">
+          ${currentOverride ? `
+            <button class="btn btn-danger" id="remove-window-override">Remove Override</button>
+          ` : ''}
+          <button class="btn btn-secondary" id="cancel-window-modal">Cancel</button>
+          <button class="btn btn-primary" id="save-window-override">Save Override</button>
+        </div>
+      `;
+      
+      // Track selected window
+      let selectedWindow = currentWindow;
+      
+      // Window option click handlers
+      modalBody.querySelectorAll('.window-option').forEach(option => {
+        option.addEventListener('click', () => {
+          modalBody.querySelectorAll('.window-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedWindow = option.dataset.window as 'contending' | 'neutral' | 'rebuilding';
+        });
+      });
+      
+      // Save button
+      modalBody.querySelector('#save-window-override')?.addEventListener('click', () => {
+        if (selectedWindow !== window.window) {
+          state.overrides.championshipWindowOverrides.set(franchiseId, selectedWindow);
+        } else {
+          state.overrides.championshipWindowOverrides.delete(franchiseId);
+        }
+        saveOverrides();
+        renderTeamCapGrid();
+        modal.classList.add('hidden');
+      });
+      
+      // Remove override button
+      modalBody.querySelector('#remove-window-override')?.addEventListener('click', () => {
+        state.overrides.championshipWindowOverrides.delete(franchiseId);
+        saveOverrides();
+        renderTeamCapGrid();
+        modal.classList.add('hidden');
+      });
+      
+      // Cancel button
+      modalBody.querySelector('#cancel-window-modal')?.addEventListener('click', () => {
+        modal.classList.add('hidden');
+      });
+      
+      modal.classList.remove('hidden');
+    };
+
+    // =============================================================================
     // PERSISTENCE - LocalStorage
     // =============================================================================
 
@@ -2085,6 +2371,11 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       document.getElementById('tag-override-modal')?.classList.add('hidden');
     });
 
+    // Window modal close
+    document.getElementById('close-window-modal')?.addEventListener('click', () => {
+      document.getElementById('window-override-modal')?.classList.add('hidden');
+    });
+
     // Modal backdrop close
     document.getElementById('player-details-modal')?.addEventListener('click', (e) => {
       if (e.target === e.currentTarget) {
@@ -2094,6 +2385,13 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
     // Tag modal backdrop close
     document.getElementById('tag-override-modal')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        (e.currentTarget as HTMLElement).classList.add('hidden');
+      }
+    });
+
+    // Window modal backdrop close
+    document.getElementById('window-override-modal')?.addEventListener('click', (e) => {
       if (e.target === e.currentTarget) {
         (e.currentTarget as HTMLElement).classList.add('hidden');
       }
@@ -2118,6 +2416,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     // Initial render
     renderPlayerTable();
     renderFranchiseTagGrid();
+    renderTeamCapGrid();
 
     // =============================================================================
     // RANKINGS IMPORT HANDLERS
