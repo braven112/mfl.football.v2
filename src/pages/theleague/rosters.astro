@@ -1648,7 +1648,12 @@ const serializedConfig = JSON.stringify({
   cursor: pointer;
   transition: opacity 0.2s ease;
   position: absolute;
-  top: -2rem;
+  top: 0rem;
+}
+@media (min-width: 480px) {
+  .team-nav-toggle {
+    top: -2rem;
+  }
 }
 
 .team-nav-toggle:hover {
