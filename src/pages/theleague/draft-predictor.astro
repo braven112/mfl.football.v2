@@ -10,10 +10,10 @@ import DraftPredictorGrid from '../../components/theleague/DraftPredictorGrid.as
 import DraftViewSelector from '../../components/theleague/DraftViewSelector.astro';
 import leagueAssets from '../../data/theleague.assets.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, parseTradeFromComment } from '../../utils/draft-utils';
-import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
+import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
 import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
-import type { DraftPrediction } from '../../types/standings';
+import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
 
@@ -107,22 +107,25 @@ const teamsList = (leagueAssets.teams ?? []).map((team) => ({
 const teamConfigMap = new Map(teamsList.map((team) => [team.id, team]));
 
 // Extract toilet bowl winners
-let toiletBowlWinners = [];
+let toiletBowlWinners: ToiletBowlResult[] = [];
 if (bracketData) {
   toiletBowlWinners = extractToiletBowlWinners(bracketData);
 }
 
-// Calculate draft predictions
-let draftPredictions = [];
+// Extract league champion from playoff bracket
 let leagueWinnerId = '';
+if (bracketData) {
+  leagueWinnerId = extractLeagueChampion(bracketData);
+}
+
+// Calculate draft predictions
+let draftPredictions: DraftPrediction[] = [];
 let specialPickMap = new Map<string, DraftPrediction>();
 
 if (standingsData?.leagueStandings?.franchise) {
-  // TODO: Determine league winner (champion playoff winner)
-  // For now, assume first team in standings, but this needs real logic
   const franchises = standingsData.leagueStandings.franchise;
 
-  // Draft predictions will be calculated once we have toilet bowl winners
+  // Draft predictions will be calculated with league winner and toilet bowl winners
   draftPredictions = calculateDraftOrder(
     franchises,
     teamConfigMap,
@@ -130,10 +133,11 @@ if (standingsData?.leagueStandings?.franchise) {
     toiletBowlWinners
   );
 
-  // Track special (compensatory) picks from bracket winners so we can override downstream
+  // Track special picks (toilet bowl + champion) so we can override downstream
+  // This ensures champion always gets pick 16 even in "final" view with traded picks
   specialPickMap = new Map(
     draftPredictions
-      .filter(p => p.isToiletBowlPick)
+      .filter(p => p.isToiletBowlPick || p.isLeagueWinner)
       .map(p => [`${p.round}.${p.pickInRound}`, p])
   );
 }
@@ -156,13 +160,70 @@ const rawView = Astro.url.searchParams.get('view') || 'final';
 const normalizedView = rawView === 'assets' ? 'final' : rawView === 'trades' ? 'history' : rawView;
 const view = normalizedView as 'projected' | 'final' | 'history';
 
+// Apply champion logic to any draft predictions
+// Removes champion from their original position and places them at pick 16 in each round
+const applyChampionLogic = (predictions: DraftPrediction[]): DraftPrediction[] => {
+  if (!leagueWinnerId) {
+    return predictions; // No champion determined yet
+  }
+
+  const result: DraftPrediction[] = [];
+
+  // Process each round separately
+  for (let round = 1; round <= 3; round++) {
+    // Get all picks for this round (excluding special picks)
+    const roundPicks = predictions.filter(p =>
+      p.round === round &&
+      !p.isToiletBowlPick &&
+      p.pickInRound <= 16
+    );
+
+    // Separate champion from other teams
+    const championPick = roundPicks.find(p => p.franchiseId === leagueWinnerId);
+    const otherPicks = roundPicks.filter(p => p.franchiseId !== leagueWinnerId);
+
+    // Re-assign pick numbers: 1-15 for non-champions, 16 for champion
+    otherPicks
+      .sort((a, b) => a.pickInRound - b.pickInRound) // Keep original order
+      .forEach((pick, index) => {
+        const newPickInRound = index + 1; // 1-15
+        result.push({
+          ...pick,
+          pickInRound: newPickInRound,
+          overallPickNumber: (round - 1) * 16 + newPickInRound,
+          isLeagueWinner: false,
+        });
+      });
+
+    // Add champion at pick 16
+    if (championPick) {
+      result.push({
+        ...championPick,
+        pickInRound: 16,
+        overallPickNumber: (round - 1) * 16 + 16,
+        isLeagueWinner: true,
+      });
+    }
+  }
+
+  // Add back special picks (toilet bowl)
+  const specialPicks = predictions.filter(p => p.isToiletBowlPick);
+  result.push(...specialPicks);
+
+  return result.sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+};
+
 // Final order favors traded/actual ownership, then falls back to projection
-const finalBase =
+let finalBase =
   (assetsData && isValidAssetsData(assetsData) && convertAssetsToPredictions(assetsData, teamConfigMap).length > 0)
     ? convertAssetsToPredictions(assetsData, teamConfigMap)
     : actualDraftPicks.length > 0
       ? actualDraftPicks
       : sortedPredictions;
+
+// Apply champion logic to the final base (shifts picks to account for champion at 16)
+finalBase = applyChampionLogic(finalBase);
+
 const mergeSpecialPicks = (
   base: DraftPrediction[],
   specials: Map<string, DraftPrediction>
@@ -363,10 +424,18 @@ const filteredHistoryRows = historyRows.filter((row) =>
       {sortedPredictions.length > 0 ? (
         <>
           {view === 'projected' && (
-            <DraftPredictorGrid predictions={sortedPredictions} userTeamId={selectedTeamId} />
+            <DraftPredictorGrid
+              predictions={sortedPredictions}
+              userTeamId={selectedTeamId}
+              championshipDetermined={!!leagueWinnerId}
+            />
           )}
           {view === 'final' && finalPredictions.length > 0 && (
-            <DraftPredictorGrid predictions={finalPredictions} userTeamId={selectedTeamId} />
+            <DraftPredictorGrid
+              predictions={finalPredictions}
+              userTeamId={selectedTeamId}
+              championshipDetermined={!!leagueWinnerId}
+            />
           )}
           {view === 'final' && finalPredictions.length === 0 && (
             <div class="draft-predictor-loading">

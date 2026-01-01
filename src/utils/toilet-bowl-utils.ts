@@ -129,3 +129,63 @@ export function getToiletBowlWinner(
 ): ToiletBowlResult | undefined {
   return toiletBowlWinners.find((w) => w.level === level);
 }
+
+/**
+ * Extract league champion from playoff bracket data
+ * The champion is determined by finding bracket #1 (The League Championship)
+ * and getting the winner of the final game (last round, highest points)
+ *
+ * @param bracketData - Raw playoff bracket data with individual bracket results
+ * @returns Franchise ID of league champion, or empty string if not determined
+ */
+export function extractLeagueChampion(bracketData: any): string {
+  // Championship bracket is always bracket ID "1"
+  const championshipBracket = bracketData?.brackets?.['1']?.playoffBracket;
+
+  if (!championshipBracket) {
+    return '';
+  }
+
+  // Get all rounds
+  const rounds = championshipBracket.playoffRound;
+  if (!rounds) {
+    return '';
+  }
+
+  // Rounds can be an array or single object
+  const roundsArray = Array.isArray(rounds) ? rounds : [rounds];
+
+  // Get the last round (championship game)
+  const finalRound = roundsArray[roundsArray.length - 1];
+  if (!finalRound) {
+    return '';
+  }
+
+  // Get the game(s) in the final round
+  const games = finalRound.playoffGame;
+  if (!games) {
+    return '';
+  }
+
+  // Final round should have exactly one game
+  const finalGame = Array.isArray(games) ? games[0] : games;
+  if (!finalGame) {
+    return '';
+  }
+
+  // Determine winner by comparing points
+  const homePoints = parseFloat(finalGame.home?.points || '0');
+  const awayPoints = parseFloat(finalGame.away?.points || '0');
+
+  // If no points yet, championship hasn't been decided
+  if (homePoints === 0 && awayPoints === 0) {
+    return '';
+  }
+
+  // Return franchise ID of winner
+  const winnerId = homePoints > awayPoints
+    ? finalGame.home?.franchise_id
+    : finalGame.away?.franchise_id;
+
+  return winnerId ? String(winnerId).padStart(4, '0') : '';
+}

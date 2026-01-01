@@ -35,12 +35,13 @@ interface DraftResultsData {
 /**
  * Calculate predicted draft order based on current standings
  * Uses reverse standings (worst record = pick 1) with same tiebreakers as playoff seeding
- * Picks 1-16 assigned by reverse W-L record
+ * League champion always gets pick 16 (regardless of record)
+ * Picks 1-15 assigned by reverse W-L record (excluding champion)
  * Toilet bowl winners get picks 1.17, 2.17, 2.18
  *
  * @param standings - Current season standings
  * @param teamConfigs - Team name and icon/banner info
- * @param leagueWinnerId - Franchise ID of league champion (optional, for future use)
+ * @param leagueWinnerId - Franchise ID of league champion (empty string if not determined)
  * @param toiletBowlWinners - Results from toilet bowl tournaments
  * @returns Array of draft predictions in draft order
  */
@@ -57,15 +58,30 @@ export function calculateDraftOrder(
   // Build draft predictions (picks 1-16 based on reverse standings)
   const draftPredictions: DraftPrediction[] = [];
 
-  // Picks 1-16 go to all 16 teams in reverse record order
-  // Once league winner is determined, pick 16 will be assigned to league winner
-  sortedByRecord.forEach((standing, index) => {
-    const pickNumber = index + 1; // 1-16
-    const isLeagueWinner = leagueWinnerId && standing.id === leagueWinnerId;
+  // If league champion is determined, separate them from the draft order
+  let championStanding: StandingsFranchise | undefined;
+  let nonChampionTeams = sortedByRecord;
+
+  if (leagueWinnerId) {
+    championStanding = standings.find((s) => s.id === leagueWinnerId);
+    // Remove champion from the sorted list
+    nonChampionTeams = sortedByRecord.filter((s) => s.id !== leagueWinnerId);
+  }
+
+  // Assign picks 1-15 to non-champion teams (or picks 1-16 if no champion yet)
+  nonChampionTeams.forEach((standing, index) => {
+    const pickNumber = index + 1; // 1-15 (or 1-16 if no champion)
     draftPredictions.push(
-      buildDraftPrediction(standing, teamConfigs, pickNumber, isLeagueWinner, 1)
+      buildDraftPrediction(standing, teamConfigs, pickNumber, false, 1)
     );
   });
+
+  // Assign pick 16 to league champion (if determined)
+  if (championStanding) {
+    draftPredictions.push(
+      buildDraftPrediction(championStanding, teamConfigs, 16, true, 1)
+    );
+  }
 
   // Picks 1.17, 2.17, 2.18 go to toilet bowl winners
   const specialPicks = [
@@ -97,16 +113,18 @@ export function calculateDraftOrder(
   });
 
   // Continue rounds 2-3 for non-special picks
-  // Picks in rounds 2-3 follow same order as round 1 (picks 17-48, excluding 1.17, 2.17, 2.18)
+  // Picks in rounds 2-3 follow same order as round 1
+  // Champion always gets pick 16 in each round
   for (let round = 2; round <= 3; round++) {
     let picksInRound = 1;
-    sortedByRecord.forEach((standing) => {
+
+    // Assign picks to non-champion teams
+    nonChampionTeams.forEach((standing) => {
+      // Skip special toilet bowl picks in round 2
       if (picksInRound === 17 && round === 2) {
-        // Skip pick 2.17 (special pick for consolation winner)
         picksInRound++;
       }
       if (picksInRound === 18 && round === 2) {
-        // Skip pick 2.18 (special pick for consolation2 winner)
         picksInRound++;
       }
 
@@ -123,6 +141,21 @@ export function calculateDraftOrder(
       );
       picksInRound++;
     });
+
+    // Assign pick 16 to champion in this round (if determined)
+    if (championStanding) {
+      const overallNumber = (round - 1) * 16 + 16;
+      draftPredictions.push(
+        buildDraftPrediction(
+          championStanding,
+          teamConfigs,
+          overallNumber,
+          true,
+          round,
+          16
+        )
+      );
+    }
   }
 
   return draftPredictions;
