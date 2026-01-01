@@ -47,8 +47,8 @@ const extractFeedSeason = (filepath: string) => {
   return match ? match[1] : null;
 };
 
-// Get current year
-const currentYear = new Date().getFullYear();
+// Get current year from environment variable (fallback to current year for safety)
+const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
 const nextYear = currentYear + 1;
 
 // Load standings for current year

@@ -46,7 +46,7 @@ const availableYears = Object.keys(standingsFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-const defaultYear = availableYears[0] || new Date().getFullYear();
+const defaultYear = availableYears[0] || parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 const requestedView = Astro.url.searchParams.get('view');

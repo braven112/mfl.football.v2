@@ -475,7 +475,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       0;
     const franchiseId = player.franchiseId ?? 'FA';
     const totalRemaining = salary * Math.max(contractYears || 1, 1);
-    const seasonYear = Number.parseInt(season, 10) || new Date().getFullYear();
+    const seasonYear = Number.parseInt(season, 10) || parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
     const contractType =
       player.contractType ??
       (player.status && player.status !== 'ROSTER'
@@ -817,8 +817,8 @@ const initialAllPlayers: any[] = initialSeasonData
     ])
   : [];
 
-// Calculate draft predictions for 2026 roster view
-const currentYear = new Date().getFullYear();
+// Calculate draft predictions for 2026 roster view - use environment variable for current season year
+const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
 const nextYear = currentYear + 1;
 let draftPredictions = [];
 let actualDraftPicks = [];

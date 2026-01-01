@@ -15,8 +15,8 @@ import path from 'path';
 // Note: This page is server-rendered (not prerendered) to support team preferences
 // export const prerender = true;
 
-// Load AFL Fantasy data
-const currentYear = new Date().getFullYear();
+// Load AFL Fantasy data - use environment variable for current season year
+const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
 const standingsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'standings.json');
 const playoffBracketsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'playoff-brackets.json');
 

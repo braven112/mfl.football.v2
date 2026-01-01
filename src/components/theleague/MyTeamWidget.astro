@@ -20,8 +20,8 @@ if (!preferredTeamId) {
   return null;
 }
 
-// Load current year data
-const currentYear = new Date().getFullYear();
+// Load current year data - use environment variable for current season year
+const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
 const league = getLeagueContext(Astro.url);
 
 // Get team icon
