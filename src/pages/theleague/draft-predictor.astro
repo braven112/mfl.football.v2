@@ -394,12 +394,15 @@ const buildHistoryRows = (
 const historyRows = buildHistoryRows(historyResultsData, teamConfigMap, historyPlayerLookup);
 const historyTeamParam = Astro.url.searchParams.get('team');
 
-// Default history team filter to user's preferred team (if they have one)
+// If explicitly set to 'all', honor that choice
+// Otherwise default to user's preferred team (if they have one)
 const defaultHistoryTeam = selectedTeamId && teamConfigMap.has(selectedTeamId) ? selectedTeamId : 'all';
 const historyTeam =
-  historyTeamParam && historyTeamParam !== 'all' && teamConfigMap.has(historyTeamParam)
-    ? historyTeamParam
-    : defaultHistoryTeam;
+  historyTeamParam === 'all'
+    ? 'all'
+    : historyTeamParam && teamConfigMap.has(historyTeamParam)
+      ? historyTeamParam
+      : defaultHistoryTeam;
 
 const filteredHistoryRows = historyRows.filter((row) =>
   historyTeam === 'all' ? true : row.franchiseId === historyTeam
@@ -814,11 +817,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
         url.searchParams.set('year', year);
         if (teamSelect) {
           const team = teamSelect.value;
-          if (team && team !== 'all') {
-            url.searchParams.set('team', team);
-          } else {
-            url.searchParams.delete('team');
-          }
+          url.searchParams.set('team', team);
         }
         window.location.href = url.toString();
       });
@@ -829,11 +828,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'history');
         url.searchParams.set('year', yearSelect ? yearSelect.value : '');
-        if (team && team !== 'all') {
-          url.searchParams.set('team', team);
-        } else {
-          url.searchParams.delete('team');
-        }
+        url.searchParams.set('team', team);
         window.location.href = url.toString();
       });
     }
