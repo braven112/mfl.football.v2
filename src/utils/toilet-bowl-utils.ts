@@ -5,78 +5,88 @@
 
 import type { ToiletBowlResult } from '../types/standings';
 
-interface PlayoffBracketData {
-  playoffBracket?: {
-    playoffTierItem?: Array<{
-      tier?: string;
-      bracketId?: string;
-      bracket_id?: string;
-      franchiseId?: string;
-      franchise_id?: string;
-      franchiseName?: string;
-      franchise_name?: string;
-    }>;
-  };
+/**
+ * Extract winner from a playoff bracket by examining the final game
+ * @param bracket - Individual bracket data
+ * @returns Franchise ID of winner, or empty string if not determined
+ */
+function getBracketWinner(bracket: any): string {
+  if (!bracket?.playoffBracket?.playoffRound) {
+    return '';
+  }
+
+  const rounds = bracket.playoffBracket.playoffRound;
+  const roundsArray = Array.isArray(rounds) ? rounds : [rounds];
+
+  // Get the last round (championship game)
+  const finalRound = roundsArray[roundsArray.length - 1];
+  if (!finalRound?.playoffGame) {
+    return '';
+  }
+
+  // Final game can be a single object or array
+  const finalGame = Array.isArray(finalRound.playoffGame)
+    ? finalRound.playoffGame[0]
+    : finalRound.playoffGame;
+
+  if (!finalGame) {
+    return '';
+  }
+
+  // Determine winner by comparing points
+  const homePoints = parseFloat(finalGame.home?.points || '0');
+  const awayPoints = parseFloat(finalGame.away?.points || '0');
+
+  // If no points yet, game hasn't been decided
+  if (homePoints === 0 && awayPoints === 0) {
+    return '';
+  }
+
+  // Return franchise ID of winner
+  const winnerId = homePoints > awayPoints
+    ? finalGame.home?.franchise_id
+    : finalGame.away?.franchise_id;
+
+  return winnerId ? String(winnerId).padStart(4, '0') : '';
 }
 
 /**
  * Extract toilet bowl tournament winners from playoff bracket data
- * Maps bracket IDs: #4 = pick 1.17 (Toilet Bowl winner)
- *                   #5 = pick 2.17 (Consolation winner)
- *                   #6 = pick 2.18 (Consolation 2 winner)
- * @param bracketData - Raw playoffBracket API response
+ * Maps bracket IDs: #5 = pick 1.17 (Toilet Bowl winner)
+ *                   #6 = pick 2.17 (Consolation winner)
+ *                   #7 = pick 2.18 (Consolation 2 winner)
+ * @param bracketData - Raw playoff bracket data with individual bracket results
  * @returns Array of toilet bowl results with franchise IDs
  */
-export function extractToiletBowlWinners(bracketData: PlayoffBracketData): ToiletBowlResult[] {
+export function extractToiletBowlWinners(bracketData: any): ToiletBowlResult[] {
   const results: ToiletBowlResult[] = [];
 
-  if (!bracketData?.playoffBracket?.playoffTierItem) {
+  if (!bracketData?.brackets) {
     return results;
   }
 
-  const items = Array.isArray(bracketData.playoffBracket.playoffTierItem)
-    ? bracketData.playoffBracket.playoffTierItem
-    : [bracketData.playoffBracket.playoffTierItem];
+  // Map bracket IDs to toilet bowl levels and pick assignments
+  const bracketMapping: Array<{
+    bracketId: string;
+    level: 'winner' | 'consolation' | 'consolation2';
+  }> = [
+    { bracketId: '5', level: 'winner' },      // Toilet Bowl winner -> pick 1.17
+    { bracketId: '6', level: 'consolation' }, // Consolation winner -> pick 2.17
+    { bracketId: '7', level: 'consolation2' }, // Consolation 2 winner -> pick 2.18
+  ];
 
-  // Map bracket IDs to toilet bowl levels (primary method)
-  const bracketIdMap: Record<string | number, 'winner' | 'consolation' | 'consolation2'> = {
-    4: 'winner',      // Toilet Bowl winner -> pick 1.17
-    5: 'consolation', // Consolation winner -> pick 2.17
-    6: 'consolation2', // Consolation 2 winner -> pick 2.18
-  };
-
-  // Map tier names to toilet bowl levels (fallback for consistency)
-  const tierMap: Record<string, 'winner' | 'consolation' | 'consolation2'> = {
-    'The Toilet Bowl': 'winner',
-    'Toilet Bowl': 'winner',
-    'The Toilet Bowl Consolation': 'consolation',
-    'Toilet Bowl Consolation': 'consolation',
-    'The Toilet Bowl Consolation 2': 'consolation2',
-    'Toilet Bowl Consolation 2': 'consolation2',
-  };
-
-  items.forEach((item) => {
-    // Prefer bracket ID mapping over tier name mapping
-    const bracketId = item.bracketId || item.bracket_id;
-    let level: 'winner' | 'consolation' | 'consolation2' | undefined;
-
-    if (bracketId !== undefined) {
-      level = bracketIdMap[bracketId];
-    } else if (item.tier) {
-      level = tierMap[item.tier];
+  bracketMapping.forEach(({ bracketId, level }) => {
+    const bracket = bracketData.brackets[bracketId];
+    if (!bracket) {
+      return;
     }
 
-    if (!level) return;
-
-    // Get franchise ID (normalize naming inconsistencies)
-    const franchiseId = item.franchiseId || item.franchise_id;
-    const franchiseName = item.franchiseName || item.franchise_name || '';
-
-    if (franchiseId) {
+    const winnerId = getBracketWinner(bracket);
+    if (winnerId) {
       results.push({
         level,
-        franchiseId: String(franchiseId).padStart(4, '0'),
-        franchiseName,
+        franchiseId: winnerId,
+        franchiseName: '', // Name will be resolved from team config
       });
     }
   });
