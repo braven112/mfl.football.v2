@@ -207,14 +207,14 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 	main {
 		max-width: 1232px;
       	margin-inline: auto;
-      	padding-inline: var(--padding-md);
+      	padding-inline: var(--padding-sm);
     	width: 100%;
-		padding-bottom: var(--padding-lg);
+		padding-bottom: var(--padding-xxl);
 		box-sizing: border-box;
 	}
-	@media (max-width: 767px) {
+	@media (min-width: 768px) {
 		main {
-			padding: var(--padding-md) var(--padding-md) var(--padding-xxl);
+			padding: var(--padding-md) var(--padding-md) var(--padding-lg);
 		}
 	}
 	:global(.table-wrapper )  {
