@@ -119,11 +119,11 @@ if (standingsData?.leagueStandings?.franchise) {
     toiletBowlWinners
   );
 
-  // Track special picks (toilet bowl + champion) so we can override downstream
-  // This ensures champion always gets pick 16 even in "final" view with traded picks
+  // Track toilet bowl picks so we can preserve them (they don't trade)
+  // NOTE: Champion picks are NOT included here - they CAN be traded!
   specialPickMap = new Map(
     draftPredictions
-      .filter(p => p.isToiletBowlPick || p.isLeagueWinner)
+      .filter(p => p.isToiletBowlPick)
       .map(p => [`${p.round}.${p.pickInRound}`, p])
   );
 }
