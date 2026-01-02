@@ -221,6 +221,11 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    key: 'futureDraftPicks',
+    url: withAuth(`${host}/${year}/export?TYPE=futureDraftPicks&L=${leagueId}&JSON=1`),
+    parser: (t) => JSON.parse(t),
+  },
+  {
     key: 'projectedScores',
     url: withWeek(`${host}/${year}/export?TYPE=projectedScores&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),

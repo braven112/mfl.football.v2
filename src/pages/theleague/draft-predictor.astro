@@ -11,7 +11,7 @@ import DraftViewSelector from '../../components/theleague/DraftViewSelector.astr
 import leagueAssets from '../../data/theleague.assets.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, parseTradeFromComment } from '../../utils/draft-utils';
 import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
-import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
+import { mergeStandingsWithFuturePicks, isValidFutureDraftPicksData } from '../../utils/future-draft-picks-utils';
 import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
@@ -32,10 +32,7 @@ const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/
 const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
   eager: true,
 });
-const assetsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/assets.json', {
-  eager: true,
-});
-const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', {
+const futureDraftPicksFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/futureDraftPicks.json', {
   eager: true,
 });
 
@@ -75,25 +72,14 @@ const draftResultYears = Object.keys(draftResultsFeeds)
   .filter((y) => !!y)
   .sort((a, b) => Number(b) - Number(a));
 
-// Load assets for current year (to show team ownership of draft picks)
-let assetsData = null;
-const assetsKey = Object.keys(assetsFeeds).find(
+// Load futureDraftPicks for current year (to show team ownership of draft picks)
+let futureDraftPicksData = null;
+const futureDraftPicksKey = Object.keys(futureDraftPicksFeeds).find(
   (path) => extractFeedSeason(path) === String(currentYear)
 );
-if (assetsKey) {
-  assetsData = getModuleData(assetsFeeds[assetsKey]);
-}
 
-// Fallback: extract assets from transactions if API data is unavailable
-if (!assetsData || !isValidAssetsData(assetsData)) {
-  const transactionsKey = Object.keys(transactionsFeeds).find(
-    (path) => extractFeedSeason(path) === String(currentYear)
-  );
-  const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
-
-  if (transactionsData && standingsData) {
-    assetsData = extractAssetsFromTransactions(transactionsData, standingsData, nextYear);
-  }
+if (futureDraftPicksKey) {
+  futureDraftPicksData = getModuleData(futureDraftPicksFeeds[futureDraftPicksKey]);
 }
 
 // Build team config map
@@ -160,69 +146,21 @@ const rawView = Astro.url.searchParams.get('view') || 'final';
 const normalizedView = rawView === 'assets' ? 'final' : rawView === 'trades' ? 'history' : rawView;
 const view = normalizedView as 'projected' | 'final' | 'history';
 
-// Apply champion logic to any draft predictions
-// Removes champion from their original position and places them at pick 16 in each round
-const applyChampionLogic = (predictions: DraftPrediction[]): DraftPrediction[] => {
-  if (!leagueWinnerId) {
-    return predictions; // No champion determined yet
-  }
+// Note: Champion logic is already applied by calculateDraftOrder above
+// No need to apply it again here
 
-  const result: DraftPrediction[] = [];
-
-  // Process each round separately
-  for (let round = 1; round <= 3; round++) {
-    // Get all picks for this round (excluding special picks)
-    const roundPicks = predictions.filter(p =>
-      p.round === round &&
-      !p.isToiletBowlPick &&
-      p.pickInRound <= 16
-    );
-
-    // Separate champion from other teams
-    const championPick = roundPicks.find(p => p.franchiseId === leagueWinnerId);
-    const otherPicks = roundPicks.filter(p => p.franchiseId !== leagueWinnerId);
-
-    // Re-assign pick numbers: 1-15 for non-champions, 16 for champion
-    otherPicks
-      .sort((a, b) => a.pickInRound - b.pickInRound) // Keep original order
-      .forEach((pick, index) => {
-        const newPickInRound = index + 1; // 1-15
-        result.push({
-          ...pick,
-          pickInRound: newPickInRound,
-          overallPickNumber: (round - 1) * 16 + newPickInRound,
-          isLeagueWinner: false,
-        });
-      });
-
-    // Add champion at pick 16
-    if (championPick) {
-      result.push({
-        ...championPick,
-        pickInRound: 16,
-        overallPickNumber: (round - 1) * 16 + 16,
-        isLeagueWinner: true,
-      });
-    }
-  }
-
-  // Add back special picks (toilet bowl)
-  const specialPicks = predictions.filter(p => p.isToiletBowlPick);
-  result.push(...specialPicks);
-
-  return result.sort((a, b) => a.overallPickNumber - b.overallPickNumber);
-};
-
-// Final order favors traded/actual ownership, then falls back to projection
-let finalBase =
-  (assetsData && isValidAssetsData(assetsData) && convertAssetsToPredictions(assetsData, teamConfigMap).length > 0)
-    ? convertAssetsToPredictions(assetsData, teamConfigMap)
-    : actualDraftPicks.length > 0
-      ? actualDraftPicks
-      : sortedPredictions;
-
-// Apply champion logic to the final base (shifts picks to account for champion at 16)
-finalBase = applyChampionLogic(finalBase);
+// Final order: merge standings-based predictions with futureDraftPicks ownership
+let finalBase: DraftPrediction[];
+if (futureDraftPicksData && isValidFutureDraftPicksData(futureDraftPicksData)) {
+  // Merge standings order (with champion at pick 16) with current ownership from futureDraftPicks API
+  finalBase = mergeStandingsWithFuturePicks(sortedPredictions, futureDraftPicksData, teamConfigMap, nextYear);
+} else if (actualDraftPicks.length > 0) {
+  // After draft, use actual picks
+  finalBase = actualDraftPicks;
+} else {
+  // Fallback to standings-based projection with champion logic
+  finalBase = sortedPredictions;
+}
 
 const mergeSpecialPicks = (
   base: DraftPrediction[],
@@ -428,7 +366,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
         <>
           {view === 'projected' && (
             <DraftPredictorGrid
-              predictions={sortedPredictions}
+              predictions={standingsWithChampion}
               userTeamId={selectedTeamId}
               championshipDetermined={!!leagueWinnerId}
             />
