@@ -366,7 +366,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
         <>
           {view === 'projected' && (
             <DraftPredictorGrid
-              predictions={sortedPredictions}
+              predictions={standingsWithChampion}
               userTeamId={selectedTeamId}
               championshipDetermined={!!leagueWinnerId}
             />
