@@ -192,3 +192,117 @@ export const calculateEffectiveCapSpace = (
 ): number => {
   return capSpace - reserve;
 };
+
+/**
+ * Get reference salary for franchise tag or extension calculations
+ */
+export function getReferenceSalary(
+  position: string,
+  type: 'franchise' | 'extension',
+  salaryAverages: any
+): number {
+  if (!salaryAverages?.positions?.[position]) return 0;
+  
+  const positionData = salaryAverages.positions[position];
+  
+  if (type === 'franchise') {
+    // Franchise tag = average of top 3
+    return positionData.top3Average || 0;
+  } else {
+    // Extension = average of top 5
+    return positionData.top5Average || 0;
+  }
+}
+
+/**
+ * Calculate franchise tag salary for a player
+ * 
+ * Franchise tag salary = MAX of:
+ * - Current salary × 1.20 (20% increase)
+ * - Average of top 3 salaries at position
+ */
+export function calculateFranchiseTag(
+  currentSalary: number,
+  position: string,
+  salaryAverages: any
+): {
+  newSalary: number;
+  newYears: number;
+  basis: '20% increase' | 'top 3 average';
+} {
+  const increasedSalary = currentSalary * 1.2;
+  const avgSalary = getReferenceSalary(position, 'franchise', salaryAverages);
+  const newSalary = Math.round(Math.max(increasedSalary, avgSalary));
+  
+  return {
+    newSalary,
+    newYears: 1,
+    basis: newSalary === Math.round(increasedSalary) ? '20% increase' : 'top 3 average',
+  };
+}
+
+/**
+ * Calculate veteran extension salary
+ * 
+ * Formula: (top5 avg × extension years) / (existing years + extension years) + current salary
+ * Then apply 10% annual escalation
+ */
+export function calculateVeteranExtension(
+  contractYears: number,
+  position: string,
+  extensionYears: number,
+  currentSalary: number,
+  salaryAverages: any
+): {
+  newSalary: number;
+  newYears: number;
+  salaryBreakdown: Record<string, number>;
+} {
+  const existingYears = Number(contractYears) || 0;
+  const extYears = Number(extensionYears) || 0;
+  const avgSalary = getReferenceSalary(position, 'extension', salaryAverages);
+
+  // Per rules: (top5 avg * extensionYears / (existing years + extensionYears)) + existing salary
+  const denominator = existingYears + extYears;
+  const proratedPortion = denominator > 0 ? (avgSalary * extYears) / denominator : 0;
+  const baseSalary = Number(currentSalary) || 0;
+  const newSalaryCurrent = Math.round(proratedPortion + baseSalary);
+
+  const totalYears = existingYears + extYears;
+
+  // Create salary breakdown for ALL years with 10% increases each year
+  const salaryBreakdown: Record<string, number> = {};
+  for (let i = 0; i < totalYears; i++) {
+    salaryBreakdown[`year${i}`] = Math.round(newSalaryCurrent * Math.pow(1.1, i));
+  }
+
+  return {
+    newSalary: newSalaryCurrent,
+    newYears: totalYears,
+    salaryBreakdown,
+  };
+}
+
+/**
+ * Calculate penalty for cutting a player
+ * 
+ * Current season: 50% of salary
+ * Future seasons: 15-45% based on years remaining
+ */
+export function calculateCutPenalty(
+  salary: number,
+  contractYears: number
+): {
+  currentPenalty: number;
+  futurePenalty: number;
+  totalPenalty: number;
+} {
+  const currentSeasonPenalty = salary * 0.5;
+  const futureSeasonPenalty = salary * (FUTURE_PERCENT_BY_YEARS[contractYears] ?? 0);
+
+  return {
+    currentPenalty: currentSeasonPenalty,
+    futurePenalty: futureSeasonPenalty,
+    totalPenalty: currentSeasonPenalty + futureSeasonPenalty,
+  };
+}

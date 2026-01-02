@@ -1,5 +1,68 @@
 # MFL Football v2 - Feature Documentation
 
+## 🎯 Strategic Philosophy
+
+**Primary Goal:** Sign as many long-term contracts as possible by targeting **young, inexpensive players** to build sustained dynasty dominance.
+
+**Secondary Goal:** Acquire good short-term contracts (1-2 years) that provide:
+- Trade asset value for future deal-making
+- Roster depth and flexibility
+- Plug-and-play starters during competitive windows
+
+> **Development Principle:** ALL features, utilities, and data structures should be designed with the **Auction Price Predictor** in mind. Every function must be **reusable** and **composable** to support real-time auction analysis, multi-contract pricing, and strategic decision-making.
+
+---
+
+## 📊 Auction Price Predictor (2026)
+
+**Status:** Planning Complete, Implementation In Progress
+
+**Purpose:** Comprehensive tool to analyze the 2026 free agent market, predict franchise tags, calculate team cap spaces, estimate auction prices for 1-5 year contracts, and identify value opportunities.
+
+### Planning Documents
+- **[AUCTION_PREDICTOR_REQUIREMENTS.md](./AUCTION_PREDICTOR_REQUIREMENTS.md)** - 11 user stories, functional requirements, formulas, success metrics
+- **[AUCTION_PREDICTOR_DESIGN.md](./AUCTION_PREDICTOR_DESIGN.md)** - System architecture, component hierarchy, algorithm designs, UI/UX mockups
+- **[AUCTION_PREDICTOR_TASKS.md](./AUCTION_PREDICTOR_TASKS.md)** - 26 implementation tasks across 5 phases (81 hours total, 46 hours MVP)
+
+### Core Features
+1. **Franchise Tag Predictions** - Auto-predict which player each team will tag based on value, cap situation, position scarcity
+2. **Cap Space Calculator** - Project 2026 cap space with salary escalations (10% annual), dead money, draft pick commitments
+3. **Multi-Contract Pricing** - Show 1-5 year prices with escalation, age-based recommendations
+4. **Dynasty/Redraft Rankings Import** - Parse FootballGuys/FantasyPros format, calculate composite rankings with weighted slider
+5. **Market Analysis** - Positional scarcity, value opportunities, overvalued players
+6. **Championship Window Detection** - Auto-detect contending vs rebuilding teams based on roster, cap, draft capital
+7. **Real-Time Updates** - Override franchise tags, adjust rankings weight, see prices recalculate instantly
+
+### Reusable Utilities (Available for All Features)
+```
+src/utils/
+├── salary-calculations.ts         ✅ Franchise tag, veteran extensions, cap hits
+├── franchise-tag-predictor.ts     ✅ Predict tags with scoring algorithm
+├── cap-space-calculator.ts        ✅ 2026 cap projections with escalations
+├── auction-price-predictor.ts     ✅ Multi-factor pricing engine
+├── rankings-parser.ts             ✅ Parse external rankings (FootballGuys, FantasyPros)
+├── championship-window-detector.ts  (Planned) Auto-detect team windows
+├── draft-pick-cap-impact.ts         (Planned) Rookie salary calculations
+├── multi-contract-pricer.ts         (Planned) 1-5 year pricing with recommendations
+└── market-analyzer.ts               (Planned) Scarcity, opportunities, inflation
+```
+
+### Key Types (src/types/auction-predictor.ts)
+- `PlayerValuation` - Player identity, rankings, prices, scarcity
+- `TeamCapSituation` - Cap space, draft picks, positional needs, championship window
+- `FranchiseTagPrediction` - Predicted tags with candidates, scores, overrides
+- `MarketAnalysis` - League-wide totals, positional markets, value opportunities
+- `ContractEscalation` - Year-by-year salary schedules with 10% escalation
+
+### Strategic Insights Enabled
+- **Value Targeting:** Identify undervalued young players for long-term deals
+- **Cap Planning:** See which teams have cap space for bidding wars
+- **Position Scarcity:** Target positions with low supply, high demand
+- **Age Optimization:** Avoid overpaying for aging players on long contracts
+- **Trade Asset Identification:** Find 1-2 year contracts with upside for flipping
+
+---
+
 ## Team Personalization
 
 For details on the team preference cookie system and personalization features across both leagues, see [PERSONALIZATION.md](./PERSONALIZATION.md).
