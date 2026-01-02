@@ -1,0 +1,713 @@
+---
+/**
+ * Auction Predictor Control Panel
+ * 
+ * Provides global controls for the auction predictor:
+ * - Dynasty/Redraft weight slider (affects pricing calculations)
+ * - View selector tabs (Players, Tags, Teams, Market, Rankings)
+ * - Position filter dropdown
+ * - Sort controls
+ * - Search input
+ * 
+ * All changes are debounced and persisted to localStorage
+ * Communicates with parent via custom events
+ */
+
+export interface Props {
+  initialDynastyWeight?: number;
+  initialView?: string;
+  positionCounts?: Record<string, number>;
+  totalPlayers?: number;
+}
+
+const { 
+  initialDynastyWeight = 60,
+  initialView = 'players',
+  positionCounts = {},
+  totalPlayers = 0
+} = Astro.props;
+
+// Calculate total players by position
+const positions = ['QB', 'RB', 'WR', 'TE'];
+const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[pos] || 0), 0);
+---
+
+<div class="auction-control-panel">
+  
+  <!-- Top Row: Dynasty Weight Slider -->
+  <div class="control-row dynasty-weight-control">
+    <label for="dynasty-weight-slider" class="control-label">
+      <span class="label-text">Dynasty Weight:</span>
+      <span class="label-hint">Adjust pricing between dynasty rankings (long-term value) and redraft rankings (win-now)</span>
+    </label>
+    <div class="slider-container">
+      <span class="slider-label">Redraft</span>
+      <input 
+        type="range" 
+        id="dynasty-weight-slider"
+        class="dynasty-slider"
+        min="0" 
+        max="100" 
+        value={initialDynastyWeight}
+        data-initial={initialDynastyWeight}
+      />
+      <span class="slider-label">Dynasty</span>
+      <output id="dynasty-weight-value" class="slider-value">{initialDynastyWeight}%</output>
+    </div>
+  </div>
+
+  <!-- Middle Row: View Tabs -->
+  <div class="control-row view-tabs-control">
+    <div class="view-tabs" role="tablist">
+      <button 
+        class="view-tab active" 
+        data-view="players"
+        role="tab"
+        aria-selected="true"
+        aria-controls="players-view"
+      >
+        <span class="tab-icon">📊</span>
+        <span class="tab-text">Players</span>
+        <span class="tab-count">{totalPlayers}</span>
+      </button>
+      
+      <button 
+        class="view-tab" 
+        data-view="tags"
+        role="tab"
+        aria-selected="false"
+        aria-controls="tags-view"
+      >
+        <span class="tab-icon">🏷️</span>
+        <span class="tab-text">Franchise Tags</span>
+        <span class="tab-count">16</span>
+      </button>
+      
+      <button 
+        class="view-tab" 
+        data-view="teams"
+        role="tab"
+        aria-selected="false"
+        aria-controls="teams-view"
+      >
+        <span class="tab-icon">💰</span>
+        <span class="tab-text">Team Cap</span>
+        <span class="tab-count">16</span>
+      </button>
+      
+      <button 
+        class="view-tab" 
+        data-view="market"
+        role="tab"
+        aria-selected="false"
+        aria-controls="market-view"
+      >
+        <span class="tab-icon">📈</span>
+        <span class="tab-text">Market</span>
+      </button>
+      
+      <button 
+        class="view-tab" 
+        data-view="rankings"
+        role="tab"
+        aria-selected="false"
+        aria-controls="rankings-view"
+      >
+        <span class="tab-icon">⬆️</span>
+        <span class="tab-text">Import Rankings</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Row: Filters & Search (only shown on Players view) -->
+  <div class="control-row filters-control" data-show-on-view="players">
+    
+    <!-- Position Filter -->
+    <div class="filter-group">
+      <label for="position-filter" class="filter-label">Position:</label>
+      <select id="position-filter" class="position-filter">
+        <option value="all">All Positions ({allPositionCount})</option>
+        {positions.map(pos => (
+          <option value={pos}>
+            {pos} ({positionCounts[pos] || 0})
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <!-- Sort Controls -->
+    <div class="filter-group">
+      <label for="sort-by" class="filter-label">Sort By:</label>
+      <select id="sort-by" class="sort-select">
+        <option value="rank">Composite Rank</option>
+        <option value="name">Player Name</option>
+        <option value="position">Position</option>
+        <option value="age">Age</option>
+        <option value="price-1yr">1-Year Price</option>
+        <option value="price-3yr">3-Year Price</option>
+        <option value="price-5yr">5-Year Price</option>
+        <option value="value">Best Value</option>
+      </select>
+      
+      <button 
+        id="sort-direction" 
+        class="sort-direction-btn"
+        data-direction="asc"
+        aria-label="Toggle sort direction"
+        title="Toggle ascending/descending"
+      >
+        <span class="sort-icon">⬆️</span>
+      </button>
+    </div>
+
+    <!-- Search Input -->
+    <div class="filter-group search-group">
+      <label for="player-search" class="filter-label">Search:</label>
+      <div class="search-input-wrapper">
+        <input 
+          type="search"
+          id="player-search"
+          class="player-search"
+          placeholder="Search players..."
+          autocomplete="off"
+        />
+        <button 
+          id="clear-search" 
+          class="clear-search-btn hidden"
+          aria-label="Clear search"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Count -->
+    <div class="filter-group results-count">
+      <span id="filtered-count" class="count-display">
+        Showing <strong>{totalPlayers}</strong> players
+      </span>
+    </div>
+
+  </div>
+
+</div>
+
+<style>
+  .auction-control-panel {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+  }
+
+  .control-row {
+    margin-bottom: 1.5rem;
+  }
+
+  .control-row:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Dynasty Weight Slider */
+  .dynasty-weight-control {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1.5rem;
+  }
+
+  .control-label {
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+
+  .label-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .label-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #7f8c8d;
+    margin-top: 0.25rem;
+  }
+
+  .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .slider-label {
+    font-size: 0.75rem;
+    color: #888;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .dynasty-slider {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #e74c3c 0%, #3498db 100%);
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .dynasty-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+  }
+
+  .dynasty-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .dynasty-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+  }
+
+  .dynasty-slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .slider-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #3498db;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  /* View Tabs */
+  .view-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .view-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    color: #495057;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .view-tab:hover {
+    background: var(--accent-content-bg-color);
+    border-color: var(--accent-content-border-color);
+    color: var(--accent-content-text-color);
+  }
+
+  .view-tab.active {
+    background: var(--accent-content-bg-color);
+    border-color: var(--accent-content-border-color);
+    color: var(--accent-content-text-color);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  }
+
+  .tab-icon {
+    font-size: 1.125rem;
+  }
+
+  .tab-count {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .view-tab.active .tab-count {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Filters */
+  .filters-control {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filters-control.hidden {
+    display: none;
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .filter-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .position-filter,
+  .sort-select {
+    padding: 0.5rem 0.75rem;
+    background: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    color: #212529;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .position-filter:hover,
+  .sort-select:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+  }
+
+  .position-filter:focus,
+  .sort-select:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+    background: #ffffff;
+  }
+
+  .sort-direction-btn {
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .sort-direction-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+  }
+
+  .sort-direction-btn[data-direction="desc"] .sort-icon {
+    transform: rotate(180deg);
+    display: inline-block;
+  }
+
+  /* Search */
+  .search-group {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .search-input-wrapper {
+    position: relative;
+    flex: 1;
+  }
+
+  .player-search {
+    width: 100%;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    background: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    color: #212529;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+
+  .player-search:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+    background: #ffffff;
+    border-color: #667eea;
+  }
+
+  .player-search::placeholder {
+    color: #6c757d;
+  }
+
+  .clear-search-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.25rem 0.5rem;
+    background: #e9ecef;
+    border: none;
+    border-radius: 4px;
+    color: #495057;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1;
+    transition: all 0.2s;
+  }
+
+  .clear-search-btn:hover {
+    background: #dee2e6;
+    color: #212529;
+  }
+
+  .clear-search-btn.hidden {
+    display: none;
+  }
+
+  /* Results Count */
+  .results-count {
+    margin-left: auto;
+  }
+
+  .count-display {
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+
+  .count-display strong {
+    color: #667eea;
+    font-weight: 600;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .auction-control-panel {
+      padding: 1rem;
+    }
+
+    .view-tabs {
+      justify-content: center;
+    }
+
+    .view-tab {
+      flex: 1 1 calc(50% - 0.25rem);
+      min-width: 0;
+      justify-content: center;
+    }
+
+    .tab-text {
+      display: none;
+    }
+
+    .filters-control {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-group {
+      width: 100%;
+    }
+
+    .search-group {
+      width: 100%;
+    }
+
+    .results-count {
+      margin-left: 0;
+      text-align: center;
+    }
+  }
+</style>
+
+<script>
+  // Debounce utility
+  function debounce<T extends (...args: any[]) => void>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    return function(this: any, ...args: Parameters<T>) {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+  }
+
+  // Initialize control panel
+  function initControlPanel() {
+    const slider = document.getElementById('dynasty-weight-slider') as HTMLInputElement;
+    const output = document.getElementById('dynasty-weight-value') as HTMLOutputElement;
+    const viewTabs = document.querySelectorAll('.view-tab');
+    const positionFilter = document.getElementById('position-filter') as HTMLSelectElement;
+    const sortBy = document.getElementById('sort-by') as HTMLSelectElement;
+    const sortDirection = document.getElementById('sort-direction') as HTMLButtonElement;
+    const searchInput = document.getElementById('player-search') as HTMLInputElement;
+    const clearSearch = document.getElementById('clear-search') as HTMLButtonElement;
+    const filtersControl = document.querySelector('.filters-control') as HTMLElement;
+
+    // Dynasty weight slider handler
+    const handleSliderChange = debounce(() => {
+      const value = parseInt(slider.value);
+      output.textContent = `${value}%`;
+      
+      // Dispatch custom event for state update
+      window.dispatchEvent(new CustomEvent('auction:dynasty-weight-change', {
+        detail: { weight: value }
+      }));
+      
+      // Save to localStorage
+      localStorage.setItem('auctionPredictor.dynastyWeight', value.toString());
+    }, 300);
+
+    slider.addEventListener('input', () => {
+      output.textContent = `${slider.value}%`;
+    });
+    slider.addEventListener('change', handleSliderChange);
+
+    // View tab handlers
+    viewTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const view = tab.getAttribute('data-view');
+        
+        // Update active state
+        viewTabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        
+        // Show/hide filters based on view
+        if (view === 'players') {
+          filtersControl.classList.remove('hidden');
+        } else {
+          filtersControl.classList.add('hidden');
+        }
+        
+        // Dispatch view change event
+        window.dispatchEvent(new CustomEvent('auction:view-change', {
+          detail: { view }
+        }));
+        
+        // Save to localStorage
+        localStorage.setItem('auctionPredictor.currentView', view || 'players');
+      });
+    });
+
+    // Position filter handler
+    const handlePositionFilter = () => {
+      const position = positionFilter.value;
+      
+      window.dispatchEvent(new CustomEvent('auction:position-filter', {
+        detail: { position }
+      }));
+      
+      localStorage.setItem('auctionPredictor.positionFilter', position);
+    };
+
+    positionFilter.addEventListener('change', handlePositionFilter);
+
+    // Sort handlers
+    const handleSortChange = () => {
+      const sortField = sortBy.value;
+      const direction = sortDirection.getAttribute('data-direction') || 'asc';
+      
+      window.dispatchEvent(new CustomEvent('auction:sort-change', {
+        detail: { field: sortField, direction }
+      }));
+      
+      localStorage.setItem('auctionPredictor.sortBy', sortField);
+      localStorage.setItem('auctionPredictor.sortDirection', direction);
+    };
+
+    sortBy.addEventListener('change', handleSortChange);
+    
+    sortDirection.addEventListener('click', () => {
+      const currentDirection = sortDirection.getAttribute('data-direction') || 'asc';
+      const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+      sortDirection.setAttribute('data-direction', newDirection);
+      handleSortChange();
+    });
+
+    // Search handler
+    const handleSearch = debounce(() => {
+      const query = searchInput.value.trim();
+      
+      // Show/hide clear button
+      if (query) {
+        clearSearch.classList.remove('hidden');
+      } else {
+        clearSearch.classList.add('hidden');
+      }
+      
+      window.dispatchEvent(new CustomEvent('auction:search', {
+        detail: { query }
+      }));
+      
+      localStorage.setItem('auctionPredictor.searchQuery', query);
+    }, 300);
+
+    searchInput.addEventListener('input', handleSearch);
+    
+    clearSearch.addEventListener('click', () => {
+      searchInput.value = '';
+      clearSearch.classList.add('hidden');
+      handleSearch();
+    });
+
+    // Load saved preferences
+    const savedWeight = localStorage.getItem('auctionPredictor.dynastyWeight');
+    if (savedWeight) {
+      slider.value = savedWeight;
+      output.textContent = `${savedWeight}%`;
+    }
+
+    const savedView = localStorage.getItem('auctionPredictor.currentView');
+    if (savedView) {
+      const savedTab = document.querySelector(`[data-view="${savedView}"]`);
+      if (savedTab) {
+        (savedTab as HTMLElement).click();
+      }
+    }
+
+    const savedPosition = localStorage.getItem('auctionPredictor.positionFilter');
+    if (savedPosition) {
+      positionFilter.value = savedPosition;
+    }
+
+    const savedSort = localStorage.getItem('auctionPredictor.sortBy');
+    if (savedSort) {
+      sortBy.value = savedSort;
+    }
+
+    const savedDirection = localStorage.getItem('auctionPredictor.sortDirection');
+    if (savedDirection) {
+      sortDirection.setAttribute('data-direction', savedDirection);
+    }
+
+    const savedQuery = localStorage.getItem('auctionPredictor.searchQuery');
+    if (savedQuery) {
+      searchInput.value = savedQuery;
+      if (savedQuery) {
+        clearSearch.classList.remove('hidden');
+      }
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initControlPanel);
+  } else {
+    initControlPanel();
+  }
+</script>
