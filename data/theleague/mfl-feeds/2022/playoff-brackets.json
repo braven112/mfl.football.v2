@@ -2,441 +2,181 @@
   "playoffBrackets": {
     "playoffBracket": [
       {
-        "teamsInvolved": "7",
-        "startWeekGames": "3",
         "startWeek": "15",
-        "bracketWinnerTitle": "The League Champion",
         "name": "The League Championship",
+        "teamsInvolved": "7",
+        "bracketWinnerTitle": "The League Champion",
+        "startWeekGames": "3",
         "id": "1"
       },
       {
-        "id": "2",
+        "teamsInvolved": "2",
         "bracketWinnerTitle": "3rd Place",
-        "name": "The Consolation Bracket",
-        "startWeek": "17",
         "startWeekGames": "1",
-        "teamsInvolved": "2"
+        "id": "2",
+        "startWeek": "17",
+        "name": "The Consolation Bracket"
       },
       {
         "name": "The Loser's Bracket",
-        "bracketWinnerTitle": "5th Place",
-        "id": "3",
-        "teamsInvolved": "5",
         "startWeek": "15",
+        "bracketWinnerTitle": "5th Place",
+        "teamsInvolved": "5",
+        "id": "3",
         "startWeekGames": "1"
       },
       {
-        "teamsInvolved": "7",
-        "startWeek": "15",
-        "startWeekGames": "3",
-        "name": "The Toilet Bowl Challenge",
         "bracketWinnerTitle": "Winner of pick 1.17",
-        "id": "5"
+        "teamsInvolved": "7",
+        "startWeekGames": "3",
+        "id": "5",
+        "name": "The Toilet Bowl Challenge",
+        "startWeek": "15"
       },
       {
         "teamsInvolved": "2",
-        "startWeek": "17",
-        "startWeekGames": "1",
-        "name": "The Toilet Bowl Consolation",
         "bracketWinnerTitle": "Winner of pick 2.17",
-        "id": "6"
+        "id": "6",
+        "startWeekGames": "1",
+        "startWeek": "17",
+        "name": "The Toilet Bowl Consolation"
       },
       {
-        "name": "The Toilet Bowl Consolation 2",
-        "bracketWinnerTitle": "Winner of pick 2.18",
-        "id": "7",
-        "teamsInvolved": "4",
         "startWeek": "16",
-        "startWeekGames": "2"
+        "name": "The Toilet Bowl Consolation 2",
+        "id": "7",
+        "startWeekGames": "2",
+        "teamsInvolved": "4",
+        "bracketWinnerTitle": "Winner of pick 2.18"
       }
     ]
   },
   "brackets": {
     "1": {
       "encoding": "utf-8",
-      "version": "1.0",
       "playoffBracket": {
         "playoffRound": [
           {
             "playoffGame": [
               {
-                "away": {
-                  "points": "97.54",
-                  "seed": "7",
-                  "franchise_id": "0007"
-                },
                 "home": {
                   "points": "106.99",
-                  "franchise_id": "0015",
-                  "seed": "2"
+                  "seed": "2",
+                  "franchise_id": "0015"
+                },
+                "away": {
+                  "franchise_id": "0007",
+                  "points": "97.54",
+                  "seed": "7"
                 },
                 "game_id": "1"
               },
               {
                 "game_id": "2",
-                "home": {
-                  "seed": "3",
-                  "franchise_id": "0005",
-                  "points": "91.3"
-                },
                 "away": {
-                  "seed": "6",
                   "franchise_id": "0003",
+                  "seed": "6",
                   "points": "100.48"
+                },
+                "home": {
+                  "franchise_id": "0005",
+                  "seed": "3",
+                  "points": "91.3"
                 }
               },
               {
                 "game_id": "3",
                 "away": {
-                  "points": "125.52",
                   "franchise_id": "0001",
-                  "seed": "5"
+                  "seed": "5",
+                  "points": "125.52"
                 },
                 "home": {
+                  "points": "102.92",
                   "seed": "4",
-                  "franchise_id": "0013",
-                  "points": "102.92"
+                  "franchise_id": "0013"
                 }
               }
             ],
             "week": "15"
           },
           {
-            "playoffGame": [
-              {
-                "game_id": "4",
-                "away": {
-                  "points": "122.58",
-                  "winner_of_game": "3",
-                  "franchise_id": "0001"
-                },
-                "home": {
-                  "winner_of_game": "1",
-                  "franchise_id": "0015",
-                  "points": "129.31"
-                }
-              },
-              {
-                "game_id": "5",
-                "home": {
-                  "points": "68.16",
-                  "franchise_id": "0012",
-                  "seed": "1"
-                },
-                "away": {
-                  "franchise_id": "0003",
-                  "winner_of_game": "2",
-                  "points": "60.62"
-                }
-              }
-            ],
-            "week": "16"
-          },
-          {
-            "week": "17",
-            "playoffGame": {
-              "home": {
-                "winner_of_game": "5",
-                "franchise_id": "0012",
-                "points": "89.5"
-              },
-              "away": {
-                "winner_of_game": "4",
-                "franchise_id": "0015",
-                "points": "89.32"
-              },
-              "game_id": "6"
-            }
-          }
-        ],
-        "bracket_id": "1"
-      }
-    },
-    "2": {
-      "version": "1.0",
-      "playoffBracket": {
-        "bracket_id": "2",
-        "playoffRound": {
-          "week": "17",
-          "playoffGame": {
-            "home": {
-              "franchise_id": "0003",
-              "bracket": "1",
-              "points": "85.52",
-              "loser_of_game": "5"
-            },
-            "away": {
-              "loser_of_game": "4",
-              "bracket": "1",
-              "franchise_id": "0001",
-              "points": "94.87"
-            },
-            "game_id": "1"
-          }
-        }
-      },
-      "encoding": "utf-8"
-    },
-    "3": {
-      "version": "1.0",
-      "playoffBracket": {
-        "bracket_id": "3",
-        "playoffRound": [
-          {
-            "week": "15",
-            "playoffGame": {
-              "game_id": "1",
-              "away": {
-                "seed": "5",
-                "franchise_id": "0002",
-                "points": "133.89"
-              },
-              "home": {
-                "franchise_id": "0009",
-                "seed": "4",
-                "points": "82.15"
-              }
-            }
-          },
-          {
-            "playoffGame": [
-              {
-                "away": {
-                  "winner_of_game": "1",
-                  "franchise_id": "0002",
-                  "points": "96.41"
-                },
-                "home": {
-                  "loser_of_game": "3",
-                  "franchise_id": "0013",
-                  "bracket": "1",
-                  "points": "76.98"
-                },
-                "game_id": "2"
-              },
-              {
-                "home": {
-                  "points": "97.34",
-                  "bracket": "1",
-                  "franchise_id": "0005",
-                  "loser_of_game": "2"
-                },
-                "away": {
-                  "loser_of_game": "1",
-                  "points": "88.5",
-                  "franchise_id": "0007",
-                  "bracket": "1"
-                },
-                "game_id": "3"
-              }
-            ],
-            "week": "16"
-          },
-          {
-            "playoffGame": {
-              "home": {
-                "points": "66.55",
-                "franchise_id": "0005",
-                "winner_of_game": "3"
-              },
-              "away": {
-                "points": "90.95",
-                "winner_of_game": "2",
-                "franchise_id": "0002"
-              },
-              "game_id": "4"
-            },
-            "week": "17"
-          }
-        ]
-      },
-      "encoding": "utf-8"
-    },
-    "5": {
-      "encoding": "utf-8",
-      "version": "1.0",
-      "playoffBracket": {
-        "bracket_id": "5",
-        "playoffRound": [
-          {
-            "week": "15",
-            "playoffGame": [
-              {
-                "game_id": "1",
-                "home": {
-                  "franchise_id": "0014",
-                  "seed": "5",
-                  "points": "75.76"
-                },
-                "away": {
-                  "franchise_id": "0004",
-                  "seed": "4",
-                  "points": "106.98"
-                }
-              },
-              {
-                "away": {
-                  "points": "108.15",
-                  "franchise_id": "0016",
-                  "seed": "3"
-                },
-                "home": {
-                  "franchise_id": "0008",
-                  "seed": "6",
-                  "points": "78.64"
-                },
-                "game_id": "2"
-              },
-              {
-                "game_id": "3",
-                "home": {
-                  "franchise_id": "0006",
-                  "seed": "7",
-                  "points": "111.42"
-                },
-                "away": {
-                  "seed": "2",
-                  "franchise_id": "0011",
-                  "points": "97.63"
-                }
-              }
-            ]
-          },
-          {
             "week": "16",
             "playoffGame": [
               {
-                "away": {
-                  "winner_of_game": "1",
-                  "franchise_id": "0004",
-                  "points": "80.86"
-                },
                 "home": {
-                  "points": "87.62",
-                  "seed": "1",
-                  "franchise_id": "0010"
+                  "franchise_id": "0015",
+                  "points": "129.31",
+                  "winner_of_game": "1"
+                },
+                "away": {
+                  "winner_of_game": "3",
+                  "points": "122.58",
+                  "franchise_id": "0001"
                 },
                 "game_id": "4"
               },
               {
-                "game_id": "5",
                 "home": {
-                  "winner_of_game": "3",
-                  "franchise_id": "0006",
-                  "points": "115.2"
+                  "points": "68.16",
+                  "seed": "1",
+                  "franchise_id": "0012"
                 },
+                "game_id": "5",
                 "away": {
-                  "winner_of_game": "2",
-                  "franchise_id": "0016",
-                  "points": "118"
+                  "franchise_id": "0003",
+                  "points": "60.62",
+                  "winner_of_game": "2"
                 }
               }
             ]
           },
           {
-            "week": "17",
             "playoffGame": {
+              "game_id": "6",
               "away": {
-                "franchise_id": "0010",
+                "points": "89.32",
                 "winner_of_game": "4",
-                "points": "100.2"
+                "franchise_id": "0015"
               },
               "home": {
-                "points": "70.23",
-                "franchise_id": "0016",
+                "franchise_id": "0012",
+                "points": "89.5",
                 "winner_of_game": "5"
-              },
-              "game_id": "6"
-            }
+              }
+            },
+            "week": "17"
           }
-        ]
-      }
-    },
-    "6": {
-      "encoding": "utf-8",
-      "playoffBracket": {
-        "playoffRound": {
-          "playoffGame": {
-            "home": {
-              "loser_of_game": "4",
-              "franchise_id": "0004",
-              "bracket": "5",
-              "points": "91.3"
-            },
-            "away": {
-              "loser_of_game": "5",
-              "points": "127.25",
-              "franchise_id": "0006",
-              "bracket": "5"
-            },
-            "game_id": "1"
-          },
-          "week": "17"
-        },
-        "bracket_id": "6"
+        ],
+        "bracket_id": "1"
       },
       "version": "1.0"
     },
-    "7": {
-      "version": "1.0",
+    "6": {
       "playoffBracket": {
-        "playoffRound": [
-          {
-            "week": "16",
-            "playoffGame": [
-              {
-                "away": {
-                  "points": "64.4",
-                  "franchise_id": "0008",
-                  "bracket": "5",
-                  "loser_of_game": "2"
-                },
-                "home": {
-                  "loser_of_game": "3",
-                  "bracket": "5",
-                  "franchise_id": "0011",
-                  "points": "100.94"
-                },
-                "game_id": "1"
-              },
-              {
-                "away": {
-                  "points": "95.62",
-                  "bracket": "5",
-                  "franchise_id": "0014",
-                  "loser_of_game": "1"
-                },
-                "home": {
-                  "points": "89.15",
-                  "franchise_id": "0009",
-                  "bracket": "3",
-                  "loser_of_game": "1"
-                },
-                "game_id": "2"
-              }
-            ]
-          },
-          {
-            "week": "17",
-            "playoffGame": {
-              "away": {
-                "franchise_id": "0011",
-                "winner_of_game": "1",
-                "points": "114.58"
-              },
-              "home": {
-                "points": "98.45",
-                "franchise_id": "0014",
-                "winner_of_game": "2"
-              },
-              "game_id": "3"
+        "bracket_id": "6",
+        "playoffRound": {
+          "week": "17",
+          "playoffGame": {
+            "away": {
+              "points": "127.25",
+              "bracket": "5",
+              "loser_of_game": "5",
+              "franchise_id": "0006"
+            },
+            "game_id": "1",
+            "home": {
+              "franchise_id": "0004",
+              "loser_of_game": "4",
+              "points": "91.3",
+              "bracket": "5"
             }
           }
-        ],
-        "bracket_id": "7"
+        }
       },
+      "version": "1.0",
       "encoding": "utf-8"
     }
   },
-  "lastFetched": "2025-12-28T05:10:29.506Z"
+  "lastFetched": "2026-01-03T20:16:48.015Z"
 }

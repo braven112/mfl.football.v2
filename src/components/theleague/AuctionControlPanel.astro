@@ -18,13 +18,15 @@ export interface Props {
   initialView?: string;
   positionCounts?: Record<string, number>;
   totalPlayers?: number;
+  totalTeams?: number;
 }
 
 const { 
   initialDynastyWeight = 60,
   initialView = 'players',
   positionCounts = {},
-  totalPlayers = 0
+  totalPlayers = 0,
+  totalTeams = 12
 } = Astro.props;
 
 // Calculate total players by position
@@ -56,64 +58,152 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     </div>
   </div>
 
+  <!-- Pricing Method Row -->
+  <div class="control-row pricing-method-control">
+    <label for="pricing-method-select" class="control-label">
+      <span class="label-text">Historical Pricing:</span>
+      <span class="label-hint">Choose which historical auction values to use for salary calculations</span>
+    </label>
+    <div class="pricing-method-container">
+      <select id="pricing-method-select" class="pricing-method-select">
+        <option value="max" selected>Highest Max (Peak market value)</option>
+        <option value="average">Average (Typical value)</option>
+        <option value="min">Lowest Max (Conservative value)</option>
+      </select>
+      <span class="pricing-hint" id="pricing-method-hint">
+        Using the highest auction price paid for each rank across 2020-2025
+      </span>
+    </div>
+  </div>
+
+  <!-- Price Curve (Predictions) Row -->
+  <div class="control-row pricing-curve-control">
+    <label for="price-curve-select" class="control-label">
+      <span class="label-text">Prediction Curve:</span>
+      <span class="label-hint">Choose which historical curve to apply to precomputed FA prices</span>
+    </label>
+    <div class="pricing-method-container">
+      <select id="price-curve-select" class="pricing-method-select">
+        <option value="max" selected>Max (bullish)</option>
+        <option value="avg">Average (balanced)</option>
+        <option value="min">Min (bearish)</option>
+      </select>
+      <span class="pricing-hint" id="price-curve-hint">
+        Applies to precomputed FA prices (rank-slot curves 2020-2024)
+      </span>
+    </div>
+  </div>
+
+  <!-- Scarcity Multiplier Toggle Row -->
+  <div class="control-row scarcity-toggle-control">
+    <label for="scarcity-toggle" class="control-label">
+      <span class="label-text">Market Scarcity Adjustments:</span>
+      <span class="label-hint">Auto-adjust pricing model by position depth (deep → min, moderate → avg, shallow → max)</span>
+    </label>
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          id="scarcity-toggle"
+          class="scarcity-toggle-input"
+        />
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-status" id="scarcity-status">
+        <strong>Off</strong> - Using selected pricing model for all positions
+      </span>
+    </div>
+  </div>
+
+  <!-- Show Contracted Players Toggle Row -->
+  <div class="control-row contracted-players-toggle-control">
+    <label for="contracted-toggle" class="control-label">
+      <span class="label-text">Show Contracted Players:</span>
+      <span class="label-hint">Display all rostered players with current salaries for comparison (greyed out)</span>
+    </label>
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          id="contracted-toggle"
+          class="contracted-toggle-input"
+        />
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-status" id="contracted-status">
+        <strong>Off</strong> - Showing free agents only
+      </span>
+    </div>
+  </div>
+
   <!-- Middle Row: View Tabs -->
   <div class="control-row view-tabs-control">
     <div class="view-tabs" role="tablist">
-      <button 
-        class="view-tab active" 
+      <button
+        class="view-tab active"
         data-view="players"
         role="tab"
         aria-selected="true"
         aria-controls="players-view"
       >
-        <span class="tab-icon">📊</span>
+        <svg class="tab-icon" width="18" height="18">
+          <use href="/assets/icons/sprite.svg#icon-bar-chart"></use>
+        </svg>
         <span class="tab-text">Players</span>
         <span class="tab-count">{totalPlayers}</span>
       </button>
-      
-      <button 
-        class="view-tab" 
+
+      <button
+        class="view-tab"
         data-view="tags"
         role="tab"
         aria-selected="false"
         aria-controls="tags-view"
       >
-        <span class="tab-icon">🏷️</span>
+        <svg class="tab-icon" width="18" height="18">
+          <use href="/assets/icons/sprite.svg#icon-clipboard"></use>
+        </svg>
         <span class="tab-text">Franchise Tags</span>
-        <span class="tab-count">16</span>
+        <span class="tab-count">{totalTeams}</span>
       </button>
-      
-      <button 
-        class="view-tab" 
+
+      <button
+        class="view-tab"
         data-view="teams"
         role="tab"
         aria-selected="false"
         aria-controls="teams-view"
       >
-        <span class="tab-icon">💰</span>
+        <svg class="tab-icon" width="18" height="18">
+          <use href="/assets/icons/sprite.svg#icon-money-bag"></use>
+        </svg>
         <span class="tab-text">Team Cap</span>
-        <span class="tab-count">16</span>
+        <span class="tab-count">{totalTeams}</span>
       </button>
-      
-      <button 
-        class="view-tab" 
+
+      <button
+        class="view-tab"
         data-view="market"
         role="tab"
         aria-selected="false"
         aria-controls="market-view"
       >
-        <span class="tab-icon">📈</span>
+        <svg class="tab-icon" width="18" height="18">
+          <use href="/assets/icons/sprite.svg#icon-line-chart"></use>
+        </svg>
         <span class="tab-text">Market</span>
       </button>
-      
-      <button 
-        class="view-tab" 
+
+      <button
+        class="view-tab"
         data-view="rankings"
         role="tab"
         aria-selected="false"
         aria-controls="rankings-view"
       >
-        <span class="tab-icon">⬆️</span>
+        <svg class="tab-icon" width="18" height="18">
+          <use href="/assets/icons/sprite.svg#icon-submit"></use>
+        </svg>
         <span class="tab-text">Import Rankings</span>
       </button>
     </div>
@@ -149,14 +239,16 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
         <option value="value">Best Value</option>
       </select>
       
-      <button 
-        id="sort-direction" 
+      <button
+        id="sort-direction"
         class="sort-direction-btn"
         data-direction="asc"
         aria-label="Toggle sort direction"
         title="Toggle ascending/descending"
       >
-        <span class="sort-icon">⬆️</span>
+        <svg class="sort-icon" width="16" height="16">
+          <use href="/assets/icons/sprite.svg#icon-sort-amount-asc"></use>
+        </svg>
       </button>
     </div>
 
@@ -214,6 +306,119 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
   .dynasty-weight-control {
     border-bottom: 1px solid #e0e0e0;
     padding-bottom: 1.5rem;
+  }
+
+  /* Pricing Method Control */
+  .pricing-method-control {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1.5rem;
+  }
+
+  .pricing-method-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .pricing-method-select {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    max-width: 400px;
+  }
+
+  .pricing-method-select:hover {
+    border-color: #3498db;
+  }
+
+  .pricing-method-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+
+  .pricing-hint {
+    font-size: 0.75rem;
+    color: #888;
+    font-style: italic;
+  }
+
+  /* Scarcity Toggle Control */
+  .scarcity-toggle-control {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1.5rem;
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 34px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle-slider {
+    background-color: #3498db;
+  }
+
+  input:focus + .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+  }
+
+  .toggle-status {
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+
+  .toggle-status strong {
+    color: #2c3e50;
+    font-weight: 600;
   }
 
   .control-label {
@@ -333,7 +538,8 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
   }
 
   .tab-icon {
-    font-size: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
   }
 
   .tab-count {
@@ -412,9 +618,13 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     border-color: #adb5bd;
   }
 
+  .sort-icon {
+    fill: currentColor;
+    transition: transform 0.2s;
+  }
+
   .sort-direction-btn[data-direction="desc"] .sort-icon {
     transform: rotate(180deg);
-    display: inline-block;
   }
 
   /* Search */
@@ -546,13 +756,19 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
   // Initialize control panel
   function initControlPanel() {
     const slider = document.getElementById('dynasty-weight-slider') as HTMLInputElement;
-    const output = document.getElementById('dynasty-weight-value') as HTMLOutputElement;
+    const output = document.getElementById('dynasty-weight-value') as HTMLElement;
+    const pricingMethodSelect = document.getElementById('pricing-method-select') as HTMLSelectElement;
+    const pricingHint = document.getElementById('pricing-method-hint') as HTMLElement;
+    const scarcityToggle = document.getElementById('scarcity-toggle') as HTMLInputElement;
+    const scarcityStatus = document.getElementById('scarcity-status') as HTMLElement;
+    const contractedToggle = document.getElementById('contracted-toggle') as HTMLInputElement;
+    const contractedStatus = document.getElementById('contracted-status') as HTMLElement;
     const viewTabs = document.querySelectorAll('.view-tab');
     const positionFilter = document.getElementById('position-filter') as HTMLSelectElement;
     const sortBy = document.getElementById('sort-by') as HTMLSelectElement;
-    const sortDirection = document.getElementById('sort-direction') as HTMLButtonElement;
+    const sortDirection = document.getElementById('sort-direction') as HTMLElement;
     const searchInput = document.getElementById('player-search') as HTMLInputElement;
-    const clearSearch = document.getElementById('clear-search') as HTMLButtonElement;
+    const clearSearch = document.getElementById('clear-search') as HTMLElement;
     const filtersControl = document.querySelector('.filters-control') as HTMLElement;
 
     // Dynasty weight slider handler
@@ -573,6 +789,72 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
       output.textContent = `${slider.value}%`;
     });
     slider.addEventListener('change', handleSliderChange);
+
+    // Pricing method handler
+    const pricingMethodHints: Record<string, string> = {
+      max: 'Using the highest auction price paid for each rank across 2020-2025',
+      average: 'Using the average auction price paid for each rank across 2020-2025',
+      min: 'Using the lowest "max" auction price paid for each rank across 2020-2025'
+    };
+
+    const handlePricingMethodChange = () => {
+      const method = pricingMethodSelect.value as 'max' | 'average' | 'min';
+      
+      // Update hint text
+      pricingHint.textContent = pricingMethodHints[method] || pricingMethodHints.max;
+      
+      window.dispatchEvent(new CustomEvent('auction:pricing-method-change', {
+        detail: { method }
+      }));
+      
+      localStorage.setItem('auctionPredictor.pricingMethod', method);
+    };
+
+    pricingMethodSelect.addEventListener('change', handlePricingMethodChange);
+
+    // Scarcity toggle handler
+    const handleScarcityToggle = () => {
+      const enabled = scarcityToggle.checked;
+
+      // Update status text
+      if (enabled) {
+        scarcityStatus.innerHTML = '<strong>On</strong> - Auto-selecting pricing model per position (deep → min, shallow → max)';
+      } else {
+        scarcityStatus.innerHTML = '<strong>Off</strong> - Using selected pricing model for all positions';
+      }
+
+      // Dispatch event
+      window.dispatchEvent(new CustomEvent('auction:scarcity-toggle', {
+        detail: { enabled }
+      }));
+
+      // Save to localStorage
+      localStorage.setItem('auctionPredictor.applyScarcity', enabled.toString());
+    };
+
+    scarcityToggle.addEventListener('change', handleScarcityToggle);
+
+    // Contracted players toggle handler
+    const handleContractedToggle = () => {
+      const enabled = contractedToggle.checked;
+
+      // Update status text
+      if (enabled) {
+        contractedStatus.innerHTML = '<strong>On</strong> - Showing free agents + contracted players (greyed)';
+      } else {
+        contractedStatus.innerHTML = '<strong>Off</strong> - Showing free agents only';
+      }
+
+      // Dispatch event
+      window.dispatchEvent(new CustomEvent('auction:contracted-toggle', {
+        detail: { enabled }
+      }));
+
+      // Save to localStorage
+      localStorage.setItem('auctionPredictor.showContracted', enabled.toString());
+    };
+
+    contractedToggle.addEventListener('change', handleContractedToggle);
 
     // View tab handlers
     viewTabs.forEach(tab => {
@@ -670,6 +952,28 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     if (savedWeight) {
       slider.value = savedWeight;
       output.textContent = `${savedWeight}%`;
+    }
+
+    const savedPricingMethod = localStorage.getItem('auctionPredictor.pricingMethod');
+    if (savedPricingMethod && ['max', 'average', 'min'].includes(savedPricingMethod)) {
+      pricingMethodSelect.value = savedPricingMethod;
+      pricingHint.textContent = pricingMethodHints[savedPricingMethod] || pricingMethodHints.max;
+    }
+
+    const savedScarcity = localStorage.getItem('auctionPredictor.applyScarcity');
+    if (savedScarcity === 'true') {
+      scarcityToggle.checked = true;
+      scarcityStatus.innerHTML = '<strong>On</strong> - Auto-selecting pricing model per position (deep → min, shallow → max)';
+    }
+
+    const savedContracted = localStorage.getItem('auctionPredictor.showContracted');
+    if (savedContracted === 'true') {
+      contractedToggle.checked = true;
+      contractedStatus.innerHTML = '<strong>On</strong> - Showing free agents + contracted players (greyed)';
+      // Dispatch initial event if toggle is already enabled
+      window.dispatchEvent(new CustomEvent('auction:contracted-toggle', {
+        detail: { enabled: true }
+      }));
     }
 
     const savedView = localStorage.getItem('auctionPredictor.currentView');

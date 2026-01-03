@@ -17,6 +17,8 @@
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import fs from 'fs';
+import path from 'path';
 import leagueAssets from '../../data/theleague.assets.json';
 
 // Import components
@@ -24,12 +26,15 @@ import AuctionControlPanel from '../../components/theleague/AuctionControlPanel.
 import AuctionPlayerTable from '../../components/theleague/AuctionPlayerTable.astro';
 import FranchiseTagPanel from '../../components/theleague/FranchiseTagPanel.astro';
 import TeamCapAnalysis from '../../components/theleague/TeamCapAnalysis.astro';
+import MarketAnalysisDashboard from '../../components/theleague/MarketAnalysisDashboard.astro';
+import BudgetPlannerPanel from '../../components/theleague/BudgetPlannerPanel.astro';
 
 // Import MFL data feeds
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
 import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
 import salaryAdjustmentsData from '../../../data/theleague/mfl-feeds/2025/salaryAdjustments.json';
 import leagueData from '../../../data/theleague/mfl-feeds/2025/league.json';
+import historicalCurves from '../../../data/theleague/historical-salary-curves.json';
 
 // Import utility functions
 import { detectChampionshipWindow, detectAllChampionshipWindows } from '../../utils/championship-window-detector';
@@ -42,7 +47,7 @@ import { getNFLTeamLogo } from '../../utils/nfl';
 
 // Import types
 import type { PlayerValuation, TeamCapSituation, FranchiseTagPrediction, MarketAnalysis, AuctionPriceFactors } from '../../types/auction-predictor';
-import type { ChampionshipWindow } from '../../utils/championship-window-detector';
+import type { ChampionshipWindowAnalysis } from '../../utils/championship-window-detector';
 import type { PositionalNeed } from '../../utils/draft-pick-cap-impact';
 
 // =============================================================================
@@ -54,14 +59,14 @@ const SALARY_CAP_2026 = SALARY_CAP_2025 * 1.10; // 10% annual increase
 const ESCALATION_RATE = 0.10;
 const MIN_ROSTER_SIZE = 20;
 
-// Franchise tag values by position (2026 projected)
+// Franchise tag values by position (based on 2025 top 3-5 averages from analysis)
 const FRANCHISE_TAG_VALUES: Record<string, number> = {
-  QB: 3_500_000,
-  RB: 2_800_000,
-  WR: 3_200_000,
-  TE: 2_500_000,
-  PK: 1_500_000,
-  DEF: 2_000_000,
+  QB: 9_830_000,    // Top 5 avg: Mahomes $13.5M, Allen $13.2M, Darnold/Murray $7.5M, Burrow $7.4M
+  RB: 8_610_000,    // Top 5 avg from analysis
+  WR: 8_614_000,    // Top 5 avg from analysis
+  TE: 6_518_000,    // Top 5 avg from analysis
+  PK: 732_000,      // Top 5 avg from analysis
+  DEF: 1_334_000,   // Top 5 avg from analysis
 };
 
 // Default auction price factors (can be adjusted by user)
@@ -73,6 +78,43 @@ const DEFAULT_PRICE_FACTORS: AuctionPriceFactors = {
   injuryRiskDiscount: 0.0,
   contractYearsPreference: 3, // Neutral preference
 };
+
+// Optional precomputed predictions (from scripts/predict-auction-fas.mjs)
+const predictionFiles = {
+  max: path.resolve(process.cwd(), 'data/theleague/derived/auction-price-predictions-max.json'),
+  avg: path.resolve(process.cwd(), 'data/theleague/derived/auction-price-predictions-avg.json'),
+  min: path.resolve(process.cwd(), 'data/theleague/derived/auction-price-predictions-min.json'),
+  legacy: path.resolve(process.cwd(), 'data/theleague/derived/auction-price-predictions.json'),
+};
+
+const pricePredictionsByCurve = new Map<string, Map<string, any>>();
+
+(['max', 'avg', 'min'] as const).forEach(curve => {
+  const file = predictionFiles[curve] || predictionFiles.legacy;
+  if (file && fs.existsSync(file)) {
+    try {
+      const predictions = JSON.parse(fs.readFileSync(file, 'utf8'));
+      pricePredictionsByCurve.set(curve, new Map(predictions.map((p: any) => [p.id, p])));
+      console.log(`🔮 Loaded ${predictions.length} price predictions (${curve}) from ${file}`);
+    } catch (err) {
+      console.warn(`⚠️ Failed to load ${curve} predictions:`, err);
+    }
+  }
+});
+
+// Fallback if only legacy exists
+if (!pricePredictionsByCurve.size && fs.existsSync(predictionFiles.legacy)) {
+  try {
+    const predictions = JSON.parse(fs.readFileSync(predictionFiles.legacy, 'utf8'));
+    pricePredictionsByCurve.set('max', new Map(predictions.map((p: any) => [p.id, p])));
+    console.log(`🔮 Loaded legacy predictions as max from ${predictionFiles.legacy}`);
+  } catch (err) {
+    console.warn('⚠️ Failed to load legacy price predictions:', err);
+  }
+}
+
+// Default map (used for initial serialization)
+const pricePredictionMap = pricePredictionsByCurve.get('max') || new Map();
 
 // =============================================================================
 // DATA PROCESSING - STEP 1: Parse MFL Data
@@ -86,6 +128,8 @@ const rosters = rostersData?.rosters?.franchise || [];
 const players = playersData?.players?.player || [];
 const salaryAdjustments = salaryAdjustmentsData?.salaryAdjustments?.salaryAdjustment || [];
 const franchises = leagueData?.league?.franchises?.franchise || [];
+
+console.log('🏈 Total franchises:', franchises.length);
 
 // Create player lookup map
 const playerMap = new Map(
@@ -156,14 +200,25 @@ rosters.forEach((franchise: any) => {
     const contractInfo = p.contractInfo || '';
     
     // Extract total contract years from contractInfo
-    // Format examples: "R1", "R2", "F" (franchise tag), "1", "2", "3", "4", "5"
+    // Format examples: "R1", "R2", "R3", "R4" (rookie deals), "F" (franchise tag), "1", "2", "3", "4", "5"
     let contractYears = 1;
     if (contractInfo.startsWith('R')) {
+      // Rookie deal: R1, R2, R3, R4
       contractYears = parseInt(contractInfo.substring(1)) || 1;
     } else if (contractInfo === 'F') {
-      contractYears = 1; // Franchise tag is 1 year
-    } else {
+      // Franchise tag is always 1 year
+      contractYears = 1;
+    } else if (contractInfo) {
+      // Regular contract: "1", "2", "3", "4", "5"
       contractYears = parseInt(contractInfo) || 1;
+    } else {
+      // EMPTY contractInfo - MFL sometimes doesn't populate this field
+      // If contractYear is 4, they must have AT LEAST a 4-year deal
+      // Assume it's the same as contractYear (conservative estimate - they're in their final year)
+      // This prevents false positives for expiring contracts
+      contractYears = contractYear;
+      
+      console.warn(`⚠️ Empty contractInfo for player ${p.id}, using contractYear (${contractYear}) as fallback`);
     }
     
     playerList.push({
@@ -190,16 +245,44 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
   const expiringContracts: RosterPlayer[] = [];
   let committedSalaries2026 = 0;
   
+  // Debug logging for ALL teams to find Keon Coleman
+  const playerName = formatPlayerName(roster[0]?.playerData?.name);
+  if (franchiseId === '0001' || playerName?.includes('Coleman')) {
+    console.log(`\n🔍 Debugging contract calculations for ${teamName}:`);
+    roster.slice(0, 10).forEach(p => {
+      const name = formatPlayerName(p.playerData?.name);
+      // MFL's contractYear appears to be YEARS REMAINING, not year IN contract
+      const yearsLeft = p.contractYear;
+      console.log(`  ${name}: contractYear=${p.contractYear} (years remaining), contractYears=${p.contractYears}, contractInfo="${p.contractInfo}" → ${yearsLeft} years left → ${yearsLeft > 1 ? 'STAYS' : 'EXPIRES'}`);
+      
+      // Special attention to Keon Coleman
+      if (name?.includes('Coleman')) {
+        console.log(`    ⚠️ KEON COLEMAN FOUND! Raw data:`, {
+          contractYear: p.contractYear,
+          contractYears: p.contractYears,
+          contractInfo: p.contractInfo,
+          yearsLeft: yearsLeft
+        });
+      }
+    });
+  }
+  
   roster.forEach(p => {
-    const yearsRemaining = p.contractYears - p.contractYear;
+    // MFL's contractYear field appears to be YEARS REMAINING (counting down from contract length)
+    // - contractYear=4 means 4 years left on contract
+    // - contractYear=1 means 1 year left (expires after this season)
+    // Since we're calculating for 2026 and current year is 2025:
+    // - If contractYear > 1, player will be under contract in 2026
+    // - If contractYear = 1, player expires after 2025 season
+    const yearsRemainingAfter2025 = p.contractYear - 1;
     
-    if (yearsRemaining > 0) {
+    if (yearsRemainingAfter2025 > 0) {
       // Player still under contract in 2026
       // Apply 10% escalation to current salary
       const escalatedSalary = calculateEscalatedSalary(p.salary, 1); // 1 year forward
       committedSalaries2026 += escalatedSalary;
     } else {
-      // Contract expires after 2025
+      // Contract expires after 2025 season (before 2026)
       expiringContracts.push(p);
     }
   });
@@ -246,7 +329,7 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
     availableAfterTag: projectedCapSpace2026,
     estimatedMinimumRosterSpend,
     discretionarySpending,
-    positionalNeeds: {}, // Will be filled by analyzePositionalNeeds
+    positionalNeeds: [], // Will be filled by analyzePositionalNeeds
   } as TeamCapSituation;
 });
 
@@ -254,30 +337,157 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
 // DATA PROCESSING - STEP 3: Championship Window Detection
 // =============================================================================
 
-// TODO: This requires composite rankings - for now use placeholder
-const championshipWindows = new Map<string, ChampionshipWindow>();
+// Detect championship windows for all teams using current roster data
+const championshipWindows = new Map<string, ChampionshipWindowAnalysis>();
+
 franchises.forEach((franchise: any) => {
   const franchiseId = franchise.id;
+  const roster = teamRosters.get(franchiseId) || [];
+  const capSituation = teamCapSituations.find(t => t.franchiseId === franchiseId);
   
-  // Placeholder championship window (neutral)
+  if (!capSituation) return;
+  
+  // Calculate component scores WITHOUT rankings (salary-based analysis)
+  
+  // 1. ROSTER STRENGTH SCORE (based on total salary commitments)
+  const totalSalaryCommitted = roster
+    .filter(p => p.status === 'ROSTER')
+    .reduce((sum, p) => sum + p.salary, 0);
+  
+  const avgSalaryPerPlayer = roster.length > 0 ? totalSalaryCommitted / roster.length : 0;
+  
+  // Score based on committed salary (higher = stronger roster)
+  // $30M+ = elite (85-100)
+  // $25-30M = strong (70-84)
+  // $20-25M = average (55-69)
+  // $15-20M = below avg (40-54)
+  // < $15M = weak (0-39)
+  let rosterStrengthScore = 50;
+  const salaryInMillions = totalSalaryCommitted / 1_000_000;
+  
+  if (totalSalaryCommitted >= 30_000_000) {
+    rosterStrengthScore = 85 + Math.min(15, (salaryInMillions - 30) / 2);
+  } else if (totalSalaryCommitted >= 25_000_000) {
+    rosterStrengthScore = 70 + (salaryInMillions - 25) * 3;
+  } else if (totalSalaryCommitted >= 20_000_000) {
+    rosterStrengthScore = 55 + (salaryInMillions - 20) * 3;
+  } else if (totalSalaryCommitted >= 15_000_000) {
+    rosterStrengthScore = 40 + (salaryInMillions - 15) * 3;
+  } else {
+    rosterStrengthScore = Math.max(0, salaryInMillions * 2.67);
+  }
+  
+  // 2. DRAFT CAPITAL SCORE (placeholder - would need draft pick data)
+  const draftCapitalScore = 50; // Neutral for now
+  
+  // 3. CAP FLEXIBILITY SCORE
+  const capSpace = capSituation.projectedCapSpace2026;
+  const capPercentage = (capSpace / SALARY_CAP_2026) * 100;
+  
+  let capFlexibilityScore = 50;
+  if (capPercentage >= 40) {
+    capFlexibilityScore = 90 + Math.min(10, (capPercentage - 40) / 2);
+  } else if (capPercentage >= 30) {
+    capFlexibilityScore = 75 + (capPercentage - 30) * 1.5;
+  } else if (capPercentage >= 20) {
+    capFlexibilityScore = 55 + (capPercentage - 20) * 2;
+  } else if (capPercentage >= 10) {
+    capFlexibilityScore = 35 + (capPercentage - 10) * 2;
+  } else if (capPercentage >= 0) {
+    capFlexibilityScore = 15 + capPercentage * 2;
+  } else {
+    capFlexibilityScore = Math.max(0, 15 + capPercentage);
+  }
+  
+  // 4. AGE CURVE SCORE (based on expiring contracts - older = more expiring)
+  const expiringCount = capSituation.expiringContracts.length;
+  const totalRosterSize = roster.filter(p => p.status === 'ROSTER').length;
+  const expiringPercentage = totalRosterSize > 0 ? (expiringCount / totalRosterSize) * 100 : 0;
+  
+  // High expiring % = aging roster = lower score
+  // Low expiring % = locked in young roster = higher score
+  let ageCurveScore = 50;
+  if (expiringPercentage <= 20) {
+    ageCurveScore = 75 + (20 - expiringPercentage);
+  } else if (expiringPercentage <= 40) {
+    ageCurveScore = 50 + (40 - expiringPercentage) * 1.25;
+  } else if (expiringPercentage <= 60) {
+    ageCurveScore = 30 + (60 - expiringPercentage);
+  } else {
+    ageCurveScore = Math.max(0, 30 - (expiringPercentage - 60) * 0.5);
+  }
+  
+  // Calculate overall score (weighted average)
+  const overallScore = Math.round(
+    rosterStrengthScore * 0.45 +
+    draftCapitalScore * 0.20 +
+    capFlexibilityScore * 0.20 +
+    ageCurveScore * 0.15
+  );
+  
+  // Determine window classification
+  let window: 'contending' | 'neutral' | 'rebuilding' = 'neutral';
+  if (overallScore >= 70) {
+    window = 'contending';
+  } else if (overallScore < 40) {
+    window = 'rebuilding';
+  }
+  
+  // Build reasoning array
+  const reasoning: string[] = [];
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  
+  // Roster strength analysis
+  if (rosterStrengthScore >= 75) {
+    strengths.push(`Strong roster investment ($${salaryInMillions.toFixed(1)}M committed)`);
+    reasoning.push(`High salary commitments indicate competitive roster`);
+  } else if (rosterStrengthScore < 45) {
+    weaknesses.push(`Limited roster investment ($${salaryInMillions.toFixed(1)}M committed)`);
+    reasoning.push(`Low salary commitments suggest rebuilding phase`);
+  }
+  
+  // Cap flexibility analysis
+  if (capFlexibilityScore >= 75) {
+    strengths.push(`Excellent cap space ($${(capSpace / 1_000_000).toFixed(1)}M available)`);
+    reasoning.push(`Strong cap flexibility allows aggressive moves`);
+  } else if (capFlexibilityScore < 45) {
+    weaknesses.push(`Limited cap space ($${(capSpace / 1_000_000).toFixed(1)}M available)`);
+    reasoning.push(`Tight cap situation limits acquisition options`);
+  }
+  
+  // Age/contract analysis
+  if (ageCurveScore >= 70) {
+    strengths.push(`Young roster with locked-in contracts (${expiringCount} expiring)`);
+    reasoning.push(`Few expiring contracts indicate stable, locked-in core`);
+  } else if (ageCurveScore < 40) {
+    weaknesses.push(`High roster turnover (${expiringCount} expiring contracts)`);
+    reasoning.push(`Many expiring contracts suggest aging roster`);
+  }
+  
+  // Add window-specific reasoning
+  if (window === 'contending') {
+    reasoning.push(`Team should be aggressive in acquiring talent`);
+  } else if (window === 'rebuilding') {
+    reasoning.push(`Focus on draft picks and youth over expensive veterans`);
+  } else {
+    reasoning.push(`Team in transition - balanced approach recommended`);
+  }
+  
   championshipWindows.set(franchiseId, {
     franchiseId,
     teamName: franchise.name,
-    window: 'neutral',
-    overallScore: 55,
-    factorScores: {
-      rosterStrength: 50,
-      draftCapital: 60,
-      capFlexibility: 55,
-      ageCurve: 50,
-    },
-    confidence: 0.5,
-    reasoning: [
-      'Championship window analysis requires player rankings to be imported',
-    ],
-    strengths: [],
-    weaknesses: [],
-    isOverride: false,
+    window,
+    score: overallScore,
+    confidence: 0.65, // Medium confidence without rankings
+    rosterStrengthScore: Math.round(rosterStrengthScore),
+    draftCapitalScore,
+    capFlexibilityScore: Math.round(capFlexibilityScore),
+    ageCurveScore: Math.round(ageCurveScore),
+    reasoning,
+    strengths,
+    weaknesses,
+    isManualOverride: false,
   });
 });
 
@@ -312,16 +522,12 @@ franchises.forEach((franchise: any) => {
   // Update team cap situation with positional needs
   const teamCap = teamCapSituations.find(t => t.franchiseId === franchiseId);
   if (teamCap) {
-    teamCap.positionalNeeds = needs.reduce((acc, need) => {
-      acc[need.position] = {
-        position: need.position,
-        priority: need.priority,
-        currentDepth: need.current,
-        idealDepth: need.target,
-        gap: need.gap,
-      };
-      return acc;
-    }, {} as any);
+    teamCap.positionalNeeds = needs.map(need => ({
+      position: need.position,
+      priority: need.priority,
+      currentDepth: need.currentStarters,
+      targetAcquisitions: need.gap,
+    }));
   }
 });
 
@@ -343,11 +549,67 @@ teamRosters.forEach(roster => {
 // Get all expiring contracts as available players
 const availablePlayers: PlayerValuation[] = [];
 teamCapSituations.forEach(team => {
+  const defaultPredictionMap = pricePredictionsByCurve.get('max') || new Map();
   team.expiringContracts.forEach(player => {
+    const prediction = defaultPredictionMap.get(player.id);
+    const predictedPrice = prediction?.finalPrice;
+    const priceMeta = prediction
+      ? {
+          slot: prediction.slot,
+          basePrice: prediction.basePrice,
+          scarcityMult: prediction.scarcityMult,
+          samples: prediction.samples,
+          source: 'precomputed',
+        }
+      : undefined;
+
     availablePlayers.push({
       ...player,
-      estimatedAuctionPrice: player.currentSalary, // Placeholder: use current salary
+      estimatedAuctionPrice: predictedPrice || player.currentSalary, // Use precomputed price if available
+      pricePrediction: priceMeta,
+      contracted: false, // Mark as free agent
     });
+  });
+});
+
+// Also collect contracted players for comparison view
+// IMPORTANT: Only include players with 2+ years remaining
+// Players with 1 year remaining are already in availablePlayers (expiring contracts)
+// Including them here would create duplicates
+const allContractedPlayers: PlayerValuation[] = [];
+
+teamRosters.forEach(roster => {
+  roster.forEach(p => {
+    if (p.status === 'ROSTER') {
+      const playerData = p.playerData;
+      if (playerData) {
+        // Skip 1-year contracts - they're already in free agents list
+        if (p.contractYear == 1 || p.contractYear === '1') {
+          return; // Skip this player, continue to next
+        }
+
+        // Calculate age from draft year (same logic as expiring contracts)
+        const draftYear = playerData.draft_year ? parseInt(playerData.draft_year) : null;
+        const age = draftYear ? (2026 - draftYear + 22) : null;
+
+        const contractedPlayer = {
+          id: p.id,
+          name: formatPlayerName(playerData.name),
+          position: playerData.position || 'UNK',
+          team: playerData.team || '',
+          age: age,
+          currentSalary: p.salary,
+          estimatedAuctionPrice: p.salary, // Show actual salary for contracted players
+          contracted: true, // Mark as contracted/rostered
+          contractYear: p.contractYear,
+          contractYears: p.contractYears,
+          contractInfo: p.contractInfo,
+        };
+
+        // Only add players with 2+ years remaining
+        allContractedPlayers.push(contractedPlayer);
+      }
+    }
   });
 });
 
@@ -397,13 +659,28 @@ teamCapSituations.forEach(team => {
   }
 });
 
-// Remove tagged players from available pool
-const taggedPlayerIds = new Set(
-  franchiseTagPredictions
-    .map(t => t.taggedPlayer?.id)
-    .filter(Boolean)
-);
-const untaggedAvailablePlayers = availablePlayers.filter(p => !taggedPlayerIds.has(p.id));
+// Calculate franchise tag likelihood for each player
+// Players likely to be tagged stay in auction pool but with adjusted probabilities
+const playerFranchiseTagLikelihood = new Map<string, number>();
+
+franchiseTagPredictions.forEach(prediction => {
+  if (prediction.taggedPlayer) {
+    // Top candidate gets 80% likelihood of being tagged
+    playerFranchiseTagLikelihood.set(prediction.taggedPlayer.id, 0.80);
+  }
+  
+  // Secondary candidates get lower likelihoods
+  prediction.tagCandidates?.slice(1, 3).forEach((candidate, index) => {
+    if (candidate.player?.id) {
+      // 2nd candidate: 30%, 3rd candidate: 10%
+      const likelihood = index === 0 ? 0.30 : 0.10;
+      playerFranchiseTagLikelihood.set(candidate.player.id, likelihood);
+    }
+  });
+});
+
+// Keep all players in auction pool (don't filter out tagged players)
+const untaggedAvailablePlayers = availablePlayers;
 
 // =============================================================================
 // DATA PROCESSING - STEP 7: Market Analysis
@@ -421,11 +698,12 @@ const marketSummary = getMarketSummary(marketAnalysis);
 // DATA PROCESSING - STEP 8: Calculate Auction Prices
 // =============================================================================
 
-// Calculate prices for all available players (default 60% dynasty weight)
+// Calculate prices for all available players (default 60% dynasty weight, 'max' pricing model)
 const playerPrices = calculateAllPlayerPrices(
   untaggedAvailablePlayers,
   marketAnalysis,
-  60 // Default dynasty weight (will be adjustable in UI)
+  60, // Default dynasty weight (will be adjustable in UI)
+  'max' // Default pricing model: highest historical values (will be adjustable in UI)
 );
 
 // =============================================================================
@@ -446,14 +724,18 @@ const positionCounts: Record<string, number> = {
 interface InitialData {
   players: PlayerValuation[];
   allMFLPlayers: typeof allMFLPlayers; // All MFL players with formatted names for rankings import
+  allContractedPlayers: PlayerValuation[]; // Contracted players with 2+ years (excludes 1-year to prevent duplicates)
   teams: TeamCapSituation[];
   teamCapSituations: TeamCapSituation[];
   franchiseTags: FranchiseTagPrediction[];
+  franchiseTagLikelihoods: Array<[string, number]>;
   market: MarketAnalysis;
   marketSummary: typeof marketSummary;
-  championshipWindows: Array<ChampionshipWindow>;
+  championshipWindows: Array<ChampionshipWindowAnalysis>;
   factors: AuctionPriceFactors;
   playerPrices: Array<[string, any]>; // Array of [playerId, { factors, contracts }] entries for JSON serialization
+  pricePredictions: Array<[string, any]>; // Precomputed price predictions map entries
+  pricePredictionsByCurve: Array<[string, Array<[string, any]>]>; // curve -> entries
   constants: {
     salaryCap2026: number;
     escalationRate: number;
@@ -464,14 +746,20 @@ interface InitialData {
 const initialData: InitialData = {
   players: untaggedAvailablePlayers,
   allMFLPlayers, // Add all players for rankings matching
+  allContractedPlayers, // Contracted players with 2+ years (excludes 1-year to prevent duplicates)
   teams: teamCapSituations,
   teamCapSituations: teamCapSituations, // Also add as teamCapSituations for clarity
   franchiseTags: franchiseTagPredictions,
+  franchiseTagLikelihoods: Array.from(playerFranchiseTagLikelihood.entries()), // [playerId, likelihood]
   market: marketAnalysis,
   marketSummary,
   championshipWindows: Array.from(championshipWindows.values()),
   factors: DEFAULT_PRICE_FACTORS,
   playerPrices: Array.from(playerPrices.entries()), // Convert Map to array for JSON serialization
+  pricePredictions: Array.from(pricePredictionMap.entries()),
+  pricePredictionsByCurve: Array.from(pricePredictionsByCurve.entries()).map(
+    ([curve, map]) => [curve, Array.from(map.entries())]
+  ),
   constants: {
     salaryCap2026: SALARY_CAP_2026,
     escalationRate: ESCALATION_RATE,
@@ -510,6 +798,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         initialView="players"
         positionCounts={positionCounts}
         totalPlayers={untaggedAvailablePlayers.length}
+        totalTeams={franchises.length}
       />
 
       <!-- Player Table View (Default) -->
@@ -529,38 +818,12 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
       <!-- Market Analysis View -->
       <div class="view-content hidden" data-view="market">
-        <div class="market-analysis-container">
-          <h2>Market Overview</h2>
-          <div class="market-stats">
-            <div class="stat-card">
-              <h3>Total Available Cap</h3>
-              <p class="stat-value">{marketSummary.totalCapAvailable}</p>
-            </div>
-            <div class="stat-card">
-              <h3>Total Players</h3>
-              <p class="stat-value">{marketSummary.totalPlayers}</p>
-            </div>
-            <div class="stat-card">
-              <h3>Avg Price/Player</h3>
-              <p class="stat-value">{marketSummary.avgPricePerPlayer}</p>
-            </div>
-            <div class="stat-card">
-              <h3>Market Type</h3>
-              <p class="stat-value">{marketSummary.marketType}</p>
-            </div>
-          </div>
-          
-          <div class="market-positions">
-            <h3>Positional Scarcity</h3>
-            <p>Scarcest: <strong>{marketSummary.scarcestPosition}</strong></p>
-            <p>Most Available: <strong>{marketSummary.oversuppliedPosition}</strong></p>
-          </div>
-          
-          <div class="market-opportunities">
-            <h3>Value Opportunities: {marketSummary.topOpportunities}</h3>
-            <h3>Overvalued Risks: {marketSummary.topRisks}</h3>
-          </div>
-        </div>
+        <MarketAnalysisDashboard />
+      </div>
+
+      <!-- Budget Planner View -->
+      <div class="view-content hidden" data-view="budget">
+        <BudgetPlannerPanel />
       </div>
 
       <!-- Rankings Import View -->
@@ -717,6 +980,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
   <!-- Client-Side State Management & Interactivity -->
   <script>
+    // Import historical salary curves for pricing
+    import historicalCurves from '../../../data/theleague/historical-salary-curves.json';
+    
     // =============================================================================
     // STATE MANAGEMENT
     // =============================================================================
@@ -732,13 +998,17 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       // Data
       players: any[];
       allMFLPlayers: any[]; // All MFL players with formatted names for rankings matching
+      allContractedPlayers: any[]; // Contracted players with 2+ years remaining (excludes 1-year to prevent duplicates)
       teams: any[];
       franchiseTags: any[];
+      franchiseTagLikelihoods: Map<string, number>; // Player ID -> likelihood (0-1) of being tagged
       teamCapSituations: any[];
       market: any;
       marketSummary: any;
       championshipWindows: any[];
-      playerPrices: Map<string, any>; // Player ID -> { factors, contracts }
+    playerPrices: Map<string, any>; // Player ID -> { factors, contracts }
+    pricePredictions: Map<string, any>; // Player ID -> precomputed price payload
+    pricePredictionsByCurve: Map<string, Map<string, any>>; // curve -> (playerId -> payload)
       
       // Rankings - Independent sources
       rankings: {
@@ -751,11 +1021,27 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       // User Preferences
       preferences: {
         dynastyWeight: number; // 0-100
-        currentView: 'players' | 'tags' | 'teams' | 'market' | 'rankings';
+        pricingMethod: 'max' | 'average' | 'min'; // Which historical value to use
+        priceCurve: 'max' | 'avg' | 'min'; // Which precomputed curve to use for FA predictions
+        applyScarcity: boolean; // Apply scarcity multipliers (0.7x to 1.4x)
+        showContractedPlayers: boolean; // Show all rostered players with current salaries (excludes 1-year to prevent duplicates)
+        currentView: 'players' | 'tags' | 'teams' | 'market' | 'rankings' | 'budget';
         positionFilter: string | null;
         searchQuery: string;
         sortBy: string;
         sortDesc: boolean;
+      };
+      
+      // Budget Planner
+      budget: {
+        targetPlayers: Map<string, {
+          priority: 'must-have' | 'strong-target' | 'nice-to-have' | 'backup';
+          maxBid: number;
+          notes: string;
+          addedDate: number;
+        }>;
+        myTeamId: string | null; // User's team ID for cap calculation
+        availableCap: number;
       };
       
       // Overrides
@@ -780,6 +1066,10 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       const savedPreferences = localStorage.getItem('auctionPredictor.preferences');
       const defaultPreferences = {
         dynastyWeight: 60,
+        pricingMethod: 'max' as const,
+        priceCurve: 'max' as const,
+        applyScarcity: false,
+        showContractedPlayers: false,
         currentView: 'players' as const,
         positionFilter: null,
         searchQuery: '',
@@ -795,6 +1085,10 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       const savedTagOverrides = localStorage.getItem('auctionPredictor.tagOverrides');
       const savedWindowOverrides = localStorage.getItem('auctionPredictor.windowOverrides');
       
+      // Load budget data from localStorage
+      const savedTargetPlayers = localStorage.getItem('auctionPredictor.targetPlayers');
+      const savedMyTeamId = localStorage.getItem('auctionPredictor.myTeamId');
+      
       // Load rankings from localStorage
       const loadRankings = (key: string): RankingData | null => {
         try {
@@ -806,16 +1100,30 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         }
       };
       
+      // Calculate available cap for user's team (default to first team if not set)
+      const myTeamId = savedMyTeamId || (data.teamCapSituations?.[0]?.team?.id || null);
+      const myTeam = data.teamCapSituations?.find((t: any) => t.team?.id === myTeamId);
+      const availableCap = myTeam?.availableCapSpace || 0;
+      
       return {
         players: data.players || [],
         allMFLPlayers: data.allMFLPlayers || [], // Add all MFL players for rankings matching
+        allContractedPlayers: data.allContractedPlayers || [], // Contracted players with 2+ years (excludes 1-year to prevent duplicates)
         teams: data.teams || [],
         franchiseTags: data.franchiseTags || [],
+        franchiseTagLikelihoods: new Map(data.franchiseTagLikelihoods || []), // Convert array back to Map
         teamCapSituations: data.teamCapSituations || [],
         market: data.market || {},
         marketSummary: data.marketSummary || {},
         championshipWindows: data.championshipWindows || [],
         playerPrices: new Map(data.playerPrices || []), // Convert array back to Map
+        pricePredictions: new Map(data.pricePredictions || []),
+        pricePredictionsByCurve: new Map(
+          (data.pricePredictionsByCurve || []).map(([curve, entries]: [string, Array<[string, any]>]) => [
+            curve,
+            new Map(entries || []),
+          ])
+        ),
         rankings: {
           footballguys: loadRankings('auctionPredictor.footballguysRankings'),
           dlf: loadRankings('auctionPredictor.dlfRankings'),
@@ -823,6 +1131,13 @@ const pageDescription = 'Analyze available players and predict auction prices fo
           redraft: loadRankings('auctionPredictor.redraftRankings'), // Legacy
         },
         preferences,
+        budget: {
+          targetPlayers: savedTargetPlayers 
+            ? new Map(JSON.parse(savedTargetPlayers))
+            : new Map(),
+          myTeamId,
+          availableCap,
+        },
         overrides: {
           franchiseTagOverrides: savedTagOverrides 
             ? new Map(JSON.parse(savedTagOverrides))
@@ -947,17 +1262,296 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         // Save to localStorage
         savePreferences();
         
+        console.log('');
+        console.log('=' .repeat(60));
+        console.log(`🎚️ Dynasty Weight Changed: ${weight}%`);
+        console.log('=' .repeat(60));
+        
+        // Test with Aaron Rodgers
+        const aaronId = '13674';
+        const dlfRank = getPlayerRank(aaronId, 'dlf');
+        const fbRank = getPlayerRank(aaronId, 'footballguys');
+        const composite = getCompositeRank(aaronId);
+        console.log(`Aaron Rodgers (${aaronId}):`);
+        console.log(`  DLF Dynasty Rank: ${dlfRank || 'Not found'}`);
+        console.log(`  FootballGuys Redraft Rank: ${fbRank || 'Not found'}`);
+        console.log(`  Composite Rank (${weight}% dynasty): ${composite || 'Not found'}`);
+        console.log('=' .repeat(60));
+        
         // Emit event for UI updates
         eventBus.emit('dynastyWeightChanged', weight);
         
-        // TODO: Recalculate prices with new weight
-        console.log('Dynasty weight updated:', weight);
+        // Recalculate prices with new weight
+        console.log('Recalculating prices...');
+        recalculatePlayerPrices();
+        renderPlayerTable();
         
         // Performance tracking
         performance.mark('dynastyWeightUpdate');
       } catch (error) {
         handleError('Failed to update dynasty weight', error);
       }
+    };
+
+    /**
+     * Update pricing method (max/average/min) and recalculate prices
+     */
+    const updatePricingMethod = (method: 'max' | 'average' | 'min') => {
+      try {
+        state.preferences.pricingMethod = method;
+        state.ui.lastUpdate = Date.now();
+
+        // Save to localStorage
+        savePreferences();
+
+        console.log('');
+        console.log('=' .repeat(60));
+        console.log(`💰 Pricing Method Changed: ${method.toUpperCase()}`);
+        console.log('=' .repeat(60));
+
+        // Emit event for UI updates
+        eventBus.emit('pricingMethodChanged', method);
+
+        // Recalculate prices with new method
+        console.log('Recalculating prices...');
+        recalculatePlayerPrices();
+        renderPlayerTable();
+
+        // Performance tracking
+        performance.mark('pricingMethodUpdate');
+      } catch (error) {
+        handleError('Failed to update pricing method', error);
+      }
+    };
+
+    /**
+     * Apply selected price curve predictions to free agents
+     */
+    const applyPriceCurveToPlayers = () => {
+      const curve = state.preferences.priceCurve;
+      const curveMap = state.pricePredictionsByCurve.get(curve) || state.pricePredictions;
+      if (!curveMap || !(curveMap instanceof Map)) return;
+
+      // Build slot→price lookup per position from selected curve
+      const slotPriceByPos: Record<string, Record<number, any>> = {};
+      curveMap.forEach((pred: any) => {
+        if (!pred?.position) return;
+        if (!slotPriceByPos[pred.position]) slotPriceByPos[pred.position] = {};
+        slotPriceByPos[pred.position][pred.slot] = pred;
+      });
+
+      // Sort players by composite rank within position to assign slots dynamically
+      const playersByPos: Record<string, any[]> = {};
+      state.players.forEach(p => {
+        if (!playersByPos[p.position]) playersByPos[p.position] = [];
+        playersByPos[p.position].push(p);
+      });
+      Object.keys(playersByPos).forEach(pos => {
+        playersByPos[pos].sort((a, b) => {
+          const ra = a.compositeRank ?? 9999;
+          const rb = b.compositeRank ?? 9999;
+          if (ra !== rb) return ra - rb;
+          return (b.currentSalary || 0) - (a.currentSalary || 0);
+        });
+      });
+
+      // Update player list and playerPrices map based on dynamic slots
+      state.players = state.players.map(player => {
+        const list = playersByPos[player.position] || [];
+        const rankSlot = list.findIndex(p => p.id === player.id) + 1;
+        const slotEntry =
+          slotPriceByPos[player.position]?.[rankSlot] ||
+          slotPriceByPos[player.position]?.[Math.max(1, Math.min(rankSlot, Object.keys(slotPriceByPos[player.position] || {}).length))];
+
+        if (slotEntry) {
+          state.playerPrices.set(player.id, {
+            contracts: {
+              oneYear: slotEntry.finalPrice,
+            },
+            factors: {
+              basePrice: slotEntry.basePrice,
+              scarcityMultiplier: slotEntry.scarcityMult,
+              curve,
+              slot: rankSlot,
+            },
+          });
+
+          return {
+            ...player,
+            estimatedAuctionPrice: slotEntry.finalPrice,
+            pricePrediction: {
+              slot: rankSlot,
+              basePrice: slotEntry.basePrice,
+              scarcityMult: slotEntry.scarcityMult,
+              samples: slotEntry.samples,
+              curve,
+            },
+          };
+        }
+        return player;
+      });
+    };
+
+    /**
+     * Update price curve (max/avg/min) from precomputed predictions
+     */
+    const updatePriceCurve = (curve: 'max' | 'avg' | 'min') => {
+      try {
+        state.preferences.priceCurve = curve;
+        savePreferences();
+        applyPriceCurveToPlayers();
+        renderPlayerTable();
+        renderMarketAnalysis();
+        eventBus.emit('priceCurveChanged', curve);
+        console.log(`🧮 Price curve set to ${curve}`);
+      } catch (error) {
+        handleError('Failed to update price curve', error);
+      }
+    };
+
+    /**
+     * Toggle scarcity multipliers and recalculate prices
+     */
+    const updateScarcityToggle = (enabled: boolean) => {
+      try {
+        state.preferences.applyScarcity = enabled;
+        state.ui.lastUpdate = Date.now();
+
+        // Save to localStorage
+        savePreferences();
+
+        console.log('');
+        console.log('=' .repeat(60));
+        console.log(`📊 Scarcity Multipliers: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+        console.log('=' .repeat(60));
+
+        // Emit event for UI updates
+        eventBus.emit('scarcityToggled', enabled);
+
+        // Recalculate prices with scarcity multipliers
+        console.log('Recalculating prices...');
+        recalculatePlayerPrices();
+        renderPlayerTable();
+
+        // Performance tracking
+        performance.mark('scarcityToggleUpdate');
+      } catch (error) {
+        handleError('Failed to toggle scarcity', error);
+      }
+    };
+
+    /**
+     * Toggle showing contracted players and re-render table
+     */
+    const updateContractedPlayersToggle = (enabled: boolean) => {
+      try {
+        state.preferences.showContractedPlayers = enabled;
+        state.ui.lastUpdate = Date.now();
+
+        // Save to localStorage
+        savePreferences();
+
+        console.log('');
+        console.log('=' .repeat(60));
+        console.log(`👥 Show Contracted Players: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+        console.log('=' .repeat(60));
+
+        // Emit event for UI updates
+        eventBus.emit('contractedPlayersToggled', enabled);
+
+        // Update position counts in dropdown
+        updatePositionCounts();
+
+        // Re-render table with or without contracted players
+        console.log('Re-rendering player table...');
+        renderPlayerTable();
+
+        // Performance tracking
+        performance.mark('contractedPlayersToggleUpdate');
+      } catch (error) {
+        handleError('Failed to toggle contracted players', error);
+      }
+    };
+
+    const updateOneYearToggle = (enabled: boolean) => {
+      try {
+        // Toggle removed - 1-year contracts are now always excluded from contracted list to prevent duplicates
+        console.warn('updateOneYearToggle called but toggle has been removed');
+        state.ui.lastUpdate = Date.now();
+
+        // Save to localStorage
+        savePreferences();
+
+        console.log('');
+        console.log('=' .repeat(60));
+        console.log(`📅 Treat 1-Year Contracts As Contracted: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+        if (enabled) {
+          console.log('   → 1-year contracts will appear in BOTH free agents and contracted lists');
+        } else {
+          console.log('   → 1-year contracts will appear ONLY in free agents (no duplicates)');
+        }
+        console.log('=' .repeat(60));
+
+        // Emit event for UI updates
+        eventBus.emit('oneYearToggled', enabled);
+
+        // Update position counts in dropdown (will use new filtering logic)
+        updatePositionCounts();
+
+        // Re-render table with updated filtering
+        console.log('Re-rendering player table with updated 1-year filtering...');
+        renderPlayerTable();
+
+        // Performance tracking
+        performance.mark('oneYearToggleUpdate');
+      } catch (error) {
+        handleError('Failed to toggle 1-year contract treatment', error);
+      }
+    };
+
+    /**
+     * Update position filter counts based on current player list
+     */
+    const updatePositionCounts = () => {
+      const positionFilter = document.getElementById('position-filter') as HTMLSelectElement;
+      if (!positionFilter) return;
+
+      // Get current player list (free agents + contracted if toggle is ON)
+      // NOTE: allContractedPlayers only includes 2+ year contracts to prevent duplicates
+      let allPlayers: any[] = state.preferences.showContractedPlayers
+        ? [...state.players, ...state.allContractedPlayers]
+        : [...state.players];
+
+      // Calculate counts per position
+      const counts: Record<string, number> = {
+        QB: 0,
+        RB: 0,
+        WR: 0,
+        TE: 0,
+        PK: 0,
+        Def: 0,
+      };
+
+      allPlayers.forEach(p => {
+        if (counts.hasOwnProperty(p.position)) {
+          counts[p.position]++;
+        }
+      });
+
+      const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+      // Update dropdown options
+      const options = positionFilter.querySelectorAll('option');
+      options.forEach(option => {
+        const value = option.value;
+        if (value === '') {
+          option.textContent = `All Positions (${totalCount})`;
+        } else if (counts.hasOwnProperty(value)) {
+          option.textContent = `${value} (${counts[value]})`;
+        }
+      });
+
+      console.log('Position counts updated:', counts);
     };
 
     /**
@@ -1037,10 +1631,211 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       }
     };
 
+    // =============================================================================
+    // BUDGET MANAGEMENT FUNCTIONS
+    // =============================================================================
+
+    /**
+     * Add a player to target list
+     */
+    const addTargetPlayer = (
+      playerId: string,
+      priority: 'must-have' | 'strong-target' | 'nice-to-have' | 'backup',
+      maxBid: number,
+      notes: string = ''
+    ) => {
+      try {
+        state.budget.targetPlayers.set(playerId, {
+          priority,
+          maxBid,
+          notes,
+          addedDate: Date.now(),
+        });
+        
+        state.ui.lastUpdate = Date.now();
+        saveBudgetState();
+        eventBus.emit('targetPlayerAdded', { playerId, priority, maxBid });
+        
+        console.log('Target player added:', playerId, priority, maxBid);
+      } catch (error) {
+        handleError('Failed to add target player', error);
+      }
+    };
+
+    /**
+     * Remove a player from target list
+     */
+    const removeTargetPlayer = (playerId: string) => {
+      try {
+        state.budget.targetPlayers.delete(playerId);
+        state.ui.lastUpdate = Date.now();
+        saveBudgetState();
+        eventBus.emit('targetPlayerRemoved', { playerId });
+        
+        console.log('Target player removed:', playerId);
+      } catch (error) {
+        handleError('Failed to remove target player', error);
+      }
+    };
+
+    /**
+     * Update target player's priority
+     */
+    const updateTargetPriority = (
+      playerId: string,
+      priority: 'must-have' | 'strong-target' | 'nice-to-have' | 'backup'
+    ) => {
+      try {
+        const target = state.budget.targetPlayers.get(playerId);
+        if (target) {
+          target.priority = priority;
+          state.ui.lastUpdate = Date.now();
+          saveBudgetState();
+          eventBus.emit('targetPriorityUpdated', { playerId, priority });
+          
+          console.log('Target priority updated:', playerId, priority);
+        }
+      } catch (error) {
+        handleError('Failed to update target priority', error);
+      }
+    };
+
+    /**
+     * Update target player's max bid
+     */
+    const updateMaxBid = (playerId: string, amount: number) => {
+      try {
+        const target = state.budget.targetPlayers.get(playerId);
+        if (target) {
+          target.maxBid = Math.max(0, amount);
+          state.ui.lastUpdate = Date.now();
+          saveBudgetState();
+          eventBus.emit('maxBidUpdated', { playerId, amount });
+          
+          console.log('Max bid updated:', playerId, amount);
+        }
+      } catch (error) {
+        handleError('Failed to update max bid', error);
+      }
+    };
+
+    /**
+     * Update available cap space
+     */
+    const updateAvailableCap = (amount: number) => {
+      try {
+        state.budget.availableCap = Math.max(0, amount);
+        state.ui.lastUpdate = Date.now();
+        localStorage.setItem('auctionPredictor.myTeamId', state.budget.myTeamId || '');
+        eventBus.emit('availableCapUpdated', { amount });
+        
+        console.log('Available cap updated:', amount);
+      } catch (error) {
+        handleError('Failed to update available cap', error);
+      }
+    };
+
+    /**
+     * Calculate total planned spending
+     */
+    const calculatePlannedSpend = (): number => {
+      let total = 0;
+      state.budget.targetPlayers.forEach(target => {
+        total += target.maxBid;
+      });
+      return total;
+    };
+
+    /**
+     * Calculate remaining budget
+     */
+    const calculateRemainingBudget = (): number => {
+      return state.budget.availableCap - calculatePlannedSpend();
+    };
+
+    /**
+     * Analyze roster balance
+     */
+    const analyzeRosterBalance = () => {
+      const balance: Record<string, number> = {
+        QB: 0,
+        RB: 0,
+        WR: 0,
+        TE: 0,
+        PK: 0,
+        Def: 0,
+      };
+
+      state.budget.targetPlayers.forEach((target, playerId) => {
+        const player = state.players.find(p => p.id === playerId);
+        if (player && balance.hasOwnProperty(player.position)) {
+          balance[player.position]++;
+        }
+      });
+
+      return balance;
+    };
+
+    /**
+     * Generate budget warnings
+     */
+    const generateBudgetWarnings = (): string[] => {
+      const warnings: string[] = [];
+      const remaining = calculateRemainingBudget();
+      const balance = analyzeRosterBalance();
+
+      // Over budget warning
+      if (remaining < 0) {
+        warnings.push(`⚠️ Over budget by $${Math.abs(remaining).toFixed(1)}M`);
+      }
+
+      // Position balance warnings
+      if (balance.QB === 0) warnings.push('No QB targets set');
+      if (balance.RB < 2) warnings.push('Need more RB targets (minimum 2 recommended)');
+      if (balance.WR < 3) warnings.push('Need more WR targets (minimum 3 recommended)');
+      if (balance.TE === 0) warnings.push('No TE targets set');
+
+      // Low budget warning
+      if (remaining > 0 && remaining < 5) {
+        warnings.push(`Low remaining budget: $${remaining.toFixed(1)}M`);
+      }
+
+      return warnings;
+    };
+
+    /**
+     * Save budget state to localStorage
+     */
+    const saveBudgetState = () => {
+      try {
+        const targetPlayersArray = Array.from(state.budget.targetPlayers.entries());
+        localStorage.setItem('auctionPredictor.targetPlayers', JSON.stringify(targetPlayersArray));
+        console.log('Budget state saved to localStorage');
+      } catch (error) {
+        console.error('Failed to save budget state:', error);
+      }
+    };
+
+    /**
+     * Clear all target players
+     */
+    const clearAllTargets = () => {
+      try {
+        state.budget.targetPlayers.clear();
+        state.ui.lastUpdate = Date.now();
+        saveBudgetState();
+        eventBus.emit('allTargetsCleared');
+        
+        console.log('All targets cleared');
+      } catch (error) {
+        handleError('Failed to clear targets', error);
+      }
+    };
+
     /**
      * Update current view
      */
-    const updateView = (view: 'players' | 'tags' | 'teams' | 'market' | 'rankings') => {
+    const updateView = (view: 'players' | 'tags' | 'teams' | 'market' | 'budget' | 'rankings') => {
       try {
         state.preferences.currentView = view;
         savePreferences();
@@ -1055,6 +1850,17 @@ const pageDescription = 'Analyze available players and predict auction prices fo
             contentEl.classList.add('hidden');
           }
         });
+
+        // Render view-specific content
+        if (view === 'market') {
+          renderMarketAnalysis();
+        } else if (view === 'budget') {
+          renderBudgetPlanner();
+        } else if (view === 'tags') {
+          renderFranchiseTagGrid();
+        } else if (view === 'teams') {
+          renderTeamCapGrid();
+        }
       } catch (error) {
         handleError('Failed to update view', error);
       }
@@ -1115,8 +1921,13 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
     /**
      * Format price for display
+     * Under $1M: show as "425K" or "950K"
+     * $1M and above: show as "1.5M" or "7.0M"
      */
     const formatPrice = (price: number): string => {
+      if (price < 1_000_000) {
+        return `$${Math.round(price / 1000)}K`;
+      }
       return `$${(price / 1_000_000).toFixed(1)}M`;
     };
 
@@ -1167,7 +1978,11 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      * Get filtered and sorted players
      */
     const getFilteredPlayers = () => {
-      let players = [...state.players];
+      // Combine free agents and contracted players if toggle is enabled
+      // NOTE: allContractedPlayers only includes 2+ year contracts to prevent duplicates
+      let players: any[] = state.preferences.showContractedPlayers
+        ? [...state.players, ...state.allContractedPlayers]
+        : [...state.players];
 
       // Apply position filter
       if (state.preferences.positionFilter) {
@@ -1277,21 +2092,27 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       // Render desktop table
       const tbody = document.getElementById('player-table-body')!;
       tbody.innerHTML = pagePlayerss.map(player => {
+        const isContracted = player.contracted === true;
         const pricing = state.playerPrices.get(player.id);
         const contracts = pricing?.contracts;
 
-        const price1yr = contracts?.oneYear || 0;
-        const price2yr = contracts?.twoYear || 0;
-        const price3yr = contracts?.threeYear || 0;
-        const price4yr = contracts?.fourYear || 0;
-        const price5yr = contracts?.fiveYear || 0;
-        const recommended = contracts?.recommended?.years || 3;
+        // For contracted players, show current salary; for free agents, show predicted prices
+        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear || 0);
+        const price2yr = isContracted ? 0 : (contracts?.twoYear || 0);
+        const price3yr = isContracted ? 0 : (contracts?.threeYear || 0);
+        const price4yr = isContracted ? 0 : (contracts?.fourYear || 0);
+        const price5yr = isContracted ? 0 : (contracts?.fiveYear || 0);
+        const recommended = isContracted ? 1 : (contracts?.recommended?.years || 3);
 
         const headshot = getPlayerImageUrl(player.id);
         const nflLogo = getNflLogoPath(player.team);
 
+        // Check if player is already targeted
+        const isTargeted = state.budget.targetPlayers.has(player.id);
+        const targetInfo = state.budget.targetPlayers.get(player.id);
+
         return `
-          <tr data-player-id="${player.id}">
+          <tr data-player-id="${player.id}" class="${isContracted ? 'contracted-player' : ''}">
             <td data-column="rank">${player.compositeRank || '-'}</td>
             <td data-column="player">
               <div class="player-cell">
@@ -1306,6 +2127,8 @@ const pageDescription = 'Analyze available players and predict auction prices fo
                 </div>
                 <div>
                   <strong>${player.name}</strong>
+                  ${isContracted ? `<span class="rostered-badge" style="margin-left: 0.5rem; padding: 2px 6px; background: #6b7280; color: white; border-radius: 3px; font-size: 0.75rem;">ROSTERED</span>` : ''}
+                  ${!isContracted && isTargeted ? `<span class="target-badge" style="margin-left: 0.5rem; padding: 2px 6px; background: #3b82f6; color: white; border-radius: 3px; font-size: 0.75rem;">🎯 TARGET</span>` : ''}
                   <div class="player-meta">
                     ${player.position?.toUpperCase() !== 'DEF' && nflLogo ? `<img src="${nflLogo}" alt="${player.team || 'FA'} logo" class="player-meta__logo" loading="lazy" decoding="async" />` : ''}
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
@@ -1314,6 +2137,11 @@ const pageDescription = 'Analyze available players and predict auction prices fo
               </div>
             </td>
             <td data-column="age">${player.age || '-'}</td>
+            <td data-column="value" class="value-col value-${pricing?.factors?.valueClassification?.toLowerCase() || 'fair'}" title="IV: ${formatPrice(pricing?.factors?.intrinsicValue || 0)} | PMP: ${formatPrice(pricing?.factors?.predictedMarketPrice || 0)}">
+              <div class="value-cell">
+                <span class="value-badge">${pricing?.factors?.valueGapPercent !== undefined ? (pricing.factors.valueGapPercent > 0 ? '+' : '') + pricing.factors.valueGapPercent.toFixed(0) + '%' : '-'}</span>
+              </div>
+            </td>
             <td data-column="year1" class="price-col ${recommended === 1 ? 'price-recommended' : ''}">
               <span class="price-value">${formatPrice(price1yr)}</span>
             </td>
@@ -1329,6 +2157,29 @@ const pageDescription = 'Analyze available players and predict auction prices fo
             <td data-column="year5" class="price-col ${recommended === 5 ? 'price-recommended' : ''}">
               <span class="price-value">${formatPrice(price5yr)}</span>
             </td>
+            <td data-column="actions" style="text-align: center;">
+              ${isContracted ? `
+                <span style="color: #6b7280; font-size: 0.875rem;">Not Available</span>
+              ` : (!isTargeted ? `
+                <button
+                  class="add-target-btn"
+                  onclick="showAddTargetModal('${player.id}')"
+                  style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;"
+                  title="Add to target list"
+                >
+                  + Target
+                </button>
+              ` : `
+                <button
+                  class="remove-target-btn"
+                  onclick="removeTargetPlayer('${player.id}'); window.auctionState.renderPlayerTable();"
+                  style="padding: 4px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;"
+                  title="Remove from targets"
+                >
+                  Remove
+                </button>
+              `)}
+            </td>
           </tr>
         `;
       }).join('');
@@ -1336,21 +2187,26 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       // Render mobile cards
       const mobileCards = document.getElementById('mobile-cards')!;
       mobileCards.innerHTML = pagePlayerss.map(player => {
+        const isContracted = player.contracted === true;
         const pricing = state.playerPrices.get(player.id);
         const contracts = pricing?.contracts;
-        
-        const price1yr = contracts?.oneYear || 0;
-        const price2yr = contracts?.twoYear || 0;
-        const price3yr = contracts?.threeYear || 0;
-        const price4yr = contracts?.fourYear || 0;
-        const price5yr = contracts?.fiveYear || 0;
-        const recommended = contracts?.recommended?.years || 3;
+
+        // For contracted players, show current salary; for free agents, show predicted prices
+        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear || 0);
+        const price2yr = isContracted ? 0 : (contracts?.twoYear || 0);
+        const price3yr = isContracted ? 0 : (contracts?.threeYear || 0);
+        const price4yr = isContracted ? 0 : (contracts?.fourYear || 0);
+        const price5yr = isContracted ? 0 : (contracts?.fiveYear || 0);
+        const recommended = isContracted ? 1 : (contracts?.recommended?.years || 3);
 
         return `
-          <div class="player-card" data-player-id="${player.id}">
+          <div class="player-card ${isContracted ? 'contracted-player' : ''}" data-player-id="${player.id}">
             <div class="player-card-header">
               <div>
-                <div class="player-card-title">${player.name}</div>
+                <div class="player-card-title">
+                  ${player.name}
+                  ${isContracted ? `<span class="rostered-badge" style="margin-left: 0.5rem; padding: 2px 6px; background: #6b7280; color: white; border-radius: 3px; font-size: 0.75rem;">ROSTERED</span>` : ''}
+                </div>
                 <div class="player-card-meta">
                   <span class="position-badge ${player.position}">${player.position}</span>
                   ${player.team === 'FA' ? '<img src="/assets/nfl-logos/NFL.svg" alt="Free Agent" class="nfl-team-logo-small" style="max-width: 40px; vertical-align: middle; margin: 0 4px;" />' : (player.team ? `<img src="${getNFLTeamLogo(player.team)}" alt="${player.team}" class="nfl-team-logo-small" style="max-width: 40px; vertical-align: middle; margin: 0 4px;" />` : '')}
@@ -1413,11 +2269,19 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      * Show player details modal
      */
     const showPlayerDetails = (playerId: string) => {
-      const player = state.players.find((p: any) => p.id === playerId);
+      // Check both free agents and contracted players
+      let player = state.players.find((p: any) => p.id === playerId);
+      if (!player) {
+        player = state.allContractedPlayers.find((p: any) => p.id === playerId);
+      }
       if (!player) return;
 
       const pricing = state.playerPrices.get(playerId);
       if (!pricing) return;
+
+      // Get rankings
+      const ranks = getAllPlayerRanks(playerId);
+      const dynastyWeight = state.preferences.dynastyWeight;
 
       const modal = document.getElementById('player-details-modal')!;
       const modalName = document.getElementById('modal-player-name')!;
@@ -1444,8 +2308,16 @@ const pageDescription = 'Analyze available players and predict auction prices fo
               <span class="detail-value">${player.age || '-'}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Composite Rank</span>
-              <span class="detail-value">${player.compositeRank || '-'}</span>
+              <span class="detail-label">DLF Dynasty Rank</span>
+              <span class="detail-value">${ranks.dlf || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">FootballGuys Redraft Rank</span>
+              <span class="detail-value">${ranks.footballguys || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Composite Rank (${dynastyWeight}% Dynasty)</span>
+              <span class="detail-value" style="font-weight: 700; color: #007bff;">${ranks.composite || '-'}</span>
             </div>
           </div>
         </div>
@@ -1850,7 +2722,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
                     <h4>Expiring Contracts (${capSituation.expiringContracts.length})</h4>
                     <ul class="detail-list">
                       ${capSituation.expiringContracts.slice(0, 5).map(contract => `
-                        <li>${contract.playerName} (${contract.position}): ${formatCurrency(contract.salary)}</li>
+                        <li>${contract.name} (${contract.position}): ${formatCurrency(contract.currentSalary)}</li>
                       `).join('')}
                       ${capSituation.expiringContracts.length > 5 ? `<li><em>...and ${capSituation.expiringContracts.length - 5} more</em></li>` : ''}
                     </ul>
@@ -2026,6 +2898,712 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     };
 
     // =============================================================================
+    // RENDER - Market Analysis Dashboard
+    // =============================================================================
+
+    /**
+     * Render market analysis dashboard with position depth and value opportunities
+     */
+    const renderMarketAnalysis = () => {
+      if (!state.players || state.players.length === 0) return;
+
+      // Use the comprehensive market analysis if available
+      const market = state.market;
+      
+      if (market && market.byPosition) {
+        console.log('📊 Market Analysis Dashboard (New):', market);
+        
+        // Render Position Market Grid with new data
+        const positionGrid = document.getElementById('position-market-grid');
+        if (positionGrid) {
+          const positions = ['QB', 'RB', 'WR', 'TE'];
+          
+          positionGrid.innerHTML = positions
+            .map(position => {
+              const analysis = market.byPosition[position];
+              if (!analysis) return '';
+              
+              const depthPercent = Math.min(100, (analysis.availableCount / 20) * 100); // Normalize to 100% at 20 players
+              
+              let advice = '';
+              if (analysis.classification === 'DEEP') {
+                advice = `✅ Buyers market - ${analysis.availableCount} available for ${analysis.teamsNeedingPosition} teams. Wait for value, avoid overpaying. Top player: ${formatPrice(analysis.topPlayerPrice)}`;
+              } else if (analysis.classification === 'BALANCED') {
+                advice = `⚖️ Balanced market - ${analysis.availableCount} available for ${analysis.teamsNeedingPosition} teams. Fair competition expected. Average price: ${formatPrice(analysis.avgPrice)}`;
+              } else if (analysis.classification === 'SHALLOW') {
+                advice = `⚠️ Seller's market - Only ${analysis.availableCount} available for ${analysis.teamsNeedingPosition} teams. Expect ${((analysis.inflationFactor - 1) * 100).toFixed(0)}% price premium.`;
+              } else {
+                advice = `🚨 Critical shortage - Only ${analysis.availableCount} available! Bid aggressively early or pivot to other positions.`;
+              }
+              
+              return `
+                <div class="position-card">
+                  <div class="position-header">
+                    <div class="position-name">${position}</div>
+                    <div class="depth-badge ${analysis.classification.toLowerCase()}">${analysis.classification}</div>
+                  </div>
+                  <div class="position-stats">
+                    <div class="stat-item">
+                      <div class="stat-label">Available</div>
+                      <div class="stat-value">${analysis.availableCount}</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="stat-label">Teams Need</div>
+                      <div class="stat-value">${analysis.teamsNeedingPosition}</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="stat-label">Avg Price</div>
+                      <div class="stat-value">${formatPrice(analysis.avgPrice)}</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="stat-label">Scarcity</div>
+                      <div class="stat-value">${analysis.scarcityIndex.toFixed(2)}x</div>
+                    </div>
+                  </div>
+                  <div class="depth-meter">
+                    <div class="depth-meter-label">
+                      <span>Market Depth</span>
+                      <span>${depthPercent.toFixed(0)}%</span>
+                    </div>
+                    <div class="depth-meter-bar">
+                      <div class="depth-meter-fill" style="width: ${depthPercent}%"></div>
+                    </div>
+                  </div>
+                  <div class="market-advice">${advice}</div>
+                </div>
+              `;
+            })
+            .join('');
+        }
+
+        // Render Top Value Opportunities from new market data
+        const valueOpportunities = document.getElementById('value-opportunities');
+        if (valueOpportunities) {
+          if (market.valueOpportunities && market.valueOpportunities.length > 0) {
+            valueOpportunities.innerHTML = `
+              <table class="value-table">
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">Rank</th>
+                    <th>Player</th>
+                    <th style="width: 120px;">Overall Rank</th>
+                    <th style="width: 120px;">3-Year Price</th>
+                    <th style="width: 300px;">Opportunity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${market.valueOpportunities.map((opp: any, index: number) => {
+                    const player = opp.player;
+                    return `
+                      <tr>
+                        <td class="value-rank">#${index + 1}</td>
+                        <td>
+                          <div class="player-info">
+                            <div class="player-name">${player.name}</div>
+                            <div class="player-meta">${player.position} • Age ${player.age || '-'}</div>
+                          </div>
+                        </td>
+                        <td style="text-align: center;">
+                          <strong style="color: #3b82f6;">Top ${opp.compositeRank}</strong>
+                        </td>
+                        <td style="text-align: right;">
+                          <strong style="color: #059669;">${formatPrice(opp.estimatedPrice)}</strong>
+                        </td>
+                        <td style="font-size: 0.875rem; color: #6b7280;">
+                          ${opp.reason}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            `;
+          } else {
+            valueOpportunities.innerHTML = `
+              <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                <p>No value opportunities identified yet.</p>
+                <p style="font-size: 0.875rem; margin-top: 0.5rem;">Import rankings to enable value analysis.</p>
+              </div>
+            `;
+          }
+        }
+
+        // Render Market Insights from new data
+        const insightsGrid = document.getElementById('market-insights');
+        if (insightsGrid && market.insights) {
+          insightsGrid.innerHTML = market.insights.map((insight: any) => {
+            const iconMap: Record<string, string> = {
+              'warning': '⚠️',
+              'opportunity': '💎',
+              'info': '💡'
+            };
+            
+            return `
+              <div class="insight-card">
+                <div class="insight-icon">${iconMap[insight.type] || '💡'}</div>
+                <div class="insight-title">${insight.message}</div>
+                <div class="insight-description">${insight.recommendation}</div>
+              </div>
+            `;
+          }).join('');
+        }
+        
+        return; // Exit early if we have new market data
+      }
+
+      // Fallback to old depth analysis if no market data
+      const depthAnalysis = analyzePositionalDepth(state.players);
+      
+      console.log('📊 Market Analysis Dashboard (Legacy):', depthAnalysis);
+      
+      // Render Position Market Grid
+      const positionGrid = document.getElementById('position-market-grid');
+      if (positionGrid) {
+        // Check if we have rankings
+        const hasRankings = state.players.some(p => p.compositeRank && p.compositeRank < 999);
+        
+        positionGrid.innerHTML = Object.entries(depthAnalysis)
+          .map(([position, analysis]) => {
+            const depthPercent = Math.min(100, (analysis.depthRatio / 2.0) * 100); // 0-200% normalized to 0-100%
+            
+            let advice = '';
+            const ratio = analysis.depthRatio.toFixed(1);
+            
+            if (!hasRankings) {
+              // NO RANKINGS - show clear warning
+              advice = `⚠️ <strong>NO RANKINGS IMPORTED</strong> - Showing ${analysis.eliteCount} available ${position}s vs ${analysis.teamsNeedingPosition} estimated team needs. Import rankings for accurate market analysis.`;
+            } else if (analysis.classification === 'DEEP') {
+              advice = `✅ Buyers market - ${analysis.eliteCount} elite players for ${analysis.teamsNeedingPosition} teams (${ratio}:1 ratio). Wait for value, avoid overpaying.`;
+            } else if (analysis.classification === 'MODERATE') {
+              advice = `⚖️ Balanced market - ${analysis.eliteCount} elite for ${analysis.teamsNeedingPosition} teams (${ratio}:1). Fair competition, target 1-2 quality players.`;
+            } else if (analysis.classification === 'SHALLOW') {
+              advice = `⚠️ Seller's market - Only ${analysis.eliteCount} elite for ${analysis.teamsNeedingPosition} teams (${ratio}:1). Expect ${((analysis.depthMultiplier - 1) * 100).toFixed(0)}% price premium.`;
+            } else {
+              advice = `🚨 Critical shortage - ${analysis.eliteCount} elite vs ${analysis.teamsNeedingPosition} teams needing! Bid aggressively early or pivot positions.`;
+            }
+            
+            return `
+              <div class="position-card ${!hasRankings ? 'no-rankings' : ''}">
+                <div class="position-header">
+                  <div class="position-name">${position}</div>
+                  <div class="depth-badge ${analysis.classification.toLowerCase()}">${hasRankings ? analysis.classification : 'PLACEHOLDER'}</div>
+                </div>
+                <div class="position-stats">
+                  <div class="stat-item">
+                    <div class="stat-label">${hasRankings ? 'Elite Tier' : 'Total Available'}</div>
+                    <div class="stat-value">${analysis.eliteCount}</div>
+                  </div>
+                  ${hasRankings ? `
+                  <div class="stat-item">
+                    <div class="stat-label">Great Tier</div>
+                    <div class="stat-value">${analysis.greatCount}</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">Good Tier</div>
+                    <div class="stat-value">${analysis.goodCount}</div>
+                  </div>
+                  ` : `
+                  <div class="stat-item">
+                    <div class="stat-label">Teams Need</div>
+                    <div class="stat-value">${analysis.teamsNeedingPosition} (est)</div>
+                  </div>
+                  `}
+                  <div class="stat-item">
+                    <div class="stat-label">${hasRankings ? 'Teams Need' : 'Depth Ratio'}</div>
+                    <div class="stat-value">${hasRankings ? analysis.teamsNeedingPosition : analysis.depthRatio.toFixed(2)}</div>
+                  </div>
+                </div>
+                <div class="depth-meter">
+                  <div class="depth-meter-label">
+                    <span>${hasRankings ? 'Market Depth' : 'Player Count'}</span>
+                    <span>${depthPercent.toFixed(0)}%</span>
+                  </div>
+                  <div class="depth-meter-bar">
+                    <div class="depth-meter-fill" style="width: ${depthPercent}%"></div>
+                  </div>
+                </div>
+                <div class="market-advice">${advice}</div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      // Render Top Value Opportunities
+      const valueOpportunities = document.getElementById('value-opportunities');
+      if (valueOpportunities) {
+        // Get all players with pricing data and value classifications
+        const playersWithValue = state.players
+          .map(player => {
+            const pricing = state.playerPrices.get(player.id);
+            return {
+              ...player,
+              pricing,
+            };
+          })
+          .filter(p => 
+            p.pricing?.factors?.valueClassification &&
+            (p.pricing.factors.valueClassification === 'EXCELLENT' || 
+             p.pricing.factors.valueClassification === 'GOOD')
+          )
+          .sort((a, b) => {
+            const aGap = a.pricing?.factors?.valueGapPercent || 0;
+            const bGap = b.pricing?.factors?.valueGapPercent || 0;
+            return aGap - bGap; // Most negative first (best values)
+          })
+          .slice(0, 15); // Top 15 values
+
+        if (playersWithValue.length > 0) {
+          valueOpportunities.innerHTML = `
+            <table class="value-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">Rank</th>
+                  <th>Player</th>
+                  <th style="width: 100px;">Value</th>
+                  <th style="width: 120px;">Intrinsic Value</th>
+                  <th style="width: 120px;">Market Price</th>
+                  <th style="width: 100px;">Gap</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${playersWithValue.map((player, index) => {
+                  const iv = player.pricing?.factors?.intrinsicValue || 0;
+                  const pmp = player.pricing?.factors?.predictedMarketPrice || 0;
+                  const gapPercent = player.pricing?.factors?.valueGapPercent || 0;
+                  const classification = player.pricing?.factors?.valueClassification || 'FAIR';
+                  
+                  return `
+                    <tr>
+                      <td class="value-rank">#${index + 1}</td>
+                      <td>
+                        <div class="player-info">
+                          <div class="player-name">${player.name}</div>
+                          <div class="player-meta">${player.position} • Age ${player.age} • Rank ${player.compositeRank || '-'}</div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="value-badge ${classification.toLowerCase()}">${classification}</div>
+                      </td>
+                      <td>
+                        <div class="price-comparison">
+                          <div class="price-label">Intrinsic Value</div>
+                          <div class="price-value price-iv">${formatPrice(iv)}</div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="price-comparison">
+                          <div class="price-label">Market Price</div>
+                          <div class="price-value price-pmp">${formatPrice(pmp)}</div>
+                        </div>
+                      </td>
+                      <td style="text-align: center;">
+                        <strong style="color: ${gapPercent < -15 ? '#059669' : gapPercent < -5 ? '#3b82f6' : '#6b7280'}">
+                          ${gapPercent > 0 ? '+' : ''}${gapPercent.toFixed(0)}%
+                        </strong>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          `;
+        } else {
+          valueOpportunities.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: #6b7280;">
+              <p>No value opportunities identified yet.</p>
+              <p style="font-size: 0.875rem; margin-top: 0.5rem;">Import rankings to enable value analysis.</p>
+            </div>
+          `;
+        }
+      }
+
+      // Render Market Insights
+      const insightsGrid = document.getElementById('market-insights');
+      if (insightsGrid) {
+        // Generate strategic insights based on market analysis
+        const insights = [];
+        
+        // Find the deepest position
+        const positions = Object.entries(depthAnalysis);
+        
+        let deepestPos: string = '';
+        let deepestAnalysis: any = null;
+        let maxDepthRatio = 0;
+        
+        positions.forEach(([pos, analysis]) => {
+          if (analysis.depthRatio > maxDepthRatio) {
+            maxDepthRatio = analysis.depthRatio;
+            deepestPos = pos;
+            deepestAnalysis = analysis;
+          }
+        });
+        
+        if (deepestAnalysis) {
+          insights.push({
+            icon: '🎯',
+            title: 'Best Value Position',
+            description: `${deepestPos} has the most depth (${deepestAnalysis.eliteCount} elite players for ${deepestAnalysis.teamsNeedingPosition} teams). Target 2-3 players here for roster construction value.`
+          });
+        }
+
+        // Find the shallowest position
+        let shallowestPos: string = '';
+        let shallowestAnalysis: any = null;
+        let minDepthRatio = 999;
+        
+        positions.forEach(([pos, analysis]) => {
+          if (analysis.depthRatio < minDepthRatio) {
+            minDepthRatio = analysis.depthRatio;
+            shallowestPos = pos;
+            shallowestAnalysis = analysis;
+          }
+        });
+        
+        if (shallowestAnalysis) {
+          insights.push({
+            icon: '⚠️',
+            title: 'Scarcity Alert',
+            description: `${shallowestPos} is critically shallow (only ${shallowestAnalysis.eliteCount} elite available). Expect bidding wars and prices ${((shallowestAnalysis.depthMultiplier - 1) * 100).toFixed(0)}% above intrinsic value.`
+          });
+        }
+
+        // Value strategy
+        const excellentValues = state.players.filter(p => {
+          const pricing = state.playerPrices.get(p.id);
+          return pricing?.factors?.valueClassification === 'EXCELLENT';
+        }).length;
+
+        if (excellentValues > 0) {
+          insights.push({
+            icon: '💎',
+            title: 'Value Strategy',
+            description: `${excellentValues} players identified as EXCELLENT value (market underpriced >15%). Focus budget on these opportunities for maximum roster efficiency.`
+          });
+        }
+
+        insightsGrid.innerHTML = insights.map(insight => `
+          <div class="insight-card">
+            <div class="insight-icon">${insight.icon}</div>
+            <div class="insight-title">${insight.title}</div>
+            <div class="insight-description">${insight.description}</div>
+          </div>
+        `).join('');
+      }
+    };
+
+    // =============================================================================
+    // BUDGET PLANNER RENDERING
+    // =============================================================================
+    
+    /**
+     * Render budget planner with target players and spending analysis
+     */
+    const renderBudgetPlanner = () => {
+      const plannedSpend = calculatePlannedSpend();
+      const remaining = calculateRemainingBudget();
+      const warnings = generateBudgetWarnings();
+      const balance = analyzeRosterBalance();
+
+      // Update budget summary cards
+      const availableCapEl = document.getElementById('budget-available-cap');
+      const plannedSpendEl = document.getElementById('budget-planned-spend');
+      const remainingEl = document.getElementById('budget-remaining');
+      const targetCountEl = document.getElementById('budget-target-count');
+
+      if (availableCapEl) {
+        availableCapEl.innerHTML = `
+          <div class="budget-card-value">$${state.budget.availableCap.toFixed(1)}M</div>
+          <div class="budget-card-label">Available Cap</div>
+          <button class="edit-cap-btn" onclick="editAvailableCap()">Edit</button>
+        `;
+      }
+
+      if (plannedSpendEl) {
+        plannedSpendEl.innerHTML = `
+          <div class="budget-card-value">$${plannedSpend.toFixed(1)}M</div>
+          <div class="budget-card-label">Planned Spend</div>
+        `;
+      }
+
+      if (remainingEl) {
+        const isNegative = remaining < 0;
+        remainingEl.innerHTML = `
+          <div class="budget-card-value" style="color: ${isNegative ? '#dc2626' : remaining < 5 ? '#f59e0b' : '#059669'}">
+            ${isNegative ? '-' : ''}$${Math.abs(remaining).toFixed(1)}M
+          </div>
+          <div class="budget-card-label">Remaining</div>
+        `;
+      }
+
+      if (targetCountEl) {
+        targetCountEl.innerHTML = `
+          <div class="budget-card-value">${state.budget.targetPlayers.size}</div>
+          <div class="budget-card-label">Target Players</div>
+        `;
+      }
+
+      // Render warnings
+      const warningsEl = document.getElementById('budget-warnings');
+      if (warningsEl) {
+        if (warnings.length > 0) {
+          warningsEl.innerHTML = warnings.map(warning => `
+            <div class="warning-banner">${warning}</div>
+          `).join('');
+          warningsEl.style.display = 'block';
+        } else {
+          warningsEl.style.display = 'none';
+        }
+      }
+
+      // Render target players list
+      const targetListEl = document.getElementById('target-players-list');
+      if (targetListEl) {
+        if (state.budget.targetPlayers.size === 0) {
+          targetListEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">🎯</div>
+              <div class="empty-state-title">No Target Players</div>
+              <div class="empty-state-description">
+                Add players to your target list from the Players view using the "Add to Targets" button
+              </div>
+            </div>
+          `;
+        } else {
+          const targets = Array.from(state.budget.targetPlayers.entries())
+            .map(([playerId, target]) => {
+              const player = state.players.find(p => p.id === playerId);
+              if (!player) return null;
+
+              const predictedPrice = state.playerPrices.get(playerId) || 0;
+              const valueGap = target.maxBid - predictedPrice;
+              const valueGapPercent = predictedPrice > 0 ? (valueGap / predictedPrice) * 100 : 0;
+
+              return { playerId, player, target, predictedPrice, valueGap, valueGapPercent };
+            })
+            .filter(t => t !== null)
+            .sort((a, b) => {
+              const priorityOrder = { 'must-have': 0, 'strong-target': 1, 'nice-to-have': 2, 'backup': 3 };
+              return priorityOrder[a!.target.priority] - priorityOrder[b!.target.priority];
+            });
+
+          targetListEl.innerHTML = targets.map(item => {
+            const { playerId, player, target, predictedPrice, valueGap, valueGapPercent } = item!;
+            
+            const priorityColors = {
+              'must-have': '#dc2626',
+              'strong-target': '#f59e0b',
+              'nice-to-have': '#3b82f6',
+              'backup': '#6b7280'
+            };
+
+            const priorityLabels = {
+              'must-have': 'Must Have',
+              'strong-target': 'Strong Target',
+              'nice-to-have': 'Nice to Have',
+              'backup': 'Backup'
+            };
+
+            return `
+              <div class="target-player-card" data-player-id="${playerId}">
+                <div class="target-player-header">
+                  <div class="target-player-info">
+                    <div class="target-player-name">${player.name}</div>
+                    <div class="target-player-meta">${player.position} • Age ${player.age} • Rank ${player.compositeRank || '-'}</div>
+                  </div>
+                  <div class="priority-badge" style="background-color: ${priorityColors[target.priority]}">
+                    ${priorityLabels[target.priority]}
+                  </div>
+                </div>
+                <div class="target-player-pricing">
+                  <div class="pricing-item">
+                    <div class="pricing-label">Max Bid</div>
+                    <div class="pricing-value">
+                      <input 
+                        type="number" 
+                        class="max-bid-input" 
+                        value="${target.maxBid}" 
+                        step="0.1" 
+                        min="0"
+                        onchange="updateMaxBid('${playerId}', parseFloat(this.value))"
+                      />
+                    </div>
+                  </div>
+                  <div class="pricing-item">
+                    <div class="pricing-label">Predicted</div>
+                    <div class="pricing-value">$${predictedPrice.toFixed(1)}M</div>
+                  </div>
+                  <div class="pricing-item">
+                    <div class="pricing-label">Value Gap</div>
+                    <div class="pricing-value" style="color: ${valueGapPercent > 15 ? '#dc2626' : valueGapPercent < -15 ? '#059669' : '#6b7280'}">
+                      ${valueGap > 0 ? '+' : ''}$${valueGap.toFixed(1)}M
+                      <span style="font-size: 0.75rem;">(${valueGapPercent > 0 ? '+' : ''}${valueGapPercent.toFixed(0)}%)</span>
+                    </div>
+                  </div>
+                </div>
+                ${target.notes ? `<div class="target-notes">${target.notes}</div>` : ''}
+                <div class="target-actions">
+                  <select class="priority-select" onchange="updateTargetPriority('${playerId}', this.value)">
+                    <option value="must-have" ${target.priority === 'must-have' ? 'selected' : ''}>Must Have</option>
+                    <option value="strong-target" ${target.priority === 'strong-target' ? 'selected' : ''}>Strong Target</option>
+                    <option value="nice-to-have" ${target.priority === 'nice-to-have' ? 'selected' : ''}>Nice to Have</option>
+                    <option value="backup" ${target.priority === 'backup' ? 'selected' : ''}>Backup</option>
+                  </select>
+                  <button class="remove-target-btn" onclick="removeTargetPlayer('${playerId}')">Remove</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // Render roster balance
+      const balanceGridEl = document.getElementById('roster-balance-grid');
+      if (balanceGridEl) {
+        const totalTargets = state.budget.targetPlayers.size;
+        const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def'];
+        
+        balanceGridEl.innerHTML = positions.map(pos => {
+          const count = balance[pos] || 0;
+          const percent = totalTargets > 0 ? (count / totalTargets) * 100 : 0;
+          
+          return `
+            <div class="balance-bar">
+              <div class="balance-label">${pos}</div>
+              <div class="balance-visual">
+                <div class="balance-fill" style="width: ${percent}%"></div>
+              </div>
+              <div class="balance-count">${count}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render budget insights
+      const insightsEl = document.getElementById('budget-insights-list');
+      if (insightsEl) {
+        const insights = [];
+
+        // Budget health
+        if (remaining < 0) {
+          insights.push({
+            icon: '🚨',
+            title: 'Over Budget',
+            description: `You're $${Math.abs(remaining).toFixed(1)}M over budget. Remove targets or reduce max bids.`
+          });
+        } else if (remaining < 5) {
+          insights.push({
+            icon: '⚠️',
+            title: 'Low Buffer',
+            description: `Only $${remaining.toFixed(1)}M remaining. Consider leaving $5-10M buffer for unexpected opportunities.`
+          });
+        } else {
+          insights.push({
+            icon: '✅',
+            title: 'Budget Healthy',
+            description: `$${remaining.toFixed(1)}M remaining provides flexibility for auction adjustments.`
+          });
+        }
+
+        // Position balance
+        const hasQB = balance.QB > 0;
+        const hasRB = balance.RB >= 2;
+        const hasWR = balance.WR >= 3;
+        const hasTE = balance.TE > 0;
+
+        if (!hasQB || !hasRB || !hasWR || !hasTE) {
+          insights.push({
+            icon: '📊',
+            title: 'Position Gaps',
+            description: `Missing targets: ${!hasQB ? 'QB ' : ''}${!hasRB ? 'RB (need 2+) ' : ''}${!hasWR ? 'WR (need 3+) ' : ''}${!hasTE ? 'TE' : ''}`
+          });
+        } else {
+          insights.push({
+            icon: '✅',
+            title: 'Balanced Roster',
+            description: 'Target list covers all key positions adequately.'
+          });
+        }
+
+        // Value analysis
+        const targets = Array.from(state.budget.targetPlayers.entries());
+        const overpriced = targets.filter(([id, target]) => {
+          const predicted = state.playerPrices.get(id) || 0;
+          return target.maxBid > predicted * 1.15;
+        }).length;
+
+        if (overpriced > 0) {
+          insights.push({
+            icon: '💰',
+            title: 'Value Concerns',
+            description: `${overpriced} target(s) have max bids >15% above predicted price. Risk of overpaying.`
+          });
+        }
+
+        insightsEl.innerHTML = insights.map(insight => `
+          <div class="insight-item">
+            <span class="insight-icon">${insight.icon}</span>
+            <div class="insight-content">
+              <div class="insight-title">${insight.title}</div>
+              <div class="insight-description">${insight.description}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Wire up event listeners for priority tabs
+      document.querySelectorAll('.priority-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.priority-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          const priority = (tab as HTMLElement).dataset.priority;
+          filterTargetsByPriority(priority || 'all');
+        });
+      });
+    };
+
+    /**
+     * Filter target players by priority
+     */
+    const filterTargetsByPriority = (priority: string) => {
+      document.querySelectorAll('.target-player-card').forEach(card => {
+        const cardEl = card as HTMLElement;
+        const playerId = cardEl.dataset.playerId;
+        const target = state.budget.targetPlayers.get(playerId || '');
+        
+        if (priority === 'all' || !target) {
+          cardEl.style.display = 'block';
+        } else {
+          cardEl.style.display = target.priority === priority ? 'block' : 'none';
+        }
+      });
+    };
+
+    /**
+     * Edit available cap with modal
+     */
+    const editAvailableCap = () => {
+      const newCap = prompt('Enter your available cap space (in millions):', state.budget.availableCap.toString());
+      if (newCap !== null) {
+        const amount = parseFloat(newCap);
+        if (!isNaN(amount) && amount >= 0) {
+          updateAvailableCap(amount);
+          renderBudgetPlanner();
+        }
+      }
+    };
+
+    // Expose budget functions globally
+    (window as any).addTargetPlayer = addTargetPlayer;
+    (window as any).removeTargetPlayer = removeTargetPlayer;
+    (window as any).updateTargetPriority = updateTargetPriority;
+    (window as any).updateMaxBid = updateMaxBid;
+    (window as any).updateAvailableCap = updateAvailableCap;
+    (window as any).clearAllTargets = clearAllTargets;
+    (window as any).editAvailableCap = editAvailableCap;
+
+    // =============================================================================
     // PERSISTENCE - LocalStorage
     // =============================================================================
 
@@ -2075,6 +3653,670 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     };
 
     // =============================================================================
+    // HISTORICAL VALIDATION
+    // =============================================================================
+    
+    /**
+     * Validate contract recommendation against historical precedent
+     * NOTE: This is a simplified validation - full validation requires server-side data
+     */
+    const validateHistoricalPrecedent = (position: string, age: number, salary: number, contractLength: number) => {
+      // Position-specific historical max salaries at different ages (from 2020-2025 data)
+      const historicalMaxSalaries: Record<string, Record<number, number>> = {
+        QB: {
+          25: 7_000_000, 26: 8_500_000, 27: 9_800_000, 28: 9_800_000, 
+          29: 9_500_000, 30: 8_000_000, 31: 7_000_000, 32: 6_000_000,
+          33: 4_500_000, 34: 3_500_000, 35: 2_500_000, 36: 1_500_000
+        },
+        RB: {
+          23: 8_000_000, 24: 9_500_000, 25: 10_000_000, 26: 10_000_000,
+          27: 9_000_000, 28: 7_000_000, 29: 5_000_000, 30: 3_000_000,
+          31: 2_000_000, 32: 1_000_000
+        },
+        WR: {
+          24: 8_000_000, 25: 9_500_000, 26: 10_000_000, 27: 10_000_000,
+          28: 9_500_000, 29: 8_500_000, 30: 7_000_000, 31: 5_500_000,
+          32: 4_000_000, 33: 2_500_000
+        },
+        TE: {
+          24: 7_000_000, 25: 8_500_000, 26: 10_000_000, 27: 10_000_000,
+          28: 9_000_000, 29: 7_500_000, 30: 6_000_000, 31: 4_500_000,
+          32: 3_000_000, 33: 2_000_000
+        },
+      };
+      
+      const positionMaxes = historicalMaxSalaries[position];
+      if (!positionMaxes) {
+        return {
+          hasPrecedent: false,
+          confidence: 'MEDIUM',
+          warning: '',
+          sampleSize: 0,
+          examples: [],
+        };
+      }
+      
+      const historicalMax = positionMaxes[age] || 0;
+      const finalAge = age + contractLength;
+      const finalAgeMax = positionMaxes[finalAge] || 0;
+      
+      let confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+      let warning = '';
+      
+      // Check if salary exceeds historical precedent
+      if (salary > historicalMax * 1.3) {
+        confidence = 'LOW';
+        warning = `⚠️ UNPRECEDENTED - $${(salary / 1_000_000).toFixed(1)}M exceeds historical max for ${position} age ${age} ($${(historicalMax / 1_000_000).toFixed(1)}M)`;
+      } else if (finalAgeMax < salary * 0.5 && contractLength >= 3) {
+        // Long contract will extend into age where no one earned half this salary
+        confidence = 'LOW';
+        warning = `⚠️ HIGH RISK - By age ${finalAge}, no ${position} earned >$${(finalAgeMax / 1_000_000).toFixed(1)}M (${contractLength}yr contract risky)`;
+      } else if (salary > historicalMax * 1.1) {
+        confidence = 'MEDIUM';
+        warning = `⚠️ LIMITED PRECEDENT - $${(salary / 1_000_000).toFixed(1)}M is above typical for ${position} age ${age}`;
+      } else {
+        confidence = 'HIGH';
+        // No warning needed for contracts within historical norms
+      }
+      
+      return {
+        hasPrecedent: historicalMax > 0,
+        confidence,
+        warning,
+        sampleSize: historicalMax > 0 ? 1 : 0,
+        examples: [],
+      };
+    };
+
+    // =============================================================================
+    // PLAYER TIER ANALYSIS
+    // =============================================================================
+    
+    /**
+     * Classify player into tiers based on position rank vs overall rank gap
+     * Elite: Top positional players who are also highly ranked overall (small gap)
+     * Great: Strong positional players with moderate overall rank
+     * Good: Solid starters with larger gap
+     * Average: Replacement level starters
+     * Below Average: Depth/backup level
+     * Flyer: Long shots, late round picks
+     */
+    const classifyPlayerTier = (
+      compositeRank: number, 
+      positionRank: number,
+      position: string
+    ): 'ELITE' | 'GREAT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'FLYER' => {
+      // Calculate the gap between position rank and overall rank
+      // A small gap means they're elite at their position AND overall
+      // A large gap means they're good at position but not overall (positional scarcity)
+      const rankGap = compositeRank - positionRank;
+      
+      // Position-specific tier thresholds
+      // Premium positions (QB, RB early) have tighter requirements
+      const isPremium = position === 'QB' || position === 'RB';
+      
+      if (positionRank <= 3 && compositeRank <= 24) {
+        // Top 3 at position AND top 24 overall = Elite
+        return 'ELITE';
+      } else if (positionRank <= 6 && compositeRank <= 48) {
+        // Top 6 at position AND top 48 overall = Great
+        return 'GREAT';
+      } else if (positionRank <= 12 && compositeRank <= 96) {
+        // Top 12 at position AND top 96 overall = Good
+        return 'GOOD';
+      } else if (positionRank <= 18 && compositeRank <= 144) {
+        // Top 18 at position AND top 144 overall = Average
+        return 'AVERAGE';
+      } else if (positionRank <= 30 || compositeRank <= 200) {
+        // Top 30 at position OR top 200 overall = Below Average
+        return 'BELOW_AVERAGE';
+      } else {
+        // Everyone else = Flyer
+        return 'FLYER';
+      }
+    };
+
+    /**
+     * Get position rank for a player among all players at their position
+     */
+    const getPositionRank = (playerId: string, position: string): number | null => {
+      const positionPlayers = state.players
+        .filter(p => p.position === position && p.compositeRank && p.compositeRank < 999)
+        .sort((a, b) => (a.compositeRank || 999) - (b.compositeRank || 999));
+      
+      const index = positionPlayers.findIndex(p => p.id === playerId);
+      return index >= 0 ? index + 1 : null;
+    };
+
+    // =============================================================================
+    // MARKET DEPTH ANALYSIS (for Predicted Market Price calculation)
+    // =============================================================================
+    
+    /**
+     * Analyze positional depth in the free agent market
+     * Returns depth metrics for calculating market price multipliers
+     */
+    const analyzePositionalDepth = (players: typeof state.players) => {
+      const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def'];
+      const depthAnalysis: Record<string, {
+        eliteCount: number;
+        greatCount: number;
+        goodCount: number;
+        starterCount: number;
+        teamsNeedingPosition: number;
+        depthRatio: number;
+        depthMultiplier: number;
+        classification: 'DEEP' | 'MODERATE' | 'SHALLOW' | 'CRITICAL';
+      }> = {};
+      
+      for (const position of positions) {
+        // Get all players at position
+        const allPositionPlayers = players.filter(p => p.position === position);
+        
+        // Check if we have real rankings imported
+        const hasRankings = allPositionPlayers.some(p => p.compositeRank && p.compositeRank < 999);
+        
+        let eliteCount = 0;
+        let greatCount = 0;
+        let goodCount = 0;
+        let starterCount = 0;
+        
+        if (hasRankings) {
+          // Use tier-based classification
+          const rankedPlayers = allPositionPlayers
+            .filter(p => p.compositeRank && p.compositeRank < 999)
+            .sort((a, b) => (a.compositeRank || 999) - (b.compositeRank || 999));
+          
+          rankedPlayers.forEach((player, index) => {
+            const positionRank = index + 1;
+            const tier = classifyPlayerTier(player.compositeRank!, positionRank, position);
+            
+            if (tier === 'ELITE') eliteCount++;
+            if (tier === 'ELITE' || tier === 'GREAT') greatCount++;
+            if (tier === 'ELITE' || tier === 'GREAT' || tier === 'GOOD') goodCount++;
+            if (tier !== 'FLYER') starterCount++;
+          });
+        } else {
+          // NO RANKINGS - just count total available players
+          eliteCount = allPositionPlayers.length;
+          greatCount = allPositionPlayers.length;
+          goodCount = allPositionPlayers.length;
+          starterCount = allPositionPlayers.length;
+        }
+        
+        // Use actual team cap data to determine teams needing this position
+        let teamsNeedingPosition = 0;
+        
+        if (state.teamCapSituations && state.teamCapSituations.length > 0) {
+          // Count teams with HIGH or CRITICAL priority needs for this position
+          const criticalNeed = state.teamCapSituations.filter(team => {
+            const positionNeed = team.positionalNeeds.find((need: any) => need.position === position);
+            return positionNeed && (positionNeed.priority === 'high' || positionNeed.priority === 'critical');
+          }).length;
+          
+          teamsNeedingPosition = criticalNeed;
+        }
+        
+        // Fallback: Use position-specific roster requirements if no team data
+        if (teamsNeedingPosition === 0) {
+          // Estimate based on typical roster construction needs
+          const rosterNeeds: Record<string, number> = {
+            QB: 3,   // Fewer teams need QB (1-2 starters)
+            RB: 6,   // More teams need RB (multiple starters + depth)
+            WR: 7,   // Most teams need WR (3+ starters)
+            TE: 4,   // Moderate need for TE (1-2 starters)
+            PK: 2,   // Very few teams prioritize kicker early
+            Def: 2,  // Very few teams prioritize defense early
+          };
+          teamsNeedingPosition = rosterNeeds[position] || 5;
+        }
+        
+        // Ensure at least 2 teams (minimum competition)
+        teamsNeedingPosition = Math.max(2, teamsNeedingPosition);
+        
+        console.log(`${position}: ${eliteCount} elite available, ${teamsNeedingPosition} teams need`);
+        
+        // Calculate depth ratio: elite_available / teams_needing
+        const depthRatio = eliteCount / teamsNeedingPosition;
+        
+        // Determine depth multiplier based on scarcity
+        let depthMultiplier: number;
+        let classification: 'DEEP' | 'MODERATE' | 'SHALLOW' | 'CRITICAL';
+        
+        if (depthRatio >= 1.5) {
+          // Deep position: 6+ elite for 4 teams = buyers market
+          depthMultiplier = 0.95;
+          classification = 'DEEP';
+        } else if (depthRatio >= 1.0) {
+          // Moderate depth: 4-5 elite for 4 teams = balanced
+          depthMultiplier = 1.1;
+          classification = 'MODERATE';
+        } else if (depthRatio >= 0.5) {
+          // Shallow: 2-3 elite for 4 teams = scarcity premium
+          depthMultiplier = 1.4;
+          classification = 'SHALLOW';
+        } else {
+          // Critical shortage: 0-1 elite for 4 teams = severe premium
+          depthMultiplier = 1.8;
+          classification = 'CRITICAL';
+        }
+        
+        depthAnalysis[position] = {
+          eliteCount,
+          greatCount,
+          goodCount,
+          starterCount,
+          teamsNeedingPosition,
+          depthRatio,
+          depthMultiplier,
+          classification,
+        };
+      }
+      
+      return depthAnalysis;
+    };
+
+    /**
+     * Recalculate player prices with rankings
+     */
+    const recalculatePlayerPrices = () => {
+      try {
+        console.log('💰 Recalculating player prices with rankings...');
+        
+        // Get dynasty weight from preferences (0-100)
+        const dynastyWeight = state.preferences.dynastyWeight / 100; // Convert to 0-1
+        const redraftWeight = 1 - dynastyWeight;
+        
+        console.log(`  Dynasty weight: ${(dynastyWeight * 100).toFixed(0)}% | Redraft weight: ${(redraftWeight * 100).toFixed(0)}%`);
+        
+        // Add rankings to FREE AGENT players
+        const playersWithRankings = state.players.map(player => {
+          const dlfRank = getPlayerRank(player.id, 'dlf');
+          const fbRank = getPlayerRank(player.id, 'footballguys');
+
+          // Calculate composite rank with dynasty weight
+          let compositeRank = null;
+          if (dlfRank && fbRank) {
+            compositeRank = Math.round((dlfRank * dynastyWeight) + (fbRank * redraftWeight));
+          } else if (dlfRank) {
+            compositeRank = dlfRank;
+          } else if (fbRank) {
+            compositeRank = fbRank;
+          }
+
+          // Debug log for Chase, Jefferson, Lamb
+          if (player.name.includes('Chase') || player.name.includes('Jefferson') || player.name.includes('Lamb')) {
+            console.log(`🏈 ${player.name}: DLF=${dlfRank}, FB=${fbRank}, Composite=${compositeRank} (dynasty weight=${(dynastyWeight*100).toFixed(0)}%)`);
+          }
+
+          return {
+            ...player,
+            dynastyRank: dlfRank,
+            redraftRank: fbRank,
+            compositeRank,
+          };
+        });
+
+        // Add rankings to CONTRACTED players
+        const contractedPlayersWithRankings = state.allContractedPlayers.map(player => {
+          const dlfRank = getPlayerRank(player.id, 'dlf');
+          const fbRank = getPlayerRank(player.id, 'footballguys');
+
+          // Calculate composite rank with dynasty weight
+          let compositeRank = null;
+          if (dlfRank && fbRank) {
+            compositeRank = Math.round((dlfRank * dynastyWeight) + (fbRank * redraftWeight));
+          } else if (dlfRank) {
+            compositeRank = dlfRank;
+          } else if (fbRank) {
+            compositeRank = fbRank;
+          }
+          // If no external ranking, use salary-based ranking
+          // Their current salary reflects their market value when signed
+          else {
+            // Assign a pseudo-rank based on salary tier
+            const salary = player.currentSalary;
+            if (salary >= 10_000_000) compositeRank = 15; // Elite tier
+            else if (salary >= 7_000_000) compositeRank = 30; // Great tier
+            else if (salary >= 4_000_000) compositeRank = 50; // Good tier
+            else if (salary >= 2_000_000) compositeRank = 75; // Starter tier
+            else compositeRank = 100; // Depth tier
+          }
+
+          return {
+            ...player,
+            dynastyRank: dlfRank,
+            redraftRank: fbRank,
+            compositeRank,
+          };
+        });
+
+        // Update state with ranked contracted players
+        state.allContractedPlayers = contractedPlayersWithRankings;
+
+        // NOTE: 1-year contracts are excluded from contracted players list to prevent duplicates
+        // They only appear in the free agents list
+        
+        // For now, use a simplified price calculation based on rankings
+        // We'll recalculate each player's price using their composite rank
+        const newPrices = new Map();
+        
+        // **MARKET DEPTH ANALYSIS**: Calculate supply/demand for each position
+        const depthAnalysis = analyzePositionalDepth(playersWithRankings);
+        
+        console.log('📊 Market Depth Analysis:');
+        for (const [position, analysis] of Object.entries(depthAnalysis)) {
+          console.log(`  ${position}: ${analysis.classification} (${analysis.eliteCount} elite / ${analysis.teamsNeedingPosition} teams = ${analysis.depthRatio.toFixed(2)} ratio, ${analysis.depthMultiplier}x multiplier)`);
+        }
+        
+        // Helper function to get historical salary for a specific position/rank
+        // Uses pure position-based historical data (no cross-position blending)
+        const getHistoricalSalaryForPosition = (position: string, positionRank: number): number => {
+          const lookupRank = Math.min(positionRank, 50);
+          const pricingMethod = state.preferences.pricingMethod || 'max';
+
+          // Type guard to check if position exists in curves
+          if (!(position in historicalCurves.curves)) {
+            return 500_000; // Fallback for PK/DEF
+          }
+          
+          const positionCurves = historicalCurves.curves[position as keyof typeof historicalCurves.curves];
+          if (!positionCurves) {
+            return 500_000; // Fallback
+          }
+
+          const rankData = positionCurves[lookupRank.toString() as keyof typeof positionCurves];
+          if (rankData && typeof rankData === 'object') {
+            // Get the value based on selected pricing method
+            if (pricingMethod === 'max' && 'max' in rankData) {
+              return rankData.max as number;
+            } else if (pricingMethod === 'min' && 'min' in rankData) {
+              return rankData.min as number;
+            } else if ('average' in rankData) {
+              return rankData.average as number;
+            }
+          }
+
+          // For ranks > 50, extrapolate from rank 50
+          if (positionRank > 50) {
+            const rank50Data = positionCurves['50' as keyof typeof positionCurves];
+            if (rank50Data && typeof rank50Data === 'object') {
+              let baseValue = 0;
+              if (pricingMethod === 'max' && 'max' in rank50Data) {
+                baseValue = rank50Data.max as number;
+              } else if (pricingMethod === 'min' && 'min' in rank50Data) {
+                baseValue = rank50Data.min as number;
+              } else if ('average' in rank50Data) {
+                baseValue = rank50Data.average as number;
+              }
+
+              const decayFactor = Math.exp(-0.05 * (positionRank - 50));
+              return Math.max(baseValue * decayFactor, 425_000);
+            }
+          }
+
+          return 425_000;
+        };
+
+        // Calculate position ranks from ALL players in rankings (not just free agents)
+        // This ensures proper positional context (e.g., if Kittle is rostered but ranked #5 overall,
+        // Bowers at #9 overall should be priced as TE #2 or #3, not TE #1)
+        const positionRanks = new Map<string, number>();
+
+        // Combine all players with composite ranks from both DLF and FootballGuys
+        const allRankedPlayers = new Map<string, { compositeRank: number; position: string }>();
+
+        // Get all players from DLF rankings
+        if (state.rankings.dlf?.rankings) {
+          state.rankings.dlf.rankings.forEach(r => {
+            if (!allRankedPlayers.has(r.playerId)) {
+              const dlfRank = r.rank;
+              const fbRank = getPlayerRank(r.playerId, 'footballguys');
+              const compositeRank = dlfRank && fbRank
+                ? Math.round((dlfRank * dynastyWeight) + (fbRank * redraftWeight))
+                : dlfRank || fbRank || 999;
+
+              allRankedPlayers.set(r.playerId, {
+                compositeRank,
+                position: r.position
+              });
+            }
+          });
+        }
+
+        // Get all players from FootballGuys rankings
+        if (state.rankings.footballguys?.rankings) {
+          state.rankings.footballguys.rankings.forEach(r => {
+            if (!allRankedPlayers.has(r.playerId)) {
+              const fbRank = r.rank;
+              const dlfRank = getPlayerRank(r.playerId, 'dlf');
+              const compositeRank = dlfRank && fbRank
+                ? Math.round((dlfRank * dynastyWeight) + (fbRank * redraftWeight))
+                : dlfRank || fbRank || 999;
+
+              allRankedPlayers.set(r.playerId, {
+                compositeRank,
+                position: r.position
+              });
+            }
+          });
+        }
+
+        // Calculate position ranks from ALL ranked players
+        for (const position of ['QB', 'RB', 'WR', 'TE']) {
+          const playersAtPosition = Array.from(allRankedPlayers.entries())
+            .filter(([_, data]) => data.position === position)
+            .sort((a, b) => a[1].compositeRank - b[1].compositeRank);
+
+          playersAtPosition.forEach(([playerId, _], index) => {
+            positionRanks.set(playerId, index + 1);
+          });
+        }
+
+        playersWithRankings.forEach(player => {
+          const compositeRank = player.compositeRank;
+          const positionRank = positionRanks.get(player.id) || 99;
+
+          // Use OVERALL RANK as baseline (regardless of position)
+          // If scarcity is enabled, adjust which historical pricing model to use based on market depth
+          let effectivePricingMethod = state.preferences.pricingMethod || 'max';
+
+          if (state.preferences.applyScarcity) {
+            const positionAnalysis = depthAnalysis[player.position];
+            if (positionAnalysis) {
+              // Use market depth to select pricing model
+              // DEEP market (lots of supply) → use 'min' (lowest historical max)
+              // MODERATE market (balanced) → use 'average' (typical historical)
+              // SHALLOW/CRITICAL market (high demand) → use 'max' (highest historical max)
+              if (positionAnalysis.classification === 'DEEP') {
+                effectivePricingMethod = 'min';
+              } else if (positionAnalysis.classification === 'MODERATE') {
+                effectivePricingMethod = 'average';
+              } else {
+                // SHALLOW or CRITICAL
+                effectivePricingMethod = 'max';
+              }
+            }
+          }
+
+          let baseSalary;
+          if (compositeRank && compositeRank > 0) {
+            // Use OVERALL rank for pricing (not position rank)
+            const lookupRank = Math.min(compositeRank, 100);
+            const overallCurves = historicalCurves.curves.OVERALL;
+
+            if (!overallCurves) {
+              baseSalary = 500_000; // Fallback
+            } else {
+              const rankData = overallCurves[lookupRank.toString() as keyof typeof overallCurves];
+              if (rankData && typeof rankData === 'object') {
+                // Get the value based on effective pricing method (with scarcity adjustment)
+                if (effectivePricingMethod === 'max' && 'max' in rankData) {
+                  baseSalary = rankData.max as number;
+                } else if (effectivePricingMethod === 'min' && 'min' in rankData) {
+                  baseSalary = rankData.min as number;
+                } else if ('average' in rankData) {
+                  baseSalary = rankData.average as number;
+                } else {
+                  baseSalary = 425_000;
+                }
+              } else if (compositeRank > 100) {
+                // Extrapolate from rank 100
+                const rank100Data = overallCurves['100' as keyof typeof overallCurves];
+                if (rank100Data && typeof rank100Data === 'object') {
+                  let baseValue = 0;
+                  if (effectivePricingMethod === 'max' && 'max' in rank100Data) {
+                    baseValue = rank100Data.max as number;
+                  } else if (effectivePricingMethod === 'min' && 'min' in rank100Data) {
+                    baseValue = rank100Data.min as number;
+                  } else if ('average' in rank100Data) {
+                    baseValue = rank100Data.average as number;
+                  }
+                  const decayFactor = Math.exp(-0.0266 * (compositeRank - 100));
+                  baseSalary = Math.max(baseValue * decayFactor, 425_000);
+                } else {
+                  baseSalary = 425_000;
+                }
+              } else {
+                baseSalary = 425_000;
+              }
+            }
+
+            // Debug logging for top 50 overall players
+            if (compositeRank <= 50) {
+              const scarcityNote = state.preferences.applyScarcity
+                ? ` [${depthAnalysis[player.position]?.classification || 'N/A'} market → using ${effectivePricingMethod}]`
+                : '';
+              console.log(`🔍 Overall #${compositeRank} | ${player.position} #${positionRank}: ${player.name} - $${(baseSalary / 1_000_000).toFixed(2)}M${scarcityNote}`);
+            }
+          } else {
+            baseSalary = 425_000;
+          }
+
+          // Use base salary directly - this is the 1-year price
+          let finalPrice = Math.round(baseSalary);
+
+          // 1-year price = base historical price
+          const oneYear = finalPrice;
+
+          // Multi-year contracts depreciate based on age decay
+          const getAgeDepreciation = (age: number, years: number): number => {
+            // Annual depreciation rates by age bracket
+            let annualDecay: number;
+
+            if (age <= 24) {
+              annualDecay = 0.02; // 2% per year (still improving/prime ahead)
+            } else if (age <= 27) {
+              annualDecay = 0.05; // 5% per year (entering prime)
+            } else if (age <= 29) {
+              annualDecay = 0.08; // 8% per year (prime but aging)
+            } else if (age <= 31) {
+              annualDecay = 0.12; // 12% per year (declining)
+            } else {
+              annualDecay = 0.18; // 18% per year (steep decline)
+            }
+
+            // Position-specific adjustments
+            if (player.position === 'RB') {
+              annualDecay *= 1.5; // RBs age faster
+            } else if (player.position === 'QB') {
+              annualDecay *= 0.7; // QBs age slower
+            }
+
+            // Calculate total depreciation over contract length
+            const totalDepreciation = 1 - Math.pow(1 - annualDecay, years);
+            return totalDepreciation;
+          };
+
+          // Apply age depreciation to multi-year deals
+          const twoYear = Math.round(finalPrice * (1 - getAgeDepreciation(player.age, 2)));
+          const threeYear = Math.round(finalPrice * (1 - getAgeDepreciation(player.age, 3)));
+          const fourYear = Math.round(finalPrice * (1 - getAgeDepreciation(player.age, 4)));
+          const fiveYear = Math.round(finalPrice * (1 - getAgeDepreciation(player.age, 5)));
+          
+          // Recommend based on age and baseline value
+          let recommended = { years: 3, price: threeYear, reason: 'Market equilibrium - 3-year standard deal' };
+          
+          // Elite young talent - lock them up long-term
+          if (player.age <= 25 && finalPrice >= 8_000_000) {
+            recommended = { years: 5, price: fiveYear, reason: 'Elite young talent - lock in 5 years at discount before breakout' };
+          }
+          // Young productive - secure prime years
+          else if (player.age <= 26 && finalPrice >= 4_000_000) {
+            recommended = { years: 4, price: fourYear, reason: 'Young and productive - lock in 4 years before prime' };
+          }
+          // Prime age - standard deal
+          else if (player.age >= 27 && player.age <= 29) {
+            recommended = { years: 3, price: threeYear, reason: 'Prime years - 3-year deal balances value and risk' };
+          }
+          // Aging - limit exposure
+          else if (player.age >= 30 && player.age <= 31) {
+            recommended = { years: 2, price: twoYear, reason: 'Aging player - 2-year deal limits risk' };
+          }
+          // Veteran - prove it
+          else if (player.age >= 32) {
+            recommended = { years: 1, price: oneYear, reason: 'Veteran - 1-year prove-it deal minimizes risk' };
+          }
+          
+          // **HISTORICAL VALIDATION**: Check if recommended contract has precedent
+          const validation = validateHistoricalPrecedent(
+            player.position,
+            player.age,
+            recommended.price,
+            recommended.years
+          );
+          
+          // Add warning to recommendation if confidence is low
+          if (validation.confidence === 'LOW' && validation.warning) {
+            recommended.reason += ` | ${validation.warning}`;
+          } else if (validation.confidence === 'MEDIUM' && validation.warning) {
+            recommended.reason += ` | ${validation.warning}`;
+          }
+          // HIGH confidence = no warning needed
+          
+          newPrices.set(player.id, {
+            factors: {
+              baseSalary,
+              overallRank: compositeRank,
+              intrinsicValue: baseSalary,
+              predictedMarketPrice: baseSalary,
+              valueGap: 0,
+              valueGapPercent: 0,
+              valueClassification: 'FAIR' as const,
+              depthMultiplier: 1.0,
+              competitionFactor: 1.0,
+              marketInflation: 1.0,
+              demandMultiplier: 1.0,
+              finalPrice: finalPrice,
+              confidence: compositeRank ? 0.85 : 0.50,
+            },
+            contracts: {
+              oneYear,
+              twoYear,
+              threeYear,
+              fourYear,
+              fiveYear,
+              recommended,
+            },
+          });
+        });
+        
+        // Update state - both prices AND player composite ranks
+        state.playerPrices = newPrices;
+        
+        // Update the players array with new composite ranks
+        state.players = playersWithRankings;
+        
+        console.log(`✅ Recalculated prices for ${newPrices.size} players with rankings`);
+        
+        return true;
+      } catch (error) {
+        console.error('Failed to recalculate player prices:', error);
+        return false;
+      }
+    };
+
+    // =============================================================================
     // CALCULATIONS - Recalculate derived data
     // =============================================================================
 
@@ -2095,8 +4337,14 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         
         const availablePlayers = state.players.filter(p => !taggedPlayerIds.has(p.id));
         
-        // TODO: Call market analysis utility with filtered players
+        // Perform comprehensive market analysis
+        const analysis = analyzeMarket(availablePlayers, state.teamCapSituations, state.playerPrices);
+        
+        // Update state with new analysis
+        state.market = analysis;
+        
         console.log('Market recalculated:', availablePlayers.length, 'available players');
+        console.log('Position analysis:', analysis.byPosition);
         
         performance.mark('recalculateMarket-end');
         performance.measure('recalculateMarket', 'recalculateMarket-start', 'recalculateMarket-end');
@@ -2104,6 +4352,387 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         eventBus.emit('marketRecalculated');
       } catch (error) {
         handleError('Failed to recalculate market', error);
+      }
+    };
+
+    /**
+     * Analyze market supply/demand and identify opportunities
+     */
+    const analyzeMarket = (
+      availablePlayers: any[],
+      teamCapSituations: any[],
+      playerPrices: Map<string, any>
+    ) => {
+      const positions = ['QB', 'RB', 'WR', 'TE'] as const;
+      
+      // Calculate total available cap
+      const totalCapAvailable = teamCapSituations.reduce((sum, team) => sum + (team.availableCapSpace || 0), 0);
+      const totalPlayers = availablePlayers.length;
+      const avgCapPerTeam = totalCapAvailable / teamCapSituations.length;
+      
+      // Analyze each position
+      const byPosition: any = {};
+      
+      for (const position of positions) {
+        const positionPlayers = availablePlayers.filter(p => p.position === position);
+        const topPlayers = positionPlayers.slice(0, 12); // Top 12 at position
+        
+        // Calculate average price
+        let totalPrice = 0;
+        let priceCount = 0;
+        positionPlayers.forEach(p => {
+          const priceData = playerPrices.get(p.id);
+          if (priceData?.contracts?.['3yr']) {
+            totalPrice += priceData.contracts['3yr'];
+            priceCount++;
+          }
+        });
+        const avgPrice = priceCount > 0 ? totalPrice / priceCount : 0;
+        
+        // Get top player price
+        let topPlayerPrice = 0;
+        if (topPlayers.length > 0) {
+          const topPriceData = playerPrices.get(topPlayers[0].id);
+          topPlayerPrice = topPriceData?.contracts?.['3yr'] || 0;
+        }
+        
+        // Calculate scarcity index
+        const teamsNeedingPosition = Math.ceil(teamCapSituations.length * 0.6); // Assume 60% of teams need position
+        const scarcityIndex = positionPlayers.length > 0 
+          ? teamsNeedingPosition / positionPlayers.length 
+          : 999;
+        
+        // Classify market depth
+        let classification: 'DEEP' | 'BALANCED' | 'SHALLOW' | 'CRITICAL';
+        if (positionPlayers.length >= 20) classification = 'DEEP';
+        else if (positionPlayers.length >= 12) classification = 'BALANCED';
+        else if (positionPlayers.length >= 6) classification = 'SHALLOW';
+        else classification = 'CRITICAL';
+        
+        byPosition[position] = {
+          position,
+          availableCount: positionPlayers.length,
+          topPlayerCount: topPlayers.length,
+          avgPrice,
+          topPlayerPrice,
+          teamsNeedingPosition,
+          scarcityIndex,
+          classification,
+          inflationFactor: scarcityIndex > 1.5 ? 1.2 : scarcityIndex > 1 ? 1.1 : 1.0,
+        };
+      }
+      
+      // Find value opportunities (undervalued > 20%)
+      const valueOpportunities: any[] = [];
+      availablePlayers.forEach(player => {
+        const priceData = playerPrices.get(player.id);
+        if (!priceData?.factors) return;
+        
+        const estimatedPrice = priceData.contracts?.['3yr'] || 0;
+        const compositeRank = getCompositeRank(player.id);
+        
+        // Simple heuristic: players ranked in top 50 but priced under $5M are potential values
+        if (compositeRank && compositeRank <= 50 && estimatedPrice > 0 && estimatedPrice < 5_000_000) {
+          valueOpportunities.push({
+            player,
+            estimatedPrice,
+            compositeRank,
+            reason: `Top-${compositeRank} player priced under $5M - market inefficiency`,
+          });
+        }
+      });
+      
+      // Sort by rank (best values first)
+      valueOpportunities.sort((a, b) => a.compositeRank - b.compositeRank);
+      
+      // Market insights
+      const insights: any[] = [];
+      
+      // Check for critical positions
+      for (const pos of positions) {
+        const data = byPosition[pos];
+        if (data.classification === 'CRITICAL') {
+          insights.push({
+            type: 'warning',
+            position: pos,
+            message: `CRITICAL SHORTAGE: Only ${data.availableCount} ${pos}s available for ${teamCapSituations.length} teams`,
+            recommendation: `Expect prices to exceed $${(data.avgPrice / 1_000_000).toFixed(1)}M average - prioritize early acquisition`,
+          });
+        }
+      }
+      
+      // Check for deep markets
+      for (const pos of positions) {
+        const data = byPosition[pos];
+        if (data.classification === 'DEEP') {
+          insights.push({
+            type: 'opportunity',
+            position: pos,
+            message: `DEEP MARKET: ${data.availableCount} ${pos}s available`,
+            recommendation: `Wait for prices to drop - many quality options available`,
+          });
+        }
+      }
+      
+      return {
+        totalCapAvailable,
+        totalPlayers,
+        avgCapPerTeam,
+        avgPricePerPlayer: totalCapAvailable / totalPlayers,
+        byPosition,
+        valueOpportunities: valueOpportunities.slice(0, 10), // Top 10
+        insights,
+      };
+    };
+
+    /**
+     * Recalculate championship windows with imported rankings
+     */
+    const recalculateChampionshipWindows = () => {
+      try {
+        console.log('');
+        console.log('='.repeat(80));
+        console.log('🔄 RECALCULATING CHAMPIONSHIP WINDOWS WITH RANKINGS');
+        console.log('='.repeat(80));
+        console.log('📊 Rankings state:', {
+          dlf: state.rankings.dlf ? `${state.rankings.dlf.rankings?.length || 0} players` : 'null',
+          footballguys: state.rankings.footballguys ? `${state.rankings.footballguys.rankings?.length || 0} players` : 'null'
+        });
+        
+        // Get all available data
+        const initialData = (window as any).__INITIAL_DATA__;
+        const teamCapSituations = state.teamCapSituations;
+        const allPlayers = state.allMFLPlayers; // All MFL players
+        
+        // For each team, recalculate window
+        state.championshipWindows = teamCapSituations.map(capSituation => {
+          // Get roster for this team from initial data
+          const teamRoster = initialData.teams.find((t: any) => t.franchiseId === capSituation.franchiseId);
+          if (!teamRoster) {
+            console.warn(`No roster found for ${capSituation.teamName}`);
+            return state.championshipWindows.find(w => w.franchiseId === capSituation.franchiseId) || {
+              franchiseId: capSituation.franchiseId,
+              teamName: capSituation.teamName,
+              window: 'neutral' as const,
+              score: 50,
+              confidence: 0.5,
+              rosterStrengthScore: 50,
+              draftCapitalScore: 50,
+              capFlexibilityScore: 50,
+              ageCurveScore: 50,
+              reasoning: ['No roster data available'],
+              strengths: [],
+              weaknesses: [],
+              isManualOverride: false,
+            };
+          }
+          
+          // Get all players on this team's roster and add composite ranks
+          // EXCLUDE expiring contracts (they won't be on the team in 2026 unless franchise tagged)
+          const expiringPlayerIds = new Set(capSituation.expiringContracts.map((c: any) => c.id));
+          
+          const rosteredPlayers = allPlayers
+            .filter((p: any) => {
+              // Must be on this team
+              if (p.currentTeam !== capSituation.franchiseId) return false;
+              
+              // Exclude expiring contracts (they're free agents in 2026)
+              if (expiringPlayerIds.has(p.id)) return false;
+              
+              return true;
+            })
+            .map((p: any) => {
+              const compositeRank = getCompositeRank(p.id);
+              const age = p.draft_year ? (2026 - parseInt(p.draft_year) + 22) : undefined;
+              
+              // Debug: Log first 3 players on first team
+              if (capSituation.franchiseId === '0001' && rosteredPlayers.length < 3) {
+                console.log(`  Player: ${p.name} (${p.id}) - Composite Rank: ${compositeRank}`);
+              }
+              
+              return {
+                id: p.id,
+                name: p.name,
+                position: p.position,
+                team: p.team,
+                age,
+                compositeRank,
+              };
+            })
+            .filter((p: any) => p.compositeRank !== null); // Only players with rankings
+          
+          console.log(`${capSituation.teamName}: ${rosteredPlayers.length} ranked players (excluded ${expiringPlayerIds.size} expiring contracts)`);
+          
+          // If no ranked players, use salary-based analysis
+          if (rosteredPlayers.length === 0) {
+            console.log(`⚠️ ${capSituation.teamName}: No ranked players, using salary-based analysis`);
+            // Return existing window analysis (salary-based)
+            return state.championshipWindows.find(w => w.franchiseId === capSituation.franchiseId) || {
+              franchiseId: capSituation.franchiseId,
+              teamName: capSituation.teamName,
+              window: 'neutral' as const,
+              score: 50,
+              confidence: 0.3,
+              rosterStrengthScore: 50,
+              draftCapitalScore: 50,
+              capFlexibilityScore: 50,
+              ageCurveScore: 50,
+              reasoning: ['No ranked players on roster - import more rankings'],
+              strengths: [],
+              weaknesses: [],
+              isManualOverride: false,
+            };
+          }
+          
+          // 1. ROSTER STRENGTH SCORE (based on player rankings)
+          const topPlayers = rosteredPlayers
+            .sort((a: any, b: any) => (a.compositeRank || 999) - (b.compositeRank || 999))
+            .slice(0, 12); // Top 12 players
+          
+          const avgRank = topPlayers.reduce((sum: number, p: any) => sum + (p.compositeRank || 300), 0) / topPlayers.length;
+          
+          let rosterStrengthScore = 100;
+          if (avgRank <= 50) {
+            rosterStrengthScore = 90 + (50 - avgRank) / 5; // 90-100
+          } else if (avgRank <= 100) {
+            rosterStrengthScore = 70 + (100 - avgRank) / 2.5; // 70-89
+          } else if (avgRank <= 150) {
+            rosterStrengthScore = 50 + (150 - avgRank) / 2.5; // 50-69
+          } else if (avgRank <= 200) {
+            rosterStrengthScore = 30 + (200 - avgRank) / 2.5; // 30-49
+          } else {
+            rosterStrengthScore = Math.max(0, 30 - (avgRank - 200) / 10); // 0-29
+          }
+          
+          // Bonus for elite players (top 20)
+          const elitePlayers = topPlayers.filter((p: any) => (p.compositeRank || 999) <= 20);
+          if (elitePlayers.length >= 2) {
+            rosterStrengthScore = Math.min(100, rosterStrengthScore + 5);
+          }
+          
+          // 2. DRAFT CAPITAL SCORE (placeholder)
+          const draftCapitalScore = 50;
+          
+          // 3. CAP FLEXIBILITY SCORE
+          const capSpace = capSituation.projectedCapSpace2026;
+          const capPercentage = (capSpace / 45_000_000) * 100;
+          
+          let capFlexibilityScore = 50;
+          if (capPercentage >= 40) {
+            capFlexibilityScore = 90 + Math.min(10, (capPercentage - 40) / 2);
+          } else if (capPercentage >= 30) {
+            capFlexibilityScore = 75 + (capPercentage - 30) * 1.5;
+          } else if (capPercentage >= 20) {
+            capFlexibilityScore = 55 + (capPercentage - 20) * 2;
+          } else if (capPercentage >= 10) {
+            capFlexibilityScore = 35 + (capPercentage - 10) * 2;
+          } else if (capPercentage >= 0) {
+            capFlexibilityScore = 15 + capPercentage * 2;
+          } else {
+            capFlexibilityScore = Math.max(0, 15 + capPercentage);
+          }
+          
+          // 4. AGE CURVE SCORE (based on player ages)
+          const playersWithAge = topPlayers.filter((p: any) => p.age !== undefined);
+          let ageCurveScore = 50;
+          
+          if (playersWithAge.length > 0) {
+            const avgAge = playersWithAge.reduce((sum: number, p: any) => sum + (p.age || 28), 0) / playersWithAge.length;
+            
+            if (avgAge < 24) {
+              ageCurveScore = 90 + Math.min(10, (24 - avgAge) * 5);
+            } else if (avgAge < 26) {
+              ageCurveScore = 75 + (26 - avgAge) * 7.5;
+            } else if (avgAge < 28) {
+              ageCurveScore = 60 + (28 - avgAge) * 7.5;
+            } else if (avgAge < 30) {
+              ageCurveScore = 40 + (30 - avgAge) * 10;
+            } else {
+              ageCurveScore = Math.max(0, 40 - (avgAge - 30) * 8);
+            }
+            
+            // Bonus for young stars
+            const youngStars = topPlayers.filter((p: any) => (p.age || 30) < 25 && (p.compositeRank || 999) <= 50);
+            if (youngStars.length >= 2) {
+              ageCurveScore = Math.min(100, ageCurveScore + (youngStars.length * 5));
+            }
+          }
+          
+          // Calculate overall score
+          const overallScore = Math.round(
+            rosterStrengthScore * 0.45 +
+            draftCapitalScore * 0.20 +
+            capFlexibilityScore * 0.20 +
+            ageCurveScore * 0.15
+          );
+          
+          // Determine window
+          let window: 'contending' | 'neutral' | 'rebuilding' = 'neutral';
+          if (overallScore >= 70) {
+            window = 'contending';
+          } else if (overallScore < 40) {
+            window = 'rebuilding';
+          }
+          
+          // Build reasoning
+          const reasoning: string[] = [];
+          const strengths: string[] = [];
+          const weaknesses: string[] = [];
+          
+          if (rosterStrengthScore >= 75) {
+            strengths.push(`Elite roster (avg rank: ${Math.round(avgRank)})`);
+            reasoning.push(`Top-${Math.round(avgRank)} average player ranking indicates strong core`);
+          } else if (rosterStrengthScore < 45) {
+            weaknesses.push(`Weak roster (avg rank: ${Math.round(avgRank)})`);
+            reasoning.push(`Below-average player rankings suggest rebuilding needed`);
+          }
+          
+          if (elitePlayers.length > 0) {
+            strengths.push(`${elitePlayers.length} elite player(s) (top 20 overall)`);
+          }
+          
+          if (capFlexibilityScore >= 75) {
+            strengths.push(`Excellent cap space ($${(capSpace / 1_000_000).toFixed(1)}M)`);
+            reasoning.push(`Strong cap flexibility allows aggressive moves`);
+          } else if (capFlexibilityScore < 45) {
+            weaknesses.push(`Limited cap space ($${(capSpace / 1_000_000).toFixed(1)}M)`);
+          }
+          
+          if (playersWithAge.length > 0) {
+            const avgAge = playersWithAge.reduce((sum: number, p: any) => sum + (p.age || 28), 0) / playersWithAge.length;
+            if (ageCurveScore >= 70) {
+              strengths.push(`Young core (avg age: ${avgAge.toFixed(1)})`);
+            } else if (ageCurveScore < 40) {
+              weaknesses.push(`Aging roster (avg age: ${avgAge.toFixed(1)})`);
+            }
+          }
+          
+          if (window === 'contending') {
+            reasoning.push(`Team should be aggressive in acquiring talent`);
+          } else if (window === 'rebuilding') {
+            reasoning.push(`Focus on draft picks and youth over expensive veterans`);
+          }
+          
+          return {
+            franchiseId: capSituation.franchiseId,
+            teamName: capSituation.teamName,
+            window,
+            score: overallScore,
+            confidence: 0.85, // High confidence with rankings
+            rosterStrengthScore: Math.round(rosterStrengthScore),
+            draftCapitalScore,
+            capFlexibilityScore: Math.round(capFlexibilityScore),
+            ageCurveScore: Math.round(ageCurveScore),
+            reasoning,
+            strengths,
+            weaknesses,
+            isManualOverride: false,
+          };
+        });
+        
+        console.log('✅ Championship windows recalculated with rankings');
+      } catch (error) {
+        console.error('Failed to recalculate championship windows:', error);
       }
     };
 
@@ -2123,23 +4752,34 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     };
 
     /**
-     * Get composite rank (average of available rankings)
+     * Get composite rank (weighted average based on dynasty weight preference)
      */
     const getCompositeRank = (playerId: string): number | null => {
-      const ranks: number[] = [];
-      
-      // Check FootballGuys
-      const fbRank = getPlayerRank(playerId, 'footballguys');
-      if (fbRank) ranks.push(fbRank);
-      
-      // Check DLF
       const dlfRank = getPlayerRank(playerId, 'dlf');
-      if (dlfRank) ranks.push(dlfRank);
+      const fbRank = getPlayerRank(playerId, 'footballguys');
       
-      if (ranks.length === 0) return null;
+      // Get dynasty weight from preferences (0-100)
+      const dynastyWeight = state.preferences.dynastyWeight / 100; // Convert to 0-1
+      const redraftWeight = 1 - dynastyWeight;
       
-      // Return average
-      return Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length);
+      // If we have both rankings, calculate weighted average
+      if (dlfRank && fbRank) {
+        const composite = Math.round((dlfRank * dynastyWeight) + (fbRank * redraftWeight));
+        // Debug log for testing
+        if (playerId === '13674') { // Aaron Rodgers
+          console.log(`Aaron Rodgers composite: DLF=${dlfRank}, FB=${fbRank}, Weight=${(dynastyWeight*100).toFixed(0)}%, Composite=${composite}`);
+        }
+        return composite;
+      }
+      
+      // If we only have DLF rank (no change when slider moves)
+      if (dlfRank) return dlfRank;
+      
+      // If we only have FootballGuys rank (no change when slider moves)
+      if (fbRank) return fbRank;
+      
+      // No rankings available
+      return null;
     };
 
     /**
@@ -2201,6 +4841,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
     (window as any).auctionState = {
       getState: () => state,
+      state, // Direct state access
       updateDynastyWeight,
       updateFranchiseTagOverride,
       updateChampionshipWindowOverride,
@@ -2210,6 +4851,8 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       updateSort,
       recalculateMarket,
       clearAllData,
+      renderPlayerTable, // Add renderPlayerTable for budget modal
+      renderBudgetPlanner, // Add budget rendering
       // Rankings API
       getPlayerRank,
       getCompositeRank,
@@ -2284,6 +4927,29 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       updateDynastyWeight(weight);
     });
 
+    // Listen for pricing method changes from Control Panel
+    window.addEventListener('auction:pricing-method-change', (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const method = customEvent.detail.method as 'max' | 'average' | 'min';
+      updatePricingMethod(method);
+    });
+
+    // Listen for scarcity toggle changes from Control Panel
+    window.addEventListener('auction:scarcity-toggle', (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const enabled = customEvent.detail.enabled as boolean;
+      updateScarcityToggle(enabled);
+    });
+
+    // Listen for contracted players toggle changes from Control Panel
+    window.addEventListener('auction:contracted-toggle', (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const enabled = customEvent.detail.enabled as boolean;
+      updateContractedPlayersToggle(enabled);
+    });
+
+    // Toggle removed - 1-year contracts are now always excluded from contracted list to prevent duplicates
+
     // Listen for position filter changes from Control Panel
     window.addEventListener('auction:position-filter', (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -2296,6 +4962,12 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       const customEvent = e as CustomEvent;
       const { field, direction } = customEvent.detail;
       updateSort(field, direction === 'desc');
+    });
+
+    // Listen for price curve changes (precomputed predictions)
+    document.getElementById('price-curve-select')?.addEventListener('change', (e) => {
+      const value = (e.target as HTMLSelectElement).value as 'max' | 'avg' | 'min';
+      updatePriceCurve(value);
     });
 
     // Listen for search from Control Panel
@@ -2317,6 +4989,17 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       windowOverrides: state.overrides.championshipWindowOverrides.size,
     });
 
+    // Recalculate championship windows if rankings are loaded
+    if (hasRankings()) {
+      console.log('🔄 Rankings detected on page load - recalculating championship windows...');
+      recalculateChampionshipWindows();
+      renderTeamCapGrid();
+      
+      console.log('💰 Recalculating player prices with rankings...');
+      recalculatePlayerPrices();
+      renderPlayerTable();
+    }
+
     // Restore saved view
     const savedView = state.preferences.currentView;
     if (savedView !== 'players') {
@@ -2324,6 +5007,12 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       if (viewTab) {
         viewTab.click();
       }
+    }
+
+    // Sync price curve select with preference
+    const priceCurveSelect = document.getElementById('price-curve-select') as HTMLSelectElement | null;
+    if (priceCurveSelect) {
+      priceCurveSelect.value = state.preferences.priceCurve;
     }
 
     // =============================================================================
@@ -2413,10 +5102,54 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       renderPlayerTable();
     });
 
+    eventBus.on('marketRecalculated', () => {
+      // Re-render market analysis when market data changes
+      renderMarketAnalysis();
+    });
+
+    // Initialize contracted player rankings (salary-based if no external rankings)
+    const initializeContractedPlayerRanks = () => {
+      // Initialize ranks for multi-year contracted players
+      state.allContractedPlayers = state.allContractedPlayers.map(player => {
+        if (player.compositeRank) return player;
+
+        const salary = player.currentSalary;
+        let compositeRank;
+        if (salary >= 10_000_000) compositeRank = 15;
+        else if (salary >= 7_000_000) compositeRank = 30;
+        else if (salary >= 4_000_000) compositeRank = 50;
+        else if (salary >= 2_000_000) compositeRank = 75;
+        else compositeRank = 100;
+
+        return { ...player, compositeRank };
+      });
+
+      // NOTE: 1-year contracts are excluded from contracted list to prevent duplicates
+    };
+
     // Initial render
+    // Recalculate prices if rankings are loaded
+    if (state.rankings.dlf || state.rankings.footballguys) {
+      console.log('📊 Rankings detected on page load - recalculating prices...');
+      recalculatePlayerPrices();
+    } else {
+      // No rankings loaded - just initialize contracted player ranks by salary
+      initializeContractedPlayerRanks();
+    }
+
+    // Apply selected price curve predictions to FAs on load
+    applyPriceCurveToPlayers();
+
+    // Update position counts based on initial toggle state
+    updatePositionCounts();
+    
+    // Calculate initial market analysis
+    recalculateMarket();
+
     renderPlayerTable();
     renderFranchiseTagGrid();
     renderTeamCapGrid();
+    renderMarketAnalysis();
 
     // =============================================================================
     // RANKINGS IMPORT HANDLERS
@@ -2899,10 +5632,26 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         // Update the status overview display
         updateRankingsStatusOverview();
         
+        console.log('🎯 About to call recalculateChampionshipWindows()...');
+        
+        // Recalculate championship windows with rankings
+        recalculateChampionshipWindows();
+        
+        console.log('✅ Finished recalculateChampionshipWindows()');
+        
+        // Recalculate player prices with rankings
+        recalculatePlayerPrices();
+        
+        // Re-render team cap grid with updated windows
+        renderTeamCapGrid();
+        
+        // Re-render player table with updated prices
+        renderPlayerTable();
+        
         // Emit event
         eventBus.emit('rankingsImported', { type, total, matched });
         
-        alert(`Successfully imported ${matched} of ${total} players (${matchRate}% match rate)`);
+        alert(`Successfully imported ${matched} of ${total} players (${matchRate}% match rate)\n\nChampionship windows have been recalculated with rankings!`);
       } catch (error) {
         console.error('Failed to import rankings:', error);
         alert('Failed to import rankings. Check console for details.');
@@ -3010,12 +5759,173 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     }
     console.log('=====================\n');
   </script>
+
+  <!-- Add Target Player Modal -->
+  <div id="add-target-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 500px; width: 90%;">
+      <h2 style="margin-top: 0;">Add to Target List</h2>
+      <div id="modal-player-info" style="margin-bottom: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 4px;">
+        <!-- Player info will be inserted here -->
+      </div>
+      
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Priority Level</label>
+        <select id="modal-priority" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;">
+          <option value="must-have">Must Have - Don't let this player go</option>
+          <option value="strong-target" selected>Strong Target - Willing to overpay slightly</option>
+          <option value="nice-to-have">Nice to Have - Only at value price</option>
+          <option value="backup">Backup - Fallback option</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Max Bid (millions)</label>
+        <input 
+          type="number" 
+          id="modal-max-bid" 
+          step="0.1" 
+          min="0" 
+          style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;"
+          placeholder="Enter maximum bid amount"
+        />
+        <div id="modal-predicted-price" style="margin-top: 0.25rem; font-size: 0.875rem; color: #6b7280;">
+          <!-- Predicted price will be shown here -->
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Notes (optional)</label>
+        <textarea 
+          id="modal-notes" 
+          rows="3" 
+          style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;"
+          placeholder="Add any notes about this target..."
+        ></textarea>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button onclick="closeAddTargetModal()" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer;">
+          Cancel
+        </button>
+        <button onclick="confirmAddTarget()" style="padding: 0.5rem 1rem; border: none; background: #3b82f6; color: white; border-radius: 4px; cursor: pointer;">
+          Add Target
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    let currentTargetPlayerId = null;
+
+    window.showAddTargetModal = (playerId) => {
+      currentTargetPlayerId = playerId;
+      const state = window.auctionState?.state;
+      if (!state) return;
+
+      const player = state.players.find(p => p.id === playerId);
+      if (!player) return;
+
+      const predictedPrice = state.playerPrices.get(playerId) || 0;
+
+      // Show modal
+      const modal = document.getElementById('add-target-modal');
+      modal.style.display = 'flex';
+
+      // Fill in player info
+      document.getElementById('modal-player-info').innerHTML = `
+        <div style="font-weight: 600; font-size: 1.125rem;">${player.name}</div>
+        <div style="color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem;">
+          ${player.position} • Age ${player.age} • Rank ${player.compositeRank || '-'}
+        </div>
+      `;
+
+      // Set default max bid to predicted price
+      document.getElementById('modal-max-bid').value = predictedPrice.toFixed(1);
+      document.getElementById('modal-predicted-price').innerHTML = `
+        Predicted auction price: <strong>$${predictedPrice.toFixed(1)}M</strong>
+      `;
+
+      // Clear notes
+      document.getElementById('modal-notes').value = '';
+    };
+
+    window.closeAddTargetModal = () => {
+      document.getElementById('add-target-modal').style.display = 'none';
+      currentTargetPlayerId = null;
+    };
+
+    window.confirmAddTarget = () => {
+      if (!currentTargetPlayerId) return;
+
+      const priority = document.getElementById('modal-priority').value;
+      const maxBid = parseFloat(document.getElementById('modal-max-bid').value);
+      const notes = document.getElementById('modal-notes').value;
+
+      if (isNaN(maxBid) || maxBid < 0) {
+        alert('Please enter a valid max bid amount');
+        return;
+      }
+
+      // Add target
+      window.addTargetPlayer(currentTargetPlayerId, priority, maxBid, notes);
+
+      // Close modal and refresh view
+      closeAddTargetModal();
+      
+      // Re-render players table to show target badge
+      if (window.auctionState?.renderPlayerTable) {
+        window.auctionState.renderPlayerTable();
+      }
+    };
+
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAddTargetModal();
+      }
+    });
+
+    // Close modal on background click
+    document.getElementById('add-target-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'add-target-modal') {
+        closeAddTargetModal();
+      }
+    });
+  </script>
 </TheLeagueLayout>
 
 <style>
-  :global(table.auction-table tr td ){
-    padding-block: .25rem;
-}
+  :global(table.auction-table tr td ), :global(table.auction-table tr th ){
+    padding-block: .5rem;
+    padding-inline: .5rem;
+    text-align: center;
+    }
+
+  /* Contracted/Rostered Player Styling */
+  :global(tr.contracted-player) {
+    opacity: 0.5;
+    background-color: rgba(107, 114, 128, 0.1);
+  }
+
+  :global(tr.contracted-player td) {
+    color: #6b7280;
+  }
+
+  :global(tr.contracted-player:hover) {
+    opacity: 0.7;
+    background-color: rgba(107, 114, 128, 0.15);
+  }
+
+  /* Mobile card contracted styling */
+  :global(.player-card.contracted-player) {
+    opacity: 0.5;
+    background-color: rgba(107, 114, 128, 0.1);
+  }
+
+  :global(.player-card.contracted-player:hover) {
+    opacity: 0.7;
+  }
+
   .auction-predictor-header {
     padding: 2rem 0;
     margin-bottom: 2rem;
@@ -3032,7 +5942,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     opacity: 0.9;
     margin: 0;
   }
-
+  td[data-column="year3"] {
+    background: #eee;
+  }
   .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -3526,5 +6438,5 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     margin: 0 4px;
     object-fit: contain;
   }
-</style>
 
+</style>
