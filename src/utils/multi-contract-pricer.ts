@@ -89,8 +89,8 @@ function calculateValueGap(
   isOverpay: boolean;
 } {
   const valueGap = estimatedFairValue - auctionPrice;
-  const valueGapPercent = estimatedFairValue > 0 
-    ? (valueGap / estimatedFairValue) * 100 
+  const valueGapPercent = auctionPrice > 0
+    ? (valueGap / auctionPrice) * 100
     : 0;
   
   return {

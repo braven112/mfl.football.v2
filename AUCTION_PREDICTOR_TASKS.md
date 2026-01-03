@@ -923,14 +923,233 @@
 **Total**: 46 hours
 
 **Defer to v2**:
-- Market analysis component (Task 3.5)
+- Market analysis component (Task 3.5) ✅ **COMPLETED**
 - Rankings importer (Task 3.6)
 - Advanced features (Phase 4)
 - Full test coverage (remaining Phase 5)
 
 ---
 
-## Risk Mitigation
+## Phase 6: Live Auction Integration
+
+**Priority**: High  
+**Timeline**: Implement before March 15, 2026 auction  
+**Total Estimate**: 16 hours
+
+### Task 6.1: MFL API Research & Documentation
+**Estimate**: 3 hours  
+**Status**: Not Started  
+**Priority**: 🔴 Critical (Blocks other tasks)
+
+**Subtasks**:
+- [ ] Research MFL auction API endpoints:
+  - [ ] Test `/export?TYPE=auctionResults&L={leagueId}&APIKEY={key}&JSON=1`
+  - [ ] Test `/export?TYPE=transactions` (check for auction data)
+  - [ ] Test `/export?TYPE=league` (check for auction status)
+- [ ] Document response structures:
+  - [ ] Live auction state (active player, current bid, bidder)
+  - [ ] Completed auction results (final price, winner, timestamp)
+  - [ ] Auction metadata (total players sold, remaining, etc.)
+- [ ] Identify API constraints:
+  - [ ] Rate limits (requests per minute)
+  - [ ] Authentication requirements
+  - [ ] Response times / latency
+  - [ ] Behavior during off-season (before March)
+- [ ] Create mock auction data for development:
+  - [ ] JSON files with sample responses
+  - [ ] Multiple auction states (active, paused, completed)
+  - [ ] Edge cases (ties, cancellations, errors)
+- [ ] Document findings in `docs/MFL_AUCTION_API.md`
+
+**Deliverables**:
+- MFL auction API documentation
+- Mock data files for testing
+- API endpoint selection decision
+
+---
+
+### Task 6.2: Live Polling Engine
+**Estimate**: 4 hours  
+**Status**: Not Started  
+**Dependencies**: Task 6.1
+
+**Subtasks**:
+- [ ] Create `src/utils/auction-poller.ts`:
+  - [ ] `startPolling()` - Initialize 60-second interval
+  - [ ] `stopPolling()` - Clear interval and cleanup
+  - [ ] `fetchAuctionData()` - Call MFL API
+  - [ ] `handleResponse()` - Parse and validate data
+  - [ ] `handleError()` - Exponential backoff (max 3 retries)
+- [ ] Implement error handling:
+  - [ ] Network errors (offline, timeout)
+  - [ ] API errors (500, 404, rate limit)
+  - [ ] Parse errors (invalid JSON)
+- [ ] Add response caching:
+  - [ ] Cache last successful response
+  - [ ] Return cached data on API failure
+  - [ ] Track cache age / staleness
+- [ ] Unit tests:
+  - [ ] Test successful polling cycle
+  - [ ] Test error scenarios
+  - [ ] Test interval cleanup
+
+**Deliverables**:
+- Polling utility with error handling
+- Unit tests for polling logic
+
+---
+
+### Task 6.3: Activity Detection System
+**Estimate**: 3 hours  
+**Status**: Not Started  
+**Dependencies**: None
+
+**Subtasks**:
+- [ ] Create `src/utils/activity-detector.ts`:
+  - [ ] Track last activity timestamp
+  - [ ] Listen to events: `mousemove`, `keydown`, `click`, `scroll`
+  - [ ] Monitor tab visibility with Page Visibility API
+  - [ ] Check inactivity every 30 seconds
+  - [ ] Emit events: `inactive`, `active`
+- [ ] Implement auto-pause logic:
+  - [ ] Pause after 5 minutes of inactivity
+  - [ ] Show pause UI with resume button
+  - [ ] Resume on user click
+- [ ] Handle edge cases:
+  - [ ] User switches tabs (pause)
+  - [ ] Browser minimized (pause)
+  - [ ] User returns (show resume button)
+- [ ] Add TypeScript types
+- [ ] Unit tests:
+  - [ ] Simulate user activity
+  - [ ] Test inactivity detection
+  - [ ] Test resume functionality
+
+**Deliverables**:
+- Activity detection utility
+- Auto-pause/resume logic
+- Unit tests
+
+---
+
+### Task 6.4: Live Auction UI Component
+**Estimate**: 4 hours  
+**Status**: Not Started  
+**Dependencies**: Tasks 6.2, 6.3
+
+**Subtasks**:
+- [ ] Create `src/components/theleague/LiveAuctionPanel.astro`:
+  - [ ] Header with status indicator (🔴 LIVE / ⏸️ PAUSED)
+  - [ ] Last update timestamp
+  - [ ] Pause/Resume button
+  - [ ] Split view: Active players | Recently sold
+- [ ] Implement pause state UI:
+  ```
+  ┌─────────────────────────────────────┐
+  │  ⏸️ Live Auction Tracking Paused    │
+  │  Paused due to inactivity           │
+  │  [▶ Resume Live Tracking]           │
+  │  Last update: 3:24 PM (6 min ago)   │
+  └─────────────────────────────────────┘
+  ```
+- [ ] Create player auction card component:
+  - [ ] Player name, position, age
+  - [ ] Predicted price
+  - [ ] Current/final bid
+  - [ ] Variance badge (VALUE/FAIR/PREMIUM/AVOID)
+  - [ ] Bid history (if available)
+- [ ] Add animations:
+  - [ ] Flash green/red on price change
+  - [ ] Pulse active player card
+  - [ ] Fade out sold players
+- [ ] Add responsive CSS (mobile/desktop)
+
+**Deliverables**:
+- Live auction UI component
+- Pause state UI
+- Player auction cards
+
+---
+
+### Task 6.5: Price Comparison & Value Analysis
+**Estimate**: 2 hours  
+**Status**: Not Started  
+**Dependencies**: Task 6.4
+
+**Subtasks**:
+- [ ] Create `src/utils/auction-value-analyzer.ts`:
+  - [ ] `comparePrice()` - Predicted vs actual
+  - [ ] `classifyVariance()` - VALUE/FAIR/PREMIUM/AVOID
+    - VALUE: actual < predicted - 15%
+    - FAIR: within ±15%
+    - PREMIUM: +15% to +30%
+    - AVOID: > +30%
+  - [ ] `generateInsights()` - Market trend analysis
+- [ ] Implement auction statistics:
+  - [ ] Total players sold / remaining
+  - [ ] Average sale price by position
+  - [ ] Total cap spent across league
+  - [ ] Remaining cap by team
+- [ ] Create insight cards:
+  - [ ] "RBs selling 20% above predicted"
+  - [ ] "3 value opportunities missed"
+  - [ ] "QB market heating up"
+- [ ] Unit tests for variance classification
+
+**Deliverables**:
+- Value analysis utility
+- Auction statistics calculator
+- Insight generator
+
+---
+
+### Task 6.6: Integration & Testing
+**Estimate**: 3 hours  
+**Status**: Not Started  
+**Dependencies**: All Phase 6 tasks
+
+**Subtasks**:
+- [ ] Integrate into auction predictor page:
+  - [ ] Add "Live Auction" tab to view selector
+  - [ ] Wire up polling on tab activation
+  - [ ] Stop polling when switching tabs
+  - [ ] Cleanup on page unmount
+- [ ] Add localStorage persistence:
+  - [ ] Save last auction state
+  - [ ] Restore on page reload
+  - [ ] Clear on auction end
+- [ ] Performance testing:
+  - [ ] Test with 300+ players
+  - [ ] Verify 60-second polling doesn't lag UI
+  - [ ] Check memory leaks (long sessions)
+- [ ] Manual testing scenarios:
+  - [ ] Start/stop polling
+  - [ ] Activity detection
+  - [ ] Network failures
+  - [ ] API rate limiting
+- [ ] Create development tools:
+  - [ ] Mock auction simulator
+  - [ ] Manual bid injection UI
+  - [ ] Time-travel debugging
+
+**Deliverables**:
+- Fully integrated live auction feature
+- Performance validated
+- Dev tools for testing
+
+---
+
+## Updated Summary
+
+| Phase | Tasks | Estimated Time |
+|-------|-------|----------------|
+| Phase 1: Core Utilities | 4 | 10 hours |
+| Phase 2: Main Page | 3 | 9 hours |
+| Phase 3: Core Components | 7 | 25 hours |
+| Phase 4: Advanced Features | 5 | 15 hours (3 blocked) |
+| Phase 5: Polish & Testing | 7 | 22 hours |
+| **Phase 6: Live Auction** | **6** | **16 hours** |
+| **TOTAL** | **32** | **97 hours** |
 
 ### High-Risk Items
 

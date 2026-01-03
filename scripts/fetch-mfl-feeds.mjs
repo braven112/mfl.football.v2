@@ -179,6 +179,11 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    key: 'auctionResults',
+    url: `${host}/${year}/export?TYPE=auctionResults&L=${leagueId}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
     key: 'transactions',
     url: withWeek(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),

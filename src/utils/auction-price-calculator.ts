@@ -1,15 +1,23 @@
 /**
  * Auction Price Calculator
- * 
+ *
  * Calculates predicted auction prices for players based on:
  * - Composite rankings (dynasty + redraft weighted)
  * - Market scarcity by position
  * - Team demand and cap space
  * - Player age and contract history
- * - Historical auction patterns
+ * - Historical auction patterns (2020-2025)
+ *
+ * PRICING MODELS:
+ * - 'max': Highest salary each rank has ever commanded (bullish market)
+ * - 'average': Average salary since 2020 (balanced market)
+ * - 'min': Lowest salary each rank has commanded (bearish market)
  */
 
 import type { PlayerValuation, TeamCapSituation, MarketAnalysis } from '../types/auction-predictor';
+import historicalCurves from '../../data/theleague/historical-salary-curves.json';
+
+export type PricingModel = 'min' | 'average' | 'max';
 
 // Position-specific baseline salaries (in millions)
 const POSITION_BASELINES: Record<string, number> = {
@@ -62,51 +70,129 @@ export interface PriceCalculationFactors {
 }
 
 /**
- * Calculate auction price for a player
+ * Look up historical salary for a position/rank combination
+ * @param position - Player position (QB, RB, WR, TE)
+ * @param rank - Position rank (1-based)
+ * @param model - Pricing model: 'min', 'average', or 'max'
+ */
+function getHistoricalSalary(position: string, rank: number, model: PricingModel = 'average'): number {
+  // Get curves for this position
+  const positionCurves = historicalCurves.curves[position as keyof typeof historicalCurves.curves];
+
+  if (!positionCurves) {
+    // Fallback for positions without historical data (PK, DEF)
+    return 500_000;
+  }
+
+  // Cap rank at 50 (historical data limit)
+  const lookupRank = Math.min(rank, 50);
+
+  // Get exact match if available
+  const rankData = positionCurves[lookupRank.toString() as keyof typeof positionCurves];
+  if (rankData && typeof rankData === 'object' && 'average' in rankData) {
+    // Select the appropriate value based on pricing model
+    if (model === 'max' && 'max' in rankData) {
+      return rankData.max as number;
+    } else if (model === 'min' && 'min' in rankData) {
+      return rankData.min as number;
+    } else {
+      return rankData.average;
+    }
+  }
+
+  // For ranks > 50, extrapolate from rank 50
+  const rank50Data = positionCurves['50' as keyof typeof positionCurves];
+  if (rank > 50 && rank50Data && typeof rank50Data === 'object' && 'average' in rank50Data) {
+    // Decay beyond rank 50 at 5% per rank down to league minimum
+    let baseValue: number;
+    if (model === 'max' && 'max' in rank50Data) {
+      baseValue = rank50Data.max as number;
+    } else if (model === 'min' && 'min' in rank50Data) {
+      baseValue = rank50Data.min as number;
+    } else {
+      baseValue = rank50Data.average;
+    }
+
+    const decayFactor = Math.exp(-0.05 * (rank - 50));
+    return Math.max(baseValue * decayFactor, 425_000);
+  }
+
+  // Fallback
+  return 425_000;
+}
+
+/**
+ * Calculate auction price for a player using HISTORICAL CURVE MODEL
+ * Uses actual 2020-2025 auction data to determine pricing
+ * @param player - Player to value
+ * @param marketAnalysis - Market analysis data
+ * @param dynastyWeight - 0-100, how much to weight dynasty vs redraft
+ * @param allPlayers - All players for position rank calculation
+ * @param pricingModel - 'min', 'average', or 'max' pricing curve
  */
 export function calculateAuctionPrice(
   player: PlayerValuation,
   marketAnalysis: MarketAnalysis,
-  dynastyWeight: number = 60 // 0-100, how much to weight dynasty vs redraft
+  dynastyWeight: number = 60,
+  allPlayers?: PlayerValuation[],
+  pricingModel: PricingModel = 'average'
 ): PriceCalculationFactors {
   
   // Step 1: Calculate composite rank if we have rankings
   const compositeRank = calculateCompositeRank(player, dynastyWeight);
   
-  // Step 2: Get position baseline
-  const basePrice = POSITION_BASELINES[player.position] || 2_000_000;
+  // If no rank, use minimum pricing
+  if (!compositeRank) {
+    return {
+      basePrice: 500_000,
+      rankMultiplier: 1.0,
+      ageMultiplier: 1.0,
+      scarcityMultiplier: 1.0,
+      demandMultiplier: 1.0,
+      finalPrice: 500_000,
+      confidence: 0.3,
+    };
+  }
   
-  // Step 3: Apply rank tier multiplier
-  const rankMultiplier = getRankMultiplier(compositeRank, player.position);
+  // Step 2: Calculate position rank (how many at this position are ranked higher)
+  let positionRank = 1;
+  if (allPlayers) {
+    const playersAtPosition = allPlayers
+      .filter(p => p.position === player.position)
+      .map(p => {
+        const rank = calculateCompositeRank(p, dynastyWeight);
+        return { id: p.id, rank: rank || 999 };
+      })
+      .filter(p => p.rank < 999)
+      .sort((a, b) => a.rank - b.rank);
+    
+    positionRank = playersAtPosition.findIndex(p => p.id === player.id) + 1;
+    if (positionRank === 0) positionRank = 99; // Not found = deep backup
+  }
   
-  // Step 4: Apply age multiplier
-  const ageMultiplier = getAgeMultiplier(player.age);
-  
-  // Step 5: Apply market scarcity multiplier
+  // Step 3: PURE HISTORICAL PRICING - Use actual 2020-2025 auction data directly
+  // Simply look up this player's position rank and use the historical curve
+  // NO hybrid weighting, NO scarcity multipliers - just the raw historical data
+  let baseSalary = getHistoricalSalary(player.position, positionRank, pricingModel);
+
+  // Floor at league minimum
+  baseSalary = Math.max(baseSalary, 425_000);
+
+  // For reporting purposes, calculate what the scarcity multiplier would be
   const scarcityMultiplier = getScarcityMultiplier(player.position, marketAnalysis);
   
-  // Step 6: Apply demand multiplier (how many teams need this position)
-  const demandMultiplier = getDemandMultiplier(player.position, marketAnalysis);
+  const finalPrice = Math.round(baseSalary);
   
-  // Step 7: Calculate final price
-  const finalPrice = Math.round(
-    basePrice * 
-    rankMultiplier * 
-    ageMultiplier * 
-    scarcityMultiplier * 
-    demandMultiplier
-  );
-  
-  // Step 8: Calculate confidence (higher confidence if we have rankings)
-  const confidence = calculatePriceConfidence(player, compositeRank);
+  // Calculate confidence (higher for historical data)
+  const confidence = compositeRank ? 0.90 : 0.50;
   
   return {
-    basePrice,
-    rankMultiplier,
-    ageMultiplier,
+    basePrice: baseSalary,
+    rankMultiplier: 1.0, // Already baked into hybrid calculation
+    ageMultiplier: 1.0,  // Dynasty rankings already account for age
     scarcityMultiplier,
-    demandMultiplier,
-    finalPrice: Math.max(finalPrice, 500_000), // Minimum $500k
+    demandMultiplier: 1.0,
+    finalPrice,
     confidence,
   };
 }
@@ -247,29 +333,60 @@ function calculatePriceConfidence(player: PlayerValuation, compositeRank: number
 
 /**
  * Generate multi-year contract pricing options
+ * 
+ * PHILOSOPHY: The basePrice represents a 3-year contract value (market equilibrium).
+ * - Longer deals = discount (buying stability, accepting floor)
+ * - Shorter deals = premium (betting on upside, prove-it deals)
  */
 export function generateContractPricing(
   player: PlayerValuation,
   basePrice: number,
   ageMultiplier: number
 ): ContractPricing {
-  
-  const ESCALATION_RATE = 0.10; // 10% annual escalation
-  
-  // 1-Year Contract: Base price
+
+  // 1-year price = base historical price
   const oneYear = basePrice;
-  
-  // 2-Year Contract: Slight discount for commitment
-  const twoYear = Math.round(basePrice * 0.95);
-  
-  // 3-Year Contract: Better discount
-  const threeYear = Math.round(basePrice * 0.90);
-  
-  // 4-Year Contract: Best discount for young players
-  const fourYear = Math.round(basePrice * 0.85);
-  
-  // 5-Year Contract: Maximum discount for elite young talent
-  const fiveYear = Math.round(basePrice * 0.80);
+
+  // Multi-year contracts depreciate based on age decay
+  // Players get older and less valuable over time
+  const currentAge = player.age;
+
+  // Calculate age-based depreciation for each contract year
+  // Younger players depreciate slower, older players depreciate faster
+  const getAgeDepreciation = (age: number, years: number): number => {
+    // Annual depreciation rates by age bracket
+    let annualDecay: number;
+
+    if (age <= 24) {
+      annualDecay = 0.02; // 2% per year (still improving/prime ahead)
+    } else if (age <= 27) {
+      annualDecay = 0.05; // 5% per year (entering prime)
+    } else if (age <= 29) {
+      annualDecay = 0.08; // 8% per year (prime but aging)
+    } else if (age <= 31) {
+      annualDecay = 0.12; // 12% per year (declining)
+    } else {
+      annualDecay = 0.18; // 18% per year (steep decline)
+    }
+
+    // Position-specific adjustments
+    if (player.position === 'RB') {
+      annualDecay *= 1.5; // RBs age faster
+    } else if (player.position === 'QB') {
+      annualDecay *= 0.7; // QBs age slower
+    }
+
+    // Calculate total depreciation over contract length
+    // Use exponential decay: value = basePrice * (1 - decay)^years
+    const totalDepreciation = 1 - Math.pow(1 - annualDecay, years);
+    return totalDepreciation;
+  };
+
+  // Apply age depreciation to multi-year deals
+  const twoYear = Math.round(basePrice * (1 - getAgeDepreciation(currentAge, 2)));
+  const threeYear = Math.round(basePrice * (1 - getAgeDepreciation(currentAge, 3)));
+  const fourYear = Math.round(basePrice * (1 - getAgeDepreciation(currentAge, 4)));
+  const fiveYear = Math.round(basePrice * (1 - getAgeDepreciation(currentAge, 5)));
   
   // Recommend contract length based on age and value
   const recommended = recommendContractLength(
@@ -352,22 +469,28 @@ function recommendContractLength(
 
 /**
  * Batch calculate prices for all players
+ * @param players - All players to value
+ * @param marketAnalysis - Market analysis data
+ * @param dynastyWeight - 0-100, how much to weight dynasty vs redraft
+ * @param pricingModel - 'min', 'average', or 'max' pricing curve
  */
 export function calculateAllPlayerPrices(
   players: PlayerValuation[],
   marketAnalysis: MarketAnalysis,
-  dynastyWeight: number = 60
+  dynastyWeight: number = 60,
+  pricingModel: PricingModel = 'average'
 ): Map<string, { factors: PriceCalculationFactors; contracts: ContractPricing }> {
-  
+
   const results = new Map();
-  
+
   for (const player of players) {
-    const factors = calculateAuctionPrice(player, marketAnalysis, dynastyWeight);
+    // Pass all players so we can calculate position rank
+    const factors = calculateAuctionPrice(player, marketAnalysis, dynastyWeight, players, pricingModel);
     const contracts = generateContractPricing(player, factors.finalPrice, factors.ageMultiplier);
-    
+
     results.set(player.id, { factors, contracts });
   }
-  
+
   return results;
 }
 

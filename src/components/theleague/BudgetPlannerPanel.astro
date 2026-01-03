@@ -1,0 +1,559 @@
+---
+/**
+ * Budget Planner Panel
+ * 
+ * Allows users to:
+ * - Mark players as targets with priority tiers
+ * - Set max bid amounts for each target
+ * - Track total planned spend vs available cap
+ * - View roster construction balance
+ * - Get warnings about budget/roster issues
+ */
+---
+
+<div class="budget-planner-panel">
+  <!-- Budget Summary Header -->
+  <div class="budget-summary">
+    <div class="summary-card">
+      <div class="summary-label">Available Cap</div>
+      <div class="summary-value" id="available-cap">$0.0M</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Planned Spend</div>
+      <div class="summary-value planned" id="planned-spend">$0.0M</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Remaining Budget</div>
+      <div class="summary-value" id="remaining-budget">$0.0M</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Target Players</div>
+      <div class="summary-value" id="target-count">0</div>
+    </div>
+  </div>
+
+  <!-- Warnings -->
+  <div id="budget-warnings" class="budget-warnings"></div>
+
+  <!-- Main Content Area -->
+  <div class="budget-content">
+    
+    <!-- Left Column: Target Players -->
+    <div class="budget-section targets-section">
+      <div class="section-header">
+        <h3>🎯 Target Players</h3>
+        <div class="section-actions">
+          <button id="clear-all-targets" class="btn-secondary btn-sm">Clear All</button>
+          <button id="export-budget" class="btn-primary btn-sm">Export Plan</button>
+        </div>
+      </div>
+
+      <!-- Priority Tabs -->
+      <div class="priority-tabs">
+        <button class="priority-tab active" data-priority="all">
+          All (<span id="count-all">0</span>)
+        </button>
+        <button class="priority-tab" data-priority="must-have">
+          Must Have (<span id="count-must-have">0</span>)
+        </button>
+        <button class="priority-tab" data-priority="strong-target">
+          Strong Target (<span id="count-strong-target">0</span>)
+        </button>
+        <button class="priority-tab" data-priority="nice-to-have">
+          Nice to Have (<span id="count-nice-to-have">0</span>)
+        </button>
+        <button class="priority-tab" data-priority="backup">
+          Backup (<span id="count-backup">0</span>)
+        </button>
+      </div>
+
+      <!-- Target Players List -->
+      <div id="target-players-list" class="target-players-list">
+        <div class="empty-state">
+          <p>No target players yet</p>
+          <p class="empty-state-hint">Go to the Players tab and click "Add to Targets" on any player</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Roster Balance & Insights -->
+    <div class="budget-section insights-section">
+      
+      <!-- Roster Balance -->
+      <div class="roster-balance">
+        <h3>📊 Roster Balance</h3>
+        <div id="roster-balance-grid" class="roster-balance-grid"></div>
+      </div>
+
+      <!-- Budget Insights -->
+      <div class="budget-insights">
+        <h3>💡 Recommendations</h3>
+        <div id="budget-insights-list" class="insights-list"></div>
+      </div>
+
+      <!-- What-If Scenarios -->
+      <div class="what-if-scenarios">
+        <h3>🔮 What-If Scenarios</h3>
+        <div class="scenario-controls">
+          <button id="scenario-aggressive" class="scenario-btn">Aggressive (Bid Max)</button>
+          <button id="scenario-conservative" class="scenario-btn">Conservative (Bid -20%)</button>
+          <button id="scenario-balanced" class="scenario-btn">Balanced (Bid -10%)</button>
+        </div>
+        <div id="scenario-results" class="scenario-results"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .budget-planner-panel {
+    padding: 1.5rem 0;
+  }
+
+  /* Budget Summary Header */
+  .budget-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .summary-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .summary-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .summary-value.planned {
+    color: #3b82f6;
+  }
+
+  .summary-value.over-budget {
+    color: #ef4444;
+  }
+
+  .summary-value.warning {
+    color: #f59e0b;
+  }
+
+  /* Warnings */
+  .budget-warnings {
+    margin-bottom: 1.5rem;
+  }
+
+  .warning-banner {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .warning-banner.error {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  .warning-banner.success {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+  }
+
+  .warning-icon {
+    font-size: 1.5rem;
+  }
+
+  .warning-message {
+    flex: 1;
+    font-size: 0.875rem;
+    color: #111827;
+  }
+
+  /* Main Content */
+  .budget-content {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 1024px) {
+    .budget-content {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .budget-section {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .section-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .section-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* Priority Tabs */
+  .priority-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+
+  .priority-tab {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .priority-tab:hover {
+    background: #f9fafb;
+  }
+
+  .priority-tab.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+
+  /* Target Players List */
+  .target-players-list {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6b7280;
+  }
+
+  .empty-state-hint {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+  }
+
+  .target-player-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+  }
+
+  .target-player-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .target-player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+
+  .target-player-info {
+    flex: 1;
+  }
+
+  .target-player-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .target-player-meta {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .target-player-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .priority-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .priority-badge.must-have {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .priority-badge.strong-target {
+    background: #fed7aa;
+    color: #9a3412;
+  }
+
+  .priority-badge.nice-to-have {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .priority-badge.backup {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .target-player-pricing {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .pricing-item {
+    text-align: center;
+  }
+
+  .pricing-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  .pricing-value {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .max-bid-input {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  /* Roster Balance */
+  .roster-balance {
+    margin-bottom: 1.5rem;
+  }
+
+  .roster-balance h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .roster-balance-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .roster-position-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .roster-position-label {
+    width: 40px;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .roster-position-bar {
+    flex: 1;
+    height: 32px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .roster-position-fill {
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.3s;
+  }
+
+  .roster-position-count {
+    position: absolute;
+    top: 50%;
+    left: 0.5rem;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* Budget Insights */
+  .budget-insights {
+    margin-bottom: 1.5rem;
+  }
+
+  .budget-insights h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .insight-card {
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .insight-card.info {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .insight-card.warning {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .insight-card.success {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  /* What-If Scenarios */
+  .what-if-scenarios h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .scenario-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .scenario-btn {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    text-align: left;
+    transition: all 0.2s;
+  }
+
+  .scenario-btn:hover {
+    background: #f9fafb;
+    border-color: #3b82f6;
+  }
+
+  .scenario-btn.active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1e40af;
+  }
+
+  .scenario-results {
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .scenario-result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  /* Buttons */
+  .btn-primary, .btn-secondary {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+
+  .btn-secondary:hover {
+    background: #f9fafb;
+  }
+
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+</style>

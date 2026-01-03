@@ -56,6 +56,12 @@ export interface Props {
               <span class="sort-indicator"></span>
             </div>
           </th>
+          <th class="sortable value-col" data-sort="valueGap" data-column="value" title="Market Value Analysis: IV vs PMP">
+            <div class="th-content">
+              Value
+              <span class="sort-indicator"></span>
+            </div>
+          </th>
           <th class="sortable price-col" data-sort="price1yr" data-column="year1" title="1-Year Contract">
             <div class="th-content">
               1
@@ -84,6 +90,11 @@ export interface Props {
             <div class="th-content">
               5
               <span class="sort-indicator"></span>
+            </div>
+          </th>
+          <th data-column="actions" style="width: 100px; text-align: center;">
+            <div class="th-content">
+              Actions
             </div>
           </th>
         </tr>
@@ -199,7 +210,7 @@ export interface Props {
   }
 
   .auction-table thead {
-    background: linear-gradient(135deg, #6f42c1 0%, #563d7c 100%);
+    background: linear-gradient(120deg, var(--accent-content-bg-color) 0%, #478fd1 100%);
     color: white;
     position: sticky;
     top: 0;
@@ -211,7 +222,7 @@ export interface Props {
     text-align: left;
     font-weight: 600;
     white-space: nowrap;
-    border-bottom: 2px solid #563d7c;
+    border-bottom: 2px solid #478fd1;
   }
 
   /* Match roster page column styling */
@@ -235,9 +246,12 @@ export interface Props {
   }
 
   .th-content {
-    display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-align: center;
+  }
+  .sortable.player-name-col .th-content {
+    text-align: left;
   }
 
   .sort-indicator {
@@ -306,16 +320,65 @@ export interface Props {
     text-align: center;
   }
 
+  .value-col {
+    width: 90px;
+    text-align: center;
+  }
+
   .auction-table td[data-column='rank'],
   .auction-table td[data-column='age'] {
     text-align: center;
     font-size: var(--table-cell-font-size, 0.75rem);
   }
 
+  .value-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .value-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+
+  /* Value classification colors */
+  .value-excellent .value-badge {
+    background: #10b981;
+    color: white;
+  }
+
+  .value-good .value-badge {
+    background: #34d399;
+    color: white;
+  }
+
+  .value-fair .value-badge {
+    background: #9ca3af;
+    color: white;
+  }
+
+  .value-slight_overpay .value-badge {
+    background: #fbbf24;
+    color: #78350f;
+  }
+
+  .value-overpay .value-badge {
+    background: #f97316;
+    color: white;
+  }
+
+  .value-avoid .value-badge {
+    background: #dc2626;
+    color: white;
+  }
+
   .price-col {
     text-align: right;
     font-weight: 600;
-    color: #28a745;
   }
 
   /* Match roster page player cell */
