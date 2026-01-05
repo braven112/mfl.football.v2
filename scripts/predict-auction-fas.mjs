@@ -21,7 +21,7 @@ import path from 'path';
 
 const args = process.argv.slice(2);
 const curveArg = args.find(a => a.startsWith('--curve=')) || '';
-const curve = curveArg.split('=')[1] || 'max'; // default for CSV
+const curve = curveArg.split('=')[1] || 'avg'; // default for CSV (typical/average)
 const CURVES = ['max', 'avg', 'min'];
 const years = [2020, 2021, 2022, 2023, 2024];
 const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];

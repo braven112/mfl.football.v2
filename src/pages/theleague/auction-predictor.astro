@@ -19,6 +19,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import fs from 'fs';
 import path from 'path';
+import { mergeRanks } from '../../utils/rankings-merge';
 import leagueAssets from '../../data/theleague.assets.json';
 
 // Import components
@@ -44,6 +45,7 @@ import { analyzeMarket, getMarketSummary, getPositionAdvice } from '../../utils/
 import { calculateCapSpace, calculateEscalatedSalary } from '../../utils/cap-space-calculator';
 import { calculateAllPlayerPrices } from '../../utils/auction-price-calculator';
 import { getNFLTeamLogo } from '../../utils/nfl';
+import { computeLeagueFAEnvelope } from '../../utils/league-cap';
 
 // Import types
 import type { PlayerValuation, TeamCapSituation, FranchiseTagPrediction, MarketAnalysis, AuctionPriceFactors } from '../../types/auction-predictor';
@@ -58,6 +60,7 @@ const SALARY_CAP_2025 = 45_000_000;
 const SALARY_CAP_2026 = SALARY_CAP_2025 * 1.10; // 10% annual increase
 const ESCALATION_RATE = 0.10;
 const MIN_ROSTER_SIZE = 20;
+const TARGET_ACTIVE_ROSTER = 22;
 
 // Franchise tag values by position (based on 2025 top 3-5 averages from analysis)
 const FRANCHISE_TAG_VALUES: Record<string, number> = {
@@ -159,6 +162,15 @@ const formatPlayerName = (mflName: string): string => {
   
   // Already in correct format or single name
   return mflName;
+};
+
+// Compute player age with special handling for DEF (team defenses treated as age 21)
+const computePlayerAge = (draftYear: number | null, position?: string): number | null => {
+  if (position && position.toUpperCase() === 'DEF') {
+    return 27;
+  }
+  if (!draftYear) return null;
+  return 2026 - draftYear + 22;
 };
 
 // Create ALL players list with formatted names for rankings import
@@ -283,12 +295,12 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
       committedSalaries2026 += escalatedSalary;
     } else {
       // Contract expires after 2025 season (before 2026)
-      expiringContracts.push(p);
-    }
-  });
-  
-  const totalExpiringValue = expiringContracts.reduce((sum, p) => sum + p.salary, 0);
-  const projectedCapSpace2026 = SALARY_CAP_2026 - committedSalaries2026;
+    expiringContracts.push(p);
+  }
+});
+
+const totalExpiringValue = expiringContracts.reduce((sum, p) => sum + p.salary, 0);
+const projectedCapSpace2026 = SALARY_CAP_2026 - committedSalaries2026;
   
   // Calculate minimum roster spend (fill to 20 players at minimum salary)
   const currentRosterSize = roster.filter(p => p.status === 'ROSTER').length;
@@ -300,6 +312,7 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
   return {
     franchiseId,
     teamName,
+    rosterSize: roster.filter(p => p.status === 'ROSTER').length,
     currentCapSpace: SALARY_CAP_2025 - roster.reduce((sum, p) => sum + p.salary, 0),
     projectedCapSpace2026,
     committedSalaries: committedSalaries2026,
@@ -307,7 +320,7 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
     expiringContracts: expiringContracts.map(p => {
       // Calculate age from draft year (draft year + 22 for typical college grad age + years since draft)
       const draftYear = p.playerData?.draft_year ? parseInt(p.playerData.draft_year) : null;
-      const age = draftYear ? (2026 - draftYear + 22) : null;
+      const age = computePlayerAge(draftYear, p.playerData?.position);
 
       return {
         id: p.id,
@@ -546,10 +559,18 @@ teamRosters.forEach(roster => {
   });
 });
 
-// Get all expiring contracts as available players
+// Build composite rank map from user-provided rankings (50/50 dynasty + footballguys redraft)
+const dynRanks = JSON.parse(fs.readFileSync('auctionPredictor-local-data.json', 'utf8'))['auctionPredictor.dynastyRankings']?.rankings || [];
+const fgRanks = JSON.parse(fs.readFileSync('auctionPredictor-local-data.json', 'utf8'))['auctionPredictor.footballguysRankings']?.rankings || [];
+const dynEntries = dynRanks.map((r: any) => ({ rank: r.rank, playerId: r.playerId }));
+const fgEntries = fgRanks.map((r: any) => ({ rank: r.rank, playerId: r.playerId }));
+const compositeRankMap = mergeRanks(dynEntries, fgEntries, 0.5, 0.5);
+
+// Get all expiring contracts as available players (use default curve: avg) and attach composite rank
 const availablePlayers: PlayerValuation[] = [];
+const defaultCurveForSSR = 'avg';
+const defaultPredictionMap = pricePredictionsByCurve.get(defaultCurveForSSR) || pricePredictionMap || new Map();
 teamCapSituations.forEach(team => {
-  const defaultPredictionMap = pricePredictionsByCurve.get('max') || new Map();
   team.expiringContracts.forEach(player => {
     const prediction = defaultPredictionMap.get(player.id);
     const predictedPrice = prediction?.finalPrice;
@@ -563,13 +584,146 @@ teamCapSituations.forEach(team => {
         }
       : undefined;
 
+    const compositeRank = compositeRankMap.get(player.id) || 9999;
+
     availablePlayers.push({
       ...player,
+      compositeRank,
       estimatedAuctionPrice: predictedPrice || player.currentSalary, // Use precomputed price if available
       pricePrediction: priceMeta,
       contracted: false, // Mark as free agent
     });
   });
+});
+
+// Enforce open slots: only top N priced, rest min salary
+// Treat expiring contracts as open roster spots for 2026
+const teamCapsForOpenSlots = teamCapSituations.map(tc => ({
+  ...tc,
+  rosterSize: Math.max(0, (tc.rosterSize || 0) - (tc.expiringContracts?.length || 0)),
+}));
+const leagueFAEnvelope = computeLeagueFAEnvelope(teamCapsForOpenSlots, TARGET_ACTIVE_ROSTER, 5_000_000);
+const totalOpenSlots = Math.max(1, leagueFAEnvelope.openSlots || availablePlayers.length);
+const sortedAvailable = [...availablePlayers].sort((a, b) => {
+  const ra = a.compositeRank ?? 9999;
+  const rb = b.compositeRank ?? 9999;
+  if (ra !== rb) return ra - rb;
+  return (b.estimatedAuctionPrice || 0) - (a.estimatedAuctionPrice || 0);
+});
+sortedAvailable.forEach((player, idx) => {
+  if (idx >= totalOpenSlots) {
+    player.estimatedAuctionPrice = 425_000;
+    player.pricePrediction = undefined;
+  }
+});
+
+// Position rank mapping for server-side adjustments
+const positionRankMap = new Map<string, number>();
+const playersByPosSSR: Record<string, PlayerValuation[]> = {};
+availablePlayers.forEach(p => {
+  if (!playersByPosSSR[p.position]) playersByPosSSR[p.position] = [];
+  playersByPosSSR[p.position].push(p);
+});
+Object.keys(playersByPosSSR).forEach(pos => {
+  playersByPosSSR[pos].sort((a, b) => {
+    const ra = a.compositeRank ?? 9999;
+    const rb = b.compositeRank ?? 9999;
+    if (ra !== rb) return ra - rb;
+    return (b.estimatedAuctionPrice || 0) - (a.estimatedAuctionPrice || 0);
+  });
+  playersByPosSSR[pos].forEach((p, idx) => positionRankMap.set(p.id, idx + 1));
+});
+
+// Overall rank mapping for monotonic pricing
+const overallSortedSSR = [...availablePlayers].sort((a, b) => {
+  const ra = a.compositeRank ?? 9999;
+  const rb = b.compositeRank ?? 9999;
+  if (ra !== rb) return ra - rb;
+  return (b.estimatedAuctionPrice || 0) - (a.estimatedAuctionPrice || 0);
+});
+const overallRankMap = new Map<string, number>();
+overallSortedSSR.forEach((p, idx) => overallRankMap.set(p.id, idx + 1));
+
+const getHistoricalAverageForSlot = (position: string, rankSlot: number) => {
+  const curvesForPos = (historicalCurves as any)?.curves?.[position];
+  if (!curvesForPos) return 425_000;
+  const slotKey = Math.min(Math.max(1, rankSlot), 50).toString();
+  const slotEntry = curvesForPos[slotKey];
+  if (slotEntry && typeof slotEntry === 'object' && 'average' in slotEntry) {
+    return slotEntry.average as number;
+  }
+  const fifty = curvesForPos['50'];
+  if (fifty && typeof fifty === 'object' && 'average' in fifty) {
+    const base = fifty.average as number;
+    const decay = Math.exp(-0.05 * Math.max(0, rankSlot - 50));
+    return Math.max(425_000, Math.round(base * decay));
+  }
+  return 425_000;
+};
+
+// Server-side price adjustments (overall-ordered, with positional scarcity guard)
+availablePlayers.forEach(p => {
+  const slot = positionRankMap.get(p.id) || 9999;
+  const overallSlot = overallRankMap.get(p.id) || 9999;
+
+  // Base price strictly by overall composite rank (historical OVERALL curve), then slight scarcity per position
+  const baseOverall = getHistoricalAverageForSlot('OVERALL', overallSlot);
+  const posScarcity = playersByPosSSR[p.position]?.length ? Math.min(1.15, Math.max(0.9, (playersByPosSSR[p.position].length / overallSortedSSR.length) * 3)) : 1;
+  let price = Math.round(baseOverall * posScarcity);
+
+  // Position caps
+  if (p.position === 'WR') price = Math.min(price, 12_000_000);
+  if (p.position === 'RB') price = Math.min(price, 9_000_000);
+
+  // QB floors/uplift
+  if (p.position === 'QB') {
+    if (slot <= 5) price = Math.max(price, 7_000_000);
+    else if (slot <= 10) price = Math.max(price, 5_000_000);
+    else if (slot <= 20) price = Math.max(price, 3_000_000);
+    price = Math.round(price * 1.15);
+  }
+
+  p.estimatedAuctionPrice = price;
+});
+
+// Scale spend to use ~95% of available cap across open slots
+const targetSpend = Math.round((leagueFAEnvelope.availableCap || 0) * 0.95);
+const resortedAfterAdjust = [...availablePlayers].sort((a, b) => {
+  const ra = a.compositeRank ?? 9999;
+  const rb = b.compositeRank ?? 9999;
+  if (ra !== rb) return ra - rb;
+  return (b.estimatedAuctionPrice || 0) - (a.estimatedAuctionPrice || 0);
+});
+const spendPool = resortedAfterAdjust.slice(0, totalOpenSlots);
+// Rank-weighted scaling toward 95% spend: high ranks get most of the dollars
+const weights = spendPool.map(p => {
+  const overallSlot = overallRankMap.get(p.id) || 9999;
+  return Math.max(0.01, 1 / Math.pow(overallSlot, 0.6));
+});
+const weightedBase = spendPool.reduce((sum, p, idx) => sum + (Math.max(425_000, p.estimatedAuctionPrice || 0) * weights[idx]), 0);
+if (targetSpend > 0 && weightedBase > 0) {
+  const scale = targetSpend / weightedBase;
+  spendPool.forEach((p, idx) => {
+    const slot = positionRankMap.get(p.id) || 9999;
+    const cap = p.position === 'WR' ? 12_000_000 : p.position === 'RB' ? 9_000_000 : Infinity;
+    let price = Math.round((Math.max(425_000, p.estimatedAuctionPrice || 0) * weights[idx]) * scale);
+    if (p.position === 'QB') {
+      if (slot <= 5) price = Math.max(price, 7_000_000);
+      else if (slot <= 10) price = Math.max(price, 5_000_000);
+      else if (slot <= 20) price = Math.max(price, 3_000_000);
+      price = Math.round(price * 1.15);
+    }
+    if (cap !== Infinity) price = Math.min(price, cap);
+    p.estimatedAuctionPrice = Math.max(425_000, price);
+  });
+}
+
+// Re-apply open slot rule after scaling: only top N keep prices
+resortedAfterAdjust.forEach((player, idx) => {
+  if (idx >= totalOpenSlots) {
+    player.estimatedAuctionPrice = 425_000;
+    player.pricePrediction = undefined;
+  }
 });
 
 // Also collect contracted players for comparison view
@@ -590,7 +744,7 @@ teamRosters.forEach(roster => {
 
         // Calculate age from draft year (same logic as expiring contracts)
         const draftYear = playerData.draft_year ? parseInt(playerData.draft_year) : null;
-        const age = draftYear ? (2026 - draftYear + 22) : null;
+        const age = computePlayerAge(draftYear, playerData.position);
 
         const contractedPlayer = {
           id: p.id,
@@ -736,12 +890,33 @@ interface InitialData {
   playerPrices: Array<[string, any]>; // Array of [playerId, { factors, contracts }] entries for JSON serialization
   pricePredictions: Array<[string, any]>; // Precomputed price predictions map entries
   pricePredictionsByCurve: Array<[string, Array<[string, any]>]>; // curve -> entries
+  leagueFAEnvelope: ReturnType<typeof computeLeagueFAEnvelope> | null;
+  totalOpenSlots: number;
   constants: {
     salaryCap2026: number;
     escalationRate: number;
     franchiseTagValues: typeof FRANCHISE_TAG_VALUES;
   };
 }
+
+// Build server-side pricing map from adjusted SSR prices (declining over years)
+const playerPricesSSR = new Map<string, any>();
+availablePlayers.forEach(player => {
+  const oneYear = Math.max(425_000, Math.round(player.estimatedAuctionPrice || 0));
+  const dec = (price: number, years: number) => Math.max(425_000, Math.round(price / Math.pow(1.10, years - 1)));
+  playerPricesSSR.set(player.id, {
+    contracts: {
+      oneYear,
+      twoYear: dec(oneYear, 2),
+      threeYear: dec(oneYear, 3),
+      fourYear: dec(oneYear, 4),
+      fiveYear: dec(oneYear, 5),
+    },
+    factors: {
+      source: 'server',
+    },
+  });
+});
 
 const initialData: InitialData = {
   players: untaggedAvailablePlayers,
@@ -755,11 +930,13 @@ const initialData: InitialData = {
   marketSummary,
   championshipWindows: Array.from(championshipWindows.values()),
   factors: DEFAULT_PRICE_FACTORS,
-  playerPrices: Array.from(playerPrices.entries()), // Convert Map to array for JSON serialization
+  playerPrices: Array.from(playerPricesSSR.entries()), // Use SSR-adjusted prices
   pricePredictions: Array.from(pricePredictionMap.entries()),
   pricePredictionsByCurve: Array.from(pricePredictionsByCurve.entries()).map(
     ([curve, map]) => [curve, Array.from(map.entries())]
   ),
+  leagueFAEnvelope,
+  totalOpenSlots,
   constants: {
     salaryCap2026: SALARY_CAP_2026,
     escalationRate: ESCALATION_RATE,
@@ -1009,6 +1186,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     playerPrices: Map<string, any>; // Player ID -> { factors, contracts }
     pricePredictions: Map<string, any>; // Player ID -> precomputed price payload
     pricePredictionsByCurve: Map<string, Map<string, any>>; // curve -> (playerId -> payload)
+    totalOpenSlots: number;
       
       // Rankings - Independent sources
       rankings: {
@@ -1024,6 +1202,14 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         pricingMethod: 'max' | 'average' | 'min'; // Which historical value to use
         priceCurve: 'max' | 'avg' | 'min'; // Which precomputed curve to use for FA predictions
         applyScarcity: boolean; // Apply scarcity multipliers (0.7x to 1.4x)
+        oversupplyFloor: number; // Minimum multiplier when applying scarcity/blending
+        maxBlendStartSlot: number; // Slot from which to start blending toward max curve
+        maxBlendWeight: number; // Weight of max curve when blending (0-1)
+        overallWeight: number; // Weight of overall rank adjustment (0-1)
+        scarcityWeight: number; // Weight applied to scarcity index (demand/supply)
+        scarcityCap: number; // Max scarcity multiplier
+        liquidityWeight: number; // Weight applied to cap liquidity
+        liquidityCap: number; // Max liquidity multiplier
         showContractedPlayers: boolean; // Show all rostered players with current salaries (excludes 1-year to prevent duplicates)
         currentView: 'players' | 'tags' | 'teams' | 'market' | 'rankings' | 'budget';
         positionFilter: string | null;
@@ -1062,13 +1248,19 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     const createInitialState = (): AuctionState => {
       const data = (window as any).__INITIAL_DATA__;
       
-      // Load preferences from localStorage
-      const savedPreferences = localStorage.getItem('auctionPredictor.preferences');
       const defaultPreferences = {
-        dynastyWeight: 60,
-        pricingMethod: 'max' as const,
-        priceCurve: 'max' as const,
-        applyScarcity: false,
+        dynastyWeight: 50,
+        pricingMethod: 'average' as const,
+        priceCurve: 'avg' as const,
+        applyScarcity: true,
+        oversupplyFloor: 0.90,
+        maxBlendStartSlot: 8,
+        maxBlendWeight: 0.25,
+        overallWeight: 0.10,
+        scarcityWeight: 0.20,
+        scarcityCap: 1.25,
+        liquidityWeight: 0.0,
+        liquidityCap: 1.0,
         showContractedPlayers: false,
         currentView: 'players' as const,
         positionFilter: null,
@@ -1076,10 +1268,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         sortBy: 'estimatedAuctionPrice',
         sortDesc: true,
       };
-      
-      const preferences = savedPreferences 
-        ? { ...defaultPreferences, ...JSON.parse(savedPreferences) }
-        : defaultPreferences;
+
+      // Lock preferences to server defaults to avoid client overrides
+      const preferences = defaultPreferences;
       
       // Load overrides from localStorage
       const savedTagOverrides = localStorage.getItem('auctionPredictor.tagOverrides');
@@ -1124,6 +1315,8 @@ const pageDescription = 'Analyze available players and predict auction prices fo
             new Map(entries || []),
           ])
         ),
+        totalOpenSlots: data.totalOpenSlots || 0,
+        leagueFAEnvelope: data.leagueFAEnvelope || null,
         rankings: {
           footballguys: loadRankings('auctionPredictor.footballguysRankings'),
           dlf: loadRankings('auctionPredictor.dlfRankings'),
@@ -1256,6 +1449,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      */
     const updateDynastyWeight = (weight: number) => {
       try {
+        console.log('🎚️ Dynasty/redraft weighting is server-controlled; ignoring client change.');
+        return;
+
         state.preferences.dynastyWeight = Math.max(0, Math.min(100, weight));
         state.ui.lastUpdate = Date.now();
         
@@ -1298,6 +1494,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      */
     const updatePricingMethod = (method: 'max' | 'average' | 'min') => {
       try {
+        console.log('💰 Pricing method is locked server-side; ignoring client change.');
+        return;
+
         state.preferences.pricingMethod = method;
         state.ui.lastUpdate = Date.now();
 
@@ -1328,9 +1527,25 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      * Apply selected price curve predictions to free agents
      */
     const applyPriceCurveToPlayers = () => {
+      console.log('📈 Server-calculated prices locked; client curve adjustments are read-only.');
+      return;
+
       const curve = state.preferences.priceCurve;
       const curveMap = state.pricePredictionsByCurve.get(curve) || state.pricePredictions;
       if (!curveMap || !(curveMap instanceof Map)) return;
+      const maxCurveMap = state.pricePredictionsByCurve.get('max');
+      const minCurveMap = state.pricePredictionsByCurve.get('min');
+
+      // Overall ranking list for global adjustment
+      const overallRanked = [...state.players].sort((a, b) => {
+        const ra = a.compositeRank ?? 9999;
+        const rb = b.compositeRank ?? 9999;
+        if (ra !== rb) return ra - rb;
+        return (b.currentSalary || 0) - (a.currentSalary || 0);
+      });
+      const overallIndex = new Map<string, number>();
+      overallRanked.forEach((p, idx) => overallIndex.set(p.id, idx));
+      const overallCount = Math.max(1, overallRanked.length);
 
       // Build slot→price lookup per position from selected curve
       const slotPriceByPos: Record<string, Record<number, any>> = {};
@@ -1339,6 +1554,37 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         if (!slotPriceByPos[pred.position]) slotPriceByPos[pred.position] = {};
         slotPriceByPos[pred.position][pred.slot] = pred;
       });
+      const maxSlotPriceByPos: Record<string, Record<number, any>> = {};
+      const minSlotPriceByPos: Record<string, Record<number, any>> = {};
+      const posCaps: Record<string, number> = {};
+      const posMinCaps: Record<string, number> = {};
+      if (maxCurveMap) {
+        maxCurveMap.forEach((pred: any) => {
+          if (!pred?.position) return;
+          if (!maxSlotPriceByPos[pred.position]) maxSlotPriceByPos[pred.position] = {};
+          maxSlotPriceByPos[pred.position][pred.slot] = pred;
+          // cap: use historical top-slot final price as upper bound
+          if (pred.slot === 1) {
+            posCaps[pred.position] = pred.finalPrice;
+          }
+        });
+      }
+      // Position-specific caps/guards
+      posCaps['WR'] = Math.min(posCaps['WR'] || Infinity, 12_000_000);
+      posCaps['RB'] = Math.min(posCaps['RB'] || Infinity, 9_000_000);
+
+      if (minCurveMap) {
+        minCurveMap.forEach((pred: any) => {
+          if (!pred?.position) return;
+          if (!minSlotPriceByPos[pred.position]) minSlotPriceByPos[pred.position] = {};
+          minSlotPriceByPos[pred.position][pred.slot] = pred;
+          if (pred.slot === 1) {
+            posMinCaps[pred.position] = pred.finalPrice;
+          }
+        });
+      }
+      // Allow RBs to dip below historical min if needed (avoid 3-4M floor on depth)
+      posMinCaps['RB'] = Math.min(posMinCaps['RB'] || Infinity, 1_000_000);
 
       // Sort players by composite rank within position to assign slots dynamically
       const playersByPos: Record<string, any[]> = {};
@@ -1355,7 +1601,40 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         });
       });
 
+      // Scarcity multiplier per position (based on current FA pool)
+      const startersPerPos: Record<string, number> = { QB: 1, RB: 2, WR: 3, TE: 1, PK: 1, DEF: 1 };
+      const scarcityMultForPos: Record<string, number> = {};
+      if (state.preferences.applyScarcity) {
+        Object.keys(playersByPos).forEach(pos => {
+          const supply = playersByPos[pos].filter(p => !p.contracted).length || 1;
+          const demand = (state.teams?.length || 16) * (startersPerPos[pos] || 1);
+          const scarcityIndex = demand / supply;
+          const raw = 1 + (state.preferences.scarcityWeight || 0.25) * (scarcityIndex - 1);
+          const cap = state.preferences.scarcityCap || 1.4;
+          const floor = state.preferences.oversupplyFloor || 0.9;
+          scarcityMultForPos[pos] = Math.max(floor, Math.min(cap, raw));
+        });
+      }
+
+      // Cap liquidity multiplier (league-wide discretionary cap / FA count)
+      const discretionaryCap = (state.teams || []).reduce((sum, team: any) => {
+        const base = team.availableAfterTag ?? team.projectedCapSpace2026 ?? 0;
+        // buffer 5M per team for draft picks/in-season FA
+        const discretionary = Math.max(0, base - 5_000_000);
+        return sum + discretionary;
+      }, 0);
+      const faCount = state.players.filter(p => !p.contracted).length || 1;
+      const liquidityPerFA = discretionaryCap / faCount; // dollars per FA
+      const liquidityIndex = liquidityPerFA / 1_000_000; // relative to $1M neutral
+      const liquidityRaw = 1 + (state.preferences.liquidityWeight || 0) * (liquidityIndex - 1);
+      const liquidityCap = state.preferences.liquidityCap || 1.0;
+      const liquidityFloor = state.preferences.oversupplyFloor || 0.9;
+      const liquidityMult = Math.max(liquidityFloor, Math.min(liquidityCap, liquidityRaw));
+
       // Update player list and playerPrices map based on dynamic slots
+      const rankedAll = [...state.players].sort((a, b) => (a.compositeRank ?? 9999) - (b.compositeRank ?? 9999));
+      const openSlots = Math.max(1, state.totalOpenSlots || rankedAll.length);
+
       state.players = state.players.map(player => {
         const list = playersByPos[player.position] || [];
         const rankSlot = list.findIndex(p => p.id === player.id) + 1;
@@ -1364,26 +1643,98 @@ const pageDescription = 'Analyze available players and predict auction prices fo
           slotPriceByPos[player.position]?.[Math.max(1, Math.min(rankSlot, Object.keys(slotPriceByPos[player.position] || {}).length))];
 
         if (slotEntry) {
+          // Optional blend toward max curve for deeper slots
+          let blended = slotEntry;
+          if (curve !== 'max' && maxSlotPriceByPos[player.position] && rankSlot >= state.preferences.maxBlendStartSlot) {
+            const maxEntry = maxSlotPriceByPos[player.position][rankSlot] || maxSlotPriceByPos[player.position][Math.max(1, rankSlot - 1)];
+            if (maxEntry) {
+              const w = Math.max(0, Math.min(1, state.preferences.maxBlendWeight));
+              blended = {
+                ...slotEntry,
+                finalPrice: Math.round(slotEntry.finalPrice * (1 - w) + maxEntry.finalPrice * w),
+                basePrice: Math.round(slotEntry.basePrice * (1 - w) + maxEntry.basePrice * w),
+              };
+            }
+          }
+
+          // Apply oversupply floor as multiplier of base (skip for deep ranks >200)
+          const floorBase = (state.preferences.oversupplyFloor || 0.9) * blended.basePrice;
+          const applyFloor = overallSlot <= 200;
+          let adjustedFinal = applyFloor ? Math.max(floorBase, blended.finalPrice) : Math.max(425_000, blended.finalPrice);
+
+          // Overall rank adjustment (top overall gets slight premium, bottom gets discount)
+          const overallSlot = (overallIndex.get(player.id) ?? overallCount) + 1;
+          const percentile = (overallSlot - 1) / overallCount; // 0 = best
+          const overallWeight = state.preferences.overallWeight || 0;
+          if (overallWeight > 0) {
+            const overallBoost = 1 + overallWeight * ((1 - percentile) - 0.5); // centered at 0.5
+            adjustedFinal = Math.round(adjustedFinal * overallBoost);
+          }
+
+          // Scarcity multiplier (live)
+          const scarcityMult = scarcityMultForPos[player.position] || 1;
+          adjustedFinal = Math.round(adjustedFinal * scarcityMult);
+
+          // Cap liquidity multiplier (league-wide)
+          adjustedFinal = Math.round(adjustedFinal * liquidityMult);
+
+          // QB floors and uplift
+          if (player.position === 'QB') {
+            if (rankSlot <= 5) {
+              adjustedFinal = Math.max(adjustedFinal, 7_000_000);
+            } else if (rankSlot <= 10) {
+              adjustedFinal = Math.max(adjustedFinal, 5_000_000);
+            } else if (rankSlot <= 20) {
+              adjustedFinal = Math.max(adjustedFinal, 3_000_000);
+            }
+            adjustedFinal = Math.round(adjustedFinal * 1.15); // moderate uplift
+          }
+
+         // Clamp to historical bounds (slot-1 max/min with small buffer)
+          const capMax = posCaps[player.position];
+          const capMin = posMinCaps[player.position];
+          if (capMax) {
+            adjustedFinal = Math.min(adjustedFinal, Math.round(capMax)); // strict cap
+          }
+          if (capMin) {
+            adjustedFinal = Math.max(adjustedFinal, Math.round(capMin * 0.95));
+          }
+
+          // If beyond open slots, force to minimum
+          const overallRankedIndex = rankedAll.findIndex(p => p.id === player.id) + 1;
+          if (overallRankedIndex > openSlots) {
+            adjustedFinal = Math.min(adjustedFinal, 425_000);
+          }
+
+          const existingEntry = state.playerPrices.get(player.id) as any;
+          const contracts = existingEntry?.contracts ? { ...existingEntry.contracts } : {};
+          contracts.oneYear = adjustedFinal;
+          // If multi-year prices missing, generate simple escalations (10% per year)
+          const escalator = (price: number, years: number) => Math.round(price * Math.pow(1.10, years - 1));
+          contracts.twoYear = contracts.twoYear || escalator(adjustedFinal, 2);
+          contracts.threeYear = contracts.threeYear || escalator(adjustedFinal, 3);
+          contracts.fourYear = contracts.fourYear || escalator(adjustedFinal, 4);
+          contracts.fiveYear = contracts.fiveYear || escalator(adjustedFinal, 5);
+
           state.playerPrices.set(player.id, {
-            contracts: {
-              oneYear: slotEntry.finalPrice,
-            },
+            contracts,
             factors: {
-              basePrice: slotEntry.basePrice,
-              scarcityMultiplier: slotEntry.scarcityMult,
+              basePrice: blended.basePrice,
+              scarcityMultiplier: scarcityMult,
               curve,
               slot: rankSlot,
+              liquidityMultiplier: liquidityMult,
             },
           });
 
           return {
             ...player,
-            estimatedAuctionPrice: slotEntry.finalPrice,
+            estimatedAuctionPrice: adjustedFinal,
             pricePrediction: {
               slot: rankSlot,
-              basePrice: slotEntry.basePrice,
-              scarcityMult: slotEntry.scarcityMult,
-              samples: slotEntry.samples,
+              basePrice: blended.basePrice,
+              scarcityMult: blended.scarcityMult,
+              samples: blended.samples,
               curve,
             },
           };
@@ -1397,6 +1748,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      */
     const updatePriceCurve = (curve: 'max' | 'avg' | 'min') => {
       try {
+        console.log('🧮 Price curve selection is read-only; ignoring client change.');
+        return;
+
         state.preferences.priceCurve = curve;
         savePreferences();
         applyPriceCurveToPlayers();
@@ -1410,10 +1764,48 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     };
 
     /**
+     * Update formula tunables from modal sliders
+     */
+    const updateFormulaSetting = (
+      key:
+        | 'oversupplyFloor'
+        | 'maxBlendStartSlot'
+        | 'maxBlendWeight'
+        | 'scarcityWeight'
+        | 'scarcityCap'
+        | 'liquidityWeight'
+        | 'liquidityCap',
+      value: number
+    ) => {
+      console.log('⚙️ Formula sliders are read-only; ignoring client change.');
+      return;
+
+      (state.preferences as any)[key] = value;
+      savePreferences();
+      applyPriceCurveToPlayers();
+      renderPlayerTable();
+      renderMarketAnalysis();
+    };
+
+    const updateOverallWeight = (value: number) => {
+      console.log('🏅 Overall vs position weighting is server-controlled; ignoring client change.');
+      return;
+
+      state.preferences.overallWeight = value;
+      savePreferences();
+      applyPriceCurveToPlayers();
+      renderPlayerTable();
+      renderMarketAnalysis();
+    };
+
+    /**
      * Toggle scarcity multipliers and recalculate prices
      */
     const updateScarcityToggle = (enabled: boolean) => {
       try {
+        console.log('📊 Scarcity toggle is locked server-side; ignoring client change.');
+        return;
+
         state.preferences.applyScarcity = enabled;
         state.ui.lastUpdate = Date.now();
 
@@ -1980,9 +2372,15 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     const getFilteredPlayers = () => {
       // Combine free agents and contracted players if toggle is enabled
       // NOTE: allContractedPlayers only includes 2+ year contracts to prevent duplicates
-      let players: any[] = state.preferences.showContractedPlayers
-        ? [...state.players, ...state.allContractedPlayers]
-        : [...state.players];
+      // Merge free agents + contracted (if enabled) with id-based dedupe (prefer free agent version)
+      const merged = new Map<string, any>();
+      state.players.forEach(p => merged.set(p.id, p));
+      if (state.preferences.showContractedPlayers) {
+        state.allContractedPlayers.forEach(p => {
+          if (!merged.has(p.id)) merged.set(p.id, p);
+        });
+      }
+      let players: any[] = Array.from(merged.values());
 
       // Apply position filter
       if (state.preferences.positionFilter) {
@@ -2015,8 +2413,10 @@ const pageDescription = 'Analyze available players and predict auction prices fo
           
           // Map year number to property name
           const yearProp = years === 1 ? 'oneYear' : years === 2 ? 'twoYear' : years === 3 ? 'threeYear' : years === 4 ? 'fourYear' : 'fiveYear';
-          aVal = aPricing?.contracts?.[yearProp] || 0;
-          bVal = bPricing?.contracts?.[yearProp] || 0;
+          const aBasePrice = aPricing?.contracts?.[yearProp] || a.currentSalary || a.estimatedAuctionPrice || 0;
+          const bBasePrice = bPricing?.contracts?.[yearProp] || b.currentSalary || b.estimatedAuctionPrice || 0;
+          aVal = aBasePrice;
+          bVal = bBasePrice;
         } else if (sortBy === 'compositeRank') {
           aVal = a.compositeRank || 999;
           bVal = b.compositeRank || 999;
@@ -2096,12 +2496,14 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         const pricing = state.playerPrices.get(player.id);
         const contracts = pricing?.contracts;
 
-        // For contracted players, show current salary; for free agents, show predicted prices
-        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear || 0);
-        const price2yr = isContracted ? 0 : (contracts?.twoYear || 0);
-        const price3yr = isContracted ? 0 : (contracts?.threeYear || 0);
-        const price4yr = isContracted ? 0 : (contracts?.fourYear || 0);
-        const price5yr = isContracted ? 0 : (contracts?.fiveYear || 0);
+        // For contracted players, show current salary; for free agents, show SSR prices with fallback to estimatedAuctionPrice
+        const baseEstimate = Math.max(425_000, player.estimatedAuctionPrice || 0);
+        // Declining ladder: year 1 highest, year 5 lowest
+        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear ?? baseEstimate);
+        const price2yr = isContracted ? 0 : (contracts?.twoYear ?? Math.max(425_000, Math.round(baseEstimate / 1.10)));
+        const price3yr = isContracted ? 0 : (contracts?.threeYear ?? Math.max(425_000, Math.round(baseEstimate / Math.pow(1.10, 2))));
+        const price4yr = isContracted ? 0 : (contracts?.fourYear ?? Math.max(425_000, Math.round(baseEstimate / Math.pow(1.10, 3))));
+        const price5yr = isContracted ? 0 : (contracts?.fiveYear ?? Math.max(425_000, Math.round(baseEstimate / Math.pow(1.10, 4))));
         const recommended = isContracted ? 1 : (contracts?.recommended?.years || 3);
 
         const headshot = getPlayerImageUrl(player.id);
@@ -2128,7 +2530,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
                 <div>
                   <strong>${player.name}</strong>
                   ${isContracted ? `<span class="rostered-badge" style="margin-left: 0.5rem; padding: 2px 6px; background: #6b7280; color: white; border-radius: 3px; font-size: 0.75rem;">ROSTERED</span>` : ''}
-                  ${!isContracted && isTargeted ? `<span class="target-badge" style="margin-left: 0.5rem; padding: 2px 6px; background: #3b82f6; color: white; border-radius: 3px; font-size: 0.75rem;">🎯 TARGET</span>` : ''}
+                  ${!isContracted && isTargeted ? `<span class="target-badge" style="margin-left: 0.5rem; padding: 2px 6px; background: var(--primary-color); color: white; border-radius: 3px; font-size: 0.75rem;">🎯 TARGET</span>` : ''}
                   <div class="player-meta">
                     ${player.position?.toUpperCase() !== 'DEF' && nflLogo ? `<img src="${nflLogo}" alt="${player.team || 'FA'} logo" class="player-meta__logo" loading="lazy" decoding="async" />` : ''}
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
@@ -3921,7 +4323,31 @@ const pageDescription = 'Analyze available players and predict auction prices fo
      */
     const recalculatePlayerPrices = () => {
       try {
-        console.log('💰 Recalculating player prices with rankings...');
+        console.log('💰 Server-side pricing is authoritative; skipping client recalculation.');
+
+        // Ensure contract ladders exist in case SSR map is missing
+        if (!state.playerPrices || state.playerPrices.size === 0) {
+          const rebuilt = new Map();
+          state.players.forEach(player => {
+            const oneYear = Math.max(425_000, player.estimatedAuctionPrice || 0);
+            const escalator = (price: number, years: number) => Math.round(price * Math.pow(1.10, years - 1));
+            rebuilt.set(player.id, {
+              contracts: {
+                oneYear,
+                twoYear: escalator(oneYear, 2),
+                threeYear: escalator(oneYear, 3),
+                fourYear: escalator(oneYear, 4),
+                fiveYear: escalator(oneYear, 5),
+              },
+              factors: { source: 'server' },
+            });
+          });
+          state.playerPrices = rebuilt;
+        }
+
+        // Leave SSR-provided values untouched
+        state.ui.lastUpdate = Date.now();
+        return;
         
         // Get dynasty weight from preferences (0-100)
         const dynastyWeight = state.preferences.dynastyWeight / 100; // Convert to 0-1
@@ -4543,7 +4969,8 @@ const pageDescription = 'Analyze available players and predict auction prices fo
             })
             .map((p: any) => {
               const compositeRank = getCompositeRank(p.id);
-              const age = p.draft_year ? (2026 - parseInt(p.draft_year) + 22) : undefined;
+              const draftYear = p.draft_year ? parseInt(p.draft_year) : null;
+              const age = computePlayerAge(draftYear, p.position) ?? undefined;
               
               // Debug: Log first 3 players on first team
               if (capSituation.franchiseId === '0001' && rosteredPlayers.length < 3) {
@@ -4964,11 +5391,158 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       updateSort(field, direction === 'desc');
     });
 
-    // Listen for price curve changes (precomputed predictions)
+    // Formula modal controls
+    const formulaModal = document.getElementById('formula-modal') as HTMLElement | null;
+    const openFormulaBtn = document.getElementById('open-formula-modal');
+    const closeFormulaBtn = document.getElementById('close-formula-modal');
+      const oversupplySlider = document.getElementById('oversupply-floor-slider') as HTMLInputElement | null;
+      const oversupplyValue = document.getElementById('oversupply-floor-value');
+      const pricingMethodSelect = document.getElementById('pricing-method-select') as HTMLSelectElement | null;
+    const scarcityWeightSlider = document.getElementById('scarcity-weight-slider') as HTMLInputElement | null;
+    const scarcityWeightValue = document.getElementById('scarcity-weight-value');
+    const scarcityCapSlider = document.getElementById('scarcity-cap-slider') as HTMLInputElement | null;
+    const scarcityCapValue = document.getElementById('scarcity-cap-value');
+    const liquidityWeightSlider = document.getElementById('liquidity-weight-slider') as HTMLInputElement | null;
+    const liquidityWeightValue = document.getElementById('liquidity-weight-value');
+    const liquidityCapSlider = document.getElementById('liquidity-cap-slider') as HTMLInputElement | null;
+    const liquidityCapValue = document.getElementById('liquidity-cap-value');
+    const blendStartSlider = document.getElementById('blend-start-slider') as HTMLInputElement | null;
+    const blendStartValue = document.getElementById('blend-start-value');
+    const blendWeightSlider = document.getElementById('blend-weight-slider') as HTMLInputElement | null;
+    const blendWeightValue = document.getElementById('blend-weight-value');
+    const overallWeightSlider = document.getElementById('overall-weight-slider') as HTMLInputElement | null;
+    const overallWeightValue = document.getElementById('overall-weight-value');
+    const exportLocalBtn = document.getElementById('export-local-data');
+
+    const syncFormulaUI = () => {
+      const priceCurveSelect = document.getElementById('price-curve-select') as HTMLSelectElement | null;
+      if (priceCurveSelect) {
+        priceCurveSelect.value = state.preferences.priceCurve;
+      }
+      if (oversupplySlider && oversupplyValue) {
+        oversupplySlider.value = state.preferences.oversupplyFloor.toString();
+        oversupplyValue.textContent = state.preferences.oversupplyFloor.toFixed(2);
+      }
+      if (pricingMethodSelect) {
+        pricingMethodSelect.value = state.preferences.pricingMethod;
+      }
+      if (scarcityWeightSlider && scarcityWeightValue) {
+        scarcityWeightSlider.value = state.preferences.scarcityWeight.toString();
+        scarcityWeightValue.textContent = state.preferences.scarcityWeight.toFixed(2);
+      }
+      if (scarcityCapSlider && scarcityCapValue) {
+        scarcityCapSlider.value = state.preferences.scarcityCap.toString();
+        scarcityCapValue.textContent = state.preferences.scarcityCap.toFixed(2);
+      }
+      if (liquidityWeightSlider && liquidityWeightValue) {
+        liquidityWeightSlider.value = state.preferences.liquidityWeight.toString();
+        liquidityWeightValue.textContent = state.preferences.liquidityWeight.toFixed(2);
+      }
+      if (liquidityCapSlider && liquidityCapValue) {
+        liquidityCapSlider.value = state.preferences.liquidityCap.toString();
+        liquidityCapValue.textContent = state.preferences.liquidityCap.toFixed(2);
+      }
+      if (blendStartSlider && blendStartValue) {
+        blendStartSlider.value = state.preferences.maxBlendStartSlot.toString();
+        blendStartValue.textContent = state.preferences.maxBlendStartSlot.toString();
+      }
+      if (blendWeightSlider && blendWeightValue) {
+        blendWeightSlider.value = state.preferences.maxBlendWeight.toString();
+        blendWeightValue.textContent = state.preferences.maxBlendWeight.toFixed(2);
+      }
+      if (overallWeightSlider && overallWeightValue) {
+        overallWeightSlider.value = state.preferences.overallWeight.toString();
+        overallWeightValue.textContent = state.preferences.overallWeight.toFixed(2);
+      }
+    };
+
+    openFormulaBtn?.addEventListener('click', () => {
+      syncFormulaUI();
+      if (formulaModal) formulaModal.style.display = 'block';
+    });
+    closeFormulaBtn?.addEventListener('click', () => {
+      if (formulaModal) formulaModal.style.display = 'none';
+    });
+    formulaModal?.addEventListener('click', (e) => {
+      if (e.target === formulaModal) {
+        formulaModal.style.display = 'none';
+      }
+    });
+
+    oversupplySlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateFormulaSetting('oversupplyFloor', val);
+      syncFormulaUI();
+    });
     document.getElementById('price-curve-select')?.addEventListener('change', (e) => {
       const value = (e.target as HTMLSelectElement).value as 'max' | 'avg' | 'min';
       updatePriceCurve(value);
+      syncFormulaUI();
     });
+    pricingMethodSelect?.addEventListener('change', (e) => {
+      const value = (e.target as HTMLSelectElement).value as 'max' | 'average' | 'min';
+      updatePricingMethod(value);
+      syncFormulaUI();
+    });
+    scarcityWeightSlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateFormulaSetting('scarcityWeight', val);
+      syncFormulaUI();
+    });
+    scarcityCapSlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateFormulaSetting('scarcityCap', val);
+      syncFormulaUI();
+    });
+    liquidityWeightSlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateFormulaSetting('liquidityWeight', val);
+      syncFormulaUI();
+    });
+    liquidityCapSlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateFormulaSetting('liquidityCap', val);
+      syncFormulaUI();
+    });
+    blendStartSlider?.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10);
+      updateFormulaSetting('maxBlendStartSlot', val);
+      syncFormulaUI();
+    });
+    blendWeightSlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateFormulaSetting('maxBlendWeight', val);
+      syncFormulaUI();
+    });
+    overallWeightSlider?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      updateOverallWeight(val);
+      syncFormulaUI();
+    });
+
+    // Export localStorage data for rankings/preferences
+    const exportLocalData = () => {
+      const payload: Record<string, any> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (key.startsWith('auctionPredictor.')) {
+          try {
+            payload[key] = JSON.parse(localStorage.getItem(key) || 'null');
+          } catch {
+            payload[key] = localStorage.getItem(key);
+          }
+        }
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'auctionPredictor-local-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    exportLocalBtn?.addEventListener('click', exportLocalData);
 
     // Listen for search from Control Panel
     window.addEventListener('auction:search', (e: Event) => {
@@ -5010,11 +5584,6 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     }
 
     // Sync price curve select with preference
-    const priceCurveSelect = document.getElementById('price-curve-select') as HTMLSelectElement | null;
-    if (priceCurveSelect) {
-      priceCurveSelect.value = state.preferences.priceCurve;
-    }
-
     // =============================================================================
     // PLAYER TABLE EVENT LISTENERS
     // =============================================================================
@@ -5807,7 +6376,7 @@ const pageDescription = 'Analyze available players and predict auction prices fo
         <button onclick="closeAddTargetModal()" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer;">
           Cancel
         </button>
-        <button onclick="confirmAddTarget()" style="padding: 0.5rem 1rem; border: none; background: #3b82f6; color: white; border-radius: 4px; cursor: pointer;">
+        <button onclick="confirmAddTarget()" style="padding: 0.5rem 1rem; border: none; background: var(--primary-color); color: white; border-radius: 4px; cursor: pointer;">
           Add Target
         </button>
       </div>
@@ -6292,12 +6861,12 @@ const pageDescription = 'Analyze available players and predict auction prices fo
   }
 
   .btn-primary {
-    background: var(--primary-color);
+    background: #3498db;
     color: white;
   }
 
   .btn-primary:hover {
-    background: var(--primary-btn-hover-bg-color);
+    background: #1a77b5;
   }
 
   .btn-secondary {
@@ -6439,4 +7008,169 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     object-fit: contain;
   }
 
+  /* Formula modal */
+  :global(#formula-modal) {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  :global(#formula-modal .modal-content) {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  :global(#formula-modal .slider-group) {
+    margin-bottom: 1rem;
+  }
+  :global(#formula-modal .info-row) {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #444;
+  }
+  :global(#formula-modal .slider-group label) {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+  :global(#formula-modal .slider-value) {
+    font-size: 0.85rem;
+    color: #555;
+    margin-left: 0.5rem;
+  }
+  :global(.pricing-method-select) {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    max-width: 400px;
+    width: 100%;
+  }
+  :global(.pricing-method-select:hover) {
+    border-color: #3498db;
+  }
+  :global(.pricing-method-select:focus) {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+  :global(#formula-modal .slider-group label) {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+  :global(#formula-modal .slider-value) {
+    font-size: 0.85rem;
+    color: #555;
+    margin-left: 0.5rem;
+  }
+  :global(.pricing-method-select) {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    max-width: 400px;
+    width: 100%;
+  }
+  :global(.pricing-method-select:hover) {
+    border-color: #3498db;
+  }
+  :global(.pricing-method-select:focus) {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+
 </style>
+
+<!-- Formula Tuning Modal -->
+<div class="modal" id="formula-modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Formula Tuning</h3>
+      <button class="modal-close" id="close-formula-modal" aria-label="Close">✕</button>
+    </div>
+  <div class="modal-body">
+      <div class="info-row">
+        <strong>Typical (Average) Curve:</strong> This is the default pricing curve based on historical averages. Use the dropdown to switch to Max (bullish) or Min (bearish) as needed.
+      </div>
+      <div class="slider-group">
+        <label for="pricing-method-select">Historical Pricing Method</label>
+        <select id="pricing-method-select" class="pricing-method-select">
+          <option value="max">Highest Max (peak market)</option>
+          <option value="average" selected>Average (typical, default)</option>
+          <option value="min">Lowest Max (conservative)</option>
+        </select>
+      </div>
+      <div class="slider-group">
+        <label for="price-curve-select">Prediction Curve</label>
+        <select id="price-curve-select" class="pricing-method-select">
+          <option value="max">Max (bullish)</option>
+          <option value="avg" selected>Average (balanced, default)</option>
+          <option value="min">Min (bearish)</option>
+        </select>
+      </div>
+      <div class="slider-group">
+        <label for="oversupply-floor-slider">Oversupply Floor (0.80 - 1.00)</label>
+        <input type="range" id="oversupply-floor-slider" min="0.8" max="1.0" step="0.01" />
+        <span id="oversupply-floor-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label for="scarcity-weight-slider">Scarcity Weight (0 - 0.5)</label>
+        <input type="range" id="scarcity-weight-slider" min="0" max="0.5" step="0.01" />
+        <span id="scarcity-weight-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label for="scarcity-cap-slider">Scarcity Cap (1.0 - 2.0)</label>
+        <input type="range" id="scarcity-cap-slider" min="1.0" max="2.0" step="0.05" />
+        <span id="scarcity-cap-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label for="liquidity-weight-slider">Cap Liquidity Weight (0 - 0.5)</label>
+        <input type="range" id="liquidity-weight-slider" min="0" max="0.5" step="0.01" />
+        <span id="liquidity-weight-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label for="liquidity-cap-slider">Cap Liquidity Cap (1.0 - 2.0)</label>
+        <input type="range" id="liquidity-cap-slider" min="1.0" max="2.0" step="0.05" />
+        <span id="liquidity-cap-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label>Export Local Data</label>
+        <p class="history-note">Download your saved rankings/preferences (from localStorage) so we can load them server-side.</p>
+        <button id="export-local-data" class="btn-primary">Download Local Data</button>
+      </div>
+      <div class="slider-group">
+        <label for="blend-start-slider">Blend Start Slot (1 - 20)</label>
+        <input type="range" id="blend-start-slider" min="1" max="20" step="1" />
+        <span id="blend-start-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label for="blend-weight-slider">Max Blend Weight (0 - 1)</label>
+        <input type="range" id="blend-weight-slider" min="0" max="1" step="0.05" />
+        <span id="blend-weight-value" class="slider-value"></span>
+      </div>
+      <div class="slider-group">
+        <label for="overall-weight-slider">Overall Rank Weight (0 - 0.5)</label>
+        <input type="range" id="overall-weight-slider" min="0" max="0.5" step="0.01" />
+        <span id="overall-weight-value" class="slider-value"></span>
+      </div>
+    </div>
+  </div>
+</div>
