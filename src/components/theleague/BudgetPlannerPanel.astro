@@ -514,7 +514,7 @@
   }
 
   /* Buttons */
-  .btn-primary, .btn-secondary {
+  :global(.btn-primary, .btn-secondary) {
     padding: 0.5rem 1rem;
     border-radius: 6px;
     font-size: 0.875rem;
@@ -524,13 +524,13 @@
     border: none;
   }
 
-  .btn-primary {
-    background: #3b82f6;
+  :global(.btn-primary) {
+    background: #3498db;
     color: white;
   }
 
-  .btn-primary:hover {
-    background: #2563eb;
+  :global(.btn-primary:hover) {
+    background: #1a77b5;
   }
 
   .btn-secondary {

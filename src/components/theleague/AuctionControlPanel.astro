@@ -3,7 +3,6 @@
  * Auction Predictor Control Panel
  * 
  * Provides global controls for the auction predictor:
- * - Dynasty/Redraft weight slider (affects pricing calculations)
  * - View selector tabs (Players, Tags, Teams, Market, Rankings)
  * - Position filter dropdown
  * - Sort controls
@@ -14,7 +13,6 @@
  */
 
 export interface Props {
-  initialDynastyWeight?: number;
   initialView?: string;
   positionCounts?: Record<string, number>;
   totalPlayers?: number;
@@ -22,7 +20,6 @@ export interface Props {
 }
 
 const { 
-  initialDynastyWeight = 60,
   initialView = 'players',
   positionCounts = {},
   totalPlayers = 0,
@@ -36,85 +33,6 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
 
 <div class="auction-control-panel">
   
-  <!-- Top Row: Dynasty Weight Slider -->
-  <div class="control-row dynasty-weight-control">
-    <label for="dynasty-weight-slider" class="control-label">
-      <span class="label-text">Dynasty Weight:</span>
-      <span class="label-hint">Adjust pricing between dynasty rankings (long-term value) and redraft rankings (win-now)</span>
-    </label>
-    <div class="slider-container">
-      <span class="slider-label">Redraft</span>
-      <input 
-        type="range" 
-        id="dynasty-weight-slider"
-        class="dynasty-slider"
-        min="0" 
-        max="100" 
-        value={initialDynastyWeight}
-        data-initial={initialDynastyWeight}
-      />
-      <span class="slider-label">Dynasty</span>
-      <output id="dynasty-weight-value" class="slider-value">{initialDynastyWeight}%</output>
-    </div>
-  </div>
-
-  <!-- Pricing Method Row -->
-  <div class="control-row pricing-method-control">
-    <label for="pricing-method-select" class="control-label">
-      <span class="label-text">Historical Pricing:</span>
-      <span class="label-hint">Choose which historical auction values to use for salary calculations</span>
-    </label>
-    <div class="pricing-method-container">
-      <select id="pricing-method-select" class="pricing-method-select">
-        <option value="max" selected>Highest Max (Peak market value)</option>
-        <option value="average">Average (Typical value)</option>
-        <option value="min">Lowest Max (Conservative value)</option>
-      </select>
-      <span class="pricing-hint" id="pricing-method-hint">
-        Using the highest auction price paid for each rank across 2020-2025
-      </span>
-    </div>
-  </div>
-
-  <!-- Price Curve (Predictions) Row -->
-  <div class="control-row pricing-curve-control">
-    <label for="price-curve-select" class="control-label">
-      <span class="label-text">Prediction Curve:</span>
-      <span class="label-hint">Choose which historical curve to apply to precomputed FA prices</span>
-    </label>
-    <div class="pricing-method-container">
-      <select id="price-curve-select" class="pricing-method-select">
-        <option value="max" selected>Max (bullish)</option>
-        <option value="avg">Average (balanced)</option>
-        <option value="min">Min (bearish)</option>
-      </select>
-      <span class="pricing-hint" id="price-curve-hint">
-        Applies to precomputed FA prices (rank-slot curves 2020-2024)
-      </span>
-    </div>
-  </div>
-
-  <!-- Scarcity Multiplier Toggle Row -->
-  <div class="control-row scarcity-toggle-control">
-    <label for="scarcity-toggle" class="control-label">
-      <span class="label-text">Market Scarcity Adjustments:</span>
-      <span class="label-hint">Auto-adjust pricing model by position depth (deep → min, moderate → avg, shallow → max)</span>
-    </label>
-    <div class="toggle-container">
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          id="scarcity-toggle"
-          class="scarcity-toggle-input"
-        />
-        <span class="toggle-slider"></span>
-      </label>
-      <span class="toggle-status" id="scarcity-status">
-        <strong>Off</strong> - Using selected pricing model for all positions
-      </span>
-    </div>
-  </div>
-
   <!-- Show Contracted Players Toggle Row -->
   <div class="control-row contracted-players-toggle-control">
     <label for="contracted-toggle" class="control-label">
@@ -302,59 +220,6 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     margin-bottom: 0;
   }
 
-  /* Dynasty Weight Slider */
-  .dynasty-weight-control {
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 1.5rem;
-  }
-
-  /* Pricing Method Control */
-  .pricing-method-control {
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 1.5rem;
-  }
-
-  .pricing-method-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .pricing-method-select {
-    padding: 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border: 2px solid #d1d5db;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #2c3e50;
-    cursor: pointer;
-    transition: all 0.2s;
-    max-width: 400px;
-  }
-
-  .pricing-method-select:hover {
-    border-color: #3498db;
-  }
-
-  .pricing-method-select:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-  }
-
-  .pricing-hint {
-    font-size: 0.75rem;
-    color: #888;
-    font-style: italic;
-  }
-
-  /* Scarcity Toggle Control */
-  .scarcity-toggle-control {
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 1.5rem;
-  }
-
   .toggle-container {
     display: flex;
     align-items: center;
@@ -450,54 +315,6 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
   .slider-label {
     font-size: 0.75rem;
     color: #888;
-    min-width: 50px;
-    text-align: center;
-  }
-
-  .dynasty-slider {
-    flex: 1;
-    height: 8px;
-    border-radius: 4px;
-    background: linear-gradient(to right, #e74c3c 0%, #3498db 100%);
-    outline: none;
-    -webkit-appearance: none;
-  }
-
-  .dynasty-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #fff;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s;
-  }
-
-  .dynasty-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-  }
-
-  .dynasty-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #fff;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s;
-  }
-
-  .dynasty-slider::-moz-range-thumb:hover {
-    transform: scale(1.2);
-  }
-
-  .slider-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #3498db;
     min-width: 50px;
     text-align: center;
   }
@@ -755,12 +572,6 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
 
   // Initialize control panel
   function initControlPanel() {
-    const slider = document.getElementById('dynasty-weight-slider') as HTMLInputElement;
-    const output = document.getElementById('dynasty-weight-value') as HTMLElement;
-    const pricingMethodSelect = document.getElementById('pricing-method-select') as HTMLSelectElement;
-    const pricingHint = document.getElementById('pricing-method-hint') as HTMLElement;
-    const scarcityToggle = document.getElementById('scarcity-toggle') as HTMLInputElement;
-    const scarcityStatus = document.getElementById('scarcity-status') as HTMLElement;
     const contractedToggle = document.getElementById('contracted-toggle') as HTMLInputElement;
     const contractedStatus = document.getElementById('contracted-status') as HTMLElement;
     const viewTabs = document.querySelectorAll('.view-tab');
@@ -770,69 +581,6 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     const searchInput = document.getElementById('player-search') as HTMLInputElement;
     const clearSearch = document.getElementById('clear-search') as HTMLElement;
     const filtersControl = document.querySelector('.filters-control') as HTMLElement;
-
-    // Dynasty weight slider handler
-    const handleSliderChange = debounce(() => {
-      const value = parseInt(slider.value);
-      output.textContent = `${value}%`;
-      
-      // Dispatch custom event for state update
-      window.dispatchEvent(new CustomEvent('auction:dynasty-weight-change', {
-        detail: { weight: value }
-      }));
-      
-      // Save to localStorage
-      localStorage.setItem('auctionPredictor.dynastyWeight', value.toString());
-    }, 300);
-
-    slider.addEventListener('input', () => {
-      output.textContent = `${slider.value}%`;
-    });
-    slider.addEventListener('change', handleSliderChange);
-
-    // Pricing method handler
-    const pricingMethodHints: Record<string, string> = {
-      max: 'Using the highest auction price paid for each rank across 2020-2025',
-      average: 'Using the average auction price paid for each rank across 2020-2025',
-      min: 'Using the lowest "max" auction price paid for each rank across 2020-2025'
-    };
-
-    const handlePricingMethodChange = () => {
-      const method = pricingMethodSelect.value as 'max' | 'average' | 'min';
-      
-      // Update hint text
-      pricingHint.textContent = pricingMethodHints[method] || pricingMethodHints.max;
-      
-      window.dispatchEvent(new CustomEvent('auction:pricing-method-change', {
-        detail: { method }
-      }));
-      
-      localStorage.setItem('auctionPredictor.pricingMethod', method);
-    };
-
-    pricingMethodSelect.addEventListener('change', handlePricingMethodChange);
-
-    // Scarcity toggle handler
-    const handleScarcityToggle = () => {
-      const enabled = scarcityToggle.checked;
-
-      // Update status text
-      if (enabled) {
-        scarcityStatus.innerHTML = '<strong>On</strong> - Auto-selecting pricing model per position (deep → min, shallow → max)';
-      } else {
-        scarcityStatus.innerHTML = '<strong>Off</strong> - Using selected pricing model for all positions';
-      }
-
-      // Dispatch event
-      window.dispatchEvent(new CustomEvent('auction:scarcity-toggle', {
-        detail: { enabled }
-      }));
-
-      // Save to localStorage
-      localStorage.setItem('auctionPredictor.applyScarcity', enabled.toString());
-    };
-
-    scarcityToggle.addEventListener('change', handleScarcityToggle);
 
     // Contracted players toggle handler
     const handleContractedToggle = () => {
@@ -948,24 +696,6 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     });
 
     // Load saved preferences
-    const savedWeight = localStorage.getItem('auctionPredictor.dynastyWeight');
-    if (savedWeight) {
-      slider.value = savedWeight;
-      output.textContent = `${savedWeight}%`;
-    }
-
-    const savedPricingMethod = localStorage.getItem('auctionPredictor.pricingMethod');
-    if (savedPricingMethod && ['max', 'average', 'min'].includes(savedPricingMethod)) {
-      pricingMethodSelect.value = savedPricingMethod;
-      pricingHint.textContent = pricingMethodHints[savedPricingMethod] || pricingMethodHints.max;
-    }
-
-    const savedScarcity = localStorage.getItem('auctionPredictor.applyScarcity');
-    if (savedScarcity === 'true') {
-      scarcityToggle.checked = true;
-      scarcityStatus.innerHTML = '<strong>On</strong> - Auto-selecting pricing model per position (deep → min, shallow → max)';
-    }
-
     const savedContracted = localStorage.getItem('auctionPredictor.showContracted');
     if (savedContracted === 'true') {
       contractedToggle.checked = true;

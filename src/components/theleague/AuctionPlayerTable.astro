@@ -123,6 +123,19 @@ export interface Props {
       </div>
       <div class="modal-body" id="modal-body">
         <!-- Details will be populated by JavaScript -->
+
+        <!-- Historical Pricing -->
+        <div class="historical-pricing">
+          <h4>Historical Pricing</h4>
+          <p class="history-note">
+            Prices are clamped to historical auction ranges (slot-based curves 2020-2024). Values outside historical max/min are capped within a small buffer.
+          </p>
+          <ul class="history-list">
+            <li><strong>Curve:</strong> Defaults to historical average (switchable via Tune Formula)</li>
+            <li><strong>Bounds:</strong> Max/min per position slot with ±5% buffer</li>
+            <li><strong>Sources:</strong> Auction results 2020-2024</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -515,7 +528,7 @@ export interface Props {
   }
 
   /* Modal */
-  .modal {
+  :global(.modal) {
     display: none;
     position: fixed;
     top: 0;
@@ -528,11 +541,11 @@ export interface Props {
     justify-content: center;
   }
 
-  .modal.active {
+  :global(.modal.active) {
     display: flex;
   }
 
-  .modal-content {
+  :global(.modal-content) {
     background: white;
     border-radius: 12px;
     width: 90%;
@@ -542,7 +555,7 @@ export interface Props {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 
-  .modal-header {
+  :global(.modal-header) {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -550,13 +563,13 @@ export interface Props {
     border-bottom: 1px solid #dee2e6;
   }
 
-  .modal-header h3 {
+  :global(.modal-header h3) {
     margin: 0;
     font-size: 1.25rem;
     color: #212529;
   }
 
-  .modal-close {
+  :global(.modal-close) {
     background: none;
     border: none;
     color: #6c757d;
@@ -568,12 +581,37 @@ export interface Props {
     transition: color 0.2s;
   }
 
-  .modal-close:hover {
+  :global(.modal-close:hover) {
     color: #212529;
   }
 
-  .modal-body {
+  :global(.modal-body) {
     padding: 1.5rem;
+  }
+
+  .historical-pricing {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+  }
+
+  .historical-pricing h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #343a40;
+  }
+
+  .history-note {
+    margin: 0 0 0.5rem 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+
+  .history-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: #495057;
+    font-size: 0.9rem;
   }
 
   .detail-section {

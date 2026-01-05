@@ -72,6 +72,7 @@ export interface FranchiseTagPrediction {
 export interface TeamCapSituation {
   franchiseId: string;
   teamName: string;
+  rosterSize?: number;
   
   // Current Cap
   currentCapSpace: number; // As of end of 2025 season
