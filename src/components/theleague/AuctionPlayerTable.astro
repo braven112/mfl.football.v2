@@ -80,13 +80,13 @@ export interface Props {
               <span class="sort-indicator"></span>
             </div>
           </th>
-          <th class="sortable price-col" data-sort="price4yr" data-column="year4" title="4-Year Contract">
+          <th class="sortable price-col optional-price" data-sort="price4yr" data-column="year4" title="4-Year Contract">
             <div class="th-content">
               4
               <span class="sort-indicator"></span>
             </div>
           </th>
-          <th class="sortable price-col" data-sort="price5yr" data-column="year5" title="5-Year Contract">
+          <th class="sortable price-col optional-price" data-sort="price5yr" data-column="year5" title="5-Year Contract">
             <div class="th-content">
               5
               <span class="sort-indicator"></span>
@@ -692,6 +692,21 @@ export interface Props {
 
     .detail-grid {
       grid-template-columns: 1fr;
+    }
+
+    /* Hide less critical columns on very small screens */
+    :global(.optional-price) {
+      display: none !important;
+    }
+
+    /* Ensure touch targets are large enough */
+    .btn, 
+    .btn-details, 
+    :global(.add-target-btn),
+    :global(.remove-target-btn) {
+      min-height: 44px;
+      padding-top: 0.6rem;
+      padding-bottom: 0.6rem;
     }
   }
 </style>

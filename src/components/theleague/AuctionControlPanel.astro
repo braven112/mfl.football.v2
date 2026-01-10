@@ -339,6 +339,7 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    min-height: 44px;
   }
 
   .view-tab:hover {
@@ -406,6 +407,7 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s;
+    min-height: 44px;
   }
 
   .position-filter:hover,
@@ -428,6 +430,11 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .sort-direction-btn:hover {
@@ -464,6 +471,7 @@ const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[po
     color: #212529;
     font-size: 0.875rem;
     transition: all 0.2s;
+    min-height: 44px;
   }
 
   .player-search:focus {
