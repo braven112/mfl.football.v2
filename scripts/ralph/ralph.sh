@@ -1,15 +1,26 @@
 #!/bin/bash
 # Ralph Wiggum - Long-running AI agent loop
-# Usage: ./ralph.sh [max_iterations]
+# Usage: ./ralph.sh [max_iterations] [ai_provider]
+# Examples:
+#   ./ralph.sh 10 gemini
+#   ./ralph.sh 10 claude
+#   AI_PROVIDER=claude ./ralph.sh 10
 
 set -e
 
 MAX_ITERATIONS=${1:-10}
+AI_PROVIDER=${2:-${AI_PROVIDER:-gemini}}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
 PROGRESS_FILE="$SCRIPT_DIR/progress.txt"
 ARCHIVE_DIR="$SCRIPT_DIR/archive"
 LAST_BRANCH_FILE="$SCRIPT_DIR/.last-branch"
+
+# Validate AI provider
+if [[ "$AI_PROVIDER" != "gemini" && "$AI_PROVIDER" != "claude" ]]; then
+  echo "Error: AI_PROVIDER must be 'gemini' or 'claude', got: $AI_PROVIDER"
+  exit 1
+fi
 
 # Archive previous run if branch changed
 if [ -f "$PRD_FILE" ] && [ -f "$LAST_BRANCH_FILE" ]; then
@@ -52,16 +63,23 @@ if [ ! -f "$PROGRESS_FILE" ]; then
 fi
 
 echo "Starting Ralph - Max iterations: $MAX_ITERATIONS"
+echo "Using AI Provider: $AI_PROVIDER"
 
 for i in $(seq 1 $MAX_ITERATIONS); do
   echo ""
   echo "═══════════════════════════════════════════════════════"
-  echo "  Ralph Iteration $i of $MAX_ITERATIONS"
+  echo "  Ralph Iteration $i of $MAX_ITERATIONS ($AI_PROVIDER)"
   echo "═══════════════════════════════════════════════════════"
-  
-  # Run gemini with the ralph prompt
-  # Using --yolo to auto-accept tool calls for autonomous execution
-  OUTPUT=$(gemini "$(cat "$SCRIPT_DIR/prompt.md")" --yolo 2>&1 | tee /dev/stderr) || true
+
+  # Run AI CLI with the ralph prompt
+  # Using auto-accept flags for autonomous execution
+  if [[ "$AI_PROVIDER" == "gemini" ]]; then
+    # Gemini: --yolo to auto-accept tool calls
+    OUTPUT=$(gemini "$(cat "$SCRIPT_DIR/prompt.md")" --yolo 2>&1 | tee /dev/stderr) || true
+  elif [[ "$AI_PROVIDER" == "claude" ]]; then
+    # Claude: --dangerously-skip-tool-approval to auto-accept tool calls
+    OUTPUT=$(claude "$(cat "$SCRIPT_DIR/prompt.md")" --dangerously-skip-tool-approval 2>&1 | tee /dev/stderr) || true
+  fi
   
   # Check for completion signal
   if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
