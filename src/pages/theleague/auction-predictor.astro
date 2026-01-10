@@ -563,8 +563,11 @@ teamRosters.forEach(roster => {
 });
 
 // Build composite rank map from user-provided rankings (50/50 dynasty + footballguys redraft)
-const dynRanks = JSON.parse(fs.readFileSync('auctionPredictor-local-data.json', 'utf8'))['auctionPredictor.dynastyRankings']?.rankings || [];
-const fgRanks = JSON.parse(fs.readFileSync('auctionPredictor-local-data.json', 'utf8'))['auctionPredictor.footballguysRankings']?.rankings || [];
+const localDataPath = path.resolve(process.cwd(), 'auctionPredictor-local-data.json');
+const localDataExists = fs.existsSync(localDataPath);
+const localData = localDataExists ? JSON.parse(fs.readFileSync(localDataPath, 'utf8')) : {};
+const dynRanks = localData['auctionPredictor.dynastyRankings']?.rankings || [];
+const fgRanks = localData['auctionPredictor.footballguysRankings']?.rankings || [];
 const dynEntries = dynRanks.map((r: any) => ({ rank: r.rank, playerId: r.playerId }));
 const fgEntries = fgRanks.map((r: any) => ({ rank: r.rank, playerId: r.playerId }));
 const compositeRankMap = mergeRanks(dynEntries, fgEntries, 0.5, 0.5);
