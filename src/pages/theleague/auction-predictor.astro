@@ -49,7 +49,7 @@ import { calculateDraftPickSalary, analyzePositionalNeeds, calculateTotalDraftIm
 import { generateContractOptions, getQuickRecommendation } from '../../utils/multi-contract-pricer';
 import { analyzeMarket, getMarketSummary, getPositionAdvice } from '../../utils/market-analyzer';
 import { calculateCapSpace, calculateEscalatedSalary } from '../../utils/cap-space-calculator';
-import { calculateAllPlayerPrices } from '../../utils/auction-price-calculator';
+import { calculateAllPlayerPrices, DEFAULT_AUCTION_FACTORS } from '../../utils/auction-price-calculator';
 import { getNFLTeamLogo } from '../../utils/nfl';
 import { computeLeagueFAEnvelope } from '../../utils/league-cap';
 
@@ -80,12 +80,9 @@ const FRANCHISE_TAG_VALUES: Record<string, number> = {
 
 // Default auction price factors (can be adjusted by user)
 const DEFAULT_PRICE_FACTORS: AuctionPriceFactors = {
-  dynastyWeight: 0.6, // 60% dynasty, 40% redraft
-  scarcityMultiplier: 1.0,
-  demandMultiplier: 1.0,
-  ageDiscountFactor: 1.0,
-  injuryRiskDiscount: 0.0,
-  contractYearsPreference: 3, // Neutral preference
+  ...DEFAULT_AUCTION_FACTORS,
+  dynastyWeight: 0.6,
+  redraftWeight: 0.4,
 };
 
 // Optional precomputed predictions (from scripts/predict-auction-fas.mjs)
@@ -858,12 +855,11 @@ const marketSummary = getMarketSummary(marketAnalysis);
 // DATA PROCESSING - STEP 8: Calculate Auction Prices
 // =============================================================================
 
-// Calculate prices for all available players (default 60% dynasty weight, 'max' pricing model)
+// Calculate prices for all available players
 const playerPrices = calculateAllPlayerPrices(
   untaggedAvailablePlayers,
-  marketAnalysis,
-  60, // Default dynasty weight (will be adjustable in UI)
-  'max' // Default pricing model: highest historical values (will be adjustable in UI)
+  teamCapSituations,
+  DEFAULT_PRICE_FACTORS
 );
 
 // =============================================================================

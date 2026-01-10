@@ -70,8 +70,10 @@ import historicalCurves from '../../data/theleague/historical-salary-curves.json
     availablePlayers: PlayerValuation[],
     teamCapSituations: TeamCapSituation[]
   ): PositionScarcityAnalysis {
+    const normalizedTargetPos = position.toUpperCase();
+    
     // Supply: Available players at this position
-    const positionPlayers = availablePlayers.filter(p => p.position === position);
+    const positionPlayers = availablePlayers.filter(p => p.position?.toUpperCase() === normalizedTargetPos);
     const qualityStartersAvailable = positionPlayers.filter(p => {
       // Heuristic for "Quality": Top 30 at pos or has significant projected points
       return (p.compositeRank && p.compositeRank <= 100) || (p.projectedPoints && p.projectedPoints > 100);
@@ -81,13 +83,13 @@ import historicalCurves from '../../data/theleague/historical-salary-curves.json
     const teamsNeedingStarters = teamCapSituations.filter(team => {
       // Safety check for test mocks
       if (!team.positionalNeeds) return false;
-      const need = team.positionalNeeds.find(n => n.position === position);
+      const need = team.positionalNeeds.find(n => n.position?.toUpperCase() === normalizedTargetPos);
       return need && (need.priority === 'critical' || need.priority === 'high');
     }).length;
     
     const totalDemand = teamCapSituations.reduce((sum, team) => {
       if (!team.positionalNeeds) return sum;
-      const need = team.positionalNeeds.find(n => n.position === position);
+      const need = team.positionalNeeds.find(n => n.position?.toUpperCase() === normalizedTargetPos);
       return sum + (need?.targetAcquisitions || 0);
     }, 0);
     
@@ -138,7 +140,8 @@ import historicalCurves from '../../data/theleague/historical-salary-curves.json
   
     // 2. Get Curves for Position
     // Use injected source or global import
-    const positionCurves = curvesSource ? curvesSource[player.position] : curves[player.position];
+    const normalizedPos = player.position?.toUpperCase();
+    const positionCurves = curvesSource ? curvesSource[normalizedPos] : curves[normalizedPos];
     
     if (!positionCurves) {
       // Fallback logic
@@ -281,8 +284,25 @@ import historicalCurves from '../../data/theleague/historical-salary-curves.json
     // Sort first for consistency
     const players = [...availablePlayers].sort((a, b) => (a.compositeRank || 999) - (b.compositeRank || 999));
 
+    // Default scarcity for unexpected positions
+    const defaultScarcity: PositionScarcityAnalysis = {
+      position: 'UNKNOWN',
+      currentRosteredPlayers: 0,
+      qualityStartersAvailable: 1,
+      expiringContracts: 1,
+      rookiesExpected: 0,
+      totalLeagueStartingSpots: 1,
+      teamsNeedingStarters: 0,
+      averageDepthPerTeam: 0,
+      scarcityScore: 0,
+      priceImpactMultiplier: 1.0,
+      topTierSize: 0,
+      replacementLevel: LEAGUE_MINIMUM,
+    };
+
     for (const player of players) {
-      const scarcity = scarcityByPosition.get(player.position)!;
+      const normalizedPos = player.position?.toUpperCase() || 'UNKNOWN';
+      const scarcity = scarcityByPosition.get(normalizedPos) || defaultScarcity;
       
       const factorsResult = calculateAuctionPrice(
         player,

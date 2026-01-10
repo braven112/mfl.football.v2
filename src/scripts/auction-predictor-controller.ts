@@ -1470,11 +1470,11 @@
                 <span class="price-label">3-Year:</span>
                 <span class="price-amount">${formatPrice(price3yr)}</span>
               </div>
-              <div class="price-item ${recommended === 4 ? 'price-recommended' : ''}">
+              <div class="price-item optional-price ${recommended === 4 ? 'price-recommended' : ''}">
                 <span class="price-label">4-Year:</span>
                 <span class="price-amount">${formatPrice(price4yr)}</span>
               </div>
-              <div class="price-item ${recommended === 5 ? 'price-recommended' : ''}">
+              <div class="price-item optional-price ${recommended === 5 ? 'price-recommended' : ''}">
                 <span class="price-label">5-Year:</span>
                 <span class="price-amount">${formatPrice(price5yr)}</span>
               </div>

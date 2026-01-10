@@ -1,0 +1,280 @@
+---
+// src/components/theleague/RankingsImporter.astro
+import { parseRankingsText, matchRankingsToPlayers } from '../../utils/rankings-parser';
+import { chooseTeamName } from '../../utils/team-names'; // Assuming this exists for player team names
+import type { PlayerValuation } from '../../types/auction-predictor';
+
+interface Props {
+    allMFLPlayers: PlayerValuation[];
+    onRankingsImported: (rankings: PlayerValuation[]) => void;
+}
+
+const { allMFLPlayers, onRankingsImported } = Astro.props;
+
+let dlfRankingsInput = '';
+let footballGuysRankingsInput = '';
+
+let dlfImportResult = null;
+let footballGuysImportResult = null;
+
+let parsedPlayers: PlayerValuation[] = [];
+
+// Client-side script for interactivity
+// Using a <script is:inline> to keep it simple, or separate JS file
+// For simplicity, let's keep it inline for now, or use a framework specific solution
+
+// Data structure for storing imported rankings in localStorage
+// { source: 'dlf', rankings: [{ playerId: '123', rank: 10 }, ...] }
+---
+
+<div class="rankings-importer bg-white p-6 rounded-lg shadow-lg">
+  <h2 class="text-2xl font-bold mb-4">Import Player Rankings</h2>
+  <p class="text-gray-600 mb-6">
+    Paste player rankings from your favorite fantasy football sites below. The tool will parse and match players to MFL IDs.
+  </p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="source-section border p-4 rounded-md">
+      <h3 class="text-xl font-semibold mb-3">DLF (Dynasty League Football)</h3>
+      <textarea
+        id="dlfRankingsInput"
+        class="w-full p-2 border rounded-md h-40 text-sm font-mono"
+        placeholder="Paste DLF dynasty rankings here (e.g., Rank,Player,Pos,Team,...)"
+        bind:value={dlfRankingsInput}
+      ></textarea>
+      <div class="flex space-x-2 mt-3">
+        <button id="importDlfRankings" class="btn btn-primary">Import DLF</button>
+        <button id="clearDlfRankings" class="btn btn-secondary">Clear DLF</button>
+      </div>
+      <div id="dlfResult" class="mt-3 text-sm">
+        {dlfImportResult && (
+          <p>Matched: {dlfImportResult.matchedCount} / {dlfImportResult.totalRows}</p>
+        )}
+        {dlfImportResult && dlfImportResult.unmatched.length > 0 && (
+          <p class="text-red-500">Unmatched: {dlfImportResult.unmatched.length}</p>
+        )}
+      </div>
+    </div>
+
+    <div class="source-section border p-4 rounded-md">
+      <h3 class="text-xl font-semibold mb-3">FootballGuys</h3>
+      <textarea
+        id="footballGuysRankingsInput"
+        class="w-full p-2 border rounded-md h-40 text-sm font-mono"
+        placeholder="Paste FootballGuys rankings here (e.g., Rank Name Team Bye Pos,...)"
+        bind:value={footballGuysRankingsInput}
+      ></textarea>
+      <div class="flex space-x-2 mt-3">
+        <button id="importFootballGuysRankings" class="btn btn-primary">Import FBG</button>
+        <button id="clearFootballGuysRankings" class="btn btn-secondary">Clear FBG</button>
+      </div>
+      <div id="footballGuysResult" class="mt-3 text-sm">
+        {footballGuysImportResult && (
+          <p>Matched: {footballGuysImportResult.matchedCount} / {footballGuysImportResult.totalRows}</p>
+        )}
+        {footballGuysImportResult && footballGuysImportResult.unmatched.length > 0 && (
+          <p class="text-red-500">Unmatched: {footballGuysImportResult.unmatched.length}</p>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <div id="compositeRankingsSummary" class="mt-8">
+    <h3 class="text-xl font-semibold mb-3">Composite Rankings Summary</h3>
+    {parsedPlayers.length === 0 ? (
+      <p class="text-gray-500">No rankings imported yet. Paste and import to see summary.</p>
+    ) : (
+      <p>Total players with composite ranks: {parsedPlayers.length}</p>
+    )}
+  </div>
+
+  <div class="mt-6 border-t pt-4">
+    <button id="applyRankings" class="btn btn-green">Apply Rankings to Predictor</button>
+  </div>
+</div>
+
+<script define:vars={{ allMFLPlayers }}>
+  const dlfInput = document.getElementById('dlfRankingsInput');
+  const footballGuysInput = document.getElementById('footballGuysRankingsInput');
+  const importDlfBtn = document.getElementById('importDlfRankings');
+  const clearDlfBtn = document.getElementById('clearDlfRankings');
+  const importFootballGuysBtn = document.getElementById('importFootballGuysRankings');
+  const clearFootballGuysBtn = document.getElementById('clearFootballGuysRankings');
+  const dlfResultDiv = document.getElementById('dlfResult');
+  const footballGuysResultDiv = document.getElementById('footballGuysResult');
+  const compositeSummaryDiv = document.getElementById('compositeRankingsSummary');
+  const applyRankingsBtn = document.getElementById('applyRankings');
+
+  let currentDlfRankings = [];
+  let currentFootballGuysRankings = [];
+
+  // Function to save rankings to localStorage
+  function saveRankingsToLocalStorage(source, rankings) {
+    localStorage.setItem(`auctionPredictor.${source}Rankings`, JSON.stringify(rankings));
+  }
+
+  // Function to load rankings from localStorage
+  function loadRankingsFromLocalStorage(source) {
+    const data = localStorage.getItem(`auctionPredictor.${source}Rankings`);
+    return data ? JSON.parse(data) : [];
+  }
+
+  // Render match results
+  function renderResult(resultDiv, importResult) {
+    if (!importResult) {
+      resultDiv.innerHTML = '';
+      return;
+    }
+    resultDiv.innerHTML = `
+      <p>Matched: ${importResult.matchedCount} / ${importResult.totalRows}</p>
+      ${importResult.unmatched.length > 0 ? `<p class="text-red-500">Unmatched: ${importResult.unmatched.length}</p>` : ''}
+      ${importResult.unmatched.length > 0 ? `
+        <details class="text-red-500 cursor-pointer">
+          <summary>Show Unmatched Players</summary>
+          <ul class="list-disc list-inside">
+            ${importResult.unmatched.map(p => `<li>${p.playerName} (${p.position})</li>`).join('')}
+          </ul>
+        </details>
+      ` : ''}
+    `;
+  }
+
+  // Update composite summary (will be more complex when calculating actual composite rank)
+  function updateCompositeSummary() {
+    let totalRankedPlayers = 0;
+    // This part will become more sophisticated when we merge ranks and apply weights
+    // For now, just count unique players with rankings
+    const allParsedRankings = [...currentDlfRankings, ...currentFootballGuysRankings];
+    const uniquePlayerIds = new Set(allParsedRankings.map(r => r.matchedPlayerId).filter(Boolean));
+    totalRankedPlayers = uniquePlayerIds.size;
+
+    if (totalRankedPlayers === 0) {
+      compositeSummaryDiv.innerHTML = `<h3 class="text-xl font-semibold mb-3">Composite Rankings Summary</h3><p class="text-gray-500">No rankings imported yet. Paste and import to see summary.</p>`;
+    } else {
+      compositeSummaryDiv.innerHTML = `<h3 class="text-xl font-semibold mb-3">Composite Rankings Summary</h3><p>Total players with ranks from ${[currentDlfRankings.length > 0 ? 'DLF' : '', currentFootballGuysRankings.length > 0 ? 'FootballGuys' : ''].filter(Boolean).join(' and ')}: ${totalRankedPlayers}</p>`;
+    }
+  }
+
+  // Initial load from localStorage
+  window.addEventListener('load', () => {
+    currentDlfRankings = loadRankingsFromLocalStorage('dlf');
+    if (currentDlfRankings.length > 0) {
+      // Re-match to get proper display, assuming allMFLPlayers is static
+      const result = matchRankingsToPlayers(currentDlfRankings.map(r => ({ ...r, matchedPlayerId: undefined })), allMFLPlayers);
+      renderResult(dlfResultDiv, result);
+    }
+
+    currentFootballGuysRankings = loadRankingsFromLocalStorage('footballguys');
+    if (currentFootballGuysRankings.length > 0) {
+      const result = matchRankingsToPlayers(currentFootballGuysRankings.map(r => ({ ...r, matchedPlayerId: undefined })), allMFLPlayers);
+      renderResult(footballGuysResultDiv, result);
+    }
+    updateCompositeSummary();
+  });
+
+  importDlfBtn.addEventListener('click', () => {
+    const text = dlfInput.value;
+    const parsed = parseRankingsText(text, 'dlf');
+    const result = matchRankingsToPlayers(parsed, allMFLPlayers);
+    renderResult(dlfResultDiv, result);
+    currentDlfRankings = result.rankings;
+    saveRankingsToLocalStorage('dlf', result.rankings);
+    updateCompositeSummary();
+  });
+
+  clearDlfBtn.addEventListener('click', () => {
+    dlfInput.value = '';
+    currentDlfRankings = [];
+    localStorage.removeItem('auctionPredictor.dlfRankings');
+    renderResult(dlfResultDiv, null);
+    updateCompositeSummary();
+  });
+
+  importFootballGuysBtn.addEventListener('click', () => {
+    const text = footballGuysInput.value;
+    const parsed = parseRankingsText(text, 'footballguys');
+    const result = matchRankingsToPlayers(parsed, allMFLPlayers);
+    renderResult(footballGuysResultDiv, result);
+    currentFootballGuysRankings = result.rankings;
+    saveRankingsToLocalStorage('footballguys', result.rankings);
+    updateCompositeSummary();
+  });
+
+  clearFootballGuysBtn.addEventListener('click', () => {
+    footballGuysInput.value = '';
+    currentFootballGuysRankings = [];
+    localStorage.removeItem('auctionPredictor.footballguysRankings');
+    renderResult(footballGuysResultDiv, null);
+    updateCompositeSummary();
+  });
+
+  // Event to communicate back to the parent component (auction-predictor.astro)
+  applyRankingsBtn.addEventListener('click', () => {
+    // Merge rankings from all sources into a single structure
+    // This is where composite ranks would be truly calculated
+    const allRankings = [...currentDlfRankings, ...currentFootballGuysRankings];
+    const playerRankMap = new Map(); // playerId -> { dlfRank, fbgRank }
+
+    allRankings.forEach(r => {
+      if (r.matchedPlayerId) {
+        let playerEntry = playerRankMap.get(r.matchedPlayerId);
+        if (!playerEntry) {
+          playerEntry = { id: r.matchedPlayerId };
+          playerRankMap.set(r.matchedPlayerId, playerEntry);
+        }
+        if (r.source === 'dlf') playerEntry.dlfRank = r.rank;
+        if (r.source === 'footballguys') playerEntry.fbgRank = r.rank;
+      }
+    });
+
+    const playersWithRanks = Array.from(playerRankMap.values()).map(p => {
+      // Here you would apply your actual composite ranking logic
+      // For now, let's just assign dlfRank if available, otherwise fbgRank
+      const dynastyRank = p.dlfRank;
+      const redraftRank = p.fbgRank; // Assuming FBG is more redraft-centric
+
+      return {
+        ...allMFLPlayers.find(mflP => mflP.id === p.id), // Get full player data
+        dynastyRank: dynastyRank,
+        redraftRank: redraftRank,
+        // Composite rank will be calculated in auction-price-calculator based on weights
+      };
+    });
+
+    // Dispatch a custom event to notify the parent Astro component
+    window.dispatchEvent(new CustomEvent('rankingsUpdated', { detail: playersWithRanks }));
+  });
+</script>
+
+<style>
+  .rankings-importer {
+    font-family: sans-serif;
+  }
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    transition: background-color 0.2s;
+  }
+  .btn-primary {
+    background-color: #3b82f6; /* blue-500 */
+    color: white;
+  }
+  .btn-primary:hover {
+    background-color: #2563eb; /* blue-600 */
+  }
+  .btn-secondary {
+    background-color: #e5e7eb; /* gray-200 */
+    color: #374151; /* gray-700 */
+  }
+  .btn-secondary:hover {
+    background-color: #d1d5db; /* gray-300 */
+  }
+  .btn-green {
+    background-color: #10b981; /* green-500 */
+    color: white;
+  }
+  .btn-green:hover {
+    background-color: #059669; /* green-600 */
+  }
+</style>
