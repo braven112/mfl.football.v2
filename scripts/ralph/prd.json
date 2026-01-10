@@ -1,0 +1,66 @@
+{
+  "project": "MFL Football v2",
+  "branchName": "ralph/auction-predictor-polish",
+  "description": "Final polish and refactoring of the Auction Price Predictor feature",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Implement Help Modal Component",
+      "description": "As a user, I want a help modal to explain how to use the auction tool.",
+      "acceptanceCriteria": [
+        "Create src/components/theleague/HelpModal.astro",
+        "Add '?' button to the page header",
+        "Include sections for: Rankings Import, Franchise Tags, Price Interpretation, Contract Lengths",
+        "Ensure modal is responsive and accessible (close on Esc, trap focus)",
+        "Add tooltips for key terms (Dynasty Weight, Scarcity, etc.)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Refer to AUCTION_PREDICTOR_TASKS.md Task 5.7"
+    },
+    {
+      "id": "US-002",
+      "title": "Add Print-Friendly Styles",
+      "description": "As a user, I want to print the auction values for offline reference during the draft.",
+      "acceptanceCriteria": [
+        "Add @media print styles to src/pages/theleague/auction-predictor.astro",
+        "Hide navigation, control panels, and buttons when printing",
+        "Ensure table rows do not break awkwardly across pages",
+        "Force high-contrast black & white text",
+        "Add a print header with League Name and Date"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Refer to AUCTION_PREDICTOR_TASKS.md Task 4.3"
+    },
+    {
+      "id": "US-003",
+      "title": "Refactor Auction Predictor Client Script",
+      "description": "As a developer, I want the massive inline script in auction-predictor.astro refactored into a separate file for maintainability.",
+      "acceptanceCriteria": [
+        "Extract the client-side state management and logic from src/pages/theleague/auction-predictor.astro",
+        "Move logic to new file: src/scripts/auction-predictor-controller.ts (or similar)",
+        "Ensure all functionality (state, events, rendering, updates) remains intact",
+        "Import the new script tag in the Astro page",
+        "Page load performance should remain the same or improve"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "The file is currently over 6000 lines. Separation of concerns is needed."
+    },
+    {
+      "id": "US-004",
+      "title": "Mobile Responsiveness Audit & Fixes",
+      "description": "As a mobile user, I want the auction tool to be usable on my phone.",
+      "acceptanceCriteria": [
+        "Check Player Table on mobile view (hide less critical columns like 4yr/5yr prices)",
+        "Ensure Control Panel stacks vertically on small screens",
+        "Fix any horizontal scrolling issues on 375px width",
+        "Ensure touch targets for sliders and buttons are at least 44px"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Refer to AUCTION_PREDICTOR_TASKS.md Task 5.3"
+    }
+  ]
+}

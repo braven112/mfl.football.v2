@@ -1,0 +1,23 @@
+# Ralph Progress Log
+## Codebase Patterns
+- **Astro Styles:** often placed at the bottom of `.astro` files. Use `:global` to override child component styles.
+- **Layouts:** `TheLeagueLayout` is the primary wrapper for pages.
+- **Print Styles:** Use `@media print` in the page's `<style>` block. Use `:global` to hide layout elements (nav, header) and force colors/widths.
+- **Global Selectors:** When styling components imported into a page (like `AuctionControlPanel`), use `:global(.class-name)` if the styles are scoped to the page.
+
+Started: Fri Jan  9 23:11:18 PST 2026
+---
+## Fri Jan 9 2026 - US-001
+- Implemented HelpModal component.
+- Added Help button to auction-predictor.astro header.
+- Files changed: src/components/theleague/HelpModal.astro, src/pages/theleague/auction-predictor.astro
+---
+## Fri Jan 9 2026 - US-002
+- Implemented print-friendly styles for the Auction Predictor.
+- Added a print-only header with the current date.
+- Added `@media print` styles to hide navigation, controls, and force high-contrast layout.
+- Files changed: src/pages/theleague/auction-predictor.astro
+- **Learnings:**
+  - The `!important` flag is often necessary in print styles to override specific component styles (like background colors).
+  - Checking `package.json` for build scripts (`pnpm run build:apps`) is crucial for verification.
+---

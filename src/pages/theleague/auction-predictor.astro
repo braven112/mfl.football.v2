@@ -975,6 +975,12 @@ const pageDescription = 'Analyze available players and predict auction prices fo
   <div class="auction-predictor-container">
     <div class="container">
 
+      <!-- Print Header -->
+      <div class="print-header hidden-screen visible-print">
+        <h1>The League - Auction Cheat Sheet</h1>
+        <p>Generated: {new Date().toLocaleDateString()}</p>
+      </div>
+
       <!-- Tool Header -->
       <div class="tool-header">
         <LiveModeToggle />
@@ -7428,6 +7434,105 @@ const pageDescription = 'Analyze available players and predict auction prices fo
 
   :global(.player-card.player-row-target) {
     border-left: 4px solid #ef4444 !important;
+  }
+
+  /* ========================================================================== */
+  /* PRINT STYLES */
+  /* ========================================================================== */
+  
+  @media print {
+    /* Hide non-essential elements */
+    :global(nav), 
+    :global(header), 
+    :global(footer),
+    .tool-header, 
+    .notification-settings-panel,
+    .help-modal-trigger,
+    :global(.live-auction-panel),
+    :global(.control-panel-container),
+    :global(.auction-control-panel),
+    :global(#formula-modal),
+    :global(.live-mode-toggle) {
+      display: none !important;
+    }
+
+    /* Reset layout for print */
+    body, .auction-predictor-container, .container {
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: none !important;
+      background: white !important;
+      color: black !important;
+    }
+    
+    /* Visible Print Header */
+    .print-header {
+      display: block !important;
+      margin-bottom: 20px;
+      text-align: center;
+      border-bottom: 2px solid black;
+      padding-bottom: 10px;
+    }
+    
+    .print-header h1 {
+      font-size: 24pt;
+      margin: 0;
+      color: black !important;
+    }
+    
+    /* Table Optimizations */
+    :global(.auction-player-table), 
+    :global(table) {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 10pt !important;
+    }
+    
+    :global(th), :global(td) {
+      border: 1px solid #000 !important;
+      padding: 4px !important;
+      color: black !important;
+    }
+    
+    :global(th) {
+      background-color: #f0f0f0 !important;
+      -webkit-print-color-adjust: exact;
+      font-weight: bold;
+    }
+    
+    /* Prevent page breaks inside rows */
+    :global(tr) {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    
+    /* Ensure specific views are visible/hidden */
+    .view-content[data-view="players"] {
+      display: block !important;
+    }
+    
+    .view-content:not([data-view="players"]) {
+      display: none !important;
+    }
+
+    /* Force high contrast for text */
+    :global(*) {
+      color: #000 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+
+    /* Re-enable backgrounds for specific elements like headers */
+    :global(th) {
+      background-color: #f0f0f0 !important;
+    }
+  }
+  
+  /* Helper classes for print visibility */
+  .visible-print {
+    display: none;
   }
 
 </style>
