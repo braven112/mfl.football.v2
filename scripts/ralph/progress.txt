@@ -4,6 +4,7 @@
 - **Layouts:** `TheLeagueLayout` is the primary wrapper for pages.
 - **Print Styles:** Use `@media print` in the page's `<style>` block. Use `:global` to hide layout elements (nav, header) and force colors/widths.
 - **Global Selectors:** When styling components imported into a page (like `AuctionControlPanel`), use `:global(.class-name)` if the styles are scoped to the page.
+- **Imports:** When moving code from `src/pages/...` to `src/scripts/...`, remember that `../../` in pages (depth 3) maps to `../` in scripts (depth 2) for accessing `src/` root.
 
 Started: Fri Jan  9 23:11:18 PST 2026
 ---
@@ -20,4 +21,15 @@ Started: Fri Jan  9 23:11:18 PST 2026
 - **Learnings:**
   - The `!important` flag is often necessary in print styles to override specific component styles (like background colors).
   - Checking `package.json` for build scripts (`pnpm run build:apps`) is crucial for verification.
+---
+## Fri Jan 9 2026 - US-003
+- Refactored ~5300 lines of inline client script from `src/pages/theleague/auction-predictor.astro` to `src/scripts/auction-predictor-controller.ts`.
+- Updated import paths in the new controller file.
+- Updated Astro page to load the script from the new location.
+- Verified build (`pnpm run build`) passes.
+- Files changed: src/pages/theleague/auction-predictor.astro, src/scripts/auction-predictor-controller.ts
+- **Learnings:**
+  - `sed` is useful for extracting large chunks of text, but line counts must be precise.
+  - Moving files changes import depths (`../../` -> `../`).
+  - `vitest` config environment `node` causes failures in tests expecting `document` (unrelated to this change but noted).
 ---
