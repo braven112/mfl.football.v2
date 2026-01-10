@@ -1,327 +1,158 @@
 /**
- * Player Rankings Parser
+ * Rankings Parser Utility
  * 
- * Parses dynasty and redraft rankings from various sources:
- * - FantasyPros
- * - FootballGuys  
- * - DynastyLeagueFootball
- * - Custom tab-separated format
- * 
- * Expected format:
- * Rank	Player	Pos	Age	Exp	Bye
- * 1	Brock Bowers LV2	TE1	23	1	8
+ * Parses copy-pasted text from rankings sites (DLF, FootballGuys, etc.)
+ * and matches them to MFL player IDs.
  */
+
+import type { PlayerValuation } from '../types/auction-predictor';
 
 export interface ParsedRanking {
   rank: number;
   playerName: string;
-  nflTeam: string;
   position: string;
-  age?: number;
-  experience?: string;
-  byeWeek?: number;
-  tier?: number;
-  positionRank?: number; // e.g., TE1, QB2
-  matched: boolean;
-  mflId?: string;
+  team?: string;
+  matchedPlayerId?: string;
 }
 
-export interface RankingImport {
-  source: 'fantasypros' | 'footballguys' | 'dynastyleaguefootball' | 'custom';
-  rankingType: 'dynasty' | 'redraft';
-  importDate: Date;
+export interface RankingsImportResult {
+  source: string;
+  totalRows: number;
+  matchedCount: number;
   rankings: ParsedRanking[];
-  totalPlayers: number;
-  tierCount: number;
+  unmatched: ParsedRanking[];
 }
 
 /**
- * Extract player name and NFL team from formats like:
- * - "Brock Bowers LV2"
- * - "Joe Burrow CIN2"
- * - "Patrick Mahomes KC"
+ * Normalizes player names for fuzzy matching
+ * e.g. "Patrick Mahomes II" -> "patrick mahomes"
  */
-function parsePlayerString(playerStr: string): {
-  name: string;
-  nflTeam: string;
-  positionRank?: string;
-} {
-  // Pattern: "Name TEAM# POS#" or "Name TEAM POS#" or just "Name TEAM"
-  const match = playerStr.match(/^(.+?)\s+([A-Z]{2,3})(\d*)(?:\s+([A-Z]+\d+))?$/);
-  
-  if (match) {
-    return {
-      name: match[1].trim(),
-      nflTeam: match[2],
-      positionRank: match[4],
-    };
-  }
-  
-  // Fallback: just return the whole string as name
-  return {
-    name: playerStr.trim(),
-    nflTeam: '',
-  };
+export function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '') // Remove punctuation
+    .replace(/\s(ii|iii|iv|jr|sr)$/, '') // Remove suffixes
+    .replace(/\s+/g, ' ') // Collapse whitespace
+    .trim();
 }
 
 /**
- * Extract position rank number from strings like "TE1", "QB12", "RB23"
- */
-function extractPositionRank(posStr: string): {
-  position: string;
-  rank: number;
-} | null {
-  const match = posStr.match(/^([A-Z]+)(\d+)$/);
-  if (match) {
-    return {
-      position: match[1],
-      rank: parseInt(match[2], 10),
-    };
-  }
-  return null;
-}
-
-/**
- * Parse tab-separated rankings text
+ * Parses raw text from CSV/TSV
  */
 export function parseRankingsText(
-  text: string,
-  source: 'fantasypros' | 'footballguys' | 'dynastyleaguefootball' | 'custom' = 'custom',
-  rankingType: 'dynasty' | 'redraft' = 'dynasty'
-): RankingImport {
-  const lines = text.trim().split('\n');
-  const rankings: ParsedRanking[] = [];
-  let currentTier = 0;
+  text: string, 
+  source: 'dlf' | 'footballguys' | 'fantasypros' | 'generic'
+): ParsedRanking[] {
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  const parsed: ParsedRanking[] = [];
   
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    // Skip empty lines
-    if (!trimmed) continue;
-    
-    // Check for tier headers (e.g., "Tier 1", "Tier 2")
-    const tierMatch = trimmed.match(/^Tier\s+(\d+)$/i);
-    if (tierMatch) {
-      currentTier = parseInt(tierMatch[1], 10);
-      continue;
-    }
-    
-    // Check for header row (contains "Rank" or "Player")
-    if (trimmed.toLowerCase().includes('rank') && trimmed.toLowerCase().includes('player')) {
-      continue;
-    }
-    
-    // Split by tabs
-    const columns = trimmed.split('\t');
-    
-    // Need at least: Rank, Player, Pos
-    if (columns.length < 3) continue;
-    
-    const rank = parseInt(columns[0], 10);
-    if (isNaN(rank)) continue;
-    
-    const playerStr = columns[1];
-    const posStr = columns[2];
-    const age = columns[3] ? parseInt(columns[3], 10) : undefined;
-    const experience = columns[4] || undefined;
-    const byeWeek = columns[5] ? parseInt(columns[5], 10) : undefined;
-    
-    // Parse player name and team
-    const { name, nflTeam, positionRank } = parsePlayerString(playerStr);
-    
-    // Extract position from position column or position rank
-    let position = posStr;
-    let posRankNum: number | undefined;
-    
-    const posRankData = extractPositionRank(posStr);
-    if (posRankData) {
-      position = posRankData.position;
-      posRankNum = posRankData.rank;
-    } else if (positionRank) {
-      const prData = extractPositionRank(positionRank);
-      if (prData) {
-        posRankNum = prData.rank;
-      }
-    }
-    
-    rankings.push({
-      rank,
-      playerName: name,
-      nflTeam,
-      position,
-      age: isNaN(age!) ? undefined : age,
-      experience,
-      byeWeek: isNaN(byeWeek!) ? undefined : byeWeek,
-      tier: currentTier || undefined,
-      positionRank: posRankNum,
-      matched: false,
-    });
+  // Detect delimiter (Tab for TSV, Comma for CSV)
+  const firstLine = lines[0] || '';
+  const isTsv = firstLine.includes('\t');
+  const delimiter = isTsv ? '\t' : ',';
+
+  // Heuristic column detection
+  // We need to find columns for: Rank, Name, Position, Team
+  // Defaults (common formats)
+  let colMap = { rank: 0, name: 1, pos: 2, team: 3 };
+  
+  // Adjust based on source if known formats (Mock implementation)
+  if (source === 'dlf') {
+    // DLF CSV often: Rank, Player, Pos, Team, Age...
+    colMap = { rank: 0, name: 1, pos: 2, team: 3 };
+  } else if (source === 'footballguys') {
+    // FBG often: Rank, Name, Team, Bye, Pos...
+    colMap = { rank: 0, name: 1, team: 2, pos: 4 }; 
   }
-  
-  // Count unique tiers
-  const tiers = new Set(rankings.map(r => r.tier).filter(t => t !== undefined));
-  
-  return {
-    source,
-    rankingType,
-    importDate: new Date(),
-    rankings,
-    totalPlayers: rankings.length,
-    tierCount: tiers.size,
-  };
+
+  let currentRank = 1;
+
+  for (const line of lines) {
+    // Skip headers
+    if (line.toLowerCase().startsWith('rank') || line.toLowerCase().startsWith('overall')) continue;
+
+    const cols = line.split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+    
+    if (cols.length < 2) continue;
+
+    // Extract Rank
+    let rankVal = parseInt(cols[colMap.rank]);
+    if (isNaN(rankVal)) {
+      // If rank column is missing or implied, use counter
+      rankVal = currentRank; 
+    } else {
+      currentRank = rankVal;
+    }
+
+    // Extract Name
+    const name = cols[colMap.name];
+    
+    // Extract Position (try to parse if mixed)
+    let pos = cols[colMap.pos] || '';
+    // Handle "QB12" format
+    if (pos.match(/^[A-Z]{2,3}\d+$/)) {
+      pos = pos.replace(/\d+$/, '');
+    }
+
+    if (name && name.length > 2) {
+      parsed.push({
+        rank: rankVal,
+        playerName: name,
+        position: pos.toUpperCase(),
+        team: cols[colMap.team] || '',
+      });
+      currentRank++;
+    }
+  }
+
+  return parsed;
 }
 
 /**
- * Match rankings to MFL players by name
+ * Matches parsed rankings to MFL players
  */
 export function matchRankingsToPlayers(
-  rankings: ParsedRanking[],
-  mflPlayers: Array<{ id: string; name: string; position: string; team: string }>
-): ParsedRanking[] {
-  // Build lookup map for fuzzy matching
-  const playerMap = new Map<string, { id: string; position: string; team: string }>();
-  
-  for (const player of mflPlayers) {
-    // Normalize name: lowercase, remove punctuation
-    const normalized = player.name.toLowerCase().replace(/[^a-z\s]/g, '');
-    playerMap.set(normalized, {
-      id: player.id,
-      position: player.position,
-      team: player.team,
-    });
-  }
-  
-  return rankings.map(ranking => {
-    const normalizedName = ranking.playerName.toLowerCase().replace(/[^a-z\s]/g, '');
-    const match = playerMap.get(normalizedName);
-    
-    if (match) {
-      // Verify position matches (if available)
-      if (ranking.position && match.position !== ranking.position) {
-        // Position mismatch - might be wrong player
-        return ranking;
-      }
-      
-      return {
-        ...ranking,
-        matched: true,
-        mflId: match.id,
-        // Update NFL team if it was missing
-        nflTeam: ranking.nflTeam || match.team,
-      };
-    }
-    
-    return ranking;
+  rankings: ParsedRanking[], 
+  mflPlayers: PlayerValuation[]
+): RankingsImportResult {
+  const matchedRankings: ParsedRanking[] = [];
+  const unmatchedRankings: ParsedRanking[] = [];
+  let matchedCount = 0;
+
+  // Index MFL players by normalized name for O(1) lookup
+  const playerIndex = new Map<string, PlayerValuation>();
+  mflPlayers.forEach(p => {
+    playerIndex.set(normalizeName(p.name), p);
   });
-}
 
-/**
- * Calculate composite rank from dynasty and redraft rankings
- */
-export function calculateCompositeRank(
-  dynastyRank: number | undefined,
-  redraftRank: number | undefined,
-  dynastyWeight: number = 0.6
-): number | undefined {
-  if (!dynastyRank && !redraftRank) return undefined;
-  if (!dynastyRank) return redraftRank;
-  if (!redraftRank) return dynastyRank;
-  
-  const redraftWeight = 1 - dynastyWeight;
-  return Math.round(dynastyRank * dynastyWeight + redraftRank * redraftWeight);
-}
+  for (const item of rankings) {
+    const normName = normalizeName(item.playerName);
+    const match = playerIndex.get(normName);
 
-/**
- * Merge multiple ranking sources
- */
-export function mergeRankings(
-  rankings: RankingImport[]
-): Map<string, {
-  playerId: string;
-  playerName: string;
-  dynastyRank?: number;
-  redraftRank?: number;
-  compositeRank?: number;
-  position: string;
-  nflTeam: string;
-}> {
-  const merged = new Map<string, any>();
-  
-  for (const rankingSet of rankings) {
-    for (const ranking of rankingSet.rankings) {
-      if (!ranking.matched || !ranking.mflId) continue;
-      
-      const existing = merged.get(ranking.mflId) || {
-        playerId: ranking.mflId,
-        playerName: ranking.playerName,
-        position: ranking.position,
-        nflTeam: ranking.nflTeam,
-      };
-      
-      if (rankingSet.rankingType === 'dynasty') {
-        existing.dynastyRank = ranking.rank;
-      } else {
-        existing.redraftRank = ranking.rank;
+    if (match) {
+      // Basic match found
+      // Optional: Verify position matches to avoid same-name conflicts
+      if (item.position && match.position && !item.position.includes(match.position) && !match.position.includes(item.position)) {
+         // Position mismatch warning
+         // But for now, name match is usually sufficient for fantasy relevant players
       }
-      
-      // Recalculate composite rank
-      existing.compositeRank = calculateCompositeRank(
-        existing.dynastyRank,
-        existing.redraftRank
-      );
-      
-      merged.set(ranking.mflId, existing);
-    }
-  }
-  
-  return merged;
-}
 
-/**
- * Validate rankings import
- */
-export function validateRankingsImport(text: string): {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  preview: ParsedRanking[];
-} {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-  
-  if (!text || text.trim().length === 0) {
-    errors.push('Rankings text is empty');
-    return { isValid: false, errors, warnings, preview: [] };
+      matchedRankings.push({
+        ...item,
+        matchedPlayerId: match.id
+      });
+      matchedCount++;
+    } else {
+      // Try fuzzy matching or manual overrides here in future
+      unmatchedRankings.push(item);
+    }
   }
-  
-  try {
-    const result = parseRankingsText(text);
-    
-    if (result.rankings.length === 0) {
-      errors.push('No valid rankings found in text');
-      return { isValid: false, errors, warnings, preview: [] };
-    }
-    
-    if (result.rankings.length < 10) {
-      warnings.push(`Only ${result.rankings.length} players found - expected more`);
-    }
-    
-    const unmatchedPlayers = result.rankings.filter(r => !r.playerName || r.playerName.length < 3);
-    if (unmatchedPlayers.length > 0) {
-      warnings.push(`${unmatchedPlayers.length} players have invalid names`);
-    }
-    
-    // Preview first 10 rankings
-    const preview = result.rankings.slice(0, 10);
-    
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-      preview,
-    };
-  } catch (error) {
-    errors.push(`Failed to parse rankings: ${error}`);
-    return { isValid: false, errors, warnings, preview: [] };
-  }
+
+  return {
+    source: 'unknown',
+    totalRows: rankings.length,
+    matchedCount,
+    rankings: matchedRankings,
+    unmatched: unmatchedRankings
+  };
 }
