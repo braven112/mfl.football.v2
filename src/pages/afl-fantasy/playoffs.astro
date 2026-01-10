@@ -96,10 +96,19 @@ const franchises = selectedFeed.leagueStandings.franchise;
 const conferenceAStandings = getConferenceStandings(franchises, aflConfig, '00');
 const conferenceBStandings = getConferenceStandings(franchises, aflConfig, '01');
 
-const fallbackBracketFeed =
-  bracketFallbackFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/playoff-brackets.json`] as
-    | { playoffBrackets?: any; brackets?: Record<string, any> }
-    | undefined;
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+const bracketKey = Object.keys(bracketFallbackFeeds).find(
+  path => extractFeedSeason(path) === selectedYear.toString()
+);
+
+const fallbackBracketFeed = bracketKey ? getModuleData(bracketFallbackFeeds[bracketKey]) : undefined;
 const fallbackBracketMetas = fallbackBracketFeed?.playoffBrackets?.playoffBracket || [];
 const fallbackBracketDetails = fallbackBracketFeed?.brackets || {};
 
