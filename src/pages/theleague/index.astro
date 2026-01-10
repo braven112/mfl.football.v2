@@ -28,10 +28,6 @@ const pages = {
 
 <TheLeagueLayout title="The League - Home">
   <main class="league-home">
-    <header class="home-header">
-      <h1>The League</h1>
-      <p class="subtitle">Fantasy Football Dynasty League</p>
-    </header>
 
     {Object.entries(pages).map(([category, items]) => (
       <section class="page-category">
@@ -85,7 +81,6 @@ const pages = {
     color: var(--primary-link-default-text-color, #1c497c);
     margin: 0;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
   }
 
   .page-grid {
@@ -101,7 +96,7 @@ const pages = {
     background: var(--content-bg, #fff);
     padding: 1.5rem;
     border-radius: 0.75rem;
-    border: 2px solid var(--primary-content-border-color, #e2e2e2);
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     text-decoration: none;
     color: inherit;
     transition: all 0.2s ease;
