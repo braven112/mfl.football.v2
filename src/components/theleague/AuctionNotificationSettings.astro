@@ -1,0 +1,263 @@
+---
+/**
+ * Auction Notification Settings Panel
+ * Allows users to configure notification preferences
+ */
+---
+
+<div class="notification-settings-panel" id="notificationSettings">
+  <h3>🔔 Notification Settings</h3>
+
+  <div class="settings-group">
+    <label class="setting-toggle">
+      <input type="checkbox" id="notificationsEnabled" checked />
+      <span>Enable notifications</span>
+    </label>
+
+    <label class="setting-toggle">
+      <input type="checkbox" id="soundEnabled" checked />
+      <span>Play sound alerts</span>
+    </label>
+
+    <label class="setting-toggle">
+      <input type="checkbox" id="notifyAllBids" />
+      <span>Notify for all bids (not just target players)</span>
+    </label>
+
+    <label class="setting-toggle">
+      <input type="checkbox" id="notifyCompletions" checked />
+      <span>Notify when auctions complete</span>
+    </label>
+  </div>
+
+  <div class="settings-group">
+    <label class="setting-input">
+      <span>Alert threshold (minimum bid amount)</span>
+      <select id="alertThreshold">
+        <option value="0">All amounts</option>
+        <option value="1000000">$1M+</option>
+        <option value="2500000">$2.5M+</option>
+        <option value="5000000">$5M+</option>
+        <option value="10000000">$10M+</option>
+      </select>
+    </label>
+
+    <label class="setting-input">
+      <span>Max notifications per minute</span>
+      <select id="maxNotificationsPerMinute">
+        <option value="6">6 (every 10s)</option>
+        <option value="12" selected>12 (every 5s)</option>
+        <option value="20">20 (every 3s)</option>
+        <option value="60">Unlimited</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="settings-actions">
+    <button type="button" class="btn-secondary" id="resetSettings">Reset to Defaults</button>
+    <button type="button" class="btn-primary" id="testNotification">Test Notification</button>
+  </div>
+</div>
+
+<style>
+  .notification-settings-panel {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .notification-settings-panel h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .settings-group:last-of-type {
+    border-bottom: none;
+  }
+
+  .setting-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .setting-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .setting-toggle span {
+    font-size: 14px;
+    color: #374151;
+  }
+
+  .setting-input {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .setting-input span {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .setting-input select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+  }
+
+  .setting-input select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .settings-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+  }
+
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+
+  @media (max-width: 640px) {
+    .notification-settings-panel {
+      padding: 16px;
+    }
+
+    .settings-actions {
+      flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  import {
+    loadNotificationPreferences,
+    saveNotificationPreferences,
+    resetNotificationPreferences,
+    type NotificationPreferences,
+  } from '../../utils/auction-notifications';
+
+  // Load preferences
+  const preferences = loadNotificationPreferences();
+
+  // Get elements
+  const notificationsEnabled = document.getElementById('notificationsEnabled') as HTMLInputElement;
+  const soundEnabled = document.getElementById('soundEnabled') as HTMLInputElement;
+  const notifyAllBids = document.getElementById('notifyAllBids') as HTMLInputElement;
+  const notifyCompletions = document.getElementById('notifyCompletions') as HTMLInputElement;
+  const alertThreshold = document.getElementById('alertThreshold') as HTMLSelectElement;
+  const maxNotificationsPerMinute = document.getElementById('maxNotificationsPerMinute') as HTMLSelectElement;
+  const resetButton = document.getElementById('resetSettings') as HTMLButtonElement;
+  const testButton = document.getElementById('testNotification') as HTMLButtonElement;
+
+  // Set initial values
+  if (notificationsEnabled) notificationsEnabled.checked = preferences.enabled;
+  if (soundEnabled) soundEnabled.checked = preferences.soundEnabled;
+  if (notifyAllBids) notifyAllBids.checked = preferences.notifyAllBids;
+  if (notifyCompletions) notifyCompletions.checked = preferences.notifyCompletions;
+  if (alertThreshold) alertThreshold.value = preferences.alertThreshold.toString();
+  if (maxNotificationsPerMinute) maxNotificationsPerMinute.value = preferences.maxNotificationsPerMinute.toString();
+
+  // Save preferences on change
+  function saveCurrentPreferences() {
+    const newPreferences: NotificationPreferences = {
+      enabled: notificationsEnabled?.checked || false,
+      soundEnabled: soundEnabled?.checked || false,
+      notifyAllBids: notifyAllBids?.checked || false,
+      notifyCompletions: notifyCompletions?.checked || false,
+      alertThreshold: parseInt(alertThreshold?.value || '0', 10),
+      maxNotificationsPerMinute: parseInt(maxNotificationsPerMinute?.value || '12', 10),
+    };
+
+    saveNotificationPreferences(newPreferences);
+
+    // Dispatch event for activity detector to update
+    window.dispatchEvent(new CustomEvent('notification-preferences-changed', {
+      detail: newPreferences,
+    }));
+  }
+
+  // Add change listeners
+  notificationsEnabled?.addEventListener('change', saveCurrentPreferences);
+  soundEnabled?.addEventListener('change', saveCurrentPreferences);
+  notifyAllBids?.addEventListener('change', saveCurrentPreferences);
+  notifyCompletions?.addEventListener('change', saveCurrentPreferences);
+  alertThreshold?.addEventListener('change', saveCurrentPreferences);
+  maxNotificationsPerMinute?.addEventListener('change', saveCurrentPreferences);
+
+  // Reset button
+  resetButton?.addEventListener('click', () => {
+    resetNotificationPreferences();
+    const defaults = loadNotificationPreferences();
+
+    if (notificationsEnabled) notificationsEnabled.checked = defaults.enabled;
+    if (soundEnabled) soundEnabled.checked = defaults.soundEnabled;
+    if (notifyAllBids) notifyAllBids.checked = defaults.notifyAllBids;
+    if (notifyCompletions) notifyCompletions.checked = defaults.notifyCompletions;
+    if (alertThreshold) alertThreshold.value = defaults.alertThreshold.toString();
+    if (maxNotificationsPerMinute) maxNotificationsPerMinute.value = defaults.maxNotificationsPerMinute.toString();
+
+    saveCurrentPreferences();
+  });
+
+  // Test notification
+  testButton?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('test-notification'));
+  });
+</script>

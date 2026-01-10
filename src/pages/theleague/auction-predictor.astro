@@ -30,6 +30,11 @@ import TeamCapAnalysis from '../../components/theleague/TeamCapAnalysis.astro';
 import MarketAnalysisDashboard from '../../components/theleague/MarketAnalysisDashboard.astro';
 import BudgetPlannerPanel from '../../components/theleague/BudgetPlannerPanel.astro';
 
+// Live Auction components
+import LiveModeToggle from '../../components/theleague/LiveModeToggle.astro';
+import LiveAuctionPanel from '../../components/theleague/LiveAuctionPanel.astro';
+import AuctionNotificationSettings from '../../components/theleague/AuctionNotificationSettings.astro';
+
 // Import MFL data feeds
 import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
 import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
@@ -968,15 +973,27 @@ const pageDescription = 'Analyze available players and predict auction prices fo
   <!-- Main Content Area -->
   <div class="auction-predictor-container">
     <div class="container">
-      
-      <!-- Control Panel Component -->
-      <AuctionControlPanel 
-        initialDynastyWeight={60}
-        initialView="players"
-        positionCounts={positionCounts}
-        totalPlayers={untaggedAvailablePlayers.length}
-        totalTeams={franchises.length}
-      />
+
+      <!-- Live Mode Toggle -->
+      <LiveModeToggle />
+
+      <!-- Notification Settings (Collapsible) -->
+      <details class="notification-settings-panel">
+        <summary>⚙️ Notification Settings</summary>
+        <AuctionNotificationSettings />
+      </details>
+
+      <!-- Planning Mode Container -->
+      <div id="planningContainer">
+
+        <!-- Control Panel Component -->
+        <AuctionControlPanel
+          initialDynastyWeight={60}
+          initialView="players"
+          positionCounts={positionCounts}
+          totalPlayers={untaggedAvailablePlayers.length}
+          totalTeams={franchises.length}
+        />
 
       <!-- Player Table View (Default) -->
       <div class="view-content" data-view="players">
@@ -1136,6 +1153,11 @@ const pageDescription = 'Analyze available players and predict auction prices fo
           </div>
         </div>
       </div>
+
+      </div> <!-- End planningContainer -->
+
+      <!-- Live Auction Panel (hidden by default) -->
+      <LiveAuctionPanel />
 
     </div>
   </div>
@@ -6327,6 +6349,175 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       console.log('⚠️ No rankings loaded yet. Import rankings to enable pricing predictions.');
     }
     console.log('=====================\n');
+
+    // =============================================================================
+    // LIVE AUCTION INTEGRATION
+    // =============================================================================
+
+    import { createActivityDetector } from '../../utils/live-auction-activity-detector';
+    import { createLiveModeManager } from '../../utils/live-mode-manager';
+    import type { PlayerLookup, TeamLookup } from '../../utils/live-auction-activity-detector';
+
+    // Build player lookup from MFL data
+    const playerLookup: PlayerLookup = {};
+    for (const player of state.allMFLPlayers) {
+      playerLookup[player.id] = {
+        name: player.name,
+        position: player.position,
+      };
+    }
+
+    // Build team lookup from franchises
+    const teamLookup: TeamLookup = {};
+    for (const team of state.teams) {
+      const franchiseId = team.id;
+      const teamAsset = window.__LEAGUE_ASSETS__?.teams?.[franchiseId];
+      teamLookup[franchiseId] = {
+        name: teamAsset?.name || team.name || `Team ${franchiseId}`,
+        abbrev: teamAsset?.abbrev || team.name?.substring(0, 4).toUpperCase() || franchiseId,
+      };
+    }
+
+    // Build predicted prices from current state
+    const predictedPrices: { [playerId: string]: number } = {};
+    for (const player of state.players) {
+      const pricing = state.playerPrices.get(player.id);
+      if (pricing?.contracts?.oneYear) {
+        predictedPrices[player.id] = pricing.contracts.oneYear;
+      }
+    }
+
+    // Initialize Live Mode Manager
+    const liveModeManager = createLiveModeManager({
+      playerLookup,
+      teamLookup,
+      predictedPrices,
+    });
+
+    // Wait for DOM to be ready, then initialize
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        liveModeManager.initialize('planningContainer', 'liveAuctionPanel');
+      });
+    } else {
+      liveModeManager.initialize('planningContainer', 'liveAuctionPanel');
+    }
+
+    // Initialize Activity Detector
+    const activityDetector = createActivityDetector({
+      year: 2026,
+      leagueId: '13522',
+      pollInterval: 15000, // 15 seconds
+      playerLookup,
+      teamLookup,
+      predictedPrices,
+      onStateChange: (auctionState) => {
+        // Update Live Panel when auction state changes
+        liveModeManager.updateLivePanel(auctionState);
+
+        // Update player table highlights in planning mode
+        updatePlayerTableHighlights();
+        
+        // Sync results to main state (mark sold players, update market)
+        syncLiveStateToAppState(auctionState);
+      },
+    });
+
+    // Listen for mode changes from the LiveModeToggle component
+    window.addEventListener('auction-mode-changed', (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const mode = customEvent.detail.mode;
+
+      if (mode === 'live') {
+        // Switched to Live Mode - start polling
+        activityDetector.start();
+        console.log('✅ Live auction tracking started');
+      } else {
+        // Switched to Planning Mode - stop polling
+        activityDetector.stop();
+        console.log('⏸️ Live auction tracking stopped');
+      }
+    });
+
+    // Sync target players from budget planner to activity detector
+    function syncTargetPlayers(budgetPlayers: string[]) {
+      // Clear existing targets
+      const currentTargets = activityDetector.getHighlightManager().getTargetPlayers();
+      for (const playerId of currentTargets) {
+        activityDetector.removeTargetPlayer(playerId);
+      }
+
+      // Add new targets
+      for (const playerId of budgetPlayers) {
+        activityDetector.addTargetPlayer(playerId);
+      }
+    }
+
+    // Update player table highlights (in planning mode)
+    function updatePlayerTableHighlights() {
+      const highlightManager = activityDetector.getHighlightManager();
+
+      // Apply CSS classes to player rows
+      document.querySelectorAll('.player-row, tr[data-player-id]').forEach((row) => {
+        const playerId = row.getAttribute('data-player-id');
+        if (!playerId) return;
+
+        const highlightClass = highlightManager.getHighlightClass(playerId);
+
+        // Remove all highlight classes
+        row.classList.remove(
+          'player-row-current-auction',
+          'player-row-recent-bid',
+          'player-row-sold',
+          'player-row-target'
+        );
+
+        // Add new highlight class
+        if (highlightClass) {
+          row.classList.add(highlightClass);
+        }
+      });
+    }
+
+    // Listen for auction state changes
+    window.addEventListener('auction-state-changed', () => {
+      updatePlayerTableHighlights();
+    });
+
+    // Listen for test notification request from settings panel
+    window.addEventListener('test-notification', () => {
+      const notificationManager = activityDetector.getNotificationManager();
+      notificationManager.notifyPlayerNominated('Test Player (RB)', 425000);
+    });
+
+    // Manual refresh button handler
+    const refreshButton = document.getElementById('refreshButton');
+    refreshButton?.addEventListener('click', async () => {
+      console.log('🔄 Manual refresh requested');
+      await activityDetector.refresh();
+    });
+
+    // Initialize target players from budget planner on load
+    if (state.budget.targetPlayers.size > 0) {
+      const targetPlayerIds = Array.from(state.budget.targetPlayers.keys());
+      syncTargetPlayers(targetPlayerIds);
+      console.log(`🎯 Synced ${targetPlayerIds.length} target players to live tracker`);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      activityDetector.destroy();
+    });
+
+    // Expose for debugging
+    (window as any).liveAuction = {
+      detector: activityDetector,
+      modeManager: liveModeManager,
+      syncTargetPlayers,
+      updateHighlights: updatePlayerTableHighlights,
+    };
+
+    console.log('🎬 Live Auction System initialized');
   </script>
 
   <!-- Add Target Player Modal -->
@@ -7095,6 +7286,94 @@ const pageDescription = 'Analyze available players and predict auction prices fo
     outline: none;
     border-color: #3498db;
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+
+  /* ========================================================================== */
+  /* LIVE AUCTION INTEGRATION STYLES */
+  /* ========================================================================== */
+
+  /* Notification Settings Panel */
+  .notification-settings-panel {
+    margin-bottom: 1.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+  }
+
+  .notification-settings-panel summary {
+    padding: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #374151;
+    list-style: none;
+    user-select: none;
+    transition: background 0.2s;
+  }
+
+  .notification-settings-panel summary:hover {
+    background: #f3f4f6;
+  }
+
+  .notification-settings-panel summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .notification-settings-panel[open] summary {
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  /* Player Row Highlights for Live Auction */
+  :global(tr.player-row-current-auction) {
+    background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%) !important;
+    border-left: 4px solid #f59e0b !important;
+    animation: pulse-highlight 2s infinite;
+  }
+
+  @keyframes pulse-highlight {
+    0%, 100% {
+      background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+    }
+    50% {
+      background: linear-gradient(90deg, #fde68a 0%, #fef3c7 100%);
+    }
+  }
+
+  :global(tr.player-row-recent-bid) {
+    background: #dbeafe !important;
+    border-left: 4px solid #3b82f6 !important;
+  }
+
+  :global(tr.player-row-sold) {
+    opacity: 0.4 !important;
+    text-decoration: line-through !important;
+    background: #f3f4f6 !important;
+    border-left: 4px solid #9ca3af !important;
+  }
+
+  :global(tr.player-row-target) {
+    border-left: 4px solid #ef4444 !important;
+  }
+
+  /* Mobile card highlights */
+  :global(.player-card.player-row-current-auction) {
+    background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%) !important;
+    border-left: 4px solid #f59e0b !important;
+  }
+
+  :global(.player-card.player-row-recent-bid) {
+    background: #dbeafe !important;
+    border-left: 4px solid #3b82f6 !important;
+  }
+
+  :global(.player-card.player-row-sold) {
+    opacity: 0.4 !important;
+    text-decoration: line-through !important;
+    background: #f3f4f6 !important;
+    border-left: 4px solid #9ca3af !important;
+  }
+
+  :global(.player-card.player-row-target) {
+    border-left: 4px solid #ef4444 !important;
   }
 
 </style>
