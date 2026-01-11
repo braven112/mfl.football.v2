@@ -22,6 +22,7 @@ export interface PlayerValuation {
   redraftRank?: number; // From external rankings
   compositeRank?: number; // Calculated weighted average
   projectedPoints?: number; // Season projection
+  points?: number; // Previous season points scored
   age: number;
   experience: number;
   

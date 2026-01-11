@@ -549,13 +549,12 @@
 
           const existingEntry = state.playerPrices.get(player.id) as any;
           const contracts = existingEntry?.contracts ? { ...existingEntry.contracts } : {};
-          contracts.oneYear = adjustedFinal;
-          // If multi-year prices missing, generate simple escalations (10% per year)
-          const escalator = (price: number, years: number) => Math.round(price * Math.pow(1.10, years - 1));
-          contracts.twoYear = contracts.twoYear || escalator(adjustedFinal, 2);
-          contracts.threeYear = contracts.threeYear || escalator(adjustedFinal, 3);
-          contracts.fourYear = contracts.fourYear || escalator(adjustedFinal, 4);
-          contracts.fiveYear = contracts.fiveYear || escalator(adjustedFinal, 5);
+          const basePrice = adjustedFinal;
+          contracts.oneYear = Math.max(425_000, Math.round(basePrice * 1.2));
+          contracts.twoYear = Math.max(425_000, Math.round(basePrice * 1.1));
+          contracts.threeYear = Math.max(425_000, Math.round(basePrice));
+          contracts.fourYear = Math.max(425_000, Math.round(basePrice * 0.9));
+          contracts.fiveYear = Math.max(425_000, Math.round(basePrice * 0.8));
 
           state.playerPrices.set(player.id, {
             contracts,
@@ -762,7 +761,7 @@
         WR: 0,
         TE: 0,
         PK: 0,
-        Def: 0,
+        DEF: 0,
       };
 
       allPlayers.forEach(p => {
@@ -996,7 +995,7 @@
         WR: 0,
         TE: 0,
         PK: 0,
-        Def: 0,
+        DEF: 0,
       };
 
       state.budget.targetPlayers.forEach((target, playerId) => {
@@ -1337,14 +1336,13 @@
         const pricing = state.playerPrices.get(player.id);
         const contracts = pricing?.contracts;
 
-        // For contracted players, show current salary; for free agents, show SSR prices with fallback to estimatedAuctionPrice
+        // For contracted players, show current salary; for free agents, show prices with fallback to estimatedAuctionPrice
         const baseEstimate = Math.max(425_000, player.estimatedAuctionPrice || 0);
-        // Declining ladder: year 1 highest, year 5 lowest
-        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear ?? baseEstimate);
-        const price2yr = isContracted ? 0 : (contracts?.twoYear ?? Math.max(425_000, Math.round(baseEstimate / 1.10)));
-        const price3yr = isContracted ? 0 : (contracts?.threeYear ?? Math.max(425_000, Math.round(baseEstimate / Math.pow(1.10, 2))));
-        const price4yr = isContracted ? 0 : (contracts?.fourYear ?? Math.max(425_000, Math.round(baseEstimate / Math.pow(1.10, 3))));
-        const price5yr = isContracted ? 0 : (contracts?.fiveYear ?? Math.max(425_000, Math.round(baseEstimate / Math.pow(1.10, 4))));
+        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear ?? Math.max(425_000, Math.round(baseEstimate * 1.2)));
+        const price2yr = isContracted ? 0 : (contracts?.twoYear ?? Math.max(425_000, Math.round(baseEstimate * 1.1)));
+        const price3yr = isContracted ? 0 : (contracts?.threeYear ?? Math.max(425_000, Math.round(baseEstimate)));
+        const price4yr = isContracted ? 0 : (contracts?.fourYear ?? Math.max(425_000, Math.round(baseEstimate * 0.9)));
+        const price5yr = isContracted ? 0 : (contracts?.fiveYear ?? Math.max(425_000, Math.round(baseEstimate * 0.8)));
         const recommended = isContracted ? 1 : (contracts?.recommended?.years || 3);
 
         const headshot = getPlayerImageUrl(player.id);
@@ -1435,11 +1433,12 @@
         const contracts = pricing?.contracts;
 
         // For contracted players, show current salary; for free agents, show predicted prices
-        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear || 0);
-        const price2yr = isContracted ? 0 : (contracts?.twoYear || 0);
-        const price3yr = isContracted ? 0 : (contracts?.threeYear || 0);
-        const price4yr = isContracted ? 0 : (contracts?.fourYear || 0);
-        const price5yr = isContracted ? 0 : (contracts?.fiveYear || 0);
+        const baseEstimate = Math.max(425_000, player.estimatedAuctionPrice || 0);
+        const price1yr = isContracted ? player.currentSalary : (contracts?.oneYear ?? Math.max(425_000, Math.round(baseEstimate * 1.2)));
+        const price2yr = isContracted ? 0 : (contracts?.twoYear ?? Math.max(425_000, Math.round(baseEstimate * 1.1)));
+        const price3yr = isContracted ? 0 : (contracts?.threeYear ?? Math.max(425_000, Math.round(baseEstimate)));
+        const price4yr = isContracted ? 0 : (contracts?.fourYear ?? Math.max(425_000, Math.round(baseEstimate * 0.9)));
+        const price5yr = isContracted ? 0 : (contracts?.fiveYear ?? Math.max(425_000, Math.round(baseEstimate * 0.8)));
         const recommended = isContracted ? 1 : (contracts?.recommended?.years || 3);
 
         return `
@@ -2618,7 +2617,8 @@
               const player = state.players.find(p => p.id === playerId);
               if (!player) return null;
 
-              const predictedPrice = state.playerPrices.get(playerId) || 0;
+              const pricing = state.playerPrices.get(playerId);
+              const predictedPrice = pricing?.contracts?.oneYear ? pricing.contracts.oneYear / 1_000_000 : 0;
               const valueGap = target.maxBid - predictedPrice;
               const valueGapPercent = predictedPrice > 0 ? (valueGap / predictedPrice) * 100 : 0;
 
@@ -2704,7 +2704,7 @@
       const balanceGridEl = document.getElementById('roster-balance-grid');
       if (balanceGridEl) {
         const totalTargets = state.budget.targetPlayers.size;
-        const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def'];
+        const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
         
         balanceGridEl.innerHTML = positions.map(pos => {
           const count = balance[pos] || 0;
@@ -2771,7 +2771,8 @@
         // Value analysis
         const targets = Array.from(state.budget.targetPlayers.entries());
         const overpriced = targets.filter(([id, target]) => {
-          const predicted = state.playerPrices.get(id) || 0;
+          const pricing = state.playerPrices.get(id);
+          const predicted = pricing?.contracts?.oneYear ? pricing.contracts.oneYear / 1_000_000 : 0;
           return target.maxBid > predicted * 1.15;
         }).length;
 
@@ -3040,7 +3041,7 @@
      * Returns depth metrics for calculating market price multipliers
      */
     const analyzePositionalDepth = (players: typeof state.players) => {
-      const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def'];
+      const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
       const depthAnalysis: Record<string, {
         eliteCount: number;
         greatCount: number;
@@ -3109,7 +3110,7 @@
             WR: 7,   // Most teams need WR (3+ starters)
             TE: 4,   // Moderate need for TE (1-2 starters)
             PK: 2,   // Very few teams prioritize kicker early
-            Def: 2,  // Very few teams prioritize defense early
+            DEF: 2,  // Very few teams prioritize defense early
           };
           teamsNeedingPosition = rosterNeeds[position] || 5;
         }
@@ -3170,15 +3171,14 @@
         if (!state.playerPrices || state.playerPrices.size === 0) {
           const rebuilt = new Map();
           state.players.forEach(player => {
-            const oneYear = Math.max(425_000, player.estimatedAuctionPrice || 0);
-            const escalator = (price: number, years: number) => Math.round(price * Math.pow(1.10, years - 1));
+            const basePrice = Math.max(425_000, player.estimatedAuctionPrice || 0);
             rebuilt.set(player.id, {
               contracts: {
-                oneYear,
-                twoYear: escalator(oneYear, 2),
-                threeYear: escalator(oneYear, 3),
-                fourYear: escalator(oneYear, 4),
-                fiveYear: escalator(oneYear, 5),
+                oneYear: Math.max(425_000, Math.round(basePrice * 1.2)),
+                twoYear: Math.max(425_000, Math.round(basePrice * 1.1)),
+                threeYear: Math.max(425_000, Math.round(basePrice)),
+                fourYear: Math.max(425_000, Math.round(basePrice * 0.9)),
+                fiveYear: Math.max(425_000, Math.round(basePrice * 0.8)),
               },
               factors: { source: 'server' },
             });
@@ -3649,8 +3649,8 @@
         let priceCount = 0;
         positionPlayers.forEach(p => {
           const priceData = playerPrices.get(p.id);
-          if (priceData?.contracts?.['3yr']) {
-            totalPrice += priceData.contracts['3yr'];
+          if (priceData?.contracts?.threeYear) {
+            totalPrice += priceData.contracts.threeYear;
             priceCount++;
           }
         });
@@ -3660,7 +3660,7 @@
         let topPlayerPrice = 0;
         if (topPlayers.length > 0) {
           const topPriceData = playerPrices.get(topPlayers[0].id);
-          topPlayerPrice = topPriceData?.contracts?.['3yr'] || 0;
+          topPlayerPrice = topPriceData?.contracts?.threeYear || 0;
         }
         
         // Calculate scarcity index
@@ -3695,7 +3695,7 @@
         const priceData = playerPrices.get(player.id);
         if (!priceData?.factors) return;
         
-        const estimatedPrice = priceData.contracts?.['3yr'] || 0;
+        const estimatedPrice = priceData.contracts?.threeYear || 0;
         const compositeRank = getCompositeRank(player.id);
         
         // Simple heuristic: players ranked in top 50 but priced under $5M are potential values

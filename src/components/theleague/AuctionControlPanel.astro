@@ -27,7 +27,7 @@ const {
 } = Astro.props;
 
 // Calculate total players by position
-const positions = ['QB', 'RB', 'WR', 'TE'];
+const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 const allPositionCount = positions.reduce((sum, pos) => sum + (positionCounts[pos] || 0), 0);
 ---
 

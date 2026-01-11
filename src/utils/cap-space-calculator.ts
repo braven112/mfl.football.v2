@@ -145,6 +145,12 @@ export function calculateTeamCapSpace(
   deadMoney: number = 0,
   franchiseTagSalary: number = 0
 ): TeamCapSituation {
+  const normalizePosition = (position: string | undefined): string => {
+    const normalized = (position || '').toUpperCase();
+    if (['DEF', 'DST', 'D/ST', 'DEFENSE', 'DEF/ST'].includes(normalized)) return 'DEF';
+    if (normalized === 'K') return 'PK';
+    return normalized;
+  };
   // Filter players for this team
   const teamPlayers = players.filter(p => p.franchiseId === franchiseId);
   
@@ -192,7 +198,7 @@ export function calculateTeamCapSpace(
     expiringContracts: expiringContracts.map(p => ({
       id: p.id,
       name: p.name,
-      position: p.position as any,
+      position: normalizePosition(p.position) as any,
       team: p.team,
       currentSalary: p.salary,
       contractYearsRemaining: 1,

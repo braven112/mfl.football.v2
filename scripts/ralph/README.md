@@ -4,12 +4,13 @@ Ralph is an autonomous coding agent that works through a Product Requirements Do
 
 ## Setup
 
-Ralph supports **two AI providers**: Gemini and Claude.
+Ralph supports **three AI providers**: Gemini, Claude, and Codex.
 
 ### Prerequisites
 
 - **For Gemini:** Install the `gemini` CLI
 - **For Claude:** Install the `claude` CLI
+- **For Codex:** Install the `codex` CLI
 
 ## Usage
 
@@ -22,14 +23,19 @@ Ralph supports **two AI providers**: Gemini and Claude.
 # Run with Claude
 ./ralph.sh 10 claude
 
+# Run with Codex
+./ralph.sh 10 codex
+
 # Using environment variable
 AI_PROVIDER=claude ./ralph.sh 10
+AI_PROVIDER=codex ./ralph.sh 10
 ```
 
 ### Parameters
 
 - `[max_iterations]` - Maximum number of iterations before stopping (default: 10)
-- `[ai_provider]` - AI provider to use: `gemini` or `claude` (default: `gemini`)
+- `[ai_provider]` - AI provider to use: `gemini`, `claude`, or `codex` (default: `gemini`)
+- `CODEX_FLAGS` (optional) - Extra flags passed to the `codex` CLI (e.g., auto-approval)
 
 ### How It Works
 
@@ -65,6 +71,14 @@ When you switch branches (change `branchName` in `prd.json`), Ralph automaticall
 - **`progress.txt`** - Running log of completed work and learnings
 - **`.last-branch`** - Tracks current branch for archiving
 - **`archive/`** - Archived runs from previous branches
+
+## Guardrails (safety)
+
+- Refuses to run on `main`/`master`; switches or creates the branch from `prd.json`.
+- Uses iteration timeout (default 15m) when `timeout`/`gtimeout` is available.
+- Fails the iteration if the AI command exits non-zero; stops after 3 identical failures.
+- Asserts that the targeted story (highest priority `passes: false`) is marked `passes: true` after each iteration; otherwise stops.
+- Honors `<promise>COMPLETE</promise>` output and exits.
 
 ## Stop Condition
 

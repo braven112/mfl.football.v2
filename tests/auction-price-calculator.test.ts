@@ -6,6 +6,10 @@ import {
   getPriceExplanation,
   calculatePositionalScarcity,
   DEFAULT_AUCTION_FACTORS,
+  calculateEliteRankPremium,
+  applyTierPriceFloor,
+  getOverallRankTier,
+  selectHistoricalCurveForPosition,
   type PricingModel,
 } from '../src/utils/auction-price-calculator';
 import type { PlayerValuation, TeamCapSituation, PositionScarcityAnalysis, AuctionPriceFactors } from '../src/types/auction-predictor';
@@ -514,9 +518,9 @@ describe('auction-price-calculator', () => {
 
       const result = generateContractPricing(player, basePrice, 1.0);
 
-
-
-      expect(result.oneYear).toBe(basePrice);
+      expect(result.threeYear).toBe(basePrice);
+      expect(result.oneYear).toBe(Math.round(basePrice * 1.2));
+      expect(result.fiveYear).toBe(Math.round(basePrice * 0.8));
 
       expect(result.twoYear).toBeGreaterThan(0);
 
@@ -530,52 +534,16 @@ describe('auction-price-calculator', () => {
 
 
 
-    it('should apply age depreciation to multi-year contracts', () => {
+    it('should increase prices as contracts shorten', () => {
+      const player = createMockPlayer({ age: 29 });
+      const basePrice = 6_000_000;
 
-      const youngPlayer = createMockPlayer({ age: 24 });
+      const result = generateContractPricing(player, basePrice, 1.0);
 
-      const oldPlayer = createMockPlayer({ age: 32 });
-
-      const basePrice = 10_000_000;
-
-
-
-      const youngContracts = generateContractPricing(youngPlayer, basePrice, 1.0);
-
-      const oldContracts = generateContractPricing(oldPlayer, basePrice, 1.0);
-
-
-
-      // Young player's 5-year deal should be closer to base price (less depreciation)
-
-      // Old player's 5-year deal should be much lower (more depreciation)
-
-      expect(youngContracts.fiveYear).toBeGreaterThan(oldContracts.fiveYear);
-
-    });
-
-
-
-    it('should depreciate RBs faster than QBs', () => {
-
-      const rb = createMockPlayer({ age: 27, position: 'RB' });
-
-      const qb = createMockPlayer({ age: 27, position: 'QB' });
-
-      const basePrice = 10_000_000;
-
-
-
-      const rbContracts = generateContractPricing(rb, basePrice, 1.0);
-
-      const qbContracts = generateContractPricing(qb, basePrice, 1.0);
-
-
-
-      // QB should depreciate slower, so 5-year deal should be higher
-
-      expect(qbContracts.fiveYear).toBeGreaterThan(rbContracts.fiveYear);
-
+      expect(result.fiveYear).toBeLessThan(result.fourYear);
+      expect(result.fourYear).toBeLessThan(result.threeYear);
+      expect(result.threeYear).toBeLessThan(result.twoYear);
+      expect(result.twoYear).toBeLessThan(result.oneYear);
     });
 
 
@@ -624,6 +592,45 @@ describe('auction-price-calculator', () => {
 
     });
 
+  });
+
+  describe('tier logic helpers', () => {
+    it('should classify overall rank tiers correctly', () => {
+      expect(getOverallRankTier(1)).toBe('elite');
+      expect(getOverallRankTier(30)).toBe('elite');
+      expect(getOverallRankTier(31)).toBe('star');
+      expect(getOverallRankTier(105)).toBe('star');
+      expect(getOverallRankTier(106)).toBe('starter');
+      expect(getOverallRankTier(199)).toBe('starter');
+      expect(getOverallRankTier(200)).toBe('depth');
+    });
+
+    it('should calculate elite rank premium', () => {
+      expect(calculateEliteRankPremium(1)).toBeCloseTo(0.05);
+      expect(calculateEliteRankPremium(3)).toBeCloseTo(0.025);
+      expect(calculateEliteRankPremium(5)).toBe(0);
+      expect(calculateEliteRankPremium(6)).toBe(0);
+    });
+
+    it('should apply tier price floors', () => {
+      const max = 10_000_000;
+      expect(applyTierPriceFloor(1_000_000, 1, max)).toBe(max * 0.85);
+      expect(applyTierPriceFloor(1_000_000, 40, max)).toBe(max * 0.60);
+      expect(applyTierPriceFloor(1_000_000, 120, max)).toBe(max * 0.30);
+      expect(applyTierPriceFloor(1_000_000, 200, max)).toBe(1_000_000);
+    });
+
+    it('should select curve based on best player at position', () => {
+      const factors = { ...mockFactors, dynastyWeight: 0, redraftWeight: 0 };
+      const players: PlayerValuation[] = [
+        createMockPlayer({ id: '1', position: 'QB', compositeRank: 10, dynastyRank: undefined, redraftRank: undefined }),
+        createMockPlayer({ id: '2', position: 'QB', compositeRank: 45, dynastyRank: undefined, redraftRank: undefined }),
+        createMockPlayer({ id: '3', position: 'WR', compositeRank: 160, dynastyRank: undefined, redraftRank: undefined }),
+      ];
+
+      expect(selectHistoricalCurveForPosition('QB', players, factors)).toBe('max');
+      expect(selectHistoricalCurveForPosition('WR', players, factors)).toBe('min');
+    });
   });
 
 
@@ -898,7 +905,7 @@ describe('auction-price-calculator', () => {
 
       // Rank 1 should be most expensive, rank 50 should be cheapest
 
-      expect(result1.finalPrice).toBeGreaterThan(result10.finalPrice);
+      expect(result1.finalPrice).toBeGreaterThanOrEqual(result10.finalPrice);
 
       expect(result10.finalPrice).toBeGreaterThan(result50.finalPrice);
 

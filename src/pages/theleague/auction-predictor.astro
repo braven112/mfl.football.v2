@@ -137,6 +137,32 @@ const franchises = leagueData?.league?.franchises?.franchise || [];
 
 console.log('🏈 Total franchises:', franchises.length);
 
+const normalizePosition = (position: string | null | undefined): string => {
+  const normalized = String(position || '').toUpperCase();
+  if (['DEF', 'DST', 'D/ST', 'DEFENSE', 'DEF/ST'].includes(normalized)) return 'DEF';
+  if (normalized === 'K') return 'PK';
+  return normalized;
+};
+
+const loadDefensePointsFromLastSeason = (): Map<string, number> => {
+  const points = new Map<string, number>();
+  const pointsPath = path.resolve(process.cwd(), 'data/theleague/mfl-feeds/2024/option07.json');
+  if (!fs.existsSync(pointsPath)) return points;
+
+  const html = fs.readFileSync(pointsPath, 'utf8');
+  const regex = /<a href="javascript:launch_player_modal\('\d+','(\d+)'\)[^"]*"[^>]*class="position_def"[^>]*>[^<]*<\/a><\/td>\s*<td class="points"><a[^>]*>([\d.]+)<\/a>/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html)) !== null) {
+    const id = match[1];
+    const pts = parseFloat(match[2]);
+    if (!Number.isNaN(pts)) {
+      points.set(id, pts);
+    }
+  }
+
+  return points;
+};
+
 // Create player lookup map
 const playerMap = new Map(
   players.map((p: any) => [
@@ -144,7 +170,7 @@ const playerMap = new Map(
     {
       id: p.id,
       name: p.name,
-      position: p.position,
+      position: normalizePosition(p.position),
       team: p.team,
       draft_year: p.draft_year,
     },
@@ -180,7 +206,7 @@ const computePlayerAge = (draftYear: number | null, position?: string): number |
 const allMFLPlayers = players.map((p: any) => ({
   id: p.id,
   name: formatPlayerName(p.name),
-  position: p.position,
+  position: normalizePosition(p.position),
   team: p.team,
   draft_year: p.draft_year,
 }));
@@ -551,6 +577,8 @@ franchises.forEach((franchise: any) => {
 // DATA PROCESSING - STEP 5: Build Available Player Pool
 // =============================================================================
 
+const defensePointsById = loadDefensePointsFromLastSeason();
+
 // For MVP: All players not currently rostered are "available"
 // In reality, this would be filtered to expiring contracts + rookies
 const rosteredPlayerIds = new Set<string>();
@@ -578,6 +606,7 @@ const defaultCurveForSSR = 'avg';
 const defaultPredictionMap = pricePredictionsByCurve.get(defaultCurveForSSR) || pricePredictionMap || new Map();
 teamCapSituations.forEach(team => {
   team.expiringContracts.forEach(player => {
+    const normalizedPos = normalizePosition(player.position);
     const prediction = defaultPredictionMap.get(player.id);
     const predictedPrice = prediction?.finalPrice;
     const priceMeta = prediction
@@ -592,15 +621,54 @@ teamCapSituations.forEach(team => {
 
     const compositeRank = compositeRankMap.get(player.id) || 9999;
 
+    const points = normalizedPos === 'DEF' ? defensePointsById.get(player.id) : undefined;
+
     availablePlayers.push({
       ...player,
+      position: normalizedPos,
       compositeRank,
+      points,
       estimatedAuctionPrice: predictedPrice || player.currentSalary, // Use precomputed price if available
       pricePrediction: priceMeta,
       contracted: false, // Mark as free agent
     });
   });
 });
+
+// Ensure defenses are included as available players
+const availablePlayerIds = new Set(availablePlayers.map(player => player.id));
+players
+  .filter((p: any) => String(p.position || '').toUpperCase() === 'DEF')
+  .forEach((defense: any) => {
+    if (availablePlayerIds.has(defense.id)) return;
+
+    const normalizedPos = normalizePosition(defense.position) || 'DEF';
+    const compositeRank = compositeRankMap.get(defense.id) || 9999;
+    const age = computePlayerAge(parseInt(defense.draft_year) || null, normalizedPos) || 27;
+    const points = defensePointsById.get(defense.id);
+
+    availablePlayers.push({
+      id: defense.id,
+      name: formatPlayerName(defense.name),
+      position: normalizedPos,
+      team: defense.team || 'FA',
+      currentSalary: 425_000,
+      contractYearsRemaining: 1,
+      franchiseId: null,
+      dynastyRank: undefined,
+      redraftRank: undefined,
+      compositeRank,
+      points,
+      projectedPoints: undefined,
+      age,
+      experience: 0,
+      isExpiring: true,
+      isFranchiseTagCandidate: false,
+      franchiseTagProbability: 0,
+      estimatedAuctionPrice: 425_000,
+      contracted: false,
+    });
+  });
 
 // Enforce open slots: only top N priced, rest min salary
 // Treat expiring contracts as open roster spots for 2026
@@ -843,7 +911,26 @@ franchiseTagPredictions.forEach(prediction => {
 const untaggedAvailablePlayers = availablePlayers;
 
 // =============================================================================
-// DATA PROCESSING - STEP 7: Market Analysis
+// DATA PROCESSING - STEP 7: Calculate Auction Prices
+// =============================================================================
+
+// Calculate prices for all available players
+const playerPrices = calculateAllPlayerPrices(
+  untaggedAvailablePlayers,
+  teamCapSituations,
+  DEFAULT_PRICE_FACTORS
+);
+
+const playerById = new Map(untaggedAvailablePlayers.map(player => [player.id, player]));
+playerPrices.forEach((result, playerId) => {
+  const player = playerById.get(playerId);
+  if (player) {
+    player.estimatedAuctionPrice = result.factors.finalPrice;
+  }
+});
+
+// =============================================================================
+// DATA PROCESSING - STEP 8: Market Analysis
 // =============================================================================
 
 const marketAnalysis: MarketAnalysis = analyzeMarket(
@@ -855,17 +942,6 @@ const marketAnalysis: MarketAnalysis = analyzeMarket(
 const marketSummary = getMarketSummary(marketAnalysis);
 
 // =============================================================================
-// DATA PROCESSING - STEP 8: Calculate Auction Prices
-// =============================================================================
-
-// Calculate prices for all available players
-const playerPrices = calculateAllPlayerPrices(
-  untaggedAvailablePlayers,
-  teamCapSituations,
-  DEFAULT_PRICE_FACTORS
-);
-
-// =============================================================================
 // DATA PROCESSING - STEP 9: Calculate Position Counts for Control Panel
 // =============================================================================
 
@@ -874,6 +950,8 @@ const positionCounts: Record<string, number> = {
   RB: untaggedAvailablePlayers.filter(p => p.position === 'RB').length,
   WR: untaggedAvailablePlayers.filter(p => p.position === 'WR').length,
   TE: untaggedAvailablePlayers.filter(p => p.position === 'TE').length,
+  PK: untaggedAvailablePlayers.filter(p => p.position === 'PK').length,
+  DEF: untaggedAvailablePlayers.filter(p => p.position === 'DEF').length,
 };
 
 // =============================================================================
@@ -904,25 +982,6 @@ interface InitialData {
   };
 }
 
-// Build server-side pricing map from adjusted SSR prices (declining over years)
-const playerPricesSSR = new Map<string, any>();
-availablePlayers.forEach(player => {
-  const oneYear = Math.max(425_000, Math.round(player.estimatedAuctionPrice || 0));
-  const dec = (price: number, years: number) => Math.max(425_000, Math.round(price / Math.pow(1.10, years - 1)));
-  playerPricesSSR.set(player.id, {
-    contracts: {
-      oneYear,
-      twoYear: dec(oneYear, 2),
-      threeYear: dec(oneYear, 3),
-      fourYear: dec(oneYear, 4),
-      fiveYear: dec(oneYear, 5),
-    },
-    factors: {
-      source: 'server',
-    },
-  });
-});
-
 const initialData: InitialData = {
   players: untaggedAvailablePlayers,
   allMFLPlayers, // Add all players for rankings matching
@@ -935,7 +994,7 @@ const initialData: InitialData = {
   marketSummary,
   championshipWindows: Array.from(championshipWindows.values()),
   factors: DEFAULT_PRICE_FACTORS,
-  playerPrices: Array.from(playerPricesSSR.entries()), // Use SSR-adjusted prices
+  playerPrices: Array.from(playerPrices.entries()),
   pricePredictions: Array.from(pricePredictionMap.entries()),
   pricePredictionsByCurve: Array.from(pricePredictionsByCurve.entries()).map(
     ([curve, map]) => [curve, Array.from(map.entries())]
@@ -1259,7 +1318,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       const player = state.players.find(p => p.id === playerId);
       if (!player) return;
 
-      const predictedPrice = state.playerPrices.get(playerId) || 0;
+      const pricing = state.playerPrices.get(playerId);
+      const predictedPrice = pricing?.contracts?.oneYear || 0;
+      const predictedPriceMillions = predictedPrice / 1_000_000;
 
       // Show modal
       const modal = document.getElementById('add-target-modal');
@@ -1274,9 +1335,9 @@ const pageDescription = 'Analyze available players and predict auction prices fo
       `;
 
       // Set default max bid to predicted price
-      document.getElementById('modal-max-bid').value = predictedPrice.toFixed(1);
+      document.getElementById('modal-max-bid').value = predictedPriceMillions.toFixed(1);
       document.getElementById('modal-predicted-price').innerHTML = `
-        Predicted auction price: <strong>$${predictedPrice.toFixed(1)}M</strong>
+        Predicted auction price: <strong>$${predictedPriceMillions.toFixed(1)}M</strong>
       `;
 
       // Clear notes
