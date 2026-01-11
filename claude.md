@@ -13,7 +13,90 @@
 
 ---
 
-## 📊 Auction Price Predictor (2026)
+## 📅 Year Rollover System
+
+**Automatic year transitions** based on league calendar with two critical dates:
+
+### Key Dates
+
+1. **Feb 14th @ 8:45 PT** - New MFL league created, rosters move to new year
+2. **Labor Day** (first Monday in September) - NFL season starts, standings/playoffs update
+
+### Year Logic
+
+The application uses three year concepts:
+
+- **Current League Year** (`getCurrentLeagueYear()`) - Updates Feb 14th
+  - Used for: Rosters, contracts, salary cap, auctions, trade analysis
+  - Example: After Feb 14, 2026 → uses 2026 MFL league data
+
+- **Current Season Year** (`getCurrentSeasonYear()`) - Updates Labor Day
+  - Used for: Standings, playoffs, MVP tracking, draft order
+  - Example: Until Labor Day 2026 → still shows 2025 season results
+
+- **Next Draft Year** (`getNextDraftYear()`) - Always season year + 1
+  - Draft order based on current/completed season standings
+
+- **Next Auction Year** (`getNextAuctionYear()`) - Always league year + 1
+  - Auction predictor always shows next year's free agent class
+
+### Dual-Year Window (Feb 14 - Labor Day)
+
+During this period, **two years are active simultaneously**:
+- Roster management → uses new league year (2026)
+- Season results → uses previous season (2025)
+
+### Implementation
+
+**Utility File:** `src/utils/league-year.ts`
+
+```typescript
+import { getCurrentLeagueYear, getCurrentSeasonYear, getNextDraftYear, getNextAuctionYear } from '../utils/league-year';
+
+// For rosters/contracts (updates Feb 14th)
+const leagueYear = getCurrentLeagueYear();
+
+// For standings/playoffs (updates Labor Day)
+const seasonYear = getCurrentSeasonYear();
+
+// For draft predictor
+const draftYear = getNextDraftYear();
+
+// For auction predictor
+const auctionYear = getNextAuctionYear();
+```
+
+**Testing:** Add `?testDate=YYYY-MM-DD` URL parameter to simulate different dates
+
+**Automatic Operation:** The system **auto-calculates** the base year based on the current date and Labor Day, requiring **zero manual updates**. The base year is automatically set to:
+- Current calendar year (if today is after Labor Day)
+- Previous calendar year (if today is before Labor Day)
+
+**Optional Override:** Set `PUBLIC_BASE_YEAR=2025` in `.env` to manually override for testing or special cases
+
+### Decision Framework for New Pages
+
+When creating a new page, determine which year logic to use:
+
+**Use `getCurrentLeagueYear()` if the page:**
+- Manages current rosters or player transactions
+- Shows active contracts or salary cap
+- Predicts auctions or trade values
+- Previews upcoming matchups
+
+**Key question:** *"Does this page help manage my roster?"* → `getCurrentLeagueYear()`
+
+**Use `getCurrentSeasonYear()` if the page:**
+- Shows season standings or rankings
+- Displays playoff brackets or results
+- Tracks MVP/awards or season performance
+- Shows draft order based on season results
+
+**Key question:** *"Does this page show results from games played?"* → `getCurrentSeasonYear()`
+
+---
+
+## 📊 Auction Price Predictor
 
 **Status:** Planning Complete, Implementation In Progress
 

@@ -16,6 +16,7 @@ import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../co
 import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
+import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
 
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
@@ -44,9 +45,9 @@ const extractFeedSeason = (filepath: string) => {
   return match ? match[1] : null;
 };
 
-// Get current year from environment variable (fallback to current year for safety)
-const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
-const nextYear = currentYear + 1;
+// Get current season year (updates Labor Day) and next draft year
+const currentYear = getCurrentSeasonYear();
+const nextYear = getNextDraftYear();
 
 // Load standings for current year
 const standingsKey = Object.keys(standingsFeeds).find(

@@ -9,14 +9,15 @@ import {
   getAFLTeamData,
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
+import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
 import fs from 'fs';
 import path from 'path';
 
 // Note: This page is server-rendered (not prerendered) to support team preferences
 // export const prerender = true;
 
-// Load AFL Fantasy data - use environment variable for current season year
-const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
+// Load AFL Fantasy data - use current season year (updates Labor Day)
+const currentYear = getCurrentSeasonYear();
 const standingsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'standings.json');
 const playoffBracketsPath = path.join(process.cwd(), 'data', 'afl-fantasy', 'mfl-feeds', currentYear.toString(), 'playoff-brackets.json');
 
@@ -86,7 +87,7 @@ const draftOrders = calculateAFLDraftOrder(
   nitResults
 );
 
-const nextYear = currentYear + 1;
+const nextYear = getNextDraftYear();
 
 // Get both conference orders (we'll switch between them client-side)
 const alOrder = draftOrders.find(order => order.conference === 'American League');

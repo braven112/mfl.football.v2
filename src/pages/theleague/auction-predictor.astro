@@ -1,8 +1,8 @@
 ---
 /**
  * Auction Price Predictor
- * 
- * Analyzes all players available in the upcoming 2026 free agency auction
+ *
+ * Analyzes all players available in the upcoming free agency auction
  * and estimates projected prices based on:
  * - Current contracts and expiring deals
  * - Franchise tag predictions
@@ -11,7 +11,7 @@
  * - Multi-year contract recommendations
  * 
  * Data Sources:
- * - 2025 MFL data (rosters, salaries, draft picks, teams)
+ * - Current league year MFL data (rosters, salaries, draft picks, teams)
  * - User-imported rankings (dynasty/redraft weights)
  * - Historical auction prices (optional enhancement)
  */
@@ -52,6 +52,7 @@ import { calculateCapSpace, calculateEscalatedSalary } from '../../utils/cap-spa
 import { calculateAllPlayerPrices, DEFAULT_AUCTION_FACTORS } from '../../utils/auction-price-calculator';
 import { getNFLTeamLogo } from '../../utils/nfl';
 import { computeLeagueFAEnvelope } from '../../utils/league-cap';
+import { getCurrentLeagueYear, getNextAuctionYear } from '../../utils/league-year';
 
 // Import types
 import type { PlayerValuation, TeamCapSituation, FranchiseTagPrediction, MarketAnalysis, AuctionPriceFactors } from '../../types/auction-predictor';
@@ -59,11 +60,22 @@ import type { ChampionshipWindowAnalysis } from '../../utils/championship-window
 import type { PositionalNeed } from '../../utils/draft-pick-cap-impact';
 
 // =============================================================================
+// YEAR CONFIGURATION
+// =============================================================================
+
+// Current league year (updates Feb 14th) - roster data comes from this year
+const currentLeagueYear = getCurrentLeagueYear();
+// Next auction year (always currentLeagueYear + 1) - predicting NEXT year's auction
+const auctionYear = getNextAuctionYear();
+
+// =============================================================================
 // CONSTANTS
 // =============================================================================
 
-const SALARY_CAP_2025 = 45_000_000;
-const SALARY_CAP_2026 = SALARY_CAP_2025 * 1.10; // 10% annual increase
+// Use current league year for current salary cap
+const CURRENT_YEAR_CAP = 45_000_000;
+// Next auction year cap (10% annual increase)
+const AUCTION_YEAR_CAP = CURRENT_YEAR_CAP * 1.10;
 const ESCALATION_RATE = 0.10;
 const MIN_ROSTER_SIZE = 20;
 const TARGET_ACTIVE_ROSTER = 22;
@@ -199,7 +211,7 @@ const computePlayerAge = (draftYear: number | null, position?: string): number |
     return 27;
   }
   if (!draftYear) return null;
-  return 2026 - draftYear + 22;
+  return auctionYear - draftYear + 22;
 };
 
 // Create ALL players list with formatted names for rankings import
@@ -282,9 +294,9 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
   const teamName = franchise.name;
   const roster = teamRosters.get(franchiseId) || [];
   
-  // Calculate 2026 cap space
+  // Calculate next auction year cap space
   const expiringContracts: RosterPlayer[] = [];
-  let committedSalaries2026 = 0;
+  let committedSalariesNextYear = 0;
   
   // Debug logging for ALL teams to find Keon Coleman
   const playerName = formatPlayerName(roster[0]?.playerData?.name);
@@ -312,39 +324,39 @@ const teamCapSituations: TeamCapSituation[] = franchises.map((franchise: any) =>
     // MFL's contractYear field appears to be YEARS REMAINING (counting down from contract length)
     // - contractYear=4 means 4 years left on contract
     // - contractYear=1 means 1 year left (expires after this season)
-    // Since we're calculating for 2026 and current year is 2025:
-    // - If contractYear > 1, player will be under contract in 2026
-    // - If contractYear = 1, player expires after 2025 season
-    const yearsRemainingAfter2025 = p.contractYear - 1;
-    
-    if (yearsRemainingAfter2025 > 0) {
-      // Player still under contract in 2026
+    // Since we're calculating for next auction year (current + 1):
+    // - If contractYear > 1, player will be under contract in auction year
+    // - If contractYear = 1, player expires after current season
+    const yearsRemainingAfterCurrentSeason = p.contractYear - 1;
+
+    if (yearsRemainingAfterCurrentSeason > 0) {
+      // Player still under contract in auction year
       // Apply 10% escalation to current salary
       const escalatedSalary = calculateEscalatedSalary(p.salary, 1); // 1 year forward
-      committedSalaries2026 += escalatedSalary;
+      committedSalariesNextYear += escalatedSalary;
     } else {
-      // Contract expires after 2025 season (before 2026)
+      // Contract expires after current season (before auction)
     expiringContracts.push(p);
   }
 });
 
 const totalExpiringValue = expiringContracts.reduce((sum, p) => sum + p.salary, 0);
-const projectedCapSpace2026 = SALARY_CAP_2026 - committedSalaries2026;
+const projectedCapSpaceNextYear = AUCTION_YEAR_CAP - committedSalariesNextYear;
   
   // Calculate minimum roster spend (fill to 20 players at minimum salary)
   const currentRosterSize = roster.filter(p => p.status === 'ROSTER').length;
   const spotsToFill = Math.max(0, MIN_ROSTER_SIZE - currentRosterSize + expiringContracts.length);
   const estimatedMinimumRosterSpend = spotsToFill * 425_000; // Minimum rookie salary
   
-  const discretionarySpending = Math.max(0, projectedCapSpace2026 - estimatedMinimumRosterSpend);
+  const discretionarySpending = Math.max(0, projectedCapSpaceNextYear - estimatedMinimumRosterSpend);
   
   return {
     franchiseId,
     teamName,
     rosterSize: roster.filter(p => p.status === 'ROSTER').length,
-    currentCapSpace: SALARY_CAP_2025 - roster.reduce((sum, p) => sum + p.salary, 0),
-    projectedCapSpace2026,
-    committedSalaries: committedSalaries2026,
+    currentCapSpace: CURRENT_YEAR_CAP - roster.reduce((sum, p) => sum + p.salary, 0),
+    projectedCapSpaceNextYear,
+    committedSalaries: committedSalariesNextYear,
     deadMoney: 0, // Not tracking this yet
     expiringContracts: expiringContracts.map(p => {
       // Calculate age from draft year (draft year + 22 for typical college grad age + years since draft)
@@ -363,12 +375,12 @@ const projectedCapSpace2026 = SALARY_CAP_2026 - committedSalaries2026;
         isFranchiseTagCandidate: p.salary >= 1_500_000, // Arbitrary threshold
         franchiseTagProbability: 0,
         age: age,
-        experience: draftYear ? (2026 - draftYear) : 0,
+        experience: draftYear ? (auctionYear - draftYear) : 0,
       };
     }),
     totalExpiringValue,
     franchiseTagCommitment: 0, // Will be calculated after tag predictions
-    availableAfterTag: projectedCapSpace2026,
+    availableAfterTag: projectedCapSpaceNextYear,
     estimatedMinimumRosterSpend,
     discretionarySpending,
     positionalNeeds: [], // Will be filled by analyzePositionalNeeds
@@ -423,8 +435,8 @@ franchises.forEach((franchise: any) => {
   const draftCapitalScore = 50; // Neutral for now
   
   // 3. CAP FLEXIBILITY SCORE
-  const capSpace = capSituation.projectedCapSpace2026;
-  const capPercentage = (capSpace / SALARY_CAP_2026) * 100;
+  const capSpace = capSituation.projectedCapSpaceNextYear;
+  const capPercentage = (capSpace / AUCTION_YEAR_CAP) * 100;
   
   let capFlexibilityScore = 50;
   if (capPercentage >= 40) {
@@ -671,7 +683,7 @@ players
   });
 
 // Enforce open slots: only top N priced, rest min salary
-// Treat expiring contracts as open roster spots for 2026
+// Treat expiring contracts as open roster spots for auction year
 const teamCapsForOpenSlots = teamCapSituations.map(tc => ({
   ...tc,
   rosterSize: Math.max(0, (tc.rosterSize || 0) - (tc.expiringContracts?.length || 0)),
@@ -882,7 +894,7 @@ teamCapSituations.forEach(team => {
     const position = tagPrediction.taggedPlayer.position as keyof typeof FRANCHISE_TAG_VALUES;
     const tagValue = FRANCHISE_TAG_VALUES[position] || 2_000_000;
     team.franchiseTagCommitment = tagValue;
-    team.availableAfterTag = team.projectedCapSpace2026 - tagValue;
+    team.availableAfterTag = team.projectedCapSpaceNextYear - tagValue;
     team.discretionarySpending = Math.max(0, team.availableAfterTag - team.estimatedMinimumRosterSpend);
   }
 });
@@ -976,7 +988,7 @@ interface InitialData {
   leagueFAEnvelope: ReturnType<typeof computeLeagueFAEnvelope> | null;
   totalOpenSlots: number;
   constants: {
-    salaryCap2026: number;
+    auctionYearCap: number;
     escalationRate: number;
     franchiseTagValues: typeof FRANCHISE_TAG_VALUES;
   };
@@ -1002,7 +1014,7 @@ const initialData: InitialData = {
   leagueFAEnvelope,
   totalOpenSlots,
   constants: {
-    salaryCap2026: SALARY_CAP_2026,
+    auctionYearCap: AUCTION_YEAR_CAP,
     escalationRate: ESCALATION_RATE,
     franchiseTagValues: FRANCHISE_TAG_VALUES,
   },
@@ -1012,15 +1024,15 @@ const initialData: InitialData = {
 // PAGE METADATA
 // =============================================================================
 
-const pageTitle = '2026 Auction Price Predictor - The League';
-const pageDescription = 'Analyze available players and predict auction prices for 2026 free agency';
+const pageTitle = `${auctionYear} Auction Price Predictor - The League`;
+const pageDescription = `Analyze available players and predict auction prices for ${auctionYear} free agency`;
 ---
 
 <TheLeagueLayout title={pageTitle}>
   <!-- Page Header 
   <div class="auction-predictor-header">
     <div class="container">
-      <h1>2026 Auction Price Predictor</h1>
+      <h1>{auctionYear} Auction Price Predictor</h1>
       <p class="subtitle">
         Analyze {untaggedAvailablePlayers.length} available players • 
         {marketSummary.totalCapAvailable} total cap • 

@@ -27,6 +27,70 @@ const getNonEmpty = (value) => {
   return trimmed.length ? trimmed : undefined;
 };
 
+/**
+ * Calculate Labor Day for a given year (first Monday in September)
+ */
+const getLaborDay = (year) => {
+  const septemberFirst = new Date(year, 8, 1); // Month 8 = September (0-indexed)
+  const dayOfWeek = septemberFirst.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+  let daysUntilMonday;
+  if (dayOfWeek === 1) {
+    daysUntilMonday = 0; // Sept 1st is already Monday
+  } else if (dayOfWeek === 0) {
+    daysUntilMonday = 1; // Sept 1st is Sunday, Labor Day is Sept 2nd
+  } else {
+    daysUntilMonday = 8 - dayOfWeek; // Days until next Monday
+  }
+
+  return new Date(year, 8, 1 + daysUntilMonday, 0, 0, 0, 0);
+};
+
+/**
+ * Get years to fetch based on current date and league calendar
+ * Returns { currentLeagueYear, currentSeasonYear, yearsToFetch }
+ */
+const getYearsToFetch = () => {
+  const now = new Date();
+  const baseYear = parseInt(
+    getNonEmpty(process.env.PUBLIC_BASE_YEAR) ||
+    getNonEmpty(process.env.MFL_YEAR) ||
+    getNonEmpty(process.env.MFL_SEASON) ||
+    now.getFullYear().toString(),
+    10
+  );
+
+  // Feb 14th @ 8:45 PT cutoff (16:45 UTC in PST)
+  const febCutoff = new Date(now.getFullYear(), 1, 14, 16, 45, 0, 0);
+
+  // Labor Day cutoff (first Monday in September)
+  const laborDay = getLaborDay(now.getFullYear());
+
+  let currentLeagueYear = baseYear;
+  let currentSeasonYear = baseYear;
+
+  // After Feb 14th @ 8:45 PT, league year advances (rosters move to new MFL league)
+  if (now >= febCutoff) {
+    currentLeagueYear = baseYear + 1;
+  }
+
+  // After Labor Day, season year advances (standings/playoffs show new season)
+  if (now >= laborDay) {
+    currentSeasonYear = baseYear + 1;
+  }
+
+  // During Feb 14 - Labor Day window, fetch BOTH years
+  const yearsToFetch = currentLeagueYear === currentSeasonYear
+    ? [currentLeagueYear]
+    : [currentLeagueYear, currentSeasonYear];
+
+  return {
+    currentLeagueYear,
+    currentSeasonYear,
+    yearsToFetch: [...new Set(yearsToFetch)], // Remove duplicates
+  };
+};
+
 const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID);
 if (!leagueId) {
   console.error('Missing MFL_LEAGUE_ID env var');
@@ -38,7 +102,24 @@ const leagueKey = getNonEmpty(process.env.MFL_LEAGUE_SLUG) || leagueId;
 // MFL_LEAGUE_NAME env var or default based on league ID
 const leagueName = getNonEmpty(process.env.MFL_LEAGUE_NAME) || (leagueId === '19621' ? 'afl-fantasy' : 'theleague');
 
-const year = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SEASON) || new Date().getFullYear().toString();
+// Determine which year(s) to fetch based on league calendar
+// If MFL_YEAR is explicitly set, use that (manual override)
+// Otherwise, use intelligent year logic based on current date
+const manualYear = getNonEmpty(process.env.MFL_YEAR) || getNonEmpty(process.env.MFL_SEASON);
+const yearConfig = getYearsToFetch();
+
+// Use manual year if provided, otherwise use currentLeagueYear
+const year = manualYear || yearConfig.currentLeagueYear.toString();
+
+// Log dual-year window info
+if (!manualYear && yearConfig.yearsToFetch.length > 1) {
+  console.log(`📅 Dual-year window detected (Feb 14 - Labor Day):`);
+  console.log(`   League Year: ${yearConfig.currentLeagueYear} (rosters, contracts)`);
+  console.log(`   Season Year: ${yearConfig.currentSeasonYear} (standings, playoffs)`);
+  console.log(`   Fetching: ${year}`);
+  console.log(`   Note: Run with MFL_YEAR=${yearConfig.currentSeasonYear} to fetch the other year if needed`);
+}
+
 // Only include a week param when explicitly provided; otherwise let MFL serve latest/YTD.
 const week = getNonEmpty(process.env.MFL_WEEK) || null;
 const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.com';

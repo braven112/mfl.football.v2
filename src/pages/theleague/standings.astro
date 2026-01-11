@@ -17,6 +17,7 @@ import {
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -35,8 +36,8 @@ const availableYears = Object.keys(standingsFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-// Get year from query parameter (default to latest year)
-const defaultYear = availableYears[0] || 2025;
+// Get year from query parameter (default to latest available or current season year)
+const defaultYear = availableYears[0] || getCurrentSeasonYear();
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 

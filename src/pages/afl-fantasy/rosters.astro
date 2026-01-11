@@ -6,6 +6,7 @@ import {
   setAFLPreference,
   getAFLTeamData,
 } from '../../utils/team-preferences';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -41,8 +42,8 @@ const availableYears = Object.keys(rostersFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-// Get selected year
-const defaultYear = availableYears[0] || 2025;
+// Get selected year - default to latest available or current league year
+const defaultYear = availableYears[0] || getCurrentLeagueYear();
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 

@@ -21,6 +21,7 @@ import {
   getAFLTeamData,
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -69,7 +70,7 @@ const availableYears = Object.keys(standingsFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-const defaultYear = availableYears[0] || parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
+const defaultYear = availableYears[0] || getCurrentSeasonYear();
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 const requestedView = Astro.url.searchParams.get('view');

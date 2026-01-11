@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -168,7 +169,7 @@ function buildAuctionState(transactions: AuctionTransaction[]): AuctionState {
 }
 
 export const GET: APIRoute = async ({ url }) => {
-  const year = url.searchParams.get('year') || new Date().getFullYear().toString();
+  const year = url.searchParams.get('year') || getCurrentLeagueYear().toString();
   const leagueId = url.searchParams.get('L') || DEFAULT_LEAGUE_ID;
   const host = url.searchParams.get('host') || DEFAULT_HOST;
   const since = url.searchParams.get('since'); // Optional: only return transactions after this timestamp

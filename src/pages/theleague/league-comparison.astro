@@ -14,6 +14,7 @@ import {
   type FranchiseMetrics,
 } from '../../utils/league-comparison-utils';
 import { parseNumber } from '../../utils/formatters';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 // Load roster and salary data
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
@@ -57,7 +58,7 @@ const rosterEntries = Object.entries(rosterModules)
   .sort((a, b) => parseInt(b.season!) - parseInt(a.season!));
 
 const latestRoster = rosterEntries[0]?.data || {};
-const currentYear = rosterEntries[0]?.season || new Date().getFullYear().toString();
+const currentYear = rosterEntries[0]?.season || getCurrentSeasonYear().toString();
 
 // Get salary adjustments for the current year
 const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)

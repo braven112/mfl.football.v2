@@ -44,6 +44,7 @@ import {
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -475,7 +476,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       0;
     const franchiseId = player.franchiseId ?? 'FA';
     const totalRemaining = salary * Math.max(contractYears || 1, 1);
-    const seasonYear = Number.parseInt(season, 10) || parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
+    const seasonYear = Number.parseInt(season, 10) || getCurrentLeagueYear();
     const contractType =
       player.contractType ??
       (player.status && player.status !== 'ROSTER'
@@ -817,8 +818,8 @@ const initialAllPlayers: any[] = initialSeasonData
     ])
   : [];
 
-// Calculate draft predictions for 2026 roster view - use environment variable for current season year
-const currentYear = parseInt(import.meta.env.PUBLIC_MFL_YEAR || new Date().getFullYear().toString(), 10);
+// Calculate draft predictions for 2026 roster view - use getCurrentLeagueYear() for roster data
+const currentYear = getCurrentLeagueYear();
 const nextYear = currentYear + 1;
 let draftPredictions = [];
 let actualDraftPicks = [];

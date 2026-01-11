@@ -18,6 +18,7 @@ import {
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -37,8 +38,8 @@ const availableYears = Object.keys(standingsFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-// Get year from query parameter (default to latest year)
-const defaultYear = availableYears[0] || 2025;
+// Get year from query parameter (default to latest available or current season year)
+const defaultYear = availableYears[0] || getCurrentSeasonYear();
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 

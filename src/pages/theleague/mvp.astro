@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
 import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 const playerModules = import.meta.glob(
   '../../data/mfl-player-salaries-*.json',
@@ -207,7 +208,7 @@ const allTimeTeam = allPlayersAllSeasons.length ? buildTeamFromPlayers(allPlayer
 const availableYears = Array.from(playersBySeason.keys())
   .map(Number)
   .sort((a, b) => b - a);
-const mostRecentYear = availableYears[0]?.toString() ?? '2025';
+const mostRecentYear = availableYears[0]?.toString() ?? getCurrentSeasonYear().toString();
 
 // Create a set of overall MVP player IDs for badge display
 const overallMvpIds = new Set(overallCandidates.map(p => `${p.id}-${p.season}`));
