@@ -567,27 +567,65 @@ const run = async () => {
     }
   }
 
-  // Fetch weekly results (weeks 1–14) more gently to avoid hammering MFL.
-  const weeks = Array.from({ length: 14 }, (_, idx) => idx + 1);
-  const weeklyResults = [];
-  for (const weekNum of weeks) {
+  // Fetch weekly results with smart merging
+  const weeklyRawPath = path.join(outDir, 'weekly-results-raw.json');
+  let existingWeekly = [];
+  if (fs.existsSync(weeklyRawPath)) {
+    try {
+      existingWeekly = JSON.parse(fs.readFileSync(weeklyRawPath, 'utf8'));
+    } catch (e) {
+      console.warn('Failed to parse existing weekly results, starting fresh.');
+    }
+  }
+
+  // Identify weeks we already have
+  const existingWeeksSet = new Set();
+  existingWeekly.forEach(item => {
+    const w = parseInt(item?.weeklyResults?.week, 10);
+    if (!isNaN(w)) existingWeeksSet.add(w);
+  });
+
+  // Define target weeks (1-18)
+  const targetWeeks = Array.from({ length: 18 }, (_, idx) => idx + 1);
+  const missingWeeks = targetWeeks.filter(w => !existingWeeksSet.has(w));
+
+  console.log(`Existing weeks: ${[...existingWeeksSet].sort((a,b)=>a-b).join(',')}`);
+  console.log(`Missing weeks to fetch: ${missingWeeks.join(',')}`);
+
+  const newWeeklyResults = [];
+  for (const weekNum of missingWeeks) {
     const weekUrl = `${host}/${year}/export?TYPE=weeklyResults&L=${leagueId}&JSON=1&W=${weekNum}`;
     try {
       console.log(`Fetching weeklyResults week ${weekNum} from ${weekUrl}`);
       const text = await fetchTextWithRetry(weekUrl, 4, 2000);
       const parsed = JSON.parse(text);
-      weeklyResults.push(parsed);
+      if (parsed.weeklyResults) {
+        newWeeklyResults.push(parsed);
+      }
     } catch (err) {
       console.error(`Failed weeklyResults week ${weekNum}:`, err.message);
     }
     // Slow down between calls to be polite
-    await delay(1200);
+    await delay(5000);
   }
 
-  if (weeklyResults.length > 0) {
-    writeOut('weekly-results-raw', weeklyResults);
+  // Merge and Save
+  const combinedWeekly = [...existingWeekly, ...newWeeklyResults];
+  // Deduplicate by week just in case
+  const weeklyMap = new Map();
+  combinedWeekly.forEach(item => {
+    const w = parseInt(item?.weeklyResults?.week, 10);
+    if (!isNaN(w)) weeklyMap.set(w, item);
+  });
+  
+  const finalWeeklyResults = Array.from(weeklyMap.values()).sort((a, b) => {
+    return parseInt(a.weeklyResults.week) - parseInt(b.weeklyResults.week);
+  });
+
+  if (finalWeeklyResults.length > 0) {
+    writeOut('weekly-results-raw', finalWeeklyResults);
     const normalized = {
-      weeks: weeklyResults.map((weekPayload) => {
+      weeks: finalWeeklyResults.map((weekPayload) => {
         const weekVal = Number(weekPayload?.weeklyResults?.week) || undefined;
         const matchups = weekPayload?.weeklyResults?.matchup
           ? Array.isArray(weekPayload.weeklyResults.matchup)

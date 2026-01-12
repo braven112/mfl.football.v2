@@ -3,6 +3,7 @@
  */
 
 import { parseNumber } from './formatters';
+import { getCurrentLeagueYear } from './league-year';
 
 /**
  * Fantasy football salary cap constants
@@ -13,9 +14,20 @@ export const TARGET_ACTIVE_COUNT = 22;
 export const RESERVE_FOR_ROOKIES = 5_000_000;
 
 /**
- * Salary years for multi-year contract projections
+ * Generate salary years array dynamically based on current league year
+ * @param referenceDate - Optional date for testing
+ * @returns Array of 5 consecutive years starting from current league year
  */
-export const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029];
+export function getSalaryYears(referenceDate?: Date): number[] {
+  const currentYear = getCurrentLeagueYear(referenceDate);
+  return [currentYear, currentYear + 1, currentYear + 2, currentYear + 3, currentYear + 4];
+}
+
+/**
+ * Salary years for multi-year contract projections
+ * @deprecated Use getSalaryYears() instead for dynamic year calculation
+ */
+export const SALARY_YEARS = getSalaryYears();
 
 /**
  * Cap inclusion percentages by player status
@@ -65,10 +77,12 @@ export interface CapPlayer {
  * Calculate cap charges for each salary year
  * Applies 10% annual salary escalation for multi-year contracts
  * @param rows - List of players on roster
- * @returns Array of cap charges, one per year in SALARY_YEARS
+ * @param referenceDate - Optional date for testing (to get correct salary years)
+ * @returns Array of cap charges, one per year in salary years array
  */
-export const calculateCapCharges = (rows: CapPlayer[] = []): number[] =>
-  SALARY_YEARS.map((_, index) =>
+export const calculateCapCharges = (rows: CapPlayer[] = [], referenceDate?: Date): number[] => {
+  const salaryYears = getSalaryYears(referenceDate);
+  return salaryYears.map((_, index) =>
     rows.reduce((sum, player) => {
       const contractYears = parseNumber(player.contractYears ?? 0);
       if (contractYears > index) {
@@ -82,6 +96,7 @@ export const calculateCapCharges = (rows: CapPlayer[] = []): number[] =>
       return sum;
     }, 0)
   );
+};
 
 /**
  * Waiver penalty percentages by contract years remaining
@@ -112,12 +127,15 @@ export interface DeadMoneyAdjustment {
  * Aggregate dead money charges across salary years
  * @param adjustments - List of dead money adjustments
  * @param franchiseId - Filter to specific franchise (optional)
- * @returns Array of dead money amounts, one per year in SALARY_YEARS
+ * @param referenceDate - Optional date for testing (to get correct salary years)
+ * @returns Array of dead money amounts, one per year in salary years array
  */
 export const aggregateDeadMoney = (
   adjustments: DeadMoneyAdjustment[] = [],
-  franchiseId?: string
+  franchiseId?: string,
+  referenceDate?: Date
 ): number[] => {
+  const salaryYears = getSalaryYears(referenceDate);
   return adjustments.reduce((acc, adj) => {
     if (franchiseId && adj.franchiseId !== franchiseId) return acc;
 
@@ -142,7 +160,7 @@ export const aggregateDeadMoney = (
     }
 
     return acc;
-  }, Array(SALARY_YEARS.length).fill(0));
+  }, Array(salaryYears.length).fill(0));
 };
 
 /**

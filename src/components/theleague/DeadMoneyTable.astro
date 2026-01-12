@@ -5,7 +5,7 @@
  * Table body is dynamically populated by client-side JavaScript
  */
 
-import { SALARY_YEARS } from '../../utils/salary-calculations';
+import { getSalaryYears } from '../../utils/salary-calculations';
 
 export interface Props {
   /** Table ID for client-side updates */
@@ -15,6 +15,7 @@ export interface Props {
 }
 
 const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
+const SALARY_YEARS = getSalaryYears();
 ---
 
 <div class:list={['dead-money-table-wrapper', className]}>
