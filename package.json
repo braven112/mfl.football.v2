@@ -33,6 +33,9 @@
     "test:e2e": "node tests/e2e-cookie-test.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
+    "check:bundle:src": "node scripts/check-bundle-size.mjs --src",
+    "predeploy": "pnpm run check:bundle:src",
     "type-check": "pnpm --filter './packages/*' type-check",
     "clean": "pnpm --parallel --filter './packages/*' clean"
   },
