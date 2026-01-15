@@ -58,8 +58,7 @@ function getSeasonConfig(year: number): SeasonConfig | undefined {
  */
 export function getCurrentNFLWeek(date: Date = new Date(), year?: number): number | null {
   // Determine the season year if not provided
-  // If Jan or Feb, it's the playoffs of the previous calendar year
-  const seasonYear = year ?? (date.getMonth() < 2 ? date.getFullYear() - 1 : date.getFullYear());
+  const seasonYear = year ?? (date.getMonth() < 8 ? date.getFullYear() : date.getFullYear());
 
   const config = getSeasonConfig(seasonYear);
 
