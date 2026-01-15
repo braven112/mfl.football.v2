@@ -79,6 +79,12 @@ const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/
 const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', {
   eager: true,
 });
+const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/rosters.json', {
+  eager: true,
+});
+const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
+  eager: true,
+});
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -386,6 +392,34 @@ Object.entries(playersFeeds).forEach(([path, mod]) => {
   });
 });
 
+// Build player data mapping from live rosters data
+// This ensures we show current roster assignments AND salary data (not frozen week 14)
+const liveRosterDataByPlayerId = {};
+Object.entries(rostersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const franchises = data?.rosters?.franchise ?? [];
+  if (!season || !Array.isArray(franchises)) return;
+  if (!liveRosterDataByPlayerId[season]) liveRosterDataByPlayerId[season] = {};
+  franchises.forEach((franchise) => {
+    const franchiseId = franchise.id;
+    if (!franchiseId) return;
+    const players = Array.isArray(franchise.player) ? franchise.player : [franchise.player].filter(Boolean);
+    players.forEach((player) => {
+      if (player?.id) {
+        // Store full player data from live rosters including salary, contractYear, status
+        liveRosterDataByPlayerId[season][player.id] = {
+          franchiseId,
+          salary: player.salary,
+          contractYear: player.contractYear,
+          contractInfo: player.contractInfo,
+          status: player.status,
+        };
+      }
+    });
+  });
+});
+
 // Load MFL injury data for current season (dynamically determined week)
 const currentWeek = getCurrentWeek();
 let mflInjuryData = {};
@@ -462,25 +496,35 @@ const buildDisplayRows = (teamData) => {
 
 const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => {
   const feedPlayers = playersFeedBySeason[season] ?? {};
+  const liveRosterData = liveRosterDataByPlayerId[season] ?? {};
 
   const players = (rawData?.players ?? []).map((player) => {
-    const salary = parseNumber(player.salary);
+    // Get live roster data for this player (includes current salary, contract, franchise)
+    const liveData = liveRosterData[player.id];
+
+    // Use live salary if available, otherwise fall back to frozen data
+    const salary = liveData?.salary ? parseNumber(liveData.salary) : parseNumber(player.salary);
     const nflverse = player.nflverse ?? {};
     const parseSnap = (val) => {
       if (val === undefined || val === null || val === '') return null;
       const num = Number(val);
       return Number.isFinite(num) ? num : null;
     };
+    // Use live contract years if available
     const contractYears =
-      Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) ||
+      Number.parseInt(liveData?.contractYear ?? player.contractYear ?? player.contractYearRemaining ?? '0', 10) ||
       0;
-    const franchiseId = player.franchiseId ?? 'FA';
+    // Use live roster data for current franchise assignment
+    // If player not in live rosters, they may have been dropped - show as FA
+    const franchiseId = liveData?.franchiseId ?? 'FA';
     const totalRemaining = salary * Math.max(contractYears || 1, 1);
     const seasonYear = Number.parseInt(season, 10) || getCurrentLeagueYear();
+    // Use live status if available
+    const status = liveData?.status ?? player.status ?? 'ROSTER';
     const contractType =
       player.contractType ??
-      (player.status && player.status !== 'ROSTER'
-        ? player.status
+      (status && status !== 'ROSTER'
+        ? status
         : player.draftYear && seasonYear - Number(player.draftYear) <= 2
           ? 'Rookie'
           : 'Standard');
@@ -507,7 +551,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       contractYears,
       totalRemaining,
       franchiseId,
-      status: player.status ?? 'ROSTER',
+      status,
       contractType,
       points: parseNumber(player.points),
       nflTeam,
@@ -821,6 +865,13 @@ const initialAllPlayers: any[] = initialSeasonData
 // Calculate draft predictions for 2026 roster view - use getCurrentLeagueYear() for roster data
 const currentYear = getCurrentLeagueYear();
 const nextYear = currentYear + 1;
+
+// Get last fetched timestamp from meta file
+const fetchMetaKey = Object.keys(fetchMetaFeeds).find(
+  (path) => path.includes(`/${currentYear}/`)
+);
+const fetchMeta = fetchMetaKey ? getModuleData(fetchMetaFeeds[fetchMetaKey]) : null;
+const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 let draftPredictions = [];
 let actualDraftPicks = [];
 let assetsPredictions = [];
@@ -1473,6 +1524,11 @@ const serializedConfig = JSON.stringify({
     </div>
     <!-- End Next Year View -->
 
+    {lastFetched && (
+      <p class="data-disclaimer">
+        Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+      </p>
+    )}
   </section>
 </TheLeagueLayout>
 
@@ -3128,6 +3184,12 @@ const serializedConfig = JSON.stringify({
   .analytics-section__sub{
     color: var(--text-secondary-color, #64748b);
     font-size: 0.9rem;
+  }
+
+  .data-disclaimer {
+    margin: 1rem 0 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.95rem;
   }
 </style>
 

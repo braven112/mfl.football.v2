@@ -47,18 +47,34 @@ const getLaborDay = (year) => {
 };
 
 /**
+ * Calculate base year automatically based on current date
+ * Base year = last completed NFL season (same logic as league-year.ts)
+ *
+ * Logic:
+ * - If today is before Labor Day: base year = previous calendar year
+ * - If today is after Labor Day: base year = current calendar year
+ */
+const calculateBaseYear = (date) => {
+  const calendarYear = date.getFullYear();
+  const laborDay = getLaborDay(calendarYear);
+  return date >= laborDay ? calendarYear : calendarYear - 1;
+};
+
+/**
  * Get years to fetch based on current date and league calendar
  * Returns { currentLeagueYear, currentSeasonYear, yearsToFetch }
  */
 const getYearsToFetch = () => {
   const now = new Date();
-  const baseYear = parseInt(
-    getNonEmpty(process.env.PUBLIC_BASE_YEAR) ||
+
+  // Priority: explicit env var > auto-calculate based on Labor Day
+  const envYear = getNonEmpty(process.env.PUBLIC_BASE_YEAR) ||
     getNonEmpty(process.env.MFL_YEAR) ||
-    getNonEmpty(process.env.MFL_SEASON) ||
-    now.getFullYear().toString(),
-    10
-  );
+    getNonEmpty(process.env.MFL_SEASON);
+
+  const baseYear = envYear
+    ? parseInt(envYear, 10)
+    : calculateBaseYear(now);
 
   // Feb 14th @ 8:45 PT cutoff (16:45 UTC in PST)
   const febCutoff = new Date(now.getFullYear(), 1, 14, 16, 45, 0, 0);
