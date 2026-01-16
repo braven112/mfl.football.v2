@@ -1,5 +1,6 @@
 ---
 import { getLeagueContext } from '../../utils/league-context';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 interface Props {
   host?: string;
@@ -15,7 +16,7 @@ const envLeagueId =
   (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || "";
 const envYear =
   (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) ||
-  new Date().getFullYear().toString();
+  getCurrentLeagueYear().toString();
 const envStaticHost =
   (import.meta.env.PUBLIC_STATIC_HOST as string | undefined) || envHost;
 
