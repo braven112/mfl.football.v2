@@ -6,6 +6,10 @@ on:
     - cron: "*/5 * * * *"
   workflow_dispatch:
 
+concurrency:
+  group: roster-sync
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -14,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         league:
           - name: theleague
@@ -25,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -77,4 +84,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/ src/data/
           git commit -m "chore: sync rosters and playoff data (${{ matrix.league.slug }})"
+          git pull --rebase origin main
           git push
