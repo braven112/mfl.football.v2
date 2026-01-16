@@ -1498,7 +1498,7 @@ const serializedConfig = JSON.stringify({
                   <span class="avg-points">{player.avgSeason}</span>
                 </td>
                 <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
-                  <div style="display: flex; align-items: center; gap: 0.25rem;">
+                  <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end;">
                     {player.gameOdds?.opponent && (
                       <img
                         src={getNflLogoUrl(player.gameOdds.opponent)}
@@ -5081,7 +5081,7 @@ const serializedConfig = JSON.stringify({
 
           const oppAvgCell = `
             <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
-              <div style="display: flex; align-items: center; gap: 0.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end;">
                 ${player.gameOdds?.opponent ? `
                   <img
                     src="${getLogoUrl(player.gameOdds.opponent)}"
