@@ -2,8 +2,8 @@ name: Roster Sync
 
 on:
   schedule:
-    # Run every 10 minutes to fetch latest roster data
-    - cron: "*/10 * * * *"
+    # Run every 5 minutes to fetch latest roster data
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -62,6 +62,10 @@ jobs:
           MFL_YEAR: ${{ vars.MFL_YEAR }}
         run: node ./scripts/update-salary-averages.mjs
 
+      - name: Fetch live NFL odds (theleague only)
+        if: matrix.league.slug == 'theleague'
+        run: node ./scripts/fetch-live-odds.mjs
+
       - name: Commit and push updates
         run: |
           if [ -z "$(git status --porcelain)" ]; then
@@ -71,6 +75,6 @@ jobs:
 
           git config user.name "Roster Sync Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/
+          git add data/ src/data/
           git commit -m "chore: sync rosters and playoff data (${{ matrix.league.slug }})"
           git push

@@ -10,6 +10,7 @@ import FranchiseOptions from '../../components/theleague/FranchiseOptions.astro'
 import VeteranExtensionCandidates from '../../components/theleague/VeteranExtensionCandidates.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
+import PlayerNewsModal from '../../components/theleague/PlayerNewsModal.astro';
 import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
 import collegeLogos from '../../data/college-logos.json';
@@ -36,6 +37,10 @@ import {
 } from '../../utils/salary-calculations';
 import { getAuthUser } from '../../utils/auth';
 import tradeBait2025Data from '../../../data/theleague/mfl-feeds/2025/tradeBait.json';
+import projectedScores2025Data from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
+import weeklyResultsRaw2025Data from '../../../data/theleague/mfl-feeds/2025/weekly-results-raw.json';
+import fantasyPointsAllowed2025Data from '../../../data/theleague/mfl-feeds/2025/fantasyPointsAllowed.json';
+import espnNewsData from '../../../data/theleague/nfl-news-week15.json';
 import { calculateDraftOrder, buildActualDraftPicks } from '../../utils/draft-utils';
 import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
@@ -45,6 +50,72 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import liveOddsData from '../../data/nfl/live-odds.json';
+
+// Weather icon mapping based on condition text
+const getWeatherIcon = (displayValue: string | undefined): string => {
+  if (!displayValue) return '🌡️';
+
+  const condition = displayValue.toLowerCase();
+
+  if (condition.includes('thunder') || condition.includes('storm')) return '⛈️';
+  if (condition.includes('snow') || condition.includes('flurr')) return '❄️';
+  if (condition.includes('rain') || condition.includes('shower')) return '🌧️';
+  if (condition.includes('fog') || condition.includes('mist') || condition.includes('haze')) return '🌫️';
+  if (condition.includes('wind')) return '💨';
+  if (condition.includes('overcast') || condition === 'cloudy') return '☁️';
+  if (condition.includes('partly') || condition.includes('mostly cloudy') || condition.includes('intermittent')) return '⛅';
+  if (condition.includes('clear') || condition.includes('sunny') || condition.includes('fair')) return '☀️';
+
+  return '🌡️'; // Default fallback
+};
+
+// Process Weekly Scores for Trend
+const processWeeklyScores = (rawData, currentWeek) => {
+  const scoresByPlayer = new Map(); // playerId -> { week: score }
+
+  // Ensure rawData is an array
+  const weeks = Array.isArray(rawData) ? rawData : (rawData?.weeklyResults ? [rawData] : []);
+
+  weeks.forEach(weekItem => {
+    const weekResults = weekItem.weeklyResults;
+    if (!weekResults) return;
+
+    const week = parseInt(weekResults.week, 10);
+    const matchups = Array.isArray(weekResults.matchup) ? weekResults.matchup : [weekResults.matchup];
+
+    matchups.forEach(matchup => {
+      const franchises = Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
+      franchises.forEach(franchise => {
+        const players = Array.isArray(franchise.player) ? franchise.player : (franchise.player ? [franchise.player] : []);
+        players.forEach(p => {
+          if (!scoresByPlayer.has(p.id)) {
+            scoresByPlayer.set(p.id, {});
+          }
+          // Only store numeric scores
+          const score = parseFloat(p.score);
+          if (!isNaN(score)) {
+            scoresByPlayer.get(p.id)[week] = score;
+          }
+        });
+      });
+    });
+  });
+
+  return scoresByPlayer;
+};
+
+// Determine last 3 completed weeks
+// League ends week 17, so cap at 17
+const currentWeekNum = getCurrentWeek();
+const lastCompletedWeek = Math.min(currentWeekNum > 1 ? currentWeekNum - 1 : 0, 17);
+const trendWeeks = [];
+for (let i = 0; i < 3; i++) {
+  const w = lastCompletedWeek - i;
+  if (w > 0) trendWeeks.unshift(w);
+}
+
+const playerScoresMap = processWeeklyScores(weeklyResultsRaw2025Data, currentWeekNum);
 
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -498,6 +569,15 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
   const feedPlayers = playersFeedBySeason[season] ?? {};
   const liveRosterData = liveRosterDataByPlayerId[season] ?? {};
 
+  // Projections Map (only for current season usually, but simplified for now)
+  const projectedScores = projectedScores2025Data?.projectedScores?.playerScore || [];
+  const projectionMap = new Map();
+  if (Array.isArray(projectedScores)) {
+    projectedScores.forEach(p => projectionMap.set(p.id, p.score));
+  } else if (projectedScores.id) {
+    projectionMap.set(projectedScores.id, projectedScores.score);
+  }
+
   const players = (rawData?.players ?? []).map((player) => {
     // Get live roster data for this player (includes current salary, contract, franchise)
     const liveData = liveRosterData[player.id];
@@ -529,6 +609,61 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
           ? 'Rookie'
           : 'Standard');
     const nflTeam = (player.team ?? '').toUpperCase();
+
+    // Helper to get odds data
+    const getOddsData = (team) => {
+      const normalized = team === 'JAC' ? 'JAX' : team === 'WSH' ? 'WAS' : team;
+      return liveOddsData[normalized] || null;
+    };
+
+    const gameOdds = getOddsData(nflTeam);
+    const opponent = gameOdds ? (gameOdds.isHome ? `vs ${gameOdds.opponent}` : `@ ${gameOdds.opponent}`) : 'BYE';
+
+    // Parse Spread
+    let favoredTeam = null;
+    let spreadAmount = null;
+    if (gameOdds?.spread) {
+      const parts = gameOdds.spread.split(' ');
+      if (parts.length >= 2) {
+        favoredTeam = parts[0];
+        // Strip non-numeric characters to get the absolute spread amount
+        spreadAmount = parts[1].replace(/[^0-9.]/g, '');
+      }
+    }
+
+    // Get Opponent Stats (Rank/Avg)
+    let oppStats = null;
+    if (gameOdds && season === '2025') {
+      const oppCode = gameOdds.opponent === 'JAX' ? 'JAC' : gameOdds.opponent === 'WAS' ? 'WSH' : gameOdds.opponent;
+      const teamStats = fantasyPointsAllowed2025Data.fantasyPointsAllowed[oppCode] || fantasyPointsAllowed2025Data.fantasyPointsAllowed[gameOdds.opponent];
+      if (teamStats) {
+        oppStats = teamStats[player.position];
+      }
+    }
+
+    // Get Recent Scores
+    const recentScores = trendWeeks.map(week => ({
+      week,
+      score: playerScoresMap.get(player.id)?.[week] !== undefined
+        ? playerScoresMap.get(player.id)[week]
+        : '-'
+    }));
+
+    // Calculate Recent Average (Last 3 Weeks)
+    const recentNumericScores = recentScores
+      .map(s => s.score)
+      .filter(s => typeof s === 'number');
+    const avgRecent = recentNumericScores.length > 0
+      ? (recentNumericScores.reduce((sum, s) => sum + s, 0) / recentNumericScores.length).toFixed(1)
+      : '-';
+
+    // Calculate Season Average (All Weeks)
+    const playerAllScores = playerScoresMap.get(player.id) || {};
+    const seasonScores = Object.values(playerAllScores).filter(s => typeof s === 'number');
+    const avgSeason = seasonScores.length > 0
+      ? (seasonScores.reduce((sum, s) => sum + s, 0) / seasonScores.length).toFixed(1)
+      : '-';
+
     const headshot = player.headshot ?? getPlayerImageUrl(player.id);
     const collegeName = player.sleeper?.college ?? player.college ?? null;
     const collegeAssets = getCollegeAssets(collegeName);
@@ -554,7 +689,22 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       status,
       contractType,
       points: parseNumber(player.points),
+      projectedPoints: projectionMap.get(player.id) || '-',
+      recentScores,
+      avgRecent,
+      avgSeason,
       nflTeam,
+      opponent,
+      oppStats,
+      gameOdds: gameOdds ? {
+        spread: gameOdds.spread,
+        overUnder: gameOdds.overUnder,
+        favoredTeam,
+        spreadAmount,
+        weather: gameOdds.weather,
+        opponent: gameOdds.opponent,
+        isHome: gameOdds.isHome
+      } : null,
       draftYear,
       draftTeam,
       draftRound,
@@ -974,6 +1124,8 @@ const serializedConfig = JSON.stringify({
   reserveForRookies: RESERVE_FOR_ROOKIES,
   collegeLogos: collegeLogosNormalized,
   authUser: authUser ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId } : null,
+  trendWeeks,
+  espnNews: espnNewsData?.teams || {},
 });
 ---
 
@@ -1070,70 +1222,93 @@ const serializedConfig = JSON.stringify({
           </div>
         </div>
     </div>
-    <div class="roster-controls">
-      <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
-      <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
-    </div>
     <!-- Roster View -->
     <div class="view-container" data-view-content="roster">
       <div class="roster-table-card">
-        <div class="table-header-actions">
+        <div class="roster-controls">
+          <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
+          <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
+
           <button class="clear-all-tags-btn" id="clearAllTagsBtn" style="display: none;" title="Clear all contract actions">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
             Clear All Tags
           </button>
+
+          <div class="mode-toggle" style={(cookiePreference?.franchiseId === '0001' || myTeamParam === '0001') ? '' : 'display:none'}>
+            <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
+              <svg class="mode-icon"><use href="/assets/icons/sprite.svg#icon-banknote"></use></svg> GM
+            </button>
+            <button class="mode-btn" data-mode="coach" title="Coach Mode: Matchups & Odds">
+              <svg class="mode-icon"><use href="/assets/icons/sprite.svg#icon-submit"></use></svg> Coach
+            </button>
+          </div>
         </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
           <thead>
             <tr>
               <th scope="col" data-column="player">Player</th>
-              <th scope="col" data-column="years">Yrs</th>
-              <th scope="col" data-column="actions" class="actions-column">Actions</th>
+
+              <!-- Coach Mode Columns -->
+              <th scope="col" data-column="oppRank" class="coach-col" style="display:none">Opp #</th>
+              <th scope="col" data-column="opponent" class="coach-col" style="display:none">Opponent</th>
+              <th scope="col" data-column="ou" class="coach-col" style="display:none">O/U</th>
+              <th scope="col" data-column="weather" class="coach-col" style="display:none">Weather</th>
+              {trendWeeks.map(week => (
+                <th scope="col" data-column={`trend-${week}`} class="coach-col trend-header" style="display:none">W{week}</th>
+              ))}
+              <th scope="col" data-column="avgRecent" class="coach-col" style="display:none; text-align: right;">Trend</th>
+              <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">Avg</th>
+              <th scope="col" data-column="oppAvg" class="coach-col" style="display:none">Opp Avg</th>
+              <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;">Proj</th>
+
+              <!-- GM Mode Columns -->
+              <th scope="col" data-column="years" class="gm-col">Yrs</th>
+              <th scope="col" data-column="actions" class="actions-column gm-col">Actions</th>
               {SALARY_YEARS.map((year, index) => (
-                <th scope="col" data-column={`year${index + 1}`}>{year}</th>
+                <th scope="col" data-column={`year${index + 1}`} class="gm-col">{year}</th>
               ))}
             </tr>
           </thead>
           <tfoot>
-            <tr class="roster-totals roster-totals--dead">
+            <tr class="roster-totals roster-totals--dead gm-row">
               <td data-column="player" class="roster-totals__label">Dead Money</td>
-              <td data-column="years"></td>
-              <td data-column="actions"></td>
+              <td data-column="years" class="gm-col"></td>
+              <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`}>
+                <td data-column={`dm${index + 1}`} id={`dmTotal${index + 1}`} class="gm-col">
                   {formatCurrency(initialDeadMoney[index] ?? 0)}
                 </td>
               ))}
             </tr>
-            <tr class="roster-totals">
+            <tr class="roster-totals gm-row">
               <td data-column="player" class="roster-totals__label">Total Salary</td>
-              <td data-column="years"></td>
-              <td data-column="actions"></td>
+              <td data-column="years" class="gm-col"></td>
+              <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`}>
+                <td data-column={`year${index + 1}`} id={`yearTotal${index + 1}`} class="gm-col">
                   {formatCurrency((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))}
                 </td>
               ))}
             </tr>
-            <tr class="roster-totals roster-totals--cap">
+            <tr class="roster-totals roster-totals--cap gm-row">
               <td data-column="player" class="roster-totals__label">Salary Cap</td>
-              <td data-column="years"></td>
-              <td data-column="actions"></td>
+              <td data-column="years" class="gm-col"></td>
+              <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`}>
+                <td data-column={`cap${index + 1}`} id={`capLimit${index + 1}`} class="gm-col">
                   {formatCurrency(initialCapLimit)}
                 </td>
               ))}
             </tr>
-            <tr class="roster-totals roster-totals--space">
+            <tr class="roster-totals roster-totals--space gm-row">
               <td data-column="player" class="roster-totals__label">Cap Space</td>
-              <td data-column="years"></td>
-              <td data-column="actions"></td>
+              <td data-column="years" class="gm-col"></td>
+              <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
-                <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`}>
+                <td data-column={`space${index + 1}`} id={`capSpaceTotal${index + 1}`} class="gm-col">
                   {formatCurrency(
                     (index === 0 ? initialCapLimit : initialCapLimit) -
                       ((initialYearTotals[index] ?? 0) + (initialDeadMoney[index] ?? 0))
@@ -1239,14 +1414,135 @@ const serializedConfig = JSON.stringify({
                     </div>
                   </div>
                 </td>
-                <td data-label="Yrs" data-column="years">{player.contractYears || 0}</td>
+
+                {/* Coach Mode Cells */}
+                <td data-label="Opp Rank" data-column="oppRank" class="coach-col" style="display:none">
+                  {player.oppStats ? (
+                    <span class={`rank-badge rank-tier-${Math.ceil(player.oppStats.rank / 8)}`}>
+                      #{player.oppStats.rank}
+                    </span>
+                  ) : '-'}
+                </td>
+                <td data-label="Opponent" data-column="opponent" class="coach-col" style="display:none">
+                  {player.opponent !== 'BYE' && player.gameOdds ? (
+                    <div class="opponent-cell">
+                      <div class="opponent-info">
+                        <span class="vs-at">{player.gameOdds.isHome ? 'vs' : '@'}</span>
+                        <img
+                          src={getNflLogoUrl(player.gameOdds.opponent)}
+                          alt={player.gameOdds.opponent}
+                          class="opponent-logo"
+                          style="width: 20px; height: 20px; object-fit: contain;"
+                        />
+                        <span class={`spread-badge ${!player.gameOdds.spreadAmount ? 'spread-neutral' : player.gameOdds.favoredTeam === player.gameOdds.opponent ? 'spread-underdog' : 'spread-favorite'}`}>
+                        {!player.gameOdds.spreadAmount ? '-' : (player.gameOdds.favoredTeam === player.gameOdds.opponent ? '-' : '+') + player.gameOdds.spreadAmount}
+                      </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span class="opponent-bye">BYE</span>
+                  )}
+                </td>
+                <td data-label="O/U" data-column="ou" class="coach-col" style="display:none">
+                  {player.gameOdds ? (
+                    <span class="odds-total">{player.gameOdds.overUnder === 'N/A' ? '-' : player.gameOdds.overUnder}</span>
+                  ) : (
+                    <span class="odds-empty">-</span>
+                  )}
+                </td>
+                <td data-label="Weather" data-column="weather" class="coach-col" style="display:none">
+                  {player.gameOdds?.weather ? (
+                    <div class="weather-cell">
+                      <span class="weather-temp">{player.gameOdds.weather.temperature}°</span>
+                      <span class="weather-icon" title={player.gameOdds.weather.displayValue}>
+                        {getWeatherIcon(player.gameOdds.weather.displayValue)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span class="weather-empty">-</span>
+                  )}
+                </td>
+                {player.recentScores.map(scoreData => {
+                  const score = parseFloat(scoreData.score);
+                  const avg = parseFloat(player.avgSeason);
+                  const isBetter = !isNaN(score) && !isNaN(avg) && score > avg;
+                  const isWorse = !isNaN(score) && !isNaN(avg) && score < avg;
+
+                  return (
+                    <td data-label={`Wk ${scoreData.week}`} data-column={`trend-${scoreData.week}`} class="coach-col trend-cell" style="display:none">
+                      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px;">
+                        {scoreData.score}
+                        {isBetter && <span style="color: #22c55e; font-size: 0.8rem;">↑</span>}
+                        {isWorse && <span style="color: #ef4444; font-size: 0.8rem;">↓</span>}
+                      </div>
+                    </td>
+                  );
+                })}
+                <td data-label="Avg (L3)" data-column="avgRecent" class="coach-col" style="display:none; text-align: right;">
+                  {(() => {
+                    const recent = parseFloat(player.avgRecent);
+                    const season = parseFloat(player.avgSeason);
+                    const isBetter = !isNaN(recent) && !isNaN(season) && recent > season;
+                    const isWorse = !isNaN(recent) && !isNaN(season) && recent < season;
+
+                    return (
+                      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                        <span class="avg-points">{player.avgRecent}</span>
+                        {isBetter && <span style="color: #22c55e; font-size: 0.9rem; font-weight: bold;">↑</span>}
+                        {isWorse && <span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;">↓</span>}
+                      </div>
+                    );
+                  })()}
+                </td>
+                <td data-label="Avg (Szn)" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">
+                  <span class="avg-points">{player.avgSeason}</span>
+                </td>
+                <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
+                  <div style="display: flex; align-items: center; gap: 0.25rem;">
+                    {player.gameOdds?.opponent && (
+                      <img
+                        src={getNflLogoUrl(player.gameOdds.opponent)}
+                        alt={player.gameOdds.opponent}
+                        class="opponent-logo"
+                        style="width: 20px; height: 20px; object-fit: contain;"
+                        onerror="this.style.display='none'"
+                      />
+                    )}
+                    {player.oppStats ? player.oppStats.avg : '-'}
+                  </div>
+                </td>
+                <td data-label="Projected" data-column="projected" class="coach-col" style="display:none; text-align: right;">
+                  <span class="proj-points">{player.projectedPoints}</span>
+                </td>
+
+                {/* GM Mode Cells */}
+                <td data-label="Yrs" data-column="years" class="gm-col">{player.contractYears || 0}</td>
+                <td data-label="Actions" data-column="actions" class="actions-cell gm-col">
+                  <button
+                    class="ufa-action-btn"
+                    data-player-id={player.id}
+                    data-player-name={player.name}
+                    data-player-position={player.position || ''}
+                    data-player-nfl-team={player.nflTeam || ''}
+                    data-player-nfl-logo={player.nflLogo || ''}
+                    data-player-headshot={player.headshot || ''}
+                    data-player-salary={player.salary || 0}
+                    data-player-years={player.contractYears || 1}
+                    data-player-injury-status={player.injuryStatus || ''}
+                    title="Manage Contract"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                  </button>
+                </td>
                 {SALARY_YEARS.map((year, index) => {
                   const isUfa = !(player.contractYears > index);
                   const isFirstYearUfa = isUfa && player.contractYears === index;
                   const isFutureUfa = isUfa && player.contractYears < index;
 
                   let displayValue;
-                  let cellClass = 'salary-cell';
+                  let cellClass = 'salary-cell gm-col';
 
                   if (isFirstYearUfa) {
                     displayValue = 'UFA';
@@ -1255,7 +1551,10 @@ const serializedConfig = JSON.stringify({
                     displayValue = '—';
                     cellClass += ' salary-cell--future-ufa';
                   } else {
-                    displayValue = formatCurrency(player.salary ?? 0);
+                    // Apply 10% annual salary escalation for multi-year contracts
+                    const baseSalary = player.salary ?? 0;
+                    const escalatedSalary = baseSalary * Math.pow(1.10, index);
+                    displayValue = formatCurrency(escalatedSalary);
                   }
 
                   return (
@@ -1264,7 +1563,7 @@ const serializedConfig = JSON.stringify({
                       data-column={`year${index + 1}`}
                       class={cellClass}
                     >
-                      
+                      {displayValue}
                     </td>
                   );
                 })}
@@ -3191,6 +3490,232 @@ const serializedConfig = JSON.stringify({
     color: var(--text-secondary-color, #64748b);
     font-size: 0.95rem;
   }
+
+  /* Coach Mode Toggle */
+  .mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+    background: #f1f5f9;
+    border-radius: 0 0 0.5rem 0.5rem;
+    width: fit-content;
+    padding: 0.5rem .65rem;
+    box-shadow: 0px 0px 0px 1px #00000014;
+    margin-left: auto;
+    margin-top: -1rem;
+  }
+
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.8rem;
+    border: none;
+    background: transparent;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .mode-btn:hover {
+    color: #334155;
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .mode-btn.active {
+    background: #fff;
+    color: #495a72;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .mode-icon {
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+  }
+
+  /* Coach Mode Table Styles */
+  :global(.roster-table th.coach-col) {
+    text-align: left !important;
+  }
+  :global(.roster-table td.coach-col) {
+    text-align: left !important;
+    padding: 0.75rem 0.5rem !important;
+  }
+
+  :global(.roster-table th[data-column="projected"]),
+  :global(.roster-table td[data-column="projected"]),
+  :global(.roster-table td[data-column="oppAvg"]),
+  :global(.roster-table th[data-column="oppAvg"]),
+  :global(.roster-table th[data-column="avgRecent"]),
+  :global(.roster-table td[data-column="avgRecent"]),
+  :global(.roster-table th[data-column="avgSeason"]),
+  :global(.roster-table td[data-column="avgSeason"]) {
+    text-align: right !important;
+  }
+
+  /* Coach Mode Cells */
+  :global(.opponent-cell) {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  :global(.opponent-info) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  :global(.spread-badge) {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+
+  :global(.spread-favorite) {
+    background-color: #d1fae5;
+    color: #047857;
+  }
+
+  :global(.spread-underdog) {
+    background-color: #fee2e2;
+    color: #b91c1c;
+  }
+
+  :global(.spread-neutral) {
+    background-color: #f1f5f9;
+    color: #64748b;
+  }
+
+  :global(.rank-badge) {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #fff;
+  }
+
+  :global(.rank-tier-4) { background-color: #10b981; } /* Rank 25-32 (Best Matchup) */
+  :global(.rank-tier-3) { background-color: #84cc16; } /* Rank 17-24 (Good) */
+  :global(.rank-tier-2) { background-color: #f97316; } /* Rank 9-16 (Bad) */
+  :global(.rank-tier-1) { background-color: #ef4444; } /* Rank 1-8 (Worst Matchup) */
+
+  :global(.vs-at) {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+    width: 1.25rem;
+    text-align: center;
+  }
+
+  :global(.opponent-logo) {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+
+  :global(.opponent-bye) {
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  :global(.odds-cell) {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    min-width: 90px;
+  }
+
+  :global(.odds-spread) {
+    font-weight: 700;
+    color: #334155;
+  }
+
+  :global(.odds-total) {
+    color: #64748b;
+  }
+
+  :global(.odds-spread-row) {
+    display: flex;
+    align-items: center;
+  }
+
+  :global(.weather-cell) {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  :global(.weather-temp) {
+    font-weight: 700;
+    color: #334155;
+  }
+
+  :global(.weather-icon) {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  :global(.proj-points) {
+    font-weight: 600;
+    color: #059669;
+    font-size: 1rem;
+  }
+
+  :global(.avg-points) {
+    font-weight: 600;
+    color: #0891b2;
+    font-size: 0.95rem;
+  }
+
+  :global(.trend-cell) {
+    font-size: 0.75rem;
+    color: #475569;
+  }
+
+  :global(.trend-header) {
+    min-width: 40px;
+  }
+
+  /* Roster Controls */
+  .roster-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .roster-controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    .mode-toggle {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .clear-all-tags-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 </style>
 
 <!-- Player Details Modal -->
@@ -3198,6 +3723,9 @@ const serializedConfig = JSON.stringify({
 
 <!-- Player Injury Modal -->
 <PlayerInjuryModal />
+
+<!-- Player News Modal -->
+<PlayerNewsModal />
 
 <!-- Contract Action Modal -->
 <div class="contract-modal" id="contract-modal" style="display: none;">
@@ -3307,6 +3835,24 @@ const serializedConfig = JSON.stringify({
   const getNflLogoUrl = (teamCode) => {
     if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${teamCode}.svg`;
+  };
+
+  // Weather icon mapping based on condition text
+  const getWeatherIcon = (displayValue) => {
+    if (!displayValue) return '🌡️';
+
+    const condition = displayValue.toLowerCase();
+
+    if (condition.includes('thunder') || condition.includes('storm')) return '⛈️';
+    if (condition.includes('snow') || condition.includes('flurr')) return '❄️';
+    if (condition.includes('rain') || condition.includes('shower')) return '🌧️';
+    if (condition.includes('fog') || condition.includes('mist') || condition.includes('haze')) return '🌫️';
+    if (condition.includes('wind')) return '💨';
+    if (condition.includes('overcast') || condition === 'cloudy') return '☁️';
+    if (condition.includes('partly') || condition.includes('mostly cloudy') || condition.includes('intermittent')) return '⛅';
+    if (condition.includes('clear') || condition.includes('sunny') || condition.includes('fair')) return '☀️';
+
+    return '🌡️'; // Default fallback
   };
 
   // Helper functions for contract calculations
@@ -3798,10 +4344,54 @@ const serializedConfig = JSON.stringify({
       positionColors = {},
       targetActiveCount = 22,
       reserveForRookies = 5_000_000,
+      trendWeeks = [],
     } = config;
 
     console.log('defaultTeamId:', defaultTeamId);
     console.log('defaultSeason:', defaultSeason);
+
+    // Coach Mode Logic
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const modeToggleContainer = document.querySelector('.mode-toggle');
+    const rosterPage = document.querySelector('.roster-page');
+
+    // Check storage for team preference to show toggle if cookie was missed by SSR
+    const storedTeam = localStorage.getItem('mfl_team_preference');
+    if (storedTeam === '0001' && modeToggleContainer) {
+      modeToggleContainer.style.display = 'flex';
+    }
+
+    function setMode(mode) {
+      modeBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+
+      if (rosterPage) {
+        rosterPage.classList.toggle('coach-mode', mode === 'coach');
+        rosterPage.classList.toggle('gm-mode', mode === 'gm');
+      }
+
+      // Toggle Columns
+      const coachCols = document.querySelectorAll('.coach-col');
+      const gmCols = document.querySelectorAll('.gm-col');
+      const gmRows = document.querySelectorAll('.gm-row');
+
+      coachCols.forEach(col => col.style.display = mode === 'coach' ? 'table-cell' : 'none');
+      gmCols.forEach(col => col.style.display = mode === 'gm' ? 'table-cell' : 'none');
+      gmRows.forEach(row => row.style.display = mode === 'gm' ? 'table-row' : 'none');
+
+      // Save preference
+      localStorage.setItem('rosterViewMode', mode);
+    }
+
+    // Init Mode
+    const savedMode = localStorage.getItem('rosterViewMode') || 'gm';
+    // Small delay to ensure DOM is fully ready/hydrated if needed, or just run it
+    setTimeout(() => setMode(savedMode), 0);
+
+    modeBtns.forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    });
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -4360,17 +4950,16 @@ const serializedConfig = JSON.stringify({
             ? player.nflLogo
             : player.headshot ?? getPlayerImageUrl(player.id);
 
-          const salaryCells = salaryYears
+          const salaryCells = (salaryYears && salaryYears.length > 0 ? salaryYears : [2025, 2026, 2027, 2028, 2029])
             .map((year, index) => {
               const columnKey = `year${index + 1}`;
-              const isUfa = !(player.contractYears > index);
-              const isFirstYearUfa = isUfa && player.contractYears === index;
-              const isFutureUfa = isUfa && player.contractYears < index;
+              const isUfa = !(parseInt(player.contractYears, 10) > index);
+              const isFirstYearUfa = isUfa && parseInt(player.contractYears, 10) === index;
+              const isFutureUfa = isUfa && parseInt(player.contractYears, 10) < index;
 
               let value;
-              let cellClass = 'salary-cell';
+              let cellClass = 'salary-cell gm-col';
 
-              // Check if this cell should show franchise tag salary
               if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
                 value = formatCurrency.format(action.newSalary ?? 0);
                 cellClass += ' salary-cell--simulated';
@@ -4381,15 +4970,12 @@ const serializedConfig = JSON.stringify({
                 value = '—';
                 cellClass += ' salary-cell--future-ufa';
               } else {
-                // Add simulated class if this player has a contract action applied
                 if (action && action.type === 'extension' && action.salaryBreakdown) {
                   cellClass += ' salary-cell--simulated';
-                  // Use the salary breakdown from the extension for this year
                   const yearKey = `year${index}`;
                   const yearSalary = action.salaryBreakdown[yearKey] ?? displaySalary;
                   value = formatCurrency.format(yearSalary ?? 0);
                 } else {
-                  // Apply 10% annual escalation to all salaries
                   const baseSalary = Number(player.salary ?? 0);
                   const escalatedSalary = Math.round(baseSalary * Math.pow(1.1, index));
                   value = formatCurrency.format(escalatedSalary);
@@ -4402,7 +4988,7 @@ const serializedConfig = JSON.stringify({
 
           // Add action button for all players
           const actionsCell = `
-            <td data-label="Actions" data-column="actions" class="actions-cell">
+            <td data-label="Actions" data-column="actions" class="actions-cell gm-col">
               <button
                 class="ufa-action-btn"
                 data-player-id="${player.id}"
@@ -4422,6 +5008,143 @@ const serializedConfig = JSON.stringify({
               </button>
             </td>
           `;
+
+          // Coach Mode Cells Construction
+          const getLogoUrl = (team) => {
+            if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
+            return `/assets/nfl-logos/${team}.svg`;
+          };
+
+          const isOpponentFavorite = player.gameOdds && player.gameOdds.favoredTeam === player.gameOdds.opponent;
+          const hasSpread = player.gameOdds && player.gameOdds.spreadAmount;
+
+          let spreadClass = 'spread-neutral';
+          let spreadDisplay = '-';
+
+          if (hasSpread) {
+            spreadClass = isOpponentFavorite ? 'spread-underdog' : 'spread-favorite';
+            spreadDisplay = (isOpponentFavorite ? '-' : '+') + player.gameOdds.spreadAmount;
+          }
+
+          const opponentCell = `
+            <td data-label="Opponent" data-column="opponent" class="coach-col" style="display:none">
+              ${player.opponent !== 'BYE' && player.gameOdds ? `
+                <div class="opponent-cell">
+                  <div class="opponent-info">
+                    <span class="vs-at">${player.gameOdds.isHome ? 'vs' : '@'}</span>
+                    <img
+                      src="${getLogoUrl(player.gameOdds.opponent)}"
+                      alt="${player.gameOdds.opponent}"
+                      class="opponent-logo"
+                      style="width: 20px; height: 20px; object-fit: contain;"
+                      onerror="this.style.display='none'"
+                    />
+                    <span class="spread-badge ${spreadClass}">
+                    ${spreadDisplay}
+                  </span>
+                  </div>
+                </div>
+              ` : '<span class="opponent-bye">BYE</span>'}
+            </td>
+          `;
+
+          const ouCell = `
+            <td data-label="O/U" data-column="ou" class="coach-col" style="display:none">
+              ${player.gameOdds ? `
+                <span class="odds-total">${player.gameOdds.overUnder === 'N/A' ? '-' : player.gameOdds.overUnder}</span>
+              ` : '<span class="odds-empty">-</span>'}
+            </td>
+          `;
+
+          const weatherCell = `
+            <td data-label="Weather" data-column="weather" class="coach-col" style="display:none">
+              ${player.gameOdds?.weather ? `
+                <div class="weather-cell">
+                  <span class="weather-temp">${player.gameOdds.weather.temperature}°</span>
+                  <span class="weather-icon" title="${player.gameOdds.weather.displayValue}">
+                    ${getWeatherIcon(player.gameOdds.weather.displayValue)}
+                  </span>
+                </div>
+              ` : '<span class="weather-empty">-</span>'}
+            </td>
+          `;
+
+          const oppRankCell = `
+            <td data-label="Opp Rank" data-column="oppRank" class="coach-col" style="display:none">
+              ${player.oppStats ? `
+                <span class="rank-badge rank-tier-${Math.ceil(player.oppStats.rank / 8)}">
+                  #${player.oppStats.rank}
+                </span>
+              ` : '-'}
+            </td>
+          `;
+
+          const oppAvgCell = `
+            <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
+              <div style="display: flex; align-items: center; gap: 0.25rem;">
+                ${player.gameOdds?.opponent ? `
+                  <img
+                    src="${getLogoUrl(player.gameOdds.opponent)}"
+                    alt="${player.gameOdds.opponent}"
+                    class="opponent-logo"
+                    style="width: 20px; height: 20px; object-fit: contain;"
+                    onerror="this.style.display='none'"
+                  />
+                ` : ''}
+                ${player.oppStats ? player.oppStats.avg : '-'}
+              </div>
+            </td>
+          `;
+
+          const projectedCell = `
+            <td data-label="Projected" data-column="projected" class="coach-col" style="display:none; text-align: right;">
+              <span class="proj-points">${player.projectedPoints || '-'}</span>
+            </td>
+          `;
+
+          // Avg Recent Cell with trend arrow
+          const avgRecentCell = (() => {
+            const recent = parseFloat(player.avgRecent);
+            const season = parseFloat(player.avgSeason);
+            const isBetter = !isNaN(recent) && !isNaN(season) && recent > season;
+            const isWorse = !isNaN(recent) && !isNaN(season) && recent < season;
+            const arrow = isBetter ? '<span style="color: #22c55e; font-size: 0.9rem; font-weight: bold;">↑</span>' :
+                          isWorse ? '<span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;">↓</span>' : '';
+
+            return `
+              <td data-label="Avg (L3)" data-column="avgRecent" class="coach-col" style="display:none; text-align: right;">
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                  <span class="avg-points">${player.avgRecent || '-'}</span>
+                  ${arrow}
+                </div>
+              </td>
+            `;
+          })();
+
+          const avgSeasonCell = `
+            <td data-label="Avg (Szn)" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">
+              <span class="avg-points">${player.avgSeason || '-'}</span>
+            </td>
+          `;
+
+          // Trend Cells
+          const trendCells = player.recentScores ? player.recentScores.map(scoreData => {
+            const score = parseFloat(scoreData.score);
+            const avg = parseFloat(player.avgSeason);
+            const isBetter = !isNaN(score) && !isNaN(avg) && score > avg;
+            const isWorse = !isNaN(score) && !isNaN(avg) && score < avg;
+            const arrow = isBetter ? '<span style="color: #22c55e; font-size: 0.8rem;">↑</span>' :
+                          isWorse ? '<span style="color: #ef4444; font-size: 0.8rem;">↓</span>' : '';
+
+            return `
+              <td data-label="Wk ${scoreData.week}" data-column="trend-${scoreData.week}" class="coach-col trend-cell" style="display:none">
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px;">
+                  ${scoreData.score}
+                  ${arrow}
+                </div>
+              </td>
+            `;
+          }).join('') : '';
 
           const rowClasses = [
             'roster-row',
@@ -4538,7 +5261,19 @@ const serializedConfig = JSON.stringify({
                 </div>
               </div>
             </td>
-            <td data-label="Yrs" data-column="years">${displayYears || 0}</td>
+            ${/* Coach Mode Cells */ ''}
+            ${oppRankCell}
+            ${opponentCell}
+            ${ouCell}
+            ${weatherCell}
+            ${trendCells}
+            ${avgRecentCell}
+            ${avgSeasonCell}
+            ${oppAvgCell}
+            ${projectedCell}
+
+            ${/* GM Mode Cells */ ''}
+            <td data-label="Yrs" data-column="years" class="gm-col">${displayYears || 0}</td>
             ${actionsCell}
             ${salaryCells}
           </tr>`;
@@ -5143,6 +5878,26 @@ const serializedConfig = JSON.stringify({
       setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
       renderTeamIdentity(teamData.record ?? '');
       renderTableRows(rows);
+
+      // Re-apply view mode logic after rendering
+      const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
+      const rosterPageEl = document.querySelector('.roster-page');
+
+      // Update container class
+      if (rosterPageEl) {
+        rosterPageEl.classList.toggle('coach-mode', currentMode === 'coach');
+        rosterPageEl.classList.toggle('gm-mode', currentMode === 'gm');
+      }
+
+      // Update column visibility
+      const coachCols = document.querySelectorAll('.coach-col');
+      const gmCols = document.querySelectorAll('.gm-col');
+      const gmRows = document.querySelectorAll('.gm-row');
+
+      coachCols.forEach(col => col.style.display = currentMode === 'coach' ? 'table-cell' : 'none');
+      gmCols.forEach(col => col.style.display = currentMode === 'gm' ? 'table-cell' : 'none');
+      gmRows.forEach(row => row.style.display = currentMode === 'gm' ? 'table-row' : 'none');
+
       renderDeadMoney(seasonData, currentTeam);
 
       const activeCount = teamData.totals?.rosterCount ?? rows.filter((p) => (p.displayTag ?? 'active') === 'active').length;

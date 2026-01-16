@@ -15,6 +15,8 @@
     "build:apps": "astro build",
     "prebuild": "npm run build:styles && npm run update:salary:all && npm run fetch:live:lineups",
     "fetch:live:lineups": "node scripts/fetch-live-lineups.mjs",
+    "fetch:live:odds": "node scripts/fetch-live-odds.mjs",
+    "fetch:fantasy-pts-allowed": "node scripts/fetch-fantasy-points-allowed.mjs",
     "fetch:all": "echo 'TODO: Create scripts/fetch-all-feeds.mjs'",
     "fetch:espn:schedule": "node scripts/fetch-espn-schedule.mjs",
     "fetch:weather": "node scripts/enrich-schedule-with-weather.mjs",
