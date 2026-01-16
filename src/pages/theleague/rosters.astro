@@ -875,7 +875,11 @@ Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
 const seasonOptions = Object.keys(rostersBySeason).sort(
   (a, b) => Number(b) - Number(a)
 );
-const defaultSeason = seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
+const currentLeagueYear = getCurrentLeagueYear();
+const preferredSeason = seasonOptions.find(
+  (season) => Number(season) === currentLeagueYear
+);
+const defaultSeason = preferredSeason ?? seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
 
 // Normalize franchise ids so "8" and "0008" resolve to the same team
 const normalizeFranchiseId = (id) => {
@@ -1013,7 +1017,7 @@ const initialAllPlayers: any[] = initialSeasonData
   : [];
 
 // Calculate draft predictions for 2026 roster view - use getCurrentLeagueYear() for roster data
-const currentYear = getCurrentLeagueYear();
+const currentYear = currentLeagueYear;
 const nextYear = currentYear + 1;
 
 // Get last fetched timestamp from meta file
@@ -3495,7 +3499,7 @@ const serializedConfig = JSON.stringify({
   .mode-toggle {
     display: flex;
     gap: 0.5rem;
-    background: #f1f5f9;
+    background: #dbdbdb;
     border-radius: 0 0 0.5rem 0.5rem;
     width: fit-content;
     padding: 0.5rem .65rem;
@@ -4316,9 +4320,7 @@ const serializedConfig = JSON.stringify({
   // Clear all tags button event listener
   const clearAllBtn = document.getElementById('clearAllTagsBtn');
   clearAllBtn?.addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear all contract actions?')) {
-      clearAllContractActions();
-    }
+    clearAllContractActions();
   });
 
   const initRosterPage = () => {
@@ -5081,7 +5083,7 @@ const serializedConfig = JSON.stringify({
 
           const oppAvgCell = `
             <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
-              <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end;">
+              <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end; background: #d1d0d0;border-radius: .5rem; padding: 0 .35rem; border: 1px solid #cccccc;">
                 ${player.gameOdds?.opponent ? `
                   <img
                     src="${getLogoUrl(player.gameOdds.opponent)}"
