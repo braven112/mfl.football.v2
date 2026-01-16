@@ -47,7 +47,10 @@ const availableYears = Object.keys(standingsFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-const defaultYear = availableYears[0] || getCurrentSeasonYear();
+const currentSeasonYear = getCurrentSeasonYear();
+const defaultYear = availableYears.includes(currentSeasonYear)
+  ? currentSeasonYear
+  : availableYears[0] || currentSeasonYear;
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 const requestedView = Astro.url.searchParams.get('view');
