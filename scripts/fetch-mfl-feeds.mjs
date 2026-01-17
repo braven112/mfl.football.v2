@@ -583,8 +583,8 @@ const run = async () => {
     }
   }
 
-  // Fetch weekly results (weeks 1–14) more gently to avoid hammering MFL.
-  const weeks = Array.from({ length: 14 }, (_, idx) => idx + 1);
+  // Fetch weekly results (weeks 1–17) more gently to avoid hammering MFL.
+  const weeks = Array.from({ length: 17 }, (_, idx) => idx + 1);
   const weeklyResults = [];
   for (const weekNum of weeks) {
     const weekUrl = `${host}/${year}/export?TYPE=weeklyResults&L=${leagueId}&JSON=1&W=${weekNum}`;

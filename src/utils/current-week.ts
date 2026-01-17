@@ -58,7 +58,8 @@ function getSeasonConfig(year: number): SeasonConfig | undefined {
  */
 export function getCurrentNFLWeek(date: Date = new Date(), year?: number): number | null {
   // Determine the season year if not provided
-  const seasonYear = year ?? (date.getMonth() < 8 ? date.getFullYear() : date.getFullYear());
+  // NFL season runs Sep-Feb, so Jan-Aug uses previous year's season
+  const seasonYear = year ?? (date.getMonth() < 8 ? date.getFullYear() - 1 : date.getFullYear());
 
   const config = getSeasonConfig(seasonYear);
 

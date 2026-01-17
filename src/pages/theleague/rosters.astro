@@ -49,7 +49,7 @@ import {
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 
 // Weather icon mapping based on condition text
@@ -151,10 +151,13 @@ const buildOddsMap = (espnData) => {
 };
 
 const loadLiveOddsData = async (week: number) => {
-  // In off-season (week 1 default), use fallback data for testing
-  const now = new Date();
-  const month = now.getMonth(); // 0-indexed: 0=Jan, 8=Sep
-  const isOffSeason = month < 8 || month > 11; // Before September or after December
+  // Use league calendar to detect off-season
+  // Off-season = Feb 14 through Labor Day (when currentLeagueYear > currentSeasonYear)
+  // During off-season, use fallback data for testing
+  // During season (regular + playoffs), fetch live ESPN data
+  const leagueYear = getCurrentLeagueYear();
+  const seasonYear = getCurrentSeasonYear();
+  const isOffSeason = leagueYear > seasonYear;
 
   if (isOffSeason) {
     return liveOddsFallbackData;
@@ -168,8 +171,13 @@ const loadLiveOddsData = async (week: number) => {
     return liveOddsCache.data;
   }
 
-  const seasonType = week <= 18 ? 2 : 3;
-  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&seasontype=${seasonType}`;
+  // ESPN API uses different week numbering for playoffs:
+  // Regular season: seasontype=2, week=1-18
+  // Playoffs: seasontype=3, week=1-4 (not 19-22)
+  const isPlayoffs = week > 18;
+  const seasonType = isPlayoffs ? 3 : 2;
+  const espnWeek = isPlayoffs ? week - 18 : week;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${espnWeek}&seasontype=${seasonType}`;
 
   try {
     const response = await fetch(url);
@@ -180,17 +188,17 @@ const loadLiveOddsData = async (week: number) => {
     const data = await response.json();
     const oddsData = buildOddsMap(data);
 
-    if (Object.keys(oddsData).length) {
-      liveOddsCache.data = oddsData;
-      liveOddsCache.fetchedAt = Date.now();
-      liveOddsCache.week = week;
-      return oddsData;
-    }
+    // Cache the result even if empty (valid during playoffs when only some teams play)
+    liveOddsCache.data = oddsData;
+    liveOddsCache.fetchedAt = Date.now();
+    liveOddsCache.week = week;
+    return oddsData;
   } catch (error) {
-    console.warn('[rosters] live odds fetch failed, using fallback', error);
+    console.warn('[rosters] live odds fetch failed', error);
+    // During season, return empty object on failure (don't show stale data)
+    // Only use fallback during off-season for testing
+    return {};
   }
-
-  return liveOddsFallbackData;
 };
 
 // Process Weekly Scores for Trend
@@ -3623,13 +3631,13 @@ const serializedConfig = JSON.stringify({
   .mode-toggle {
     display: flex;
     gap: 0.5rem;
-    background: #dbdbdb;
+    background: var(--primary-page-bg);
     border-radius: 0 0 0.5rem 0.5rem;
     width: fit-content;
     padding: 0.5rem .65rem;
-    box-shadow: 0px 0px 0px 1px #00000014;
+    box-shadow: 0px 2px 4px 0px #00000014;
     margin-left: auto;
-    margin-top: -1rem;
+    margin-top: -1.25rem;
   }
 
   .mode-btn {
@@ -3825,6 +3833,7 @@ const serializedConfig = JSON.stringify({
     gap: 1rem;
     padding: 0 1rem;
     margin-bottom: 1rem;
+    min-height: 40px;
   }
 
   @media (max-width: 640px) {
