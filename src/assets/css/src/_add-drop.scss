@@ -25,6 +25,12 @@
 //   cursor: pointer;
 // }
 
+#body_add_drop .page-wrapper > table {
+    border: 1px solid $border-color;
+    border-radius: 1rem;
+    background-color: $primary-bg-color;
+    padding: 1rem;
+}
 
 #body_add_drop {
 	form table td[colspan="3"] td[align="right"] {
