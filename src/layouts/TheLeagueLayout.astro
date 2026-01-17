@@ -39,136 +39,23 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 	</body>
 </html>
 <style>
-	:root {
-		--font-size-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);
-		--font-size-lg: clamp(1.2rem, 0.7vw + 1.2rem, 1.5rem);
-		--font-size-xl: clamp(2.44rem, 2.38vw + 1.85rem, 3.75rem);
-
-		/* TheLeague Color Scheme - Custom branding */
-
-		--primary-color: #1c497c; /* The League Blue */
-		--secondary-color: #2e8743; /* The League Green */
-		--accent-color: #2e8743; /* Green accent */
-		--inverse-color: #ffffff;
-
-		--primary-page-bg: #e0e0e0; /* Light gray background */
-
-		--primary-content-bg-color: #ffffff;
-		--primary-content-border-color: #e2e8f0;
-		--primary-content-boxshadow-color: #1c497c28;
-		--primary-content-boxshadow-size: 0 2px 6px rgba(0, 0, 0, 0.05);
-
-		--secondary-content-bg-color: #ffffff;
-		--secondary-content-border-color: #e2e8f0;
-		--secondary-content-boxshadow-color: #1c497c28;
-		--secondary-content-boxshadow-size: 0 2px 6px rgba(0, 0, 0, 0.05);
-
-	    --accent-content-bg-color: #66abea;
-    	--accent-content-border-color: #d6e3f0;
-		--accent-content-text-color: #ffffff;
-		--accent-content-boxshadow-color: #1c497c35;
-		--accent-content-boxshadow-size: 0 2px 4px rgba(0, 0, 0, 0.05);
-
-		--inverse-content-bg: #1c497c;
-		--inverse-accent-bg: #2e8743;
-		--inverse-content-border-color: #164066;
-
-		--primary-link-default-text-color: #111111;
-		--primary-link-hover-text-color: #2e8743;
-		--primary-link-focus-text-color: #2e8743;
-
-		--inverse-link-default-text-color: #e2e8f0;
-		--inverse-link-hover-text-color: #2e8743;
-		--inverse-link-focus-text-color: #2e8743;
-
-		--accent-link-default-text-color: #2563eb;
-		--accent-link-hover-text-color: #b45309;
-		--accent-link-focus-text-color: #b45309;
-
-		--primary-btn-default-bg-color: #1c497c;
-		--primary-btn-hover-bg-color: #164066;
-		--primary-btn-focus-bg-color: #164066;
-
-		--primary-btn-detault-text-color: #ffffff;
-		--primary-btn-hover-text-color: #ffffff;
-		--primary-btn-focus-text-color: #ffffff;
-
-		--primary-btn-default-border-color: #1c497c;
-		--primary-btn-hover-border-color: #2e8743;
-		--primary-btn-focus-border-color: #2e8743;
-
-		--secondary-btn-default-bg-color: #2e8743;
-		--secondary-btn-hover-bg-color: #26743a;
-		--secondary-btn-focus-bg-color: #22663a;
-
-		--secondary-btn-default-border-color: #2e8743;
-		--secondary-btn-hover-border-color: #1c497c;
-		--secondary-btn-focus-border-color: #1c497c;
-		
-		--secondary-btn-detault-text-color: #ffffff;
-		--secondary-btn-hover-text-color: #ffffff;
-		--secondary-btn-focus-text-color: #ffffff;
-
-		--inverse-btn-default-bg-color: #e2e8f0;
-		--inverse-btn-hover-bg-color: #1c497c;
-		--inverse-btn-focus-bg-color: #1c497c;
-		
-		--inverse-btn-detault-text-color: #1f2937;
-		--inverse-btn-hover-text-color: #ffffff;
-		--inverse-btn-focus-text-color: #ffffff;
-
-		--icon-btn-default-text-color: #64748b;
-		--icon-btn-default-focus-color: #3b82f6;
-
-
-		/* The League specific variables */
-		--muted-text-color: #6b7280;
-		--content-bg: #ffffff;
-		--content-border-color: #e2e2e2;
-		--gallery-content-bg: #eeeeee;
-
-		/* Status Colors */
-		--error-color: #dc2626;
-		--warning-color: #f59e0b;
-		--success-color: #10b981;
-
-		/* Box Shadow Variables */
-
-		--box-shadow-sm: 0 0 2px rgba(15, 15, 15, 0.1);
-		--box-shadow-md: 0 0 3px rgba(15, 15, 15, 0.1);
-		--box-shadow-lg: 0 0 4px rgba(15, 15, 15, 0.1);
-		--box-shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
-		--box-shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.1);
-
-		/* backgrounds*/
-		--card-bg-color: #fff;
-
-		/* padding*/
-		--padding-xs: 0.25rem;
-		--padding-sm: 0.5rem;
-		--padding-md: 1rem;
-		--padding-lg: 1.5rem;
-		--padding-xl: 2rem;
-		--padding-xxl: 3rem;
-
-		--table-header-text-color: #94a3b8;
-		--table-cell-font-size: 0.9rem;
-	}
+	/* Design tokens are imported from /src/styles/tokens.css */
+	@import '../styles/tokens.css';
 
 	html {
-		font-family: 'Vend Sans', system-ui, sans-serif;
+		font-family: var(--font-family-base);
 		font-size: var(--font-size-base);
-		color: var(--primary-text-color);
-		background-color: var(--primary-page-bg);
+		color: var(--page-text);
+		background-color: var(--page-bg);
 	}
 
 	body {
 		margin: 0;
-    	min-height: 100vh;
-      	font-family: "Vend Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      	line-height: 1.5;
-      	text-rendering: optimizeLegibility;
-      	-webkit-font-smoothing: antialiased;
+		min-height: 100vh;
+		font-family: var(--font-family-base);
+		line-height: var(--line-height-base);
+		text-rendering: optimizeLegibility;
+		-webkit-font-smoothing: antialiased;
 	}
 
 	:global(h1) {
@@ -184,11 +71,10 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 	}
 
 	:global(code) {
-		font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
-			Bitstream Vera Sans Mono, Courier New, monospace;
-		background: #f5f5f5;
-		padding: var(--padding-xs);
-		border-radius: 0.25rem;
+		font-family: var(--font-family-mono);
+		background: var(--color-gray-100);
+		padding: var(--spacing-xs);
+		border-radius: var(--radius-sm);
 	}
 
 	:global(a) {

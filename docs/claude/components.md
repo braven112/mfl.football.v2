@@ -158,6 +158,79 @@ Use CSS custom properties defined in global styles:
 }
 ```
 
+### Shadow System
+
+Our shadow tokens use a **layered shadow** approach based on [Josh Comeau's shadow design principles](https://www.joshwcomeau.com/css/designing-shadows/).
+
+#### Key Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Layered depth** | Multiple shadow layers, each doubling offset/blur |
+| **Directional light** | 1:2 horizontal:vertical ratio (simulates overhead light) |
+| **Tinted color** | `220deg` blue hue instead of pure black |
+| **Opacity scaling** | Lower opacity per layer as elevation increases |
+
+#### Available Tokens
+
+| Token | Layers | Use Case |
+|-------|--------|----------|
+| `--shadow-sm` | 1 | Subtle elevation (buttons, inputs) |
+| `--shadow-md` | 3 | Moderate elevation (cards, dropdowns) |
+| `--shadow-lg` | 5 | High elevation (modals, popovers) |
+| `--shadow-xl` | 6 | Maximum elevation (dialogs, overlays) |
+
+#### Usage
+```css
+.card {
+  box-shadow: var(--shadow-md);
+}
+
+.modal {
+  box-shadow: var(--shadow-lg);
+}
+```
+
+#### Customizing Shadow Color
+
+The `--shadow-color` variable controls the shadow tint. Override it for different contexts:
+
+```css
+/* Default blue tint */
+--shadow-color: 220deg 3% 15%;
+
+/* Warmer tint for accent sections */
+.warm-section {
+  --shadow-color: 30deg 5% 20%;
+}
+
+/* Neutral gray for dark mode */
+.dark-mode {
+  --shadow-color: 0deg 0% 10%;
+}
+```
+
+#### Why Layered Shadows?
+
+Single-layer shadows look flat and artificial. Layered shadows mimic how real light behaves:
+
+```css
+/* ❌ Flat, artificial */
+box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+
+/* ✅ Realistic depth (--shadow-lg) */
+box-shadow:
+  1px 2px 2px hsl(var(--shadow-color) / 0.15),
+  2px 4px 4px hsl(var(--shadow-color) / 0.15),
+  4px 8px 8px hsl(var(--shadow-color) / 0.15),
+  8px 16px 16px hsl(var(--shadow-color) / 0.15),
+  16px 32px 32px hsl(var(--shadow-color) / 0.15);
+```
+
+#### Performance Note
+
+Layered shadows increase rendering load. Avoid animating shadow tokens directly. Instead, use opacity or transform animations on the element itself.
+
 ## Component Organization
 
 ```

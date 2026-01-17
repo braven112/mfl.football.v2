@@ -1,0 +1,431 @@
+/**
+ * Design Tokens - Single Source of Truth
+ *
+ * This file contains all design tokens for TheLeague and AFL Fantasy.
+ * Import this file in layouts to ensure consistent theming.
+ *
+ * Usage:
+ *   color: var(--color-primary);
+ *   padding: var(--spacing-md);
+ *   font-size: var(--font-size-base);
+ */
+
+:root {
+  /* ========================================
+     Typography
+     ======================================== */
+
+  /* Font Families */
+  --font-family-base: 'Vend Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
+
+  /* Font Sizes - Fluid scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);
+  --font-size-lg: clamp(1.2rem, 0.7vw + 1.2rem, 1.5rem);
+  --font-size-xl: clamp(1.5rem, 1vw + 1.25rem, 2rem);
+  --font-size-2xl: clamp(2rem, 1.5vw + 1.5rem, 2.5rem);
+  --font-size-3xl: clamp(2.44rem, 2.38vw + 1.85rem, 3.75rem);
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ========================================
+     Spacing Scale
+     ======================================== */
+  --spacing-0: 0;
+  --spacing-xs: 0.25rem;   /* 4px */
+  --spacing-sm: 0.5rem;    /* 8px */
+  --spacing-md: 1rem;      /* 16px */
+  --spacing-lg: 1.5rem;    /* 24px */
+  --spacing-xl: 2rem;      /* 32px */
+  --spacing-2xl: 3rem;     /* 48px */
+  --spacing-3xl: 4rem;     /* 64px */
+
+  /* Legacy padding aliases (for backwards compatibility) */
+  --padding-xs: var(--spacing-xs);
+  --padding-sm: var(--spacing-sm);
+  --padding-md: var(--spacing-md);
+  --padding-lg: var(--spacing-lg);
+  --padding-xl: var(--spacing-xl);
+  --padding-xxl: var(--spacing-2xl);
+
+  /* ========================================
+     Border Radius
+     ======================================== */
+  --radius-none: 0;
+  --radius-sm: 0.25rem;    /* 4px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 1rem;       /* 16px */
+  --radius-xl: 1.5rem;     /* 24px */
+  --radius-full: 9999px;
+
+  /* ========================================
+     Shadows
+
+     Strategy: Layered shadows with tinted color
+     Based on: https://www.joshwcomeau.com/css/designing-shadows/
+
+     Key principles:
+     - Multiple layers create realistic depth (each layer doubles offset/blur)
+     - 1:2 horizontal:vertical ratio simulates overhead light source
+     - Tinted shadow color (220deg blue) avoids desaturating backgrounds
+     - Lower opacity per layer as elevation increases
+     ======================================== */
+
+  /* Shadow color - adjust hue to match context (220deg = blue tint) */
+  --shadow-color: 220deg 3% 15%;
+
+  /* Small: tight, subtle shadow for minimal elevation */
+  --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.09);
+
+  /* Medium: 3 layers for moderate elevation (cards, dropdowns) */
+  --shadow-md:
+    0 1px 1px hsl(var(--shadow-color) / 0.08),
+    0 2px 2px hsl(var(--shadow-color) / 0.06),
+    0 3px 4px hsl(var(--shadow-color) / 0.04);
+
+  /* Large: 4 layers for high elevation (modals, popovers) */
+  --shadow-lg:
+    0 1px 1px hsl(var(--shadow-color) / 0.06),
+    0 2px 2px hsl(var(--shadow-color) / 0.05),
+    0 4px 4px hsl(var(--shadow-color) / 0.04),
+    0 6px 8px hsl(var(--shadow-color) / 0.03);
+
+  /* Extra Large: 5 layers for maximum elevation */
+  --shadow-xl:
+    0 1px 1px hsl(var(--shadow-color) / 0.05),
+    0 2px 2px hsl(var(--shadow-color) / 0.04),
+    0 4px 4px hsl(var(--shadow-color) / 0.035),
+    0 8px 8px hsl(var(--shadow-color) / 0.03),
+    0 12px 16px hsl(var(--shadow-color) / 0.025);
+
+  /* Component-specific shadows */
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
+  --shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.25);
+
+  /* Legacy shadow aliases */
+  --box-shadow-sm: var(--shadow-sm);
+  --box-shadow-md: var(--shadow-md);
+  --box-shadow-lg: var(--shadow-lg);
+  --box-shadow-btn-hover: var(--shadow-btn-hover);
+  --box-shadow-focus-ring: var(--shadow-focus-ring);
+
+  /* ========================================
+     Transitions
+     ======================================== */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* ========================================
+     Z-Index Scale
+     ======================================== */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+
+  /* ========================================
+     Layout
+     ======================================== */
+  --container-max-width: 1232px;
+  --header-height: 64px;
+  --header-height-mobile: 56px;
+
+  /* ========================================
+     Colors - TheLeague Theme
+     ======================================== */
+
+  /* Brand Colors */
+  --color-primary: #1c497c;          /* TheLeague Blue */
+  --color-primary-dark: #164066;
+  --color-primary-light: #2563eb;
+
+  --color-secondary: #2e8743;        /* TheLeague Green */
+  --color-secondary-dark: #26743a;
+  --color-secondary-light: #3c9950;
+
+  --color-accent: #2e8743;           /* Same as secondary for TheLeague */
+
+  /* Neutral Colors */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-success-dark: #059669;
+
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #d97706;
+
+  --color-error: #dc2626;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #b91c1c;
+
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+  --color-info-dark: #2563eb;
+
+  /* ========================================
+     Component Tokens - Page
+     ======================================== */
+  --page-bg: #e0e0e0;
+  --page-text: var(--color-gray-900);
+
+  /* ========================================
+     Component Tokens - Content Areas
+     ======================================== */
+  --content-bg: var(--color-white);
+  --content-border: #e2e8f0;
+  --content-shadow: var(--shadow-card);
+
+  --content-bg-muted: #eeeeee;
+  --content-bg-accent: #66abea;
+  --content-text-muted: var(--color-gray-500);
+
+  /* ========================================
+     Component Tokens - Cards
+     ======================================== */
+  --card-bg: var(--color-white);
+  --card-border: var(--content-border);
+  --card-shadow: var(--shadow-card);
+  --card-radius: var(--radius-md);
+
+  /* Legacy alias */
+  --card-bg-color: var(--card-bg);
+
+  /* ========================================
+     Component Tokens - Links
+     ======================================== */
+  --link-color: var(--color-gray-900);
+  --link-color-hover: var(--color-secondary);
+  --link-color-focus: var(--color-secondary);
+
+  --link-color-inverse: #e2e8f0;
+  --link-color-inverse-hover: var(--color-secondary);
+
+  --link-color-accent: var(--color-primary-light);
+  --link-color-accent-hover: #b45309;
+
+  /* Legacy aliases */
+  --primary-link-default-text-color: var(--link-color);
+  --primary-link-hover-text-color: var(--link-color-hover);
+  --primary-link-focus-text-color: var(--link-color-focus);
+
+  --inverse-link-default-text-color: var(--link-color-inverse);
+  --inverse-link-hover-text-color: var(--link-color-inverse-hover);
+  --inverse-link-focus-text-color: var(--link-color-inverse-hover);
+
+  --accent-link-default-text-color: var(--link-color-accent);
+  --accent-link-hover-text-color: var(--link-color-accent-hover);
+  --accent-link-focus-text-color: var(--link-color-accent-hover);
+
+  /* ========================================
+     Component Tokens - Buttons
+     ======================================== */
+
+  /* Primary Button */
+  --btn-primary-bg: var(--color-primary);
+  --btn-primary-bg-hover: var(--color-primary-dark);
+  --btn-primary-bg-focus: var(--color-primary-dark);
+  --btn-primary-text: var(--color-white);
+  --btn-primary-border: var(--color-primary);
+  --btn-primary-border-hover: var(--color-secondary);
+
+  /* Secondary Button */
+  --btn-secondary-bg: var(--color-secondary);
+  --btn-secondary-bg-hover: var(--color-secondary-dark);
+  --btn-secondary-bg-focus: #22663a;
+  --btn-secondary-text: var(--color-white);
+  --btn-secondary-border: var(--color-secondary);
+  --btn-secondary-border-hover: var(--color-primary);
+
+  /* Inverse Button */
+  --btn-inverse-bg: #e2e8f0;
+  --btn-inverse-bg-hover: var(--color-primary);
+  --btn-inverse-bg-focus: var(--color-primary);
+  --btn-inverse-text: var(--color-gray-800);
+  --btn-inverse-text-hover: var(--color-white);
+
+  /* Icon Button */
+  --btn-icon-text: var(--color-gray-500);
+  --btn-icon-text-focus: var(--color-info);
+
+  /* Legacy aliases (with typo fix: detault -> default) */
+  --primary-btn-default-bg-color: var(--btn-primary-bg);
+  --primary-btn-hover-bg-color: var(--btn-primary-bg-hover);
+  --primary-btn-focus-bg-color: var(--btn-primary-bg-focus);
+  --primary-btn-default-text-color: var(--btn-primary-text);
+  --primary-btn-hover-text-color: var(--btn-primary-text);
+  --primary-btn-focus-text-color: var(--btn-primary-text);
+  --primary-btn-default-border-color: var(--btn-primary-border);
+  --primary-btn-hover-border-color: var(--btn-primary-border-hover);
+  --primary-btn-focus-border-color: var(--btn-primary-border-hover);
+
+  --secondary-btn-default-bg-color: var(--btn-secondary-bg);
+  --secondary-btn-hover-bg-color: var(--btn-secondary-bg-hover);
+  --secondary-btn-focus-bg-color: var(--btn-secondary-bg-focus);
+  --secondary-btn-default-text-color: var(--btn-secondary-text);
+  --secondary-btn-hover-text-color: var(--btn-secondary-text);
+  --secondary-btn-focus-text-color: var(--btn-secondary-text);
+  --secondary-btn-default-border-color: var(--btn-secondary-border);
+  --secondary-btn-hover-border-color: var(--btn-secondary-border-hover);
+  --secondary-btn-focus-border-color: var(--btn-secondary-border-hover);
+
+  --inverse-btn-default-bg-color: var(--btn-inverse-bg);
+  --inverse-btn-hover-bg-color: var(--btn-inverse-bg-hover);
+  --inverse-btn-focus-bg-color: var(--btn-inverse-bg-focus);
+  --inverse-btn-default-text-color: var(--btn-inverse-text);
+  --inverse-btn-hover-text-color: var(--btn-inverse-text-hover);
+  --inverse-btn-focus-text-color: var(--btn-inverse-text-hover);
+
+  --icon-btn-default-text-color: var(--btn-icon-text);
+  --icon-btn-default-focus-color: var(--btn-icon-text-focus);
+
+  /* ========================================
+     Component Tokens - Tables
+     ======================================== */
+  --table-header-bg: var(--color-gray-50);
+  --table-header-text: var(--color-gray-400);
+  --table-row-bg: var(--color-white);
+  --table-row-bg-alt: #ececec;
+  --table-row-bg-hover: var(--color-gray-50);
+  --table-border: var(--content-border);
+  --table-cell-font-size: 0.9rem;
+
+  /* Legacy aliases */
+  --table-header-text-color: var(--table-header-text);
+  --oddtablerow: var(--table-row-bg);
+  --eventablerow: var(--table-row-bg-alt);
+
+  /* ========================================
+     Component Tokens - Inverse (Dark Sections)
+     ======================================== */
+  --inverse-bg: var(--color-primary);
+  --inverse-bg-accent: var(--color-secondary);
+  --inverse-border: #164066;
+  --inverse-text: var(--color-white);
+
+  /* Legacy aliases */
+  --inverse-content-bg: var(--inverse-bg);
+  --inverse-accent-bg: var(--inverse-bg-accent);
+  --inverse-content-border-color: var(--inverse-border);
+  --inverse-color: var(--inverse-text);
+
+  /* ========================================
+     Component Tokens - Accent Content
+     ======================================== */
+  --accent-content-bg-color: #66abea;
+  --accent-content-border-color: #d6e3f0;
+  --accent-content-text-color: var(--color-white);
+  --accent-content-boxshadow-color: #1c497c35;
+
+  /* ========================================
+     Component Tokens - Forms
+     ======================================== */
+  --input-bg: var(--color-white);
+  --input-border: var(--color-gray-300);
+  --input-border-focus: var(--color-primary);
+  --input-text: var(--color-gray-900);
+  --input-placeholder: var(--color-gray-400);
+  --input-disabled-bg: var(--color-gray-100);
+
+  /* ========================================
+     Component Tokens - Badges/Status
+     ======================================== */
+  --badge-success-bg: var(--color-success-light);
+  --badge-success-text: var(--color-success-dark);
+  --badge-warning-bg: var(--color-warning-light);
+  --badge-warning-text: var(--color-warning-dark);
+  --badge-error-bg: var(--color-error-light);
+  --badge-error-text: var(--color-error-dark);
+  --badge-info-bg: var(--color-info-light);
+  --badge-info-text: var(--color-info-dark);
+
+  /* Legacy status colors */
+  --error-color: var(--color-error);
+  --warning-color: var(--color-warning);
+  --success-color: var(--color-success);
+
+  /* Alert styles (legacy) */
+  --alert-warning-text: #8a6d3b;
+  --alert-warning-bg: #fcf8e3;
+  --alert-warning-border: #faf2cc;
+  --alert-success-text: #3c763d;
+  --alert-success-bg: #dff0d8;
+  --alert-success-border: #d0e9c6;
+  --alert-info-text: #31708f;
+  --alert-info-bg: #d9edf7;
+  --alert-info-border: #bcdff1;
+
+  /* ========================================
+     Legacy Color Aliases
+     ======================================== */
+  --primary-color: var(--color-primary);
+  --secondary-color: var(--color-secondary);
+  --accent-color: var(--color-accent);
+  --muted-text-color: var(--content-text-muted);
+  --primary-page-bg: var(--page-bg);
+  --primary-content-bg-color: var(--content-bg);
+  --primary-content-border-color: var(--content-border);
+  --primary-content-boxshadow-color: #1c497c28;
+  --primary-content-boxshadow-size: var(--shadow-card);
+  --secondary-content-bg-color: var(--content-bg);
+  --secondary-content-border-color: var(--content-border);
+  --secondary-content-boxshadow-color: #1c497c28;
+  --content-border-color: #e2e2e2;
+  --gallery-content-bg: var(--content-bg-muted);
+}
+
+/* ========================================
+   Focus Visible Styles
+   ======================================== */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Remove default outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Interactive element focus styles */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus-ring);
+}

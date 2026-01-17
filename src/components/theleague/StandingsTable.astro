@@ -84,22 +84,22 @@ function calculateGamesBack(team: TeamStanding, allTeamsInDivision: TeamStanding
     <table class="standings-table">
       <thead>
         <tr>
-          {view === 'league' && <th class="col-seed">Seed</th>}
-          {(view === 'division' || view === 'all_play') && <th class="col-badge">Seed</th>}
-          <th class="col-team">Team</th>
-          {view === 'division' && <th class="col-overall-record">Overall</th>}
-          {view === 'division' && <th class="col-overall-pct">PCT</th>}
-          {view === 'division' && <th class="col-gb">GB</th>}
-          {view === 'division' && <th class="col-streak">Strk</th>}
-          {view === 'division' && <th class="col-div-record">Div</th>}
-          {view === 'division' && <th class="col-pf">PF</th>}
-          {view === 'division' && <th class="col-pa">PA</th>}
-          {view !== 'division' && <th class="col-record">Record</th>}
-          {view !== 'division' && <th class="col-pct">PCT</th>}
-          {view !== 'division' && <th class="col-pf">PF</th>}
-          {view !== 'division' && <th class="col-pa">PA</th>}
-          {view !== 'division' && <th class="col-pwr">PWR</th>}
-          {view !== 'division' && <th class="col-vp">VP</th>}
+          {view === 'league' && <th scope="col" class="col-seed">Seed</th>}
+          {(view === 'division' || view === 'all_play') && <th scope="col" class="col-badge">Seed</th>}
+          <th scope="col" class="col-team">Team</th>
+          {view === 'division' && <th scope="col" class="col-overall-record">Overall</th>}
+          {view === 'division' && <th scope="col" class="col-overall-pct">PCT</th>}
+          {view === 'division' && <th scope="col" class="col-gb">GB</th>}
+          {view === 'division' && <th scope="col" class="col-streak">Strk</th>}
+          {view === 'division' && <th scope="col" class="col-div-record">Div</th>}
+          {view === 'division' && <th scope="col" class="col-pf">PF</th>}
+          {view === 'division' && <th scope="col" class="col-pa">PA</th>}
+          {view !== 'division' && <th scope="col" class="col-record">Record</th>}
+          {view !== 'division' && <th scope="col" class="col-pct">PCT</th>}
+          {view !== 'division' && <th scope="col" class="col-pf">PF</th>}
+          {view !== 'division' && <th scope="col" class="col-pa">PA</th>}
+          {view !== 'division' && <th scope="col" class="col-pwr">PWR</th>}
+          {view !== 'division' && <th scope="col" class="col-vp">VP</th>}
         </tr>
       </thead>
       <tbody>
