@@ -6,8 +6,14 @@ Comprehensive reference for MyFantasyLeague (MFL) API endpoints used in this pro
 
 - **Official MFL API Explorer:** https://www49.myfantasyleague.com/2025/options?L=13522&O=79
 - **Complete API Documentation:** https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522
-- **League ID:** 13522
 - **Current Year:** 2025
+
+### Supported Leagues
+
+| League | MFL ID | Host Server | Type |
+|--------|--------|-------------|------|
+| TheLeague | 13522 | www49 | Dynasty Salary Cap |
+| AFL Fantasy | 19621 | www44 | Keeper (24-team) |
 
 ## Base URL Patterns
 
@@ -406,7 +412,49 @@ https://api.myfantasyleague.com/2025/export?TYPE=league&L=13522&JSON=1
 - [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
 - [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
 
-**Notes:** Essential for team names, configurations, and league rules
+**Response Structure (key fields):**
+```json
+{
+  "league": {
+    "name": "The League",
+    "id": "13522",
+    "salaryCapAmount": "45000000",
+    "rosterSize": "22",
+    "taxiSquad": "3",
+    "injuredReserve": "50",
+    "usesSalaries": "1",
+    "usesContractYear": "1",
+    "keeperType": "dynasty",
+    "h2h": "YES",
+    "lastRegularSeasonWeek": "14",
+    "endWeek": "17",
+    "draftPlayerPool": "Rookie",
+    "currentWaiverType": "BBID_FCFS",
+    "bbidMinimum": "425000",
+    "bbidIncrement": "25000",
+    "includeTaxiWithSalary": "50",
+    "includeIRWithSalary": "100",
+    "starters": { "count": "9", "position": [...] },
+    "franchises": { "franchise": [...], "count": "16" },
+    "divisions": { "division": [...], "count": "4" },
+    "history": { "league": [...] }
+  }
+}
+```
+
+**Key Insights (updated 2026-01-17):**
+- Contains ALL league configuration including salary cap, roster rules, waiver settings
+- `starters.position` array defines starting lineup requirements with min-max limits
+- `franchises.franchise` includes `bbidAvailableBalance` for each team's remaining FAAB
+- `includeTaxiWithSalary: "50"` means taxi squad players count 50% toward cap
+- `includeIRWithSalary: "100"` means IR players count 100% toward cap
+- `history.league` array provides URLs to all historical league years
+- Note: API redirects from `api.myfantasyleague.com` to the league's specific host (e.g., www49 for 13522, www44 for 19621)
+- `usesSalaries: "0"` indicates no salary cap (AFL Fantasy), `usesSalaries: "1"` indicates salary cap league (TheLeague)
+- `usesContractYear: "0"` indicates no contract years (keeper league), `usesContractYear: "1"` indicates dynasty contracts
+- `playerLimitUnit` can be "LEAGUE" (one copy per league) or "CONFERENCE" (one copy per conference)
+- `conferences` object only present in leagues with conference structure (AFL Fantasy has 2 conferences)
+- `divisions.division[].conference` links divisions to their parent conference
 
 ---
 
@@ -421,6 +469,56 @@ https://api.myfantasyleague.com/2025/export?TYPE=league&L=13522&JSON=1
 ```
 https://api.myfantasyleague.com/2025/export?TYPE=rules&L=13522&JSON=1
 ```
+
+**Response Structure:**
+```json
+{
+  "rules": {
+    "positionRules": [
+      {
+        "positions": "QB|RB|WR|TE|PK",
+        "rule": [
+          { "event": "#P", "points": "0.04" },
+          { "event": "#P_20_99_1", "points": "1" },
+          { "event": "PC", "points": "6" },
+          ...
+        ]
+      },
+      { "positions": "Def", "rule": [...] }
+    ]
+  }
+}
+```
+
+**Common Event Codes:**
+| Code | Description |
+|------|-------------|
+| `#P` | Passing yards (per yard) |
+| `PC` | Passing TD |
+| `IN` | Interception thrown |
+| `#R` | Rushing yards (per yard) |
+| `RC` | Rushing TD |
+| `#C` | Receiving yards (per yard) |
+| `CC` | Receiving TD |
+| `RZ` | Reception (PPR) |
+| `FL` | Fumble lost |
+| `FG` | Field goal made |
+| `PA` | Points allowed (defense) |
+| `SK` | Sacks |
+| `IR` | Interception return |
+
+**Key Insights (updated 2026-01-17):**
+- Scoring rules are position-specific, with position groups like "QB|RB|WR|TE|PK"
+- PPR values vary by position AND by league:
+  - TheLeague (13522): TE=1.0, WR=0.5, RB=0.25
+  - AFL Fantasy (19621): TE=1.5 (TE premium), WR=1.0, RB=1.0
+- Passing TDs worth 6 points (non-standard, many leagues use 4)
+- Range rules use format like `#P_20_99_1` (passing yards 20-99, 1 bonus point)
+- Defense points allowed (OPA) scoring can be tiered (specific point values per PA range) or linear formula
+- TheLeague uses simplified formula: `15 - (0.6 * PA)` for 0-35 PA, then -6 + (-0.01 * PA) for 36+
+- AFL Fantasy uses detailed tiered OPA scoring with specific values at each point threshold
+- Common event codes: CC=catch count (PPR), #P=pass TD count, #R=rush TD count, #C=catch TD count
+- `*` prefix on points means "multiply by count" (e.g., `*0.1` for 0.1 points per yard)
 
 ---
 
