@@ -50,7 +50,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear } from '../../utils/league-year';
-import liveOddsData from '../../data/nfl/live-odds.json';
+import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 
 // Weather icon mapping based on condition text
 const getWeatherIcon = (displayValue: string | undefined): string => {
@@ -68,6 +68,129 @@ const getWeatherIcon = (displayValue: string | undefined): string => {
   if (condition.includes('clear') || condition.includes('sunny') || condition.includes('fair')) return '☀️';
 
   return '🌡️'; // Default fallback
+};
+
+const LIVE_ODDS_TTL_MS = 5 * 60 * 1000;
+const liveOddsCache =
+  globalThis.__liveOddsCache ??
+  (globalThis.__liveOddsCache = {
+    data: null,
+    fetchedAt: 0,
+    week: null,
+  });
+
+const normalizeEspnTeamCode = (espnAbbrev: string) => {
+  const map: Record<string, string> = {
+    WSH: 'WAS',
+    JAX: 'JAX',
+    JAC: 'JAX',
+  };
+  return map[espnAbbrev] || espnAbbrev;
+};
+
+const buildOddsMap = (espnData) => {
+  if (!espnData?.events?.length) return {};
+
+  const oddsData = {};
+  espnData.events.forEach((event) => {
+    const competition = event.competitions?.[0];
+    if (!competition) return;
+
+    const homeTeam = competition.competitors?.find((team) => team.homeAway === 'home');
+    const awayTeam = competition.competitors?.find((team) => team.homeAway === 'away');
+    if (!homeTeam || !awayTeam) return;
+
+    const homeCode = normalizeEspnTeamCode(homeTeam.team?.abbreviation);
+    const awayCode = normalizeEspnTeamCode(awayTeam.team?.abbreviation);
+    if (!homeCode || !awayCode) return;
+
+    const odds = competition.odds?.[0] || {};
+    const spread = odds.details || 'N/A';
+    const overUnder = odds.overUnder || 'N/A';
+
+    const weather = competition.weather
+      ? {
+        temperature: competition.weather.temperature,
+        displayValue: competition.weather.displayValue,
+        conditionId: competition.weather.conditionId,
+      }
+      : null;
+
+    const status =
+      competition.status?.type?.shortDetail ||
+      competition.status?.type?.description ||
+      'Scheduled';
+
+    const gameRecord = {
+      id: event.id,
+      date: event.date,
+      homeTeam: homeCode,
+      awayTeam: awayCode,
+      status,
+      spread,
+      overUnder,
+      homeScore: homeTeam.score || '0',
+      awayScore: awayTeam.score || '0',
+      weather,
+    };
+
+    oddsData[homeCode] = {
+      ...gameRecord,
+      isHome: true,
+      opponent: awayCode,
+    };
+
+    oddsData[awayCode] = {
+      ...gameRecord,
+      isHome: false,
+      opponent: homeCode,
+    };
+  });
+
+  return oddsData;
+};
+
+const loadLiveOddsData = async (week: number) => {
+  // In off-season (week 1 default), use fallback data for testing
+  const now = new Date();
+  const month = now.getMonth(); // 0-indexed: 0=Jan, 8=Sep
+  const isOffSeason = month < 8 || month > 11; // Before September or after December
+
+  if (isOffSeason) {
+    return liveOddsFallbackData;
+  }
+
+  if (
+    liveOddsCache.data &&
+    liveOddsCache.week === week &&
+    Date.now() - liveOddsCache.fetchedAt < LIVE_ODDS_TTL_MS
+  ) {
+    return liveOddsCache.data;
+  }
+
+  const seasonType = week <= 18 ? 2 : 3;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&seasontype=${seasonType}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`ESPN API returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    const oddsData = buildOddsMap(data);
+
+    if (Object.keys(oddsData).length) {
+      liveOddsCache.data = oddsData;
+      liveOddsCache.fetchedAt = Date.now();
+      liveOddsCache.week = week;
+      return oddsData;
+    }
+  } catch (error) {
+    console.warn('[rosters] live odds fetch failed, using fallback', error);
+  }
+
+  return liveOddsFallbackData;
 };
 
 // Process Weekly Scores for Trend
@@ -108,6 +231,7 @@ const processWeeklyScores = (rawData, currentWeek) => {
 // Determine last 3 completed weeks
 // League ends week 17, so cap at 17
 const currentWeekNum = getCurrentWeek();
+const liveOddsData = await loadLiveOddsData(currentWeekNum);
 const lastCompletedWeek = Math.min(currentWeekNum > 1 ? currentWeekNum - 1 : 0, 17);
 const trendWeeks = [];
 for (let i = 0; i < 3; i++) {
