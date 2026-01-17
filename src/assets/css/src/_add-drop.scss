@@ -26,7 +26,7 @@
 // }
 
 #body_add_drop .page-wrapper > table {
-    border: 1px solid $border-color;
+    box-shadow: 0px 1px 1px rgba(0,0,0,.1);
     border-radius: 1rem;
     background-color: $primary-bg-color;
     padding: 1rem;
