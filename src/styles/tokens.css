@@ -109,8 +109,15 @@
     0 8px 8px hsl(var(--shadow-color) / 0.03),
     0 12px 16px hsl(var(--shadow-color) / 0.025);
 
+  /* Inset shadows - for sunken/pressed elements */
+  --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.12);
+  --shadow-inset-md:
+    inset 0 1px 1px hsl(var(--shadow-color) / 0.1),
+    inset 0 2px 3px hsl(var(--shadow-color) / 0.08),
+    inset 0 3px 5px hsl(var(--shadow-color) / 0.06);
+
   /* Component-specific shadows */
-  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-card: var(--shadow-md);
   --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
   --shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.25);
 
@@ -167,7 +174,7 @@
 
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
+  --color-gray-200: #dddedf;
   --color-gray-300: #d1d5db;
   --color-gray-400: #9ca3af;
   --color-gray-500: #6b7280;
