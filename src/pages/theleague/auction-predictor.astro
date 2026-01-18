@@ -682,6 +682,58 @@ players
     });
   });
 
+// Add unrostered players (true free agents with no team)
+const availablePlayerIdsAfterDef = new Set(availablePlayers.map(p => p.id));
+players
+  .filter((p: any) => {
+    const pos = normalizePosition(p.position);
+    // Skip if already added or if rostered
+    if (availablePlayerIdsAfterDef.has(p.id)) return false;
+    if (rosteredPlayerIds.has(p.id)) return false;
+    // Only include skill positions
+    return ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'].includes(pos);
+  })
+  .forEach((unrosteredPlayer: any) => {
+    const normalizedPos = normalizePosition(unrosteredPlayer.position);
+    const compositeRank = compositeRankMap.get(unrosteredPlayer.id) || 9999;
+    const age = computePlayerAge(parseInt(unrosteredPlayer.draft_year) || null, normalizedPos);
+    const points = normalizedPos === 'DEF' ? defensePointsById.get(unrosteredPlayer.id) : undefined;
+    const prediction = defaultPredictionMap.get(unrosteredPlayer.id);
+    const predictedPrice = prediction?.finalPrice;
+    const priceMeta = prediction
+      ? {
+          slot: prediction.slot,
+          basePrice: prediction.basePrice,
+          scarcityMult: prediction.scarcityMult,
+          samples: prediction.samples,
+          source: 'precomputed',
+        }
+      : undefined;
+
+    availablePlayers.push({
+      id: unrosteredPlayer.id,
+      name: formatPlayerName(unrosteredPlayer.name),
+      position: normalizedPos,
+      team: unrosteredPlayer.team || 'FA',
+      currentSalary: 0, // No current contract
+      contractYearsRemaining: 0, // No contract
+      franchiseId: null,
+      dynastyRank: undefined,
+      redraftRank: undefined,
+      compositeRank,
+      points,
+      projectedPoints: undefined,
+      age,
+      experience: 0,
+      isExpiring: true,
+      isFranchiseTagCandidate: false,
+      franchiseTagProbability: 0,
+      estimatedAuctionPrice: predictedPrice || 425_000,
+      pricePrediction: priceMeta,
+      contracted: false,
+    });
+  });
+
 // Enforce open slots: only top N priced, rest min salary
 // Treat expiring contracts as open roster spots for auction year
 const teamCapsForOpenSlots = teamCapSituations.map(tc => ({

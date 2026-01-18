@@ -1497,9 +1497,16 @@ const serializedConfig = JSON.stringify({
               <th scope="col" data-column="ou" class="coach-col" style="display:none">O/U</th>
               <th scope="col" data-column="weather" class="coach-col" style="display:none">Weather</th>
               {trendWeeks.map(week => (
-                <th scope="col" data-column={`trend-${week}`} class="coach-col trend-header" style="display:none">W{week}</th>
+                <th scope="col" data-column={`trend-${week}`} class="coach-col trend-week-col trend-header" style="display:none">W{week}</th>
               ))}
-              <th scope="col" data-column="avgRecent" class="coach-col" style="display:none; text-align: right;">Trend</th>
+              <th scope="col" data-column="avgRecent" class="coach-col trend-toggle-header" style="display:none; text-align: right;">
+                <button type="button" class="trend-toggle-btn" id="trendToggleBtn" title="Show/hide weekly scores">
+                  <svg class="trend-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <span>Trend</span>
+              </th>
               <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">Avg</th>
               <th scope="col" data-column="oppAvg" class="coach-col" style="display:none">Opp Avg</th>
               <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;">Proj</th>
@@ -1709,7 +1716,7 @@ const serializedConfig = JSON.stringify({
                   const isWorse = !isNaN(score) && !isNaN(avg) && score < avg;
 
                   return (
-                    <td data-label={`Wk ${scoreData.week}`} data-column={`trend-${scoreData.week}`} class="coach-col trend-cell" style="display:none">
+                    <td data-label={`Wk ${scoreData.week}`} data-column={`trend-${scoreData.week}`} class="coach-col trend-week-col trend-cell" style="display:none">
                       <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px;">
                         {scoreData.score}
                         {isBetter && <span style="color: #22c55e; font-size: 0.8rem;">↑</span>}
@@ -2306,8 +2313,6 @@ const serializedConfig = JSON.stringify({
   justify-content: center;
   align-items: center;
   background-color: var(--card-bg-color);
-  box-shadow: var(--box-shadow-lg);
-  border-radius: 1rem;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -3741,9 +3746,14 @@ const serializedConfig = JSON.stringify({
     padding: 0.75rem .5rem .5rem;
     box-shadow: var(--shadow-inset-md);
     margin-left: auto;
-    margin-top: -2rem;
+    margin-top: -1.25rem;
   }
 
+   @media (min-width: 640px) {
+    .mode-toggle {
+          margin-top: -2rem;
+    }
+  }
   .mode-btn {
     display: flex;
     align-items: center;
@@ -3837,17 +3847,17 @@ const serializedConfig = JSON.stringify({
 
   :global(.rank-badge) {
     display: inline-block;
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
+    padding: .12rem .75rem;
+    border-radius: .5rem;
     font-weight: 700;
     font-size: 0.75rem;
     color: #fff;
   }
 
-  :global(.rank-tier-4) { background-color: #10b981; } /* Rank 25-32 (Best Matchup) */
-  :global(.rank-tier-3) { background-color: #84cc16; } /* Rank 17-24 (Good) */
-  :global(.rank-tier-2) { background-color: #f97316; } /* Rank 9-16 (Bad) */
-  :global(.rank-tier-1) { background-color: #ef4444; } /* Rank 1-8 (Worst Matchup) */
+  :global(.rank-tier-4) { background-color: #10b981; border: 1px solid #079767; } /* Rank 25-32 (Best Matchup) */
+  :global(.rank-tier-3) { background-color: #99e625; border: 1px solid #6bab0c; color: #365705; } /* Rank 17-24 (Good) */
+  :global(.rank-tier-2) { background-color: #ff710f; border: 1px solid #ed6100;} /* Rank 9-16 (Bad) */
+  :global(.rank-tier-1) { background-color: #ef4444; border: 1px solid #c01c1c; } /* Rank 1-8 (Worst Matchup) */
 
   :global(.vs-at) {
     font-size: 0.75rem;
@@ -3935,6 +3945,36 @@ const serializedConfig = JSON.stringify({
     min-width: 40px;
   }
 
+  :global(.trend-toggle-header) {
+    min-width: 70px;
+  }
+
+  :global(.trend-toggle-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    margin-right: 4px;
+    border-radius: 4px;
+    color: var(--table-header-text-color, #94a3b8);
+    transition: background-color 0.15s ease, transform 0.2s ease;
+  }
+
+  :global(.trend-toggle-btn:hover) {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  :global(.trend-toggle-btn .trend-arrow) {
+    transition: transform 0.2s ease;
+  }
+
+  :global(.trend-toggle-btn.expanded .trend-arrow) {
+    transform: rotate(180deg);
+  }
+
   /* Roster Controls */
   .roster-controls {
     display: flex;
@@ -3951,11 +3991,6 @@ const serializedConfig = JSON.stringify({
       flex-direction: column;
       align-items: stretch;
       gap: 0.75rem;
-    }
-
-    .mode-toggle {
-      width: 100%;
-      justify-content: center;
     }
 
     .clear-all-tags-btn {
@@ -4606,6 +4641,30 @@ const serializedConfig = JSON.stringify({
       modeToggleContainer.style.display = 'flex';
     }
 
+    // Trend weeks toggle state
+    let trendWeeksExpanded = localStorage.getItem('trendWeeksExpanded') === 'true';
+
+    function updateTrendWeeksVisibility(mode) {
+      const trendWeekCols = document.querySelectorAll('.trend-week-col');
+      const trendToggleBtn = document.getElementById('trendToggleBtn');
+
+      // Trend weeks only visible when: coach mode AND expanded
+      const shouldShow = mode === 'coach' && trendWeeksExpanded;
+      trendWeekCols.forEach(col => col.style.display = shouldShow ? 'table-cell' : 'none');
+
+      // Update toggle button state
+      if (trendToggleBtn) {
+        trendToggleBtn.classList.toggle('expanded', trendWeeksExpanded);
+      }
+    }
+
+    function toggleTrendWeeks() {
+      trendWeeksExpanded = !trendWeeksExpanded;
+      localStorage.setItem('trendWeeksExpanded', trendWeeksExpanded.toString());
+      const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
+      updateTrendWeeksVisibility(currentMode);
+    }
+
     function setMode(mode) {
       modeBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
@@ -4616,14 +4675,17 @@ const serializedConfig = JSON.stringify({
         rosterPage.classList.toggle('gm-mode', mode === 'gm');
       }
 
-      // Toggle Columns
-      const coachCols = document.querySelectorAll('.coach-col');
+      // Toggle Columns (exclude trend-week-col from regular coach handling)
+      const coachCols = document.querySelectorAll('.coach-col:not(.trend-week-col)');
       const gmCols = document.querySelectorAll('.gm-col');
       const gmRows = document.querySelectorAll('.gm-row');
 
       coachCols.forEach(col => col.style.display = mode === 'coach' ? 'table-cell' : 'none');
       gmCols.forEach(col => col.style.display = mode === 'gm' ? 'table-cell' : 'none');
       gmRows.forEach(row => row.style.display = mode === 'gm' ? 'table-row' : 'none');
+
+      // Handle trend weeks visibility separately
+      updateTrendWeeksVisibility(mode);
 
       // Save preference
       localStorage.setItem('rosterViewMode', mode);
@@ -4637,6 +4699,12 @@ const serializedConfig = JSON.stringify({
     modeBtns.forEach(btn => {
       btn.addEventListener('click', () => setMode(btn.dataset.mode));
     });
+
+    // Trend toggle button handler
+    const trendToggleBtn = document.getElementById('trendToggleBtn');
+    if (trendToggleBtn) {
+      trendToggleBtn.addEventListener('click', toggleTrendWeeks);
+    }
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -5382,7 +5450,7 @@ const serializedConfig = JSON.stringify({
                           isWorse ? '<span style="color: #ef4444; font-size: 0.8rem;">↓</span>' : '';
 
             return `
-              <td data-label="Wk ${scoreData.week}" data-column="trend-${scoreData.week}" class="coach-col trend-cell" style="display:none">
+              <td data-label="Wk ${scoreData.week}" data-column="trend-${scoreData.week}" class="coach-col trend-week-col trend-cell" style="display:none">
                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px;">
                   ${scoreData.score}
                   ${arrow}
@@ -6134,14 +6202,17 @@ const serializedConfig = JSON.stringify({
         rosterPageEl.classList.toggle('gm-mode', currentMode === 'gm');
       }
 
-      // Update column visibility
-      const coachCols = document.querySelectorAll('.coach-col');
+      // Update column visibility (exclude trend-week-col from regular coach handling)
+      const coachCols = document.querySelectorAll('.coach-col:not(.trend-week-col)');
       const gmCols = document.querySelectorAll('.gm-col');
       const gmRows = document.querySelectorAll('.gm-row');
 
       coachCols.forEach(col => col.style.display = currentMode === 'coach' ? 'table-cell' : 'none');
       gmCols.forEach(col => col.style.display = currentMode === 'gm' ? 'table-cell' : 'none');
       gmRows.forEach(row => row.style.display = currentMode === 'gm' ? 'table-row' : 'none');
+
+      // Handle trend weeks visibility separately
+      updateTrendWeeksVisibility(currentMode);
 
       renderDeadMoney(seasonData, currentTeam);
 
