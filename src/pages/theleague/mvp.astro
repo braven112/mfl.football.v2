@@ -333,7 +333,7 @@ const getNflLogo = (team) => {
                                   onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
                                 />
                                 <div>
-                                  <h2>{player.name}</h2>
+                                  <h2 class="player-info__headline">{player.name}</h2>
                                   <p class="mvp-meta">
                                     {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
                                     <span>{player.position}</span>
@@ -756,7 +756,7 @@ const getNflLogo = (team) => {
     border: 1px solid #d7dce3;
     border-radius: 1rem;
     padding: 1.25rem;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -788,6 +788,9 @@ const getNflLogo = (team) => {
     align-items: center;
     gap: 0.75rem;
     width: 100%;
+  }
+  .player-info__headline {
+    min-width: 240px;
   }
 
   .player-headshot {
