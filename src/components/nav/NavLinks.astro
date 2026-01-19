@@ -1,0 +1,647 @@
+---
+/**
+ * NavLinks Component
+ *
+ * Scrollable navigation links section for the unified navigation drawer.
+ * Renders grouped sections with section titles, icons, and visibility logic.
+ *
+ * Features:
+ * - Scrollable middle section (fills space between header and footer)
+ * - Grouped sections with visual separation
+ * - Active state highlighting for current page
+ * - Collapsed mode with icon-only display and tooltips
+ * - Visibility filtering (admin, owner, league-specific)
+ * - External link indicators
+ * - Touch-friendly targets (44px minimum)
+ * - Dark mode support via design tokens
+ *
+ * @example
+ * <NavLinks
+ *   sections={navConfig.sections}
+ *   league="theleague"
+ *   currentPath="/theleague/rosters"
+ *   isCollapsed={false}
+ *   franchiseId="0001"
+ * />
+ */
+
+import type { NavLinksProps, NavSection, NavLink, LeagueSlug } from '../../types/nav';
+
+interface Props extends NavLinksProps {
+  /** Admin franchise IDs for visibility checks */
+  adminFranchiseIds?: string[];
+}
+
+const {
+  sections,
+  league,
+  currentPath = '',
+  isCollapsed = false,
+  franchiseId,
+  adminFranchiseIds = [],
+} = Astro.props;
+
+/**
+ * Get the league path prefix
+ */
+function getLeaguePrefix(leagueSlug: LeagueSlug): string {
+  return leagueSlug === 'afl' ? '/afl-fantasy' : '/theleague';
+}
+
+/**
+ * Check if a link should be visible based on visibility rules
+ */
+function isLinkVisible(link: NavLink, franchiseId?: string, adminIds: string[] = []): boolean {
+  // Check visibility restriction
+  if (link.visibility === 'admin') {
+    return !!franchiseId && adminIds.includes(franchiseId);
+  }
+  if (link.visibility === 'owner') {
+    return !!franchiseId;
+  }
+  return true; // public visibility (default)
+}
+
+/**
+ * Check if a section should be visible
+ */
+function isSectionVisible(section: NavSection, league: LeagueSlug, franchiseId?: string, adminIds: string[] = []): boolean {
+  // Check league restriction
+  if (section.leagueOnly && section.leagueOnly !== league) {
+    return false;
+  }
+
+  // Check section-level visibility
+  if (section.visibility === 'admin') {
+    return !!franchiseId && adminIds.includes(franchiseId);
+  }
+  if (section.visibility === 'owner') {
+    return !!franchiseId;
+  }
+
+  // Check if section has any visible links
+  const visibleLinks = section.links.filter((link) => {
+    // Check link's league restriction
+    if (link.leagueOnly && link.leagueOnly !== league) {
+      return false;
+    }
+    return isLinkVisible(link, franchiseId, adminIds);
+  });
+
+  return visibleLinks.length > 0;
+}
+
+/**
+ * Resolve the final href for a link
+ */
+function resolveHref(link: NavLink, league: LeagueSlug): string {
+  // External URL takes precedence
+  if (link.url) {
+    return link.url;
+  }
+
+  // URL template (would need variable substitution)
+  if (link.urlTemplate) {
+    return link.urlTemplate;
+  }
+
+  // Internal path - prepend league prefix
+  if (link.path) {
+    const prefix = getLeaguePrefix(league);
+    return `${prefix}${link.path}`;
+  }
+
+  return '#';
+}
+
+/**
+ * Get the display label for a link (supports AFL override)
+ */
+function getLabel(link: NavLink, league: LeagueSlug): string {
+  if (league === 'afl' && link.labelAFL) {
+    return link.labelAFL;
+  }
+  return link.label;
+}
+
+/**
+ * Get the icon for a link (supports AFL override)
+ */
+function getIcon(link: NavLink, league: LeagueSlug): string {
+  if (league === 'afl' && link.iconAFL) {
+    return link.iconAFL;
+  }
+  return link.icon;
+}
+
+/**
+ * Check if a link is active based on current path (including query string)
+ *
+ * Priority:
+ * 1. Exact match (path + query string) - highest priority
+ * 2. If link has query params, require exact match (don't match base path only)
+ * 3. If link has no query params, match base path only
+ */
+function isActive(link: NavLink, currentPath: string, league: LeagueSlug): boolean {
+  const href = resolveHref(link, league);
+
+  // Don't mark external links as active
+  if (link.external || link.url) {
+    return false;
+  }
+
+  // Exact match (path + query string)
+  if (currentPath === href) {
+    return true;
+  }
+
+  // Check if the link has query params
+  const linkHasQueryParams = href.includes('?');
+
+  // If link has query params, require exact match (already checked above)
+  if (linkHasQueryParams) {
+    return false;
+  }
+
+  // For links without query params, match if current path starts with link path
+  // but only if current path has no query string OR has different query string
+  const currentBasePath = currentPath.split('?')[0];
+  const currentHasQueryParams = currentPath.includes('?');
+
+  // If current page has query params, don't match against a link without query params
+  // This prevents /rosters from being active when on /rosters?view=nextyear
+  if (currentHasQueryParams) {
+    return false;
+  }
+
+  return currentBasePath === href;
+}
+
+/**
+ * Filter sections and links based on visibility rules
+ */
+function getVisibleSections(): NavSection[] {
+  return sections
+    .filter((section) => isSectionVisible(section, league, franchiseId, adminFranchiseIds))
+    .map((section) => ({
+      ...section,
+      links: section.links.filter((link) => {
+        // Check link's league restriction
+        if (link.leagueOnly && link.leagueOnly !== league) {
+          return false;
+        }
+        return isLinkVisible(link, franchiseId, adminFranchiseIds);
+      }),
+    }));
+}
+
+const visibleSections = getVisibleSections();
+---
+
+<nav
+  class:list={['nav-links', { 'nav-links--collapsed': isCollapsed }]}
+  aria-label="Main navigation"
+>
+  <ul class="nav-links__list" role="list">
+    {visibleSections.map((section, sectionIndex) => (
+      <li class="nav-links__section" key={section.id}>
+        {/* Section title - hidden in collapsed mode */}
+        <h2
+          class:list={[
+            'nav-links__section-title',
+            { 'visually-hidden': isCollapsed },
+          ]}
+          id={`nav-section-${section.id}`}
+        >
+          {section.label}
+        </h2>
+
+        <ul
+          class="nav-links__section-links"
+          role="list"
+          aria-labelledby={`nav-section-${section.id}`}
+        >
+          {section.links.map((link) => {
+            const href = resolveHref(link, league);
+            const label = getLabel(link, league);
+            const icon = getIcon(link, league);
+            const active = isActive(link, currentPath, league);
+            const isExternal = link.external || !!link.url;
+            const hasQueryParams = href.includes('?');
+
+            return (
+              <li class="nav-links__item" key={link.id}>
+                <a
+                  href={href}
+                  class:list={[
+                    'nav-links__link',
+                    { 'nav-links__link--active': active },
+                  ]}
+                  {...(isExternal && {
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                  })}
+                  {...(hasQueryParams && { 'data-astro-reload': true })}
+                  aria-current={active ? 'page' : undefined}
+                  data-tooltip={isCollapsed ? label : undefined}
+                >
+                  {/* Icon */}
+                  <span class="nav-links__icon" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                      <use href={`/assets/icons/sprite.svg#icon-${icon}`} />
+                    </svg>
+                  </span>
+
+                  {/* Label - hidden in collapsed mode but accessible */}
+                  <span
+                    class:list={[
+                      'nav-links__label',
+                      { 'visually-hidden': isCollapsed },
+                    ]}
+                  >
+                    {label}
+                  </span>
+
+                  {/* Badge (if present) */}
+                  {link.badge && link.badge > 0 && (
+                    <span
+                      class="nav-links__badge"
+                      aria-label={`${link.badge} notifications`}
+                    >
+                      {link.badge > 99 ? '99+' : link.badge}
+                    </span>
+                  )}
+
+                  {/* External link indicator */}
+                  {isExternal && !isCollapsed && (
+                    <span class="nav-links__external" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </span>
+                  )}
+                </a>
+
+                {/* Tooltip (shown in collapsed mode on hover) */}
+                {isCollapsed && (
+                  <span class="nav-links__tooltip" role="tooltip">
+                    {label}
+                    {isExternal && (
+                      <span class="nav-links__tooltip-external">(opens in new tab)</span>
+                    )}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Section separator - not after last section */}
+        {sectionIndex < visibleSections.length - 1 && (
+          <hr class="nav-links__separator" aria-hidden="true" />
+        )}
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  /* ============================================
+   * NAV LINKS CONTAINER
+   * Scrollable section that fills remaining space
+   * ============================================ */
+  .nav-links {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--nav-spacing-lg, 16px) var(--nav-spacing-lg, 16px);
+
+    /* Custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--nav-scrollbar-thumb, #d1d5db) var(--nav-scrollbar-track, transparent);
+  }
+
+  .nav-links::-webkit-scrollbar {
+    width: var(--nav-scrollbar-width, 6px);
+  }
+
+  .nav-links::-webkit-scrollbar-track {
+    background: var(--nav-scrollbar-track, transparent);
+  }
+
+  .nav-links::-webkit-scrollbar-thumb {
+    background: var(--nav-scrollbar-thumb, #d1d5db);
+    border-radius: var(--nav-border-radius-sm, 4px);
+  }
+
+  .nav-links::-webkit-scrollbar-thumb:hover {
+    background: var(--nav-scrollbar-thumb-hover, #9ca3af);
+  }
+
+  /* ============================================
+   * COLLAPSED MODE
+   * ============================================ */
+  .nav-links--collapsed {
+    padding: var(--nav-spacing-sm, 8px) var(--nav-spacing-sm, 8px);
+  }
+
+  .nav-links--collapsed .nav-links__section-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nav-links--collapsed .nav-links__link {
+    width: var(--nav-touch-target-min, 44px);
+    height: var(--nav-touch-target-min, 44px);
+    justify-content: center;
+    padding: 0;
+    border-radius: var(--nav-border-radius-md, 8px);
+  }
+
+  /* Hide section titles in collapsed mode */
+  .nav-links--collapsed .nav-links__section-title {
+    display: none;
+  }
+
+
+  /* ============================================
+   * LISTS
+   * ============================================ */
+  .nav-links__list,
+  .nav-links__section-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* ============================================
+   * SECTION
+   * ============================================ */
+  .nav-links__section {
+    margin-bottom: 20px;
+  }
+
+  .nav-links__section:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ============================================
+   * SECTION TITLE
+   * ============================================ */
+  .nav-links__section-title {
+    font-size: var(--nav-section-font-size, 0.75rem);
+    font-weight: var(--nav-section-font-weight, 700);
+    color: var(--nav-section-color, #b22222);
+    text-transform: uppercase;
+    letter-spacing: var(--nav-section-letter-spacing, 0.05em);
+    margin: 0 0 var(--nav-section-margin-bottom, 12px) 0;
+    padding: 0 var(--nav-spacing-sm, 8px);
+    line-height: 1.5;
+  }
+
+  /* ============================================
+   * LINK ITEM
+   * ============================================ */
+  .nav-links__item {
+    position: relative;
+    margin-bottom: 4px;
+  }
+
+  .nav-links__item:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ============================================
+   * LINK
+   * ============================================ */
+  .nav-links__link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 8px;
+    min-height: 44px;
+    color: var(--nav-text);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: var(--nav-hover-transition);
+  }
+
+  .nav-links__link:hover {
+    background: var(--nav-hover-bg);
+    color: var(--nav-hover-text);
+  }
+
+  .nav-links__link:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring);
+    outline-offset: var(--nav-focus-ring-offset);
+  }
+
+  /* Active link */
+  .nav-links__link--active {
+    background: var(--color-primary, #1c497c);
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .nav-links__link--active:hover {
+    background: var(--color-primary, #1c497c);
+    color: #ffffff;
+  }
+
+  /* Override icon color for active state */
+  .nav-links__link--active .nav-links__icon :global(svg) {
+    fill: #ffffff;
+  }
+
+  /* ============================================
+   * ICON
+   * ============================================ */
+  .nav-links__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-links__icon :global(svg) {
+    width: 24px;
+    height: 24px;
+    fill: var(--color-primary, #1c497c);
+  }
+
+  .nav-links--collapsed .nav-links__icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .nav-links--collapsed .nav-links__icon :global(svg) {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* ============================================
+   * LABEL
+   * ============================================ */
+  .nav-links__label {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ============================================
+   * BADGE
+   * ============================================ */
+  .nav-links__badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--nav-badge-size);
+    height: var(--nav-badge-size);
+    padding: 0 var(--nav-spacing-xs);
+    background: var(--nav-badge-bg);
+    color: var(--nav-badge-text);
+    font-size: var(--nav-badge-font-size);
+    font-weight: var(--nav-badge-font-weight);
+    border-radius: calc(var(--nav-badge-size) / 2);
+    flex-shrink: 0;
+  }
+
+  /* In collapsed mode, position badge absolutely */
+  .nav-links--collapsed .nav-links__badge {
+    position: absolute;
+    top: var(--nav-spacing-xs);
+    right: var(--nav-spacing-xs);
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.625rem;
+  }
+
+  /* ============================================
+   * EXTERNAL LINK INDICATOR
+   * ============================================ */
+  .nav-links__external {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--nav-text-muted);
+    opacity: 0.6;
+  }
+
+  .nav-links__external svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .nav-links__link:hover .nav-links__external {
+    opacity: 1;
+  }
+
+  /* ============================================
+   * TOOLTIP (collapsed mode)
+   * ============================================ */
+  .nav-links__tooltip {
+    position: absolute;
+    left: calc(100% + var(--nav-spacing-sm));
+    top: 50%;
+    transform: translateY(-50%);
+    padding: var(--nav-spacing-sm) var(--nav-spacing-md);
+    background: var(--nav-tooltip-bg);
+    color: var(--nav-tooltip-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: var(--nav-border-radius-sm);
+    box-shadow: var(--nav-tooltip-shadow);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: calc(var(--nav-z-drawer) + 10);
+  }
+
+  .nav-links__tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--nav-tooltip-bg);
+  }
+
+  .nav-links__item:hover .nav-links__tooltip,
+  .nav-links__link:focus-visible + .nav-links__tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .nav-links__tooltip-external {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--nav-text-muted);
+    font-weight: 400;
+    margin-top: var(--nav-spacing-xs);
+  }
+
+  /* ============================================
+   * SEPARATOR
+   * ============================================ */
+  .nav-links__separator {
+    border: none;
+    border-top: 1px solid var(--nav-border-subtle);
+    margin: var(--nav-spacing-lg) 0;
+  }
+
+  .nav-links--collapsed .nav-links__separator {
+    margin: var(--nav-spacing-md) 0;
+  }
+
+  /* ============================================
+   * VISUALLY HIDDEN (accessible hiding)
+   * ============================================ */
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* ============================================
+   * REDUCED MOTION
+   * ============================================ */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-links__link,
+    .nav-links__tooltip {
+      transition: none;
+    }
+  }
+
+  /* ============================================
+   * TOUCH DEVICE ADJUSTMENTS
+   * Ensure touch targets are at least 44x44px
+   * ============================================ */
+  @media (pointer: coarse) {
+    .nav-links__link {
+      min-height: var(--nav-touch-target-min);
+      padding-top: var(--nav-spacing-md);
+      padding-bottom: var(--nav-spacing-md);
+    }
+  }
+</style>

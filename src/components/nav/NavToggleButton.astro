@@ -1,0 +1,204 @@
+---
+/**
+ * NavToggleButton Component
+ *
+ * Hamburger menu button that transforms to an X when active.
+ * Based on the existing pattern in Header.astro but extracted for reuse.
+ *
+ * Features:
+ * - CSS-only hamburger to X transformation
+ * - Accessible: aria-expanded, aria-label, aria-controls
+ * - Touch-friendly target size (44x44px minimum)
+ * - Smooth cubic-bezier animations
+ * - Dark mode support via design tokens
+ *
+ * @component
+ * @example
+ * <NavToggleButton
+ *   isOpen={false}
+ *   ariaLabel="Toggle navigation menu"
+ *   controlsId="nav-drawer"
+ * />
+ */
+
+import type { NavToggleButtonProps } from '../../types/nav';
+
+interface Props extends NavToggleButtonProps {
+  /** ID of the element this button controls (for aria-controls) */
+  controlsId?: string;
+  /** Additional CSS classes */
+  class?: string;
+}
+
+const {
+  isOpen = false,
+  ariaLabel = 'Toggle menu',
+  controlsId = 'nav-drawer',
+  class: className,
+} = Astro.props;
+---
+
+<button
+  type="button"
+  class:list={[
+    'nav-toggle-btn',
+    { 'nav-toggle-btn--open': isOpen },
+    className,
+  ]}
+  id="nav-toggle-btn"
+  aria-label={ariaLabel}
+  aria-expanded={isOpen ? 'true' : 'false'}
+  aria-controls={controlsId}
+  data-nav-toggle
+>
+  <span class="nav-toggle-btn__box" aria-hidden="true">
+    <span class="nav-toggle-btn__inner"></span>
+  </span>
+</button>
+
+<style>
+  /* ==============================================
+   * NAV TOGGLE BUTTON - Base Styles
+   * ============================================== */
+  .nav-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--nav-touch-target-min, 44px);
+    height: var(--nav-touch-target-min, 44px);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--nav-spacing-sm, 8px);
+    border-radius: var(--nav-border-radius-md, 8px);
+    transition: background-color var(--nav-transition-duration, 0.3s) var(--nav-transition-timing, cubic-bezier(0.4, 0, 0.2, 1));
+    position: relative;
+    z-index: var(--nav-z-close-btn, 970);
+  }
+
+  .nav-toggle-btn:hover {
+    background: var(--nav-hover-bg, rgba(0, 0, 0, 0.05));
+  }
+
+  .nav-toggle-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  /* ==============================================
+   * HAMBURGER BOX - Container for lines
+   * ============================================== */
+  .nav-toggle-btn__box {
+    width: 24px;
+    height: 18px;
+    display: inline-block;
+    position: relative;
+  }
+
+  /* ==============================================
+   * HAMBURGER INNER - The three lines
+   * ============================================== */
+  .nav-toggle-btn__inner {
+    display: block;
+    top: 50%;
+    margin-top: -1.5px;
+  }
+
+  .nav-toggle-btn__inner,
+  .nav-toggle-btn__inner::before,
+  .nav-toggle-btn__inner::after {
+    width: 24px;
+    height: 3px;
+    background-color: var(--nav-text, #333333);
+    border-radius: 1px;
+    position: absolute;
+    transition:
+      transform var(--nav-transition-duration, 0.3s) var(--nav-transition-timing, cubic-bezier(0.4, 0, 0.2, 1)),
+      opacity var(--nav-transition-duration, 0.3s) var(--nav-transition-timing, cubic-bezier(0.4, 0, 0.2, 1)),
+      background-color var(--nav-transition-duration, 0.3s) var(--nav-transition-timing, cubic-bezier(0.4, 0, 0.2, 1));
+  }
+
+  .nav-toggle-btn__inner::before,
+  .nav-toggle-btn__inner::after {
+    content: '';
+    display: block;
+  }
+
+  .nav-toggle-btn__inner::before {
+    top: -8px;
+  }
+
+  .nav-toggle-btn__inner::after {
+    bottom: -8px;
+  }
+
+  /* ==============================================
+   * HOVER STATE
+   * ============================================== */
+  .nav-toggle-btn:hover .nav-toggle-btn__inner,
+  .nav-toggle-btn:hover .nav-toggle-btn__inner::before,
+  .nav-toggle-btn:hover .nav-toggle-btn__inner::after {
+    background-color: var(--nav-active-text, #1c497c);
+  }
+
+  /* ==============================================
+   * OPEN STATE - Hide visually but keep in DOM
+   * Uses opacity and pointer-events to preserve layout
+   * and maintain keyboard accessibility
+   * ============================================== */
+  .nav-toggle-btn--open {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ==============================================
+   * DARK MODE
+   * ============================================== */
+  :global(.dark) .nav-toggle-btn__inner,
+  :global(.dark) .nav-toggle-btn__inner::before,
+  :global(.dark) .nav-toggle-btn__inner::after {
+    background-color: var(--nav-text);
+  }
+
+  :global(.dark) .nav-toggle-btn:hover .nav-toggle-btn__inner,
+  :global(.dark) .nav-toggle-btn:hover .nav-toggle-btn__inner::before,
+  :global(.dark) .nav-toggle-btn:hover .nav-toggle-btn__inner::after {
+    background-color: var(--nav-active-text);
+  }
+
+  /* ==============================================
+   * REDUCED MOTION
+   * ============================================== */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-toggle-btn,
+    .nav-toggle-btn__inner,
+    .nav-toggle-btn__inner::before,
+    .nav-toggle-btn__inner::after {
+      transition: none;
+    }
+  }
+
+  /* ==============================================
+   * BREADCRUMB BAR VARIANT
+   * When used in the breadcrumb bar, use light colors
+   * ============================================== */
+  :global(.breadcrumb-bar) .nav-toggle-btn__inner,
+  :global(.breadcrumb-bar) .nav-toggle-btn__inner::before,
+  :global(.breadcrumb-bar) .nav-toggle-btn__inner::after {
+    background-color: var(--nav-bg, #ffffff);
+  }
+
+  :global(.breadcrumb-bar) .nav-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  :global(.breadcrumb-bar) .nav-toggle-btn:hover .nav-toggle-btn__inner,
+  :global(.breadcrumb-bar) .nav-toggle-btn:hover .nav-toggle-btn__inner::before,
+  :global(.breadcrumb-bar) .nav-toggle-btn:hover .nav-toggle-btn__inner::after {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+
+  :global(.breadcrumb-bar) .nav-toggle-btn:focus-visible {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+</style>

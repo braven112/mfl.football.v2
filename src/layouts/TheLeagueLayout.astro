@@ -1,6 +1,30 @@
 ---
+/**
+ * TheLeague Layout
+ *
+ * Main layout for TheLeague pages. Includes:
+ * - Header with breadcrumb bar and desktop nav icons
+ * - NavDrawer component for full navigation
+ * - Footer
+ * - Page wrapper with push behavior on desktop when drawer is open
+ *
+ * Handles:
+ * - myteam URL parameter parsing and cookie setting
+ * - Team info loading from config
+ * - League context detection
+ * - Navigation drawer integration
+ */
+
+import { ViewTransitions } from 'astro:transitions';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
+import NavDrawer from '../components/nav/NavDrawer.astro';
+import { getLeagueContext } from '../utils/league-context';
+import { getCurrentLeagueYear } from '../utils/league-year';
+import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
+import { getVisibleSections, parseMyTeamFromUrl } from '../utils/nav-utils';
+import type { NavTeamInfo, LeagueSlug } from '../types/nav';
+import leagueConfigData from '../data/theleague.config.json';
 
 export interface Props {
 	title: string;
@@ -11,6 +35,77 @@ export interface Props {
 }
 
 const { title, host, leagueId, year, staticHost } = Astro.props as Props;
+
+// Get league context from URL
+const leagueContext = getLeagueContext(Astro.url);
+
+// Determine the MFL host to use
+const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'www49.myfantasyleague.com';
+const mflHost = (host || envHost).replace(/^https?:\/\//, '').replace(/\/+$/, '');
+
+// Determine the year
+const envYear = (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) || getCurrentLeagueYear().toString();
+const currentYear = (year || envYear).toString();
+
+// Check for myteam in URL and set cookie if present
+const myteamParam = parseMyTeamFromUrl(Astro.url);
+if (myteamParam) {
+	// Set the myteam cookie via response headers
+	Astro.cookies.set('myteam', myteamParam, {
+		path: '/',
+		maxAge: 60 * 60 * 24 * 365, // 1 year
+		sameSite: 'lax',
+	});
+	// Also set the league for this team
+	Astro.cookies.set('myteam-league', 'theleague', {
+		path: '/',
+		maxAge: 60 * 60 * 24 * 365,
+		sameSite: 'lax',
+	});
+}
+
+// Get myteam from cookie
+const myteam = myteamParam || Astro.cookies.get('myteam')?.value || null;
+
+// Build team info from config if myteam is set
+let teamInfo: NavTeamInfo | null = null;
+if (myteam) {
+	// Find the team in the config
+	const teamData = leagueConfigData.teams.find(
+		(t: { franchiseId: string }) => t.franchiseId === myteam
+	);
+
+	if (teamData) {
+		teamInfo = {
+			franchiseId: myteam,
+			teamName: teamData.name,
+			iconUrl: teamData.icon || null,
+			ownerName: null, // Could be added to config if needed
+			league: 'theleague' as LeagueSlug,
+		};
+	} else {
+		// Team not found in config, use minimal info
+		teamInfo = {
+			franchiseId: myteam,
+			teamName: `Team ${myteam}`,
+			iconUrl: null,
+			ownerName: null,
+			league: 'theleague' as LeagueSlug,
+		};
+	}
+}
+
+// Get current path for active link detection (include query string for exact matching)
+const currentPath = Astro.url.pathname + Astro.url.search;
+
+// Determine league slug for nav
+const league: LeagueSlug = leagueContext.slug === 'afl-fantasy' ? 'afl' : 'theleague';
+
+// Get admin franchise IDs
+const adminFranchiseIds = getAdminFranchiseIds();
+
+// Get visible navigation sections
+const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 ---
 
 <!DOCTYPE html>
@@ -24,18 +119,34 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 		<title>{title}</title>
+		<ViewTransitions />
 	</head>
 	<body>
-		<TheLeagueHeader
-			host={host}
-			leagueId={leagueId}
-			year={year}
-			staticHost={staticHost}
+		<!-- Page wrapper for push behavior when drawer is open on desktop -->
+		<div class="page-wrapper" id="page-wrapper">
+			<TheLeagueHeader
+				host={host}
+				leagueId={leagueId}
+				year={year}
+				staticHost={staticHost}
+			/>
+			<main>
+				<slot />
+			</main>
+			<TheLeagueFooter />
+		</div>
+
+		<!-- Navigation Drawer - outside page-wrapper for overlay behavior -->
+		<NavDrawer
+			sections={sections}
+			league={league}
+			currentPath={currentPath}
+			teamInfo={teamInfo}
+			host={mflHost}
+			year={currentYear}
+			leagueId={leagueContext.leagueId}
+			adminFranchiseIds={adminFranchiseIds}
 		/>
-		<main>
-			<slot />
-		</main>
-		<TheLeagueFooter />
 	</body>
 </html>
 <style>
@@ -108,4 +219,145 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 	:global(.table-wrapper )  {
     overflow-x: auto;
   }
+
+	/* ==============================================
+	 * PAGE WRAPPER - For push behavior with NavDrawer
+	 * ============================================== */
+	.page-wrapper {
+		transition: margin-right var(--nav-transition, 0.3s cubic-bezier(0.4, 0, 0.2, 1));
+		min-height: 100vh;
+	}
+
+	/* Desktop push behavior when drawer is open */
+	@media (min-width: 1024px) {
+		.page-wrapper.nav-open {
+			margin-right: var(--nav-width-expanded, 320px);
+		}
+
+		/* When drawer is open but collapsed to icon-only mode */
+		.page-wrapper.nav-open.nav-collapsed {
+			margin-right: var(--nav-width-collapsed, 64px);
+		}
+	}
+
+	/* Reduced motion support */
+	@media (prefers-reduced-motion: reduce) {
+		.page-wrapper {
+			transition: none;
+		}
+	}
+
+	/* ==============================================
+	 * VIEW TRANSITIONS - Subtle page transitions
+	 * ============================================== */
+
+	/* Default animation for page content - subtle fade */
+	::view-transition-old(root) {
+		animation: fade-out 150ms ease-out;
+	}
+
+	::view-transition-new(root) {
+		animation: fade-in 150ms ease-in;
+	}
+
+	@keyframes fade-out {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	/* Keep navigation drawer persistent during transitions */
+	.nav-drawer {
+		view-transition-name: nav-drawer;
+	}
+
+	::view-transition-old(nav-drawer),
+	::view-transition-new(nav-drawer) {
+		animation: none;
+	}
+
+	/* Reduced motion - disable animations */
+	@media (prefers-reduced-motion: reduce) {
+		::view-transition-old(root),
+		::view-transition-new(root) {
+			animation: none;
+		}
+	}
 </style>
+
+<script>
+	/**
+	 * Page Wrapper Sync Script
+	 *
+	 * Syncs the page-wrapper classes with the NavDrawer state.
+	 * Listens for drawer open/close and collapse/expand events.
+	 */
+
+	// Wait for the navDrawer API to be available
+	function initPageWrapperSync(): void {
+		const pageWrapper = document.getElementById('page-wrapper');
+		const drawer = document.getElementById('nav-drawer');
+
+		if (!pageWrapper || !drawer) {
+			return;
+		}
+
+		// Create a MutationObserver to watch for class changes on the drawer
+		const observer = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+					syncPageWrapperClasses();
+				}
+			}
+		});
+
+		// Start observing the drawer for class changes
+		observer.observe(drawer, {
+			attributes: true,
+			attributeFilter: ['class'],
+		});
+
+		// Function to sync page wrapper classes with drawer state
+		function syncPageWrapperClasses(): void {
+			const isOpen = drawer?.classList.contains('nav-drawer--open');
+			const isCollapsed = drawer?.classList.contains('nav-drawer--collapsed');
+
+			if (isOpen) {
+				pageWrapper?.classList.add('nav-open');
+			} else {
+				pageWrapper?.classList.remove('nav-open');
+			}
+
+			if (isCollapsed) {
+				pageWrapper?.classList.add('nav-collapsed');
+			} else {
+				pageWrapper?.classList.remove('nav-collapsed');
+			}
+		}
+
+		// Initial sync
+		syncPageWrapperClasses();
+	}
+
+	// Initialize when DOM is ready
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initPageWrapperSync);
+	} else {
+		initPageWrapperSync();
+	}
+
+	// Re-initialize after view transitions (Astro page navigation)
+	document.addEventListener('astro:page-load', initPageWrapperSync);
+</script>

@@ -1,0 +1,287 @@
+---
+/**
+ * LeagueSwitcher Component
+ *
+ * Toggle component for switching between AFL Fantasy and TheLeague.
+ * Implements smart routing to navigate to the equivalent page in the other league.
+ *
+ * Features:
+ * - Visual toggle showing both league options
+ * - Active state highlighting for current league
+ * - Smart routing: attempts to navigate to equivalent page, falls back to home
+ * - Accessible keyboard navigation
+ * - Collapsed mode support (icon-only)
+ *
+ * @component
+ * @example
+ * <LeagueSwitcher
+ *   currentLeague="theleague"
+ *   currentPath="/theleague/rosters"
+ *   isCollapsed={false}
+ * />
+ */
+
+import type { LeagueSwitcherProps } from '../../types/nav';
+
+interface Props extends LeagueSwitcherProps {
+  /** Whether the nav drawer is collapsed (icon-only mode) */
+  isCollapsed?: boolean;
+}
+
+const {
+  currentLeague,
+  currentPath,
+  isCollapsed = false,
+} = Astro.props;
+
+/**
+ * Get the equivalent route in the target league.
+ *
+ * Smart routing logic:
+ * 1. Extract the page path from current URL (e.g., /theleague/rosters -> /rosters)
+ * 2. Prepend the target league prefix
+ * 3. Return the target league home if path is just the root
+ *
+ * Note: Route existence validation happens client-side via nav-config.json
+ * or could be enhanced with a route map in the future.
+ */
+function getEquivalentRoute(path: string, targetLeague: 'theleague' | 'afl'): string {
+  const targetBase = targetLeague === 'afl' ? '/afl-fantasy' : '/theleague';
+  const sourceBase = targetLeague === 'afl' ? '/theleague' : '/afl-fantasy';
+
+  // Extract the page portion after the league prefix
+  let pagePath = '';
+  if (path.startsWith('/theleague')) {
+    pagePath = path.slice('/theleague'.length);
+  } else if (path.startsWith('/afl-fantasy')) {
+    pagePath = path.slice('/afl-fantasy'.length);
+  }
+
+  // If no page path or just root, return league home
+  if (!pagePath || pagePath === '/') {
+    return targetBase;
+  }
+
+  // Construct equivalent URL
+  return `${targetBase}${pagePath}`;
+}
+
+// Calculate target URLs for both leagues
+const theLeagueUrl = currentLeague === 'theleague'
+  ? currentPath
+  : getEquivalentRoute(currentPath, 'theleague');
+
+const aflUrl = currentLeague === 'afl'
+  ? currentPath
+  : getEquivalentRoute(currentPath, 'afl');
+
+// For collapsed mode, we only show an icon with tooltip
+const isTheLeagueActive = currentLeague === 'theleague';
+const isAflActive = currentLeague === 'afl';
+---
+
+<nav
+  class:list={['league-switcher', { 'league-switcher--collapsed': isCollapsed }]}
+  aria-label="Switch league"
+>
+  {isCollapsed ? (
+    <!-- Collapsed mode: single button that shows other league -->
+    <div class="league-switcher__collapsed-wrapper">
+      <a
+        href={isTheLeagueActive ? aflUrl : theLeagueUrl}
+        class="league-switcher__collapsed-btn"
+        aria-label={`Switch to ${isTheLeagueActive ? 'AFL Fantasy' : 'TheLeague'}`}
+      >
+        <svg class="league-switcher__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      </a>
+      <!-- Tooltip shown on hover -->
+      <span class="league-switcher__tooltip" role="tooltip">
+        {isTheLeagueActive ? 'AFL Fantasy' : 'TheLeague'}
+      </span>
+    </div>
+  ) : (
+    <!-- Expanded mode: pill toggle -->
+    <div class="league-switcher__pill">
+      <a
+        href={theLeagueUrl}
+        class:list={['league-switcher__option', { 'league-switcher__option--active': isTheLeagueActive }]}
+        aria-label={isTheLeagueActive ? 'TheLeague (current)' : 'Switch to TheLeague'}
+        aria-current={isTheLeagueActive ? 'page' : undefined}
+      >
+        <span class="league-switcher__abbrev">TL</span>
+      </a>
+      <a
+        href={aflUrl}
+        class:list={['league-switcher__option', { 'league-switcher__option--active': isAflActive }]}
+        aria-label={isAflActive ? 'AFL Fantasy (current)' : 'Switch to AFL Fantasy'}
+        aria-current={isAflActive ? 'page' : undefined}
+      >
+        <span class="league-switcher__abbrev">AFL</span>
+      </a>
+    </div>
+  )}
+</nav>
+
+<style>
+  .league-switcher {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Pill toggle container */
+  .league-switcher__pill {
+    display: flex;
+    align-items: center;
+    background: var(--nav-switcher-bg, #f3f4f6);
+    border: 1px solid var(--nav-switcher-border, #e5e7eb);
+    border-radius: 9999px;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  /* Individual option within the pill */
+  .league-switcher__option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--nav-spacing-sm, 8px) var(--nav-spacing-md, 12px);
+    border-radius: 9999px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    color: var(--nav-switcher-inactive-text, #6b7280);
+    transition: var(--nav-hover-transition);
+    min-width: var(--nav-touch-target-min, 44px);
+    min-height: calc(var(--nav-touch-target-min, 44px) - 8px);
+  }
+
+  .league-switcher__option:hover:not(.league-switcher__option--active) {
+    color: var(--nav-text, #333333);
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .league-switcher__option:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  /* Active state */
+  .league-switcher__option--active {
+    background: var(--nav-switcher-active-bg, #1c497c);
+    color: var(--nav-switcher-active-text, #ffffff);
+    cursor: default;
+  }
+
+  .league-switcher__abbrev {
+    line-height: 1;
+  }
+
+  /* Collapsed mode wrapper - for positioning tooltip */
+  .league-switcher--collapsed {
+    justify-content: center;
+  }
+
+  .league-switcher__collapsed-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .league-switcher__collapsed-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--nav-touch-target-min, 44px);
+    height: var(--nav-touch-target-min, 44px);
+    border-radius: var(--nav-border-radius-md, 8px);
+    color: var(--nav-text-muted, #6b7280);
+    transition: var(--nav-hover-transition);
+  }
+
+  .league-switcher__collapsed-btn:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+    color: var(--nav-text, #333333);
+  }
+
+  .league-switcher__collapsed-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  .league-switcher__icon {
+    width: var(--nav-icon-size, 24px);
+    height: var(--nav-icon-size, 24px);
+  }
+
+  /* Dark mode support */
+  :global(.dark) .league-switcher__pill {
+    background: var(--nav-switcher-bg);
+    border-color: var(--nav-switcher-border);
+  }
+
+  :global(.dark) .league-switcher__option {
+    color: var(--nav-switcher-inactive-text);
+  }
+
+  :global(.dark) .league-switcher__option:hover:not(.league-switcher__option--active) {
+    color: var(--nav-text);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  :global(.dark) .league-switcher__option--active {
+    background: var(--nav-switcher-active-bg);
+    color: var(--nav-switcher-active-text);
+  }
+
+  :global(.dark) .league-switcher__collapsed-btn {
+    color: var(--nav-text-muted);
+  }
+
+  :global(.dark) .league-switcher__collapsed-btn:hover {
+    background: var(--nav-hover-bg);
+    color: var(--nav-text);
+  }
+
+  /* Tooltip for collapsed mode (appears on hover) */
+  .league-switcher__tooltip {
+    position: absolute;
+    left: calc(100% + var(--nav-spacing-sm, 8px));
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--nav-tooltip-bg, #1f2937);
+    color: var(--nav-tooltip-text, #ffffff);
+    padding: var(--nav-spacing-sm, 8px) var(--nav-spacing-md, 12px);
+    border-radius: var(--nav-border-radius-sm, 4px);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: var(--nav-tooltip-shadow, 0 4px 12px rgba(0, 0, 0, 0.15));
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    pointer-events: none;
+    z-index: calc(var(--nav-z-drawer, 950) + 10);
+  }
+
+  /* Tooltip arrow */
+  .league-switcher__tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--nav-tooltip-bg, #1f2937);
+  }
+
+  /* Show tooltip on hover */
+  .league-switcher__collapsed-wrapper:hover .league-switcher__tooltip,
+  .league-switcher__collapsed-btn:focus-visible ~ .league-switcher__tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+</style>

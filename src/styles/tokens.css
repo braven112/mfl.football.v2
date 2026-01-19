@@ -409,6 +409,134 @@
   --secondary-content-boxshadow-color: #1c497c28;
   --content-border-color: #e2e2e2;
   --gallery-content-bg: var(--content-bg-muted);
+
+  /* ========================================
+     Navigation Drawer Tokens
+     ======================================== */
+
+  /* Dimensions */
+  --nav-width-expanded: 320px;
+  --nav-width-collapsed: 64px;
+  --nav-header-height: 72px;
+  --nav-footer-height: 80px;
+
+  /* Spacing (nav-specific) */
+  --nav-spacing-xs: 4px;
+  --nav-spacing-sm: 8px;
+  --nav-spacing-md: 12px;
+  --nav-spacing-lg: 16px;
+  --nav-spacing-xl: 24px;
+  --nav-spacing-2xl: 32px;
+
+  /* Border radius (nav-specific) */
+  --nav-border-radius-sm: 4px;
+  --nav-border-radius-md: 8px;
+  --nav-border-radius-lg: 12px;
+
+  /* Touch targets & icons */
+  --nav-touch-target-min: 44px;
+  --nav-link-height: 48px;
+  --nav-icon-size: 24px;
+  --nav-icon-size-collapsed: 28px;
+
+  /* Transitions */
+  --nav-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --nav-transition-duration: 0.3s;
+  --nav-transition: var(--nav-transition-duration) var(--nav-transition-timing);
+  --nav-drawer-transition: transform var(--nav-transition);
+  --nav-overlay-transition: opacity var(--nav-transition);
+  --nav-hover-transition: background-color 0.15s ease, color 0.15s ease;
+  --nav-focus-transition: box-shadow 0.15s ease;
+
+  /* Z-index layers */
+  --nav-z-overlay: 900;
+  --nav-z-drawer: 950;
+  --nav-z-header: 960;
+  --nav-z-close-btn: 970;
+
+  /* Background colors */
+  --nav-bg: var(--content-bg, #ffffff);
+  --nav-bg-subtle: #f9fafb;
+
+  /* Text colors */
+  --nav-text: #333333;
+  --nav-text-muted: #6b7280;
+  --nav-text-subtle: #9ca3af;
+
+  /* Border colors */
+  --nav-border: #e5e7eb;
+  --nav-border-subtle: #f3f4f6;
+
+  /* Interactive states */
+  --nav-hover-bg: #f3f4f6;
+  --nav-hover-text: var(--nav-text);
+
+  /* Active/selected link */
+  --nav-active-bg: rgba(28, 73, 124, 0.1);
+  --nav-active-text: var(--color-primary, #1c497c);
+  --nav-active-border-left: var(--color-primary, #1c497c);
+  --nav-active-border-width: 3px;
+
+  /* Focus state */
+  --nav-focus-ring: 0 0 0 2px var(--color-primary, #1c497c);
+  --nav-focus-ring-offset: 2px;
+
+  /* Section styling */
+  --nav-section-color: #777777;
+  --nav-section-font-size: 0.75rem;
+  --nav-section-font-weight: 700;
+  --nav-section-letter-spacing: 0.05em;
+  --nav-section-margin-top: var(--nav-spacing-xl);
+  --nav-section-margin-bottom: var(--nav-spacing-md);
+
+  /* Footer styling */
+  --nav-footer-bg: #f9fafb;
+  --nav-footer-border: #e5e7eb;
+  --nav-footer-text: var(--nav-text);
+  --nav-footer-text-muted: var(--nav-text-muted);
+
+  /* Team info in footer */
+  --nav-team-logo-size: 40px;
+  --nav-team-name-size: 0.9375rem;
+  --nav-owner-name-size: 0.8125rem;
+
+  /* Verify team prompt */
+  --nav-verify-bg: rgba(28, 73, 124, 0.05);
+  --nav-verify-border: var(--color-primary, #1c497c);
+  --nav-verify-text: var(--color-primary, #1c497c);
+  --nav-verify-hover-bg: rgba(28, 73, 124, 0.1);
+
+  /* Overlay */
+  --nav-overlay-bg: rgba(0, 0, 0, 0.5);
+
+  /* Badge styling */
+  --nav-badge-bg: #ef4444;
+  --nav-badge-text: #ffffff;
+  --nav-badge-size: 18px;
+  --nav-badge-font-size: 0.6875rem;
+  --nav-badge-font-weight: 600;
+
+  /* League switcher */
+  --nav-switcher-bg: #f3f4f6;
+  --nav-switcher-border: #e5e7eb;
+  --nav-switcher-active-bg: var(--color-primary, #1c497c);
+  --nav-switcher-active-text: #ffffff;
+  --nav-switcher-inactive-text: var(--nav-text-muted);
+
+  /* Tooltip */
+  --nav-tooltip-bg: #1f2937;
+  --nav-tooltip-text: #ffffff;
+  --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  /* Shadows */
+  --nav-shadow: var(--shadow-lg);
+  --nav-shadow-sm: var(--shadow-sm);
+
+  /* Scrollbar */
+  --nav-scrollbar-width: 6px;
+  --nav-scrollbar-track: transparent;
+  --nav-scrollbar-thumb: #d1d5db;
+  --nav-scrollbar-thumb-hover: #9ca3af;
 }
 
 /* ========================================

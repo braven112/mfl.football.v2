@@ -1,0 +1,357 @@
+---
+/**
+ * NavHeader Component
+ *
+ * Fixed header at the top of the navigation drawer.
+ * Displays the current league logo and name with a switcher button.
+ *
+ * Design: Logo + League Name + chevron icon for switching
+ * Clicking the chevron navigates to the equivalent page in the other league.
+ *
+ * @component
+ * @example
+ * <NavHeader
+ *   league="theleague"
+ *   logoUrl="/assets/logos/theleague-logo.svg"
+ *   currentPath="/theleague/rosters"
+ *   isCollapsed={false}
+ * />
+ */
+
+import type { LeagueSlug, NavHeaderProps } from '../../types/nav';
+
+interface Props extends NavHeaderProps {
+  /** Current page path for smart routing when switching leagues */
+  currentPath: string;
+  /** Whether the drawer is collapsed (icon-only mode) */
+  isCollapsed?: boolean;
+}
+
+const {
+  league,
+  logoUrl,
+  currentPath,
+  isCollapsed = false,
+} = Astro.props;
+
+// Determine league home URL
+const leagueHome = league === 'afl' ? '/afl-fantasy' : '/theleague';
+
+// Determine league display name for screen readers
+const leagueName = league === 'afl' ? 'AFL Fantasy' : 'TheLeague';
+
+// Logo alt text
+const logoAlt = league === 'afl' ? 'AFL Fantasy Logo' : 'TheLeague Logo';
+
+// Target league for switching
+const targetLeague = league === 'afl' ? 'theleague' : 'afl';
+const targetLeagueName = league === 'afl' ? 'TheLeague' : 'AFL Fantasy';
+
+/**
+ * Get the equivalent route in the target league.
+ */
+function getEquivalentRoute(path: string, target: 'theleague' | 'afl'): string {
+  const targetBase = target === 'afl' ? '/afl-fantasy' : '/theleague';
+
+  // Extract the page portion after the league prefix
+  let pagePath = '';
+  if (path.startsWith('/theleague')) {
+    pagePath = path.slice('/theleague'.length);
+  } else if (path.startsWith('/afl-fantasy')) {
+    pagePath = path.slice('/afl-fantasy'.length);
+  }
+
+  // If no page path or just root, return league home
+  if (!pagePath || pagePath === '/') {
+    return targetBase;
+  }
+
+  // Construct equivalent URL
+  return `${targetBase}${pagePath}`;
+}
+
+const switchUrl = getEquivalentRoute(currentPath, targetLeague);
+---
+
+<header
+  class:list={['nav-header', { 'nav-header--collapsed': isCollapsed }]}
+  role="banner"
+>
+  <div class="nav-header__content">
+    <a
+      href={leagueHome}
+      class="nav-header__logo-link"
+      aria-label={`Go to ${leagueName} home`}
+    >
+      <img
+        src={logoUrl}
+        alt={logoAlt}
+        class="nav-header__logo"
+        width="48"
+        height="48"
+      />
+      {!isCollapsed && (
+        <span class="nav-header__league-name">
+          {league === 'afl' ? (
+            <span class="nav-header__league-name--afl">AFL Fantasy</span>
+          ) : (
+            <>
+              <span class="nav-header__league-name--the">The</span>
+              <span class="nav-header__league-name--league">League</span>
+            </>
+          )}
+        </span>
+      )}
+    </a>
+
+    {/* League switcher - chevron button */}
+    {!isCollapsed && (
+      <a
+        href={switchUrl}
+        class="nav-header__switch-btn"
+        aria-label={`Switch to ${targetLeagueName}`}
+        title={`Switch to ${targetLeagueName}`}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M7 15l5 5 5-5" />
+          <path d="M7 9l5-5 5 5" />
+        </svg>
+      </a>
+    )}
+
+    {/* Close button - pushed to right */}
+    <button
+      type="button"
+      class="nav-header__close-btn"
+      aria-label="Close navigation"
+      data-nav-close
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<style>
+  .nav-header {
+    display: flex;
+    align-items: center;
+    height: var(--nav-header-height, 72px);
+    padding: 0 var(--nav-spacing-lg, 16px);
+    background: var(--nav-bg, #ffffff);
+    border-bottom: 1px solid var(--nav-border, #e5e7eb);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: var(--nav-z-header, 960);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-header--collapsed {
+    justify-content: center;
+    padding: 0 var(--nav-spacing-sm, 8px);
+  }
+
+  .nav-header__content {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-sm, 8px);
+    width: 100%;
+  }
+
+  .nav-header--collapsed .nav-header__content {
+    justify-content: center;
+  }
+
+  .nav-header__logo-link {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-md, 12px);
+    text-decoration: none;
+    color: var(--nav-text, #333333);
+    border-radius: var(--nav-border-radius-md, 8px);
+    padding: var(--nav-spacing-sm, 8px);
+    margin: calc(-1 * var(--nav-spacing-sm, 8px));
+    transition: var(--nav-hover-transition);
+  }
+
+  .nav-header__logo-link:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+  }
+
+  .nav-header__logo-link:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  .nav-header__logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .nav-header--collapsed .nav-header__logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-header__league-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .nav-header__league-name--the {
+    color: var(--primary-color, #1c497c);
+    margin-right: 0.125rem;
+  }
+
+  .nav-header__league-name--league {
+    color: var(--secondary-color, #2e8743);
+  }
+
+  .nav-header__league-name--afl {
+    background: linear-gradient(135deg, #c41e3a 0%, #002244 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* League switch button */
+  .nav-header__switch-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--nav-border-radius-sm, 4px);
+    color: var(--nav-text-muted, #6b7280);
+    transition: var(--nav-hover-transition);
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  .nav-header__switch-btn:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+    color: var(--nav-text, #333333);
+  }
+
+  .nav-header__switch-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  /* Close button */
+  .nav-header__close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: var(--nav-text-muted, #6b7280);
+    border-radius: var(--nav-border-radius-sm, 4px);
+    transition: var(--nav-hover-transition);
+    flex-shrink: 0;
+  }
+
+  .nav-header__close-btn:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+    color: var(--nav-text, #333333);
+  }
+
+  .nav-header__close-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  /* Collapsed state */
+  .nav-header--collapsed .nav-header__logo-link {
+    margin: 0;
+    padding: var(--nav-spacing-xs, 4px);
+  }
+
+  .nav-header--collapsed .nav-header__close-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Dark mode support via .dark class */
+  :global(.dark) .nav-header {
+    background: var(--nav-bg);
+    border-bottom-color: var(--nav-border);
+  }
+
+  :global(.dark) .nav-header__logo-link {
+    color: var(--nav-text);
+  }
+
+  :global(.dark) .nav-header__logo-link:hover {
+    background: var(--nav-hover-bg);
+  }
+
+  :global(.dark) .nav-header__league-name--the {
+    color: #60a5fa;
+  }
+
+  :global(.dark) .nav-header__league-name--league {
+    color: #4ade80;
+  }
+
+  :global(.dark) .nav-header__switch-btn {
+    color: var(--nav-text-muted);
+  }
+
+  :global(.dark) .nav-header__switch-btn:hover {
+    background: var(--nav-hover-bg);
+    color: var(--nav-text);
+  }
+
+  :global(.dark) .nav-header__close-btn {
+    color: var(--nav-text-muted);
+  }
+
+  :global(.dark) .nav-header__close-btn:hover {
+    background: var(--nav-hover-bg);
+    color: var(--nav-text);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .nav-header__logo {
+      width: 40px;
+      height: 40px;
+    }
+
+    .nav-header__league-name {
+      font-size: 1rem;
+    }
+  }
+</style>

@@ -1,0 +1,230 @@
+{
+  "sections": [
+    {
+      "id": "tools",
+      "label": "Tools",
+      "links": [
+        {
+          "id": "rosters",
+          "label": "Roster/Salary",
+          "labelAFL": "Rosters",
+          "icon": "banknote",
+          "iconAFL": "helmet",
+          "path": "/rosters",
+          "external": false,
+          "description": "View all team rosters and salary cap details"
+        },
+        {
+          "id": "next-year",
+          "label": "Next Year Summary",
+          "icon": "chalkboard",
+          "path": "/rosters?view=nextyear",
+          "external": false,
+          "description": "Preview next year's roster and salary commitments"
+        },
+        {
+          "id": "calculator",
+          "label": "Extension Calculator",
+          "icon": "dollar",
+          "path": "/calculator",
+          "external": false,
+          "description": "Calculate contract extension values"
+        },
+        {
+          "id": "draft-predictor",
+          "label": "Draft Order",
+          "icon": "draft-podium",
+          "path": "/draft-predictor",
+          "external": false,
+          "description": "View projected draft order"
+        },
+        {
+          "id": "standings",
+          "label": "Standings",
+          "icon": "numberone",
+          "path": "/standings",
+          "external": false,
+          "description": "Current league standings"
+        },
+        {
+          "id": "playoffs",
+          "label": "Playoffs",
+          "icon": "trophy",
+          "path": "/playoffs",
+          "external": false,
+          "description": "Playoff bracket and results"
+        }
+      ]
+    },
+    {
+      "id": "reports",
+      "label": "Advanced Reports",
+      "links": [
+        {
+          "id": "salary-benchmarks",
+          "label": "Salary Benchmarks",
+          "icon": "bar-chart",
+          "path": "/salary",
+          "external": false,
+          "description": "Compare salary spending across positions"
+        },
+        {
+          "id": "salary-history",
+          "label": "Salary History",
+          "icon": "history",
+          "path": "/salary-history",
+          "external": false,
+          "description": "Historical salary cap trends"
+        },
+        {
+          "id": "mvp",
+          "label": "Salary-Adjusted MVPs",
+          "icon": "star",
+          "path": "/mvp",
+          "external": false,
+          "description": "Top performers relative to salary"
+        }
+      ]
+    },
+    {
+      "id": "community",
+      "label": "Community",
+      "leagueOnly": "theleague",
+      "links": [
+        {
+          "id": "forum",
+          "label": "Message Board",
+          "icon": "comments",
+          "url": "https://theleague.us/forum/index.php",
+          "external": true,
+          "description": "Discussion forum for league members"
+        }
+      ]
+    },
+    {
+      "id": "my-team",
+      "label": "My Team",
+      "visibility": "admin",
+      "links": [
+        {
+          "id": "coach-tab",
+          "label": "Coach Tab",
+          "icon": "clipboard",
+          "urlTemplate": "https://{host}/{year}/options?L={leagueId}&F={franchiseId}&O=07",
+          "external": true,
+          "description": "Your team's MFL coach page"
+        },
+        {
+          "id": "auction-predictor",
+          "label": "Auction Predictor",
+          "icon": "line-chart",
+          "path": "/auction-predictor",
+          "external": false,
+          "description": "Predict auction values for players"
+        },
+        {
+          "id": "team-preview",
+          "label": "Team Preview",
+          "icon": "eye",
+          "urlTemplate": "https://{host}/{year}/options?L={leagueId}&F={franchiseId}&O=02",
+          "external": true,
+          "description": "Your team's overview on MFL"
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "label": "Admin",
+      "visibility": "admin",
+      "links": [
+        {
+          "id": "feature-flags",
+          "label": "Feature Flags",
+          "icon": "wrench",
+          "path": "/admin/features",
+          "external": false,
+          "description": "Manage feature flags"
+        }
+      ]
+    },
+    {
+      "id": "mfl-links",
+      "label": "MFL Actions",
+      "links": [
+        {
+          "id": "submit-lineup",
+          "label": "Submit Lineup",
+          "icon": "submit",
+          "urlTemplate": "https://{host}/{year}/lineup?L={leagueId}",
+          "external": true,
+          "description": "Set your starting lineup on MFL"
+        },
+        {
+          "id": "add-drop",
+          "label": "Add/Drop",
+          "icon": "user-plus",
+          "urlTemplate": "https://{host}/{year}/add_drop?L={leagueId}",
+          "external": true,
+          "description": "Add or drop players on MFL"
+        },
+        {
+          "id": "live-scoring",
+          "label": "Live Scoring",
+          "icon": "scoreboard",
+          "urlTemplate": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE6",
+          "external": true,
+          "description": "Real-time scoring on MFL"
+        }
+      ]
+    },
+    {
+      "id": "leagues",
+      "label": "Leagues",
+      "links": [
+        {
+          "id": "theleague-site",
+          "label": "TheLeague.us",
+          "icon": "shield",
+          "url": "https://theleague.us",
+          "external": true,
+          "description": "TheLeague main website"
+        },
+        {
+          "id": "afl-site",
+          "label": "AFL Fantasy",
+          "icon": "helmet",
+          "url": "https://afl-fantasy.com",
+          "external": true,
+          "description": "AFL Fantasy main website"
+        }
+      ]
+    }
+  ],
+  "adminFranchiseIds": ["0001"],
+  "footerLinks": [
+    {
+      "id": "mfl-home",
+      "label": "Back to MFL",
+      "icon": "home",
+      "urlTemplate": "https://{host}/{year}/home/{leagueId}",
+      "external": true
+    }
+  ],
+  "routeEquivalence": {
+    "/rosters": "/rosters",
+    "/rosters?view=nextyear": "/rosters?view=nextyear",
+    "/calculator": "/calculator",
+    "/standings": "/standings",
+    "/playoffs": "/playoffs",
+    "/salary": "/salary",
+    "/salary-history": "/salary-history",
+    "/mvp": "/mvp",
+    "/draft-predictor": "/draft-predictor",
+    "/icons": "/icons",
+    "/assets": "/assets"
+  },
+  "verifyTeamUrl": {
+    "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
+    "afl": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
+  }
+}

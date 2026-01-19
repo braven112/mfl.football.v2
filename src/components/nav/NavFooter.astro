@@ -1,0 +1,472 @@
+---
+/**
+ * NavFooter Component
+ *
+ * Fixed footer for the navigation drawer showing either:
+ * 1. Authenticated state: Team logo, name, and owner info
+ * 2. Unauthenticated state: "Verify Your Team" prompt with link to MFL
+ *
+ * Supports collapsed mode where only the icon/logo is shown with a tooltip.
+ *
+ * @see NavFooterProps in src/types/nav.ts
+ * @see Design tokens in src/assets/css/src/_nav-tokens.scss
+ */
+
+import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav';
+
+interface Props extends NavFooterProps {
+  /** Current league for constructing roster link */
+  league?: LeagueSlug;
+}
+
+const {
+  team,
+  footerLinks = [],
+  host,
+  year,
+  leagueId,
+  isCollapsed = false,
+  verifyTeamUrl,
+  league = 'theleague',
+} = Astro.props;
+
+// Build the roster GM page URL
+const leagueBase = league === 'afl' ? '/afl-fantasy' : '/theleague';
+const rosterUrl = `${leagueBase}/rosters`;
+
+/**
+ * Build the MFL verify team URL
+ * Points to the custom MFL page with embedded script that detects franchise ID
+ */
+const defaultVerifyUrl = `https://${host}/${year}/home/${leagueId}?MODULE=MESSAGE20`;
+const verifyUrl = verifyTeamUrl || defaultVerifyUrl;
+
+/**
+ * Resolve URL templates with runtime values
+ */
+function resolveUrlTemplate(template: string): string {
+  return template
+    .replace('{host}', host)
+    .replace('{year}', String(year))
+    .replace('{leagueId}', leagueId);
+}
+
+/**
+ * Get the resolved URL for a footer link
+ */
+function getFooterLinkUrl(link: NavFooterLink): string {
+  if (link.urlTemplate) {
+    return resolveUrlTemplate(link.urlTemplate);
+  }
+  return link.url || '#';
+}
+
+const isAuthenticated = !!team;
+---
+
+<footer
+  class:list={['nav-footer', { 'nav-footer--collapsed': isCollapsed }]}
+  role="contentinfo"
+>
+  {isAuthenticated ? (
+    <!-- Authenticated State: Team Info - Links to Rosters page -->
+    <a href={rosterUrl} class="nav-footer__team" aria-label={`View ${team.teamName} roster`}>
+      <div class="nav-footer__team-logo">
+        {team.iconUrl ? (
+          <img
+            src={team.iconUrl}
+            alt={`${team.teamName} logo`}
+            class="nav-footer__team-img"
+            width="40"
+            height="40"
+            loading="lazy"
+          />
+        ) : (
+          <!-- Fallback icon if no team logo -->
+          <div class="nav-footer__team-placeholder">
+            <svg class="nav-footer__icon" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-shield"></use>
+            </svg>
+          </div>
+        )}
+      </div>
+      {!isCollapsed && (
+        <div class="nav-footer__team-info">
+          <span class="nav-footer__team-name">{team.teamName}</span>
+          {team.ownerName && (
+            <span class="nav-footer__owner-name">{team.ownerName}</span>
+          )}
+        </div>
+      )}
+      {isCollapsed && (
+        <span class="nav-footer__tooltip" role="tooltip">
+          {team.teamName}
+          {team.ownerName && ` - ${team.ownerName}`}
+        </span>
+      )}
+    </a>
+  ) : (
+    <!-- Unauthenticated State: Verify Prompt -->
+    <a
+      href={verifyUrl}
+      class="nav-footer__verify"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Verify your team ownership on MFL"
+    >
+      <div class="nav-footer__verify-icon">
+        <svg class="nav-footer__icon" aria-hidden="true">
+          <use href="/assets/icons/sprite.svg#icon-user"></use>
+        </svg>
+      </div>
+      {!isCollapsed && (
+        <div class="nav-footer__verify-info">
+          <span class="nav-footer__verify-label">Verify Your Team</span>
+          <span class="nav-footer__verify-hint">Link your MFL account</span>
+        </div>
+      )}
+      {!isCollapsed && (
+        <svg class="nav-footer__verify-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      )}
+      {isCollapsed && (
+        <span class="nav-footer__tooltip" role="tooltip">
+          Verify Your Team
+        </span>
+      )}
+    </a>
+  )}
+
+  {/* Footer Links (e.g., "Back to MFL") - shown only when expanded */}
+  {!isCollapsed && footerLinks.length > 0 && (
+    <div class="nav-footer__links">
+      {footerLinks.map((link) => (
+        <a
+          href={getFooterLinkUrl(link)}
+          class="nav-footer__link"
+          target={link.external ? '_blank' : undefined}
+          rel={link.external ? 'noopener noreferrer' : undefined}
+        >
+          <svg class="nav-footer__link-icon" aria-hidden="true">
+            <use href={`/assets/icons/sprite.svg#icon-${link.icon}`}></use>
+          </svg>
+          <span>{link.label}</span>
+        </a>
+      ))}
+    </div>
+  )}
+</footer>
+
+<style>
+  /* ==============================================
+   * NAV FOOTER - Base Styles
+   * ============================================== */
+  .nav-footer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--nav-spacing-md, 12px);
+    padding: var(--nav-spacing-lg, 16px);
+    background: var(--nav-footer-bg, #f9fafb);
+    border-top: 1px solid var(--nav-footer-border, #e5e7eb);
+    min-height: var(--nav-footer-height, 80px);
+    box-sizing: border-box;
+    box-shadow: 0 -1px 1px hsl(220deg 3% 15% / 0.08),
+                0 -2px 2px hsl(220deg 3% 15% / 0.06),
+                0 -3px 4px hsl(220deg 3% 15% / 0.04);
+  }
+
+  /* ==============================================
+   * AUTHENTICATED STATE - Team Info (clickable link)
+   * ============================================== */
+  .nav-footer__team {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-md, 12px);
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+    padding: var(--nav-spacing-sm, 8px);
+    margin: calc(-1 * var(--nav-spacing-sm, 8px));
+    border-radius: var(--nav-border-radius-md, 8px);
+    transition: var(--nav-hover-transition, background-color 0.15s ease);
+  }
+
+  .nav-footer__team:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+  }
+
+  .nav-footer__team:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  .nav-footer__team-logo {
+    flex-shrink: 0;
+    width: var(--nav-team-logo-size, 40px);
+    height: var(--nav-team-logo-size, 40px);
+    border-radius: var(--nav-border-radius-md, 8px);
+    overflow: hidden;
+    background: var(--nav-bg, #ffffff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-footer__team-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .nav-footer__team-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--nav-bg-subtle, #f9fafb);
+  }
+
+  .nav-footer__team-placeholder .nav-footer__icon {
+    width: 24px;
+    height: 24px;
+    fill: var(--nav-text-muted, #6b7280);
+  }
+
+  .nav-footer__team-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0; /* Allow text truncation */
+  }
+
+  .nav-footer__team-name {
+    font-size: var(--nav-team-name-size, 0.9375rem);
+    font-weight: 600;
+    color: var(--nav-footer-text, #333333);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-footer__owner-name {
+    font-size: var(--nav-owner-name-size, 0.8125rem);
+    color: var(--nav-footer-text-muted, #6b7280);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ==============================================
+   * UNAUTHENTICATED STATE - Verify Prompt
+   * ============================================== */
+  .nav-footer__verify {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-md, 12px);
+    padding: var(--nav-spacing-md, 12px);
+    margin: calc(-1 * var(--nav-spacing-md, 12px));
+    margin-bottom: 0;
+    background: var(--nav-verify-bg, rgba(28, 73, 124, 0.05));
+    border: 1px dashed var(--nav-verify-border, #1c497c);
+    border-radius: var(--nav-border-radius-md, 8px);
+    text-decoration: none;
+    transition: var(--nav-hover-transition, background-color 0.15s ease, color 0.15s ease);
+    position: relative;
+    min-height: var(--nav-touch-target-min, 44px);
+  }
+
+  .nav-footer__verify:hover,
+  .nav-footer__verify:focus-visible {
+    background: var(--nav-verify-hover-bg, rgba(28, 73, 124, 0.1));
+  }
+
+  .nav-footer__verify:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+    outline-offset: var(--nav-focus-ring-offset, 2px);
+  }
+
+  .nav-footer__verify-icon {
+    flex-shrink: 0;
+    width: var(--nav-team-logo-size, 40px);
+    height: var(--nav-team-logo-size, 40px);
+    border-radius: 50%;
+    background: var(--nav-verify-border, #1c497c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-footer__verify-icon .nav-footer__icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--nav-bg, #ffffff);
+  }
+
+  .nav-footer__verify-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .nav-footer__verify-label {
+    font-size: var(--nav-team-name-size, 0.9375rem);
+    font-weight: 600;
+    color: var(--nav-verify-text, #1c497c);
+    line-height: 1.3;
+  }
+
+  .nav-footer__verify-hint {
+    font-size: var(--nav-owner-name-size, 0.8125rem);
+    color: var(--nav-footer-text-muted, #6b7280);
+    line-height: 1.3;
+  }
+
+  .nav-footer__verify-arrow {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--nav-verify-text, #1c497c);
+    transition: transform 0.15s ease;
+  }
+
+  .nav-footer__verify:hover .nav-footer__verify-arrow {
+    transform: translateX(2px);
+  }
+
+  /* ==============================================
+   * FOOTER LINKS
+   * ============================================== */
+  .nav-footer__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nav-spacing-xs, 4px);
+    padding-top: var(--nav-spacing-sm, 8px);
+    border-top: 1px solid var(--nav-border-subtle, #f3f4f6);
+  }
+
+  .nav-footer__link {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-sm, 8px);
+    padding: var(--nav-spacing-sm, 8px) 0;
+    color: var(--nav-footer-text-muted, #6b7280);
+    text-decoration: none;
+    font-size: 0.8125rem;
+    transition: var(--nav-hover-transition, background-color 0.15s ease, color 0.15s ease);
+  }
+
+  .nav-footer__link:hover,
+  .nav-footer__link:focus-visible {
+    color: var(--nav-footer-text, #333333);
+  }
+
+  .nav-footer__link:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+    border-radius: var(--nav-border-radius-sm, 4px);
+  }
+
+  .nav-footer__link-icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* ==============================================
+   * COLLAPSED STATE
+   * ============================================== */
+  .nav-footer--collapsed {
+    padding: var(--nav-spacing-sm, 8px);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-footer--collapsed .nav-footer__team,
+  .nav-footer--collapsed .nav-footer__verify {
+    justify-content: center;
+  }
+
+  .nav-footer--collapsed .nav-footer__verify {
+    padding: var(--nav-spacing-sm, 8px);
+    margin: 0;
+    border: none;
+    background: transparent;
+    border-radius: var(--nav-border-radius-md, 8px);
+  }
+
+  .nav-footer--collapsed .nav-footer__verify:hover,
+  .nav-footer--collapsed .nav-footer__verify:focus-visible {
+    background: var(--nav-verify-bg, rgba(28, 73, 124, 0.05));
+  }
+
+  /* ==============================================
+   * TOOLTIP (Collapsed State)
+   * ============================================== */
+  .nav-footer__tooltip {
+    position: absolute;
+    left: calc(100% + var(--nav-spacing-sm, 8px));
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--nav-tooltip-bg, #1f2937);
+    color: var(--nav-tooltip-text, #ffffff);
+    padding: var(--nav-spacing-sm, 8px) var(--nav-spacing-md, 12px);
+    border-radius: var(--nav-border-radius-sm, 4px);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: var(--nav-tooltip-shadow, 0 4px 12px rgba(0, 0, 0, 0.15));
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 10;
+  }
+
+  /* Tooltip arrow */
+  .nav-footer__tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--nav-tooltip-bg, #1f2937);
+  }
+
+  /* Show tooltip on hover/focus in collapsed state */
+  .nav-footer--collapsed .nav-footer__team:hover .nav-footer__tooltip,
+  .nav-footer--collapsed .nav-footer__team:focus-within .nav-footer__tooltip,
+  .nav-footer--collapsed .nav-footer__verify:hover .nav-footer__tooltip,
+  .nav-footer--collapsed .nav-footer__verify:focus-visible .nav-footer__tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* ==============================================
+   * ICON STYLES
+   * ============================================== */
+  .nav-footer__icon {
+    display: block;
+  }
+
+  /* ==============================================
+   * ACCESSIBILITY
+   * ============================================== */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-footer__verify,
+    .nav-footer__verify-arrow,
+    .nav-footer__link,
+    .nav-footer__tooltip {
+      transition: none;
+    }
+  }
+</style>
