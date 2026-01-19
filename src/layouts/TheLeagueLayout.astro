@@ -238,18 +238,24 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 	@media (min-width: 1024px) {
 		.page-wrapper.nav-open {
 			margin-right: var(--nav-width-expanded, 320px);
+			animation: page-content-settle 180ms ease-out;
 		}
 
 		/* When drawer is open but collapsed to icon-only mode */
 		.page-wrapper.nav-open.nav-collapsed {
 			margin-right: var(--nav-width-collapsed, 64px);
+			animation: page-content-settle 180ms ease-out;
 		}
+
 	}
 
 	/* Reduced motion support */
 	@media (prefers-reduced-motion: reduce) {
 		.page-wrapper {
 			transition: none;
+		}
+		.page-wrapper.nav-open {
+			animation: none;
 		}
 	}
 
@@ -283,6 +289,16 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			opacity: 1;
 		}
 	}
+
+	@keyframes page-content-settle {
+		from {
+			opacity: 0.96;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
 
 	/* Keep navigation drawer persistent during transitions */
 	.nav-drawer {

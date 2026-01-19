@@ -177,6 +177,7 @@ const footerLinks = [
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    animation: nav-overlay-pulse 900ms ease-in-out;
   }
 
   /* Desktop: no overlay needed in push mode */
@@ -319,6 +320,11 @@ const footerLinks = [
     .nav-drawer__close-btn {
       transition: none;
     }
+
+    .nav-overlay.nav-overlay--visible {
+      animation: none;
+    }
+
   }
 
   /* ==============================================
@@ -334,6 +340,18 @@ const footerLinks = [
     clip: rect(0, 0, 0, 0) !important;
     white-space: nowrap !important;
     border: 0 !important;
+  }
+
+  @keyframes nav-overlay-pulse {
+    0% {
+      opacity: 0.2;
+    }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.75;
+    }
   }
 </style>
 
