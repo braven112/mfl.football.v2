@@ -21,6 +21,44 @@
  */
 
 /**
+ * NFL Team full names (ESPN format codes)
+ */
+export const NFL_TEAM_NAMES: Record<string, string> = {
+  'ARI': 'Arizona Cardinals',
+  'ATL': 'Atlanta Falcons',
+  'BAL': 'Baltimore Ravens',
+  'BUF': 'Buffalo Bills',
+  'CAR': 'Carolina Panthers',
+  'CHI': 'Chicago Bears',
+  'CIN': 'Cincinnati Bengals',
+  'CLE': 'Cleveland Browns',
+  'DAL': 'Dallas Cowboys',
+  'DEN': 'Denver Broncos',
+  'DET': 'Detroit Lions',
+  'GB': 'Green Bay Packers',
+  'HOU': 'Houston Texans',
+  'IND': 'Indianapolis Colts',
+  'JAX': 'Jacksonville Jaguars',
+  'KC': 'Kansas City Chiefs',
+  'LAC': 'Los Angeles Chargers',
+  'LAR': 'Los Angeles Rams',
+  'LV': 'Las Vegas Raiders',
+  'MIA': 'Miami Dolphins',
+  'MIN': 'Minnesota Vikings',
+  'NE': 'New England Patriots',
+  'NO': 'New Orleans Saints',
+  'NYG': 'New York Giants',
+  'NYJ': 'New York Jets',
+  'PHI': 'Philadelphia Eagles',
+  'PIT': 'Pittsburgh Steelers',
+  'SEA': 'Seattle Seahawks',
+  'SF': 'San Francisco 49ers',
+  'TB': 'Tampa Bay Buccaneers',
+  'TEN': 'Tennessee Titans',
+  'WSH': 'Washington Commanders'
+};
+
+/**
  * Team code mapping from MFL format to ESPN/Standard format
  */
 const TEAM_CODE_MAP: Record<string, string> = {
@@ -143,4 +181,22 @@ export function getAllNFLTeamCodes(): string[] {
 export function isValidTeamCode(teamCode: string): boolean {
   const normalized = normalizeTeamCode(teamCode);
   return getAllNFLTeamCodes().includes(normalized);
+}
+
+/**
+ * Get NFL team full name from team code
+ *
+ * @param teamCode - Team abbreviation (e.g., 'WAS', 'DAL', 'GB')
+ * @returns Full team name (e.g., 'Dallas Cowboys')
+ *
+ * @example
+ * ```typescript
+ * getNFLTeamName('DAL') // => 'Dallas Cowboys'
+ * getNFLTeamName('WAS') // => 'Washington Commanders' (normalized)
+ * getNFLTeamName('GB')  // => 'Green Bay Packers'
+ * ```
+ */
+export function getNFLTeamName(teamCode: string): string {
+  const code = normalizeTeamCode(teamCode);
+  return NFL_TEAM_NAMES[code] || code;
 }

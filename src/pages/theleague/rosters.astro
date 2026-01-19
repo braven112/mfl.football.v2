@@ -3661,6 +3661,13 @@ const serializedConfig = JSON.stringify({
 :global(.chart-card__header .team-group__logo) {
     margin-left: .75rem;
   }
+  :global(.team-group__name) {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary, #64748b);
+    margin-top: 0.25rem;
+    font-weight: 500;
+  }
   :global(.team-group__logo--fallback) {
     height: 2rem;
     width: 2rem;
@@ -4131,6 +4138,44 @@ const serializedConfig = JSON.stringify({
     if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${teamCode}.svg`;
   };
+
+  const NFL_TEAM_NAMES = {
+    'ARI': 'Arizona Cardinals',
+    'ATL': 'Atlanta Falcons',
+    'BAL': 'Baltimore Ravens',
+    'BUF': 'Buffalo Bills',
+    'CAR': 'Carolina Panthers',
+    'CHI': 'Chicago Bears',
+    'CIN': 'Cincinnati Bengals',
+    'CLE': 'Cleveland Browns',
+    'DAL': 'Dallas Cowboys',
+    'DEN': 'Denver Broncos',
+    'DET': 'Detroit Lions',
+    'GB': 'Green Bay Packers',
+    'HOU': 'Houston Texans',
+    'IND': 'Indianapolis Colts',
+    'JAX': 'Jacksonville Jaguars',
+    'KC': 'Kansas City Chiefs',
+    'LAC': 'Los Angeles Chargers',
+    'LAR': 'Los Angeles Rams',
+    'LV': 'Las Vegas Raiders',
+    'MIA': 'Miami Dolphins',
+    'MIN': 'Minnesota Vikings',
+    'NE': 'New England Patriots',
+    'NO': 'New Orleans Saints',
+    'NYG': 'New York Giants',
+    'NYJ': 'New York Jets',
+    'PHI': 'Philadelphia Eagles',
+    'PIT': 'Pittsburgh Steelers',
+    'SEA': 'Seattle Seahawks',
+    'SF': 'San Francisco 49ers',
+    'TB': 'Tampa Bay Buccaneers',
+    'TEN': 'Tennessee Titans',
+    'WSH': 'Washington Commanders',
+    'FA': 'Free Agent'
+  };
+
+  const getNflTeamName = (teamCode) => NFL_TEAM_NAMES[teamCode] || teamCode;
 
   // Weather icon mapping based on condition text
   const getWeatherIcon = (displayValue) => {
@@ -5064,7 +5109,8 @@ const serializedConfig = JSON.stringify({
         return `
           <div class="chart-card">
             <div class="chart-card__header">
-            <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" />
+              <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" />
+              <span class="team-group__name">${getNflTeamName(team)}</span>
             </div>
             <div class="team-group__players">
               ${playersHtml}
@@ -5130,7 +5176,7 @@ const serializedConfig = JSON.stringify({
           <div class="chart-card">
             <div class="chart-card__header">
               ${collegeLogoMarkup}
-              <div class="chart-card__title">${college}</div>
+              <span class="team-group__name">${college}</span>
             </div>
             <div class="team-group__players">
               ${playersHtml}
