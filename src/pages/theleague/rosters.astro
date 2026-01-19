@@ -1971,7 +1971,7 @@ const serializedConfig = JSON.stringify({
 
     <!-- Next Year View -->
     <div class="view-container" data-view-content="nextyear" style="display: none;">
-      <h3 class="chart-metrics__headline">2026 at a glance</h3>
+      
 
       <div class="next-year-layout">
         <!-- Left Column: Draft Order -->
@@ -2021,6 +2021,7 @@ const serializedConfig = JSON.stringify({
 
         <!-- Right Column: Metrics -->
         <div class="next-year-layout__right">
+          <h3 class="chart-metrics__headline">2026 at a glance</h3>
           <div class="chart-metrics">
             <MetricCard
               label="Cap Space"
@@ -2665,10 +2666,11 @@ const serializedConfig = JSON.stringify({
   .chart-metrics__hint {
     color: #6b7280;
     font-size: 0.8rem;
+    padding-block: 1rem;
+    display: block;
   }
 
   .chart-metrics__headline {
-    margin: 0;
     font-size: 1.25rem;
   }
 
@@ -2713,11 +2715,6 @@ const serializedConfig = JSON.stringify({
   .next-year-layout__left {
     display: grid;
     gap: 2rem;
-  }
-
-  .next-year-layout__right {
-    display: grid;
-    gap: 1rem;
   }
 
   .draft-section {
@@ -4691,10 +4688,12 @@ const serializedConfig = JSON.stringify({
       localStorage.setItem('rosterViewMode', mode);
     }
 
-    // Init Mode
+    // Init Mode - URL param takes precedence over saved mode
+    const urlModeParam = new URL(window.location.href).searchParams.get('view');
     const savedMode = localStorage.getItem('rosterViewMode') || 'gm';
+    const initialMode = urlModeParam === 'coach' ? 'coach' : savedMode;
     // Small delay to ensure DOM is fully ready/hydrated if needed, or just run it
-    setTimeout(() => setMode(savedMode), 0);
+    setTimeout(() => setMode(initialMode), 0);
 
     modeBtns.forEach(btn => {
       btn.addEventListener('click', () => setMode(btn.dataset.mode));
@@ -6458,9 +6457,11 @@ const serializedConfig = JSON.stringify({
 
     applyHiddenColumns();
     const urlViewParam = new URL(window.location.href).searchParams.get('view');
-    const validViews = ['roster', 'analytics', 'nextyear'];
+    const validViews = ['roster', 'analytics', 'nextyear', 'coach'];
     if (urlViewParam && validViews.includes(urlViewParam)) {
-      switchView(urlViewParam);
+      // Coach view uses roster view (Coach mode toggle is handled in init above)
+      const viewToShow = urlViewParam === 'coach' ? 'roster' : urlViewParam;
+      switchView(viewToShow);
     } else {
       switchView(currentView);
     }

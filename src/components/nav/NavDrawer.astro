@@ -878,9 +878,9 @@ const footerLinks = [
   };
   } // End of initNavDrawer function
 
-  // Initialize on first load
-  initNavDrawer();
-
-  // Reinitialize after View Transitions (Astro page navigation)
-  document.addEventListener('astro:page-load', initNavDrawer);
+  // Use astro:page-load for View Transitions (fires on every page including initial)
+  // This ensures the drawer is reinitialized after each navigation
+  document.addEventListener('astro:page-load', () => {
+    initNavDrawer();
+  });
 </script>

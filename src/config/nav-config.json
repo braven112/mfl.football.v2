@@ -110,9 +110,9 @@
           "id": "coach-tab",
           "label": "Coach Tab",
           "icon": "clipboard",
-          "urlTemplate": "https://{host}/{year}/options?L={leagueId}&F={franchiseId}&O=07",
-          "external": true,
-          "description": "Your team's MFL coach page"
+          "path": "/rosters?view=coach",
+          "external": false,
+          "description": "Your team's coach view"
         },
         {
           "id": "auction-predictor",

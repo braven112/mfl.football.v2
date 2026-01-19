@@ -1,6 +1,9 @@
 @use "./fonts-afl";
 @use "./reset";
 
+//// Design Tokens (load before components)
+@use "./nav-tokens";
+
 //// Alphabetical
 @use "./afl";
 @use "./add-drop";

@@ -699,25 +699,112 @@ https://api.myfantasyleague.com/2025/export?TYPE=salaryAdjustments&L=13522&JSON=
 **Purpose:** Validate credentials and receive authentication cookie
 
 **Parameters:**
-- Required: `USERNAME`, `PASSWORD`, `XML`
+- Required: `USERNAME`, `PASSWORD`
+- Optional: `LEAGUE_ID`, `XML=1` or `JSON=1`
 - Auth: Public
+
+**Example:**
+```
+POST https://api.myfantasyleague.com/2025/login
+Content-Type: application/x-www-form-urlencoded
+
+USERNAME=myuser&PASSWORD=mypass&LEAGUE_ID=13522&JSON=1
+```
 
 **Used In:**
 - [src/utils/mfl-login.ts](src/utils/mfl-login.ts)
 
+**Response Structure:**
+```json
+{
+  "cookie": "base64_encoded_session_cookie"
+}
+```
+
+**Key Insights (updated 2026-01-18):**
+- Returns a Base64-encoded cookie that may contain `+`, `/`, and `=` characters
+- Cookie must be URL-escaped before passing back in subsequent requests
+- Response does NOT include `franchise_id` or `myteam` value - you must call `myleagues` to get this
+- Use POST method over HTTPS to protect credentials
+- The cookie should be passed as: `Cookie: MFL_USER_ID=cookie_value`
+
 ---
 
-#### `myleagues`
-**Purpose:** All leagues for current authenticated user
+#### MFL Web Login with Redirect (Non-API)
+
+**Purpose:** Redirect users to MFL login page and have them return to your site
+
+**URL Format:**
+```
+https://www{XX}.myfantasyleague.com/{YEAR}/login?L={LEAGUE_ID}&URL={ENCODED_RETURN_URL}
+```
 
 **Parameters:**
-- Optional: `YEAR`, `FRANCHISE_NAMES`
-- Auth: Owner
+- `L` - League ID (required)
+- `URL` - URL-encoded destination after successful login (optional)
 
 **Example:**
 ```
-https://api.myfantasyleague.com/2025/export?TYPE=myleagues&JSON=1
+https://www49.myfantasyleague.com/2025/login?L=13522&URL=https%3A%2F%2Fmysite.com%2Fcallback
 ```
+
+**Key Insights (updated 2026-01-18):**
+- The `URL` parameter allows redirect to external sites after login
+- **IMPORTANT:** MFL does NOT pass franchise_id back in the redirect URL
+- After redirect, user has MFL cookie set in browser but your site cannot read it (different domain)
+- The redirect is purely for UX - user logs in on MFL, then is sent back to your URL
+- To identify the user's franchise after redirect, you need your own authentication flow
+
+**Workaround for Franchise Identification:**
+Since MFL doesn't pass franchise_id back in the redirect, the codebase uses a two-step process:
+1. User logs in via our `/login` page with MFL credentials
+2. We call MFL's `login` API to validate, then `myleagues` API to get franchise_id
+3. We create our own JWT session with the franchise_id embedded
+
+See: [src/utils/mfl-login.ts](src/utils/mfl-login.ts) and [AUTH_SYSTEM.md](AUTH_SYSTEM.md)
+
+---
+
+#### `myleagues`
+**Purpose:** All leagues for current authenticated user, INCLUDING their franchise_id in each league
+
+**Parameters:**
+- Optional: `YEAR`, `FRANCHISE_NAMES`, `USERNAME`, `PASSWORD`
+- Auth: Owner (via cookie) OR pass USERNAME/PASSWORD directly
+
+**Example:**
+```
+# With cookie authentication
+https://api.myfantasyleague.com/2025/export?TYPE=myleagues&JSON=1
+
+# With direct credentials (less secure, use HTTPS)
+https://api.myfantasyleague.com/2025/myleagues?USERNAME=myuser&PASSWORD=mypass&JSON=1
+```
+
+**Response Structure:**
+```json
+{
+  "myleagues": {
+    "league": [
+      {
+        "id": "13522",
+        "name": "TheLeague",
+        "franchise_id": "0003",
+        "franchise_name": "Team Name",
+        "url": "https://www49.myfantasyleague.com/2025/home/13522"
+      }
+    ]
+  }
+}
+```
+
+**Key Insights (updated 2026-01-18):**
+- **This is the only reliable way to get franchise_id for a user**
+- Response includes `franchise_id` (4-digit string like "0003") for each league
+- The `FRANCHISE_NAMES=1` parameter includes team names but may cause timeouts for users with many leagues
+- Can pass USERNAME/PASSWORD directly instead of using cookie auth
+- Response field names vary across MFL deployments - check for: `franchise_id`, `franchiseId`, `FRANCHISE_ID`
+- League host information is also included in the response
 
 **Used In:**
 - [src/utils/mfl-login.ts](src/utils/mfl-login.ts)

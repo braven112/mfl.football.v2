@@ -78,6 +78,28 @@ Two leagues share this codebase:
 
 ---
 
+## AI Insights System
+
+**IMPORTANT:** Before starting any task, read relevant insight files. After completing work, record learnings.
+
+```
+docs/claude/insights/
+├── domains/           # Cross-cutting knowledge
+│   ├── frontend.md        # UI patterns, components
+│   ├── design-system.md   # Tokens, CSS variables
+│   ├── mfl-api.md         # MFL API quirks
+│   └── accessibility.md   # A11y patterns
+└── features/          # Feature-specific learnings
+    ├── nav-redesign.md    # Navigation drawer
+    └── {feature}.md       # New features
+```
+
+**Workflow:**
+1. **Before task:** Read `domains/` files for relevant domains + `features/{feature}.md` if exists
+2. **After task:** Add new insights using the format in `docs/claude/insights/README.md`
+
+---
+
 ## Documentation Index
 
 For detailed documentation, see `docs/claude/`:
@@ -94,6 +116,7 @@ For detailed documentation, see `docs/claude/`:
 | [critical-assumptions.md](docs/claude/critical-assumptions.md) | Hardcoded values ($45M cap, 10% escalation) |
 | [league-rules.md](docs/claude/league-rules.md) | TheLeague rules, scoring, roster config |
 | [afl-rules.md](docs/claude/afl-rules.md) | AFL Fantasy rules, scoring, roster config |
+| [insights/](docs/claude/insights/) | AI learnings by domain and feature |
 
 ### Feature Documentation
 

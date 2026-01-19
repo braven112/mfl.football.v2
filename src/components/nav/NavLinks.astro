@@ -227,8 +227,6 @@ const visibleSections = getVisibleSections();
             const icon = getIcon(link, league);
             const active = isActive(link, currentPath, league);
             const isExternal = link.external || !!link.url;
-            const hasQueryParams = href.includes('?');
-
             return (
               <li class="nav-links__item" key={link.id}>
                 <a
@@ -241,7 +239,7 @@ const visibleSections = getVisibleSections();
                     target: '_blank',
                     rel: 'noopener noreferrer',
                   })}
-                  {...(hasQueryParams && { 'data-astro-reload': true })}
+                  data-astro-reload
                   aria-current={active ? 'page' : undefined}
                   data-tooltip={isCollapsed ? label : undefined}
                 >

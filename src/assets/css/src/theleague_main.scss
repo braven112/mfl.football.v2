@@ -1,6 +1,9 @@
 @use "./fonts";
 @use "./reset";
 
+//// Design Tokens (load before components)
+@use "./nav-tokens";
+
 //// Alphabetical
 @use "./add-drop";
 @use "./alerts";
