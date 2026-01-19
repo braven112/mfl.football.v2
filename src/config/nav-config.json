@@ -1,8 +1,8 @@
 {
   "sections": [
     {
-      "id": "tools",
-      "label": "Tools",
+      "id": "popular",
+      "label": "Popular",
       "links": [
         {
           "id": "rosters",
@@ -21,14 +21,6 @@
           "path": "/rosters?view=nextyear",
           "external": false,
           "description": "Preview next year's roster and salary commitments"
-        },
-        {
-          "id": "calculator",
-          "label": "Extension Calculator",
-          "icon": "dollar",
-          "path": "/calculator",
-          "external": false,
-          "description": "Calculate contract extension values"
         },
         {
           "id": "draft-predictor",
@@ -83,21 +75,6 @@
           "path": "/mvp",
           "external": false,
           "description": "Top performers relative to salary"
-        }
-      ]
-    },
-    {
-      "id": "community",
-      "label": "Community",
-      "leagueOnly": "theleague",
-      "links": [
-        {
-          "id": "forum",
-          "label": "Message Board",
-          "icon": "comments",
-          "url": "https://theleague.us/forum/index.php",
-          "external": true,
-          "description": "Discussion forum for league members"
         }
       ]
     },
@@ -175,6 +152,37 @@
           "external": true,
           "description": "Real-time scoring on MFL"
         }
+      ]
+    },
+        {
+      "id": "community",
+      "label": "Community",
+      "leagueOnly": "theleague",
+      "links": [
+        {
+          "id": "forum",
+          "label": "Message Board",
+          "icon": "comments",
+          "url": "https://theleague.us/forum/index.php",
+          "external": true,
+          "description": "Discussion forum for league members"
+        }
+      ]
+    },
+        {
+      "id": "tools",
+      "label": "Tools",
+      "links": [
+        
+        {
+          "id": "calculator",
+          "label": "Extension Calculator",
+          "icon": "dollar",
+          "path": "/calculator",
+          "external": false,
+          "description": "Calculate contract extension values"
+        }
+        
       ]
     },
     {
