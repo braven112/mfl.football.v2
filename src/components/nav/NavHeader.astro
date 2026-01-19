@@ -23,15 +23,12 @@ import type { LeagueSlug, NavHeaderProps } from '../../types/nav';
 interface Props extends NavHeaderProps {
   /** Current page path for smart routing when switching leagues */
   currentPath: string;
-  /** Whether the drawer is collapsed (icon-only mode) */
-  isCollapsed?: boolean;
 }
 
 const {
   league,
   logoUrl,
   currentPath,
-  isCollapsed = false,
 } = Astro.props;
 
 // Determine league home URL
@@ -74,7 +71,7 @@ const switchUrl = getEquivalentRoute(currentPath, targetLeague);
 ---
 
 <header
-  class:list={['nav-header', { 'nav-header--collapsed': isCollapsed }]}
+  class="nav-header"
   role="banner"
 >
   <div class="nav-header__content">
@@ -90,44 +87,40 @@ const switchUrl = getEquivalentRoute(currentPath, targetLeague);
         width="48"
         height="48"
       />
-      {!isCollapsed && (
-        <span class="nav-header__league-name">
-          {league === 'afl' ? (
-            <span class="nav-header__league-name--afl">AFL Fantasy</span>
-          ) : (
-            <>
-              <span class="nav-header__league-name--the">The</span>
-              <span class="nav-header__league-name--league">League</span>
-            </>
-          )}
-        </span>
-      )}
+      <span class="nav-header__league-name">
+        {league === 'afl' ? (
+          <span class="nav-header__league-name--afl">AFL Fantasy</span>
+        ) : (
+          <>
+            <span class="nav-header__league-name--the">The</span>
+            <span class="nav-header__league-name--league">League</span>
+          </>
+        )}
+      </span>
     </a>
 
     {/* League switcher - chevron button */}
-    {!isCollapsed && (
-      <a
-        href={switchUrl}
-        class="nav-header__switch-btn"
-        aria-label={`Switch to ${targetLeagueName}`}
-        title={`Switch to ${targetLeagueName}`}
+    <a
+      href={switchUrl}
+      class="nav-header__switch-btn"
+      aria-label={`Switch to ${targetLeagueName}`}
+      title={`Switch to ${targetLeagueName}`}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
       >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M7 15l5 5 5-5" />
-          <path d="M7 9l5-5 5 5" />
-        </svg>
-      </a>
-    )}
+        <path d="M7 15l5 5 5-5" />
+        <path d="M7 9l5-5 5 5" />
+      </svg>
+    </a>
 
     {/* Close button - pushed to right */}
     <button
@@ -167,20 +160,11 @@ const switchUrl = getEquivalentRoute(currentPath, targetLeague);
     box-shadow: var(--shadow-md);
   }
 
-  .nav-header--collapsed {
-    justify-content: center;
-    padding: 0 var(--nav-spacing-sm, 8px);
-  }
-
   .nav-header__content {
     display: flex;
     align-items: center;
     gap: var(--nav-spacing-sm, 8px);
     width: 100%;
-  }
-
-  .nav-header--collapsed .nav-header__content {
-    justify-content: center;
   }
 
   .nav-header__logo-link {
@@ -209,11 +193,6 @@ const switchUrl = getEquivalentRoute(currentPath, targetLeague);
     height: 48px;
     object-fit: contain;
     flex-shrink: 0;
-  }
-
-  .nav-header--collapsed .nav-header__logo {
-    width: 40px;
-    height: 40px;
   }
 
   .nav-header__league-name {
@@ -290,17 +269,6 @@ const switchUrl = getEquivalentRoute(currentPath, targetLeague);
   .nav-header__close-btn:focus-visible {
     outline: none;
     box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
-  }
-
-  /* Collapsed state */
-  .nav-header--collapsed .nav-header__logo-link {
-    margin: 0;
-    padding: var(--nav-spacing-xs, 4px);
-  }
-
-  .nav-header--collapsed .nav-header__close-btn {
-    width: 28px;
-    height: 28px;
   }
 
   /* Dark mode support via .dark class */

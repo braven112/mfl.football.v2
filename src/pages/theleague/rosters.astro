@@ -2320,7 +2320,7 @@ const serializedConfig = JSON.stringify({
   box-sizing: border-box;
 }
 /* Tablet: 2x2 grid */
-@container (min-width: 768px) {
+@container (min-width: 600px) {
   .team-card__navigation .team-icon-nav {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2678,6 +2678,12 @@ const serializedConfig = JSON.stringify({
 
   .chart-metrics__headline {
     font-size: 1.25rem;
+    margin-left: .75rem
+  }
+  @media (min-width: 1200px) {
+    .chart-metrics__headline {
+      margin-left: inherit;
+    }
   }
 
   .chart-card-link {

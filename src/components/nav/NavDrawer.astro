@@ -68,9 +68,6 @@ const {
   initialOpen = false,
 } = Astro.props;
 
-// Read collapsed state from cookie (server-side)
-const navCollapsedCookie = Astro.cookies.get(NAV_COOKIES.NAV_COLLAPSED);
-const initialCollapsed = navCollapsedCookie?.value === 'true';
 
 // Read open state from cookie (server-side, for desktop persistence)
 const navOpenCookie = Astro.cookies.get(NAV_COOKIES.NAV_OPEN);
@@ -108,7 +105,6 @@ const footerLinks = [
 <aside
   class:list={[
     'nav-drawer',
-    { 'nav-drawer--collapsed': initialCollapsed },
     { 'nav-drawer--open': shouldOpenOnDesktop },
     { 'nav-drawer--no-transition': shouldOpenOnDesktop },
   ]}
@@ -118,39 +114,8 @@ const footerLinks = [
   aria-label="Navigation drawer"
   aria-hidden={shouldOpenOnDesktop ? 'false' : 'true'}
   data-nav-drawer
-  data-collapsed={initialCollapsed ? 'true' : 'false'}
   data-persist-open={shouldOpenOnDesktop ? 'true' : 'false'}
 >
-  <!-- Close button moved to NavHeader component -->
-
-  <!-- Collapse toggle button (visible in expanded mode) -->
-  <button
-    type="button"
-    class="nav-drawer__collapse-btn"
-    aria-label="Collapse navigation"
-    title="Collapse sidebar"
-    data-nav-collapse
-  >
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <polyline points="11 17 6 12 11 7"></polyline>
-      <polyline points="18 17 13 12 18 7"></polyline>
-    </svg>
-  </button>
-
-  <!-- Expand toggle button (visible in collapsed mode) -->
-  <button
-    type="button"
-    class="nav-drawer__expand-btn"
-    aria-label="Expand navigation"
-    title="Expand sidebar"
-    data-nav-expand
-  >
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <polyline points="13 17 18 12 13 7"></polyline>
-      <polyline points="6 17 11 12 6 7"></polyline>
-    </svg>
-  </button>
-
   <!-- Drawer content wrapper -->
   <div class="nav-drawer__content">
     <!-- Header: Logo + League Switcher -->
@@ -158,7 +123,6 @@ const footerLinks = [
       league={league}
       logoUrl={logoUrl}
       currentPath={currentPath}
-      isCollapsed={initialCollapsed}
     />
 
     <!-- Links: Scrollable navigation sections -->
@@ -166,7 +130,6 @@ const footerLinks = [
       sections={sections}
       league={league}
       currentPath={currentPath}
-      isCollapsed={initialCollapsed}
       franchiseId={franchiseId}
       adminFranchiseIds={adminFranchiseIds}
     />
@@ -178,7 +141,6 @@ const footerLinks = [
       host={host}
       year={year}
       leagueId={leagueId}
-      isCollapsed={initialCollapsed}
       league={league}
     />
   </div>
@@ -254,19 +216,6 @@ const footerLinks = [
     transition: none !important;
   }
 
-  /* Collapsed state */
-  .nav-drawer--collapsed {
-    width: var(--nav-width-collapsed, 64px);
-  }
-
-  /* Expose width as custom property for layout integration */
-  .nav-drawer {
-    --nav-drawer-width: var(--nav-width-expanded, 320px);
-  }
-
-  .nav-drawer--collapsed {
-    --nav-drawer-width: var(--nav-width-collapsed, 64px);
-  }
 
   /* ==============================================
    * DRAWER CONTENT - Flex container for sections
@@ -320,68 +269,6 @@ const footerLinks = [
     justify-content: center;
   }
 
-  /* Hide close button in collapsed mode */
-  .nav-drawer--collapsed .nav-drawer__close-btn {
-    display: none;
-  }
-
-  /* ==============================================
-   * COLLAPSE/EXPAND BUTTONS
-   * ============================================== */
-  .nav-drawer__collapse-btn,
-  .nav-drawer__expand-btn {
-    position: absolute;
-    top: 120px; /* Position below header */
-    left: 0;
-    transform: translateX(-50%);
-    width: 24px;
-    height: 24px;
-    background: var(--nav-bg, #ffffff);
-    border: 1px solid var(--nav-border, #e5e7eb);
-    border-radius: 50%;
-    cursor: pointer;
-    padding: 4px;
-    color: var(--nav-text-muted, #6b7280);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-    transition: var(--nav-hover-transition);
-    z-index: var(--nav-z-close-btn, 970);
-    display: none; /* Shown via CSS based on state */
-  }
-
-  .nav-drawer__collapse-btn:hover,
-  .nav-drawer__expand-btn:hover {
-    color: var(--nav-text, #333333);
-    background: var(--nav-hover-bg, #f3f4f6);
-    border-color: var(--nav-active-border-left, #1c497c);
-  }
-
-  .nav-drawer__collapse-btn:focus-visible,
-  .nav-drawer__expand-btn:focus-visible {
-    outline: none;
-    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
-  }
-
-  .nav-drawer__collapse-btn svg,
-  .nav-drawer__expand-btn svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  /* Show collapse button when expanded and open (desktop only) */
-  @media (min-width: 1024px) {
-    .nav-drawer--open:not(.nav-drawer--collapsed) .nav-drawer__collapse-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Show expand button when collapsed and open */
-    .nav-drawer--open.nav-drawer--collapsed .nav-drawer__expand-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  }
 
   /* ==============================================
    * DESKTOP PUSH BEHAVIOR
@@ -398,7 +285,6 @@ const footerLinks = [
 
     /* No shadow on desktop when open (it pushes content) */
     .nav-drawer--open {
-      box-shadow: none;
       border-left: 1px solid var(--nav-border, #e5e7eb);
     }
   }
@@ -424,29 +310,13 @@ const footerLinks = [
     background: var(--nav-hover-bg);
   }
 
-  :global(.dark) .nav-drawer__collapse-btn,
-  :global(.dark) .nav-drawer__expand-btn {
-    background: var(--nav-bg);
-    border-color: var(--nav-border);
-    color: var(--nav-text-muted);
-  }
-
-  :global(.dark) .nav-drawer__collapse-btn:hover,
-  :global(.dark) .nav-drawer__expand-btn:hover {
-    color: var(--nav-text);
-    background: var(--nav-hover-bg);
-    border-color: var(--nav-active-border-left);
-  }
-
   /* ==============================================
    * REDUCED MOTION
    * ============================================== */
   @media (prefers-reduced-motion: reduce) {
     .nav-overlay,
     .nav-drawer,
-    .nav-drawer__close-btn,
-    .nav-drawer__collapse-btn,
-    .nav-drawer__expand-btn {
+    .nav-drawer__close-btn {
       transition: none;
     }
   }
@@ -473,21 +343,17 @@ const footerLinks = [
    *
    * Handles:
    * - Open/close drawer state
-   * - Collapsed/expanded state
    * - Focus trap when open
    * - Escape key to close
    * - Backdrop click to close
    * - Body scroll lock
-   * - Cookie persistence for collapsed state
-   * - ResizeObserver for auto-collapse
+   * - Cookie persistence for open state
    * - Screen reader announcements
    * - View Transitions support (reinitializes on page navigation)
    */
 
   // Cookie names (must match NAV_COOKIES in nav.ts)
-  const COOKIE_NAV_COLLAPSED = 'nav-collapsed';
   const COOKIE_NAV_OPEN = 'nav-open';
-  const MOBILE_BREAKPOINT = 768;
   const DESKTOP_BREAKPOINT = 1024;
 
   // Check if we're on desktop
@@ -509,8 +375,6 @@ const footerLinks = [
     const drawer = document.getElementById('nav-drawer') as HTMLElement | null;
     const overlay = document.getElementById('nav-overlay') as HTMLElement | null;
     const closeBtn = document.querySelector('[data-nav-close]') as HTMLElement | null;
-    const collapseBtn = document.querySelector('[data-nav-collapse]') as HTMLElement | null;
-    const expandBtn = document.querySelector('[data-nav-expand]') as HTMLElement | null;
     const toggleBtns = document.querySelectorAll('[data-nav-toggle]');
     const announcer = document.getElementById('nav-drawer-announcer') as HTMLElement | null;
 
@@ -519,7 +383,6 @@ const footerLinks = [
     // State - check if drawer should be open on desktop (from server-rendered class)
     const shouldPersistOpen = drawer?.dataset.persistOpen === 'true';
     let isOpen = shouldPersistOpen && isDesktop();
-    let isCollapsed = drawer?.dataset.collapsed === 'true';
     let previousActiveElement: HTMLElement | null = null;
     let focusTrapActive = false;
 
@@ -596,27 +459,6 @@ const footerLinks = [
       if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
     }
     return null;
-  }
-
-  /**
-   * Update collapsed state in UI
-   */
-  function updateCollapsedUI(): void {
-    if (!drawer) return;
-
-    if (isCollapsed) {
-      drawer.classList.add('nav-drawer--collapsed');
-      drawer.dataset.collapsed = 'true';
-    } else {
-      drawer.classList.remove('nav-drawer--collapsed');
-      drawer.dataset.collapsed = 'false';
-    }
-
-    // Update all nav sub-components that have isCollapsed prop
-    // This is handled by data attributes on sub-components
-    drawer.querySelectorAll('[data-nav-collapsible]').forEach((el) => {
-      (el as HTMLElement).dataset.collapsed = isCollapsed ? 'true' : 'false';
-    });
   }
 
   /**
@@ -712,70 +554,11 @@ const footerLinks = [
   }
 
   /**
-   * Collapse the drawer (icon-only mode)
-   */
-  function collapseDrawer(): void {
-    isCollapsed = true;
-    updateCollapsedUI();
-    setCookie(COOKIE_NAV_COLLAPSED, 'true');
-    announce('Navigation collapsed to icon-only mode');
-  }
-
-  /**
-   * Expand the drawer (full mode)
-   */
-  function expandDrawer(): void {
-    isCollapsed = false;
-    updateCollapsedUI();
-    setCookie(COOKIE_NAV_COLLAPSED, 'false');
-    announce('Navigation expanded');
-  }
-
-  /**
-   * Toggle collapsed state
-   */
-  function toggleCollapsed(): void {
-    if (isCollapsed) {
-      expandDrawer();
-    } else {
-      collapseDrawer();
-    }
-  }
-
-  /**
    * Handle escape key
    */
   function handleEscapeKey(e: KeyboardEvent): void {
     if (e.key === 'Escape' && isOpen) {
       closeDrawer();
-    }
-  }
-
-  /**
-   * Handle resize - auto-collapse on mobile
-   */
-  function handleResize(): void {
-    const width = window.innerWidth;
-
-    // Auto-collapse on mobile
-    if (width < MOBILE_BREAKPOINT && !isCollapsed) {
-      // Only auto-collapse if user hasn't explicitly set a preference
-      const userPref = getCookie(COOKIE_NAV_COLLAPSED);
-      if (userPref === null) {
-        isCollapsed = true;
-        updateCollapsedUI();
-      }
-    }
-
-    // Update body scroll lock based on mode
-    if (isOpen) {
-      if (width >= DESKTOP_BREAKPOINT) {
-        // Desktop push mode - no scroll lock needed
-        document.body.style.overflow = '';
-      } else {
-        // Mobile overlay mode - lock scroll
-        document.body.style.overflow = 'hidden';
-      }
     }
   }
 
@@ -795,34 +578,8 @@ const footerLinks = [
     cleanupFunctions.push(() => overlay.removeEventListener('click', closeDrawer));
   }
 
-  if (collapseBtn) {
-    collapseBtn.addEventListener('click', collapseDrawer);
-    cleanupFunctions.push(() => collapseBtn.removeEventListener('click', collapseDrawer));
-  }
-
-  if (expandBtn) {
-    expandBtn.addEventListener('click', expandDrawer);
-    cleanupFunctions.push(() => expandBtn.removeEventListener('click', expandDrawer));
-  }
-
   document.addEventListener('keydown', handleEscapeKey);
   cleanupFunctions.push(() => document.removeEventListener('keydown', handleEscapeKey));
-
-  // ResizeObserver for responsive behavior
-  if (typeof ResizeObserver !== 'undefined') {
-    const resizeObserver = new ResizeObserver(() => {
-      handleResize();
-    });
-    resizeObserver.observe(document.body);
-    cleanupFunctions.push(() => resizeObserver.disconnect());
-  } else {
-    // Fallback for older browsers
-    window.addEventListener('resize', handleResize);
-    cleanupFunctions.push(() => window.removeEventListener('resize', handleResize));
-  }
-
-  // Initial setup
-  handleResize();
 
   // Handle persisted open state based on current viewport
   if (shouldPersistOpen) {
@@ -870,11 +627,7 @@ const footerLinks = [
     open: openDrawer,
     close: closeDrawer,
     toggle: toggleDrawer,
-    collapse: collapseDrawer,
-    expand: expandDrawer,
-    toggleCollapsed,
     isOpen: () => isOpen,
-    isCollapsed: () => isCollapsed,
   };
   } // End of initNavDrawer function
 

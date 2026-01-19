@@ -25,7 +25,6 @@ const {
   host,
   year,
   leagueId,
-  isCollapsed = false,
   verifyTeamUrl,
   league = 'theleague',
 } = Astro.props;
@@ -65,7 +64,7 @@ const isAuthenticated = !!team;
 ---
 
 <footer
-  class:list={['nav-footer', { 'nav-footer--collapsed': isCollapsed }]}
+  class="nav-footer"
   role="contentinfo"
 >
   {isAuthenticated ? (
@@ -90,20 +89,12 @@ const isAuthenticated = !!team;
           </div>
         )}
       </div>
-      {!isCollapsed && (
-        <div class="nav-footer__team-info">
-          <span class="nav-footer__team-name">{team.teamName}</span>
-          {team.ownerName && (
-            <span class="nav-footer__owner-name">{team.ownerName}</span>
-          )}
-        </div>
-      )}
-      {isCollapsed && (
-        <span class="nav-footer__tooltip" role="tooltip">
-          {team.teamName}
-          {team.ownerName && ` - ${team.ownerName}`}
-        </span>
-      )}
+      <div class="nav-footer__team-info">
+        <span class="nav-footer__team-name">{team.teamName}</span>
+        {team.ownerName && (
+          <span class="nav-footer__owner-name">{team.ownerName}</span>
+        )}
+      </div>
     </a>
   ) : (
     <!-- Unauthenticated State: Verify Prompt -->
@@ -119,27 +110,18 @@ const isAuthenticated = !!team;
           <use href="/assets/icons/sprite.svg#icon-user"></use>
         </svg>
       </div>
-      {!isCollapsed && (
-        <div class="nav-footer__verify-info">
-          <span class="nav-footer__verify-label">Verify Your Team</span>
-          <span class="nav-footer__verify-hint">Link your MFL account</span>
-        </div>
-      )}
-      {!isCollapsed && (
-        <svg class="nav-footer__verify-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-      )}
-      {isCollapsed && (
-        <span class="nav-footer__tooltip" role="tooltip">
-          Verify Your Team
-        </span>
-      )}
+      <div class="nav-footer__verify-info">
+        <span class="nav-footer__verify-label">Verify Your Team</span>
+        <span class="nav-footer__verify-hint">Link your MFL account</span>
+      </div>
+      <svg class="nav-footer__verify-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6" />
+      </svg>
     </a>
   )}
 
-  {/* Footer Links (e.g., "Back to MFL") - shown only when expanded */}
-  {!isCollapsed && footerLinks.length > 0 && (
+  {/* Footer Links (e.g., "Back to MFL") */}
+  {footerLinks.length > 0 && (
     <div class="nav-footer__links">
       {footerLinks.map((link) => (
         <a
@@ -382,76 +364,6 @@ const isAuthenticated = !!team;
   }
 
   /* ==============================================
-   * COLLAPSED STATE
-   * ============================================== */
-  .nav-footer--collapsed {
-    padding: var(--nav-spacing-sm, 8px);
-    align-items: center;
-    justify-content: center;
-  }
-
-  .nav-footer--collapsed .nav-footer__team,
-  .nav-footer--collapsed .nav-footer__verify {
-    justify-content: center;
-  }
-
-  .nav-footer--collapsed .nav-footer__verify {
-    padding: var(--nav-spacing-sm, 8px);
-    margin: 0;
-    border: none;
-    background: transparent;
-    border-radius: var(--nav-border-radius-md, 8px);
-  }
-
-  .nav-footer--collapsed .nav-footer__verify:hover,
-  .nav-footer--collapsed .nav-footer__verify:focus-visible {
-    background: var(--nav-verify-bg, rgba(28, 73, 124, 0.05));
-  }
-
-  /* ==============================================
-   * TOOLTIP (Collapsed State)
-   * ============================================== */
-  .nav-footer__tooltip {
-    position: absolute;
-    left: calc(100% + var(--nav-spacing-sm, 8px));
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--nav-tooltip-bg, #1f2937);
-    color: var(--nav-tooltip-text, #ffffff);
-    padding: var(--nav-spacing-sm, 8px) var(--nav-spacing-md, 12px);
-    border-radius: var(--nav-border-radius-sm, 4px);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    white-space: nowrap;
-    box-shadow: var(--nav-tooltip-shadow, 0 4px 12px rgba(0, 0, 0, 0.15));
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
-    z-index: 10;
-  }
-
-  /* Tooltip arrow */
-  .nav-footer__tooltip::before {
-    content: '';
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 6px solid transparent;
-    border-right-color: var(--nav-tooltip-bg, #1f2937);
-  }
-
-  /* Show tooltip on hover/focus in collapsed state */
-  .nav-footer--collapsed .nav-footer__team:hover .nav-footer__tooltip,
-  .nav-footer--collapsed .nav-footer__team:focus-within .nav-footer__tooltip,
-  .nav-footer--collapsed .nav-footer__verify:hover .nav-footer__tooltip,
-  .nav-footer--collapsed .nav-footer__verify:focus-visible .nav-footer__tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  /* ==============================================
    * ICON STYLES
    * ============================================== */
   .nav-footer__icon {
@@ -464,8 +376,7 @@ const isAuthenticated = !!team;
   @media (prefers-reduced-motion: reduce) {
     .nav-footer__verify,
     .nav-footer__verify-arrow,
-    .nav-footer__link,
-    .nav-footer__tooltip {
+    .nav-footer__link {
       transition: none;
     }
   }

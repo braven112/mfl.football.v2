@@ -413,7 +413,6 @@ interface Props extends NavLinksProps {
 /* Desktop push mode */
 @media (min-width: 1024px) {
   .nav-drawer--open {
-    box-shadow: none;
     border-left: 1px solid var(--nav-border);
   }
 }
@@ -710,6 +709,30 @@ observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
 - Test on various pages to ensure navigation works correctly
 - Apply same pattern to AFL layout if needed
 - Consider extracting page-wrapper pattern into a shared component
+
+---
+
+## 2026-01-18 - Collapsed State Removed
+
+**Context:** Simplifying the navigation drawer by removing the icon-only collapsed mode
+
+**Insight:** The collapsed state (64px width, icon-only mode) was removed from the navigation drawer. The drawer now only has two states: open (320px) and closed.
+
+**Changes Made:**
+1. **NavDrawer.astro**: Removed collapse/expand buttons, collapsed CSS class, and all JavaScript collapse/expand logic
+2. **NavHeader.astro**: Removed `isCollapsed` prop, always shows league name and switcher chevron
+3. **LeagueSwitcher.astro**: Removed collapsed mode (single swap icon), always renders pill toggle
+4. **NavLinks.astro**: Removed collapsed mode (icon-only with tooltips), always shows labels
+5. **NavFooter.astro**: Removed collapsed mode, always shows full team info or verify prompt
+
+**Removed Features:**
+- Collapse/expand toggle buttons on drawer edge
+- `nav-collapsed` cookie persistence
+- Auto-collapse on mobile (<768px)
+- Tooltips for collapsed mode
+- ResizeObserver for responsive collapse
+
+**Recommendation:** If collapsed mode is needed in the future, consider re-implementing as a separate feature branch rather than modifying the current simplified implementation.
 
 ---
 

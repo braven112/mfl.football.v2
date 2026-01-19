@@ -36,7 +36,6 @@ const {
   sections,
   league,
   currentPath = '',
-  isCollapsed = false,
   franchiseId,
   adminFranchiseIds = [],
 } = Astro.props;
@@ -199,18 +198,14 @@ const visibleSections = getVisibleSections();
 ---
 
 <nav
-  class:list={['nav-links', { 'nav-links--collapsed': isCollapsed }]}
+  class="nav-links"
   aria-label="Main navigation"
 >
   <ul class="nav-links__list" role="list">
     {visibleSections.map((section, sectionIndex) => (
       <li class="nav-links__section" key={section.id}>
-        {/* Section title - hidden in collapsed mode */}
         <h2
-          class:list={[
-            'nav-links__section-title',
-            { 'visually-hidden': isCollapsed },
-          ]}
+          class="nav-links__section-title"
           id={`nav-section-${section.id}`}
         >
           {section.label}
@@ -241,7 +236,6 @@ const visibleSections = getVisibleSections();
                   })}
                   data-astro-reload
                   aria-current={active ? 'page' : undefined}
-                  data-tooltip={isCollapsed ? label : undefined}
                 >
                   {/* Icon */}
                   <span class="nav-links__icon" aria-hidden="true">
@@ -250,13 +244,8 @@ const visibleSections = getVisibleSections();
                     </svg>
                   </span>
 
-                  {/* Label - hidden in collapsed mode but accessible */}
-                  <span
-                    class:list={[
-                      'nav-links__label',
-                      { 'visually-hidden': isCollapsed },
-                    ]}
-                  >
+                  {/* Label */}
+                  <span class="nav-links__label">
                     {label}
                   </span>
 
@@ -271,7 +260,7 @@ const visibleSections = getVisibleSections();
                   )}
 
                   {/* External link indicator */}
-                  {isExternal && !isCollapsed && (
+                  {isExternal && (
                     <span class="nav-links__external" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -281,16 +270,6 @@ const visibleSections = getVisibleSections();
                     </span>
                   )}
                 </a>
-
-                {/* Tooltip (shown in collapsed mode on hover) */}
-                {isCollapsed && (
-                  <span class="nav-links__tooltip" role="tooltip">
-                    {label}
-                    {isExternal && (
-                      <span class="nav-links__tooltip-external">(opens in new tab)</span>
-                    )}
-                  </span>
-                )}
               </li>
             );
           })}
@@ -337,33 +316,6 @@ const visibleSections = getVisibleSections();
   .nav-links::-webkit-scrollbar-thumb:hover {
     background: var(--nav-scrollbar-thumb-hover, #9ca3af);
   }
-
-  /* ============================================
-   * COLLAPSED MODE
-   * ============================================ */
-  .nav-links--collapsed {
-    padding: var(--nav-spacing-sm, 8px) var(--nav-spacing-sm, 8px);
-  }
-
-  .nav-links--collapsed .nav-links__section-links {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .nav-links--collapsed .nav-links__link {
-    width: var(--nav-touch-target-min, 44px);
-    height: var(--nav-touch-target-min, 44px);
-    justify-content: center;
-    padding: 0;
-    border-radius: var(--nav-border-radius-md, 8px);
-  }
-
-  /* Hide section titles in collapsed mode */
-  .nav-links--collapsed .nav-links__section-title {
-    display: none;
-  }
-
 
   /* ============================================
    * LISTS
@@ -473,16 +425,6 @@ const visibleSections = getVisibleSections();
     fill: var(--color-primary, #1c497c);
   }
 
-  .nav-links--collapsed .nav-links__icon {
-    width: 28px;
-    height: 28px;
-  }
-
-  .nav-links--collapsed .nav-links__icon :global(svg) {
-    width: 28px;
-    height: 28px;
-  }
-
   /* ============================================
    * LABEL
    * ============================================ */
@@ -513,16 +455,6 @@ const visibleSections = getVisibleSections();
     flex-shrink: 0;
   }
 
-  /* In collapsed mode, position badge absolutely */
-  .nav-links--collapsed .nav-links__badge {
-    position: absolute;
-    top: var(--nav-spacing-xs);
-    right: var(--nav-spacing-xs);
-    min-width: 16px;
-    height: 16px;
-    font-size: 0.625rem;
-  }
-
   /* ============================================
    * EXTERNAL LINK INDICATOR
    * ============================================ */
@@ -547,63 +479,12 @@ const visibleSections = getVisibleSections();
   }
 
   /* ============================================
-   * TOOLTIP (collapsed mode)
-   * ============================================ */
-  .nav-links__tooltip {
-    position: absolute;
-    left: calc(100% + var(--nav-spacing-sm));
-    top: 50%;
-    transform: translateY(-50%);
-    padding: var(--nav-spacing-sm) var(--nav-spacing-md);
-    background: var(--nav-tooltip-bg);
-    color: var(--nav-tooltip-text);
-    font-size: 0.875rem;
-    font-weight: 500;
-    white-space: nowrap;
-    border-radius: var(--nav-border-radius-sm);
-    box-shadow: var(--nav-tooltip-shadow);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
-    z-index: calc(var(--nav-z-drawer) + 10);
-  }
-
-  .nav-links__tooltip::before {
-    content: '';
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 6px solid transparent;
-    border-right-color: var(--nav-tooltip-bg);
-  }
-
-  .nav-links__item:hover .nav-links__tooltip,
-  .nav-links__link:focus-visible + .nav-links__tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  .nav-links__tooltip-external {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--nav-text-muted);
-    font-weight: 400;
-    margin-top: var(--nav-spacing-xs);
-  }
-
-  /* ============================================
    * SEPARATOR
    * ============================================ */
   .nav-links__separator {
     border: none;
     border-top: 1px solid var(--nav-border-subtle);
     margin: var(--nav-spacing-lg) 0;
-  }
-
-  .nav-links--collapsed .nav-links__separator {
-    margin: var(--nav-spacing-md) 0;
   }
 
   /* ============================================
@@ -625,8 +506,7 @@ const visibleSections = getVisibleSections();
    * REDUCED MOTION
    * ============================================ */
   @media (prefers-reduced-motion: reduce) {
-    .nav-links__link,
-    .nav-links__tooltip {
+    .nav-links__link {
       transition: none;
     }
   }
