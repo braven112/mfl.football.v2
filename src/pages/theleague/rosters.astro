@@ -2226,8 +2226,8 @@ const serializedConfig = JSON.stringify({
   .team-icon-img {
     width: 100%;
     height: 100%;
-    max-width: 42px;
-    max-height: 42px;
+    max-width: 40px;
+    max-height: 40px;
     object-fit: contain;
   }
 
@@ -2241,6 +2241,7 @@ const serializedConfig = JSON.stringify({
   width: 100%;
   position: relative;
   order: 10; /* Ensure it appears last in flex layout */
+  container-type: inline-size; /* Enable container queries */
 }
 
 /* Minimal Toggle Button - just a small arrow at bottom of card */
@@ -2318,29 +2319,35 @@ const serializedConfig = JSON.stringify({
   margin: 0 auto;
   box-sizing: border-box;
 }
-
 /* Tablet: 2x2 grid */
-@media (min-width: 768px) {
+@container (min-width: 768px) {
   .team-card__navigation .team-icon-nav {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
-/* Desktop: all in one row */
-@media (min-width: 1200px) {
+@container (min-width: 1024px) {
   .team-card__navigation .team-icon-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+
+
+/* Container query: 4 columns as default when possible */
+@container (min-width: 400px) {
+  .team-icon-nav {
     grid-template-columns: repeat(4, auto);
   }
 
   .team-nav-accordion__content.expanded {
-    max-height: 400px; /* Single row on desktop */
+    max-height: 400px; /* Single row */
   }
 }
 
-/* Responsive: Mobile */
-@media (max-width: 767px) {
-  .team-nav-accordion__content.expanded {
-    max-height: 800px; /* Stacked divisions on mobile */
+/* Container query: fall back to 2x2 only when very narrow */
+@container (max-width: 399px) and (min-width: 280px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -2708,7 +2715,7 @@ const serializedConfig = JSON.stringify({
   .next-year-layout {
     display: grid;
     grid-template-columns: 13fr 7fr;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   .next-year-layout__left {
