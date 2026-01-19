@@ -24,6 +24,7 @@ import { getCurrentLeagueYear } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, parseMyTeamFromUrl } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
+import { NAV_COOKIES } from '../types/nav';
 import leagueConfigData from '../data/theleague.config.json';
 
 export interface Props {
@@ -35,6 +36,8 @@ export interface Props {
 }
 
 const { title, host, leagueId, year, staticHost } = Astro.props as Props;
+const navOpenCookie = Astro.cookies.get(NAV_COOKIES.NAV_OPEN);
+const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 
 // Get league context from URL
 const leagueContext = getLeagueContext(Astro.url);
@@ -123,7 +126,10 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 	</head>
 	<body>
 		<!-- Page wrapper for push behavior when drawer is open on desktop -->
-		<div class="page-wrapper" id="page-wrapper">
+		<div
+			class:list={['page-wrapper', { 'nav-open': shouldOpenOnDesktop }]}
+			id="page-wrapper"
+		>
 			<TheLeagueHeader
 				host={host}
 				leagueId={leagueId}
