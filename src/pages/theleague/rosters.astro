@@ -2585,8 +2585,7 @@ const serializedConfig = JSON.stringify({
 
   :global(.chart-card__header) {
     display: flex;
-    flex-direction: column;
-    gap: 0;
+    gap: 1rem;
     align-self: start;
   }
 
@@ -3645,6 +3644,9 @@ const serializedConfig = JSON.stringify({
     object-fit: contain;
     align-self: flex-start;
   }
+:global(.chart-card__header .team-group__logo) {
+    margin-left: .75rem;
+  }
   :global(.team-group__logo--fallback) {
     height: 2rem;
     width: 2rem;
@@ -4251,13 +4253,6 @@ const serializedConfig = JSON.stringify({
     }
   };
 
-  // Initialize view tabs
-  document.querySelectorAll('.view-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      switchView(tab.dataset.view);
-    });
-  });
-
   /**
    * Team Navigation Accordion
    * Manages collapse/expand state with localStorage persistence
@@ -4626,6 +4621,13 @@ const serializedConfig = JSON.stringify({
 
     console.log('defaultTeamId:', defaultTeamId);
     console.log('defaultSeason:', defaultSeason);
+
+    // Initialize view tabs
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        switchView(tab.dataset.view);
+      });
+    });
 
     // Coach Mode Logic
     const modeBtns = document.querySelectorAll('.mode-btn');
@@ -6474,4 +6476,7 @@ const serializedConfig = JSON.stringify({
   } else {
     initRosterPage();
   }
+
+  // Re-initialize after View Transitions (Astro page navigation)
+  document.addEventListener('astro:page-load', initRosterPage);
 </script>
