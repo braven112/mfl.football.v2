@@ -5,6 +5,80 @@
 
 import type { StandingsFranchise, TeamStanding, DivisionStandings, PlayoffSeeding } from '../types/standings';
 
+// Weekly results type for calculating all-play from weekly data
+export type WeeklyResult = {
+  week: number;
+  scores: Record<string, number>;
+};
+
+export type WeeklyResultsData = {
+  weeks: WeeklyResult[];
+};
+
+// Calculated all-play record
+export type AllPlayRecord = {
+  wins: number;
+  losses: number;
+  ties: number;
+  pct: number;
+};
+
+/**
+ * Calculate all-play records from weekly results up to a cutoff week
+ * All-play: each team gets wins/losses against all other teams each week based on score
+ */
+export function calculateAllPlayFromWeekly(
+  weeklyResults: WeeklyResultsData,
+  cutoffWeek: number
+): Map<string, AllPlayRecord> {
+  const allPlayRecords = new Map<string, AllPlayRecord>();
+
+  // Filter weeks up to and including the cutoff
+  const weeksToProcess = weeklyResults.weeks.filter(w => w.week <= cutoffWeek);
+
+  // Initialize records for all franchises
+  const allFranchiseIds = new Set<string>();
+  weeksToProcess.forEach(week => {
+    Object.keys(week.scores).forEach(id => allFranchiseIds.add(id));
+  });
+
+  allFranchiseIds.forEach(id => {
+    allPlayRecords.set(id, { wins: 0, losses: 0, ties: 0, pct: 0 });
+  });
+
+  // Process each week
+  weeksToProcess.forEach(week => {
+    const scores = Object.entries(week.scores);
+
+    // For each team, compare against all other teams
+    scores.forEach(([teamId, teamScore]) => {
+      const record = allPlayRecords.get(teamId)!;
+
+      scores.forEach(([opponentId, opponentScore]) => {
+        if (teamId === opponentId) return; // Don't compare to self
+
+        if (teamScore > opponentScore) {
+          record.wins++;
+        } else if (teamScore < opponentScore) {
+          record.losses++;
+        } else {
+          record.ties++;
+        }
+      });
+    });
+  });
+
+  // Calculate percentages
+  allPlayRecords.forEach((record, id) => {
+    const total = record.wins + record.losses + record.ties;
+    if (total > 0) {
+      record.pct = (record.wins + record.ties * 0.5) / total;
+    }
+  });
+
+  return allPlayRecords;
+}
+
 // League config type (can come from either league)
 type LeagueConfig = {
   leagueId?: string;
@@ -334,7 +408,13 @@ export function getAllPlayStandings(franchises: StandingsFranchise[], config: Le
 }
 
 // Get all-play standings grouped by tier (for AFL Fantasy)
-export function getTierAllPlayStandings(franchises: StandingsFranchise[], config: LeagueConfig): { tier: string; teams: TeamStanding[] }[] {
+// Optional calculatedAllPlay parameter allows using week-limited all-play records
+// instead of MFL's cumulative all-play data
+export function getTierAllPlayStandings(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  calculatedAllPlay?: Map<string, AllPlayRecord>
+): { tier: string; teams: TeamStanding[] }[] {
   // First get league standings to get seed information
   const leagueStandings = getLeagueStandings(franchises, config);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
@@ -343,6 +423,16 @@ export function getTierAllPlayStandings(franchises: StandingsFranchise[], config
     const standing = enrichTeamStanding(franchise, config);
     // Add seed from league standings
     standing.seed = seedMap.get(standing.id);
+
+    // Override all-play data if calculated records are provided
+    if (calculatedAllPlay) {
+      const allPlayRecord = calculatedAllPlay.get(standing.id);
+      if (allPlayRecord) {
+        standing.all_play_wlt = `${allPlayRecord.wins}-${allPlayRecord.losses}-${allPlayRecord.ties}`;
+        standing.all_play_pct = allPlayRecord.pct.toFixed(3);
+      }
+    }
+
     return standing;
   });
 

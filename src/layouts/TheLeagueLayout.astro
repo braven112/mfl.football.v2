@@ -25,6 +25,7 @@ import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, parseMyTeamFromUrl } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
+import { getAFLPreference, getTheLeaguePreference } from '../utils/team-preferences';
 import leagueConfigData from '../data/theleague.config.json';
 
 export interface Props {
@@ -50,6 +51,9 @@ const mflHost = (host || envHost).replace(/^https?:\/\//, '').replace(/\/+$/, ''
 const envYear = (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) || getCurrentLeagueYear().toString();
 const currentYear = (year || envYear).toString();
 
+// Determine league slug for nav (needed early for team lookup)
+const league: LeagueSlug = leagueContext.slug === 'afl-fantasy' ? 'afl' : 'theleague';
+
 // Check for myteam in URL and set cookie if present
 const myteamParam = parseMyTeamFromUrl(Astro.url);
 if (myteamParam) {
@@ -60,49 +64,79 @@ if (myteamParam) {
 		sameSite: 'lax',
 	});
 	// Also set the league for this team
-	Astro.cookies.set('myteam-league', 'theleague', {
+	Astro.cookies.set('myteam-league', league, {
 		path: '/',
 		maxAge: 60 * 60 * 24 * 365,
 		sameSite: 'lax',
 	});
 }
 
-// Get myteam from cookie
-const myteam = myteamParam || Astro.cookies.get('myteam')?.value || null;
-
-// Build team info from config if myteam is set
+// Get team preference based on current league context
+let myteam: string | null = null;
 let teamInfo: NavTeamInfo | null = null;
-if (myteam) {
-	// Find the team in the config
-	const teamData = leagueConfigData.teams.find(
-		(t: { franchiseId: string }) => t.franchiseId === myteam
-	);
 
-	if (teamData) {
-		teamInfo = {
-			franchiseId: myteam,
-			teamName: teamData.name,
-			iconUrl: teamData.icon || null,
-			ownerName: null, // Could be added to config if needed
-			league: 'theleague' as LeagueSlug,
-		};
-	} else {
-		// Team not found in config, use minimal info
-		teamInfo = {
-			franchiseId: myteam,
-			teamName: `Team ${myteam}`,
-			iconUrl: null,
-			ownerName: null,
-			league: 'theleague' as LeagueSlug,
-		};
+if (league === 'afl') {
+	// AFL: Check AFL-specific preference cookie first
+	const aflPref = getAFLPreference(Astro.cookies);
+	myteam = myteamParam || aflPref?.franchiseId || null;
+
+	if (myteam) {
+		// Dynamic import AFL config only when needed
+		const aflConfigData = await import('../../data/afl-fantasy/afl.config.json');
+		const teamData = aflConfigData.teams.find(
+			(t: { franchiseId: string }) => t.franchiseId === myteam
+		);
+
+		if (teamData) {
+			teamInfo = {
+				franchiseId: myteam,
+				teamName: teamData.name,
+				iconUrl: teamData.icon || null,
+				ownerName: null,
+				league: 'afl' as LeagueSlug,
+			};
+		} else {
+			teamInfo = {
+				franchiseId: myteam,
+				teamName: `Team ${myteam}`,
+				iconUrl: null,
+				ownerName: null,
+				league: 'afl' as LeagueSlug,
+			};
+		}
+	}
+} else {
+	// TheLeague: Check TheLeague preference cookie first, then fall back to generic myteam
+	const theLeaguePref = getTheLeaguePreference(Astro.cookies);
+	myteam = myteamParam || theLeaguePref?.franchiseId || Astro.cookies.get('myteam')?.value || null;
+
+	if (myteam) {
+		const teamData = leagueConfigData.teams.find(
+			(t: { franchiseId: string }) => t.franchiseId === myteam
+		);
+
+		if (teamData) {
+			teamInfo = {
+				franchiseId: myteam,
+				teamName: teamData.name,
+				iconUrl: teamData.icon || null,
+				ownerName: null,
+				league: 'theleague' as LeagueSlug,
+			};
+		} else {
+			teamInfo = {
+				franchiseId: myteam,
+				teamName: `Team ${myteam}`,
+				iconUrl: null,
+				ownerName: null,
+				league: 'theleague' as LeagueSlug,
+			};
+		}
 	}
 }
 
 // Get current path for active link detection (include query string for exact matching)
 const currentPath = Astro.url.pathname + Astro.url.search;
-
-// Determine league slug for nav
-const league: LeagueSlug = leagueContext.slug === 'afl-fantasy' ? 'afl' : 'theleague';
 
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds();

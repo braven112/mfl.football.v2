@@ -10,6 +10,8 @@ import {
   getDivisionStandings,
   getConferenceStandings,
   getTierAllPlayStandings,
+  calculateAllPlayFromWeekly,
+  type WeeklyResultsData,
 } from '../../utils/standings';
 import {
   getAFLPreference,
@@ -26,6 +28,11 @@ const baseUrl = getLeagueBaseUrl(league);
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+
+// Import weekly results data for calculating all-play with week cutoff
+const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
 
@@ -87,11 +94,23 @@ const preferredTeamId = resolveAFLTeamSelection({
   defaultTeam: '0001',
 });
 
+// Get weekly results for selected year to calculate all-play with week cutoff
+const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`] as
+  | WeeklyResultsData
+  | undefined;
+
+// Premier League all-play standings are calculated through week 17 (final week)
+// This ensures we use consistent data from weekly results rather than MFL's cumulative
+const PREMIER_LEAGUE_CUTOFF_WEEK = 17;
+const calculatedAllPlay = weeklyResultsFeed
+  ? calculateAllPlayFromWeekly(weeklyResultsFeed, PREMIER_LEAGUE_CUTOFF_WEEK)
+  : undefined;
+
 // Calculate standings for all views
 const divisionStandings = getDivisionStandings(franchises, aflConfig);
 const conferenceAStandings = getConferenceStandings(franchises, aflConfig, '00');
 const conferenceBStandings = getConferenceStandings(franchises, aflConfig, '01');
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig);
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, aflConfig, calculatedAllPlay);
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
     team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12

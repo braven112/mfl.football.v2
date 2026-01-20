@@ -48,7 +48,12 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 				<h4>League</h4>
 				<ul>
 					<li><a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"}>{isAFL ? "Rosters" : "Roster/Salary"}</a></li>
-					<li><a href={isAFL ? "/afl-fantasy/rosters?view=nextyear" : "/theleague/rosters?view=nextyear"}>Next Year Summary</a></li>
+					{!isAFL && (
+						<li><a href="/theleague/rosters?view=nextyear">Next Year Summary</a></li>
+					)}
+					{isAFL && (
+						<li><a href="/afl-fantasy/standings?view=all_play">Premier League</a></li>
+					)}
 					<li><a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"}>Standings</a></li>
 				</ul>
 			</div>

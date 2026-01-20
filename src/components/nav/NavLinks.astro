@@ -26,6 +26,7 @@
  */
 
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug } from '../../types/nav';
+import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
 
 interface Props extends NavLinksProps {
   /** Admin franchise IDs for visibility checks */
@@ -39,6 +40,19 @@ const {
   franchiseId,
   adminFranchiseIds = [],
 } = Astro.props;
+
+const aflPreference = league === 'afl' ? getAFLPreference(Astro.cookies) : null;
+
+const AFL_TIER_LINKS = {
+  'Premier League': {
+    label: 'Premier League',
+    iconUrl: 'https://mfl.football/afl-fantasy.com/images/league_logo/premier.svg',
+  },
+  'D-League': {
+    label: 'D-League',
+    iconUrl: 'https://mfl.football/afl-fantasy.com/images/league_logo/dleague.svg',
+  },
+} as const;
 
 /**
  * Get the league path prefix
@@ -121,6 +135,18 @@ function getLabel(link: NavLink, league: LeagueSlug): string {
     return link.labelAFL;
   }
   return link.label;
+}
+
+function getAflCompetitionOverride(link: NavLink, league: LeagueSlug, franchiseId?: string): { label: string; iconUrl: string } | null {
+  if (league !== 'afl' || link.id !== 'premier-league') {
+    return null;
+  }
+
+  const tier =
+    aflPreference?.competitionId ||
+    (franchiseId ? getAFLTeamData(franchiseId)?.tier : null);
+
+  return AFL_TIER_LINKS[tier as keyof typeof AFL_TIER_LINKS] ?? AFL_TIER_LINKS['Premier League'];
 }
 
 /**
@@ -218,8 +244,10 @@ const visibleSections = getVisibleSections();
         >
           {section.links.map((link) => {
             const href = resolveHref(link, league);
-            const label = getLabel(link, league);
+            const aflOverride = getAflCompetitionOverride(link, league, franchiseId);
+            const label = aflOverride?.label ?? getLabel(link, league);
             const icon = getIcon(link, league);
+            const iconUrl = aflOverride?.iconUrl ?? null;
             const active = isActive(link, currentPath, league);
             const isExternal = link.external || !!link.url;
             return (
@@ -239,9 +267,13 @@ const visibleSections = getVisibleSections();
                 >
                   {/* Icon */}
                   <span class="nav-links__icon" aria-hidden="true">
-                    <svg width="24" height="24" viewBox="0 0 24 24">
-                      <use href={`/assets/icons/sprite.svg#icon-${icon}`} />
-                    </svg>
+                    {iconUrl ? (
+                      <img src={iconUrl} alt="" loading="lazy" />
+                    ) : (
+                      <svg width="24" height="24" viewBox="0 0 24 24">
+                        <use href={`/assets/icons/sprite.svg#icon-${icon}`} />
+                      </svg>
+                    )}
                   </span>
 
                   {/* Label */}
@@ -423,6 +455,12 @@ const visibleSections = getVisibleSections();
     width: 24px;
     height: 24px;
     fill: var(--color-primary, #1c497c);
+  }
+
+  .nav-links__icon img {
+    width: 24px;
+    height: 24px;
+    display: block;
   }
 
   /* ============================================

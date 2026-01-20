@@ -20,6 +20,7 @@
           "icon": "chalkboard",
           "path": "/rosters?view=nextyear",
           "external": false,
+          "leagueOnly": "theleague",
           "description": "Preview next year's roster and salary commitments"
         },
         {
@@ -39,6 +40,15 @@
           "description": "Current league standings"
         },
         {
+          "id": "premier-league",
+          "label": "Premier League",
+          "icon": "premier-league",
+          "path": "/standings?view=all_play",
+          "external": false,
+          "leagueOnly": "afl",
+          "description": "Premier League all-play standings"
+        },
+        {
           "id": "playoffs",
           "label": "Playoffs",
           "icon": "trophy",
@@ -51,6 +61,7 @@
     {
       "id": "reports",
       "label": "Advanced Reports",
+      "leagueOnly": "theleague",
       "links": [
         {
           "id": "salary-benchmarks",
@@ -82,6 +93,7 @@
       "id": "my-team",
       "label": "My Team",
       "visibility": "admin",
+      "leagueOnly": "theleague",
       "links": [
         {
           "id": "coach-tab",
@@ -113,6 +125,7 @@
       "id": "admin",
       "label": "Admin",
       "visibility": "admin",
+      "leagueOnly": "theleague",
       "links": [
         {
           "id": "feature-flags",
@@ -172,6 +185,7 @@
         {
       "id": "tools",
       "label": "Tools",
+      "leagueOnly": "theleague",
       "links": [
         
         {
