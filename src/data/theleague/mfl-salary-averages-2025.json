@@ -13,9 +13,9 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2026-01-20T13:57:45.649Z",
+    "fetchedAt": "2026-01-20T14:16:07.558Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-01-20T13:57:45.667Z"
+    "generatedAt": "2026-01-20T14:16:07.563Z"
   },
   "positions": {
     "RB": {
@@ -94,15 +94,9 @@
     },
     "TE": {
       "totalPlayers": 57,
-      "top3Average": 6966666.67,
-      "top5Average": 6518000,
+      "top3Average": 6563333.33,
+      "top5Average": 5820050,
       "topPlayers": [
-        {
-          "id": "13772",
-          "name": "Schultz, Dalton",
-          "salary": 7150000,
-          "franchiseId": "0007"
-        },
         {
           "id": "13299",
           "name": "Kittle, George",
@@ -126,6 +120,12 @@
           "name": "Kelce, Travis",
           "salary": 5750000,
           "franchiseId": "0010"
+        },
+        {
+          "id": "15329",
+          "name": "Pitts, Kyle",
+          "salary": 3660250,
+          "franchiseId": "0015"
         }
       ]
     },
@@ -206,7 +206,7 @@
     "QB": {
       "totalPlayers": 55,
       "top3Average": 11400821.33,
-      "top5Average": 9620492.8,
+      "top5Average": 9340492.8,
       "topPlayers": [
         {
           "id": "13116",
@@ -227,16 +227,16 @@
           "franchiseId": "0011"
         },
         {
-          "id": "14777",
-          "name": "Burrow, Joe",
-          "salary": 7400000,
-          "franchiseId": "0007"
-        },
-        {
           "id": "14783",
           "name": "Hurts, Jalen",
           "salary": 6500000,
           "franchiseId": "0005"
+        },
+        {
+          "id": "11150",
+          "name": "Smith, Geno",
+          "salary": 6000000,
+          "franchiseId": "0011"
         }
       ]
     }
