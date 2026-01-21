@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-01-21T17-43-39.173Z",
+  "snapshot": "2026-01-21T18-07-29.137Z",
   "week": 14,
   "metadata": {
     "leagueId": "13522",
@@ -15,9 +15,9 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2026-01-21T17:43:39.155Z",
+    "fetchedAt": "2026-01-21T18:07:29.120Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-01-21T17:43:39.172Z"
+    "generatedAt": "2026-01-21T18:07:29.136Z"
   },
   "positions": {
     "RB": {
@@ -207,15 +207,9 @@
     },
     "QB": {
       "totalPlayers": 55,
-      "top3Average": 11400821.33,
-      "top5Average": 9340492.8,
+      "top3Average": 9064000,
+      "top5Average": 7565017.6,
       "topPlayers": [
-        {
-          "id": "13116",
-          "name": "Mahomes, Patrick",
-          "salary": 13510464,
-          "franchiseId": "0014"
-        },
         {
           "id": "13589",
           "name": "Allen, Josh",
@@ -239,6 +233,12 @@
           "name": "Smith, Geno",
           "salary": 6000000,
           "franchiseId": "0011"
+        },
+        {
+          "id": "12611",
+          "name": "Goff, Jared",
+          "salary": 4633088,
+          "franchiseId": "0015"
         }
       ]
     }
