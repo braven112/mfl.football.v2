@@ -1,110 +1,65 @@
 {
-  "encoding": "utf-8",
-  "version": "1.0",
   "league": {
-    "precision": "2",
-    "victoryPointsBuckets": "2 1 0",
-    "rostersPerPlayer": "1",
-    "taxiSquad": "0",
-    "lastRegularSeasonWeek": "14",
-    "playerLimitUnit": "CONFERENCE",
-    "usesSalaries": "0",
-    "victoryPointsTie": "1",
-    "mobileAlerts": "",
-    "rosterLimits": {
-      "position": [
+    "draftLimitHours": "12:00",
+    "victoryPointsEndWeek": "13",
+    "victoryPointsWin": "2",
+    "maxWaiverRounds": "8",
+    "name": "American Football League",
+    "usesContractYear": "0",
+    "divisions": {
+      "division": [
         {
-          "name": "QB",
-          "limit": "0-0"
+          "id": "00",
+          "conference": "00",
+          "name": "North"
         },
         {
-          "name": "RB",
-          "limit": "0-0"
+          "conference": "00",
+          "id": "01",
+          "name": "South"
         },
         {
-          "limit": "0-0",
-          "name": "WR"
+          "name": "East",
+          "conference": "01",
+          "id": "02"
         },
         {
-          "name": "TE",
-          "limit": "0-0"
-        },
-        {
-          "name": "PK",
-          "limit": "0-0"
-        },
-        {
-          "limit": "0-0",
-          "name": "Def"
+          "name": "West",
+          "conference": "01",
+          "id": "03"
         }
-      ]
+      ],
+      "count": "4"
     },
-    "maxKeepers": "7",
-    "starters": {
-      "count": "9",
-      "position": [
-        {
-          "limit": "1",
-          "name": "QB"
-        },
-        {
-          "name": "RB",
-          "limit": "1-4"
-        },
-        {
-          "name": "WR",
-          "limit": "1-4"
-        },
-        {
-          "name": "TE",
-          "limit": "1-4"
-        },
-        {
-          "limit": "1",
-          "name": "PK"
-        },
-        {
-          "name": "Def",
-          "limit": "1"
-        }
-      ]
-    },
-    "draft_kind": "email",
-    "loadRosters": "email_draft",
-    "victoryPointsStartWeek": "1",
-    "id": "19621",
-    "victoryPointsLoss": "0",
-    "minKeepers": "7",
-    "endWeek": "18",
-    "injuredReserve": "10",
-    "defaultTradeExpirationDays": "7",
-    "currentWaiverType": "WAIVERS_FCFS",
-    "partialLineupAllowed": "NO",
-    "h2h": "YES",
-    "draftTimer": "OFF",
-    "rosterSize": "16",
+    "bestLineup": "No",
+    "standingsSort": "PCT,H2H,DIVPCT,CONFPCT,PWR,PTS,ALL_PLAY_PCT,VICTORY_POINTS,OPP_PTS,",
+    "startWeek": "1",
+    "baseURL": "https://www44.myfantasyleague.com",
+    "draftPlayerPool": "Both",
     "lockout": "Yes",
+    "rosterSize": "16",
+    "draftTimer": "OFF",
     "history": {
       "league": [
         {
-          "year": "2025",
-          "url": "https://www44.myfantasyleague.com/2025/home/19621"
+          "url": "https://www44.myfantasyleague.com/2025/home/19621",
+          "year": "2025"
         },
         {
           "year": "2003",
           "url": "https://www45.myfantasyleague.com/2003/home/55011"
         },
         {
-          "year": "2004",
-          "url": "https://www47.myfantasyleague.com/2004/home/23644"
+          "url": "https://www47.myfantasyleague.com/2004/home/23644",
+          "year": "2004"
         },
         {
-          "url": "https://www42.myfantasyleague.com/2005/home/29232",
-          "year": "2005"
+          "year": "2005",
+          "url": "https://www42.myfantasyleague.com/2005/home/29232"
         },
         {
-          "url": "https://www45.myfantasyleague.com/2006/home/49793",
-          "year": "2006"
+          "year": "2006",
+          "url": "https://www45.myfantasyleague.com/2006/home/49793"
         },
         {
           "url": "https://www43.myfantasyleague.com/2007/home/47555",
@@ -115,16 +70,16 @@
           "url": "https://www44.myfantasyleague.com/2008/home/13233"
         },
         {
-          "year": "2009",
-          "url": "https://www47.myfantasyleague.com/2009/home/21465"
+          "url": "https://www47.myfantasyleague.com/2009/home/21465",
+          "year": "2009"
         },
         {
-          "year": "2010",
-          "url": "https://www46.myfantasyleague.com/2010/home/30033"
+          "url": "https://www46.myfantasyleague.com/2010/home/30033",
+          "year": "2010"
         },
         {
-          "year": "2011",
-          "url": "https://www49.myfantasyleague.com/2011/home/36377"
+          "url": "https://www49.myfantasyleague.com/2011/home/36377",
+          "year": "2011"
         },
         {
           "year": "2012",
@@ -135,12 +90,12 @@
           "url": "https://www45.myfantasyleague.com/2013/home/48338"
         },
         {
-          "url": "https://www45.myfantasyleague.com/2014/home/40840",
-          "year": "2014"
+          "year": "2014",
+          "url": "https://www45.myfantasyleague.com/2014/home/40840"
         },
         {
-          "url": "https://www44.myfantasyleague.com/2015/home/14236",
-          "year": "2015"
+          "year": "2015",
+          "url": "https://www44.myfantasyleague.com/2015/home/14236"
         },
         {
           "url": "https://www44.myfantasyleague.com/2016/home/19621",
@@ -151,8 +106,8 @@
           "year": "2017"
         },
         {
-          "year": "2018",
-          "url": "http://www44.myfantasyleague.com/2018/home/19621"
+          "url": "http://www44.myfantasyleague.com/2018/home/19621",
+          "year": "2018"
         },
         {
           "url": "http://www44.myfantasyleague.com/2019/home/19621",
@@ -167,8 +122,8 @@
           "year": "2021"
         },
         {
-          "year": "2022",
-          "url": "https://www44.myfantasyleague.com/2022/home/19621"
+          "url": "https://www44.myfantasyleague.com/2022/home/19621",
+          "year": "2022"
         },
         {
           "url": "https://www44.myfantasyleague.com/2023/home/19621",
@@ -185,159 +140,159 @@
       "franchise": [
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/smokane.png",
-          "abbrev": "SMOKE",
-          "waiverSortOrder": "19",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/smokane.png",
+          "name": "Smokane FC",
           "id": "0001",
           "division": "00",
-          "name": "Smokane FC",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/smokane.png"
+          "waiverSortOrder": "19",
+          "abbrev": "SMOKE"
         },
         {
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/drunk_indians.png",
           "name": "Drunk Indians",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/drunk_indians.png",
-          "abbrev": "DRUNK",
           "waiverSortOrder": "17",
-          "division": "00",
+          "abbrev": "DRUNK",
           "id": "0002",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/drunk_indians.png"
+          "division": "00"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/minty.png",
-          "division": "01",
-          "id": "0003",
-          "waiverSortOrder": "1",
-          "abbrev": "MINT",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/minty.png",
-          "name": "Team Minty Fresh"
+          "name": "Team Minty Fresh",
+          "id": "0003",
+          "division": "01",
+          "waiverSortOrder": "1",
+          "abbrev": "MINT"
         },
         {
-          "abbrev": "DITKA",
-          "waiverSortOrder": "4",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/ditka.png",
+          "name": "Get off my Ditka",
           "id": "0004",
           "division": "00",
-          "name": "Get off my Ditka",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/ditka.png",
+          "waiverSortOrder": "4",
+          "abbrev": "DITKA",
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/ditka.png"
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/computer_jocks.png",
           "division": "01",
           "id": "0005",
           "waiverSortOrder": "22",
           "abbrev": "JOCKS",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/computer_jocks.png",
-          "name": "Computer Jocks"
+          "name": "Computer Jocks",
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/computer_jocks.png"
         },
         {
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/da_dangsters.png",
           "name": "Da Dangsters",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/da_dangsters.png",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/da_dangsters.png",
+          "waiverSortOrder": "21",
+          "abbrev": "DANG",
           "id": "0006",
           "division": "00",
-          "abbrev": "DANG",
-          "waiverSortOrder": "21"
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/da_dangsters.png"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/amish.png",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/amish.png",
-          "name": "Avenging Amish",
-          "division": "01",
-          "id": "0007",
+          "abbrev": "AMISH",
           "waiverSortOrder": "5",
-          "abbrev": "AMISH"
+          "id": "0007",
+          "division": "01",
+          "name": "Avenging Amish",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/amish.png"
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/harambe.png",
-          "abbrev": "DICK",
+          "name": "Dicks out for Harambe",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/harambe.png",
           "waiverSortOrder": "12",
+          "abbrev": "DICK",
           "id": "0008",
           "division": "01",
-          "name": "Dicks out for Harambe",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/harambe.png"
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/harambe.png"
         },
         {
-          "name": "Vitside Mafia",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/vitside_mafia.png",
-          "waiverSortOrder": "8",
-          "abbrev": "VIT",
-          "id": "0009",
-          "division": "01",
           "sound": "http://leadingedgegym.com/files/VitDraftClimax.mp3",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/vitside_mafia.png"
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/vitside_mafia.png",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/vitside_mafia.png",
+          "name": "Vitside Mafia",
+          "division": "01",
+          "id": "0009",
+          "waiverSortOrder": "8",
+          "abbrev": "VIT"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/fullybaked.png",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/fullybaked.png",
           "name": "Fullybaked",
-          "id": "0010",
-          "division": "00",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/fullybaked.png",
           "abbrev": "BAKD",
-          "waiverSortOrder": "13"
+          "waiverSortOrder": "13",
+          "division": "00",
+          "id": "0010"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/midwestside.png",
-          "id": "0011",
-          "division": "01",
-          "abbrev": "MWS",
-          "waiverSortOrder": "9",
+          "name": "Midwestside Connection",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/midwestside.png",
-          "name": "Midwestside Connection"
+          "waiverSortOrder": "9",
+          "abbrev": "MWS",
+          "division": "01",
+          "id": "0011"
         },
         {
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/suh.png",
+          "name": "Suh girls, one cup",
           "division": "00",
           "id": "0012",
           "waiverSortOrder": "18",
           "abbrev": "SHIT",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/suh.png",
-          "name": "Suh girls, one cup",
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/suh.png"
         },
         {
-          "abbrev": "MICKS",
-          "waiverSortOrder": "10",
-          "id": "0013",
-          "division": "03",
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/micks.png",
           "name": "Muck Juggling Micks",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/micks.png",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/micks.png"
+          "abbrev": "MICKS",
+          "waiverSortOrder": "10",
+          "division": "03",
+          "id": "0013"
         },
         {
-          "id": "0014",
-          "division": "03",
-          "waiverSortOrder": "11",
-          "abbrev": "HERD",
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/herd.png",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/herd.png",
           "name": "Thundering Herd",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/herd.png"
+          "id": "0014",
+          "division": "03",
+          "abbrev": "HERD",
+          "waiverSortOrder": "11"
         },
         {
-          "stadium": "Koga Stadium",
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/ninjas.png",
+          "stadium": "Koga Stadium",
           "name": "The Mariachi Ninjas",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/ninjas.png",
           "abbrev": "NINJAS",
           "waiverSortOrder": "24",
-          "division": "02",
-          "id": "0015"
+          "id": "0015",
+          "division": "02"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/swift.png",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/swift.png",
-          "name": "Swiftie 4 Life",
-          "division": "03",
           "id": "0016",
+          "division": "03",
           "waiverSortOrder": "2",
-          "abbrev": "SWIFTY"
+          "abbrev": "SWIFTY",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/swift.png",
+          "name": "Swiftie 4 Life"
         },
         {
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/titsburgh_feelers.png",
-          "name": "Titsburgh Feelers",
           "id": "0017",
           "division": "02",
           "waiverSortOrder": "20",
           "abbrev": "TITS",
-          "stadium": "Elland Road",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/titsburgh_feelers.png"
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/titsburgh_feelers.png",
+          "name": "Titsburgh Feelers",
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/titsburgh_feelers.png",
+          "stadium": "Elland Road"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/jewpacabra.png",
@@ -345,62 +300,62 @@
           "name": "Jewpacabra",
           "division": "03",
           "id": "0018",
-          "waiverSortOrder": "14",
-          "abbrev": "JEW"
+          "abbrev": "JEW",
+          "waiverSortOrder": "14"
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/badd_boys.png",
+          "abbrev": "BADD",
+          "waiverSortOrder": "23",
           "id": "0019",
           "division": "02",
-          "waiverSortOrder": "23",
-          "abbrev": "BADD",
+          "name": "Badd Boys",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/badd_boys.png",
-          "name": "Badd Boys"
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/badd_boys.png"
         },
         {
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/saints.png",
-          "name": "The Boondock Saints",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/saints.png",
-          "abbrev": "SAINTS",
-          "waiverSortOrder": "15",
+          "name": "The Boondock Saints",
           "division": "03",
-          "id": "0020"
+          "id": "0020",
+          "waiverSortOrder": "15",
+          "abbrev": "SAINTS"
         },
         {
-          "division": "03",
-          "id": "0021",
-          "abbrev": "CHAT",
-          "waiverSortOrder": "3",
+          "stadium": "AOL Field",
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/chat.png",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/chat.png",
           "name": "Chatmaster",
-          "stadium": "AOL Field",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/chat.png"
+          "id": "0021",
+          "division": "03",
+          "abbrev": "CHAT",
+          "waiverSortOrder": "3"
         },
         {
-          "waiverSortOrder": "16",
-          "abbrev": "BALLS",
+          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/balls_deep.png",
           "division": "02",
           "id": "0022",
-          "name": "Balls Deep",
+          "abbrev": "BALLS",
+          "waiverSortOrder": "16",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/balls_deep.png",
-          "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/balls_deep.png"
+          "name": "Balls Deep"
         },
         {
-          "waiverSortOrder": "7",
-          "abbrev": "DkLuvr",
-          "division": "02",
-          "id": "0023",
           "name": "Cock Gobbler",
           "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/gobblers.png",
+          "abbrev": "DkLuvr",
+          "waiverSortOrder": "7",
+          "division": "02",
+          "id": "0023",
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/gobblers.png"
         },
         {
+          "name": "No Soup For You",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/no_soup.png",
           "waiverSortOrder": "6",
           "abbrev": "SOUP",
           "id": "0024",
           "division": "02",
-          "name": "No Soup For You",
-          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/no_soup.png",
           "logo": "https://mflfootballv2.vercel.app/assets/afl/banners/no_soup.png"
         }
       ]
@@ -409,8 +364,8 @@
       "count": "2",
       "conference": [
         {
-          "id": "00",
-          "name": "American League"
+          "name": "American League",
+          "id": "00"
         },
         {
           "name": "National League",
@@ -418,41 +373,86 @@
         }
       ]
     },
-    "standingsSort": "PCT,H2H,DIVPCT,CONFPCT,PWR,PTS,ALL_PLAY_PCT,VICTORY_POINTS,OPP_PTS,",
-    "startWeek": "1",
-    "baseURL": "https://www44.myfantasyleague.com",
-    "draftPlayerPool": "Both",
-    "bestLineup": "No",
-    "divisions": {
-      "count": "4",
-      "division": [
+    "h2h": "YES",
+    "currentWaiverType": "WAIVERS_FCFS",
+    "defaultTradeExpirationDays": "7",
+    "partialLineupAllowed": "NO",
+    "injuredReserve": "10",
+    "victoryPointsLoss": "0",
+    "minKeepers": "7",
+    "endWeek": "18",
+    "id": "19621",
+    "victoryPointsStartWeek": "1",
+    "loadRosters": "email_draft",
+    "draft_kind": "email",
+    "starters": {
+      "position": [
         {
-          "name": "North",
-          "id": "00",
-          "conference": "00"
+          "limit": "1",
+          "name": "QB"
         },
         {
-          "name": "South",
-          "id": "01",
-          "conference": "00"
+          "limit": "1-4",
+          "name": "RB"
         },
         {
-          "conference": "01",
-          "id": "02",
-          "name": "East"
+          "name": "WR",
+          "limit": "1-4"
         },
         {
-          "conference": "01",
-          "id": "03",
-          "name": "West"
+          "limit": "1-4",
+          "name": "TE"
+        },
+        {
+          "name": "PK",
+          "limit": "1"
+        },
+        {
+          "name": "Def",
+          "limit": "1"
+        }
+      ],
+      "count": "9"
+    },
+    "maxKeepers": "7",
+    "mobileAlerts": "",
+    "victoryPointsTie": "1",
+    "rosterLimits": {
+      "position": [
+        {
+          "limit": "0-0",
+          "name": "QB"
+        },
+        {
+          "name": "RB",
+          "limit": "0-0"
+        },
+        {
+          "name": "WR",
+          "limit": "0-0"
+        },
+        {
+          "limit": "0-0",
+          "name": "TE"
+        },
+        {
+          "name": "PK",
+          "limit": "0-0"
+        },
+        {
+          "name": "Def",
+          "limit": "0-0"
         }
       ]
     },
-    "usesContractYear": "0",
-    "victoryPointsEndWeek": "13",
-    "victoryPointsWin": "2",
-    "name": "American Football League",
-    "maxWaiverRounds": "8",
-    "draftLimitHours": "12:00"
-  }
+    "usesSalaries": "0",
+    "lastRegularSeasonWeek": "14",
+    "playerLimitUnit": "CONFERENCE",
+    "taxiSquad": "0",
+    "precision": "2",
+    "victoryPointsBuckets": "2 1 0",
+    "rostersPerPlayer": "1"
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
 }
