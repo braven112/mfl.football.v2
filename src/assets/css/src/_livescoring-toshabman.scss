@@ -129,6 +129,7 @@ td.MFLPlayerPoints {
   border-radius: $border-radius-default;
   padding: 24px 12px;
   box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+  background-color: $primary-bg-color;
   @media (max-width: 991px) {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -481,7 +482,6 @@ div#scoreboardTooltip {
 }
 
 .MFLGameLinks {
-  background-color: $pagebody-bg;
   .MFLGameTable {
     background-color: $report-bg;
   }
@@ -497,7 +497,6 @@ div#scoreboardTooltip {
 
 .MFLMainScoreboard {
   @media (min-width: 513px) {
-    background-color: $pagebody-bg;
     border: 1px solid rgba(0, 0, 0, 0.1);
   }
 
