@@ -21,6 +21,7 @@
     "fetch:espn:schedule": "node scripts/fetch-espn-schedule.mjs",
     "fetch:weather": "node scripts/enrich-schedule-with-weather.mjs",
     "fetch:schedule:current": "node scripts/fetch-espn-schedule.mjs && node scripts/enrich-schedule-with-weather.mjs",
+    "upload:psds": "node scripts/upload-psds.mjs",
     "sync:all": "pnpm run sync:theleague && pnpm run sync:afl",
     "sync:theleague": "node scripts/sync-theleague-assets.mjs",
     "sync:afl": "node scripts/sync-afl-asset-urls.mjs && node scripts/sync-afl-assets.mjs",
@@ -33,6 +34,7 @@
     "test": "pnpm run test:unit && pnpm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "node tests/e2e-cookie-test.mjs",
+    "test:psd-links": "RUN_PSD_DOWNLOAD_TESTS=1 pnpm exec playwright test tests/e2e/psd-downloads.spec.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "check:bundle": "node scripts/check-bundle-size.mjs",
@@ -64,6 +66,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@vercel/blob": "^0.27.0",
+    "dotenv": "^16.4.5",
     "node-fetch": "^3.3.2"
   }
 }

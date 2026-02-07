@@ -1,5 +1,6 @@
 {
   "assetDomain": "https://mflfootballv2.vercel.app",
+  "psdAssetDomain": "https://uhyqublxrbcezhyu.public.blob.vercel-storage.com",
   "divisions": [
     "Northwest",
     "Southwest",
@@ -55,18 +56,23 @@
     },
     {
       "franchiseId": "0004",
-      "name": "Heavy Chevy",
-      "nameMedium": "Heavy Chevy",
-      "nameShort": "Heavy",
-      "abbrev": "CHEVY",
+      "name": "Dead Cap Walking",
+      "nameMedium": "Dead Cap Walk",
+      "nameShort": "Dead Cap",
+      "abbrev": "DEAD",
       "aliases": [
+        "Dead Cap Walking",
+        "Dead Cap",
+        "DCW",
+        "Heavy Chevy",
         "Heavy",
         "Chevy"
       ],
       "division": "Southwest",
-      "icon": "/assets/theleague/icons/heavy_chevy.png",
-      "banner": "/assets/theleague/banners/heavy_chevy.png",
-      "groupMe": "/assets/theleague/group-me/heavy_chevy.png"
+      "icon": "/assets/theleague/icons/dead_cap_walking.png",
+      "banner": "/assets/theleague/banners/dead_cap_walking.png",
+      "groupMe": "/assets/theleague/group-me/heavy_chevy.png",
+      "activeFromYear": 2026
     },
     {
       "franchiseId": "0005",
@@ -252,6 +258,24 @@
       "icon": "/assets/theleague/icons/the_dream.png",
       "banner": "/assets/theleague/banners/the_dream.png",
       "groupMe": "/assets/theleague/group-me/the_dream.png"
+    }
+  ],
+  "retiredTeams": [
+    {
+      "franchiseId": "0004",
+      "name": "Heavy Chevy",
+      "nameMedium": "Heavy Chevy",
+      "nameShort": "Heavy",
+      "abbrev": "CHEVY",
+      "aliases": [
+        "Heavy",
+        "Chevy"
+      ],
+      "division": "Southwest",
+      "icon": "/assets/theleague/icons/heavy_chevy.png",
+      "banner": "/assets/theleague/banners/heavy_chevy.png",
+      "groupMe": "/assets/theleague/group-me/heavy_chevy.png",
+      "activeThroughYear": 2025
     }
   ]
 }

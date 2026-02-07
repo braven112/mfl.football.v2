@@ -28,6 +28,7 @@ type TeamEntry = {
 
 const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
 const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
+const psdAssetDomain = normalizeDomain(leagueConfig.psdAssetDomain || '');
 
 const formatBucketLabel = (bucket: string) =>
   bucket === 'group-me'
@@ -38,15 +39,19 @@ const formatBucketLabel = (bucket: string) =>
 
 const PSD_FOLDERS = ['psd', 'psds'];
 
+const resolveAssetUrl = (entry: AssetEntry, folder: string) => {
+  const usePsdDomain = PSD_FOLDERS.includes(folder) && psdAssetDomain;
+  const domain = usePsdDomain ? psdAssetDomain : assetDomain;
+  return domain ? `${domain}${entry.relativePath}` : entry.relativePath;
+};
+
 const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
   const rawAssets = Object.fromEntries(
     Object.entries(team.assets || {}).map(([folder, entries]) => [
       folder,
       entries.map(entry => ({
         ...entry,
-        absoluteUrl: assetDomain
-          ? `${assetDomain}${entry.relativePath}`
-          : entry.relativePath,
+        absoluteUrl: resolveAssetUrl(entry as AssetEntry, folder),
         extension: entry.extension
       }))
     ])
