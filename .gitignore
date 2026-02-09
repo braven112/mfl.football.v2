@@ -1,0 +1,41 @@
+# astro
+.astro
+
+# build output
+/dist/
+.output/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+.vercel
+
+# VS Code personal settings
+.vscode/extensions.json
+
+# Salary history snapshots (large raw data files)
+data/salary-history-archive/
+data/*/salary-history/
+
+# Salary history - only keep summary-week-*.json files
+src/data/salary-history/**/raw-*.json
+src/data/salary-history/**/summary-2*.json
+
+# Design files (PSDs/AI stored in Vercel Blob)
+*.psd
+*.ai
+
+# Claude Code
+.claude/

@@ -1,0 +1,453 @@
+---
+/**
+ * EnhancedPlayerCard Component
+ * Player card with integrated status indicators and optimization suggestions
+ */
+
+import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
+import InjuryManager from './InjuryManager.astro';
+import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
+
+export interface Props {
+  player: FantasyPlayer;
+  optimizations?: LineupOptimization[];
+  showOptimization?: boolean;
+  showHeadshot?: boolean;
+  showMatchupInfo?: boolean;
+  showInjuryManager?: boolean;
+  leagueId?: string;
+  year?: string;
+  className?: string;
+}
+
+const { 
+  player, 
+  optimizations = [],
+  showOptimization = true, 
+  showHeadshot = true,
+  showMatchupInfo = true,
+  showInjuryManager = true,
+  leagueId = '13522',
+  year = new Date().getFullYear().toString(),
+  className = '' 
+} = Astro.props;
+
+// Helper to get ESPN player headshot URL
+function getPlayerHeadshot(espnId?: string) {
+  if (!espnId) return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
+}
+
+// Determine matchup quality styling
+const matchupQuality = player.matchupData ? 
+  (player.matchupData.projectedPoints && player.projectedPoints && player.matchupData.projectedPoints > player.projectedPoints ? 'favorable' : 
+   player.matchupData.projectedPoints && player.projectedPoints && player.matchupData.projectedPoints < player.projectedPoints * 0.8 ? 'tough' : 'neutral') : 'neutral';
+
+const cardClasses = [
+  'enhanced-player-card',
+  matchupQuality,
+  player.isStarting ? 'starting' : 'bench',
+  player.injuryStatus !== 'Healthy' ? 'injured' : '',
+  className
+].filter(Boolean).join(' ');
+---
+
+<div class={cardClasses}>
+  <!-- Player Header -->
+  <div class="player-header">
+    {showHeadshot && (
+      <div class="player-headshot-container">
+        <img
+          src={getPlayerHeadshot(player.id)}
+          alt={player.name}
+          class="player-headshot"
+          onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+        />
+      </div>
+    )}
+    
+    <div class="player-info">
+      <div class="player-name-row">
+        <h4 class="player-name">
+          {player.name}
+          {player.injuryStatus !== 'Healthy' && (
+            <span class="injury-status-inline">
+              ({player.injuryStatus === 'Out' && 'O'})
+              ({player.injuryStatus === 'Doubtful' && 'D'})
+              ({player.injuryStatus === 'Questionable' && 'Q'})
+              ({player.injuryStatus === 'IR' && 'IR'})
+            </span>
+          )}
+        </h4>
+        <PlayerStatusIndicator 
+          player={player} 
+          showOptimization={showOptimization}
+          className="status-indicators"
+        />
+      </div>
+      
+      <div class="player-details">
+        <span class="player-position">{player.position}</span>
+        <span class="separator">•</span>
+        <span class="player-team">{player.nflTeam}</span>
+        {player.matchupData && showMatchupInfo && (
+          <>
+            <span class="separator">•</span>
+            <span class="matchup-opponent">
+              vs {player.matchupData.opponent}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+
+    <div class="player-stats">
+      <div class="projected-points">
+        <span class="stat-label">Proj</span>
+        <span class="stat-value">
+          {player.projectedPoints ? player.projectedPoints.toFixed(1) : '--'}
+        </span>
+      </div>
+      
+      {player.actualPoints !== undefined && (
+        <div class="actual-points">
+          <span class="stat-label">Actual</span>
+          <span class="stat-value">
+            {player.actualPoints.toFixed(1)}
+          </span>
+        </div>
+      )}
+      
+      <div class="fantasy-team-indicator">
+        <img 
+          src={`/assets/theleague/icons/${player.fantasyTeamId}.png`} 
+          alt="Fantasy Team" 
+          class="fantasy-team-logo"
+          onerror="this.style.display='none'"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Bench Upgrade Details -->
+  {showOptimization && player.benchUpgrade?.hasUpgrade && (
+    <div class="upgrade-details">
+      <div class="upgrade-suggestion">
+        <span class="upgrade-icon">📈</span>
+        <span class="upgrade-text">
+          Consider starting <strong>{player.benchUpgrade.upgradePlayer?.name}</strong>
+          {player.benchUpgrade.pointsDifference && (
+            <span class="points-improvement">
+              (+{player.benchUpgrade.pointsDifference.toFixed(1)} pts)
+            </span>
+          )}
+        </span>
+      </div>
+    </div>
+  )}
+
+  <!-- News Updates -->
+  {player.newsUpdates && player.newsUpdates.length > 0 && (
+    <div class="news-updates">
+      <div class="news-header">
+        <span class="news-icon">📰</span>
+        <span class="news-label">Latest News</span>
+      </div>
+      {player.newsUpdates.slice(0, 2).map(news => (
+        <div class="news-item">
+          <div class="news-headline">{news.headline}</div>
+          {news.summary && (
+            <div class="news-summary">{news.summary}</div>
+          )}
+          <div class="news-meta">
+            <span class="news-source">{news.source}</span>
+            <span class="news-time">
+              {new Date(news.timestamp).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <!-- Injury Management -->
+  {showInjuryManager && (
+    <InjuryManager 
+      player={player}
+      optimizations={optimizations}
+      leagueId={leagueId}
+      year={year}
+    />
+  )}
+</div>
+
+<style>
+  .enhanced-player-card {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+    overflow: hidden;
+  }
+
+  .enhanced-player-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #d1d5db;
+  }
+
+  .enhanced-player-card.favorable {
+    border-left: 4px solid #10b981;
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.02), white);
+  }
+
+  .enhanced-player-card.tough {
+    border-left: 4px solid #ef4444;
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.02), white);
+  }
+
+  .enhanced-player-card.starting {
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
+  }
+
+  .enhanced-player-card.injured {
+    border-color: #f59e0b;
+  }
+
+  .player-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .player-headshot-container {
+    flex-shrink: 0;
+  }
+
+  .player-headshot {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    background: #f3f4f6;
+  }
+
+  .player-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .player-name-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .player-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .injury-status-inline {
+    color: #dc2626;
+    font-weight: 600;
+    margin-left: 0.25rem;
+  }
+
+  .status-indicators {
+    flex-shrink: 0;
+  }
+
+  .player-details {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    flex-wrap: wrap;
+  }
+
+  .player-position {
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .separator {
+    opacity: 0.5;
+  }
+
+  .matchup-opponent {
+    font-weight: 500;
+  }
+
+  .player-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .projected-points,
+  .actual-points {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  .stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.025em;
+  }
+
+  .stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+  }
+
+  .fantasy-team-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 0.25rem;
+    object-fit: contain;
+  }
+
+  .upgrade-details {
+    padding: 0.75rem 1rem;
+    background: rgba(16, 185, 129, 0.05);
+    border-top: 1px solid rgba(16, 185, 129, 0.1);
+  }
+
+  .upgrade-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .upgrade-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .upgrade-text {
+    color: #374151;
+  }
+
+  .points-improvement {
+    font-weight: 700;
+    color: #059669;
+  }
+
+  .news-updates {
+    padding: 0.75rem 1rem;
+    background: rgba(59, 130, 246, 0.02);
+    border-top: 1px solid rgba(59, 130, 246, 0.1);
+  }
+
+  .news-header {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .news-icon {
+    font-size: 0.875rem;
+  }
+
+  .news-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.025em;
+  }
+
+  .news-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .news-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .news-headline {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1.4;
+    margin-bottom: 0.25rem;
+  }
+
+  .news-summary {
+    font-size: 0.75rem;
+    color: #6b7280;
+    line-height: 1.4;
+    margin-bottom: 0.25rem;
+  }
+
+  .news-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.6875rem;
+    color: #9ca3af;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .player-header {
+      padding: 0.75rem;
+      gap: 0.5rem;
+    }
+
+    .player-headshot {
+      width: 40px;
+      height: 40px;
+    }
+
+    .player-name {
+      font-size: 0.9375rem;
+    }
+
+    .player-details {
+      font-size: 0.75rem;
+    }
+
+    .stat-value {
+      font-size: 1rem;
+    }
+
+    .upgrade-details,
+    .news-updates {
+      padding: 0.5rem 0.75rem;
+    }
+
+    .upgrade-suggestion {
+      font-size: 0.75rem;
+    }
+
+    .news-headline {
+      font-size: 0.75rem;
+    }
+
+    .news-summary {
+      font-size: 0.6875rem;
+    }
+  }
+</style>

@@ -1,0 +1,157 @@
+{
+  "playoffBrackets": {
+    "playoffBracket": [
+      {
+        "id": "1",
+        "startWeekGames": "3",
+        "bracketWinnerTitle": "The League Champion",
+        "teamsInvolved": "7",
+        "name": "The League Championship",
+        "startWeek": "15"
+      },
+      {
+        "startWeekGames": "1",
+        "id": "2",
+        "teamsInvolved": "2",
+        "bracketWinnerTitle": "3rd Place",
+        "startWeek": "17",
+        "name": "The Consolation Bracket"
+      },
+      {
+        "name": "The Loser's Bracket",
+        "startWeek": "15",
+        "bracketWinnerTitle": "5th Place",
+        "teamsInvolved": "5",
+        "startWeekGames": "1",
+        "id": "3"
+      },
+      {
+        "teamsInvolved": "7",
+        "bracketWinnerTitle": "Winner of pick 1.17",
+        "id": "5",
+        "startWeekGames": "3",
+        "startWeek": "15",
+        "name": "The Toilet Bowl Challenge"
+      },
+      {
+        "name": "The Toilet Bowl Consolation",
+        "startWeek": "17",
+        "startWeekGames": "1",
+        "id": "6",
+        "bracketWinnerTitle": "Winner of pick 2.17",
+        "teamsInvolved": "2"
+      },
+      {
+        "bracketWinnerTitle": "Winner of pick 2.18",
+        "teamsInvolved": "4",
+        "id": "7",
+        "startWeekGames": "2",
+        "name": "The Toilet Bowl Consolation 2",
+        "startWeek": "16"
+      }
+    ]
+  },
+  "brackets": {
+    "1": {
+      "playoffBracket": {
+        "playoffRound": [
+          {
+            "week": "15",
+            "playoffGame": [
+              {
+                "home": {
+                  "franchise_id": "0001",
+                  "seed": "2",
+                  "points": "93.36"
+                },
+                "away": {
+                  "franchise_id": "0006",
+                  "points": "64.05",
+                  "seed": "7"
+                },
+                "game_id": "1"
+              },
+              {
+                "away": {
+                  "franchise_id": "0010",
+                  "points": "50.92",
+                  "seed": "6"
+                },
+                "game_id": "2",
+                "home": {
+                  "points": "168.6",
+                  "seed": "3",
+                  "franchise_id": "0008"
+                }
+              },
+              {
+                "game_id": "3",
+                "away": {
+                  "points": "79.81",
+                  "seed": "5",
+                  "franchise_id": "0012"
+                },
+                "home": {
+                  "franchise_id": "0011",
+                  "seed": "4",
+                  "points": "119.52"
+                }
+              }
+            ]
+          },
+          {
+            "playoffGame": [
+              {
+                "game_id": "4",
+                "away": {
+                  "franchise_id": "0008",
+                  "points": "107.46",
+                  "winner_of_game": "2"
+                },
+                "home": {
+                  "franchise_id": "0001",
+                  "winner_of_game": "1",
+                  "points": "91.35"
+                }
+              },
+              {
+                "home": {
+                  "franchise_id": "0009",
+                  "seed": "1",
+                  "points": "89.32"
+                },
+                "away": {
+                  "franchise_id": "0011",
+                  "points": "109.13",
+                  "winner_of_game": "3"
+                },
+                "game_id": "5"
+              }
+            ],
+            "week": "16"
+          },
+          {
+            "week": "17",
+            "playoffGame": {
+              "game_id": "6",
+              "away": {
+                "franchise_id": "0008",
+                "winner_of_game": "4",
+                "points": "87.63"
+              },
+              "home": {
+                "franchise_id": "0011",
+                "winner_of_game": "5",
+                "points": "101.27"
+              }
+            }
+          }
+        ],
+        "bracket_id": "1"
+      },
+      "version": "1.0",
+      "encoding": "utf-8"
+    }
+  },
+  "lastFetched": "2026-01-03T20:13:34.296Z"
+}

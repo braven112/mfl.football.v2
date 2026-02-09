@@ -1,0 +1,50 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="MFL Fantasy Football">
+  <main class="container mx-auto px-4 py-16">
+    <h1 class="text-4xl font-bold text-center mb-12">
+      MFL Fantasy Football Leagues
+    </h1>
+
+    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <!-- The League Card -->
+      <a
+        href="/theleague"
+        class="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-transparent hover:border-blue-500"
+      >
+        <h2 class="text-2xl font-bold mb-4 text-blue-600">The League</h2>
+        <p class="text-gray-600 mb-4">
+          16 teams • Single conference • 3 draft rounds
+        </p>
+        <div class="text-sm text-gray-500">
+          League ID: 13522
+        </div>
+      </a>
+
+      <!-- AFL Fantasy Card -->
+      <a
+        href="/afl-fantasy"
+        class="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-transparent hover:border-green-500"
+      >
+        <h2 class="text-2xl font-bold mb-4 text-green-600">AFL Fantasy</h2>
+        <p class="text-gray-600 mb-4">
+          24 teams • 2 conferences • 9 draft rounds
+        </p>
+        <div class="text-sm text-gray-500">
+          League ID: 19621
+        </div>
+      </a>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+</style>

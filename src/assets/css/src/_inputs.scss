@@ -1,0 +1,136 @@
+@use "./globals" as *;
+
+input[type="button"], input[type="submit"] {
+  padding: .75rem 2.5rem;
+  margin-bottom: 10px;
+  border: 2px solid;
+  margin-top: 10px;
+  color: white;
+  font-weight: $headline-font-weight;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: $border-radius-xl;
+  @media (max-width: 991px) {
+    width: 100%;
+  }
+}
+
+
+#league_chat input[type="button"] {
+  width: 100%;
+}
+
+input#chat_text_field {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid;
+}
+
+#player_search {
+  input[type="text"] {
+    width: 100%;
+    @media (min-width: 1200px) {
+        width: 75.425%;
+    }
+    padding: 8px;
+    border: 1px solid;
+  }
+  input[type="submit"] {
+    width: 100%;
+      @media (min-width: 1200px) {
+        width: 23.5%;
+        padding: 8px 11px;
+      }
+  }
+}
+
+
+#body_options_101 input[type="submit"] {
+  margin-left: 10px;
+}
+
+input[value="Now!"],form.reportform input[type="submit"] {
+  padding: .75rem 2rem;
+    margin-left: .5rem;
+}
+//button on current auction page
+.btn-primary a, .btn-primary a:link, .btn-primary a:visited {
+  border-radius: $border-radius-default;
+  padding: 14px 30px;
+  position: relative;
+  top: 10px;
+  text-transform: uppercase;
+  font-weight: $body-font-weight;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
+input[type="password"], input[type="text"] {
+  padding: 4px;
+  font-size: 1.1em;
+  min-width: 100px;
+}
+
+select {
+  padding: 4px 5px 5px;
+  font-size: 1.1em;
+}
+
+
+/*//messageboard cta*/
+
+.mb {
+  @media (max-width: 767px) {
+    display: none;
+  }
+  position: relative;
+  top: 20px;
+  right: 10px;
+  a {
+    position: absolute;
+    right: 0;
+    text-decoration: none;
+  }
+  svg.icon-chevron-right {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    position: relative;
+    top: 3px;
+  }
+}
+input[type="checkbox"] {
+    scale: 1.45;
+}
+input[type="button"],
+input[type="submit"] {
+  background-color: $accent-color;
+  border-color: $accent-color;
+}
+
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  background-color: $dark-accent-color;
+  border-color: $dark-accent-color;
+}
+
+input#chat_text_field {
+  border-color: $lightgray;
+}
+
+form.reportform input[type="submit"] {
+  background: $accent-color;
+  color: $white;
+}
+
+.btn-primary a,
+.btn-primary a:link,
+.btn-primary a:visited {
+  background-color: $accent-color;
+  color: $white;
+}
+
+.btn-primary a:hover {
+  background-color: $dark-accent-color;
+}

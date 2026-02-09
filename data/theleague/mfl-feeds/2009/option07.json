@@ -1,0 +1,1199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>Fantasy Football: Dynasty: The League Rosters</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"  />
+<meta name="keywords" content="Rosters, fantasy football, keeper fantasy football league, dynasty fantasy football league, salary cap fantasy football league, IDP fantasy football league, MyFantasyLeague, MFL, ffl, league management"  />
+<meta name="description" content="The most customizable way to run your fantasy football league on the web today, MyFantasyLeague.com was voted 'Best Fantasy Commissioner Product' by the Fantasy Sports Trade Association, and has won several additional significant industry awards.  Our 31 years of experience means we do fantasy football right.  If you're ready to move beyond basic league settings, and onto fantasy football how the hard-core players play it, try MyFantasyLeague.com: Beyond League Management"  />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"  />
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WZDGQ9CBF2"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-WZDGQ9CBF2');
+</script>
+<meta name="viewport" content="initial-scale=1.0, width=device-width" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700|Roboto+Condensed:400,700|Roboto:400,400i,700" rel="stylesheet">
+<link rel="stylesheet" id="default" href="https://www47.myfantasyleague.com/skins17/MFLBaseCSS.css" type="text/css"  />
+<link rel="stylesheet" id="skin" href="https://www47.myfantasyleague.com/skins17/MFL/MFL.css" type="text/css"  />
+<link rel="stylesheet" id="responsive" href="https://www47.myfantasyleague.com/skins17/MFL/responsive.css" type="text/css"  />
+<link rel="apple-touch-icon" href="https://www47.myfantasyleague.com/apple-touch-icon.png" />
+<link rel="shortcut icon" href="https://www47.myfantasyleague.com/favicon.ico" />
+<script type="text/javascript" src="https://www47.myfantasyleague.com/mfl_common.js"></script>
+<script type="text/javascript">
+<!--
+var league_id = '42989';
+var year = 2009;
+var xmlBaseURL = 'https://www47.myfantasyleague.com/fflnetdynamic2009/';
+var baseURLStatic = 'https://www47.myfantasyleague.com';
+var baseURLDynamic = 'https://www47.myfantasyleague.com';
+var currentServerTime = 1764402311;
+var completedWeek = 21;
+var liveScoringWeek = 21;
+var startWeek = 1;
+var endWeek = 17;
+var standingsEndWeek = "";
+var h2h_setting = "YES";  
+var precision = 2;
+var thisProgram = "options_07";
+
+function Franchise (id, name, division, icon, logo, abbrev) {
+   this.id = id;
+   this.name = name;
+   this.division = division;
+   this.icon = icon;
+   this.logo = logo;
+   this.abbrev = abbrev;
+}
+var leagueAttributes = new Object();
+
+var franchiseDatabase = new Array();
+franchiseDatabase['fid_0000'] = new Franchise('0000', 'Commissioner', undefined, 'http://www.dynastytheleague.com/images/team_banners/dynasty_the_commish.png', '');
+franchiseDatabase['fid_0001'] = new Franchise('0001', 'Pacific Pigskins', '00' ,'http://dynastytheleague.com/images/team_banners/pigskins_icon.png' ,'http://dynastytheleague.com/images/team_banners/pigskins.png' ,'PIGS');
+franchiseDatabase['fid_0015'] = new Franchise('0015', 'Dark Magicians of Chaos', '01' ,'http://dynastytheleague.com/images/team_banners/dark_magicians_of_chaos_ico.png' ,'http://dynastytheleague.com/images/team_pages/dark_magicians_of_chaos.jpg' ,'DMOC');
+franchiseDatabase['fid_0004'] = new Franchise('0004', 'Las Vegas Elite', '00' ,'http://dynastytheleague.com/images/team_banners/las_vegas_icon.png' ,'http://dynastytheleague.com/images/team_pages/las_vegas.jpg' ,'LVE');
+franchiseDatabase['fid_0006'] = new Franchise('0006', 'LBer-DeCleaters', '00' ,'http://dynastytheleague.com/images/team_banners/lb_decleaters_icon.png' ,'http://dynastytheleague.com/images/team_pages/decleaters.jpg' ,'LBDe');
+franchiseDatabase['fid_0002'] = new Franchise('0002', 'Degenerates', '01' ,'http://dynastytheleague.com/images/team_banners/degenerates_icon.png' ,'http://dynastytheleague.com/images/team_pages/degenerates.jpg' ,'DEG');
+franchiseDatabase['fid_0003'] = new Franchise('0003', 'Mistakes Were Made', '01' ,'http://dynastytheleague.com/images/team_banners/mistakes_were_made.png' ,'http://dynastytheleague.com/images/team_pages/mistakesweremade.jpg' ,'MWM');
+franchiseDatabase['fid_0013'] = new Franchise('0013', 'Sabertooths', '00' ,'http://dynastytheleague.com/images/team_banners/sabertooths_icon.png' ,'http://dynastytheleague.com/images/team_pages/sabertooths.jpg' ,'SABR');
+franchiseDatabase['fid_0012'] = new Franchise('0012', 'BOYZ II MEN', '01' ,'http://dynastytheleague.com/images/team_banners/boyz2men_icon.png' ,'http://dynastytheleague.com/images/team_pages/boys2men.jpg' ,'B2M');
+franchiseDatabase['fid_0011'] = new Franchise('0011', 'Amish Rakefighters', '02' ,'http://www.dynastytheleague.com/images/team_banners/amish_rakefighters_icon.png' ,'http://dynastytheleague.com/images/team_pages/rakefighters.jpg' ,'RAKE');
+franchiseDatabase['fid_0005'] = new Franchise('0005', 'The Executioners', '02' ,'http://dynastytheleague.com/images/team_banners/executioners.png' ,'http://dynastytheleague.com/images/team_pages/executioners.jpg' ,'THEX');
+franchiseDatabase['fid_0008'] = new Franchise('0008', 'Bring the Pain', '02' ,'http://dynastytheleague.com/images/team_banners/bring_the_pain_icon.png' ,'http://dynastytheleague.com/images/team_pages/bring_the_pain.jpg' ,'PAIN');
+franchiseDatabase['fid_0009'] = new Franchise('0009', 'Rolling Rockers', '02' ,'http://dynastytheleague.com/images/team_banners/rolling_rockers_icon.png' ,'http://dynastytheleague.com/images/team_pages/rolling_rockers.jpg' ,'ROCK');
+franchiseDatabase['fid_0014'] = new Franchise('0014', 'Devil Dogs', '03' ,'http://dynastytheleague.com/images/team_banners/devil_dogs_icon.png' ,'http://dynastytheleague.com/images/team_pages/devil_dogs.jpg' ,'DOGS');
+franchiseDatabase['fid_0016'] = new Franchise('0016', 'Silver Bullets', '03' ,'http://dynastytheleague.com/images/team_banners/silver_bullets_icon.png' ,'http://dynastytheleague.com/images/team_pages/silver_bullets.jpg' ,'SBUL');
+franchiseDatabase['fid_0010'] = new Franchise('0010', 'Witch City Warlocks', '03' ,'http://dynastytheleague.com/images/team_banners/witch_city_warriors_icon.png' ,'http://dynastytheleague.com/images/team_pages/witch_city_warlocks.jpg' ,'WCW');
+franchiseDatabase['fid_0007'] = new Franchise('0007', 'Acer FC Edge', '03' ,'http://dynastytheleague.com/images/team_banners/acer_fc_edge_icon.png' ,'http://dynastytheleague.com/images/team_pages/acer_fc_edge.jpg' ,'ACER');
+leagueAttributes['Draft'] = true;
+leagueAttributes['Auction'] = true;
+leagueAttributes['MinStarters'] = 9;
+leagueAttributes['MaxStarters'] = 9;
+leagueAttributes['Franchises'] = 16;
+leagueAttributes['Divisions'] = new Array('Pacific', 'Midwest', 'Central', 'Atlantic'); // This will be deprecated soon, use leagueDivisions instead
+leagueDivisions = new Object();
+leagueDivisions['00'] = { 'id' : '00', 'name' : 'Pacific' };
+leagueDivisions['01'] = { 'id' : '01', 'name' : 'Midwest' };
+leagueDivisions['02'] = { 'id' : '02', 'name' : 'Central' };
+leagueDivisions['03'] = { 'id' : '03', 'name' : 'Atlantic' };
+
+function chat_window (url) {
+    var chatWindow = window.open(url,"chat_window","height=600,width=450,scrollbars=yes,toolbar=no,status=no,resizable=yes,menubar=no");
+    chatWindow.focus();
+}
+
+function live_draft_window (url) {
+    var liveDraftWindow = window.open(url,"live_draft_window","height=800,width=1060,scrollbars=yes,toolbar=no,status=no,resizable=yes,menubar=no");
+    liveDraftWindow.focus();
+}
+
+function live_auction_window (url) {
+    var liveAuctionWindow = window.open(url,"live_auction_window","height=700,width=1060,scrollbars=yes,toolbar=no,status=no,resizable=yes,menubar=no");
+    liveAuctionWindow.focus();
+}
+
+
+//-->
+</script>
+<link rev="MADE" href="mailto:support@myfantasyleague.com"  />
+</head>
+<body id="body_options_07"><noscript>
+  <img src="http://b.scorecardresearch.com/b?c1=2&amp;c2=6035210&amp;c3=&amp;c4=www.myfantasyleague.com&amp;c5=&amp;c6=&amp;c15=&amp;cv=1.3&amp;cj=1" style="display:none" width="0" height="0" alt="" />
+</noscript>
+<div class="myfantasyleague_menu" onclick=""><span>LEAGUE MENU</span><input id="sub0" type="checkbox"><label for="sub0"><span></span></label><ul>
+<li class="mfl-icon"><a class="no-sub" href="http://home.myfantasyleague.com"><img src="/images/mfl-logo-2017.png" alt="MyFantasyLeague.com"><span>MyFantasyLeague.com</span></a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/home/42989">Home</a></li>
+<li class="has-sub sub-default mm-myacct"><a>My Account</a><b aria-haspopup="true" aria-controls="p1"></b><input id="sub1" type="checkbox"><label for="sub1"><span></span></label>
+<ul id="p1">
+<li><a class="no-sub" href="https://www42.myfantasyleague.com/2025/dash" target="">MFL&nbsp;Dashboard</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/login?L=42989" target="">Login</a></li>
+<li><a class="no-sub" href="https://www42.myfantasyleague.com/2025/index" target="">Find&nbsp;A&nbsp;League</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-scores"><a>Scores</a><b aria-haspopup="true" aria-controls="p2"></b><input id="sub2" type="checkbox"><label for="sub2"><span></span></label>
+<ul id="p2">
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/ajax_ls?L=42989" target="">Live&nbsp;Scoring</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/standings?L=42989" target="">Standings</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=22" target="">Weekly&nbsp;Results</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=31" target="">Weekly&nbsp;Summary</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=101" target="">Power&nbsp;Rank</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=06" target="">Starting&nbsp;Lineups</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=15" target="">Fantasy&nbsp;Schedule</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=79" target="">Playoff&nbsp;Brackets</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/pro_schedule?L=42989" target="">NFL&nbsp;Schedule</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=207" target="">Fantasy&nbsp;Previews</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=177" target="">Fantasy&nbsp;Recaps</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-trans"><a>Transactions</a><b aria-haspopup="true" aria-controls="p3"></b><input id="sub3" type="checkbox"><label for="sub3"><span></span></label>
+<ul id="p3">
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=07" target="">Rosters</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=03" target="">Transactions</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-player"><a>Player Research</a><b aria-haspopup="true" aria-controls="p4"></b><input id="sub4" type="checkbox"><label for="sub4"><span></span></label>
+<ul id="p4">
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=08" target="">Top&nbsp;Performers/Player&nbsp;Stats</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=236" target="">Projected&nbsp;Stats</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/depth_chart?L=42989" target="">Fantasy&nbsp;Depth&nbsp;Charts</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=117" target="">Top&nbsp;Adds/Drops/Starters</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=81" target="">Points&nbsp;Allowed&nbsp;-&nbsp;By&nbsp;Position</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/reports?L=42989&R=FULLFA" target="">Complete&nbsp;Free&nbsp;Agent&nbsp;Listing</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/injury?L=42989" target="">NFL&nbsp;Injury&nbsp;Report</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/news_articles?L=42989&P=*" target="">Player&nbsp;News</a></li>
+<li><a class="no-sub" href="http://subscribe.myfantasyleague.com/" target="">Get&nbsp;Projection&nbsp;Sources</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/player_search?L=42989" target="">Player&nbsp;Search</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-draft"><a>Draft/Auction</a><b aria-haspopup="true" aria-controls="p5"></b><input id="sub5" type="checkbox"><label for="sub5"><span></span></label>
+<ul id="p5">
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=17" target="">Draft&nbsp;Results</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/reports?L=42989&R=ADP" target="">ADP&nbsp;Report</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=100" target="">Future&nbsp;Draft&nbsp;Picks</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=44" target="">Auction&nbsp;Results</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/reports?L=42989&R=AAV" target="">AAV&nbsp;Report</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-league"><a>League</a><b aria-haspopup="true" aria-controls="p6"></b><input id="sub6" type="checkbox"><label for="sub6"><span></span></label>
+<ul id="p6">
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/all_reports?L=42989" target="">All&nbsp;Reports</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=123" target="">League&nbsp;Calendar</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=09" target="">League&nbsp;Rules</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/accounting_report?L=42989" target="">Accounting</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=01" target="">Franchise&nbsp;Information</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/reports?L=42989&R=FSUMMARY" target="">Franchise&nbsp;Summary</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=122" target="">NFL&nbsp;Pool&nbsp;Results</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=120" target="">Survivor&nbsp;Pool</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=194" target="">League&nbsp;Champions</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-social"><a>Social</a><b aria-haspopup="true" aria-controls="p7"></b><input id="sub7" type="checkbox"><label for="sub7"><span></span></label>
+<ul id="p7">
+<li><a class="no-sub" href="https://www.fantasysharks.com/forum/viewforum.php?f=501" target="">MFL&nbsp;Community&nbsp;Forums</a></li>
+<li><a class="no-sub" href="https://twitter.com/MyFantasyLeague" target="">Follow&nbsp;Us&nbsp;On&nbsp;Twitter</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=167" target="">Refer&nbsp;A&nbsp;Friend&nbsp;And&nbsp;Save!</a></li>
+</ul>
+</li>
+<li class="has-sub sub-default mm-help"><a>Help</a><b aria-haspopup="true" aria-controls="p8"></b><input id="sub8" type="checkbox"><label for="sub8"><span></span></label>
+<ul id="p8">
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/support?L=42989" target="">Help&nbsp;Center</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/support?PROGRAM=options_07&L=42989" target="_blank">Help&nbsp;on&nbsp;this&nbsp;Page</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/site_news?L=42989" target="">What's&nbsp;New?</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/options?L=42989&O=07&PRINTER=1" target="">Printer&nbsp;Friendly&nbsp;Page</a></li>
+<li><a class="no-sub" href="https://www47.myfantasyleague.com/2009/api_info?L=42989" target="">Developer's&nbsp;API</a></li>
+</ul>
+</li>
+</ul></div>
+<table cellspacing="0" class="pageheader">
+<tr>
+<td rowspan="3" class="welcome"><b>Guest</b> (<a href="https://www47.myfantasyleague.com/2009/login?L=42989">Login</a>)</td>
+</tr>
+<tr>
+<td class="pagetitle">
+<h1>
+ <span>Rosters</span></h1></td></tr></table><div class="pagebody" id="options_07">
+<h3>Display: Full Format | <a href="https://www47.myfantasyleague.com/2009/options?L=42989&O=105">Grid Format</a> | <a href="https://www47.myfantasyleague.com/2009/options?L=42989&O=138">With Stats Format</a></h4>
+<table align="center" class="two_column_layout">
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 6-12-0, PF: 1534.38"  class="franchise_0001 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0001&amp;O=01">Pacific Pigskins</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9515');" title="Salary: $425,000, Years: 5, Week 17: at Rams Sun 10:00 a.m. PT" class="position_rb">Coffee, Glen SFO RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9515&amp;YEAR=2009">40.21</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9015');" title="Salary: $725,000, Years: 4, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_rb">Ware, Danny NYG RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9015&amp;YEAR=2009">14.66</a></td>
+<td class="week">10</td><td class="salary">$725,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8076');" title="Salary: $425,000, Years: 2, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_rb">Weaver, Leonard PHI RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8076&amp;YEAR=2009">75.04</a></td>
+<td class="week">4</td><td class="salary">$425,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9526');" title="Salary: $425,000, Years: 5, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_wr">Barden, Ramses NYG WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9526&amp;YEAR=2009">2.10</a></td>
+<td class="week">10</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9545');" title="Salary: $425,000, Years: 5, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_wr">Hartline, Brian MIA WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9545&amp;YEAR=2009">94.08</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8266');" title="Salary: $1,845,250, Years: 3, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_wr">Holmes, Santonio PIT WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8266&amp;YEAR=2009">193.08</a></td>
+<td class="week">8</td><td class="salary">$1,845,250</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9450');" title="Salary: $1,150,000, Years: 5, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_wr">Nicks, Hakeem NYG WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9450&amp;YEAR=2009">139.78</a></td>
+<td class="week">10</td><td class="salary">$1,150,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8774');" title="Salary: $574,750, Years: 2, Week 17: vs 49ers Sun 10:00 a.m. PT" class="position_wr">Robinson, Laurent STL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8774&amp;YEAR=2009">29.20</a></td>
+<td class="week">9</td><td class="salary">$574,750</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8344');" title="Salary: $425,000, Years: 4, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_wr">Smith, Brad NYJ WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8344&amp;YEAR=2009">53.69</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9525');" title="Salary: $425,000, Years: 5, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_wr">Wallace, Mike PIT WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9525&amp;YEAR=2009">134.68</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9052');" title="Salary: $467,500, Years: 4, Week 17: vs Titans Sun 1:15 p.m. PT" class="position_te">Carlson, John SEA TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9052&amp;YEAR=2009">150.40</a></td>
+<td class="week">7</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0525');" title="Salary: $514,250, Years: 3, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_def">Buccaneers, Tampa Bay TBB Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0525&amp;YEAR=2009">123.00</a></td>
+<td class="week">8</td><td class="salary">$514,250</td><td class="contractyear">3</td></tr>
+<tr><th colspan="5">12 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0001">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$19,875,500</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$27,702,250</th>
+<th>47</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$17,297,750</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>33</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Pacific Pigskins:<br  />At Least 1 QB Are Required On Your Roster<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 11-7-0, PF: 1830.52"  class="franchise_0015 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0015&amp;O=01">Dark Magicians of Chaos</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','5065');" title="Salary: $425,000, Years: 5, Week 17: vs Saints Sun 10:00 a.m. PT" class="position_qb">Feeley, A.J. CAR QB</a></td>
+<td class="points"> &dash; </td>
+<td class="week">4</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7836');" title="Salary: $514,250, Years: 2, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_qb">Rodgers, Aaron GBP QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7836&amp;YEAR=2009">402.96</a></td>
+<td class="week">5</td><td class="salary">$514,250</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8244');" title="Salary: $880,000, Years: 4, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_qb">Young, Vince TEN QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8244&amp;YEAR=2009">157.26</a></td>
+<td class="week">7</td><td class="salary">$880,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7814');" title="Salary: $7,000,000, Years: 2, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_rb">Brown, Ronnie MIA RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7814&amp;YEAR=2009">130.98</a></td>
+<td class="week">6</td><td class="salary">$7,000,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7877');" title="Salary: $8,000,000, Years: 3, Week 17: at Rams Sun 10:00 a.m. PT" class="position_rb">Gore, Frank SFO RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7877&amp;YEAR=2009">239.60</a></td>
+<td class="week">6</td><td class="salary">$8,000,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','5172');" title="Salary: $425,000, Years: 2, Week 17: Bye" class="position_rb">Rhodes, Dominic FA* RB</a></td>
+<td class="points"> &dash; </td>
+<td class="week">-</td><td class="salary">$425,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7405');" title="Salary: $900,000, Years: 2, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Clayton, Michael TBB WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7405&amp;YEAR=2009">39.00</a></td>
+<td class="week">8</td><td class="salary">$900,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8493');" title="Salary: $5,596,250, Years: 3, Week 17: at Panthers Sun 10:00 a.m. PT" class="position_wr">Colston, Marques NOS WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8493&amp;YEAR=2009">193.18</a></td>
+<td class="week">5</td><td class="salary">$5,596,250</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8293');" title="Salary: $2,510,750, Years: 1, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_wr">Jennings, Greg GBP WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8293&amp;YEAR=2009">173.30</a></td>
+<td class="week">5</td><td class="salary">$2,510,750</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9081');" title="Salary: $880,000, Years: 2, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_wr">Kelly, Malcolm WAS WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9081&amp;YEAR=2009">47.20</a></td>
+<td class="week">8</td><td class="salary">$880,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8247');" title="Salary: $3,085,500, Years: 1, Week 17: at Rams Sun 10:00 a.m. PT" class="position_te">Davis, Vernon SFO TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8247&amp;YEAR=2009">252.50</a></td>
+<td class="week">6</td><td class="salary">$3,085,500</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8294');" title="Salary: $467,500, Years: 3, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_te">Fasano, Anthony MIA TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8294&amp;YEAR=2009">72.90</a></td>
+<td class="week">6</td><td class="salary">$467,500</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','3579');" title="Salary: $550,000, Years: 2, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_pk">Akers, David PHI PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3579&amp;YEAR=2009">161.00</a></td>
+<td class="week">4</td><td class="salary">$550,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','4092');" title="Salary: $500,000, Years: 3, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_pk">Brown, Kris HOU PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4092&amp;YEAR=2009">116.00</a></td>
+<td class="week">10</td><td class="salary">$500,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0518');" title="Salary: $695,750, Years: 2, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_def">Eagles, Philadelphia PHI Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0518&amp;YEAR=2009">178.00</a></td>
+<td class="week">4</td><td class="salary">$695,750</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','0520');" title="Salary: $475,000, Years: 3, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_def">Redskins, Washington WAS Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0520&amp;YEAR=2009">102.00</a></td>
+<td class="week">8</td><td class="salary">$475,000</td><td class="contractyear">3</td></tr>
+<tr><th colspan="5">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0015">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$6,154,875</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$39,059,875</th>
+<th>40</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$5,940,125</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>40</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 11-7-0, PF: 1864.35"  class="franchise_0004 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0004&amp;O=01">Las Vegas Elite</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8944');" title="Salary: $525,000, Years: 3, Week 17: vs Saints Sun 10:00 a.m. PT" class="position_qb">Moore, Matt CAR QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8944&amp;YEAR=2009">85.82</a></td>
+<td class="week">4</td><td class="salary">$525,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7394');" title="Salary: $3,690,500, Years: 2, Week 17: vs Redskins Sun 1:15 p.m. PT" class="position_qb">Rivers, Philip SDC QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7394&amp;YEAR=2009">325.16</a></td>
+<td class="week">5</td><td class="salary">$3,690,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9468');" title="Salary: $425,000, Years: 4, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_rb">Davis, James CLE RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9468&amp;YEAR=2009">3.00</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9639');" title="Salary: $425,000, Years: 3, Week 17: at Jets Sun 5:20 p.m. PT" class="position_rb">Scott, Bernard CIN RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9639&amp;YEAR=2009">61.17</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9101');" title="Salary: $5,500,000, Years: 4, Week 17: vs Saints Sun 10:00 a.m. PT" class="position_rb">Stewart, Jonathan CAR RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9101&amp;YEAR=2009">194.21</a></td>
+<td class="week">4</td><td class="salary">$5,500,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8931');" title="Salary: $495,000, Years: 4, Week 17: at Panthers Sun 10:00 a.m. PT" class="position_rb">Thomas, Pierre NOS RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8931&amp;YEAR=2009">165.82</a></td>
+<td class="week">5</td><td class="salary">$495,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','3869');" title="Salary: $525,000, Years: 2, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_rb">Williams, Ricky MIA RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3869&amp;YEAR=2009">221.25</a></td>
+<td class="week">6</td><td class="salary">$525,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8510');" title="Salary: $660,000, Years: 4, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_wr">Austin, Miles DAL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8510&amp;YEAR=2009">242.41</a></td>
+<td class="week">6</td><td class="salary">$660,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8822');" title="Salary: $467,500, Years: 4, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_wr">Breaston, Steve ARI WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8822&amp;YEAR=2009">126.69</a></td>
+<td class="week">4</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9427');" title="Salary: $2,550,000, Years: 5, Week 17: at Rams Sun 10:00 a.m. PT" class="position_wr">Crabtree, Michael SFO WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9427&amp;YEAR=2009">96.50</a></td>
+<td class="week">6</td><td class="salary">$2,550,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8777');" title="Salary: $514,250, Years: 3, Week 17: at Browns Sun 10:00 a.m. PT" class="position_wr">Sims-Walker, Mike JAC WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8777&amp;YEAR=2009">158.40</a></td>
+<td class="week">7</td><td class="salary">$514,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','4923');" title="Salary: $6,503,750, Years: 3, Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Wayne, Reggie IND WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4923&amp;YEAR=2009">234.40</a></td>
+<td class="week">6</td><td class="salary">$6,503,750</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9480');" title="Salary: $500,000, Years: 3, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_te">Casey, James HOU TE</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9480&amp;YEAR=2009">12.40</a></td>
+<td class="week">10</td><td class="salary">$500,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7842');" title="Salary: $2,255,000, Years: 2, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_te">Miller, Heath PIT TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7842&amp;YEAR=2009">190.90</a></td>
+<td class="week">8</td><td class="salary">$2,255,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8687');" title="Salary: $1,361,250, Years: 3, Week 17: at Lions Sun 10:00 a.m. PT" class="position_te">Olsen, Greg CHI TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8687&amp;YEAR=2009">169.20</a></td>
+<td class="week">5</td><td class="salary">$1,361,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','3143');" title="Salary: $495,000, Years: 1, Week 17: vs Giants Sun 10:00 a.m. PT" class="position_pk">Longwell, Ryan MIN PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3143&amp;YEAR=2009">149.00</a></td>
+<td class="week">9</td><td class="salary">$495,000</td><td class="contractyear">1</td></tr>
+<tr><th colspan="5">16 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0004">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$9,950,650</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$36,842,900</th>
+<th>50</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$8,157,100</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>30</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Las Vegas Elite:<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 10-8-0, PF: 1830.71"  class="franchise_0006 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0006&amp;O=01">LBer-DeCleaters</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9047');" title="Salary: $425,000, Years: 5, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_qb">Brennan, Colt WAS QB</a></td>
+<td class="points"> &dash; </td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9459');" title="Salary: $425,000, Years: 5, Week 17: at Rams Sun 10:00 a.m. PT" class="position_qb">Davis, Nate SFO QB</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7401');" title="Salary: $3,115,750, Years: 3, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_qb">Roethlisberger, Ben PIT QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7401&amp;YEAR=2009">319.32</a></td>
+<td class="week">8</td><td class="salary">$3,115,750</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9458');" title="Salary: $2,700,000, Years: 5, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_rb">Greene, Shonn NYJ RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9458&amp;YEAR=2009">60.10</a></td>
+<td class="week">9</td><td class="salary">$2,700,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8301');" title="Salary: $9,105,250, Years: 2, Week 17: at Browns Sun 10:00 a.m. PT" class="position_rb">Jones-Drew, Maurice JAC RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8301&amp;YEAR=2009">287.38</a></td>
+<td class="week">7</td><td class="salary">$9,105,250</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9094');" title="Salary: $4,400,000, Years: 4, Week 17: at Raiders Sun 1:15 p.m. PT" class="position_rb">Rice, Ray BAL RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9094&amp;YEAR=2009">265.60</a></td>
+<td class="week">7</td><td class="salary">$4,400,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9563');" title="Salary: $425,000, Years: 4, Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Collie, Austin IND WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9563&amp;YEAR=2009">139.94</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8072');" title="Salary: $600,000, Years: 3, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_wr">Cribbs, Josh CLE WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8072&amp;YEAR=2009">152.14</a></td>
+<td class="week">9</td><td class="salary">$600,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9625');" title="Salary: $550,000, Years: 5, Week 17: vs 49ers Sun 10:00 a.m. PT" class="position_wr">Gibson, Brandon STL WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9625&amp;YEAR=2009">55.80</a></td>
+<td class="week">9</td><td class="salary">$550,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9075');" title="Salary: $467,500, Years: 4, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_wr">Jackson, DeSean PHI WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9075&amp;YEAR=2009">245.13</a></td>
+<td class="week">4</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','4929');" title="Salary: $4,025,000, Years: 2, Week 17: at Jets Sun 5:20 p.m. PT" class="position_wr">Ochocinco, Chad CIN WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4929&amp;YEAR=2009">193.90</a></td>
+<td class="week">8</td><td class="salary">$4,025,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9044');" title="Salary: $577,500, Years: 4, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_te">Bennett, Martellus DAL TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9044&amp;YEAR=2009">30.90</a></td>
+<td class="week">6</td><td class="salary">$577,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','4883');" title="Salary: $425,000, Years: 1, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_pk">Feely, Jay NYJ PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4883&amp;YEAR=2009">146.40</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0531');" title="Salary: $550,000, Years: 2, Week 17: at Raiders Sun 1:15 p.m. PT" class="position_def">Ravens, Baltimore BAL Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0531&amp;YEAR=2009">187.00</a></td>
+<td class="week">7</td><td class="salary">$550,000</td><td class="contractyear">2</td></tr>
+<tr><th colspan="5">14 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0006">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$11,310,375</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$39,101,375</th>
+<th>49</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$5,898,625</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>31</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 13-5-0, PF: 1923.87"  class="franchise_0002 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0002&amp;O=01">Degenerates</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','5848');" title="Salary: $6,050,000, Years: 2, Week 17: at Texans Sun 10:00 a.m. PT" class="position_qb">Brady, Tom NEP QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=5848&amp;YEAR=2009">326.32</a></td>
+<td class="week">8</td><td class="salary">$6,050,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8767');" title="Salary: $1,475,000, Years: 2, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_rb">Jackson, Brandon GBP RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8767&amp;YEAR=2009">56.13</a></td>
+<td class="week">5</td><td class="salary">$1,475,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9680');" title="Salary: $425,000, Years: 5, Week 17: at Browns Sun 10:00 a.m. PT" class="position_rb">Jennings, Rashad JAC RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9680&amp;YEAR=2009">41.98</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7873');" title="Salary: $2,887,500, Years: 2, Week 17: vs Redskins Sun 1:15 p.m. PT" class="position_wr">Jackson, Vincent SDC WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7873&amp;YEAR=2009">205.80</a></td>
+<td class="week">5</td><td class="salary">$2,887,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8360');" title="Salary: $1,421,750, Years: 3, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_wr">Marshall, Brandon DEN WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8360&amp;YEAR=2009">226.40</a></td>
+<td class="week">7</td><td class="salary">$1,421,750</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8725');" title="Salary: $450,000, Years: 3, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_wr">Stuckey, Chansi CLE WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8725&amp;YEAR=2009">59.40</a></td>
+<td class="week">9</td><td class="salary">$450,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','3367');" title="Salary: $2,000,000, Years: 2, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_wr">Ward, Hines PIT WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3367&amp;YEAR=2009">198.20</a></td>
+<td class="week">8</td><td class="salary">$2,000,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7396');" title="Salary: $2,268,750, Years: 3, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_te">Winslow, Kellen TBB TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7396&amp;YEAR=2009">196.10</a></td>
+<td class="week">8</td><td class="salary">$2,268,750</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8153');" title="Salary: $500,000, Years: 2, Week 17: at Lions Sun 10:00 a.m. PT" class="position_pk">Gould, Robbie CHI PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8153&amp;YEAR=2009">123.00</a></td>
+<td class="week">5</td><td class="salary">$500,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0523');" title="Salary: $514,250, Years: 2, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_def">Packers, Green Bay GBP Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0523&amp;YEAR=2009">187.00</a></td>
+<td class="week">5</td><td class="salary">$514,250</td><td class="contractyear">2</td></tr>
+<tr><th colspan="5">10 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0002">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$14,706,375</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,698,625</th>
+<th>26</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,301,375</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>54</th></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 7-11-0, PF: 1565.61"  class="franchise_0003 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0003&amp;O=01">Mistakes Were Made</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7391');" title="Salary: $1,905,750, Years: 1, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_qb">Manning, Eli NYG QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7391&amp;YEAR=2009">285.34</a></td>
+<td class="week">10</td><td class="salary">$1,905,750</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','6715');" title="Salary: $715,000, Years: 3, Week 17: vs Giants Sun 10:00 a.m. PT" class="position_rb">Taylor, Chester MIN RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6715&amp;YEAR=2009">95.10</a></td>
+<td class="week">9</td><td class="salary">$715,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7468');" title="Salary: $1,754,500, Years: 2, Week 17: vs Giants Sun 10:00 a.m. PT" class="position_wr">Berrian, Bernard MIN WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7468&amp;YEAR=2009">113.69</a></td>
+<td class="week">9</td><td class="salary">$1,754,500</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','3870');" title="Salary: $1,425,000, Years: 2, Week 17: at Browns Sun 10:00 a.m. PT" class="position_wr">Holt, Torry JAC WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3870&amp;YEAR=2009">95.70</a></td>
+<td class="week">7</td><td class="salary">$1,425,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8657');" title="Salary: $6,473,500, Years: 1, Week 17: vs Bears Sun 10:00 a.m. PT" class="position_wr">Johnson, Calvin DET WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8657&amp;YEAR=2009">165.20</a></td>
+<td class="week">7</td><td class="salary">$6,473,500</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7839');" title="Salary: $2,887,500, Years: 2, Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">White, Roddy ATL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7839&amp;YEAR=2009">224.00</a></td>
+<td class="week">4</td><td class="salary">$2,887,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8830');" title="Salary: $687,500, Years: 3, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_te">Boss, Kevin NYG TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8830&amp;YEAR=2009">130.30</a></td>
+<td class="week">10</td><td class="salary">$687,500</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0502');" title="Salary: $425,000, Years: 3, Week 17: at Bills Sun 10:00 a.m. PT" class="position_def">Colts, Indianapolis IND Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0502&amp;YEAR=2009">133.00</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">3</td></tr>
+<tr><th colspan="5">8 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0003">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$14,856,000</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$31,129,750</th>
+<th>17</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$13,870,250</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>63</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Mistakes Were Made:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 7-11-0, PF: 1239.39"  class="franchise_0013 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0013&amp;O=01">Sabertooths</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9460');" title="Salary: $425,000, Years: 5, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_qb">Freeman, Josh TBB QB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9460&amp;YEAR=2009">114.40</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8251');" title="Salary: $1,000,000, Years: 5, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_qb">Leinart, Matt ARI QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8251&amp;YEAR=2009">10.80</a></td>
+<td class="week">4</td><td class="salary">$1,000,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9079');" title="Salary: $3,575,000, Years: 4, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_rb">Jones, Felix DAL RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9079&amp;YEAR=2009">120.09</a></td>
+<td class="week">6</td><td class="salary">$3,575,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9089');" title="Salary: $6,050,000, Years: 2, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_rb">Mendenhall, Rashard PIT RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9089&amp;YEAR=2009">185.39</a></td>
+<td class="week">8</td><td class="salary">$6,050,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9467');" title="Salary: $775,000, Years: 5, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_wr">Britt, Kenny TEN WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9467&amp;YEAR=2009">122.79</a></td>
+<td class="week">7</td><td class="salary">$775,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9636');" title="Salary: $425,000, Years: 5, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_wr">Edison, Dominique TEN WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9636&amp;YEAR=2009">0.00</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9441');" title="Salary: $1,250,000, Years: 5, Week 17: vs Giants Sun 10:00 a.m. PT" class="position_wr">Harvin, Percy MIN WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9441&amp;YEAR=2009">205.18</a></td>
+<td class="week">9</td><td class="salary">$1,250,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9436');" title="Salary: $1,450,000, Years: 5, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_wr">Maclin, Jeremy PHI WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9436&amp;YEAR=2009">131.62</a></td>
+<td class="week">4</td><td class="salary">$1,450,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9507');" title="Salary: $425,000, Years: 5, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_te">Quinn, Richard DEN TE</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9507&amp;YEAR=2009">0.57</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr><th colspan="5">9 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0013">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$17,022,000</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,397,000</th>
+<th>41</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,603,000</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>39</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Sabertooths:<br  />At Least 1 PK Are Required On Your Roster<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 8-10-0, PF: 1667.71"  class="franchise_0012 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0012&amp;O=01">BOYZ II MEN</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8252');" title="Salary: $4,295,500, Years: 1, Week 17: at Lions Sun 10:00 a.m. PT" class="position_qb">Cutler, Jay CHI QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8252&amp;YEAR=2009">281.94</a></td>
+<td class="week">5</td><td class="salary">$4,295,500</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9122');" title="Salary: $4,950,000, Years: 2, Week 17: at Lions Sun 10:00 a.m. PT" class="position_rb">Forte, Matt CHI RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9122&amp;YEAR=2009">174.25</a></td>
+<td class="week">5</td><td class="salary">$4,950,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8667');" title="Salary: $1,936,000, Years: 2, Week 17: at Broncos Sun 1:15 p.m. PT" class="position_wr">Bowe, Dwayne KCC WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8667&amp;YEAR=2009">106.40</a></td>
+<td class="week">8</td><td class="salary">$1,936,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','6999');" title="Salary: $544,500, Years: 2, Week 17: vs Titans Sun 1:15 p.m. PT" class="position_wr">Burleson, Nate SEA WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6999&amp;YEAR=2009">134.78</a></td>
+<td class="week">7</td><td class="salary">$544,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8680');" title="Salary: $2,026,750, Years: 3, Week 17: at Panthers Sun 10:00 a.m. PT" class="position_wr">Meachem, Robert NOS WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8680&amp;YEAR=2009">165.34</a></td>
+<td class="week">5</td><td class="salary">$2,026,750</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','6952');" title="Salary: $1,210,000, Years: 3, Week 17: at Bills Sun 10:00 a.m. PT" class="position_te">Clark, Dallas IND TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6952&amp;YEAR=2009">271.70</a></td>
+<td class="week">6</td><td class="salary">$1,210,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9080');" title="Salary: $770,000, Years: 4, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_te">Keller, Dustin NYJ TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9080&amp;YEAR=2009">109.90</a></td>
+<td class="week">9</td><td class="salary">$770,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8074');" title="Salary: $632,500, Years: 2, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_pk">Bironas, Rob TEN PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8074&amp;YEAR=2009">146.70</a></td>
+<td class="week">7</td><td class="salary">$632,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0508');" title="Salary: $574,750, Years: 2, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_def">Titans, Tennessee TEN Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0508&amp;YEAR=2009">122.00</a></td>
+<td class="week">7</td><td class="salary">$574,750</td><td class="contractyear">2</td></tr>
+<tr><th colspan="5">9 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0012">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$14,968,625</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$31,908,625</th>
+<th>21</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$13,091,375</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>59</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 5-13-0, PF: 1394.72"  class="franchise_0011 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0011&amp;O=01">Amish Rakefighters</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9429');" title="Salary: $500,000, Years: 5, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_qb">Sanchez, Mark NYJ QB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9429&amp;YEAR=2009">156.36</a></td>
+<td class="week">9</td><td class="salary">$500,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9431');" title="Salary: $975,000, Years: 5, Week 17: vs Bears Sun 10:00 a.m. PT" class="position_qb">Stafford, Matthew DET QB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9431&amp;YEAR=2009">151.48</a></td>
+<td class="week">7</td><td class="salary">$975,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9347');" title="Salary: $1,125,000, Years: 4, Week 17: at Texans Sun 10:00 a.m. PT" class="position_rb">Green-Ellis, BenJarvus NEP RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9347&amp;YEAR=2009">13.00</a></td>
+<td class="week">8</td><td class="salary">$1,125,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9196');" title="Salary: $467,500, Years: 4, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_rb">Hightower, Tim ARI RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9196&amp;YEAR=2009">158.35</a></td>
+<td class="week">4</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8934');" title="Salary: $1,525,000, Years: 5, Week 17: vs Colts Sun 10:00 a.m. PT" class="position_rb">Jackson, Fred BUF RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8934&amp;YEAR=2009">214.37</a></td>
+<td class="week">9</td><td class="salary">$1,525,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9250');" title="Salary: $625,000, Years: 3, Week 17: at Bills Sun 10:00 a.m. PT" class="position_wr">Garcon, Pierre IND WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9250&amp;YEAR=2009">125.00</a></td>
+<td class="week">6</td><td class="salary">$625,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9452');" title="Salary: $875,000, Years: 5, Week 17: vs Ravens Sun 1:15 p.m. PT" class="position_wr">Heyward-Bey, Darrius OAK WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9452&amp;YEAR=2009">24.80</a></td>
+<td class="week">9</td><td class="salary">$875,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8772');" title="Salary: $650,000, Years: 3, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_wr">Jones, Jacoby HOU WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8772&amp;YEAR=2009">133.32</a></td>
+<td class="week">10</td><td class="salary">$650,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9221');" title="Salary: $2,075,000, Years: 4, Week 17: at Rams Sun 10:00 a.m. PT" class="position_wr">Morgan, Josh SFO WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9221&amp;YEAR=2009">113.81</a></td>
+<td class="week">6</td><td class="salary">$2,075,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8847');" title="Salary: $650,000, Years: 5, Week 17: vs Redskins Sun 1:15 p.m. PT" class="position_wr">Naanee, Legedu SDC WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8847&amp;YEAR=2009">49.74</a></td>
+<td class="week">5</td><td class="salary">$650,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9700');" title="Salary: $425,000, Years: 4, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_wr">Ogletree, Kevin DAL WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9700&amp;YEAR=2009">18.68</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8679');" title="Salary: $1,603,250, Years: 3, Week 17: vs Giants Sun 10:00 a.m. PT" class="position_wr">Rice, Sidney MIN WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8679&amp;YEAR=2009">218.70</a></td>
+<td class="week">9</td><td class="salary">$1,603,250</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9524');" title="Salary: $425,000, Years: 5, Week 17: at Texans Sun 10:00 a.m. PT" class="position_wr">Tate, Brandon NEP WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9524&amp;YEAR=2009">4.28</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9787');" title="Salary: $500,000, Years: 3, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_te">Moore, Evan CLE TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9787&amp;YEAR=2009">27.80</a></td>
+<td class="week">9</td><td class="salary">$500,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8302');" title="Salary: $1,500,000, Years: 3, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_te">Scheffler, Tony DEN TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8302&amp;YEAR=2009">84.60</a></td>
+<td class="week">7</td><td class="salary">$1,500,000</td><td class="contractyear">3</td></tr>
+<tr><th colspan="5">15 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0011">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$21,929,875</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$35,850,625</th>
+<th>61</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$9,149,375</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>19</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Amish Rakefighters:<br  />At Least 1 PK Are Required On Your Roster<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 7-11-0, PF: 1432.12"  class="franchise_0005 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0005&amp;O=01">The Executioners</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9073');" title="Salary: $467,500, Years: 4, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_qb">Henne, Chad MIA QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9073&amp;YEAR=2009">168.32</a></td>
+<td class="week">6</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8758');" title="Salary: $514,250, Years: 3, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_qb">Kolb, Kevin PHI QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8758&amp;YEAR=2009">51.54</a></td>
+<td class="week">4</td><td class="salary">$514,250</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9456');" title="Salary: $3,325,000, Years: 5, Week 17: at Bills Sun 10:00 a.m. PT" class="position_rb">Brown, Donald IND RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9456&amp;YEAR=2009">66.38</a></td>
+<td class="week">6</td><td class="salary">$3,325,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8685');" title="Salary: $467,500, Years: 4, Week 17: vs Ravens Sun 1:15 p.m. PT" class="position_rb">Bush, Michael OAK RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8685&amp;YEAR=2009">87.65</a></td>
+<td class="week">9</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9171');" title="Salary: $1,525,000, Years: 5, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_rb">Choice, Tashard DAL RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9171&amp;YEAR=2009">71.85</a></td>
+<td class="week">6</td><td class="salary">$1,525,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9616');" title="Salary: $425,000, Years: 5, Week 17: vs Bears Sun 10:00 a.m. PT" class="position_rb">Peerman, Cedric DET RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9616&amp;YEAR=2009">0.00</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7403');" title="Salary: $3,500,000, Years: 3, Week 17: vs Colts Sun 10:00 a.m. PT" class="position_wr">Evans, Lee BUF WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7403&amp;YEAR=2009">125.20</a></td>
+<td class="week">9</td><td class="salary">$3,500,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9085');" title="Salary: $1,800,000, Years: 3, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_wr">Manningham, Mario NYG WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9085&amp;YEAR=2009">138.70</a></td>
+<td class="week">10</td><td class="salary">$1,800,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9560');" title="Salary: $425,000, Years: 5, Week 17: vs Ravens Sun 1:15 p.m. PT" class="position_wr">Murphy, Louis OAK WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9560&amp;YEAR=2009">96.20</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9544');" title="Salary: $425,000, Years: 5, Week 17: at Browns Sun 10:00 a.m. PT" class="position_wr">Thomas, Mike JAC WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9544&amp;YEAR=2009">104.76</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7183');" title="Salary: $514,250, Years: 3, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_wr">Walter, Kevin HOU WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7183&amp;YEAR=2009">102.20</a></td>
+<td class="week">10</td><td class="salary">$514,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8838');" title="Salary: $750,000, Years: 1, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_te">Celek, Brent PHI TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8838&amp;YEAR=2009">221.10</a></td>
+<td class="week">4</td><td class="salary">$750,000</td><td class="contractyear">1</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9454');" title="Salary: $425,000, Years: 5, Week 17: at Jets Sun 5:20 p.m. PT" class="position_te">Coffman, Chase CIN TE</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0503');" title="Salary: $467,500, Years: 4, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_def">Dolphins, Miami MIA Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0503&amp;YEAR=2009">119.00</a></td>
+<td class="week">6</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr><th colspan="5">14 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0005">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$17,449,250</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,480,250</th>
+<th>55</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,519,750</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>25</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For The Executioners:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 13-5-0, PF: 2005.00"  class="franchise_0008 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0008&amp;O=01">Bring the Pain</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7918');" title="Salary: $1,100,000, Years: 1, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_qb">Orton, Kyle DEN QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7918&amp;YEAR=2009">257.18</a></td>
+<td class="week">7</td><td class="salary">$1,100,000</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7480');" title="Salary: $2,389,750, Years: 2, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_qb">Schaub, Matt HOU QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7480&amp;YEAR=2009">338.50</a></td>
+<td class="week">10</td><td class="salary">$2,389,750</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9078');" title="Salary: $1,100,000, Years: 4, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_rb">Johnson, Chris TEN RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9078&amp;YEAR=2009">355.40</a></td>
+<td class="week">7</td><td class="salary">$1,100,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9448');" title="Salary: $2,335,000, Years: 5, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_rb">McCoy, LeSean PHI RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9448&amp;YEAR=2009">128.50</a></td>
+<td class="week">4</td><td class="salary">$2,335,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9050');" title="Salary: $467,500, Years: 4, Week 17: at Jets Sun 5:20 p.m. PT" class="position_wr">Caldwell, Andre CIN WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9050&amp;YEAR=2009">101.07</a></td>
+<td class="week">8</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7393');" title="Salary: $7,320,500, Years: 1, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_wr">Fitzgerald, Larry ARI WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7393&amp;YEAR=2009">235.70</a></td>
+<td class="week">4</td><td class="salary">$7,320,500</td><td class="contractyear">1</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9537');" title="Salary: $425,000, Years: 5, Week 17: at Lions Sun 10:00 a.m. PT" class="position_wr">Iglesias, Juaquin CHI WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9537&amp;YEAR=2009">0.00</a></td>
+<td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8776');" title="Salary: $514,250, Years: 2, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_wr">Jones, James GBP WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8776&amp;YEAR=2009">90.00</a></td>
+<td class="week">5</td><td class="salary">$514,250</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9575');" title="Salary: $425,000, Years: 5, Week 17: at Lions Sun 10:00 a.m. PT" class="position_wr">Knox, Johnny CHI WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9575&amp;YEAR=2009">135.01</a></td>
+<td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9663');" title="Salary: $425,000, Years: 5, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Stroughter, Sammie TBB WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9663&amp;YEAR=2009">74.19</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9474');" title="Salary: $425,000, Years: 5, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_te">Cook, Jared TEN TE</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9474&amp;YEAR=2009">16.40</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','2918');" title="Salary: $3,055,250, Years: 1, Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_te">Gonzalez, Tony ATL TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=2918&amp;YEAR=2009">205.70</a></td>
+<td class="week">4</td><td class="salary">$3,055,250</td><td class="contractyear">1</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9611');" title="Salary: $425,000, Years: 5, Week 17: at Browns Sun 10:00 a.m. PT" class="position_te">Miller, Zach JAC TE</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9611&amp;YEAR=2009">55.07</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8683');" title="Salary: $816,750, Years: 3, Week 17: vs Ravens Sun 1:15 p.m. PT" class="position_te">Miller, Zach OAK TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8683&amp;YEAR=2009">164.50</a></td>
+<td class="week">9</td><td class="salary">$816,750</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0517');" title="Salary: $577,500, Years: 2, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_def">Giants, New York NYG Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0517&amp;YEAR=2009">111.00</a></td>
+<td class="week">10</td><td class="salary">$577,500</td><td class="contractyear">2</td></tr>
+<tr><th colspan="5">15 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0008">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$14,446,375</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$36,247,875</th>
+<th>50</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$8,752,125</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>30</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Bring the Pain:<br  />At Least 1 PK Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 5-13-0, PF: 1670.89"  class="franchise_0009 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0009&amp;O=01">Rolling Rockers</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9099');" title="Salary: $1,925,000, Years: 4, Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_qb">Ryan, Matt ATL QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9099&amp;YEAR=2009">227.54</a></td>
+<td class="week">4</td><td class="salary">$1,925,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9493');" title="Salary: $425,000, Years: 4, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_qb">White, Pat MIA QB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9493&amp;YEAR=2009">8.10</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8262');" title="Salary: $4,025,000, Years: 2, Week 17: at Texans Sun 10:00 a.m. PT" class="position_rb">Maroney, Laurence NEP RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8262&amp;YEAR=2009">143.47</a></td>
+<td class="week">8</td><td class="salary">$4,025,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9437');" title="Salary: $5,000,000, Years: 5, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_rb">Moreno, Knowshon DEN RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9437&amp;YEAR=2009">169.00</a></td>
+<td class="week">7</td><td class="salary">$5,000,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8658');" title="Salary: $10,920,250, Years: 3, Week 17: vs Giants Sun 10:00 a.m. PT" class="position_rb">Peterson, Adrian MIN RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8658&amp;YEAR=2009">289.25</a></td>
+<td class="week">9</td><td class="salary">$10,920,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7625');" title="Salary: $467,500, Years: 2, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_rb">Ward, Derrick TBB RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7625&amp;YEAR=2009">79.40</a></td>
+<td class="week">8</td><td class="salary">$467,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9642');" title="Salary: $425,000, Years: 3, Week 17: at Broncos Sun 1:15 p.m. PT" class="position_rb">Williams, Javarris KCC RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9642&amp;YEAR=2009">0.60</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9061');" title="Salary: $467,500, Years: 3, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_wr">Doucet, Early ARI WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9061&amp;YEAR=2009">35.90</a></td>
+<td class="week">4</td><td class="salary">$467,500</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','6544');" title="Salary: $605,000, Years: 2, Week 17: vs Colts Sun 10:00 a.m. PT" class="position_wr">Reed, Josh BUF WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6544&amp;YEAR=2009">46.60</a></td>
+<td class="week">9</td><td class="salary">$605,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9489');" title="Salary: $625,000, Years: 5, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_wr">Robiskie, Brian CLE WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9489&amp;YEAR=2009">14.10</a></td>
+<td class="week">9</td><td class="salary">$625,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8702');" title="Salary: $695,750, Years: 3, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_wr">Smith, Steve NYG WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8702&amp;YEAR=2009">217.50</a></td>
+<td class="week">10</td><td class="salary">$695,750</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9102');" title="Salary: $1,375,000, Years: 4, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_wr">Sweed, Limas PIT WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9102&amp;YEAR=2009">1.00</a></td>
+<td class="week">8</td><td class="salary">$1,375,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8117');" title="Salary: $1,000,000, Years: 2, Week 17: at Seahawks Sun 1:15 p.m. PT" class="position_wr">Washington, Nate TEN WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8117&amp;YEAR=2009">117.90</a></td>
+<td class="week">7</td><td class="salary">$1,000,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9523');" title="Salary: $425,000, Years: 3, Week 17: vs Bears Sun 10:00 a.m. PT" class="position_wr">Williams, Derrick DET WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9523&amp;YEAR=2009">34.53</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9058');" title="Salary: $742,500, Years: 3, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_te">Davis, Fred WAS TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9058&amp;YEAR=2009">134.90</a></td>
+<td class="week">8</td><td class="salary">$742,500</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8359');" title="Salary: $574,750, Years: 2, Week 17: at Texans Sun 10:00 a.m. PT" class="position_pk">Gostkowski, Stephen NEP PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8359&amp;YEAR=2009">140.60</a></td>
+<td class="week">8</td><td class="salary">$574,750</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0530');" title="Salary: $605,000, Years: 2, Week 17: at Rams Sun 10:00 a.m. PT" class="position_def">49ers, San Francisco SFO Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0530&amp;YEAR=2009">201.00</a></td>
+<td class="week">6</td><td class="salary">$605,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','0512');" title="Salary: $425,000, Years: 3, Week 17: at Broncos Sun 1:15 p.m. PT" class="position_def">Chiefs, Kansas City KCC Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0512&amp;YEAR=2009">120.00</a></td>
+<td class="week">8</td><td class="salary">$425,000</td><td class="contractyear">3</td></tr>
+<tr><th colspan="5">18 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0009">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$8,055,875</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$38,784,125</th>
+<th>55</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$6,215,875</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>25</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 11-7-0, PF: 1773.49"  class="franchise_0014 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0014&amp;O=01">Devil Dogs</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','3291');" title="Salary: $5,000,000, Years: 2, Week 17: at Bills Sun 10:00 a.m. PT" class="position_qb">Manning, Peyton IND QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3291&amp;YEAR=2009">344.70</a></td>
+<td class="week">6</td><td class="salary">$5,000,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7921');" title="Salary: $5,142,500, Years: 2, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_rb">Barber, Marion DAL RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7921&amp;YEAR=2009">159.80</a></td>
+<td class="week">6</td><td class="salary">$5,142,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9054');" title="Salary: $2,325,000, Years: 3, Week 17: at Broncos Sun 1:15 p.m. PT" class="position_rb">Charles, Jamaal KCC RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9054&amp;YEAR=2009">229.99</a></td>
+<td class="week">8</td><td class="salary">$2,325,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9149');" title="Salary: $467,500, Years: 3, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_rb">Slaton, Steve HOU RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9149&amp;YEAR=2009">128.40</a></td>
+<td class="week">10</td><td class="salary">$467,500</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7817');" title="Salary: $550,000, Years: 3, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_rb">Williams, Carnell TBB RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7817&amp;YEAR=2009">152.50</a></td>
+<td class="week">8</td><td class="salary">$550,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9040');" title="Salary: $467,500, Years: 4, Week 17: vs 49ers Sun 10:00 a.m. PT" class="position_wr">Avery, Donnie STL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9040&amp;YEAR=2009">111.97</a></td>
+<td class="week">9</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9137');" title="Salary: $467,500, Years: 4, Week 17: at Lions Sun 10:00 a.m. PT" class="position_wr">Bennett, Earl CHI WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9137&amp;YEAR=2009">124.19</a></td>
+<td class="week">5</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','6571');" title="Salary: $2,600,000, Years: 2, Week 17: vs Falcons Sun 10:00 a.m. PT" class="position_wr">Bryant, Antonio TBB WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6571&amp;YEAR=2009">103.50</a></td>
+<td class="week">8</td><td class="salary">$2,600,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9069');" title="Salary: $425,000, Years: 5, Week 17: vs Colts Sun 10:00 a.m. PT" class="position_wr">Hardy, James BUF WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9069&amp;YEAR=2009">1.40</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7455');" title="Salary: $550,000, Years: 2, Week 17: vs Redskins Sun 1:15 p.m. PT" class="position_pk">Kaeding, Nate SDC PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7455&amp;YEAR=2009">163.70</a></td>
+<td class="week">5</td><td class="salary">$550,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0516');" title="Salary: $550,000, Years: 2, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_def">Cowboys, Dallas DAL Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0516&amp;YEAR=2009">165.00</a></td>
+<td class="week">6</td><td class="salary">$550,000</td><td class="contractyear">2</td></tr>
+<tr><th colspan="5">11 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0014">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$13,907,375</td><td>&nbsp;</td></tr>
+<tr><th colspan="5">Taxi Squad</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9579');" title="Salary: $425,000, Years: 5, Week 17: at Browns Sun 10:00 a.m. PT" class="position_wr">Dillard, Jarett JAC WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9579&amp;YEAR=2009">13.60</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr><th colspan="5">1 Total Player on Taxi Squad</th></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$32,664,875</th>
+<th>32</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$12,335,125</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>48</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Devil Dogs:<br  />At Least 1 TE Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 7-11-0, PF: 1679.55"  class="franchise_0016 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0016&amp;O=01">Silver Bullets</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9064');" title="Salary: $467,500, Years: 4, Week 17: at Raiders Sun 1:15 p.m. PT" class="position_qb">Flacco, Joe BAL QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9064&amp;YEAR=2009">248.12</a></td>
+<td class="week">7</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7260');" title="Salary: $3,690,500, Years: 1, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_qb">Romo, Tony DAL QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7260&amp;YEAR=2009">325.82</a></td>
+<td class="week">6</td><td class="salary">$3,690,500</td><td class="contractyear">1</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','4891');" title="Salary: $425,000, Years: 2, Week 17: at Cowboys Sun 1:15 p.m. PT" class="position_qb">Vick, Michael PHI QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4891&amp;YEAR=2009">30.94</a></td>
+<td class="week">4</td><td class="salary">$425,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8243');" title="Salary: $7,452,500, Years: 3, Week 17: at Panthers Sun 10:00 a.m. PT" class="position_rb">Bush, Reggie NOS RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8243&amp;YEAR=2009">132.15</a></td>
+<td class="week">5</td><td class="salary">$7,452,500</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9301');" title="Salary: $425,000, Years: 4, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_wr">Bess, Davone MIA WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9301&amp;YEAR=2009">127.17</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9144');" title="Salary: $577,500, Years: 4, Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Douglas, Harry ATL WR</a></td>
+<td class="points"> &dash; </td>
+<td class="week">4</td><td class="salary">$577,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7815');" title="Salary: $4,325,750, Years: 2, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_wr">Edwards, Braylon NYJ WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7815&amp;YEAR=2009">114.50</a></td>
+<td class="week">9</td><td class="salary">$4,325,750</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8671');" title="Salary: $425,000, Years: 2, Week 17: vs Saints Sun 10:00 a.m. PT" class="position_wr">Jarrett, Dwayne CAR WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8671&amp;YEAR=2009">34.10</a></td>
+<td class="week">4</td><td class="salary">$425,000</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','6931');" title="Salary: $6,732,000, Years: 1, Week 17: vs Patriots Sun 10:00 a.m. PT" class="position_wr">Johnson, Andre HOU WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6931&amp;YEAR=2009">264.40</a></td>
+<td class="week">10</td><td class="salary">$6,732,000</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9118');" title="Salary: $467,500, Years: 4, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_wr">Nelson, Jordy GBP WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9118&amp;YEAR=2009">74.75</a></td>
+<td class="week">5</td><td class="salary">$467,500</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8352');" title="Salary: $514,250, Years: 3, Week 17: at Raiders Sun 1:15 p.m. PT" class="position_wr">Williams, Demetrius BAL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8352&amp;YEAR=2009">24.20</a></td>
+<td class="week">7</td><td class="salary">$514,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','4924');" title="Salary: $907,500, Years: 2, Week 17: at Raiders Sun 1:15 p.m. PT" class="position_te">Heap, Todd BAL TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4924&amp;YEAR=2009">148.50</a></td>
+<td class="week">7</td><td class="salary">$907,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8742');" title="Salary: $638,000, Years: 1, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_pk">Crosby, Mason GBP PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8742&amp;YEAR=2009">143.20</a></td>
+<td class="week">5</td><td class="salary">$638,000</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0529');" title="Salary: $425,000, Years: 1, Week 17: at Panthers Sun 10:00 a.m. PT" class="position_def">Saints, New Orleans NOS Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0529&amp;YEAR=2009">186.00</a></td>
+<td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">1</td></tr>
+<tr><th colspan="5">14 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0016">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$6,670,500</td><td>&nbsp;</td></tr>
+<tr><th colspan="5">Taxi Squad</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9498');" title="Salary: $425,000, Years: 4, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_wr">Massaquoi, Mohamed CLE WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9498&amp;YEAR=2009">95.10</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9444');" title="Salary: $425,000, Years: 5, Week 17: vs Bears Sun 10:00 a.m. PT" class="position_te">Pettigrew, Brandon DET TE</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9444&amp;YEAR=2009">78.20</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr><th colspan="5">2 Total Players on Taxi Squad</th></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$34,568,500</th>
+<th>34</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$10,431,500</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>46</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 9-9-0, PF: 1684.93"  class="franchise_0010 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0010&amp;O=01">Witch City Warlocks</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','3445');" title="Salary: $2,420,000, Years: 2, Week 17: vs Titans Sun 1:15 p.m. PT" class="position_qb">Hasselbeck, Matt SEA QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=3445&amp;YEAR=2009">195.06</a></td>
+<td class="week">7</td><td class="salary">$2,420,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8271');" title="Salary: $7,000,000, Years: 4, Week 17: at Bills Sun 10:00 a.m. PT" class="position_rb">Addai, Joseph IND RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8271&amp;YEAR=2009">212.03</a></td>
+<td class="week">6</td><td class="salary">$7,000,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9751');" title="Salary: $425,000, Years: 3, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_rb">Jennings, Chris CLE RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9751&amp;YEAR=2009">35.85</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9440');" title="Salary: $4,500,000, Years: 5, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_rb">Wells, Chris ARI RB</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9440&amp;YEAR=2009">134.60</a></td>
+<td class="week">4</td><td class="salary">$4,500,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','6982');" title="Salary: $6,050,000, Years: 2, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_wr">Boldin, Anquan ARI WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6982&amp;YEAR=2009">171.60</a></td>
+<td class="week">4</td><td class="salary">$6,050,000</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9654');" title="Salary: $425,000, Years: 5, Week 17: vs Redskins Sun 1:15 p.m. PT" class="position_wr">Byrd, Demetrius SDC WR</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">5</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8673');" title="Salary: $1,089,000, Years: 3, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_wr">Ginn Jr., Ted MIA WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8673&amp;YEAR=2009">126.92</a></td>
+<td class="week">6</td><td class="salary">$1,089,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7419');" title="Salary: $725,000, Years: 4, Week 17: at Buccaneers Sun 10:00 a.m. PT" class="position_wr">Jenkins, Michael ATL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7419&amp;YEAR=2009">94.50</a></td>
+<td class="week">4</td><td class="salary">$725,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9271');" title="Salary: $425,000, Years: 5, Week 17: vs Ravens Sun 1:15 p.m. PT" class="position_wr">Schilens, Chaz OAK WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9271&amp;YEAR=2009">63.00</a></td>
+<td class="week">9</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9116');" title="Salary: $1,650,000, Years: 4, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_wr">Thomas, Devin WAS WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9116&amp;YEAR=2009">75.97</a></td>
+<td class="week">8</td><td class="salary">$1,650,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9683');" title="Salary: $425,000, Years: 5, Week 17: at Browns Sun 10:00 a.m. PT" class="position_wr">Underwood, Tiquan JAC WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9683&amp;YEAR=2009">1.14</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">5</td></tr>
+<tr class="eventablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9150');" title="Salary: $475,000, Years: 5, Week 17: at Cardinals Sun 1:15 p.m. PT" class="position_te">Finley, Jermichael GBP TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9150&amp;YEAR=2009">150.60</a></td>
+<td class="week">5</td><td class="salary">$475,000</td><td class="contractyear">5</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7236');" title="Salary: $4,930,750, Years: 2, Week 17: vs Redskins Sun 1:15 p.m. PT" class="position_te">Gates, Antonio SDC TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7236&amp;YEAR=2009">242.70</a></td>
+<td class="week">5</td><td class="salary">$4,930,750</td><td class="contractyear">2</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7422');" title="Salary: $525,000, Years: 3, Week 17: at Texans Sun 10:00 a.m. PT" class="position_te">Watson, Ben NEP TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7422&amp;YEAR=2009">99.40</a></td>
+<td class="week">8</td><td class="salary">$525,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','8930');" title="Salary: $550,000, Years: 1, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_pk">Prater, Matt DEN PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8930&amp;YEAR=2009">141.00</a></td>
+<td class="week">7</td><td class="salary">$550,000</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','6887');" title="Salary: $522,500, Years: 1, Week 17: at Dolphins Sun 10:00 a.m. PT" class="position_pk">Reed, Jeff PIT PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6887&amp;YEAR=2009">135.20</a></td>
+<td class="week">8</td><td class="salary">$522,500</td><td class="contractyear">1</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','0519');" title="Salary: $514,250, Years: 3, Week 17: vs Packers Sun 1:15 p.m. PT" class="position_def">Cardinals, Arizona ARI Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0519&amp;YEAR=2009">152.00</a></td>
+<td class="week">4</td><td class="salary">$514,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','0505');" title="Salary: $1,000,000, Years: 2, Week 17: vs Bengals Sun 5:20 p.m. PT" class="position_def">Jets, New York NYJ Def</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=0505&amp;YEAR=2009">218.00</a></td>
+<td class="week">9</td><td class="salary">$1,000,000</td><td class="contractyear">2</td></tr>
+<tr><th colspan="5">18 Total Players</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0010">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$7,088,000</td><td>&nbsp;</td></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$40,739,500</th>
+<th>59</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$4,260,500</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>21</th></tr>
+</tbody></table></td>
+<td class="two_column_layout" valign="top"><table align="center" cellspacing="1" class="report"><caption><span><a title="Franchise home page, Record: 14-4-0, PF: 1782.03"  class="franchise_0007 " href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;F=0007&amp;O=01">Acer FC Edge</a></span></caption><tbody><tr><th class="player">Player</th>
+<th class="points">2009 Pts</th>
+<th class="week">Bye</th>
+<th class="salary">Salary</th>
+<th class="contractyear">Years</th>
+</tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','4925');" title="Salary: $5,203,000, Years: 1, Week 17: at Panthers Sun 10:00 a.m. PT" class="position_qb">Brees, Drew NOS QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=4925&amp;YEAR=2009">360.42</a></td>
+<td class="week">5</td><td class="salary">$5,203,000</td><td class="contractyear">1</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7837');" title="Salary: $1,905,750, Years: 2, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_qb">Campbell, Jason WAS QB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7837&amp;YEAR=2009">258.32</a></td>
+<td class="week">8</td><td class="salary">$1,905,750</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9278');" title="Salary: $1,200,000, Years: 3, Week 17: vs Titans Sun 1:15 p.m. PT" class="position_rb">Forsett, Justin SEA RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9278&amp;YEAR=2009">150.87</a></td>
+<td class="week">7</td><td class="salary">$1,200,000</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8386');" title="Salary: $1,750,000, Years: 3, Week 17: vs Jaguars Sun 10:00 a.m. PT" class="position_rb">Harrison, Jerome CLE RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8386&amp;YEAR=2009">156.35</a></td>
+<td class="week">9</td><td class="salary">$1,750,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9132');" title="Salary: $2,750,000, Years: 4, Week 17: vs Bears Sun 10:00 a.m. PT" class="position_rb">Smith, Kevin DET RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9132&amp;YEAR=2009">151.60</a></td>
+<td class="week">7</td><td class="salary">$2,750,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','8268');" title="Salary: $4,427,500, Years: 2, Week 17: vs Saints Sun 10:00 a.m. PT" class="position_rb">Williams, DeAngelo CAR RB</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=8268&amp;YEAR=2009">182.15</a></td>
+<td class="week">4</td><td class="salary">$4,427,500</td><td class="contractyear">2</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','9531');" title="Salary: $425,000, Years: 4, Week 17: vs Titans Sun 1:15 p.m. PT" class="position_wr">Butler, Deon SEA WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9531&amp;YEAR=2009">25.48</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7606');" title="Salary: $847,000, Years: 3, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_wr">Crayton, Patrick DAL WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7606&amp;YEAR=2009">136.61</a></td>
+<td class="week">6</td><td class="salary">$847,000</td><td class="contractyear">3</td></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','7908');" title="Salary: $877,250, Years: 3, Week 17: at Rams Sun 10:00 a.m. PT" class="position_wr">Jones, Brandon SFO WR</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7908&amp;YEAR=2009">3.08</a></td>
+<td class="week">6</td><td class="salary">$877,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9576');" title="Salary: $425,000, Years: 4, Week 17: vs Chiefs Sun 1:15 p.m. PT" class="position_wr">McKinley, Kenny DEN WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9576&amp;YEAR=2009">5.70</a></td>
+<td class="week">7</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','7471');" title="Salary: $1,966,250, Years: 3, Week 17: at Chargers Sun 1:15 p.m. PT" class="position_te">Cooley, Chris WAS TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=7471&amp;YEAR=2009">74.20</a></td>
+<td class="week">8</td><td class="salary">$1,966,250</td><td class="contractyear">3</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','6997');" title="Salary: $1,905,750, Years: 1, Week 17: vs Eagles Sun 1:15 p.m. PT" class="position_te">Witten, Jason DAL TE</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=6997&amp;YEAR=2009">209.00</a></td>
+<td class="week">6</td><td class="salary">$1,905,750</td><td class="contractyear">1</td></tr>
+<tr class="oddtablerow newposition "><td class="player"><a href="javascript:launch_player_modal('42989','5168');" title="Salary: $467,500, Years: 1, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_pk">Tynes, Lawrence NYG PK</a></td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=5168&amp;YEAR=2009">141.90</a></td>
+<td class="week">10</td><td class="salary">$467,500</td><td class="contractyear">1</td></tr>
+<tr><th colspan="5">13 Total Players</th></tr>
+<tr class="eventablerow"><td class="player"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=142&amp;F=0007">Salary Adjustments:</a></td><td>&nbsp;</td><td>&nbsp;</td><td class="salary">$9,894,425</td><td>&nbsp;</td></tr>
+<tr><th colspan="5">Taxi Squad</th></tr>
+<tr class="oddtablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9565');" title="Salary: $425,000, Years: 4, Week 17: at Vikings Sun 10:00 a.m. PT" class="position_rb">Brown, Andre NYG RB</a> (R) </td>
+<td class="points"> &dash; </td>
+<td class="week">10</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr class="eventablerow"><td class="player"><a href="javascript:launch_player_modal('42989','9528');" title="Salary: $425,000, Years: 4, Week 17: vs Steelers Sun 10:00 a.m. PT" class="position_wr">Turner, Patrick MIA WR</a> (R) </td>
+<td class="points"><a href="https://www47.myfantasyleague.com/2009/options?L=42989&amp;O=08&amp;PLAYER_ID=9528&amp;YEAR=2009">0.00</a></td>
+<td class="week">6</td><td class="salary">$425,000</td><td class="contractyear">4</td></tr>
+<tr><th colspan="5">2 Total Players on Taxi Squad</th></tr>
+<tr class="total_salary_row"><th colspan="3">Total:</th><th>$34,469,425</th>
+<th>34</th>
+</tr>
+<tr class="salary_cap_row"><th colspan="3">Salary Cap:</th><th>$45,000,000</th><th>&nbsp;</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Cap Room Available:</th><th>$10,530,575</th><th>&nbsp;</th></tr>
+<tr class="salary_cap_row"><th colspan="3">Contract Year Cap:</th><th>&nbsp;</th><th>80</th></tr>
+<tr class="cap_room_available_row"><th colspan="3">Contract Year Cap Room Available:</th><th>&nbsp;</th><th>46</th></tr>
+<tr class="salary_warning_row"><td align="center" colspan="5"><b class="warning">Warning!</b> Error - Invalid Roster For Acer FC Edge:<br  />At Least 1 Def Are Required On Your Roster<br  /></td></tr>
+</tbody></table></td>
+</tr>
+</table>
+<br />
+
+<table class="contentfooter">
+<tr>
+
+<td valign="middle" align="left"><a href="http://www47.myfantasyleague.com/2009/home/42989"><img src="http://mfladdons.com/draftmaster/forum/styles/prosilver/theme/images/icon_home.gif" border="0" /></a> &nbsp;<a href="http://www47.myfantasyleague.com/2009/home/42989">Home</a></td>
+<td valign="middle" align="right"><a href="http://mfladdons.com">Site Design by MFLaddons.com</a></td>
+
+</tr>
+
+</table></div>
+<script language="Javascript" type="text/javascript">
+<!--
+
+//POPUP SETTINGS either set to true or false
+var popupTradeProposalsFromMe = false;
+var popupTradeProposalsToMe = true;
+var popupTradeAwaitingCommissionerApproval = true;
+var popupTradeAwaitingCommissionerReview = false;
+
+//FREQUENCY; 0=always, 1=once per browser session; 2=once per day; 3=once per week
+var popupTradeFrequency = 1;
+
+//POPUP COLOUR SETTING; use either color names (black) or code (#000000)
+var popupTradeBGColor = '#FFFFFF';  
+var popupTradeBorder  = '2px solid #002057';
+
+// -->
+</script>
+
+<script language="JavaScript" type="text/javascript" src="http://www.habman.com/mfl/apps/js/tradepopup.js"></script></div></div><div class="pagefooter"><table border="0" cellpadding="1" cellspacing="1" align="center">
+<tr><td colspan="2" align="center"><a href="#body_options_07">Back To Top Of Page</a></td></tr>
+<tr><td colspan="2" align="center">Page Generated Fri Nov 28 11:45:11 p.m. PT 2025</td></tr>
+<tr><td colspan="2" align="center">Copyright &copy; 1995-2025 <a href="http://home.myfantasyleague.com/">First Pick Labs, Inc.</a> All Rights Reserved. <a href="http://home.myfantasyleague.com/privacy.html">Privacy Policy</a> - <a href="http://home.myfantasyleague.com/terms.html">Terms Of Service</a> 
+ - <a href="http://home.myfantasyleague.com/use.html">Acceptable Use Policy</a> - Powered by: <a href="https://www.geniussports.com/">Genius Sports</a>.
+- <button id="pmLink">Privacy Manager</button>
+</td></tr>
+<tr><td colspan="2" align="center"><b>Disclaimer:</b>  This site is not
+in any way affiliated with, endorsed or licensed by the
+National Football League, any NFL team or NFLPA member.
+</td></tr></table></div>
+<div id="player" class="mflModal" style="display:none"><div class="mflModal-content">
+<table class="report" align="center" cellspacing="1" style="margin-bottom:0px;">
+<caption><span id="modal_title_player"></span><button style="float:right; margin-top:5px; margin-right:5px;" onclick="hide_modal_player();">&#x2716;</button><button style="float:right; margin-top:5px; margin-right:5px;" onclick="window.location.assign(player_page_url);">&#x21F1;</button></caption>
+<tbody><tr class="oddtablerow"><td class="mflModal-body"><div id="modal_body_player" align="left"></div></td></tr>
+<tr class="oddtablerow"><td class="mflModal-body"><div align="center">&nbsp; <button onclick="hide_modal_player();">Close</button></div></td></tr>
+<tr class="oddtablerow"><td class="mflModal-body">&nbsp;</td></tr></tbody></table></div></div>
+<script type="text/javascript">
+var mfl_modal_player = document.getElementById("player");
+var player_page_url = "";
+
+function show_modal_player () {
+    mfl_modal_player.style.display = "block";
+}
+function hide_modal_player () {
+    mfl_modal_player.style.display = "none";
+}
+function ack_modal_player () {
+
+}
+</script>
+</body></html>

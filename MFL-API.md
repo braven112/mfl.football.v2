@@ -1,0 +1,971 @@
+# MFL API Reference Documentation
+
+Comprehensive reference for MyFantasyLeague (MFL) API endpoints used in this project, organized by feature area.
+
+## Quick Links
+
+- **Official MFL API Explorer:** https://www49.myfantasyleague.com/2025/options?L=13522&O=79
+- **Complete API Documentation:** https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522
+- **Current Year:** 2025
+
+### Supported Leagues
+
+| League | MFL ID | Host Server | Type |
+|--------|--------|-------------|------|
+| TheLeague | 13522 | www49 | Dynasty Salary Cap |
+| AFL Fantasy | 19621 | www44 | Keeper (24-team) |
+
+## Base URL Patterns
+
+```
+Export:  https://api.myfantasyleague.com/YEAR/export?TYPE=REQUEST_TYPE&L=LEAGUE_ID&[PARAMS]
+Import:  https://api.myfantasyleague.com/YEAR/import?TYPE=REQUEST_TYPE&L=LEAGUE_ID&[PARAMS]
+Misc:    https://api.myfantasyleague.com/YEAR/REQUEST?[PARAMS]
+```
+
+## Authentication Guide
+
+### Environment Variables
+
+| Variable | Purpose | Required | Default |
+|----------|---------|----------|---------|
+| `MFL_LEAGUE_ID` | League identifier | Yes | 13522 |
+| `MFL_YEAR` | Season year | No | Current year |
+| `MFL_WEEK` | Week number for weekly data | No | null (YTD) |
+| `MFL_HOST` | API host URL | No | https://api.myfantasyleague.com |
+| `MFL_USER_ID` | User ID for cookie auth | For owner endpoints | - |
+| `MFL_APIKEY` | API key for authenticated requests | For assets endpoint | - |
+
+### Authentication Methods
+
+**Cookie-Based Authentication**
+- Used for most owner-level endpoints
+- Set `MFL_USER_ID` as an HTTP cookie header
+- Required for: `moveToIR`, personal lineups, etc.
+- Implementation: [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts), [src/utils/mfl-login.ts](src/utils/mfl-login.ts)
+
+**APIKEY Parameter**
+- Used for specific authenticated endpoints like `assets`
+- Pass as query parameter: `APIKEY={key}`
+- Implementation: [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs#L121)
+
+### Access Levels
+
+- **Public:** No authentication required
+- **Owner:** League owner/franchise member required (cookie auth)
+- **Commissioner:** League commissioner only (elevated cookie auth)
+
+## API Endpoints by Feature Area
+
+### A. Draft & Auction
+
+#### `draftResults` ✅ Currently Used
+**Purpose:** Draft selections and order with trade history in comments
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=draftResults&L=13522&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+
+**Notes:** Includes trade chain information in comments field
+
+---
+
+#### `auctionResults`
+**Purpose:** Auction picks and prices
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=auctionResults&L=13522&JSON=1
+```
+
+---
+
+#### `futureDraftPicks`
+**Purpose:** Future draft picks by franchise (for multiple years ahead)
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=futureDraftPicks&L=13522&JSON=1
+```
+
+**Notes:** Shows future year draft pick ownership
+
+---
+
+#### `assets` ✅ Currently Used
+**Purpose:** Tradable players and draft picks currently owned by each team
+
+**Parameters:**
+- Required: `L` (league ID), `APIKEY` (authentication key)
+- Auth: Owner (requires APIKEY)
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=assets&L=13522&APIKEY={key}&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+
+**Notes:**
+- Requires retry logic (3 retries, 1.5s delay) due to occasional timeouts
+- Essential for Draft Pick Predictor feature
+- Shows current pick ownership after trades
+
+---
+
+#### `myDraftList`
+**Purpose:** Current franchise's draft board and player rankings
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=myDraftList&L=13522&JSON=1
+```
+
+---
+
+### B. Rosters & Free Agents
+
+#### `rosters` ✅ Currently Used
+**Purpose:** Current rosters with salary/contract information
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `FRANCHISE` (specific team), `W` (week number)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&W=15&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+
+---
+
+#### `freeAgents`
+**Purpose:** Available free agents not rostered by any team
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `POSITION` (filter by position)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=freeAgents&L=13522&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=freeAgents&L=13522&POSITION=QB&JSON=1
+```
+
+---
+
+### C. Scoring & Results
+
+#### `weeklyResults` ✅ Currently Used
+**Purpose:** Weekly scores for starters and non-starters
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `W` (week number, or "YTD"), `MISSING_AS_BYE`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=weeklyResults&L=13522&W=1&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs) (fetches weeks 1-14 individually)
+
+**Notes:** Used to generate normalized weekly-results.json
+
+---
+
+#### `liveScoring` ✅ Currently Used
+**Purpose:** Real-time franchise scores with remaining game seconds
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `W` (week), `DETAILS`
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=liveScoring&L=13522&W=15&JSON=1
+```
+
+**Used In:**
+- [src/pages/api/live-scoring.ts](src/pages/api/live-scoring.ts)
+
+**Notes:** Updates in real-time during games
+
+---
+
+#### `playerScores`
+**Purpose:** Individual player scores per week
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `W` (week), `YEAR`, `PLAYERS`, `POSITION`, `STATUS`, `RULES`, `COUNT`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=playerScores&L=13522&W=15&JSON=1
+```
+
+---
+
+#### `projectedScores` ✅ Currently Used
+**Purpose:** Expected fantasy points using league scoring rules
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `W` (week), `PLAYERS`, `POSITION`, `STATUS`, `COUNT`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=projectedScores&L=13522&W=15&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+- [scripts/mfl-api-wrapper.js](scripts/mfl-api-wrapper.js)
+
+---
+
+### D. Standings & Playoffs
+
+#### `leagueStandings` ✅ Currently Used
+**Purpose:** Current standings with customizable columns
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `COLUMN_NAMES`, `ALL`, `WEB`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=standings&L=13522&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs) (as `TYPE=standings`)
+
+**Notes:** Used for Draft Pick Predictor feature with reversed tiebreaker logic
+
+---
+
+#### `playoffBrackets` ✅ Currently Used
+**Purpose:** All playoff brackets metadata (main playoffs and toilet bowl)
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=playoffBrackets&L=13522&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+
+**Notes:** Returns list of available brackets with their IDs
+
+---
+
+#### `playoffBracket` ✅ Currently Used
+**Purpose:** Specific bracket games/results (includes toilet bowl tournament)
+
+**Parameters:**
+- Required: `L` (league ID), `BRACKET_ID`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=playoffBracket&L=13522&BRACKET_ID=1&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [src/utils/mfl-schedule-integration.ts](src/utils/mfl-schedule-integration.ts)
+
+**Notes:**
+- Bracket IDs typically: 1 (main playoffs), 2 (toilet bowl)
+- Used for toilet bowl special draft picks (1.17, 2.17, 2.18)
+
+---
+
+### E. Transactions & Trades
+
+#### `transactions` ✅ Currently Used
+**Purpose:** Non-pending transactions; shows pending if you're the owner
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `W` (week), `TRANS_TYPE`, `FRANCHISE`, `DAYS`, `COUNT`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=transactions&L=13522&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=transactions&L=13522&W=15&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+
+---
+
+#### `tradeBait` ✅ Currently Used
+**Purpose:** Trade bait for all franchises
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `INCLUDE_DRAFT_PICKS`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=tradeBait&L=13522&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=tradeBait&L=13522&INCLUDE_DRAFT_PICKS=1&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+
+---
+
+#### `pendingWaivers`
+**Purpose:** Owner's submitted waivers awaiting processing
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `FRANCHISE_ID`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=pendingWaivers&L=13522&JSON=1
+```
+
+---
+
+#### `pendingTrades`
+**Purpose:** Offered and received trade proposals
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `FRANCHISE_ID`
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=pendingTrades&L=13522&JSON=1
+```
+
+---
+
+### F. League Configuration
+
+#### `league` ✅ Currently Used
+**Purpose:** General setup parameters, rosters, franchise/division names
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: Cookie (commissioner shows private data)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=league&L=13522&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+
+**Response Structure (key fields):**
+```json
+{
+  "league": {
+    "name": "The League",
+    "id": "13522",
+    "salaryCapAmount": "45000000",
+    "rosterSize": "22",
+    "taxiSquad": "3",
+    "injuredReserve": "50",
+    "usesSalaries": "1",
+    "usesContractYear": "1",
+    "keeperType": "dynasty",
+    "h2h": "YES",
+    "lastRegularSeasonWeek": "14",
+    "endWeek": "17",
+    "draftPlayerPool": "Rookie",
+    "currentWaiverType": "BBID_FCFS",
+    "bbidMinimum": "425000",
+    "bbidIncrement": "25000",
+    "includeTaxiWithSalary": "50",
+    "includeIRWithSalary": "100",
+    "starters": { "count": "9", "position": [...] },
+    "franchises": { "franchise": [...], "count": "16" },
+    "divisions": { "division": [...], "count": "4" },
+    "history": { "league": [...] }
+  }
+}
+```
+
+**Key Insights (updated 2026-01-17):**
+- Contains ALL league configuration including salary cap, roster rules, waiver settings
+- `starters.position` array defines starting lineup requirements with min-max limits
+- `franchises.franchise` includes `bbidAvailableBalance` for each team's remaining FAAB
+- `includeTaxiWithSalary: "50"` means taxi squad players count 50% toward cap
+- `includeIRWithSalary: "100"` means IR players count 100% toward cap
+- `history.league` array provides URLs to all historical league years
+- Note: API redirects from `api.myfantasyleague.com` to the league's specific host (e.g., www49 for 13522, www44 for 19621)
+- `usesSalaries: "0"` indicates no salary cap (AFL Fantasy), `usesSalaries: "1"` indicates salary cap league (TheLeague)
+- `usesContractYear: "0"` indicates no contract years (keeper league), `usesContractYear: "1"` indicates dynasty contracts
+- `playerLimitUnit` can be "LEAGUE" (one copy per league) or "CONFERENCE" (one copy per conference)
+- `conferences` object only present in leagues with conference structure (AFL Fantasy has 2 conferences)
+- `divisions.division[].conference` links divisions to their parent conference
+
+---
+
+#### `rules`
+**Purpose:** League scoring rules and settings
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=rules&L=13522&JSON=1
+```
+
+**Response Structure:**
+```json
+{
+  "rules": {
+    "positionRules": [
+      {
+        "positions": "QB|RB|WR|TE|PK",
+        "rule": [
+          { "event": "#P", "points": "0.04" },
+          { "event": "#P_20_99_1", "points": "1" },
+          { "event": "PC", "points": "6" },
+          ...
+        ]
+      },
+      { "positions": "Def", "rule": [...] }
+    ]
+  }
+}
+```
+
+**Common Event Codes:**
+| Code | Description |
+|------|-------------|
+| `#P` | Passing yards (per yard) |
+| `PC` | Passing TD |
+| `IN` | Interception thrown |
+| `#R` | Rushing yards (per yard) |
+| `RC` | Rushing TD |
+| `#C` | Receiving yards (per yard) |
+| `CC` | Receiving TD |
+| `RZ` | Reception (PPR) |
+| `FL` | Fumble lost |
+| `FG` | Field goal made |
+| `PA` | Points allowed (defense) |
+| `SK` | Sacks |
+| `IR` | Interception return |
+
+**Key Insights (updated 2026-01-17):**
+- Scoring rules are position-specific, with position groups like "QB|RB|WR|TE|PK"
+- PPR values vary by position AND by league:
+  - TheLeague (13522): TE=1.0, WR=0.5, RB=0.25
+  - AFL Fantasy (19621): TE=1.5 (TE premium), WR=1.0, RB=1.0
+- Passing TDs worth 6 points (non-standard, many leagues use 4)
+- Range rules use format like `#P_20_99_1` (passing yards 20-99, 1 bonus point)
+- Defense points allowed (OPA) scoring can be tiered (specific point values per PA range) or linear formula
+- TheLeague uses simplified formula: `15 - (0.6 * PA)` for 0-35 PA, then -6 + (-0.01 * PA) for 36+
+- AFL Fantasy uses detailed tiered OPA scoring with specific values at each point threshold
+- Common event codes: CC=catch count (PPR), #P=pass TD count, #R=rush TD count, #C=catch TD count
+- `*` prefix on points means "multiply by count" (e.g., `*0.1` for 0.1 points per yard)
+
+---
+
+#### `schedule` ✅ Currently Used
+**Purpose:** Fantasy matchup schedule
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `W` (week), `F` (franchise)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=schedule&L=13522&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=schedule&L=13522&W=15&JSON=1
+```
+
+**Used In:**
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+- [packages/mfl-data-fetcher/src/index.ts](packages/mfl-data-fetcher/src/index.ts)
+
+---
+
+#### `calendar`
+**Purpose:** League calendar events summary
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=calendar&L=13522&JSON=1
+```
+
+---
+
+### G. Players & Injuries
+
+#### `players` ✅ Currently Used
+**Purpose:** All player IDs, names, positions, teams
+
+**Parameters:**
+- Required: `L` (optional for global player list)
+- Optional: `DETAILS`, `SINCE`, `PLAYERS`
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=players&L=13522&DETAILS=1&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+- [scripts/mfl-api-wrapper.js](scripts/mfl-api-wrapper.js)
+
+**Notes:**
+- Results in large file (~1.5MB)
+- `DETAILS=1` includes additional player metadata
+
+---
+
+#### `injuries` ✅ Currently Used
+**Purpose:** NFL injury report status and details
+
+**Parameters:**
+- Optional: `W` (week)
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=injuries&L=13522&JSON=1
+```
+
+**Used In:**
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+- [scripts/mfl-api-wrapper.js](scripts/mfl-api-wrapper.js)
+
+---
+
+#### `playerProfile`
+**Purpose:** Player bio, height/weight, Average Draft Position
+
+**Parameters:**
+- Required: `P` (player ID)
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=playerProfile&P=14292&JSON=1
+```
+
+---
+
+### H. Salaries & Contracts
+
+#### `salaries`
+**Purpose:** Player salaries and contract details
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=salaries&L=13522&JSON=1
+```
+
+---
+
+#### `salaryAdjustments` ✅ Currently Used
+**Purpose:** League-wide salary adjustments and cap changes
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=salaryAdjustments&L=13522&JSON=1
+```
+
+**Used In:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+
+---
+
+### I. Import Endpoints (Write Operations)
+
+#### `moveToIR` (via /freeagency endpoint)
+**Purpose:** Move player to Injured Reserve
+
+**Parameters:**
+- Required: `L` (league ID), player data
+- Auth: Owner (requires MFL_USER_ID cookie)
+
+**Used In:**
+- [src/pages/api/move-to-ir.ts](src/pages/api/move-to-ir.ts)
+
+**Notes:** POST request to `/freeagency` endpoint with `TYPE=moveToIR`
+
+---
+
+#### `fcfsWaiver`
+**Purpose:** Immediate first-come-first-served add/drop execution
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `ADD`, `DROP`, `FRANCHISE_ID`
+- Auth: Owner
+
+---
+
+#### `waiverRequest`
+**Purpose:** Submit waiver claims for waiver processing
+
+**Parameters:**
+- Required: `L` (league ID), `ROUND`, `PICKS`
+- Optional: `REPLACE`, `FRANCHISE_ID`
+- Auth: Owner
+
+---
+
+#### `tradeProposal`
+**Purpose:** Propose trade to another franchise
+
+**Parameters:**
+- Required: `L`, `OFFEREDTO`, `WILL_GIVE_UP`, `WILL_RECEIVE`
+- Optional: `COMMENTS`, `EXPIRES`, `FRANCHISE_ID`
+- Auth: Owner
+
+---
+
+### J. Other Useful Endpoints
+
+#### `login`
+**Purpose:** Validate credentials and receive authentication cookie
+
+**Parameters:**
+- Required: `USERNAME`, `PASSWORD`
+- Optional: `LEAGUE_ID`, `XML=1` or `JSON=1`
+- Auth: Public
+
+**Example:**
+```
+POST https://api.myfantasyleague.com/2025/login
+Content-Type: application/x-www-form-urlencoded
+
+USERNAME=myuser&PASSWORD=mypass&LEAGUE_ID=13522&JSON=1
+```
+
+**Used In:**
+- [src/utils/mfl-login.ts](src/utils/mfl-login.ts)
+
+**Response Structure:**
+```json
+{
+  "cookie": "base64_encoded_session_cookie"
+}
+```
+
+**Key Insights (updated 2026-01-18):**
+- Returns a Base64-encoded cookie that may contain `+`, `/`, and `=` characters
+- Cookie must be URL-escaped before passing back in subsequent requests
+- Response does NOT include `franchise_id` or `myteam` value - you must call `myleagues` to get this
+- Use POST method over HTTPS to protect credentials
+- The cookie should be passed as: `Cookie: MFL_USER_ID=cookie_value`
+
+---
+
+#### MFL Web Login with Redirect (Non-API)
+
+**Purpose:** Redirect users to MFL login page and have them return to your site
+
+**URL Format:**
+```
+https://www{XX}.myfantasyleague.com/{YEAR}/login?L={LEAGUE_ID}&URL={ENCODED_RETURN_URL}
+```
+
+**Parameters:**
+- `L` - League ID (required)
+- `URL` - URL-encoded destination after successful login (optional)
+
+**Example:**
+```
+https://www49.myfantasyleague.com/2025/login?L=13522&URL=https%3A%2F%2Fmysite.com%2Fcallback
+```
+
+**Key Insights (updated 2026-01-18):**
+- The `URL` parameter allows redirect to external sites after login
+- **IMPORTANT:** MFL does NOT pass franchise_id back in the redirect URL
+- After redirect, user has MFL cookie set in browser but your site cannot read it (different domain)
+- The redirect is purely for UX - user logs in on MFL, then is sent back to your URL
+- To identify the user's franchise after redirect, you need your own authentication flow
+
+**Workaround for Franchise Identification:**
+Since MFL doesn't pass franchise_id back in the redirect, the codebase uses a two-step process:
+1. User logs in via our `/login` page with MFL credentials
+2. We call MFL's `login` API to validate, then `myleagues` API to get franchise_id
+3. We create our own JWT session with the franchise_id embedded
+
+See: [src/utils/mfl-login.ts](src/utils/mfl-login.ts) and [AUTH_SYSTEM.md](AUTH_SYSTEM.md)
+
+---
+
+#### `myleagues`
+**Purpose:** All leagues for current authenticated user, INCLUDING their franchise_id in each league
+
+**Parameters:**
+- Optional: `YEAR`, `FRANCHISE_NAMES`, `USERNAME`, `PASSWORD`
+- Auth: Owner (via cookie) OR pass USERNAME/PASSWORD directly
+
+**Example:**
+```
+# With cookie authentication
+https://api.myfantasyleague.com/2025/export?TYPE=myleagues&JSON=1
+
+# With direct credentials (less secure, use HTTPS)
+https://api.myfantasyleague.com/2025/myleagues?USERNAME=myuser&PASSWORD=mypass&JSON=1
+```
+
+**Response Structure:**
+```json
+{
+  "myleagues": {
+    "league": [
+      {
+        "id": "13522",
+        "name": "TheLeague",
+        "franchise_id": "0003",
+        "franchise_name": "Team Name",
+        "url": "https://www49.myfantasyleague.com/2025/home/13522"
+      }
+    ]
+  }
+}
+```
+
+**Key Insights (updated 2026-01-18):**
+- **This is the only reliable way to get franchise_id for a user**
+- Response includes `franchise_id` (4-digit string like "0003") for each league
+- The `FRANCHISE_NAMES=1` parameter includes team names but may cause timeouts for users with many leagues
+- Can pass USERNAME/PASSWORD directly instead of using cookie auth
+- Response field names vary across MFL deployments - check for: `franchise_id`, `franchiseId`, `FRANCHISE_ID`
+- League host information is also included in the response
+
+**Used In:**
+- [src/utils/mfl-login.ts](src/utils/mfl-login.ts)
+
+---
+
+#### `nflSchedule`
+**Purpose:** NFL game schedule and scores
+
+**Parameters:**
+- Optional: `W` (week, or "ALL")
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=nflSchedule&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=nflSchedule&W=15&JSON=1
+```
+
+---
+
+#### `nflByeWeeks`
+**Purpose:** NFL team bye weeks
+
+**Parameters:**
+- Optional: `W` (week)
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=nflByeWeeks&JSON=1
+```
+
+---
+
+#### `adp`
+**Purpose:** Average Draft Position data across MFL leagues
+
+**Parameters:**
+- Optional: `PERIOD`, `FCOUNT`, `IS_PPR`, `IS_KEEPER`, `IS_MOCK`, `CUTOFF`, `DETAILS`
+- Auth: Public
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=adp&IS_PPR=1&JSON=1
+```
+
+---
+
+## Caching Strategy
+
+### Implementation
+- **Current Year:** Daily cache (invalidated after 24 hours)
+- **Historical Years:** Permanent cache (never invalidated)
+- **Cache Location:** `/data/theleague/mfl-feeds/{YEAR}/`
+
+### Cache Files
+Current cached MFL data includes:
+- `assets.json` - Draft pick ownership
+- `draftResults.json` - Draft history with trades
+- `league.json` - League configuration
+- `playoff-brackets.json` - Playoff structure
+- `players.json` - All players (~1.5MB)
+- `projectedScores.json` - Projections
+- `rosters.json` - Team rosters
+- `salaryAdjustments.json` - Salary data
+- `standings.json` - Current standings
+- `tradeBait.json` - Trade block
+- `transactions.json` - League transactions
+- `weekly-results.json` - Normalized weekly scores
+
+### Implementation Files
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [packages/mfl-data-fetcher/src/index.ts](packages/mfl-data-fetcher/src/index.ts)
+
+## Response Formats
+
+All endpoints support multiple response formats:
+
+| Format | Parameter | Usage |
+|--------|-----------|-------|
+| XML | `XML=1` | Default format |
+| JSON | `JSON=1` | Preferred format (used throughout codebase) |
+| RSS | Automatic | For feed endpoints (messageBoard, siteNews) |
+| ICS | Automatic | For calendar endpoint |
+
+**Example:**
+```
+# JSON (preferred)
+https://api.myfantasyleague.com/2025/export?TYPE=league&L=13522&JSON=1
+
+# XML (default)
+https://api.myfantasyleague.com/2025/export?TYPE=league&L=13522&XML=1
+```
+
+## Error Handling Best Practices
+
+### Retry Logic
+For authenticated endpoints that may timeout:
+- Implement retry mechanism (e.g., 3 retries with 1.5s delay)
+- Example: `assets` endpoint in [scripts/fetch-mfl-feeds.mjs:121](scripts/fetch-mfl-feeds.mjs#L121)
+
+```javascript
+// Example retry logic
+for (let retry = 0; retry < 3; retry++) {
+  try {
+    const response = await fetch(url);
+    if (response.ok) return await response.json();
+  } catch (error) {
+    if (retry === 2) throw error;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+}
+```
+
+### Graceful Fallbacks
+- Always fall back to cached data when API calls fail
+- Return empty objects/arrays rather than throwing errors
+- Log warnings for debugging but don't break user experience
+
+**Implementation Examples:**
+- [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
+- [scripts/mfl-api-wrapper.js](scripts/mfl-api-wrapper.js)
+
+## Host Configuration
+
+### Default Hosts
+- **API Calls:** `https://api.myfantasyleague.com`
+- **Web UI:** Calculated as `https://www{leagueId % 50}.myfantasyleague.com`
+  - Example: League 13522 → `https://www49.myfantasyleague.com`
+
+### Dynamic Host Calculation
+```javascript
+const hostNumber = leagueId % 50;
+const webHost = `https://www${hostNumber}.myfantasyleague.com`;
+```
+
+## Quick Reference: Currently Used Endpoints
+
+| Endpoint | Purpose | File |
+|----------|---------|------|
+| `assets` | Draft pick ownership | fetch-mfl-feeds.mjs |
+| `draftResults` | Draft history | fetch-mfl-feeds.mjs |
+| `injuries` | Injury reports | mfl-matchup-api.ts |
+| `league` | League config | fetch-mfl-feeds.mjs |
+| `liveScoring` | Real-time scores | api/live-scoring.ts |
+| `playoffBracket` | Playoff results | fetch-mfl-feeds.mjs |
+| `playoffBrackets` | Playoff metadata | fetch-mfl-feeds.mjs |
+| `players` | Player database | fetch-mfl-feeds.mjs |
+| `projectedScores` | Projections | fetch-mfl-feeds.mjs |
+| `rosters` | Team rosters | fetch-mfl-feeds.mjs |
+| `salaryAdjustments` | Salary data | fetch-mfl-feeds.mjs |
+| `schedule` | Matchup schedule | mfl-matchup-api.ts |
+| `standings` | Current standings | fetch-mfl-feeds.mjs |
+| `tradeBait` | Trade block | fetch-mfl-feeds.mjs |
+| `transactions` | Transaction history | fetch-mfl-feeds.mjs |
+| `weeklyResults` | Weekly scores | fetch-mfl-feeds.mjs |
+
+## Additional Resources
+
+- **MFL API Forums:** https://forums.myfantasyleague.com/
+- **API Support:** Contact MFL support for APIKEY requests
+- **Rate Limiting:** MFL does not publicly document rate limits, but implement reasonable delays between requests

@@ -1,0 +1,510 @@
+---
+/**
+ * Injury Management System Demo
+ * Demonstrates the injury warning system with various scenarios
+ */
+
+import Layout from '../../layouts/Layout.astro';
+import InjuryWarningSystem from '../../components/theleague/InjuryWarningSystem.astro';
+import InjuryManager from '../../components/theleague/InjuryManager.astro';
+import EnhancedPlayerCard from '../../components/theleague/EnhancedPlayerCard.astro';
+import type { FantasyPlayer, Matchup, LineupOptimization } from '../../types/matchup-previews';
+
+// Mock data for demonstration
+const mockInjuredPlayer: FantasyPlayer = {
+  id: '12345',
+  name: 'Christian McCaffrey',
+  position: 'RB',
+  nflTeam: 'SF',
+  fantasyTeamId: '0001',
+  projectedPoints: 18.5,
+  isStarting: true,
+  injuryStatus: 'Out',
+  isIReligible: false,
+};
+
+const mockIRPlayer: FantasyPlayer = {
+  id: '67890',
+  name: 'Aaron Rodgers',
+  position: 'QB',
+  nflTeam: 'NYJ',
+  fantasyTeamId: '0002',
+  projectedPoints: 0,
+  isStarting: false,
+  injuryStatus: 'IR',
+  isIReligible: true,
+};
+
+const mockDoubtfulPlayer: FantasyPlayer = {
+  id: '11111',
+  name: 'Tyreek Hill',
+  position: 'WR',
+  nflTeam: 'MIA',
+  fantasyTeamId: '0001',
+  projectedPoints: 16.2,
+  isStarting: true,
+  injuryStatus: 'Doubtful',
+  isIReligible: false,
+};
+
+const mockOptimizations: LineupOptimization[] = [
+  {
+    type: 'injury_warning',
+    severity: 'high',
+    startingPlayer: mockInjuredPlayer,
+    message: 'Christian McCaffrey (RB) is out and currently starting',
+    actionUrl: 'https://www22.myfantasyleague.com/2025/options?L=13522&F=0001&O=07',
+    includeInAnalysis: true,
+    analysisText: 'Christian McCaffrey is out and currently starting',
+  },
+  {
+    type: 'ir_eligible',
+    severity: 'medium',
+    startingPlayer: mockIRPlayer,
+    message: 'Aaron Rodgers (QB) is on NFL IR and eligible for fantasy IR',
+    actionUrl: 'https://www22.myfantasyleague.com/2025/options?L=13522&F=0002&O=07',
+    includeInAnalysis: false,
+    analysisText: 'Aaron Rodgers is on NFL IR and eligible for fantasy IR',
+  },
+  {
+    type: 'injury_warning',
+    severity: 'medium',
+    startingPlayer: mockDoubtfulPlayer,
+    message: 'Tyreek Hill (WR) is doubtful and currently starting',
+    actionUrl: 'https://www22.myfantasyleague.com/2025/options?L=13522&F=0001&O=07',
+    includeInAnalysis: true,
+    analysisText: 'Tyreek Hill is doubtful and currently starting',
+  },
+];
+
+const mockMatchup: Matchup = {
+  id: 'demo-matchup',
+  week: 15,
+  homeTeam: {
+    id: '0001',
+    name: 'Pacific Pigskins',
+    ownerName: 'John Doe',
+    projectedPoints: 125.5,
+  },
+  awayTeam: {
+    id: '0002',
+    name: 'Midwestside Connection',
+    ownerName: 'Jane Smith',
+    projectedPoints: 118.2,
+  },
+  nflGames: [
+    {
+      id: 'game-1',
+      team1: 'SF',
+      team2: 'LAR',
+      players: [mockInjuredPlayer, mockDoubtfulPlayer],
+      playerCount: 2,
+      gameTime: new Date('2025-12-15T21:00:00Z'),
+      timeSlot: 'late',
+      isCompleted: false,
+      projectedPoints: 34.7,
+      isGameOfWeek: true,
+    },
+    {
+      id: 'game-2',
+      team1: 'NYJ',
+      team2: 'BUF',
+      players: [mockIRPlayer],
+      playerCount: 1,
+      gameTime: new Date('2025-12-15T18:00:00Z'),
+      timeSlot: 'early',
+      isCompleted: false,
+      projectedPoints: 0,
+    },
+  ],
+  gameState: 'pre-game',
+  analysis: 'Demo matchup with injury concerns',
+  lastUpdated: new Date(),
+};
+---
+
+<Layout title="Injury Management System Demo">
+  <main class="demo-container">
+    <div class="demo-header">
+      <h1>Injury Management System Demo</h1>
+      <p class="demo-description">
+        Comprehensive injury warning system with pulsating animations, IR eligibility detection, 
+        and one-click IR moves for fantasy football matchup previews.
+      </p>
+    </div>
+
+    <!-- System Overview -->
+    <section class="demo-section">
+      <h2>Complete Injury Warning System</h2>
+      <p>Shows all injury-related issues for a matchup with summary and quick actions.</p>
+      
+      <InjuryWarningSystem 
+        matchup={mockMatchup}
+        leagueId="13522"
+        year="2025"
+        showSummary={true}
+      />
+    </section>
+
+    <!-- Individual Player Cards -->
+    <section class="demo-section">
+      <h2>Enhanced Player Cards with Injury Management</h2>
+      <p>Player cards with integrated injury warnings and management options.</p>
+      
+      <div class="player-cards-grid">
+        <div class="card-demo">
+          <h3>Out Player (Starting)</h3>
+          <EnhancedPlayerCard 
+            player={mockInjuredPlayer}
+            optimizations={mockOptimizations}
+            showInjuryManager={true}
+            leagueId="13522"
+            year="2025"
+          />
+        </div>
+
+        <div class="card-demo">
+          <h3>IR Eligible Player</h3>
+          <EnhancedPlayerCard 
+            player={mockIRPlayer}
+            optimizations={mockOptimizations}
+            showInjuryManager={true}
+            leagueId="13522"
+            year="2025"
+          />
+        </div>
+
+        <div class="card-demo">
+          <h3>Doubtful Player (Starting)</h3>
+          <EnhancedPlayerCard 
+            player={mockDoubtfulPlayer}
+            optimizations={mockOptimizations}
+            showInjuryManager={true}
+            leagueId="13522"
+            year="2025"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Individual Injury Managers -->
+    <section class="demo-section">
+      <h2>Standalone Injury Managers</h2>
+      <p>Individual injury management components for specific scenarios.</p>
+      
+      <div class="injury-managers-grid">
+        <div class="manager-demo">
+          <h3>Critical Injury Warning</h3>
+          <InjuryManager 
+            player={mockInjuredPlayer}
+            optimizations={mockOptimizations}
+            leagueId="13522"
+            year="2025"
+            showIRButton={true}
+          />
+        </div>
+
+        <div class="manager-demo">
+          <h3>IR Eligible Player</h3>
+          <InjuryManager 
+            player={mockIRPlayer}
+            optimizations={mockOptimizations}
+            leagueId="13522"
+            year="2025"
+            showIRButton={true}
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Overview -->
+    <section class="demo-section">
+      <h2>Key Features</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">⚠️</div>
+          <h3>Pulsating Warnings</h3>
+          <p>Visual alerts with pulsating animations for injured starters (Out/Doubtful/IR)</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🏥</div>
+          <h3>IR Eligibility Detection</h3>
+          <p>Automatic detection of players eligible for IR based on league rules</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔧</div>
+          <h3>Direct Lineup Links</h3>
+          <p>Quick access to MFL lineup pages for immediate corrections</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">➡️</div>
+          <h3>One-Click IR Moves</h3>
+          <p>Instant IR moves through MFL API integration with confirmation</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Comprehensive Summary</h3>
+          <p>Overview of all injury issues with priority-based organization</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3>Mobile Responsive</h3>
+          <p>Fully responsive design that works on all device sizes</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Implementation Notes -->
+    <section class="demo-section">
+      <h2>Implementation Notes</h2>
+      <div class="implementation-notes">
+        <div class="note-item">
+          <h4>Requirements Satisfied</h4>
+          <ul>
+            <li><strong>10.1:</strong> Pulsating animation effects for injured starters (Out/Doubtful/IR)</li>
+            <li><strong>10.2:</strong> Direct links to submit lineup page for corrections</li>
+            <li><strong>10.3:</strong> IR eligibility detection using league rules</li>
+            <li><strong>10.4:</strong> One-click IR move functionality</li>
+            <li><strong>10.5:</strong> MFL API integration for IR moves</li>
+          </ul>
+        </div>
+
+        <div class="note-item">
+          <h4>Technical Features</h4>
+          <ul>
+            <li>Enhanced pulsating animations with glow effects</li>
+            <li>Severity-based styling (high, medium, low)</li>
+            <li>Real-time API integration for IR moves</li>
+            <li>Comprehensive error handling and fallbacks</li>
+            <li>Mobile-first responsive design</li>
+            <li>Accessibility-compliant components</li>
+          </ul>
+        </div>
+
+        <div class="note-item">
+          <h4>Integration Points</h4>
+          <ul>
+            <li>Works with existing PlayerStatusIndicator</li>
+            <li>Integrates with LineupOptimizer utility</li>
+            <li>Uses MFL API client for IR moves</li>
+            <li>Compatible with EnhancedPlayerCard</li>
+            <li>Supports matchup preview workflows</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .demo-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .demo-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .demo-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: 1rem;
+  }
+
+  .demo-description {
+    font-size: 1.125rem;
+    color: #6b7280;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .demo-section {
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .demo-section h2 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+
+  .demo-section > p {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .player-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card-demo {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: #f9fafb;
+  }
+
+  .card-demo h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .injury-managers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .manager-demo {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: #f9fafb;
+  }
+
+  .manager-demo h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .feature-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+
+  .feature-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-card p {
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .implementation-notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .note-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+  }
+
+  .note-item h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+  }
+
+  .note-item ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .note-item li {
+    padding: 0.375rem 0;
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .note-item li:last-child {
+    border-bottom: none;
+  }
+
+  .note-item li strong {
+    color: #059669;
+    font-weight: 600;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .demo-container {
+      padding: 1rem;
+    }
+
+    .demo-header h1 {
+      font-size: 2rem;
+    }
+
+    .demo-section {
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .demo-section h2 {
+      font-size: 1.5rem;
+    }
+
+    .player-cards-grid,
+    .injury-managers-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .features-grid {
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .implementation-notes {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

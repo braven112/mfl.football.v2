@@ -1,0 +1,17 @@
+@use "./globals" as *;
+
+#body_view_news_article {
+  .report td,.report th {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  caption {
+  	padding-left:0;
+  }
+}
+body#body_view_news_article .oddtablerow td:nth-child(2) {
+ display: none   
+}
+body#body_news_articles td[rowspan="100"] {
+    display: none;
+}

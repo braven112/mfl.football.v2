@@ -1,0 +1,242 @@
+{
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2020",
+    "week": 14,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2020/export?TYPE=rosters&L=13522&JSON=1&W=14",
+      "players": "https://api.myfantasyleague.com/2020/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2020/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1"
+    },
+    "fetchedAt": "2025-11-17T07:17:32.832Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2025-11-17T07:17:32.836Z"
+  },
+  "positions": {
+    "Def": {
+      "totalPlayers": 31,
+      "top3Average": 1141666.67,
+      "top5Average": 1019000,
+      "topPlayers": [
+        {
+          "id": "0521",
+          "name": "Bears, Chicago",
+          "salary": 1225000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "0528",
+          "name": "Rams, Los Angeles",
+          "salary": 1100000,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "0531",
+          "name": "Ravens, Baltimore",
+          "salary": 1100000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "0529",
+          "name": "Saints, New Orleans",
+          "salary": 900000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "0508",
+          "name": "Titans, Tennessee",
+          "salary": 770000,
+          "franchiseId": "0009"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 48,
+      "top3Average": 6939166.67,
+      "top5Average": 6237550,
+      "topPlayers": [
+        {
+          "id": "7836",
+          "name": "Rodgers, Aaron",
+          "salary": 7837500,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "10703",
+          "name": "Wilson, Russell",
+          "salary": 7177500,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "11644",
+          "name": "Carr, Derek",
+          "salary": 5802500,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "5848",
+          "name": "Brady, Tom",
+          "salary": 5500000,
+          "franchiseId": "0001"
+        },
+        {
+          "id": "9099",
+          "name": "Ryan, Matt",
+          "salary": 4870250,
+          "franchiseId": "0015"
+        }
+      ]
+    },
+    "WR": {
+      "totalPlayers": 133,
+      "top3Average": 11100000,
+      "top5Average": 9877500,
+      "topPlayers": [
+        {
+          "id": "11232",
+          "name": "Hopkins, DeAndre",
+          "salary": 13525000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon",
+          "salary": 10775000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "12175",
+          "name": "Cooper, Amari",
+          "salary": 9000000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "11680",
+          "name": "Landry, Jarvis",
+          "salary": 8250000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "11678",
+          "name": "Robinson, Allen",
+          "salary": 7837500,
+          "franchiseId": "0003"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 102,
+      "top3Average": 6016666.67,
+      "top5Average": 5510668,
+      "topPlayers": [
+        {
+          "id": "11192",
+          "name": "Bell, Le'Veon",
+          "salary": 6800000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "12171",
+          "name": "Johnson, David",
+          "salary": 6225000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "10276",
+          "name": "Ingram, Mark",
+          "salary": 5025000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "12625",
+          "name": "Elliott, Ezekiel",
+          "salary": 4977940.01,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "13129",
+          "name": "Fournette, Leonard",
+          "salary": 4525400.01,
+          "franchiseId": "0013"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 62,
+      "top3Average": 8283333.33,
+      "top5Average": 6365000,
+      "topPlayers": [
+        {
+          "id": "11244",
+          "name": "Kelce, Travis",
+          "salary": 12100000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "12263",
+          "name": "Waller, Darren",
+          "salary": 8500000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "12678",
+          "name": "Higbee, Tyler",
+          "salary": 4250000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "11516",
+          "name": "Doyle, Jack",
+          "salary": 3625000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "11695",
+          "name": "Ebron, Eric",
+          "salary": 3350000,
+          "franchiseId": "0013"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 29,
+      "top3Average": 781066.67,
+      "top5Average": 718640,
+      "topPlayers": [
+        {
+          "id": "10976",
+          "name": "Tucker, Justin",
+          "salary": 900000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "8742",
+          "name": "Crosby, Mason",
+          "salary": 770000,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "8153",
+          "name": "Gould, Robbie",
+          "salary": 673200,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "13347",
+          "name": "Gonzalez, Zane",
+          "salary": 625000,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "11936",
+          "name": "Boswell, Chris",
+          "salary": 625000,
+          "franchiseId": "0014"
+        }
+      ]
+    }
+  }
+}

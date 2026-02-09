@@ -1,0 +1,223 @@
+---
+/**
+ * Live Mode Toggle Button
+ * Switches between Planning Mode and Live Auction Tracking Mode
+ */
+---
+
+<div class="live-mode-toggle-container">
+  <button
+    type="button"
+    id="liveModeToggle"
+    class="live-mode-toggle"
+    aria-label="Toggle Live Auction Mode"
+  >
+    <span class="toggle-icon" id="toggleIcon">📊</span>
+    <span class="toggle-label" id="toggleLabel">Enter Live Mode</span>
+    <span class="live-indicator" id="liveIndicator"></span>
+  </button>
+
+  <div class="mode-badge" id="modeBadge">
+    <span class="badge-text">Planning Mode</span>
+  </div>
+</div>
+
+<style>
+  .live-mode-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .live-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .live-mode-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  }
+
+  .live-mode-toggle:active {
+    transform: translateY(0);
+  }
+
+  .live-mode-toggle.active {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  }
+
+  .live-mode-toggle.active:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  }
+
+  .toggle-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .toggle-label {
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .live-indicator {
+    display: none;
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    margin-left: 4px;
+    animation: pulse-live 2s infinite;
+  }
+
+  .live-mode-toggle.active .live-indicator {
+    display: block;
+  }
+
+  @keyframes pulse-live {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.2);
+    }
+  }
+
+  .mode-badge {
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+  }
+
+  .mode-badge.live {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-text {
+    display: inline-block;
+  }
+
+  /* Ripple effect on click */
+  .live-mode-toggle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .live-mode-toggle:active::before {
+    width: 200px;
+    height: 200px;
+  }
+
+  @media (max-width: 640px) {
+    .live-mode-toggle-container {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .live-mode-toggle {
+      justify-content: center;
+      width: 100%;
+    }
+
+    .mode-badge {
+      text-align: center;
+    }
+  }
+</style>
+
+<script>
+  // Get elements
+  const toggleButton = document.getElementById('liveModeToggle') as HTMLButtonElement;
+  const toggleIcon = document.getElementById('toggleIcon') as HTMLSpanElement;
+  const toggleLabel = document.getElementById('toggleLabel') as HTMLSpanElement;
+  const modeBadge = document.getElementById('modeBadge') as HTMLDivElement;
+  const badgeText = modeBadge?.querySelector('.badge-text') as HTMLSpanElement;
+
+  // Load mode from localStorage
+  let isLiveMode = localStorage.getItem('auctionMode') === 'live';
+
+  // Update UI based on mode
+  function updateUI() {
+    if (!toggleButton || !toggleIcon || !toggleLabel || !modeBadge || !badgeText) {
+      return;
+    }
+
+    if (isLiveMode) {
+      toggleButton.classList.add('active');
+      toggleIcon.textContent = '📊';
+      toggleLabel.textContent = 'Exit Live Mode';
+      modeBadge.classList.add('live');
+      badgeText.textContent = 'Live Mode';
+    } else {
+      toggleButton.classList.remove('active');
+      toggleIcon.textContent = '🔴';
+      toggleLabel.textContent = 'Enter Live Mode';
+      modeBadge.classList.remove('live');
+      badgeText.textContent = 'Planning Mode';
+    }
+  }
+
+  // Initial UI update
+  updateUI();
+
+  // Toggle mode on click
+  toggleButton?.addEventListener('click', () => {
+    isLiveMode = !isLiveMode;
+
+    // Save to localStorage
+    localStorage.setItem('auctionMode', isLiveMode ? 'live' : 'planning');
+
+    // Update UI
+    updateUI();
+
+    // Dispatch event for main page to listen
+    window.dispatchEvent(new CustomEvent('auction-mode-changed', {
+      detail: { mode: isLiveMode ? 'live' : 'planning' },
+    }));
+  });
+
+  // Listen for external mode changes
+  window.addEventListener('auction-mode-changed', (e: Event) => {
+    const customEvent = e as CustomEvent;
+    const newMode = customEvent.detail?.mode;
+
+    if (newMode === 'live' && !isLiveMode) {
+      isLiveMode = true;
+      updateUI();
+    } else if (newMode === 'planning' && isLiveMode) {
+      isLiveMode = false;
+      updateUI();
+    }
+  });
+</script>

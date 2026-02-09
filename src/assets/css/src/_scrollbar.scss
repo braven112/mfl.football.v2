@@ -1,0 +1,38 @@
+@use "./globals" as *;
+
+////////////////////////Scrollbar/////////////////////////////////
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 7px;
+}
+::-webkit-scrollbar-button {
+  width: 0px;
+  height: 0px;
+}
+::-webkit-scrollbar-thumb {
+  border: 0px none;
+  border-radius: $border-radius-sm;
+  background: $scrollbar-bg-color;
+  border-color: $pagebody-bg;
+}
+
+::-webkit-scrollbar-track {
+  border: 0px none;
+  border-radius: 0px;
+  background: $pagebody-bg;
+  border-color: $pagebody-bg;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: $scrollbar-bg-hover-color;
+}
+
+::-webkit-scrollbar-track:hover,
+::-webkit-scrollbar-track:active {
+  background: $pagebody-bg;
+}

@@ -1,0 +1,613 @@
+<style type="text/css">
+    td.round2 {
+        background-color: #eee;
+    }
+
+    td.round3 {
+        background-color: #ccc;
+    }
+
+    .emphasize {
+        font-style: italic;
+    }
+
+    .constitution-wrapper {
+        font-size: 1.2em;
+        padding: 2rem;
+        text-wrap: pretty;
+    }
+
+    #consitution h2 {
+        text-align: left;
+        margin: 0 0 1rem;
+    }
+
+    .constitution-wrapper h3 {
+        text-align: left;
+        margin: 0 0 1rem;
+        border-bottom: 0.4rem solid;
+        padding-bottom: 3px;
+    }
+
+    #consitution h3 {
+        text-align: left;
+        margin: 0 0 1rem;
+    }
+
+    .constitution-wrapper h3 {
+        color: #1c497c;
+        border-bottom-color: #ddd;
+    }
+
+    blockquote {
+        border: 1px solid #ddd;
+        padding: 1rem;
+        border-left: 1rem solid #ddd;
+    }
+
+    blockquote.fine-print {
+        font-size: 0.9rem;
+        margin: 0 0 1rem;
+    }
+
+    .fine-print {
+        color: #666;
+        font-size: 0.75rem;
+    }
+
+    .unstyled {
+        padding: 0;
+        list-style-type: none;
+    }
+
+    .constitution-wrapper ul {
+        margin-bottom: 1rem;
+    }
+
+    .constitution-wrapper ul ul {
+        margin-block: 0.25rem;
+    }
+
+    .table-wrapper {
+        overflow: auto;
+    }
+
+    table.tableformat {
+        border: 1px solid #eee;
+        margin-bottom: 1rem;
+    }
+
+    .tableformat th {
+        background-color: #eee;
+        padding: .25rem .5rem;
+        border: 1px solid #ddd;
+    }
+
+    .tableformat td {
+        background-color: #fff;
+        padding: .25rem .5rem;
+        border: 1px solid #ddd;
+        font-size: .8rem;
+    }
+
+    .player-tags th {
+        text-align: left;
+    }
+
+    .player-tags td {
+        white-space: nowrap;
+        text-align: left;
+    }
+
+    .fp td,
+    .tp td,
+    .divider td {
+        border-bottom: 10px solid #ddd;
+    }
+
+    table.draftsalaries td:first-child,
+    table.draftsalaries th:first-child {
+        text-align: left;
+    }
+
+    #sectionSelect {
+        padding: 8px;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    nav {
+        float: right;
+        background: white;
+        margin-bottom: 1rem;
+    }
+
+    h2#league-information {
+        display: inline-grid;
+        padding-inline: 0 1rem
+    }
+
+    /* Back to Top Button Styling */
+    #backToTop {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        background-color: #1c497c;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        z-index: 1;
+        display: none;
+        /* Initially hidden */
+        transition: opacity 0.3s;
+    }
+
+    #backToTop:hover {
+        background-color: #123456;
+    }
+</style>
+
+<div id="consitution" class="constitution-wrapper report-wrapper">
+    <nav>
+        <label for="sectionSelect"><strong>Jump to Section:</strong></label>
+        <select id="sectionSelect" onchange="location = this.value;">
+            <option value="#">Select a section...</option>
+            <option value="#league-information">League Information</option>
+            <option value="#important-dates">Important Dates</option>
+            <option value="#division-setup">Division Setup</option>
+            <option value="#team-rosters">Team Rosters</option>
+            <option value="#injured-reserve">Injured Reserve</option>
+            <option value="#starting-rosters">Starting Rosters</option>
+            <option value="#trades">Trades</option>
+            <option value="#free-agents">Free Agent</option>
+            <option value="#keepers">Keepers</option>
+            <option value="#draft">Draft Format</option>
+            <option value="#schedule">Schedule</option>
+            <option value="#scoring">Scoring & Errors</option>
+            <option value="#game-tiebreakers">Game Tiebreakers</option>
+            <option value="#standings-tiebreakers">Standings Tiebreakers</option>
+            <option value="#playoff-structure">Playoff Structure</option>
+            <option value="#premier-dleague">Premier League Competition</option>
+            <option value="#payouts">Payouts</option>
+            <option value="#replacement-owners">Replacement Owners</option>
+            <option value="#rule-changes">Rule Changes</option>
+        </select>
+    </nav>
+
+    <h2 id="league-information">League Information</h2>
+    <ul>
+        <li><strong>Official League Website:</strong> <a href="http://AFL-Fantasy.com"
+                target="_blank">AFL-Fantasy.com</a></li>
+        <li><strong>League Format:</strong> 24-team keeper league
+            <ul>
+                <li><strong>Primary Competition:</strong> Standard league with conferences, divisions, playoffs, and a
+                    Head to Head format</li>
+                <li><strong>Side Competition:</strong> Premier League / D-League system with promotion and relegation,
+                    and an All-Play format</li>
+            </ul>
+        </li>
+        <li><strong>Commissioner:</strong> Brandon Shields</li>
+        <li><strong>Franchise Fee:</strong> $100.00 per team</li>
+        <li><strong>Payment Fees:</strong> PayPal fees are $1 for every $25 of league dues sent</li>
+        <li><strong>Time Zone:</strong> All posted times/dates are in Pacific Standard Time unless otherwise noted</li>
+    </ul>
+
+    <h2 id="important-dates">Important Dates</h2>
+    <table class="tableformat" width="100%" border="1" cellpadding="3" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Event</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Deadline for owners to notify the Commish of intent to return</td>
+                <td><strong>March 1</strong></td>
+            </tr>
+            <tr>
+                <td>Open recruitment period for new owners</td>
+                <td><strong>March 1 – April 1</strong></td>
+            </tr>
+            <tr>
+                <td>League dues deadline</td>
+                <td><strong>April 1</strong></td>
+            </tr>
+            <tr>
+                <td>Keeper selection deadline (7 Keepers)</td>
+                <td><strong>July 15</strong></td>
+            </tr>
+            <tr>
+                <td>Trade Deadline</td>
+                <td><strong>Wednesday between Week 10 and 11</strong></td>
+            </tr>
+            <tr>
+                <td>Annual Draft window</td>
+                <td><strong>August 20 – August 25</strong></td>
+            </tr>
+            <tr>
+                <td>Last day to move players from IR to active roster</td>
+                <td><strong>Super Bowl Sunday</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2 id="division-setup">Division Setup</h2>
+    <p>The League will consist of 2 conferences, with 2 divisions in each conference. Each division will have 6 teams.
+    </p>
+    <p>Each team will play the other teams in its division twice during the regular season.</p>
+
+    <h2 id="team-rosters">Team Rosters</h2>
+    <ul>
+        <li>Each team may have a maximum of <strong>16 players</strong> on their active roster.</li>
+        <li>Rosters may consist of any combination of the following positions: <strong>QB, RB, WR, TE, PK, DEF</strong>.
+        </li>
+        <li>Each team may carry <strong>additional IR players</strong> on their roster from <strong>July 15th</strong>
+            until <strong>Super Bowl Sunday</strong>.</li>
+    </ul>
+
+    <h2 id="injured-reserve">Injured Reserve</h2>
+    <ul>
+        <li>There is <strong>no limit</strong> on the number of IR spots a team may use.</li>
+        <li>Only players listed as <strong>Doubtful</strong>, <strong>Out</strong>, or on the official <strong>Injured
+                Reserve (IR)</strong> list are eligible.</li>
+        <li>Teams with IR violations will not be allowed to submit a lineup the following week.</li>
+        <li>Exceptions may be granted on a case-by-case basis at the Commissioner's discretion.</li>
+    </ul>
+
+    <h2 id="starting-rosters">Starting Rosters</h2>
+    <table class="tableformat" width="100%" border="1" cellpadding="3" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Position</th>
+                <th>Starters</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>QB</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>RB</td>
+                <td>1–4</td>
+            </tr>
+            <tr>
+                <td>WR</td>
+                <td>1–4</td>
+            </tr>
+            <tr>
+                <td>TE</td>
+                <td>1–4</td>
+            </tr>
+            <tr>
+                <td>K</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>DEF</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td><strong>Total</strong></td>
+                <td><strong>9</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Lineup Submission</h3>
+    <ul>
+        <li>Lineups are due at <strong>"game time"</strong> of the player involved.</li>
+        <li>If a team fails to submit a starting lineup, the previous week's lineup will be used.</li>
+        <li>Teams must submit a valid lineup each week. A valid lineup must exclude players on a bye or listed as "Out"
+            on the NFL injury report, if a replacement exists on the bench.</li>
+    </ul>
+
+    <h2 id="trades">Trades</h2>
+    <ul>
+        <li>All trades must be submitted through the league website and are subject to approval by the Commissioner.
+        </li>
+        <li>The Commissioner may approve or decline any trade and, if necessary, require a <strong>non-refundable $50
+                deposit</strong> toward the following season.</li>
+        <li>All approved trades will be recorded and displayed in the league's transaction report.</li>
+        <li>Trading is permitted from the conclusion of <strong>Week 17</strong> through the day before <strong>Week
+                11</strong> (typically a Wednesday).</li>
+        <li>Teams trading any draft pick must submit a <strong>non-refundable $50 deposit</strong> for the following
+            season.</li>
+        <li>All trades must satisfy roster and/or draft pick limits before approval.</li>
+        <li>Trade Deadline: <strong>Wednesday between Week 10 and 11</strong>.</li>
+        <li>Teams may trade draft picks up to <strong>one year in advance</strong>.</li>
+        <li>All teams are required to have <strong>9 total draft picks</strong> from the start of the draft until the
+            <strong>July 15 Keeper Deadline</strong>.</li>
+        <li>Between <strong>July 15 and draft day</strong>, teams may trade players for current-year draft picks,
+            provided each team has a total of <strong>16 players and/or draft picks</strong> leading into the draft.
+        </li>
+        <li>If an owner fails to meet the keeper deadline, their keeper limit is reduced to <strong>6</strong> and they
+            will receive a compensatory pick at <strong>9.13</strong>.</li>
+        <li>If a trade involving draft picks does not include an equal number of picks per team, the Commissioner may
+            assign the <strong>lowest available pick</strong> from one team to the other to balance the trade and make
+            it valid.</li>
+    </ul>
+
+    <h2 id="free-agentss">Free Agents</h2>
+    <ul>
+        <li>The league uses a <strong>rolling waiver system</strong> ("Yahoo" style) to determine waiver priority.</li>
+        <li>The initial waiver order is based on the <strong>base draft order from the previous season</strong>.</li>
+        <li>Players may be added via waivers from <strong>Week 1 through Week 17</strong>.</li>
+        <li>Waiver requests can be submitted from <strong>Sunday kickoff until Wednesday at 9:00 PM</strong>.</li>
+        <li>All waiver claims are processed on <strong>Wednesday at 9:00 PM</strong>.</li>
+        <li><strong>Dropped players</strong> are locked until the next waiver period, beginning with the following
+            <strong>Sunday kickoff</strong>.</li>
+        <li><strong>First-Come, First-Served (FCFS)</strong> is allowed from <strong>Wednesday 9:00 PM to Sunday
+                kickoff</strong>.</li>
+        <li>Any player dropped during the FCFS period is also <strong>locked until the next Sunday kickoff</strong>.
+        </li>
+        <li>FCFS is allowed from <strong>Draft Day until the start of the regular season</strong>.</li>
+        <li>All official waiver and transaction deadlines are listed on the <strong>league calendar</strong>.</li>
+    </ul>
+
+    <h2 id="keepers">Keepers</h2>
+    <ul>
+        <li>Teams will keep 7 players each year and must cut their roster down each offseason by July 15th</li>
+        <li>In the event that an owner fails to meet the keeper deadline, the owner will have their keeper limit reduced
+            to 6 and will be given a compensatory draft pick at 9.13</li>
+    </ul>
+
+    <h2 id="draft">Draft</h2>
+    <p>The League will hold a draft annually. Only players not listed as keepers are eligible to be selected.</p>
+    <p>The draft consists of <strong>9 rounds</strong> and follows a traditional NFL-style format. The base draft order
+        is determined by the final standings from Week 13 of the previous season, with the Super Bowl winner
+        automatically receiving the 12th pick. Any ties will be broken using the league’s official standings tiebreaker
+        rules.</p>
+    <p>During the NIT, teams can earn improved draft position. Points are awarded based on base draft position, ranging
+        from 12 points for the worst record to 1 point for the conference champion. The top 5 NIT finishers receive an
+        additional 1.5 points. The first round will be reordered by total points earned. In the event of a tie, the team
+        with the higher original draft position will receive the higher pick.</p>
+    <p><strong>Example Draft Points Reordering:</strong></p>
+    <ul>
+        <li>The Nukes — 12 pts (2–16)</li>
+        <li>Drunk Indians — 11 pts (4–14)</li>
+        <li>The Rookies — 9.5 pts (6–12)</li>
+        <li>Muck Juggling Micks — 9.5 pts (6–12)</li>
+        <li>Blitzkrieg — 8 pts (7–11)</li>
+        <li>The Street — 7 pts (8–10)</li>
+        <li>Gamecocks — 5.5 pts (10–8)</li>
+        <li>Fullybaked — 5.5 pts (10–8)</li>
+        <li>420 All-Stars — 4 pts (12–4) — Playoff Team</li>
+        <li>Smokane — 3 pts (13–3) — Playoff Team</li>
+        <li>Marriedwithchildren — 2 pts (14–2) — Playoff Team</li>
+        <li>Chatmaster — 1 pt (Conference Champ)</li>
+    </ul>
+    <h2 id="schedule">Schedule</h2>
+    <ul>
+        <li>Each franchise will play a <strong>17-game</strong> schedule.</li>
+        <li>Each team plays division opponents <strong>twice</strong>, all other conference opponents
+            <strong>once</strong>, and <strong>one game</strong> against a team from the opposite conference that
+            finished in the same position the previous season.</li>
+        <li><strong>Doubleheaders</strong> are scheduled for Weeks 1, 2, 3, and 13.</li>
+    </ul>
+
+    <h2 id="scoring">Scoring & Errors</h2>
+    <p><a href="https://www44.myfantasyleague.com/%YEAR%/options?L=%LEAGUEID%&O=09">Official Scoring</a></p>
+    <ul>
+        <li>Owners must notify the Commissioner via email upon discovery of any scoring error.</li>
+        <li>All scoring disputes must be submitted by <strong>Wednesday at 9:00 PM</strong>.</li>
+        <li>The Commissioner will review and resolve all scoring error disputes and notify all teams involved.</li>
+        <li>The league’s official stat provider is <strong>My Fantasy League</strong>, and their data will serve as the
+            system of record for all NFL statistics.</li>
+        <li>If a scoring error is confirmed and impacts the outcome of a matchup, the Commissioner will notify the
+            entire league and make any necessary corrections.</li>
+    </ul>
+
+    <h2 id="game-tiebreakers">Game Tiebreakers</h2>
+    <h3>Regular Season</h3>
+    <p>If a regular season game ends in a tie, it will remain a tie.</p>
+
+    <h3>Playoffs</h3>
+    <p>If a playoff game ends in a tie, the following tiebreakers will be used in order:</p>
+    <ol>
+        <li>Highest scoring bench player</li>
+        <li>Most points by starting kicker</li>
+        <li>Better regular season W–L record</li>
+        <li>Better regular season Power Rank</li>
+        <li>Most total points scored</li>
+        <li>Coin flip</li>
+    </ol>
+
+    <h2 id="standings-tiebreakers">Standings Tiebreakers</h2>
+    <p><strong>Note:</strong> Ties are always broken <strong>within divisions first</strong>.</p>
+
+    <h3>2-Team Division Tiebreakers</h3>
+    <ol>
+        <li>Head-to-head (best won-lost-tied percentage in games between the clubs)</li>
+        <li>Best won-lost-tied percentage in games played within the division</li>
+        <li>Best won-lost-tied percentage in games played within the conference</li>
+        <li>Power Rank</li>
+        <li>Total points scored</li>
+        <li>All Play Record</li>
+        <li>Victory Points</li>
+        <li>Most Points Allowed</li>
+        <li>Coin Flip</li>
+    </ol>
+
+    <h3>3-Team Division Tiebreakers</h3>
+    <p><em>If two clubs remain tied after other teams are eliminated, revert to step 1 of the two-club format.</em></p>
+    <ol>
+        <li>Head-to-head (best won-lost-tied percentage in games between the clubs)</li>
+        <li>Best won-lost-tied percentage in games played within the division</li>
+        <li>Best won-lost-tied percentage in games played within the conference</li>
+        <li>Power Rank</li>
+        <li>Total points scored</li>
+        <li>All Play Record</li>
+        <li>Victory Points</li>
+        <li>Most Points Allowed</li>
+        <li>Coin Flip</li>
+    </ol>
+
+    <h3>2-Team Wild Card Tiebreakers</h3>
+    <ol>
+        <li>Best won-lost-tied percentage in games played within the conference</li>
+        <li>Power Rank</li>
+        <li>Total points scored</li>
+        <li>All Play Record</li>
+        <li>Victory Points</li>
+        <li>Most Points Allowed</li>
+        <li>Coin Flip</li>
+    </ol>
+
+    <h3>3-Team Wild Card Tiebreakers</h3>
+    <p><em>This rule set cannot be triggered with only 2 divisions per conference since ties are broken within divisions
+            first.</em></p>
+    <p><em>If two clubs remain tied after other teams are eliminated, revert to step 1 of the two-club format.</em></p>
+    <ol>
+        <li>Head-to-head (best won-lost-tied percentage in games between the clubs)</li>
+        <li>Best won-lost-tied percentage in games played within the division</li>
+        <li>Best won-lost-tied percentage in games played within the conference</li>
+        <li>Power Rank</li>
+        <li>Total points scored</li>
+        <li>All Play Record</li>
+        <li>Victory Points</li>
+        <li>Most Points Allowed</li>
+        <li>Coin Flip</li>
+    </ol>
+
+    <h2 id="playoff-structure">Playoff Structure</h2>
+    <p>The entire league will be broken up into two groups:</p>
+
+    <h3>League Championships</h3>
+    <ul>
+        <li>Each conference will send 4 teams to the playoffs: 2 division winners and 2 wild cards.</li>
+        <li>Wild card spots go to the 2 teams in each conference with the best remaining W–L records.</li>
+        <li>Division winners are seeded <strong>1</strong> and <strong>2</strong>, wild cards are seeded
+            <strong>3</strong> and <strong>4</strong>.</li>
+        <li>Standard tiebreaker rules apply to playoff seeding.</li>
+        <li>The AL Champion will face the NL Champion in the <strong>World Championship</strong>.</li>
+    </ul>
+
+    <h4>Playoff Schedule</h4>
+    <p><strong>Week 14</strong></p>
+    <ul>
+        <li>AL Seed 1 vs. AL Seed 4</li>
+        <li>AL Seed 2 vs. AL Seed 3</li>
+        <li>NL Seed 1 vs. NL Seed 4</li>
+        <li>NL Seed 2 vs. NL Seed 3</li>
+    </ul>
+
+    <p><strong>Week 15</strong></p>
+    <ul>
+        <li>Winner of AL Game 1 vs. Winner of AL Game 2</li>
+        <li>Winner of NL Game 1 vs. Winner of NL Game 2</li>
+    </ul>
+
+    <p><strong>Week 16</strong></p>
+    <ul>
+        <li>AL Champion vs. NL Champion — <strong>League Championship</strong></li>
+    </ul>
+
+    <h3>NIT Tournament</h3>
+    <ul>
+        <li>The remaining 16 teams will compete in a consolation tournament.</li>
+        <li>Teams will be seeded <strong>1–16</strong> based on final regular season <strong>Power Rank</strong>.</li>
+        <li>Matchups follow a traditional bracket: #1 vs. #16, #2 vs. #15, and so on.</li>
+    </ul>
+    <h2 id="premier-dleague">Premier League / D-League Competition</h2>
+    <p>This side competition runs independently from the standard league standings and spans from <strong>Week 1 through
+            Week 17</strong>.</p>
+    <ul>
+        <li>Each team will play every other team in the league once per week — totaling <strong>23 games</strong> each
+            week.</li>
+        <li><strong>Top 4 teams in the Premier League</strong> win money.</li>
+        <li><strong>Bottom 2 teams in the Premier League</strong> are automatically relegated to the D-League.</li>
+        <li><strong>Top 2 teams in the D-League</strong> are promoted to the Premier League.</li>
+        <li>In the event of a tie for any prize, the winnings are split evenly.</li>
+    </ul>
+
+    <h3>Promotion/Relegation Playoff</h3>
+    <p>The following 4 teams compete for 2 Premier League spots:</p>
+    <ul>
+        <li>9th and 10th place teams in the Premier League</li>
+        <li>3rd and 4th place teams in the D-League</li>
+    </ul>
+    <p>The top 2 teams based on <strong>All-Play Record</strong> will earn or retain their spots in the Premier League.
+        The remaining 2 teams will be placed in the D-League.</p>
+
+    <h3>Premier/D-League Tiebreakers</h3>
+    <ul>
+        <li>All prize ties result in <strong>split winnings</strong>.</li>
+        <li>If a tie affects promotion or relegation, it is broken by <strong>Total Points Scored</strong>.</li>
+    </ul>
+ 
+    <h2 id="payouts">Payouts</h2>
+    <ul>
+        <li><strong>League Dues:</strong> $2400</li>
+        <li><strong>League Site Fees:</strong> -$180</li>
+        <li><strong>Total Prize Money:</strong> $2220</li>
+    </ul>
+
+    <h3>Prize Distribution</h3>
+    <ul>
+        <li><strong>League Championship:</strong> $300</li>
+        <li><strong>Conference Championship:</strong> $150</li>
+        <li><strong>Division Championship:</strong> $150</li>
+        <li><strong>Wild Card:</strong> $100</li>
+        <li><strong>Premier League Champion:</strong> $225</li>
+        <li><strong>Premier League 2nd Place:</strong> $150</li>
+        <li><strong>Premier League 3rd Place:</strong> $100</li>
+        <li><strong>Premier League 4th Place:</strong> $50</li>
+        <li><strong>D-League Champion:</strong> $50</li>
+        <li><strong>NIT Champion:</strong> $50</li>
+    </ul>
+    <p><em>*The League Champion is also a Conference Champion, earning a total of $450 for both titles.</em></p>
+    <p><a href="https://docs.google.com/spreadsheets/d/1Zl31plzbdR_e-GL87oZlNleoDKARV2YRdO7nYieTLaM/edit?usp=sharing"
+            target="_blank">Complete Financial Breakdown</a></p>
+
+    <h2 id="replacement-owners">Replacement Owners</h2>
+    <p>Owners are expected to submit lineups weekly. If an owner fails to do so for <strong>two consecutive
+                weeks</strong> or <strong>three times in a season</strong>, they will be asked to surrender the
+            franchise.</p>
+    <p>If a team leaves the league, a new owner will be selected and will take over the team as-is, including rosters,
+        keepers, draft picks, and any financial obligations. No refunds will be issued to any departing owner.</p>
+    <p>The Commissioner maintains a waiting list and will use it to identify suitable replacement owners. Owners may not
+        sell or transfer ownership of their teams without prior approval from the Commissioner. If an owner voluntarily
+        exits, the team becomes property of the league until reassigned.</p>
+    <p>In the event that two or more members leave the league simultaneously, a dispersal draft will be conducted. All
+        players and draft picks from the vacated teams will be combined into a pool, from which the new owners will
+        draft to build their rosters.</p>
+
+    <h2 id="rule-changes">Rule Changes</h2>
+    <ul>
+        <li>Any vote taken by the league to change the rules requires a <strong>75%</strong> vote to pass (<strong>18
+                out of 24</strong> owners).</li>
+        <li>Votes taken between <strong>July 15th</strong> and <strong>Week 17</strong> require a <strong>100%</strong>
+            vote to take effect immediately.</li>
+        <li>If such a vote receives 75% or more but less than 100%, it will take effect the following season.</li>
+        <li>Rule change votes should ideally occur between the <strong>trade deadline</strong> and the end of
+            <strong>Week 17</strong>.</li>
+        <li><strong>Abstentions</strong> will be considered <strong>"Yes"</strong> votes.</li>
+        <li>All poll votes are <strong>final after 5 days</strong> from when they begin.</li>
+        <li>Any unforeseen rule situation not specifically covered in the constitution will be resolved by the
+            <strong>Commissioner</strong>.</li>
+    </ul>
+
+    <button id="backToTop" onclick="scrollToTop()">⬆ Back to Top</button>
+</div>
+
+<script>
+    window.onscroll = function () {
+        var button = document.getElementById("backToTop");
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+            button.style.display = "block";
+        } else {
+            button.style.display = "none";
+        }
+    };
+
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+</script>

@@ -1,0 +1,38 @@
+@use "./globals" as *;
+
+/*hides default MFL footer*/
+
+.pagefooter {
+  display: none;
+}
+
+.container-footer {
+  min-height: 16em;
+  padding: 24px 0;
+  background-color: $footer-bg-color;
+  a {
+    color: $footer-text-color;
+    text-decoration: none;
+  }
+  ul {
+    margin-left: -40px;
+    margin-bottom: 24px;
+    li {
+      margin-left: 0;
+      list-style-type: none;
+      margin-bottom: 5px;
+      color: $footer-header-text-color;
+      font-family: $headline-font;
+    }
+  }
+  .defending-champ {
+    font-size: 18px;
+    font-weight: $headline-font-weight;
+    color: $footer-header-text-color;
+    margin-bottom: 14px;
+    a {
+      margin-top: 14px;
+      display: block;
+    }
+  }
+}

@@ -1,0 +1,289 @@
+---
+/**
+ * DraftTradeHistoryView - Shows the history of traded draft picks
+ * Displays which teams traded picks, what they traded, and to whom
+ */
+
+import type { DraftPrediction } from '../../types/standings';
+
+export interface Props {
+  predictions: DraftPrediction[];
+}
+
+const { predictions } = Astro.props;
+
+// Filter only traded picks
+const tradedPicks = predictions.filter(p => p.isTraded && p.originalTeamName);
+
+// Group traded picks by round for organization
+const tradesByRound = {
+  1: tradedPicks.filter(p => p.round === 1),
+  2: tradedPicks.filter(p => p.round === 2),
+  3: tradedPicks.filter(p => p.round === 3),
+};
+
+// Count total trades
+const totalTrades = tradedPicks.length;
+---
+
+<div class="trade-history-view">
+  <div class="trade-history-summary">
+    <div class="summary-card">
+      <div class="summary-stat">
+        <span class="summary-stat__value">{totalTrades}</span>
+        <span class="summary-stat__label">Picks Traded</span>
+      </div>
+    </div>
+  </div>
+
+  {totalTrades > 0 ? (
+    <div class="trades-container">
+      {Object.entries(tradesByRound).map(([round, trades]) =>
+        trades.length > 0 ? (
+          <div class="trades-round" key={round}>
+            <h3 class="trades-round__title">Round {round}</h3>
+            <div class="trades-list">
+              {trades.map(pick => (
+                <div class="trade-item">
+                  <div class="trade-item__pick-number">
+                    <span class="pick-label">{pick.round}.{String(pick.pickInRound).padStart(2, '0')}</span>
+                  </div>
+
+                  <div class="trade-item__from">
+                    <div class="team-badge team-badge--original">
+                      {pick.originalTeamIcon && (
+                        <img
+                          src={pick.originalTeamIcon}
+                          alt={pick.originalTeamName}
+                          class="team-badge__icon"
+                        />
+                      )}
+                      <span class="team-badge__name">{pick.originalTeamName}</span>
+                    </div>
+                  </div>
+
+                  <div class="trade-item__arrow">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="arrow-icon">
+                      <path d="M8 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+
+                  <div class="trade-item__to">
+                    <div class="team-badge team-badge--current">
+                      {pick.teamIcon && (
+                        <img
+                          src={pick.teamIcon}
+                          alt={pick.teamName}
+                          class="team-badge__icon"
+                        />
+                      )}
+                      <span class="team-badge__name">{pick.teamName}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null
+      )}
+    </div>
+  ) : (
+    <div class="no-trades">
+      <p>No trades have been made yet.</p>
+    </div>
+  )}
+</div>
+
+<style>
+  .trade-history-view {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .trade-history-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--padding-md);
+  }
+
+  .summary-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .summary-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .summary-stat__value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .summary-stat__label {
+    font-size: 0.875rem;
+    color: var(--text-secondary-color, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .trades-container {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .trades-round {
+    background: #fff;
+    border-radius: 8px;
+    padding: var(--padding-lg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .trades-round__title {
+    margin: 0 0 var(--padding-md) 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .trades-list {
+    display: grid;
+    gap: var(--padding-md);
+  }
+
+  .trade-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 40px 1fr;
+    gap: var(--padding-md);
+    align-items: center;
+    padding: var(--padding-md);
+    background: var(--card-bg-color, #f8fafc);
+    border-radius: 6px;
+    border-left: 4px solid #cbd5e1;
+  }
+
+  .trade-item__pick-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pick-label {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+    padding: 0.5rem 0.75rem;
+    background: #dbeafe;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .trade-item__from,
+  .trade-item__to {
+    display: flex;
+    align-items: center;
+  }
+
+  .trade-item__arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary-color, #64748b);
+  }
+
+  .arrow-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .team-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .team-badge--original {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #7f1d1d;
+  }
+
+  .team-badge--current {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: #1e40af;
+  }
+
+  .team-badge__icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+  }
+
+  .team-badge__name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .no-trades {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 1.125rem;
+    background: #fff;
+    border-radius: 8px;
+    border: 2px dashed #cbd5e1;
+  }
+
+  .no-trades p {
+    margin: 0;
+  }
+
+  @media (max-width: 767px) {
+    .trade-item {
+      grid-template-columns: 1fr;
+      gap: var(--padding-sm, 0.5rem);
+    }
+
+    .trade-item__pick-number {
+      grid-column: 1;
+      order: 1;
+    }
+
+    .trade-item__from {
+      grid-column: 1;
+      order: 2;
+    }
+
+    .trade-item__arrow {
+      grid-column: 1;
+      order: 3;
+      margin: 0.25rem 0;
+    }
+
+    .trade-item__to {
+      grid-column: 1;
+      order: 4;
+    }
+
+    .arrow-icon {
+      transform: rotate(90deg);
+    }
+  }
+</style>

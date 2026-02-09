@@ -1,0 +1,215 @@
+---
+/**
+ * PlayerInjuryModal - Displays detailed injury information for a player
+ * Shows injury status and body part affected
+ */
+
+export interface Props {
+  /** Additional CSS classes */
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<div class:list={['player-injury-modal', className]}>
+  <div class="player-injury-modal__overlay"></div>
+  <div class="player-injury-modal__content">
+    <div class="player-injury-modal__header">
+      <h3 id="injury-modal-title">Player Injury Details</h3>
+      <button class="player-injury-modal__close" aria-label="Close" title="Close (ESC)">
+        ×
+      </button>
+    </div>
+
+    <div class="player-injury-modal__body">
+      <div class="injury-info">
+        <div class="injury-field">
+          <span class="injury-label">Name</span>
+          <span class="injury-value" id="injury-player-name">—</span>
+        </div>
+        <div class="injury-field">
+          <span class="injury-label">Injury Status</span>
+          <span class="injury-value" id="injury-status">—</span>
+        </div>
+        <div class="injury-field">
+          <span class="injury-label">Body Part</span>
+          <span class="injury-value" id="injury-body-part">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .player-injury-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1001;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .player-injury-modal.active {
+    display: flex;
+  }
+
+  .player-injury-modal__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
+
+  .player-injury-modal__content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 400px;
+    overflow: hidden;
+  }
+
+  .player-injury-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .player-injury-modal__header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111;
+  }
+
+  .player-injury-modal__close {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .player-injury-modal__close:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .player-injury-modal__body {
+    padding: 1.5rem;
+  }
+
+  .injury-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .injury-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .injury-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .injury-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  @media (max-width: 640px) {
+    .player-injury-modal {
+      padding: 0.5rem;
+    }
+
+    .player-injury-modal__content {
+      max-width: 90%;
+    }
+
+    .player-injury-modal__header {
+      padding: 1rem;
+    }
+
+    .player-injury-modal__body {
+      padding: 1rem;
+    }
+  }
+</style>
+
+<script>
+  function initPlayerInjuryModal() {
+    const modal = document.querySelector('.player-injury-modal');
+    const overlay = document.querySelector('.player-injury-modal__overlay');
+    const closeBtn = document.querySelector('.player-injury-modal__close');
+
+    const closeModal = () => {
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+    if (overlay) {
+      overlay.addEventListener('click', closeModal);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+
+    window.openPlayerInjuryModal = function(injuryData: any) {
+      const setElementText = (id: string, value: any) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = value || 'N/A';
+        }
+      };
+
+      setElementText('injury-player-name', injuryData.name);
+      setElementText('injury-status', injuryData.injuryStatus);
+      setElementText('injury-body-part', injuryData.injuryBodyPart);
+
+      if (modal) {
+        modal.classList.add('active');
+      }
+    };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPlayerInjuryModal);
+  } else {
+    initPlayerInjuryModal();
+  }
+</script>

@@ -1,0 +1,463 @@
+---
+/**
+ * MatchupSelector - Navigation component for switching between different matchups
+ * Provides dropdown/modal interface for selecting any matchup in the league
+ * Updates URL for sharing purposes and maintains consistent functionality
+ */
+
+import type { Matchup } from '../../types/matchup-previews';
+
+export interface Props {
+  /** Current matchup being displayed */
+  currentMatchup: Matchup;
+  /** All available matchups for the week */
+  availableMatchups: Matchup[];
+  /** Week number */
+  week: number;
+  /** Optional CSS classes */
+  class?: string;
+}
+
+const {
+  currentMatchup,
+  availableMatchups,
+  week,
+  class: className,
+} = Astro.props;
+
+// Sort matchups chronologically by earliest game time
+const sortedMatchups = availableMatchups.slice().sort((a, b) => {
+  const aEarliestGame = a.nflGames.reduce((earliest, game) => 
+    !earliest || game.gameTime < earliest ? game.gameTime : earliest, 
+    null as Date | null
+  );
+  const bEarliestGame = b.nflGames.reduce((earliest, game) => 
+    !earliest || game.gameTime < earliest ? game.gameTime : earliest, 
+    null as Date | null
+  );
+  
+  if (!aEarliestGame && !bEarliestGame) return 0;
+  if (!aEarliestGame) return 1;
+  if (!bEarliestGame) return -1;
+  
+  return aEarliestGame.getTime() - bEarliestGame.getTime();
+});
+---
+
+<div class:list={['matchup-selector', className]}>
+  <div class="selector-header">
+    <h2 class="selector-title">Week {week} Matchups</h2>
+    <div class="current-matchup-display">
+      <span class="current-label">Viewing:</span>
+      <span class="current-teams">
+        {currentMatchup.awayTeam.name} @ {currentMatchup.homeTeam.name}
+      </span>
+    </div>
+  </div>
+
+  <div class="selector-dropdown">
+    <button 
+      class="dropdown-trigger" 
+      id="matchup-dropdown-trigger"
+      aria-expanded="false"
+      aria-haspopup="true"
+      aria-controls="matchup-dropdown-menu"
+    >
+      <span class="trigger-text">Switch Matchup</span>
+      <svg class="dropdown-arrow" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M4.427 6.427a.75.75 0 011.06 0L8 8.94l2.513-2.513a.75.75 0 111.06 1.06l-3.043 3.044a.75.75 0 01-1.06 0L4.427 7.487a.75.75 0 010-1.06z"/>
+      </svg>
+    </button>
+
+    <div 
+      class="dropdown-menu" 
+      id="matchup-dropdown-menu"
+      role="menu"
+      aria-labelledby="matchup-dropdown-trigger"
+    >
+      <div class="dropdown-content">
+        {sortedMatchups.map((matchup) => (
+          <button
+            class="matchup-option"
+            data-matchup-id={matchup.id}
+            data-current={matchup.id === currentMatchup.id}
+            role="menuitem"
+            aria-label={`View matchup between ${matchup.awayTeam.name} and ${matchup.homeTeam.name}`}
+          >
+            <div class="matchup-teams">
+              <div class="team-info">
+                <img 
+                  src={`/assets/theleague/icons/${matchup.awayTeam.id}.png`}
+                  alt={matchup.awayTeam.name}
+                  class="team-icon-small"
+                  onerror="this.style.display='none'"
+                />
+                <span class="team-name">{matchup.awayTeam.name}</span>
+              </div>
+              <span class="vs-symbol">@</span>
+              <div class="team-info">
+                <img 
+                  src={`/assets/theleague/icons/${matchup.homeTeam.id}.png`}
+                  alt={matchup.homeTeam.name}
+                  class="team-icon-small"
+                  onerror="this.style.display='none'"
+                />
+                <span class="team-name">{matchup.homeTeam.name}</span>
+              </div>
+            </div>
+            <div class="matchup-meta">
+              <span class="projected-total">
+                Proj: {((matchup.projectedTotal || 0)).toFixed(1)}
+              </span>
+              <span class="game-count">
+                {matchup.nflGames.length} {matchup.nflGames.length === 1 ? 'game' : 'games'}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /**
+   * Matchup selector dropdown functionality
+   * Handles dropdown open/close and matchup selection
+   */
+  const initMatchupSelector = () => {
+    const trigger = document.getElementById('matchup-dropdown-trigger');
+    const menu = document.getElementById('matchup-dropdown-menu');
+    const options = document.querySelectorAll('.matchup-option');
+
+    if (!trigger || !menu) return;
+
+    // Toggle dropdown
+    const toggleDropdown = () => {
+      const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+      trigger.setAttribute('aria-expanded', (!isOpen).toString());
+      menu.classList.toggle('open', !isOpen);
+    };
+
+    // Close dropdown
+    const closeDropdown = () => {
+      trigger.setAttribute('aria-expanded', 'false');
+      menu.classList.remove('open');
+    };
+
+    // Handle trigger click
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDropdown();
+    });
+
+    // Handle option selection
+    options.forEach((option) => {
+      option.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const matchupId = option.getAttribute('data-matchup-id');
+        if (!matchupId) return;
+
+        // Close dropdown
+        closeDropdown();
+
+        // Update URL with new matchup
+        const url = new URL(window.location.href);
+        url.searchParams.set('matchup', matchupId);
+        
+        // Navigate to new URL
+        window.location.href = url.toString();
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!trigger.contains(e.target as Node) && !menu.contains(e.target as Node)) {
+        closeDropdown();
+      }
+    });
+
+    // Handle escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDropdown();
+      }
+    });
+
+    // Handle arrow keys for accessibility
+    let focusedIndex = -1;
+    const optionElements = Array.from(options);
+
+    menu.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          focusedIndex = Math.min(focusedIndex + 1, optionElements.length - 1);
+          (optionElements[focusedIndex] as HTMLElement).focus();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          focusedIndex = Math.max(focusedIndex - 1, 0);
+          (optionElements[focusedIndex] as HTMLElement).focus();
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          if (focusedIndex >= 0) {
+            (optionElements[focusedIndex] as HTMLElement).click();
+          }
+          break;
+      }
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMatchupSelector);
+  } else {
+    initMatchupSelector();
+  }
+</script>
+
+<style>
+  .matchup-selector {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  .selector-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+  }
+
+  .current-matchup-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .current-label {
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .current-teams {
+    color: var(--text-color, #1f2937);
+    font-weight: 600;
+  }
+
+  .selector-dropdown {
+    position: relative;
+  }
+
+  .dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--card-bg-color, #ffffff);
+    border: 2px solid var(--border-color, #e5e7eb);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .dropdown-trigger:hover {
+    border-color: var(--primary-color, #1c497c);
+    background: var(--primary-light-bg, #f0f4f8);
+  }
+
+  .dropdown-trigger:focus {
+    outline: none;
+    border-color: var(--primary-color, #1c497c);
+    box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+  }
+
+  .dropdown-trigger[aria-expanded="true"] {
+    border-color: var(--primary-color, #1c497c);
+    background: var(--primary-light-bg, #f0f4f8);
+  }
+
+  .dropdown-trigger[aria-expanded="true"] .dropdown-arrow {
+    transform: rotate(180deg);
+  }
+
+  .trigger-text {
+    flex: 1;
+    text-align: left;
+  }
+
+  .dropdown-arrow {
+    transition: transform 0.2s ease;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+    max-height: 400px;
+    overflow: hidden;
+  }
+
+  .dropdown-menu.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .dropdown-content {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .matchup-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 1rem;
+  }
+
+  .matchup-option:hover {
+    background: var(--primary-light-bg, #f0f4f8);
+  }
+
+  .matchup-option:focus {
+    outline: none;
+    background: var(--primary-light-bg, #f0f4f8);
+    box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.2);
+  }
+
+  .matchup-option[data-current="true"] {
+    background: var(--primary-light-bg, #f0f4f8);
+    border: 1px solid var(--primary-color, #1c497c);
+  }
+
+  .matchup-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .team-icon-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: contain;
+  }
+
+  .team-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  .vs-symbol {
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+
+  .matchup-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .projected-total {
+    color: var(--text-color, #1f2937);
+    font-weight: 600;
+  }
+
+  .game-count {
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .selector-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .current-matchup-display {
+      font-size: 0.8125rem;
+    }
+
+    .team-name {
+      max-width: 100px;
+    }
+
+    .dropdown-menu {
+      max-height: 300px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .matchup-selector {
+      padding: 1rem;
+    }
+
+    .team-name {
+      max-width: 80px;
+    }
+
+    .matchup-option {
+      padding: 0.625rem;
+    }
+  }
+</style>

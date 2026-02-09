@@ -1,0 +1,665 @@
+---
+/**
+ * Matchup Preview Navigation Test Page
+ * Demonstrates the new matchup navigation and routing system
+ * Shows how to integrate MatchupSelector with URL routing
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import MatchupSelector from '../../components/theleague/MatchupSelector.astro';
+import { generateMockMatchupData } from '../../utils/mock-matchup-data';
+import { parseMatchupParams, resolveCurrentMatchup } from '../../utils/matchup-routing';
+
+export const prerender = false; // Enable server-side rendering for URL parameter handling
+
+// Get URL parameters
+const url = Astro.url;
+const routeParams = parseMatchupParams(url);
+const week = routeParams.week || 15;
+
+// Generate mock data for testing
+const { matchups } = generateMockMatchupData(week);
+
+// Resolve current matchup from URL parameters
+const currentMatchup = resolveCurrentMatchup(matchups, routeParams);
+
+// If no matchup found, redirect to first available matchup
+if (!currentMatchup && matchups.length > 0) {
+  const defaultMatchup = matchups[0];
+  const redirectUrl = new URL(url);
+  redirectUrl.searchParams.set('matchup', defaultMatchup.id);
+  redirectUrl.searchParams.set('week', week.toString());
+  
+  return Astro.redirect(redirectUrl.toString());
+}
+
+// If still no matchup, show error
+if (!currentMatchup) {
+  throw new Error('No matchups available for this week');
+}
+
+// Calculate some display data
+const totalProjected = (currentMatchup.homeTeam.projectedPoints || 0) + (currentMatchup.awayTeam.projectedPoints || 0);
+const gameOfWeek = currentMatchup.nflGames.find(game => game.isGameOfWeek);
+---
+
+<TheLeagueLayout title={`Week ${week} Matchup Preview | ${currentMatchup.awayTeam.name} @ ${currentMatchup.homeTeam.name}`}>
+  <div class="matchup-preview-container">
+    
+    <!-- Matchup Navigation -->
+    <MatchupSelector 
+      currentMatchup={currentMatchup}
+      availableMatchups={matchups}
+      week={week}
+    />
+
+    <!-- Current Matchup Display -->
+    <div class="current-matchup-section">
+      <div class="matchup-header">
+        <div class="week-info">
+          <span class="week-label">Week {week}</span>
+          <span class="matchup-type">{week >= 15 ? 'Playoffs' : 'Regular Season'}</span>
+        </div>
+        
+        <div class="matchup-scoreboard">
+          <!-- Away Team -->
+          <div class="team away-team">
+            <div class="team-icon-container">
+              <img
+                src={`/assets/theleague/icons/${currentMatchup.awayTeam.id}.png`}
+                alt={currentMatchup.awayTeam.name}
+                class="team-icon"
+                onerror="this.style.display='none'"
+              />
+            </div>
+            <div class="team-info">
+              <div class="team-name">{currentMatchup.awayTeam.name}</div>
+              <div class="team-owner">{currentMatchup.awayTeam.ownerName}</div>
+            </div>
+            <div class="team-projection">
+              <div class="projection-label">Proj</div>
+              <div class="projection-value">{(currentMatchup.awayTeam.projectedPoints || 0).toFixed(1)}</div>
+            </div>
+          </div>
+
+          <!-- VS Divider -->
+          <div class="vs-divider">
+            <span class="at-symbol">@</span>
+          </div>
+
+          <!-- Home Team -->
+          <div class="team home-team">
+            <div class="team-projection">
+              <div class="projection-label">Proj</div>
+              <div class="projection-value">{(currentMatchup.homeTeam.projectedPoints || 0).toFixed(1)}</div>
+            </div>
+            <div class="team-info">
+              <div class="team-name">{currentMatchup.homeTeam.name}</div>
+              <div class="team-owner">{currentMatchup.homeTeam.ownerName}</div>
+            </div>
+            <div class="team-icon-container">
+              <img
+                src={`/assets/theleague/icons/${currentMatchup.homeTeam.id}.png`}
+                alt={currentMatchup.homeTeam.name}
+                class="team-icon"
+                onerror="this.style.display='none'"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="matchup-stats">
+          <div class="stat-item">
+            <span class="stat-label">Total Projected</span>
+            <span class="stat-value">{totalProjected.toFixed(1)}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">NFL Games</span>
+            <span class="stat-value">{currentMatchup.nflGames.length}</span>
+          </div>
+          {gameOfWeek && (
+            <div class="stat-item">
+              <span class="stat-label">Game of the Week</span>
+              <span class="stat-value">{gameOfWeek.team1} @ {gameOfWeek.team2}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- Matchup Analysis -->
+      <div class="analysis-section">
+        <h3 class="analysis-title">Matchup Analysis</h3>
+        <p class="analysis-text">{currentMatchup.analysis}</p>
+      </div>
+
+      <!-- NFL Games Preview -->
+      {currentMatchup.nflGames.length > 0 && (
+        <div class="nfl-games-section">
+          <h3 class="section-title">NFL Games - Week {week}</h3>
+          <div class="games-list">
+            {currentMatchup.nflGames.map((game) => (
+              <div class="game-card">
+                <div class="game-header">
+                  <div class="game-teams">
+                    <span class="team-code">{game.team1}</span>
+                    <span class="vs-text">@</span>
+                    <span class="team-code">{game.team2}</span>
+                    {game.isGameOfWeek && (
+                      <span class="game-of-week-badge">Game of the Week</span>
+                    )}
+                  </div>
+                  <div class="game-meta">
+                    <span class="player-count">{game.playerCount} players</span>
+                    <span class="projected-points">{(game.projectedPoints || 0).toFixed(1)} proj pts</span>
+                  </div>
+                </div>
+                
+                <div class="game-players">
+                  {game.players.map((player) => (
+                    <div class="player-item">
+                      <div class="player-info">
+                        <strong>{player.name}</strong> ({player.position}, {player.nflTeam})
+                        {player.injuryStatus !== 'Healthy' && (
+                          <span class={`injury-status ${player.injuryStatus.toLowerCase()}`}>
+                            {player.injuryStatus}
+                          </span>
+                        )}
+                      </div>
+                      <div class="player-projection">
+                        Proj: <strong>{(player.projectedPoints || 0).toFixed(1)}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- URL Sharing -->
+      <div class="sharing-section">
+        <h3 class="section-title">Share This Matchup</h3>
+        <div class="share-url-container">
+          <input 
+            type="text" 
+            class="share-url-input" 
+            value={url.toString()} 
+            readonly
+            id="share-url-input"
+          />
+          <button class="copy-url-btn" id="copy-url-btn">
+            Copy URL
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize matchup state management
+    import { initializeMatchupStatePage } from '../../utils/matchup-state-manager';
+    
+    // This would normally be passed from the server, but for demo purposes we'll use mock data
+    const mockMatchups = window.mockMatchups || [];
+    const currentWeek = parseInt(new URLSearchParams(window.location.search).get('week') || '15');
+    
+    // Initialize state manager
+    const { manager, cleanup } = initializeMatchupStatePage({
+      matchups: mockMatchups,
+      week: currentWeek,
+      onStateChange: (event) => {
+        console.log('Matchup state changed:', event);
+        // In a real implementation, you might update the page content here
+        // or trigger a page reload to show the new matchup
+      },
+    });
+
+    // Copy URL functionality
+    const copyUrlBtn = document.getElementById('copy-url-btn');
+    const shareUrlInput = document.getElementById('share-url-input');
+    
+    if (copyUrlBtn && shareUrlInput) {
+      copyUrlBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(shareUrlInput.value);
+          copyUrlBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyUrlBtn.textContent = 'Copy URL';
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy URL:', err);
+          // Fallback for older browsers
+          shareUrlInput.select();
+          document.execCommand('copy');
+          copyUrlBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyUrlBtn.textContent = 'Copy URL';
+          }, 2000);
+        }
+      });
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', cleanup);
+  </script>
+</TheLeagueLayout>
+
+<style>
+  .matchup-preview-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .current-matchup-section {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .matchup-header {
+    margin-bottom: 2rem;
+  }
+
+  .week-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .week-label {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .matchup-type {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--muted-text-color, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .matchup-scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .team {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    background: var(--primary-light-bg, #f0f4f8);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 2px solid var(--border-color, #e5e7eb);
+  }
+
+  .away-team {
+    flex-direction: row;
+  }
+
+  .home-team {
+    flex-direction: row-reverse;
+  }
+
+  .team-icon-container {
+    flex-shrink: 0;
+  }
+
+  .team-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .team-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .away-team .team-info {
+    text-align: left;
+  }
+
+  .home-team .team-info {
+    text-align: right;
+  }
+
+  .team-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-color, #1f2937);
+    margin-bottom: 0.25rem;
+  }
+
+  .team-owner {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .team-projection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background: var(--content-bg, #fff);
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .projection-label {
+    color: var(--muted-text-color, #6b7280);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .projection-value {
+    color: var(--text-color, #1f2937);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .at-symbol {
+    color: var(--muted-text-color, #6b7280);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .matchup-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted-text-color, #6b7280);
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color, #1f2937);
+  }
+
+  .analysis-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.75rem;
+  }
+
+  .analysis-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0 0 1rem 0;
+  }
+
+  .analysis-text {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-color, #1f2937);
+    margin: 0;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .nfl-games-section {
+    margin-bottom: 2rem;
+  }
+
+  .games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .game-card {
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    background: var(--content-bg, #fff);
+  }
+
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .game-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-code {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+  }
+
+  .vs-text {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .game-of-week-badge {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .game-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .player-count {
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+  .projected-points {
+    color: var(--text-color, #1f2937);
+    font-weight: 600;
+  }
+
+  .game-players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .player-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-color, #1f2937);
+  }
+
+  .injury-status {
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .injury-status.questionable {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .injury-status.doubtful {
+    background: #fed7d7;
+    color: #c53030;
+  }
+
+  .injury-status.out {
+    background: #fed7d7;
+    color: #c53030;
+  }
+
+  .player-projection {
+    font-size: 0.875rem;
+    color: var(--text-color, #1f2937);
+    font-weight: 500;
+  }
+
+  .sharing-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .share-url-container {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .share-url-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: var(--content-bg, #fff);
+    color: var(--text-color, #1f2937);
+  }
+
+  .copy-url-btn {
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color, #1c497c);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .copy-url-btn:hover {
+    background: var(--primary-hover-color, #1e40af);
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .matchup-preview-container {
+      padding: 1rem;
+    }
+
+    .current-matchup-section {
+      padding: 1.5rem;
+    }
+
+    .matchup-scoreboard {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .team {
+      width: 100%;
+    }
+
+    .home-team {
+      flex-direction: row;
+    }
+
+    .home-team .team-info {
+      text-align: left;
+    }
+
+    .matchup-stats {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .stat-item {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    .game-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .share-url-container {
+      flex-direction: column;
+    }
+
+    .copy-url-btn {
+      width: 100%;
+    }
+  }
+</style>

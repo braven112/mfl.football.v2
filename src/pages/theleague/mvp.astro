@@ -1,0 +1,961 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueAssets from '../../data/theleague.assets.json';
+import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+
+const playerModules = import.meta.glob(
+  '../../data/mfl-player-salaries-*.json',
+  { eager: true }
+);
+
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const positionLabels = [
+  { key: 'QB', label: 'Quarterback' },
+  { key: 'RB', label: 'Running Back' },
+  { key: 'WR', label: 'Wide Receiver' },
+  { key: 'TE', label: 'Tight End' },
+  { key: 'PK', label: 'Kicker' },
+  { key: 'Def', label: 'Defense/ST' },
+];
+const positionLabelMap = new Map(
+  positionLabels.map(({ key, label }) => [key, label])
+);
+
+const franchiseLookup = new Map(
+  (leagueAssets.teams ?? []).map((team) => [
+    team.id,
+    {
+      name: team.name,
+      icon: team.assets?.icons?.[0]?.relativePath,
+    },
+  ])
+);
+
+const overallCandidates = [];
+const positionBuckets = new Map();
+for (const { key } of positionLabels) {
+  positionBuckets.set(key, []);
+}
+
+for (const [path, mod] of Object.entries(playerModules)) {
+  const season = extractSeason(path);
+  if (!season) continue;
+
+  const data = getModuleData(mod);
+  const players = data?.players ?? [];
+  const seasonCandidates = players
+    .map((player) => {
+      const salary = Number(player.salary) || 0;
+      const points = Number(player.points) || 0;
+      const contractYears =
+        Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) || 0;
+      if (!salary || !points) return null;
+      return {
+        season,
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        salary,
+        points,
+        efficiency: points / salary,
+        franchiseId: player.franchiseId,
+        team: player.team ?? '',
+        headshot: player.headshot ?? getPlayerImageUrl(player.id),
+        contractYears,
+      };
+    })
+    .filter(Boolean);
+
+  if (!seasonCandidates.length) continue;
+  seasonCandidates.sort((a, b) => b.efficiency - a.efficiency);
+  const overall = seasonCandidates[0];
+  if (overall) {
+    overallCandidates.push({
+      ...overall,
+      positionLabel: positionLabelMap.get(overall.position) ?? overall.position,
+    });
+  }
+
+  const positionLeaders = new Map();
+  seasonCandidates.forEach((candidate) => {
+    const existing = positionLeaders.get(candidate.position);
+    if (!existing || candidate.efficiency > existing.efficiency) {
+      positionLeaders.set(candidate.position, candidate);
+    }
+  });
+  positionLeaders.forEach((value, posKey) => {
+    const entry = {
+      ...value,
+      positionLabel: positionLabelMap.get(posKey) ?? posKey,
+    };
+    const bucket = positionBuckets.get(posKey);
+    if (bucket) bucket.push(entry);
+  });
+}
+
+overallCandidates.sort((a, b) => Number(b.season) - Number(a.season));
+
+// Sort each position bucket by season (newest first)
+positionBuckets.forEach((bucket) => {
+  bucket.sort((a, b) => Number(b.season) - Number(a.season));
+});
+
+// Calculate Team of the Year for each season
+const teamOfYearBySeason = new Map();
+const buildTeamFromPlayers = (players) => {
+  const team = {
+    qb: [],
+    rb: [],
+    wr: [],
+    te: [],
+    pk: [],
+    def: []
+  };
+
+  const qbs = players.filter(p => p.position === 'QB').sort((a, b) => b.efficiency - a.efficiency);
+  const pks = players.filter(p => p.position === 'PK').sort((a, b) => b.efficiency - a.efficiency);
+  const defs = players.filter(p => ['Def', 'DEF'].includes(p.position)).sort((a, b) => b.efficiency - a.efficiency);
+
+  if (qbs[0]) team.qb.push({ ...qbs[0], slotLabel: 'QB', isFlex: false });
+  if (pks[0]) team.pk.push({ ...pks[0], slotLabel: 'PK', isFlex: false });
+  if (defs[0]) team.def.push({ ...defs[0], slotLabel: 'DEF', isFlex: false });
+
+  const flexEligible = players
+    .filter(p => ['RB', 'WR', 'TE'].includes(p.position))
+    .sort((a, b) => b.efficiency - a.efficiency);
+
+  const topRB = flexEligible.find(p => p.position === 'RB');
+  const topWR = flexEligible.find(p => p.position === 'WR');
+  const topTE = flexEligible.find(p => p.position === 'TE');
+
+  if (topRB) team.rb.push({ ...topRB, slotLabel: 'RB', isFlex: false });
+  if (topWR) team.wr.push({ ...topWR, slotLabel: 'WR', isFlex: false });
+  if (topTE) team.te.push({ ...topTE, slotLabel: 'TE', isFlex: false });
+
+  const starterIds = new Set([topRB?.id, topWR?.id, topTE?.id].filter(Boolean));
+  const flexPlayers = flexEligible
+    .filter(p => !starterIds.has(p.id))
+    .slice(0, 3);
+
+  flexPlayers.forEach(player => {
+    if (player.position === 'RB') {
+      team.rb.push({ ...player, slotLabel: 'RB (Flex)', isFlex: true });
+    } else if (player.position === 'WR') {
+      team.wr.push({ ...player, slotLabel: 'WR (Flex)', isFlex: true });
+    } else if (player.position === 'TE') {
+      team.te.push({ ...player, slotLabel: 'TE (Flex)', isFlex: true });
+    }
+  });
+
+  return team;
+};
+
+// Group all players by season for Team of the Year calculation
+const playersBySeason = new Map();
+for (const [path, mod] of Object.entries(playerModules)) {
+  const season = extractSeason(path);
+  if (!season) continue;
+
+  const data = getModuleData(mod);
+  const players = data?.players ?? [];
+  const seasonPlayers = players
+    .map((player) => {
+      const salary = Number(player.salary) || 0;
+      const points = Number(player.points) || 0;
+      const contractYears =
+        Number.parseInt(player.contractYear ?? player.contractYearRemaining ?? '0', 10) || 0;
+      if (!salary || !points) return null;
+      return {
+        season,
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        salary,
+        points,
+        efficiency: points / salary,
+        franchiseId: player.franchiseId,
+        team: player.team ?? '',
+        headshot: player.headshot ?? getPlayerImageUrl(player.id),
+        contractYears,
+        positionLabel: positionLabelMap.get(player.position) ?? player.position,
+      };
+    })
+    .filter(Boolean);
+
+  if (seasonPlayers.length) {
+    playersBySeason.set(season, seasonPlayers);
+  }
+}
+
+// Calculate Team of the Year for each season
+playersBySeason.forEach((players, season) => {
+  const team = buildTeamFromPlayers(players);
+  teamOfYearBySeason.set(season, team);
+});
+const allPlayersAllSeasons = Array.from(playersBySeason.values()).flat();
+const emptyTeam = { qb: [], rb: [], wr: [], te: [], pk: [], def: [] };
+const allTimeTeam = allPlayersAllSeasons.length ? buildTeamFromPlayers(allPlayersAllSeasons) : emptyTeam;
+
+// Get available years for year dropdown
+const availableYears = Array.from(playersBySeason.keys())
+  .map(Number)
+  .sort((a, b) => b - a);
+const mostRecentYear = availableYears[0]?.toString() ?? getCurrentSeasonYear().toString();
+
+// Create a set of overall MVP player IDs for badge display
+const overallMvpIds = new Set(overallCandidates.map(p => `${p.id}-${p.season}`));
+
+// Get available positions for filter
+const availablePositions = [...positionLabels];
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+const formatCurrency = (value: number) => {
+  if (!Number.isFinite(value)) return '$0';
+  return currencyFormatter.format(Math.round(value));
+};
+const formatContract = (salary: number, years: number) => {
+  const base = formatCurrency(salary);
+  const normalizedYears = Number.isFinite(years) ? Number(years) : 0;
+  return normalizedYears > 1 ? `${base} x ${normalizedYears}` : base;
+};
+const formatPoints = (value: number) =>
+  Number.isFinite(value) ? value.toFixed(1) : '0.0';
+const getNflLogo = (team) => {
+  let code = (team ?? '').toUpperCase() || 'FA';
+  // Normalize team codes that don't match logo filenames
+  const teamCodeMap = {
+    'TBB': 'TB',   // Tampa Bay Buccaneers
+    'GBP': 'GB',   // Green Bay Packers
+    'NEP': 'NE',   // New England Patriots
+    'KCC': 'KC',   // Kansas City Chiefs
+    'SFO': 'SF',   // San Francisco 49ers
+    'NOS': 'NO',   // New Orleans Saints
+    'SDC': 'LAC',  // San Diego Chargers → LA Chargers
+    'SD': 'LAC',   // San Diego Chargers → LA Chargers
+    'JAC': 'JAX',  // Jacksonville Jaguars
+  };
+  code = teamCodeMap[code] ?? code;
+  return `/assets/nfl-logos/${code}.svg`;
+};
+---
+
+<TheLeagueLayout title="MFL MVPs">
+  <section class="mvp-history">
+    <header>
+      <h1>GM MVP Awards</h1>
+      <p>
+        Most efficient contracts by season, calculated as points scored divided
+        by salary. 
+      </p>
+    </header>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label for="position-filter" class="filter-label">View</label>
+        <select id="position-filter" class="filter-select">
+          <option value="team_of_year">Team of the Year</option>
+          <option value="all_time_team">All-Time Team</option>
+          <option value="all_time_mvps">All-Time MVPs</option>
+          {availablePositions.map(({ key, label }) => (
+            <option value={key}>{label}</option>
+          ))}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="year-filter" class="filter-label">Year</label>
+        <select id="year-filter" class="filter-select">
+          {availableYears.map(year => (
+            <option value={year} selected={year.toString() === mostRecentYear}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <!-- Team of the Year View -->
+    <div id="team-of-year-view" class="team-of-year-container">
+      {availableYears.map(year => {
+        const team = teamOfYearBySeason.get(year.toString());
+        if (!team) return null;
+
+        return (
+          <div class="team-of-year-season" data-year={year} style={year.toString() === mostRecentYear ? '' : 'display: none;'}>
+            <h2 class="team-of-year-title">{year} Team of the Year</h2>
+            <div class="team-of-year-roster">
+              {[
+                { players: team.qb, label: 'Quarterback' },
+                { players: team.rb, label: 'Running Back' },
+                { players: team.wr, label: 'Wide Receiver' },
+                { players: team.te, label: 'Tight End' },
+                { players: team.pk, label: 'Kicker' },
+                { players: team.def, label: 'Defense' },
+              ].map(({ players, label }) => (
+                players.length > 0 && (
+                  <div class="position-group-row">
+                    <h3 class="position-group-title">{label}</h3>
+                    <div class={players.length === 4 ? 'position-cards-quad' : players.length > 1 ? 'position-cards-multi' : 'position-cards-single'}>
+                      {players.map(player => {
+                        const franchise = player.franchiseId ? franchiseLookup.get(player.franchiseId) : null;
+                        const nflLogo = player.team ? getNflLogo(player.team) : null;
+                        const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
+                        const slotLabel = player.slotLabel ?? label;
+                        return (
+                          <article class="mvp-card team-of-year-card">
+                            <div class="slot-label">{slotLabel}</div>
+                            <header>
+                              <div class="card-header-top">
+                                <div class="season-badge-row">
+                                  <p class="mvp-season">{player.season}</p>
+                                  {isLeagueMvp && <span class="league-mvp-badge">MVP</span>}
+                                </div>
+                                {franchise?.icon && (
+                                  <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
+                                )}
+                              </div>
+                              <div class="player-info">
+                                <img
+                                  src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                                  alt={`${player.name} headshot`}
+                                  class="player-headshot"
+                                  loading="lazy"
+                                  onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                                />
+                                <div>
+                                  <h2 class="player-info__headline">{player.name}</h2>
+                                  <p class="mvp-meta">
+                                    {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+                                    <span>{player.position}</span>
+                                  </p>
+                                </div>
+                              </div>
+                            </header>
+                            <dl>
+                              <div><dt>Points</dt><dd>{formatPoints(player.points)}</dd></div>
+                              <div><dt>Contract</dt><dd>{formatContract(player.salary, player.contractYears)}</dd></div>
+                              <div><dt>Efficiency</dt><dd>{formatCurrency(1 / player.efficiency)} / pt</dd></div>
+                            </dl>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- All-Time Team View -->
+    <div id="all-time-team-view" class="team-of-year-container" style="display: none;">
+      {allPlayersAllSeasons.length ? (
+        <div class="team-of-year-season" data-year="all_time">
+          <h2 class="team-of-year-title">All-Time Team</h2>
+          <div class="team-of-year-roster">
+            {[
+              { players: allTimeTeam.qb, label: 'Quarterback' },
+              { players: allTimeTeam.rb, label: 'Running Back' },
+              { players: allTimeTeam.wr, label: 'Wide Receiver' },
+              { players: allTimeTeam.te, label: 'Tight End' },
+              { players: allTimeTeam.pk, label: 'Kicker' },
+              { players: allTimeTeam.def, label: 'Defense' },
+            ].map(({ players, label }) => (
+              players.length > 0 && (
+                <div class="position-group-row">
+                  <h3 class="position-group-title">{label}</h3>
+                  <div class={players.length === 4 ? 'position-cards-quad' : players.length > 1 ? 'position-cards-multi' : 'position-cards-single'}>
+                    {players.map(player => {
+                      const franchise = player.franchiseId ? franchiseLookup.get(player.franchiseId) : null;
+                      const nflLogo = player.team ? getNflLogo(player.team) : null;
+                      const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
+                      const slotLabel = player.slotLabel ?? label;
+                      return (
+                        <article class="mvp-card team-of-year-card">
+                          <div class="slot-label">{slotLabel}</div>
+                          <header>
+                            <div class="card-header-top">
+                              <div class="season-badge-row">
+                                <p class="mvp-season">{player.season}</p>
+                                {isLeagueMvp && <span class="league-mvp-badge">MVP</span>}
+                              </div>
+                              {franchise?.icon && (
+                                <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
+                              )}
+                            </div>
+                            <div class="player-info">
+                              <img
+                                src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                                alt={`${player.name} headshot`}
+                                class="player-headshot"
+                                loading="lazy"
+                                onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                              />
+                              <div>
+                                <h2>{player.name}</h2>
+                                <p class="mvp-meta">
+                                  {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+                                  <span>{player.position}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </header>
+                          <dl>
+                            <div><dt>Points</dt><dd>{formatPoints(player.points)}</dd></div>
+                            <div><dt>Contract</dt><dd>{formatContract(player.salary, player.contractYears)}</dd></div>
+                            <div><dt>Efficiency</dt><dd>{formatCurrency(1 / player.efficiency)} / pt</dd></div>
+                          </dl>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p>No All-Time Team data available yet.</p>
+      )}
+    </div>
+
+    <div class="mvp-grid" id="overall-mvp-grid" style="display: none;">
+      {overallCandidates.length ? (
+        overallCandidates.map((player) => {
+          const franchise = player.franchiseId
+            ? franchiseLookup.get(player.franchiseId)
+            : null;
+          const nflLogo = player.team ? getNflLogo(player.team) : null;
+          return (
+            <article class="mvp-card" data-year={player.season} data-position={player.position}>
+              <header>
+                <div class="card-header-top">
+                  <p class="mvp-season">{player.season}</p>
+                  {franchise?.icon && (
+                    <img
+                      src={franchise.icon}
+                      alt={franchise?.name ?? 'Franchise'}
+                      class="franchise-icon"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+                <div class="player-info">
+                  <img
+                    src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                    alt={`${player.name} headshot`}
+                    class="player-headshot"
+                    loading="lazy"
+                    onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                  />
+                  <div>
+                    <h2>{player.name}</h2>
+                    <p class="mvp-meta">
+                      {nflLogo && (
+                        <img
+                          src={nflLogo}
+                          alt={`${player.team ?? 'FA'} logo`}
+                          class="nfl-icon"
+                          loading="lazy"
+                        />
+                      )}
+                      <span>{player.position}</span>
+                    </p>
+                  </div>
+                </div>
+              </header>
+              <dl>
+                <div>
+                  <dt>Points</dt>
+                  <dd>{formatPoints(player.points)}</dd>
+                </div>
+                <div>
+                  <dt>Contract</dt>
+                  <dd>{formatContract(player.salary, player.contractYears)}</dd>
+                </div>
+                <div>
+                  <dt>Efficiency</dt>
+                  <dd>{formatCurrency(1 / player.efficiency)} / pt</dd>
+                </div>
+              </dl>
+            </article>
+          );
+        })
+      ) : (
+        <p>No MVP data available yet.</p>
+      )}
+    </div>
+    <section class="position-mvps" style="display: none;">
+      <h2>Position MVPs</h2>
+      {positionLabels.map(({ key, label }) => {
+        const list = positionBuckets.get(key) ?? [];
+        return (
+          <div class="position-group">
+            <h3>{label}</h3>
+            <div class="mvp-grid">
+              {list.length ? (
+                list.map((player) => {
+                  const franchise = player.franchiseId
+                    ? franchiseLookup.get(player.franchiseId)
+                    : null;
+                  const nflLogo = player.team ? getNflLogo(player.team) : null;
+                  const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
+                  return (
+                    <article class="mvp-card" data-year={player.season} data-position={player.position}>
+                      <header>
+                        <div class="card-header-top">
+                          <div class="season-badge-row">
+                            <p class="mvp-season">{player.season}</p>
+                            {isLeagueMvp && (
+                              <span class="league-mvp-badge">MVP</span>
+                            )}
+                          </div>
+                          {franchise?.icon && (
+                            <img
+                              src={franchise.icon}
+                              alt={franchise?.name ?? 'Franchise'}
+                              class="franchise-icon"
+                              loading="lazy"
+                            />
+                          )}
+                        </div>
+                        <div class="player-info">
+                          <img
+                            src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                            alt={`${player.name} headshot`}
+                            class="player-headshot"
+                            loading="lazy"
+                            onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                          />
+                          <div>
+                            <h2>{player.name}</h2>
+                            <p class="mvp-meta">
+                              {nflLogo && (
+                                <img
+                                  src={nflLogo}
+                                  alt={`${player.team ?? 'FA'} logo`}
+                                  class="nfl-icon"
+                                  loading="lazy"
+                                />
+                              )}
+                              <span>{player.position}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </header>
+                      <dl>
+                        <div>
+                          <dt>Points</dt>
+                          <dd>{formatPoints(player.points)}</dd>
+                        </div>
+                        <div>
+                          <dt>Contract</dt>
+                          <dd>{formatContract(player.salary, player.contractYears)}</dd>
+                        </div>
+                        <div>
+                          <dt>Efficiency</dt>
+                          <dd>{formatCurrency(1 / player.efficiency)} / pt</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })
+              ) : (
+                <p class="empty-state">No MVP data yet.</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .mvp-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .filters {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.25rem;
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+  }
+
+  .filter-select {
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    color: #1e293b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: fit-content;
+  }
+
+  .filter-select:hover {
+    border-color: #94a3b8;
+  }
+
+  .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .mvp-card.hidden {
+    display: none;
+  }
+
+  /* Team of the Year Styles */
+  .team-of-year-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .team-of-year-season {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .team-of-year-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid #3b82f6;
+  }
+
+  .team-of-year-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .position-group-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .position-group-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #475569;
+    margin: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .position-cards-single {
+    display: flex;
+  }
+
+  .position-cards-multi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .position-cards-quad {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+
+  .team-of-year-card {
+    position: relative;
+  }
+
+  .slot-label {
+    position: absolute;
+    top: -0.5rem;
+    left: 1rem;
+    background: #3b82f6;
+    color: #fff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  }
+
+  @media (max-width: 767px) {
+    .position-cards-multi,
+    .position-cards-quad {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .season-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .league-mvp-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+  }
+
+  .mvp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .mvp-card {
+    background: #fff;
+    border: 1px solid #d7dce3;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .mvp-card header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .card-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .franchise-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    object-fit: contain;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .player-info__headline {
+    min-width: 240px;
+  }
+
+  .player-headshot {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f3f4f6;
+    flex-shrink: 0;
+  }
+
+  .mvp-season {
+    margin: 0;
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .mvp-meta {
+    margin: 0;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .nfl-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  dt {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .position-mvps h2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .position-group {
+    margin-bottom: 2rem;
+  }
+
+  .position-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .empty-state {
+    margin: 0;
+    color: #6b7280;
+  }
+</style>
+
+<script>
+  function setupMvpFilters() {
+    const positionFilter = document.getElementById('position-filter');
+    const yearFilter = document.getElementById('year-filter');
+    const teamOfYearView = document.getElementById('team-of-year-view');
+    const allTimeTeamView = document.getElementById('all-time-team-view');
+    const overallGrid = document.getElementById('overall-mvp-grid');
+    const positionMvpsSection = document.querySelector('.position-mvps');
+    const positionGroups = document.querySelectorAll('.position-group');
+    const teamOfYearSeasons = document.querySelectorAll('.team-of-year-season');
+
+    function applyFilters() {
+      if (!positionFilter || !yearFilter) return;
+
+      const selectedView = positionFilter.value;
+      const selectedYear = yearFilter.value;
+
+      // Map position keys to labels for comparison
+      const positionMap = {
+        'QB': 'Quarterback',
+        'RB': 'Running Back',
+        'WR': 'Wide Receiver',
+        'TE': 'Tight End',
+        'PK': 'Kicker',
+        'Def': 'Defense/ST'
+      };
+
+      // Handle different view modes
+      if (selectedView === 'team_of_year') {
+        // Show Team of the Year view, enable year dropdown
+        if (teamOfYearView) teamOfYearView.style.display = '';
+        if (allTimeTeamView) allTimeTeamView.style.display = 'none';
+        if (overallGrid) overallGrid.style.display = 'none';
+        if (positionMvpsSection) positionMvpsSection.style.display = 'none';
+        yearFilter.disabled = false;
+
+        // Show only the selected year's team
+        teamOfYearSeasons.forEach(season => {
+          const yearAttr = season.dataset.year;
+          if (yearAttr === selectedYear) {
+            season.style.display = '';
+          } else {
+            season.style.display = 'none';
+          }
+        });
+
+      } else if (selectedView === 'all_time_mvps') {
+        // Show All-Time MVPs grid, disable year dropdown
+        if (teamOfYearView) teamOfYearView.style.display = 'none';
+        if (allTimeTeamView) allTimeTeamView.style.display = 'none';
+        if (overallGrid) overallGrid.style.display = '';
+        if (positionMvpsSection) positionMvpsSection.style.display = 'none';
+        if (yearFilter) yearFilter.disabled = true;
+
+      } else if (selectedView === 'all_time_team') {
+        // Show All-Time Team view, disable year dropdown
+        if (teamOfYearView) teamOfYearView.style.display = 'none';
+        if (allTimeTeamView) allTimeTeamView.style.display = '';
+        if (overallGrid) overallGrid.style.display = 'none';
+        if (positionMvpsSection) positionMvpsSection.style.display = 'none';
+        yearFilter.disabled = true;
+
+      } else {
+        // Show specific position MVPs across all years, disable year dropdown
+        if (teamOfYearView) teamOfYearView.style.display = 'none';
+        if (allTimeTeamView) allTimeTeamView.style.display = 'none';
+        if (overallGrid) overallGrid.style.display = 'none';
+        if (positionMvpsSection) positionMvpsSection.style.display = '';
+        yearFilter.disabled = true;
+
+        const selectedLabel = positionMap[selectedView];
+        positionGroups.forEach(group => {
+          const groupHeading = group.querySelector('h3');
+          const groupPosition = groupHeading?.textContent?.trim();
+
+          if (groupPosition === selectedLabel) {
+            group.style.display = '';
+          } else {
+            group.style.display = 'none';
+          }
+        });
+      }
+    }
+
+    positionFilter?.addEventListener('change', applyFilters);
+    yearFilter?.addEventListener('change', applyFilters);
+  }
+
+  // Initialize on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMvpFilters);
+  } else {
+    setupMvpFilters();
+  }
+
+  // Re-run on page transitions (for Astro view transitions)
+  document.addEventListener('astro:after-swap', setupMvpFilters);
+</script>

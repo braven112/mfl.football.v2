@@ -1,0 +1,29 @@
+# Vercel Ignore File
+# Prevents large data files from being bundled into serverless functions
+
+# Large salary history snapshots (raw timestamped files)
+src/data/salary-history/**/raw-*.json
+data/*/salary-history/
+
+# Design files (PSDs, large images)
+design/
+
+# Test files
+tests/
+*.test.ts
+*.spec.ts
+
+# Development artifacts
+tmp/
+*.log
+
+# Git
+.git/
+
+# Editor configs
+.vscode/
+.idea/
+
+# Local env files (should already be ignored)
+.env.local
+.env.*.local

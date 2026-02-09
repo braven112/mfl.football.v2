@@ -1,0 +1,2030 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import MatchupSelector from '../../components/theleague/MatchupSelector.astro';
+import SundayTicketMultiView from '../../components/theleague/SundayTicketMultiView.astro';
+import PlayerStatusIndicator from '../../components/theleague/PlayerStatusIndicator.astro';
+import LineupAccordion from '../../components/theleague/LineupAccordion.astro';
+import { getTeamProjection } from '../../utils/projections';
+import { normalizeTeamCode, getNFLTeamLogo, getStadiumName } from '../../utils/nfl';
+import { parseMatchupParams, resolveCurrentMatchup } from '../../utils/matchup-routing';
+import { getCalendarIcon } from '../../utils/timezone-utils';
+import { MFLMatchupApiClient } from '../../utils/mfl-matchup-api';
+import { buildMatchupLineups } from '../../utils/lineup-data-builder';
+import type { Matchup, FantasyTeam, NFLGame } from '../../types/matchup-previews';
+
+export const prerender = false; // Enable server-side rendering for URL parameter handling
+
+// Load the NFL-enhanced matchup story
+import storyData from '../../../data/theleague/test-matchup-story-nfl.json';
+
+// Load MFL data for real projections and team data
+import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
+import projectedScoresData from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
+import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
+import leagueData from '../../../data/theleague/mfl-feeds/2025/league.json';
+import weeklyResults from '../../../data/theleague/mfl-feeds/2025/weekly-results.json';
+import weeklyResultsRaw from '../../../data/theleague/mfl-feeds/2025/weekly-results-raw.json';
+import leagueAssets from '../../data/theleague.assets.json';
+
+// Load real injury data from MFL player salaries (same as rosters page)
+import playerSalariesData from '../../data/mfl-player-salaries-2025.json';
+
+// AI-generated fantasy-contextual NFL game blurbs for current matchup (0001 vs 0011)
+import matchupBlurbs0001vs0011 from '../../../data/theleague/matchup-nfl-blurbs-0001-0011.json';
+
+// Load NFL schedule for game details
+import nflSchedule from '../../../data/theleague/nfl-cache/week15-2025.json';
+
+// Load international broadcast mappings
+import broadcastMappings from '../../../data/theleague/broadcast-mappings.json';
+
+// Load ESPN news articles
+import nflNewsData from '../../../data/theleague/nfl-news-week15.json';
+
+// Load live starting lineups and injury data
+import liveStartingLineupsWeek15 from '../../../data/theleague/live-starting-lineups-week-15.json';
+import liveInjuryDataWeek15 from '../../../data/theleague/live-injury-data-week-15.json';
+
+// Helper function to calculate team projections from live data
+function getTeamProjectionFromLive(
+  franchiseId: string,
+  rostersData: any,
+  liveProjections: Record<string, number>
+): number {
+  const franchise = rostersData.rosters.franchise.find((f: any) => f.id === franchiseId);
+  if (!franchise) return 0;
+
+  const players = Array.isArray(franchise.player) ? franchise.player : [franchise.player];
+  let totalProjection = 0;
+
+  players.forEach((player: any) => {
+    if (player.status === 'ROSTER' && player.id) {
+      const projection = liveProjections[player.id] || 0;
+      totalProjection += projection;
+    }
+  });
+
+  return totalProjection;
+}
+
+// Calculate real projections from MFL data (will be updated with live data)
+const homeProjection = getTeamProjection('0013', rostersData, projectedScoresData);
+const awayProjection = getTeamProjection('0015', rostersData, projectedScoresData);
+
+// Build real NFL games data from rosters with live projections
+function buildNFLGamesFromRosters(homeTeamId: string, awayTeamId: string, liveProjectionsData: Record<string, number> = {}) {
+  // Get rosters for both teams
+  const homeRoster = rostersData.rosters.franchise.find((f: any) => f.id === homeTeamId);
+  const awayRoster = rostersData.rosters.franchise.find((f: any) => f.id === awayTeamId);
+
+  if (!homeRoster || !awayRoster) return [];
+
+  // Build player maps
+  const playerMap = new Map();
+  const playersList = Array.isArray(playersData.players.player)
+    ? playersData.players.player
+    : [playersData.players.player];
+  playersList.forEach((p: any) => playerMap.set(p.id, p));
+
+  // Use live projections if available, fallback to static data
+  const projMap = new Map();
+  if (Object.keys(liveProjectionsData).length > 0) {
+    // Use live projections from MFL API
+    Object.entries(liveProjectionsData).forEach(([id, score]) => {
+      projMap.set(id, score);
+    });
+  } else {
+    // Fallback to static projections
+    const projList = Array.isArray(projectedScoresData.projectedScores.playerScore)
+      ? projectedScoresData.projectedScores.playerScore
+      : [projectedScoresData.projectedScores.playerScore];
+    projList.forEach((p: any) => projMap.set(p.id, parseFloat(p.score) || 0));
+  }
+
+  // Group players by NFL team
+  const nflGamesMap = new Map();
+
+  function addPlayer(playerId: string, fantasyTeamId: string) {
+    const player = playerMap.get(playerId);
+    if (!player) return;
+
+    const nflTeam = normalizeTeamCode(player.team);
+    const projection = projMap.get(playerId) || 0;
+
+    if (!nflGamesMap.has(nflTeam)) {
+      nflGamesMap.set(nflTeam, { team: nflTeam, players: [] });
+    }
+
+    nflGamesMap.get(nflTeam).players.push({
+      id: playerId,
+      name: player.name,
+      position: player.position,
+      nflTeam,
+      projectedPoints: projection,
+      fantasyTeamId,
+      espnId: player.espn_id || ''
+    });
+  }
+
+  // Add all players from both teams
+  const homePlayers = Array.isArray(homeRoster.player) ? homeRoster.player : [homeRoster.player];
+  const awayPlayers = Array.isArray(awayRoster.player) ? awayRoster.player : [awayRoster.player];
+
+  homePlayers.forEach((p: any) => addPlayer(p.id, homeTeamId));
+  awayPlayers.forEach((p: any) => addPlayer(p.id, awayTeamId));
+
+  // Match NFL teams to create games
+  const schedule = nflSchedule.schedule || {};
+  const gameDetails = nflSchedule.gameDetails || {};
+  const processedGames = new Set();
+  const games: any[] = [];
+
+  Object.entries(schedule).forEach(([teamCode, opponentCode]) => {
+    const team1 = normalizeTeamCode(teamCode as string);
+    const team2 = normalizeTeamCode(opponentCode as string);
+    const key = [team1, team2].sort().join('-');
+
+    if (processedGames.has(key)) return;
+    processedGames.add(key);
+
+    // Get players for both teams
+    const team1Data = nflGamesMap.get(team1);
+    const team2Data = nflGamesMap.get(team2);
+    const allPlayers = [
+      ...(team1Data?.players || []),
+      ...(team2Data?.players || [])
+    ];
+
+    if (allPlayers.length === 0) return; // No fantasy players in this game
+
+    // Get game details
+    const detailKey1 = `${team1}_vs_${team2}`;
+    const detailKey2 = `${team2}_vs_${team1}`;
+    const details = (gameDetails as any)[detailKey1] || (gameDetails as any)[detailKey2] || {};
+
+    games.push({
+      team1,
+      team2,
+      players: allPlayers,
+      playerCount: allPlayers.length,
+      day: details.day || 'Sun',
+      time: details.time || '10:00 AM PST',
+      channel: details.channel || '',
+      channelLogo: details.channelLogo || '',
+      weather: details.weather || '',
+      temp: details.temp || '',
+      conditions: details.conditions || ''
+    });
+  });
+
+  // Sort games: chronologically first, then by fantasy impact for same-time games
+  return games.sort((a, b) => {
+    // Helper to convert time to sortable format
+    const getTimeValue = (game: any) => {
+      const dayOrder: Record<string, number> = { 'Thu': 0, 'Fri': 1, 'Sat': 2, 'Sun': 3, 'Mon': 4, 'Tue': 5, 'Wed': 6 };
+      const dayValue = dayOrder[game.day as string] ?? 3; // Default to Sunday
+
+      // Parse time like "10:00 AM PST" or "5:15 PM PST"
+      const timeMatch = game.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) return dayValue * 10000; // Day only if no time
+
+      let hours = parseInt(timeMatch[1]);
+      const minutes = parseInt(timeMatch[2]);
+      const period = timeMatch[3].toUpperCase();
+
+      // Convert to 24-hour format
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+
+      // Return combined value: day * 10000 + hours * 100 + minutes
+      return dayValue * 10000 + hours * 100 + minutes;
+    };
+
+    // Helper to calculate fantasy score
+    const getFantasyScore = (game: any) => {
+      return game.players.reduce((total: number, p: any) => {
+        return total + (parseFloat(p.projectedPoints) || 0);
+      }, 0);
+    };
+
+    const timeA = getTimeValue(a);
+    const timeB = getTimeValue(b);
+
+    // If times are different, sort chronologically
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    // If times are the same, sort by fantasy impact (descending)
+    return getFantasyScore(b) - getFantasyScore(a);
+  });
+}
+
+// Generate multiple matchups for navigation using real MFL playoff bracket data
+async function generateAllMatchups(week: number): Promise<Matchup[]> {
+  // Import MFL schedule integration
+  const { getWeeklyMatchupsWithMFL } = await import('../../utils/matchup-service');
+  
+  try {
+    // Use MFL schedule integration to get real playoff bracket matchups
+    const matchups = await getWeeklyMatchupsWithMFL(week, {
+      leagueId: '13522',
+      year: '2025',
+      enablePlayoffBrackets: true,
+    });
+    
+    if (matchups && matchups.length > 0) {
+      console.log(`✅ Loaded ${matchups.length} matchups from MFL playoff bracket data for week ${week}`);
+      return matchups;
+    }
+  } catch (error) {
+    console.warn('Failed to load MFL schedule data, falling back to algorithmic generation:', error);
+  }
+  
+  // Fallback to algorithmic generation if MFL integration fails
+  console.log('Using fallback matchup generation');
+  
+  // Get real team data from MFL league data
+  const franchises = leagueData.league.franchises.franchise;
+  
+  // Create team lookup with assets
+  const teamLookup = new Map();
+  franchises.forEach((franchise: any) => {
+    // Find matching assets
+    const assetTeam = leagueAssets.teams.find((team: any) => team.id === franchise.id);
+    
+    teamLookup.set(franchise.id, {
+      id: franchise.id,
+      name: franchise.name,
+      ownerName: assetTeam?.name || franchise.name, // Use asset name if available
+      abbrev: franchise.abbrev,
+      icon: franchise.icon,
+      division: franchise.division,
+    });
+  });
+
+  const matchups: Matchup[] = [];
+  
+  // Generate matchups using a rotating schedule algorithm
+  // This creates more realistic weekly matchups
+  const teamIds = Array.from(teamLookup.keys()).sort();
+  const matchupCount = Math.floor(teamIds.length / 2);
+  
+  // Create weekly rotation based on week number
+  const rotationOffset = (week - 1) % (teamIds.length - 1);
+  
+  for (let i = 0; i < matchupCount; i++) {
+    let homeIndex, awayIndex;
+    
+    if (i === 0) {
+      // First team stays fixed, opponent rotates
+      homeIndex = 0;
+      awayIndex = 1 + rotationOffset;
+    } else {
+      // Other teams pair up in rotating fashion
+      homeIndex = i;
+      awayIndex = teamIds.length - i + rotationOffset;
+    }
+    
+    // Wrap around if needed
+    awayIndex = awayIndex % teamIds.length;
+    if (awayIndex === homeIndex) {
+      awayIndex = (awayIndex + 1) % teamIds.length;
+    }
+    
+    const homeTeamId = teamIds[homeIndex];
+    const awayTeamId = teamIds[awayIndex];
+    
+    if (!homeTeamId || !awayTeamId) continue;
+    
+    const homeTeamData = teamLookup.get(homeTeamId);
+    const awayTeamData = teamLookup.get(awayTeamId);
+    
+    if (!homeTeamData || !awayTeamData) continue;
+    
+    // Get real projections from live MFL data
+    const homeProjection = getTeamProjectionFromLive(homeTeamId, rostersData, liveProjections);
+    const awayProjection = getTeamProjectionFromLive(awayTeamId, rostersData, liveProjections);
+    
+    // Build NFL games for this matchup
+    const nflGames = buildNFLGamesFromRosters(homeTeamId, awayTeamId, liveProjections);
+    
+    const homeTeam: FantasyTeam = {
+      id: homeTeamData.id,
+      name: homeTeamData.name,
+      ownerName: homeTeamData.ownerName,
+      projectedPoints: homeProjection,
+    };
+    
+    const awayTeam: FantasyTeam = {
+      id: awayTeamData.id,
+      name: awayTeamData.name,
+      ownerName: awayTeamData.ownerName,
+      projectedPoints: awayProjection,
+    };
+    
+    const matchup: Matchup = {
+      id: `matchup-${i + 1}`,
+      week,
+      homeTeam,
+      awayTeam,
+      nflGames: nflGames || [],
+      gameState: 'pre-game',
+      projectedTotal: homeProjection + awayProjection,
+      analysis: `This ${week >= 15 ? 'playoff' : 'regular season'} matchup features ${awayTeam.name} visiting ${homeTeam.name}. Both teams are looking to make a statement in Week ${week}.`,
+      lastUpdated: new Date(),
+    };
+    
+    matchups.push(matchup);
+  }
+  
+  return matchups;
+}
+
+// Get URL parameters and resolve current matchup
+const url = Astro.url;
+const routeParams = parseMatchupParams(url);
+const week = routeParams.week || 15;
+
+// Get real MFL injury data and live projections FIRST
+const mflClient = new MFLMatchupApiClient({ leagueId: '13522', year: '2025' });
+let mflInjuryData: Record<string, any> = {};
+let liveProjections: Record<string, number> = {};
+
+try {
+  // Fetch live projections from MFL API
+  const [injuryData, projectionData] = await Promise.all([
+    mflClient.getPlayers(),
+    mflClient.getProjectedScores(week)
+  ]);
+  
+  mflInjuryData = injuryData;
+  liveProjections = projectionData;
+  
+  console.log(`✅ Loaded injury data for ${Object.keys(mflInjuryData).length} players from MFL`);
+  console.log(`✅ Loaded live projections for ${Object.keys(liveProjections).length} players from MFL API`);
+} catch (error) {
+  console.warn('Failed to load MFL live data, using fallback:', error);
+  
+  // Fallback to static projections if live fetch fails
+  const projList = Array.isArray(projectedScoresData.projectedScores.playerScore)
+    ? projectedScoresData.projectedScores.playerScore
+    : [projectedScoresData.projectedScores.playerScore];
+  projList.forEach((p: any) => {
+    if (p.id && p.score) {
+      liveProjections[p.id] = parseFloat(p.score) || 0;
+    }
+  });
+  console.log(`📁 Using static projections for ${Object.keys(liveProjections).length} players as fallback`);
+}
+
+// Generate all available matchups (now with live projections available)
+const allMatchups = await generateAllMatchups(week);
+
+// Ensure allMatchups is an array
+if (!Array.isArray(allMatchups)) {
+  console.error('allMatchups is not an array:', allMatchups);
+  throw new Error('Failed to generate matchups - invalid data structure');
+}
+
+console.log(`Generated ${allMatchups.length} matchups for week ${week}`);
+
+// Resolve current matchup from URL parameters
+let currentMatchup = resolveCurrentMatchup(allMatchups, routeParams);
+
+// If no matchup found, redirect to first available matchup
+if (!currentMatchup && allMatchups.length > 0) {
+  const defaultMatchup = allMatchups[0];
+  const redirectUrl = new URL(url);
+  redirectUrl.searchParams.set('matchup', defaultMatchup.id);
+  redirectUrl.searchParams.set('week', week.toString());
+  
+  return Astro.redirect(redirectUrl.toString());
+}
+
+// If still no matchup, show error
+if (!currentMatchup) {
+  throw new Error('No matchups available for this week');
+}
+
+// Build NFL games for the current matchup
+const realNFLGames = buildNFLGamesFromRosters(currentMatchup.homeTeam.id, currentMatchup.awayTeam.id, liveProjections);
+
+// Legacy matchup object for compatibility with existing code
+const matchup = {
+  week: currentMatchup.week,
+  home: {
+    id: currentMatchup.homeTeam.id,
+    name: currentMatchup.homeTeam.name,
+    record: '10-8', // Mock data - would come from MFL in real implementation
+    seed: 4,
+    projection: currentMatchup.homeTeam.projectedPoints || 0
+  },
+  away: {
+    id: currentMatchup.awayTeam.id,
+    name: currentMatchup.awayTeam.name,
+    record: '14-4', // Mock data - would come from MFL in real implementation
+    seed: 5,
+    projection: currentMatchup.awayTeam.projectedPoints || 0
+  },
+  story: storyData.story,
+  nflMatchups: storyData.nflMatchups,
+  nflGames: realNFLGames.length > 0 ? realNFLGames : currentMatchup.nflGames,
+  bracket: week >= 15 ? 'Playoffs - First Round' : 'Regular Season'
+};
+
+// Helper to get ESPN player headshot URL
+function getPlayerHeadshot(espnId: string) {
+  if (!espnId) return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
+}
+
+// Helper to get live starting lineup data from build-time fetched data
+async function getLiveStartingLineupData(week: number) {
+  const startingLineupMap = new Map();
+
+  try {
+    // Debug: Log what we have
+    console.log(`🔍 getLiveStartingLineupData called for week ${week}:`, {
+      hasImport: !!liveStartingLineupsWeek15,
+      hasLineups: !!liveStartingLineupsWeek15?.lineups,
+      lineupCount: Object.keys(liveStartingLineupsWeek15?.lineups || {}).length
+    });
+
+    // Use statically imported live starting lineup data for week 15
+    if (week === 15 && liveStartingLineupsWeek15?.lineups) {
+      console.log(`✅ Loaded live starting lineups for week ${week}: ${Object.keys(liveStartingLineupsWeek15.lineups || {}).length} players`);
+
+      Object.entries(liveStartingLineupsWeek15.lineups).forEach(([playerId, lineupData]: [string, any]) => {
+        startingLineupMap.set(playerId, {
+          isStarting: lineupData.isStarting,
+          franchiseId: lineupData.franchiseId,
+          week: lineupData.week
+        });
+      });
+
+      return startingLineupMap;
+    }
+    
+    // Fallback to static weekly results data
+    const weekData = weeklyResultsRaw.find((w: any) => 
+      w.weeklyResults?.matchup?.[0]?.franchise?.[0]?.week === week.toString() ||
+      w.weeklyResults?.week === week.toString()
+    );
+    
+    if (weekData?.weeklyResults?.matchup) {
+      weekData.weeklyResults.matchup.forEach((matchup: any) => {
+        matchup.franchise?.forEach((franchise: any) => {
+          if (franchise.player) {
+            franchise.player.forEach((player: any) => {
+              startingLineupMap.set(player.id, {
+                isStarting: player.status === 'starter',
+                franchiseId: franchise.id,
+                week: week
+              });
+            });
+          }
+        });
+      });
+      console.log(`📁 Using static starting lineup data for week ${week}: ${startingLineupMap.size} players`);
+    }
+  } catch (error) {
+    console.warn('Could not load starting lineup data:', error);
+  }
+  
+  return startingLineupMap;
+}
+
+// Get live starting lineup data for the current week
+const realStartingLineups = await getLiveStartingLineupData(week);
+
+// Create injury data lookup from MFL injuries API
+const realInjuryData = new Map();
+
+// Load live injury data from MFL API (fetched at build time)
+try {
+  const liveInjuryPath = `../../../data/theleague/live-injury-data-week-${week}.json`;
+  const liveInjuryData = await import(liveInjuryPath);
+
+  if (liveInjuryData.default?.injuries && Object.keys(liveInjuryData.default.injuries).length > 0) {
+    Object.entries(liveInjuryData.default.injuries).forEach(([playerId, injuryInfo]: [string, any]) => {
+      realInjuryData.set(playerId, {
+        injuryStatus: injuryInfo.injuryStatus,
+        injuryBodyPart: injuryInfo.injuryBodyPart || ''
+      });
+    });
+    console.log(`✅ Loaded injury data for ${realInjuryData.size} players from MFL injuries API (week ${week})`);
+
+    // Debug: Check if Geno Smith (ID: 11150) is in the injury data
+    if (realInjuryData.has('11150')) {
+      console.log('🔍 [Matchup Preview] Geno Smith (11150) injury data loaded:', realInjuryData.get('11150'));
+    } else {
+      console.log('⚠️  [Matchup Preview] Geno Smith (11150) NOT found in injury data');
+    }
+  } else {
+    throw new Error('No injury data available in file');
+  }
+} catch (liveError) {
+  console.warn(`Live injury data not available for week ${week}, using fallback:`, liveError.message);
+
+  // Fallback to Sleeper data from MFL player salaries
+  if (playerSalariesData?.players) {
+    playerSalariesData.players.forEach((player: any) => {
+      if (player.id && player.sleeper?.injuryStatus) {
+        realInjuryData.set(player.id, {
+          injuryStatus: player.sleeper.injuryStatus,
+          injuryBodyPart: player.sleeper.injuryBodyPart
+        });
+      }
+    });
+    console.log(`📁 Using fallback injury data for ${realInjuryData.size} players from Sleeper`);
+  }
+}
+
+// Build lineup data for both teams
+const { homeLineup, awayLineup } = buildMatchupLineups(
+  currentMatchup.homeTeam.id,
+  currentMatchup.awayTeam.id,
+  week,
+  rostersData,
+  projectedScoresData,
+  playersData,
+  realStartingLineups
+);
+
+
+
+// Helper to enhance player data with real MFL status indicators
+// Uses official MFL API as the authoritative source for injury status and live projections
+function enhancePlayerWithStatus(player: any): any {
+  // Get real starting status from MFL data
+  const realLineupData = realStartingLineups.get(player.id);
+  const isStarting = realLineupData?.isStarting ?? false;
+  
+  // Get real injury status from MFL player salaries data (same source as rosters page)
+  const realPlayerInjuryData = realInjuryData.get(player.id);
+  let injuryStatus = 'Healthy';
+  
+  if (realPlayerInjuryData?.injuryStatus) {
+    // Use real Sleeper injury data
+    injuryStatus = realPlayerInjuryData.injuryStatus;
+  } else {
+    // Fallback to MFL API data if available
+    const mflPlayerData = mflInjuryData[player.id];
+    injuryStatus = mflPlayerData?.injuryStatus || 'Healthy';
+  }
+  
+  // Get live projected points from MFL API (more accurate than static file)
+  let liveProjectedPoints = liveProjections[player.id] || player.projectedPoints || 0;
+  
+  // Players on IR or Out should have 0 projected points since they can't play
+  if (['IR', 'Out'].includes(injuryStatus)) {
+    liveProjectedPoints = 0;
+  }
+  
+  console.log(`Player ${player.name} (${player.id}): MFL injury status = ${injuryStatus}, Live projection = ${liveProjectedPoints}`);
+  
+  return {
+    ...player,
+    isStarting,
+    injuryStatus,
+    projectedPoints: liveProjectedPoints, // Use live projections from MFL API, 0 for IR/Out players
+    // In The League, only players on NFL IR are eligible for fantasy IR
+    isIReligible: injuryStatus === 'IR',
+    benchUpgrade: !isStarting && (injuryStatus === 'Healthy') ? {
+      // Only show bench upgrades for healthy players to avoid confusion
+      hasUpgrade: true,
+      pointsDifference: Math.random() * 5 + 2 // 2-7 point difference for demo
+    } : undefined
+  };
+}
+
+// Prepare games for Sunday Ticket Multi-View component
+const nflGamesForMultiView = (matchup.nflGames || []).map((game: any) => ({
+  id: `${game.team1}-${game.team2}`,
+  team1: game.team1,
+  team2: game.team2,
+  players: (game.players || []).map((player: any) => {
+    // Enhance each player with starting status for accurate fantasy impact calculation
+    const enhancedPlayer = enhancePlayerWithStatus(player);
+    return {
+      ...player,
+      isStarting: enhancedPlayer.isStarting,
+      projectedPoints: enhancedPlayer.projectedPoints
+    };
+  }),
+  playerCount: (game.players || []).filter((player: any) => {
+    const enhancedPlayer = enhancePlayerWithStatus(player);
+    return enhancedPlayer.isStarting;
+  }).length,
+  day: game.day || 'Sun',
+  time: game.time || '10:00 AM PST',
+  score: game.score,
+  projectedPoints: game.projectedPoints,
+  actualPoints: game.actualPoints
+}));
+
+// Helper to get matchup data for a specific player
+function getPlayerMatchupData(playerName: string, nflMatchups: any[]) {
+  if (!nflMatchups) return null;
+
+  return nflMatchups.find((m: any) => m.name === playerName) || null;
+}
+
+// Helper to get AI blurb for a game
+function getGameBlurb(team1: string, team2: string) {
+  // Load matchup-specific blurbs dynamically
+  try {
+    // Try to load the blurbs for the current matchup
+    const matchupBlurbsData = loadMatchupBlurbs(currentMatchup.homeTeam.id, currentMatchup.awayTeam.id);
+    
+    if (!matchupBlurbsData?.blurbs) return null;
+    
+    const matchupKey = `${normalizeTeamCode(team1)} @ ${normalizeTeamCode(team2)}`;
+    const matchupKeyReverse = `${normalizeTeamCode(team2)} @ ${normalizeTeamCode(team1)}`;
+
+    const blurb = matchupBlurbsData.blurbs.find((b: any) =>
+      b.nflMatchup === matchupKey || b.nflMatchup === matchupKeyReverse
+    );
+
+    return blurb || null;
+  } catch (error) {
+    // No blurbs available for this matchup yet - need to generate them
+    console.warn(`No AI blurbs found for matchup ${currentMatchup.homeTeam.id} vs ${currentMatchup.awayTeam.id}`);
+    return null;
+  }
+}
+
+// Helper to load matchup-specific blurb data
+function loadMatchupBlurbs(homeTeamId: string, awayTeamId: string) {
+  // Check if this is the matchup we have blurbs for (0001 vs 0011)
+  if (homeTeamId === '0001' && awayTeamId === '0011') {
+    return matchupBlurbs0001vs0011;
+  }
+  
+  console.warn(`No blurb data available for matchup ${homeTeamId} vs ${awayTeamId} - only have data for 0001 vs 0011`);
+  return null;
+}
+
+// Helper to generate enhanced matchup analysis with lineup optimization suggestions
+function getEnhancedMatchupAnalysis(game: any): string {
+  // Skip analysis if no starters in this game
+  const hasStarters = game.players.some((player: any) => {
+    const enhancedPlayer = enhancePlayerWithStatus(player);
+    return enhancedPlayer.isStarting;
+  });
+  
+  if (!hasStarters) {
+    return ''; // No analysis for games without starters
+  }
+
+  // Get the AI-generated blurb from the existing system
+  const baseBlurb = getGameBlurb(game.team1, game.team2);
+  return baseBlurb?.blurb || '';
+}
+
+// Helper to get ESPN news for a game
+function getGameNews(team1: string, team2: string) {
+  const t1 = normalizeTeamCode(team1);
+  const t2 = normalizeTeamCode(team2);
+
+  // Get news for both teams (top article from each)
+  const team1News = (nflNewsData.teams as any)?.[t1]?.[0];
+  const team2News = (nflNewsData.teams as any)?.[t2]?.[0];
+
+  // Return the most recent article
+  if (!team1News && !team2News) return null;
+  if (!team1News) return team2News;
+  if (!team2News) return team1News;
+
+  // Compare published dates and return most recent
+  const date1 = new Date(team1News.published);
+  const date2 = new Date(team2News.published);
+
+  return date1 > date2 ? team1News : team2News;
+}
+---
+
+<TheLeagueLayout title={`Week ${week} ${week >= 15 ? 'Playoff' : 'Regular Season'} Preview | The League`}>
+  <div class="matchup-preview-container">
+    <!-- Matchup Navigation -->
+    <MatchupSelector 
+      currentMatchup={currentMatchup}
+      availableMatchups={allMatchups}
+      week={week}
+    />
+
+    <!-- Scoreboard Header -->
+    <div class="scoreboard-header">
+      <div class="bracket-label">{matchup.bracket}</div>
+      <div class="week-label">Week {matchup.week}</div>
+
+      <div class="matchup-scoreboard">
+        <!-- Away Team (Left) -->
+        <div class="team away-team">
+          <div class="team-icon-container">
+            <img
+              src={`/assets/theleague/icons/${matchup.away.id}.png`}
+              alt={matchup.away.name}
+              class="team-icon"
+            />
+          </div>
+          <div class="team-info">
+            <div class="team-name">{matchup.away.name}</div>
+            <div class="team-record">
+              <span class="seed">#{matchup.away.seed} Seed</span>
+              <span class="separator">•</span>
+              <span class="record">{matchup.away.record}</span>
+            </div>
+          </div>
+          <div class="team-projection">
+            <div class="projection-label">Proj</div>
+            <div class="projection-value">{matchup.away.projection.toFixed(1)}</div>
+          </div>
+        </div>
+
+        <!-- VS Divider -->
+        <div class="vs-divider">
+          <span class="at-symbol">@</span>
+        </div>
+
+        <!-- Home Team (Right) -->
+        <div class="team home-team">
+          <div class="team-projection">
+            <div class="projection-label">Proj</div>
+            <div class="projection-value">{matchup.home.projection.toFixed(1)}</div>
+          </div>
+          <div class="team-info">
+            <div class="team-name">{matchup.home.name}</div>
+            <div class="team-record">
+              <span class="seed">#{matchup.home.seed} Seed</span>
+              <span class="separator">•</span>
+              <span class="record">{matchup.home.record}</span>
+            </div>
+          </div>
+          <div class="team-icon-container">
+            <img
+              src={`/assets/theleague/icons/${matchup.home.id}.png`}
+              alt={matchup.home.name}
+              class="team-icon"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lineup Accordion -->
+    <LineupAccordion 
+      homeLineup={homeLineup}
+      awayLineup={awayLineup}
+      homeTeamName={currentMatchup.homeTeam.name}
+      awayTeamName={currentMatchup.awayTeam.name}
+      homeTeamIcon={`/assets/theleague/icons/${currentMatchup.homeTeam.id}.png`}
+      awayTeamIcon={`/assets/theleague/icons/${currentMatchup.awayTeam.id}.png`}
+      isExpanded={false}
+    />
+
+    <!-- Sunday Ticket Multi-View -->
+    <SundayTicketMultiView 
+      games={nflGamesForMultiView}
+      timeSlot="both"
+      maxGames={4}
+      showTabs={true}
+    />
+
+    <!-- NFL Game Schedule -->
+    {matchup.nflGames && matchup.nflGames.length > 0 && (
+      <div class="nfl-games-section">
+        <h3 class="section-title">NFL Schedule - Week {matchup.week}</h3>
+        <p class="section-subtitle">This weeks games that impact this matchup</p>
+        <div class="games-list">
+          {matchup.nflGames.map((game: any, gameIndex: number) => {
+            // Check if this game has any starters
+            const hasStarters = game.players.some((player: any) => {
+              const enhancedPlayer = enhancePlayerWithStatus(player);
+              return enhancedPlayer.isStarting;
+            });
+            
+            return (
+              <div class={`game-card ${hasStarters ? 'has-starters' : 'no-starters'}`}>
+                <!-- Always visible game header with accordion toggle -->
+                <button 
+                  class="game-accordion-header" 
+                  data-game-toggle={`game-${gameIndex}`}
+                  aria-expanded={hasStarters}
+                  aria-controls={`game-content-${gameIndex}`}
+                >
+                  <div class="game-teams">
+                    <img
+                      src={getNFLTeamLogo(game.team1)}
+                      alt={game.team1}
+                      class="nfl-team-logo-large"
+                      onerror="this.style.display='none'"
+                    />
+                    <span class="team-code">{game.team1}</span>
+                    <span class="vs-text">@</span>
+                    <span class="team-code">{game.team2}</span>
+                    <img
+                      src={getNFLTeamLogo(game.team2)}
+                      alt={game.team2}
+                      class="nfl-team-logo-large"
+                      onerror="this.style.display='none'"
+                    />
+                  </div>
+                  <div class="accordion-chevron">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
+
+                <!-- Collapsible game content -->
+                <div 
+                  id={`game-content-${gameIndex}`}
+                  class={`game-accordion-content ${hasStarters ? 'expanded' : 'collapsed'}`}
+                  aria-hidden={!hasStarters}
+                >
+              <div class="game-details">
+                <div class="game-detail-item">
+                  <span class="detail-icon">🗓️</span>
+                  <span class="detail-text">{game.day} <span class="game-time-display" data-time-pt={game.time} data-day={game.day}>{game.time}</span></span>
+                </div>
+                <div class="game-detail-item" data-us-channel={game.channel}>
+                  {game.channelLogo ? (
+                    <div class="network-logo-wrapper">
+                      <img
+                        src={`/assets/tv-logos/${game.channelLogo}`}
+                        alt={game.channel}
+                        class={`network-logo ${game.channel.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}`}
+                      />
+                      <span class="tooltip channel-text">{game.channel}</span>
+                    </div>
+                  ) : (
+                    <span class="detail-icon channel-text" title={game.channel}>📺 {game.channel}</span>
+                  )}
+                </div>
+                {(game.stadium || getStadiumName(game.team2)) && (
+                  <div class="game-detail-item">
+                    <span class="detail-icon">🏟️</span>
+                    <span class="detail-text">{game.stadium || getStadiumName(game.team2)}</span>
+                  </div>
+                )}
+                {game.weather && game.weather !== 'Unknown' && (
+                  <div class="game-detail-item">
+                    <span class="detail-icon">{game.weather}</span>
+                    <span class="detail-text">
+                      <span class="temperature-display" data-temp-f={game.temp}>{game.temp}</span> · {game.conditions}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div class="game-players">
+                {(() => {
+                  // Sort players: starters first, then bench
+                  const starters = game.players.filter((player: any) => {
+                    const enhancedPlayer = enhancePlayerWithStatus(player);
+                    return enhancedPlayer.isStarting;
+                  });
+                  const bench = game.players.filter((player: any) => {
+                    const enhancedPlayer = enhancePlayerWithStatus(player);
+                    return !enhancedPlayer.isStarting;
+                  });
+
+                  return (
+                    <>
+                      {/* Starters Section */}
+                      {starters.length > 0 && (
+                        <div class="player-group">
+                          <div class="player-group-header">
+                            <span class="group-label starters">Starters ({starters.length})</span>
+                          </div>
+                          <div class="player-group-list">
+                            {starters.map((player: any) => {
+                              const matchupData = getPlayerMatchupData(player.name, matchup.nflMatchups);
+                              const matchupQuality = matchupData?.isGoodMatchup ? 'favorable' : matchupData?.isToughMatchup ? 'tough' : 'neutral';
+                              const enhancedPlayer = enhancePlayerWithStatus(player);
+                              return (
+                                <div class={`game-player starter ${matchupQuality}`}>
+                                  <img
+                                    src={getPlayerHeadshot(player.espnId)}
+                                    alt={player.name}
+                                    class="player-headshot-small"
+                                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                                  />
+                                  <div class="player-info-wrapper">
+                                    <div class="player-header">
+                                      <div class="player-text">
+                                        <strong>{player.name}</strong>
+                                        {enhancedPlayer.injuryStatus !== 'Healthy' && (
+                                          <span class="injury-status-inline">
+                                            ({enhancedPlayer.injuryStatus === 'Out' ? 'O' : 
+                                              enhancedPlayer.injuryStatus === 'Doubtful' ? 'D' : 
+                                              enhancedPlayer.injuryStatus === 'Questionable' ? 'Q' : 
+                                              enhancedPlayer.injuryStatus === 'IR' ? 'IR' : 
+                                              enhancedPlayer.injuryStatus})
+                                          </span>
+                                        )}
+                                        <div class="player-position">({player.position}, {player.nflTeam})</div>
+                                        {matchupData && (
+                                          <span class="player-matchup-info">
+                                            vs {matchupData.opponent} (#{matchupData.defenseRank} vs {matchupData.position})
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div class="player-points">
+                                        {matchupData && (
+                                          <span class={`matchup-indicator-inline ${matchupData.isGoodMatchup ? 'good' : matchupData.isToughMatchup ? 'tough' : ''}`}>
+                                            {matchupData.isGoodMatchup ? '✓' : matchupData.isToughMatchup ? '⚠' : ''}
+                                          </span>
+                                        )}
+                                        Proj: <strong>{player.projectedPoints ?? '--'}</strong><img src={`/assets/theleague/icons/${player.fantasyTeamId}.png`} alt="Fantasy Team" class="fantasy-team-logo-tiny" onerror="this.style.display='none'" />
+                                      </div>
+                                    </div>
+                                    
+                                    <!-- Minimal Status Indicators (no START badge since it's in starters section) -->
+                                    <div class="player-status-row">
+                                      <PlayerStatusIndicator 
+                                        player={enhancedPlayer} 
+                                        showOptimization={true}
+                                        className="compact-clean"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bench Section */}
+                      {bench.length > 0 && (
+                        <div class="player-group">
+                          <div class="player-group-header">
+                            <span class="group-label bench">Bench ({bench.length})</span>
+                          </div>
+                          <div class="player-group-list">
+                            {bench.map((player: any) => {
+                              const matchupData = getPlayerMatchupData(player.name, matchup.nflMatchups);
+                              const matchupQuality = matchupData?.isGoodMatchup ? 'favorable' : matchupData?.isToughMatchup ? 'tough' : 'neutral';
+                              const enhancedPlayer = enhancePlayerWithStatus(player);
+                              return (
+                                <div class={`game-player bench ${matchupQuality}`}>
+                                  <img
+                                    src={getPlayerHeadshot(player.espnId)}
+                                    alt={player.name}
+                                    class="player-headshot-small"
+                                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                                  />
+                                  <div class="player-info-wrapper">
+                                    <div class="player-header">
+                                      <div class="player-text">
+                                        <strong>{player.name}</strong>
+                                        {enhancedPlayer.injuryStatus !== 'Healthy' && (
+                                          <span class="injury-status-inline">
+                                            ({enhancedPlayer.injuryStatus === 'Out' ? 'O' : 
+                                              enhancedPlayer.injuryStatus === 'Doubtful' ? 'D' : 
+                                              enhancedPlayer.injuryStatus === 'Questionable' ? 'Q' : 
+                                              enhancedPlayer.injuryStatus === 'IR' ? 'IR' : 
+                                              enhancedPlayer.injuryStatus})
+                                          </span>
+                                        )}
+                                        <div class="player-position">({player.position}, {player.nflTeam})</div>
+                                        {matchupData && (
+                                          <span class="player-matchup-info">
+                                            vs {matchupData.opponent} (#{matchupData.defenseRank} vs {matchupData.position})
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div class="player-points">
+                                        {matchupData && (
+                                          <span class={`matchup-indicator-inline ${matchupData.isGoodMatchup ? 'good' : matchupData.isToughMatchup ? 'tough' : ''}`}>
+                                            {matchupData.isGoodMatchup ? '✓' : matchupData.isToughMatchup ? '⚠' : ''}
+                                          </span>
+                                        )}
+                                        Proj: <strong>{player.projectedPoints ?? '--'}</strong><img src={`/assets/theleague/icons/${player.fantasyTeamId}.png`} alt="Fantasy Team" class="fantasy-team-logo-tiny" onerror="this.style.display='none'" />
+                                      </div>
+                                    </div>
+                                    
+                                    <!-- Minimal Status Indicators (no BENCH badge since it's in bench section) -->
+                                    <div class="player-status-row">
+                                      <PlayerStatusIndicator 
+                                        player={enhancedPlayer} 
+                                        showOptimization={true}
+                                        className="compact-clean"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+              {(() => {
+                const enhancedAnalysis = getEnhancedMatchupAnalysis(game);
+                return enhancedAnalysis ? (
+                  <div class="game-blurb">
+                    <div class="blurb-content">
+                      <div class="blurb-label">Matchup Analysis</div>
+                      <div class="blurb-text">{enhancedAnalysis}</div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+                </div> <!-- Close game-accordion-content -->
+              </div> <!-- Close game-card -->
+            );
+          })}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <script is:inline define:vars={{ currentMatchup, allMatchups, week }}>
+    // Initialize matchup state management
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle matchup change events from the MatchupSelector
+      document.addEventListener('matchupchange', function(event) {
+        const { matchupId } = event.detail;
+        if (matchupId) {
+          // Update URL and reload page with new matchup
+          const url = new URL(window.location.href);
+          url.searchParams.set('matchup', matchupId);
+          url.searchParams.set('week', week.toString());
+          window.location.href = url.toString();
+        }
+      });
+
+      // Handle browser back/forward navigation
+      window.addEventListener('popstate', function() {
+        // Reload page to reflect URL changes
+        window.location.reload();
+      });
+
+      // Handle game accordion functionality
+      document.querySelectorAll('[data-game-toggle]').forEach(button => {
+        button.addEventListener('click', function() {
+          const gameId = this.getAttribute('data-game-toggle');
+          const content = document.getElementById(`game-content-${gameId.split('-')[1]}`);
+          const isExpanded = this.getAttribute('aria-expanded') === 'true';
+          const newExpanded = !isExpanded;
+          
+          // Update aria attributes
+          this.setAttribute('aria-expanded', newExpanded.toString());
+          content.setAttribute('aria-hidden', (!newExpanded).toString());
+          
+          // Toggle classes
+          if (newExpanded) {
+            content.classList.remove('collapsed');
+            content.classList.add('expanded');
+          } else {
+            content.classList.remove('expanded');
+            content.classList.add('collapsed');
+          }
+        });
+      });
+    });
+  </script>
+
+  <script is:inline define:vars={{ broadcastMappings }}>
+    // Enhanced timezone handling for multiple matchups with calendar icons
+    function convertTimesToLocalTimezone() {
+      const userTimezoneShort = new Date().toLocaleTimeString('en-us', {
+        timeZoneName: 'short'
+      }).split(' ')[2];
+
+      // Get user timezone info
+      function getUserTimezone() {
+        const date = new Date();
+        const timeZoneShort = date.toLocaleTimeString('en-US', {
+          timeZoneName: 'short'
+        }).split(' ')[2] || 'PST';
+        
+        return {
+          abbreviation: timeZoneShort,
+          offset: -date.getTimezoneOffset() / 60
+        };
+      }
+
+      // Convert PT time string to user's local time with enhanced timezone handling
+      function convertPTTimeToLocal(ptTimeString, gameDate) {
+        const userTz = getUserTimezone();
+        
+        // Parse time like "10:00 AM PST" or "1:25 PM PST"
+        const match = ptTimeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!match) {
+          return ptTimeString;
+        }
+
+        let [_, hours, minutes, period] = match;
+        let hour24 = parseInt(hours);
+        const min = parseInt(minutes);
+
+        // Convert to 24-hour format
+        if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
+        if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
+
+        // Use provided date or next Sunday as reference
+        const referenceDate = gameDate || getNextSunday();
+        
+        // Create PT date (PT is UTC-8 in standard time, UTC-7 in daylight time)
+        const ptOffset = isPacificDaylightTime(referenceDate) ? -7 : -8;
+        const utcHour = hour24 - ptOffset;
+        
+        const ptDate = new Date(referenceDate);
+        ptDate.setUTCHours(utcHour, min, 0, 0);
+
+        // Format in user's timezone
+        const localTimeString = ptDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        return `${localTimeString} ${userTz.abbreviation}`;
+      }
+
+      // Get timezone-specific copy for early games
+      function getEarlyGameCopy() {
+        const userTz = getUserTimezone();
+        
+        // Pacific timezone shows "10 AM PT"
+        if (userTz.abbreviation.includes('P')) {
+          return '10 AM PT';
+        }
+        
+        // Eastern timezone shows "1 PM ET"  
+        if (userTz.abbreviation.includes('E')) {
+          return '1 PM ET';
+        }
+        
+        // For other timezones, convert 10 AM PT to local time
+        return convertPTTimeToLocal('10:00 AM PST');
+      }
+
+      // Get timezone-specific copy for late games
+      function getLateGameCopy() {
+        const userTz = getUserTimezone();
+        
+        // Pacific timezone shows "1 PM PT"
+        if (userTz.abbreviation.includes('P')) {
+          return '1 PM PT';
+        }
+        
+        // Eastern timezone shows "4 PM ET"
+        if (userTz.abbreviation.includes('E')) {
+          return '4 PM ET';
+        }
+        
+        // For other timezones, convert 1 PM PT to local time
+        return convertPTTimeToLocal('1:00 PM PST');
+      }
+
+      // Helper functions
+      function getNextSunday() {
+        const today = new Date();
+        const daysUntilSunday = (7 - today.getDay()) % 7;
+        const nextSunday = new Date(today);
+        nextSunday.setDate(today.getDate() + daysUntilSunday);
+        return nextSunday;
+      }
+
+      function isPacificDaylightTime(date) {
+        const month = date.getMonth();
+        const day = date.getDate();
+        
+        // DST roughly March to November
+        if (month < 2 || month > 10) return false;
+        if (month > 2 && month < 10) return true;
+        
+        // March and November need day-specific checks (simplified)
+        return month === 2 ? day > 7 : day < 7;
+      }
+
+      // Update all game time displays
+      document.querySelectorAll('.game-time-display').forEach(function(el) {
+        const ptTime = el.getAttribute('data-time-pt');
+        if (ptTime) {
+          el.textContent = convertPTTimeToLocal(ptTime);
+        }
+      });
+
+      // Update Sunday Ticket subtitle with timezone-specific copy
+      const subtitles = document.querySelectorAll('[id^="sunday-ticket-subtitle"]');
+      subtitles.forEach(subtitle => {
+        const currentText = subtitle.textContent || '';
+        if (currentText.includes('Top 4') || currentText.includes('Top')) {
+          const gameCount = currentText.match(/Top (\d+)/)?.[1] || '4';
+          subtitle.textContent = `Top ${gameCount} games ranked by fantasy impact for your quad-box`;
+        }
+      });
+
+      // Update time slot tabs with timezone-specific labels
+      updateTimeSlotTabs();
+    }
+
+    // Update time slot tab labels with timezone-specific copy
+    function updateTimeSlotTabs() {
+      const userTz = getUserTimezone();
+      
+      function getUserTimezone() {
+        const date = new Date();
+        const timeZoneShort = date.toLocaleTimeString('en-US', {
+          timeZoneName: 'short'
+        }).split(' ')[2] || 'PST';
+        
+        return { abbreviation: timeZoneShort };
+      }
+
+      function getEarlyGameCopy() {
+        const userTz = getUserTimezone();
+        return userTz.abbreviation.includes('P') ? '10 AM PT' : 
+               userTz.abbreviation.includes('E') ? '1 PM ET' : '10 AM PT';
+      }
+
+      function getLateGameCopy() {
+        const userTz = getUserTimezone();
+        return userTz.abbreviation.includes('P') ? '1 PM PT' : 
+               userTz.abbreviation.includes('E') ? '4 PM ET' : '1 PM PT';
+      }
+      
+      const earlyTabLabel = document.querySelector('[data-tab="early"] .tab-label');
+      const lateTabLabel = document.querySelector('[data-tab="late"] .tab-label');
+      
+      if (earlyTabLabel) {
+        earlyTabLabel.textContent = `Early Games (${getEarlyGameCopy()})`;
+      }
+      
+      if (lateTabLabel) {
+        lateTabLabel.textContent = `Late Games (${getLateGameCopy()})`;
+      }
+    }
+
+    // Handle international broadcasts
+    function updateBroadcastInfo() {
+      // Check for query string override first
+      const urlParams = new URLSearchParams(window.location.search);
+      const countryParam = urlParams.get('country');
+
+      let countryCode = 'US'; // default
+
+      if (countryParam) {
+        // Use query string override (e.g., ?country=CA or ?country=AU)
+        countryCode = countryParam.toUpperCase();
+        console.log(`🌍 Using query string country override: ${countryCode}`);
+      } else {
+        // Detect country from timezone
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        // Simple timezone-based country detection
+        if (timezone.includes('Toronto') || timezone.includes('Vancouver') || timezone.includes('Montreal') || timezone.includes('Edmonton')) {
+          countryCode = 'CA';
+        } else if (timezone.includes('Sydney') || timezone.includes('Melbourne') || timezone.includes('Brisbane')) {
+          countryCode = 'AU';
+        }
+      }
+
+      // Get country-specific mappings
+      const countryData = broadcastMappings.countries[countryCode];
+      if (!countryData) return;
+
+      // Update all broadcast displays
+      document.querySelectorAll('[data-us-channel]').forEach(function(el) {
+        const usChannel = el.getAttribute('data-us-channel');
+
+        if (countryCode === 'US') {
+          // Keep US channel as-is
+          return;
+        }
+
+        // Map to international channel
+        const internationalChannel = countryData.mapping[usChannel] || countryData.mapping.default;
+        const channelInfo = countryData.channels[internationalChannel];
+
+        if (channelInfo) {
+          // Update channel text
+          const channelText = el.querySelector('.channel-text');
+          if (channelText) {
+            channelText.textContent = channelInfo.name;
+          }
+
+          // Update channel logo if present
+          const channelImg = el.querySelector('.network-logo');
+          if (channelImg && channelInfo.logo) {
+            channelImg.src = '/assets/tv-logos/' + channelInfo.logo;
+            channelImg.alt = channelInfo.name;
+          }
+        }
+      });
+
+      // Convert temperatures to Celsius for CA/AU
+      if (countryCode === 'CA' || countryCode === 'AU') {
+        convertTemperaturesToCelsius();
+      }
+
+      // Show country indicator
+      console.log(`📺 Showing broadcasts for: ${countryData.name} (${countryCode})`);
+    }
+
+    // Convert Fahrenheit to Celsius
+    function convertTemperaturesToCelsius() {
+      document.querySelectorAll('.temperature-display').forEach(function(el) {
+        const tempF = el.getAttribute('data-temp-f');
+        if (!tempF) return;
+
+        // Extract numeric value from string like "72°F" or "10°F"
+        const match = tempF.match(/(\d+)°F/);
+        if (!match) return;
+
+        const fahrenheit = parseInt(match[1]);
+        const celsius = Math.round((fahrenheit - 32) * 5 / 9);
+
+        // Update display with Celsius
+        el.textContent = `${celsius}°C`;
+      });
+
+      console.log('🌡️ Converted temperatures to Celsius');
+    }
+
+    // Run on page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        convertTimesToLocalTimezone();
+        updateBroadcastInfo();
+      });
+    } else {
+      convertTimesToLocalTimezone();
+      updateBroadcastInfo();
+    }
+  </script>
+</TheLeagueLayout>
+
+<style>
+  .matchup-preview-container {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  /* Scoreboard Header */
+  .scoreboard-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .bracket-label {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .week-label {
+    text-align: center;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  .matchup-scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* Team Styles */
+  .team {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .away-team {
+    flex-direction: row;
+  }
+
+  .home-team {
+    flex-direction: row-reverse;
+  }
+
+  .team-icon-container {
+    flex-shrink: 0;
+  }
+
+  .team-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 0.5rem;
+    background: white;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .team-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .away-team .team-info {
+    text-align: left;
+  }
+
+  .home-team .team-info {
+    text-align: right;
+  }
+
+  .team-name {
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.25rem;
+  }
+
+  .team-record {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .home-team .team-record {
+    justify-content: flex-end;
+  }
+
+  .seed {
+    font-weight: 600;
+  }
+
+  .separator {
+    opacity: 0.5;
+  }
+
+  .team-projection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+  }
+
+  .projection-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .projection-value {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* VS Divider */
+  .vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .at-symbol {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  
+
+  .ai-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .nfl-team-logo-large {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+  }
+
+
+
+  /* NFL Games Section */
+  .nfl-games-section {
+    background: var(--content-bg, #fff);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .section-subtitle {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    margin: -0.75rem 0 1.5rem 0;
+  }
+
+  .games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .game-card {
+    border-radius: 0.75rem;
+    background: var(--content-bg, #fff);
+    transition: box-shadow 0.2s;
+  }
+  @media screen and (min-width: 500px) {
+    
+  
+    .game-card {
+    border: 1px solid #cccccc;
+      padding: 1rem;
+  }
+}
+  .game-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Game Accordion Styles */
+  .game-card.no-starters {
+    opacity: 0.8;
+  }
+
+  /* Game Accordion Header */
+  .game-accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: left;
+  }
+
+  .game-accordion-header:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+
+
+  .accordion-chevron {
+    transition: transform 0.2s ease;
+    color: var(--muted-text-color, #6b7280);
+    display: flex;
+    align-items: center;
+  }
+
+  .game-accordion-header[aria-expanded="true"] .accordion-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Game Accordion Content */
+  .game-accordion-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+  }
+
+  .game-accordion-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  .game-accordion-content.expanded {
+    max-height: 2000px; /* Large enough to accommodate content */
+    opacity: 1;
+  }
+
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--primary-content-border-color, #e2e2e2);
+  }
+
+  .game-details {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .game-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .game-blurb {
+    padding: 0.875rem 1rem;
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--primary-content-border-color, #e2e2e2);
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  .blurb-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .blurb-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .blurb-text {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-color, #1f2937);
+    font-weight: 400;
+  }
+
+  .detail-icon {
+    font-size: 1.125rem;
+  }
+
+  .network-logo-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .network-logo {
+    height: 1.5rem;
+    width: auto;
+    object-fit: contain;
+    cursor: help;
+  }
+  .network-logo.ESPN {
+    height: .9rem;
+  }
+
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.375rem 0.625rem;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: 0.375rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+  }
+
+  .network-logo-wrapper:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .detail-text {
+    color: var(--text-color, #1f2937);
+    font-weight: 500;
+  }
+
+  .game-teams {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+  }
+
+ 
+
+  .team-code {
+    font-size: 1rem;
+    color: var(--text-color, #1f2937);
+  }
+
+  .vs-text {
+    font-size: 0.875rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+  }
+
+
+
+  .game-players {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Player Group Styles */
+  .player-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .player-group-header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .group-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .group-label.starters {
+    color: #059669;
+  }
+
+  .group-label.bench {
+    color: #6b7280;
+  }
+
+  .player-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .game-player {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .game-player.starter {
+    background: rgba(16, 185, 129, 0.04);
+    border-left-color: #10b981;
+  }
+
+  .game-player.bench {
+    background: rgba(107, 114, 128, 0.04);
+    border-left-color: #d1d5db;
+    opacity: 0.9;
+  }
+
+  .game-player.favorable {
+    background: rgba(16, 185, 129, 0.08);
+    border-left-color: #10b981;
+  }
+
+  .game-player.tough {
+    background: rgba(239, 68, 68, 0.08);
+    border-left-color: #ef4444;
+  }
+
+  .player-headshot-small {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 0.375rem;
+    background: #f3f4f6;
+  }
+
+  .player-info-wrapper {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .player-status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Compact status indicators for matchup preview integration */
+  :global(.player-status-container.compact) {
+    gap: 0.375rem;
+  }
+
+  :global(.player-status-container.compact .player-status-badge) {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.375rem;
+  }
+
+  :global(.player-status-container.compact .injury-status-simple) {
+    font-size: 0.6875rem;
+  }
+
+  :global(.player-status-container.compact .upgrade-indicator) {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.375rem;
+  }
+
+  :global(.player-status-container.compact .ir-eligible-indicator) {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.375rem;
+  }
+
+  /* Clean compact indicators - elements are conditionally rendered, no need to hide with CSS */
+  :global(.player-status-container.compact-clean) {
+    gap: 0.25rem;
+  }
+
+  .player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .player-points {
+    font-size: 0.875rem;
+    color: var(--text-color, #1f2937);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem
+  }
+
+  .player-fantasy-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .fantasy-team-logo-tiny {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 2px;
+    object-fit: contain;
+  }
+
+  .player-text {
+    font-size: 0.875rem;
+    color: var(--text-color, #1f2937);
+  }
+
+  .player-text strong {
+    font-weight: 600;
+  }
+
+  .injury-status-inline {
+    color: #dc2626;
+    font-weight: 600;
+    margin-left: 0.25rem;
+  }
+
+  .player-matchup-info {
+    font-size: 0.75rem;
+    color: var(--muted-text-color, #6b7280);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .matchup-indicator-inline {
+    font-size: 0.875rem;
+    margin-right: 0.375rem;
+  }
+
+  .matchup-indicator-inline.good {
+    color: #059669;
+  }
+
+  .matchup-indicator-inline.tough {
+    color: #dc2626;
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    .matchup-scoreboard {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .team {
+      width: 100%;
+    }
+
+    .home-team {
+      flex-direction: row;
+    }
+
+    .home-team .team-info {
+      text-align: left;
+    }
+
+    .home-team .team-record {
+      justify-content: flex-start;
+    }
+
+    .vs-divider {
+      width: 100%;
+      padding: 0.5rem 0;
+    }
+
+    .team-icon {
+      width: 56px;
+      height: 56px;
+    }
+
+    .team-name {
+      font-size: 1rem;
+    }
+
+    .projection-value {
+      font-size: 1.25rem;
+    }
+
+    .story-content {
+      padding: 1.5rem;
+    }
+
+    .story-title {
+      font-size: 1.25rem;
+    }
+
+    .nfl-team-logo-large {
+      width: 60px;
+      height: 60px;
+    }
+
+    .game-header {
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .game-teams {
+      flex-wrap: wrap;
+    }
+
+    .nfl-games-section {
+      padding: 1.5rem;
+    }
+  }
+</style>

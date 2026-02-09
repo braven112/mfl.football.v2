@@ -1,0 +1,543 @@
+---
+/**
+ * TeamCapAnalysis - Display team cap space analysis for all teams
+ * Shows cap space, championship windows, positional needs, and roster details
+ * Grid layout: 4 cols → 2 cols → 1 col responsive
+ */
+
+export interface Props {
+  // Props will be passed from client-side state
+}
+---
+
+<div class="team-cap-analysis">
+  <div class="panel-header">
+    <h2>Team Cap Space Analysis</h2>
+    <p class="subtitle">2026 cap projections, championship windows, and positional needs for all teams.</p>
+  </div>
+
+  <!-- Team Cards Grid -->
+  <div class="team-cap-grid" id="team-cap-grid">
+    <!-- Cards will be rendered client-side -->
+  </div>
+
+  <!-- Window Override Modal -->
+  <div class="modal-overlay hidden" id="window-override-modal">
+    <div class="modal-content window-override-modal-content">
+      <div class="modal-header">
+        <h3 id="modal-window-team-name">Team Name</h3>
+        <button class="btn-close" id="close-window-modal" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body" id="window-modal-body">
+        <!-- Modal body rendered client-side -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .team-cap-analysis {
+    width: 100%;
+  }
+
+  .panel-header {
+    margin-bottom: 2rem;
+  }
+
+  .panel-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+    color: #2c3e50;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  /* Grid Layout */
+  .team-cap-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 1200px) {
+    .team-cap-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .team-cap-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .team-cap-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Team Card */
+  .team-cap-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .team-cap-card:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .team-cap-card.expanded {
+    border-color: #7c3aed;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+  }
+
+  /* Color coding by window */
+  .team-cap-card.contending {
+    border-top: 4px solid #10b981;
+  }
+
+  .team-cap-card.neutral {
+    border-top: 4px solid #6b7280;
+  }
+
+  .team-cap-card.rebuilding {
+    border-top: 4px solid #ef4444;
+  }
+
+  /* Color coding by cap space */
+  .team-cap-card.cap-high {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+  }
+
+  .team-cap-card.cap-medium {
+    background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+  }
+
+  .team-cap-card.cap-low {
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+  }
+
+  /* Card Header */
+  .cap-card-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .cap-team-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .cap-team-logo-container {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 6px;
+  }
+
+  .cap-team-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .cap-team-info {
+    flex: 1;
+  }
+
+  .cap-team-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #2c3e50;
+    margin: 0;
+  }
+
+  /* Championship Window Badge */
+  .window-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .window-badge.contending {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .window-badge.neutral {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .window-badge.rebuilding {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .window-badge.override {
+    background: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #7c3aed;
+  }
+
+  /* Cap Space Display */
+  .cap-space-main {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .cap-amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .cap-amount.positive {
+    color: #10b981;
+  }
+
+  .cap-amount.neutral {
+    color: #6b7280;
+  }
+
+  .cap-amount.negative {
+    color: #ef4444;
+  }
+
+  .cap-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Card Body */
+  .cap-card-body {
+    padding: 1.25rem;
+  }
+
+  .cap-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .cap-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .cap-stat-label {
+    font-size: 0.7rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .cap-stat-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2c3e50;
+  }
+
+  /* Positional Needs */
+  .positional-needs {
+    margin-top: 1rem;
+  }
+
+  .needs-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+  }
+
+  .needs-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .need-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .need-badge.critical {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .need-badge.high {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .need-badge.medium {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .need-badge.low {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  /* Expandable Details */
+  .cap-details {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+    display: none;
+  }
+
+  .cap-details.visible {
+    display: block;
+  }
+
+  .detail-section {
+    margin-bottom: 1rem;
+  }
+
+  .detail-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .detail-section h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    color: #2c3e50;
+    font-weight: 700;
+  }
+
+  .detail-list {
+    font-size: 0.8rem;
+    color: #666;
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  .detail-list li {
+    margin: 0.25rem 0;
+  }
+
+  .expand-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    margin-top: 1rem;
+    background: #f8f9fa;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #7c3aed;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  .expand-toggle:hover {
+    background: #f3f0ff;
+  }
+
+  .expand-icon {
+    transition: transform 0.2s ease;
+  }
+
+  .expand-toggle.expanded .expand-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-overlay.hidden {
+    display: none;
+  }
+
+  .window-override-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #2c3e50;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-close:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  /* Window Options */
+  .window-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .window-option {
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .window-option:hover {
+    border-color: #7c3aed;
+    background: #f9f9ff;
+  }
+
+  .window-option.selected {
+    border-color: #7c3aed;
+    background: linear-gradient(135deg, #ffffff 0%, #f3f0ff 100%);
+  }
+
+  .window-option-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .window-option-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #2c3e50;
+  }
+
+  .window-option-desc {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 0;
+  }
+
+  /* Modal Actions */
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+  }
+
+  .btn-primary {
+    background: #7c3aed;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #6d28d9;
+  }
+
+  .btn-secondary {
+    background: #e0e0e0;
+    color: #333;
+  }
+
+  .btn-secondary:hover {
+    background: #d0d0d0;
+  }
+
+  .btn-danger {
+    background: #dc2626;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background: #b91c1c;
+  }
+</style>

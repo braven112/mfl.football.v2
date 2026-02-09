@@ -1,0 +1,129 @@
+{
+  "metadata": {
+    "lastUpdated": "2024-12-13",
+    "description": "International broadcast mappings for NFL games by country"
+  },
+  "countries": {
+    "US": {
+      "name": "United States",
+      "primaryProvider": "Various Networks",
+      "channels": {
+        "CBS": {
+          "name": "CBS",
+          "logo": "cbs-nfl-us.png",
+          "subscription": "Cable/Antenna"
+        },
+        "FOX": {
+          "name": "FOX",
+          "logo": "fox.png",
+          "subscription": "Cable/Antenna"
+        },
+        "NBC": {
+          "name": "NBC",
+          "logo": "nbc.png",
+          "subscription": "Cable/Antenna"
+        },
+        "ESPN": {
+          "name": "ESPN",
+          "logo": "espn.png",
+          "subscription": "Cable/ESPN+"
+        },
+        "ABC": {
+          "name": "ABC",
+          "logo": "abc.png",
+          "subscription": "Cable/Antenna"
+        },
+        "NFL Network": {
+          "name": "NFL Network",
+          "logo": "nfl-network.png",
+          "subscription": "Cable"
+        },
+        "Amazon Prime Video": {
+          "name": "Prime Video",
+          "logo": "prime-video.png",
+          "subscription": "Prime Video"
+        },
+        "Prime Video": {
+          "name": "Prime Video",
+          "logo": "prime-video.png",
+          "subscription": "Prime Video"
+        }
+      }
+    },
+    "CA": {
+      "name": "Canada",
+      "primaryProvider": "DAZN",
+      "channels": {
+        "DAZN": {
+          "name": "DAZN Canada",
+          "logo": "dazn-ca-black.png",
+          "subscription": "DAZN",
+          "note": "Most games"
+        },
+        "TSN": {
+          "name": "TSN",
+          "logo": "tsn-ca.png",
+          "subscription": "Cable",
+          "note": "Select games"
+        },
+        "CTV": {
+          "name": "CTV",
+          "logo": "ctv-ca.png",
+          "subscription": "Cable/Antenna",
+          "note": "Sunday Night Football"
+        }
+      },
+      "mapping": {
+        "default": "DAZN",
+        "CBS": "DAZN",
+        "FOX": "DAZN",
+        "NBC": "CTV",
+        "ESPN": "TSN",
+        "ABC": "TSN",
+        "NFL Network": "DAZN",
+        "Amazon Prime Video": "DAZN",
+        "Prime Video": "DAZN"
+      }
+    },
+    "AU": {
+      "name": "Australia",
+      "primaryProvider": "Kayo Sports",
+      "channels": {
+        "Kayo Sports": {
+          "name": "Kayo Sports",
+          "logo": "kayo-sports.png",
+          "subscription": "Kayo Sports",
+          "note": "Most games via ESPN"
+        },
+        "7mate": {
+          "name": "7mate",
+          "logo": "7mate-au.png",
+          "subscription": "Free-to-air",
+          "note": "Select Sunday games"
+        },
+        "ESPN Australia": {
+          "name": "ESPN",
+          "logo": "espn-au.png",
+          "subscription": "Kayo/Foxtel",
+          "note": "All games"
+        }
+      },
+      "mapping": {
+        "default": "Kayo Sports",
+        "CBS": "Kayo Sports",
+        "FOX": "Kayo Sports",
+        "NBC": "Kayo Sports",
+        "ESPN": "Kayo Sports",
+        "ABC": "Kayo Sports",
+        "NFL Network": "Kayo Sports",
+        "Amazon Prime Video": "Kayo Sports",
+        "Prime Video": "Kayo Sports"
+      }
+    }
+  },
+  "notes": {
+    "US": "Live broadcasts on various networks. Sunday Ticket available via YouTube TV.",
+    "CA": "DAZN has exclusive rights to most NFL games in Canada. Some games on TSN/CTV.",
+    "AU": "All games available on Kayo Sports via ESPN. Select games on free-to-air 7mate."
+  }
+}

@@ -1,0 +1,13 @@
+@use "./globals" as *;
+
+#body_options_18 {
+
+	.dropplayer {
+    color: $lightgray;
+    opacity: .9;
+    &:hover, &:active, &:focus {
+      opacity: 1;
+      color: $accent-color;
+    }
+	}    
+}

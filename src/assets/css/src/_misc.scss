@@ -1,0 +1,478 @@
+@use "./globals" as *;
+
+body {
+  font-size: 14px;
+  border: 0px;
+  margin-top: 0;
+  overflow-x: hidden;
+}
+
+span#mfladdons {
+  margin-bottom: 24px;
+  display: block;
+}
+
+h3 {
+  margin-bottom: 12px;
+}
+
+//#body_player, #body_player_history, #body_tweets,#body_options_138,#body_options_01, #body_options_118, #body_options_16,#body_options_54 {
+//}
+h3 {
+  font-size: 15px;
+  text-align: left;
+  margin-left: 5px;
+}
+
+
+/*main mfl wrapper*/
+
+.pagebody {
+  width: 100%;
+  padding: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+
+/*act like a bootstrap row*/
+
+.row {
+  margin-left: -15px;
+  margin-right: -15px;
+  clear: both;
+}
+
+
+/*bootstrap column*/
+
+.homepagetabcontent {
+  padding: 0 0px;
+}
+
+
+
+
+.homepagecolumn {
+  padding: 0 0 24px;
+}
+
+.homepagecolumn .homepagemodule, .homepagecolumn .homepagemodule caption {
+  width: 100%;
+}
+
+caption, caption span {
+  font-weight: $headline-font-weight;
+  text-align: left;
+  font-size: 24px;
+}
+
+caption {
+  padding-left: 8px;
+  margin-bottom: 12px;
+  img {
+    margin-left: -4px;
+  }
+}
+
+th {
+  font-style: normal;
+  font-weight: $body-font-weight;
+  text-align: left;
+  padding: 4px 8px;
+  background-color: transparent;
+  vertical-align: bottom;
+}
+
+#body_home #power_rank {
+  .total_points, .total_potential_points, .efficiency, .bench_points, .maxpf, .minpf, .coulda_won, .woulda_lost, .power_rank, .alt_power_rank {
+    display: none;
+  }
+  th[colspan="11"], th[colspan="4"] {
+    display: none;
+  }
+}
+
+span.reportnavigation {
+  border: 1px solid;
+  border-radius: $border-radius-default;
+  margin-bottom: 12px;
+}
+
+
+/*reports*/
+
+//undo mobile wrap since report-wrapper already does that.  
+//Ideally we optimize this so that mobile-wrap does the report-wrapper styling.  
+//And report-wrapper is a fallback when mobile-wrap doesn't exist.
+.mobile-wrap {
+  overflow: initial !important;
+}
+
+.report-wrapper, #lineup-form {
+  margin-bottom: 24px;
+  border-radius: $border-radius-default;
+  padding: 12px;
+  box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+  @media (max-width: 991px) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.report {
+  width: 100%;
+  border-collapse: collapse;
+  border-bottom: 0px solid;
+  margin-bottom: 12px;
+}
+
+.report td {
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.report h3 {
+  text-align: left;
+}
+
+.report .oddtablerow {
+  box-shadow: inset 0px -1px 0px 0px rgba(0, 0, 0, 0.05);
+}
+
+#message_board_summary iframe {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  #message_board_summary iframe {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+  }
+}
+
+// table#message_board_summary td {
+//   margin-left: 0;
+//   padding: 0;
+// }
+.report .newposition td {
+  padding-top: 10px;
+}
+
+.newposition td, .newposition th {
+  border-top: 4px solid;
+}
+
+
+/* margin-top: 12px; */
+
+.newposition td a {
+  margin-top: 12px;
+}
+
+
+/*add drop*/
+
+#body_add_drop form table table caption {
+  padding-left: 0;
+}
+
+#body_add_drop form > table caption {
+  padding-left: 8px;
+}
+
+#body_add_drop table table div {
+  width: 100% !important;
+  padding: 5px;
+  border-radius: $border-radius-default;
+  margin-bottom: 12px;
+}
+
+#body_add_drop table table {
+  width: 100% !important;
+}
+
+table#drop td, table#add {
+  cursor: pointer;
+}
+.utility-nav {
+  background-color: $secondary-menu-bg-color;
+  svg {
+    fill: $secondary-menu-icon-color;
+  }
+  .svg-text {
+    color: $secondary-menu-text-color;
+    b,
+    a:link,
+    a:visited {
+      color: $secondary-menu-text-color;
+    }
+    .commish-link {
+      border-left-color: $secondary-menu-text-color;
+    }
+  }
+  a:hover [class^="icon"] {
+    fill: $secondary-menu-link-color;
+  }
+}
+.utility-nav {
+  margin-bottom: 24px;
+  padding: 4px 8px;
+  border-radius: $border-radius-default;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
+
+  .utility-nav--button {
+    display: inline-block;
+    padding: 6px 0 6px 0;
+    border-radius: $border-radius-default;
+    .loginbutton .svg-text {
+      margin-right: 0;
+    }
+  }
+  svg {
+    width: 20px;
+    height: 20px;
+    float: left;
+    margin: 0px 5px 0 0;
+  }
+  .svg-text {
+    font-size: $svg-text-font-size;
+    display: inline-block;
+    margin-top: 4px;
+    margin-right: 5px;
+    font-weight: $secondary-menu-font-weight;
+    @media (min-width: 1200px) {
+      margin-right: 5px;
+    }
+    b, a:link, a:visited {
+      margin-right: 5px;
+      text-decoration: none;
+    }
+    b {
+      display: none;
+    }
+    small {
+      display: none;
+    }
+    .commish-link {
+      border-left: 1px solid;
+      padding-left: 5px;
+    }
+  }
+}
+
+textarea#MSG {
+  color: white;
+  width: 100%;
+  margin: 14px 0;
+  background-color: var(--code-bg-color, #333);
+}
+
+#body_options_35 {
+  .alert {
+    margin-top: 12px;
+  }
+}
+
+#league_chat {
+  caption img {
+    margin-left: 6px;
+  }
+  a svg.icon-comments {
+    width: 20px;
+    height: 20px;
+    margin: 0 0 0 5px;
+  }
+  .chat-highlight td {
+    b {
+      font-weight: normal;
+    }
+    border-bottom: 1px solid;
+    transition: all 0.1s ease;
+  }
+}
+
+span#chat_audio_clip {
+  display: none;
+}
+//remove mfl ads
+div[id*="usmg_ad"]{display:none} 
+
+body {
+  font-family: $body-font;
+  color: $primary-text-color;
+}
+
+td a,
+td a:link,
+td a:active,
+td a:visited,
+td a:focus {
+  font-family: $body-font;
+}
+
+a,
+a:link,
+a:active,
+a:visited,
+a:focus,
+th,
+th a,
+th a:link,
+th a:active,
+th a:visited,
+th a:focus,
+h1,
+td h1 a:link,
+td h1 a:active,
+td h1 a:visited,
+td h1 a:focus,
+h2,
+td h2 a:link,
+td h2 a:active,
+td h2 a:visited,
+td h2 a:focus,
+h3,
+td h3 a,
+td h3 a:link,
+td h3 a:active,
+td h3 a:visited,
+td h3 a:focus,
+h4,
+td h4 a,
+td h4 a:link,
+td h4 a:active,
+td h4 a:visited,
+td h4 a:focus,
+input[type="button"],
+input[type="submit"],
+.myfantasyleague_tabmenu,
+.myfantasyleague_menu,
+caption,
+caption a,
+caption a:link,
+caption a:active,
+caption a:visited,
+caption a:focus,
+.welcome,
+.welcome a,
+.welcome a:link,
+.welcome a:active,
+.welcome a:visited,
+.welcome a:focus,
+#MFLPlayerPopupLinks .popreport td a,
+#owner_activity td.franchisename,
+.myfantasyleague_tabmenu #homepagetabs li a {
+  font-family: $body-font;
+}
+
+a:link,
+a:visited {
+  color: $link-color;
+}
+
+.container-footer {
+  background-color: $primary-color;
+
+  a,
+  .defending-champ {
+    color: $white;
+  }
+
+  ul li {
+    color: $white;
+    font-family: $headline-font;
+  }
+}
+
+h2 {
+  color: $secondary-color;
+}
+
+.pagebody {
+  background-color: $pagebody-bg;
+}
+
+.homepagemessage:first-child {
+  padding-left: 0;
+}
+
+.homepagemessage th {
+  color: $alert-warning-text;
+  background-color: $alert-warning-bg;
+  border: 1px solid $alert-warning-border;
+}
+
+table.homepagemessage td {
+  background-color: $alert-warning-bg;
+  color: $alert-warning-text;
+  border-color: $alert-warning-border;
+}
+
+caption,
+caption span {
+  font-family: $headline-font;
+  color: $secondary-color;
+}
+
+th,
+th a:link,
+th a:visited {
+  color: $secondary-color;
+}
+
+span.reportnavigation {
+  border-color: $accent-color;
+  background-color: $accent-color;
+  color: $white;
+
+  a:link,
+  a:visited {
+    color: $white;
+  }
+}
+
+.report-wrapper {
+  background-color: $report-bg;
+}
+
+.report {
+  border-bottom-color: $lightgray;
+}
+
+.report .oddtablerow {
+  background-color: $oddtablerow;
+}
+
+.report .eventablerow {
+  background-color: $eventablerow;
+}
+
+.mb svg.icon-chevron-right {
+  fill: $primary-color;
+}
+
+.newposition td,
+.newposition th {
+  border-top-color: $lightgray2;
+}
+
+span#add_name_field_id {
+  color: $add-color;
+}
+
+span#drop_name_field_id {
+  color: $drop-color;
+}
+
+// Hide all images by default so they can be faded in later
+
+img.franchiseicon {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}

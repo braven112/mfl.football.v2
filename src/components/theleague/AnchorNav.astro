@@ -1,0 +1,704 @@
+---
+export interface AnchorLink {
+  id: string;
+  label: string;
+}
+
+interface Props {
+  links: AnchorLink[];
+  title?: string;
+}
+
+const { links, title = "On This Page" } = Astro.props;
+---
+
+<!-- Desktop Navigation -->
+<aside class="anchor-nav anchor-nav--desktop" id="anchorNav">
+  <nav class="anchor-nav__container">
+    <h3 class="anchor-nav__title">{title}</h3>
+    <ul class="anchor-nav__list" id="anchorNavList">
+      {links.map((link) => (
+        <li class="anchor-nav__item">
+          <a
+            href={`#${link.id}`}
+            class="anchor-nav__link"
+            data-anchor-link={link.id}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</aside>
+
+<!-- Mobile FAB and Modal -->
+<div class="anchor-nav--mobile">
+  <!-- FAB Button -->
+  <button class="anchor-fab" id="anchorFab" aria-label="Open navigation menu">
+    <svg class="anchor-fab__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+    <span class="anchor-fab__label" id="fabLabel">Menu</span>
+  </button>
+
+  <!-- Modal Overlay -->
+  <div class="anchor-modal" id="anchorModal">
+    <div class="anchor-modal__backdrop" id="anchorModalBackdrop"></div>
+    <div class="anchor-modal__content">
+      <div class="anchor-modal__header">
+        <h3 class="anchor-modal__title">{title}</h3>
+        <button class="anchor-modal__close" id="anchorModalClose" aria-label="Close menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <ul class="anchor-modal__list">
+        {links.map((link) => (
+          <li class="anchor-modal__item">
+            <a
+              href={`#${link.id}`}
+              class="anchor-modal__link"
+              data-anchor-link-mobile={link.id}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<style>
+  .anchor-nav {
+    position: sticky;
+    top: 2rem;
+    align-self: flex-start;
+    width: 240px;
+    max-height: calc(100vh - 4rem);
+    z-index: 100;
+    opacity: 0;
+    transform: translateX(20px);
+    animation: slideIn 0.4s ease-out 0.2s forwards;
+  }
+
+  @keyframes slideIn {
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .anchor-nav__container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    backdrop-filter: blur(8px);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .anchor-nav__container:hover {
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+
+  .anchor-nav__title {
+    margin: 0 0 1rem 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+
+  .anchor-nav__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: calc(100vh - 10rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+  }
+
+  /* Custom scrollbar */
+  .anchor-nav__list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .anchor-nav__list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .anchor-nav__list::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 2px;
+  }
+
+  .anchor-nav__list::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+
+  .anchor-nav__item {
+    margin: 0;
+  }
+
+  .anchor-nav__link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    border-radius: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .anchor-nav__link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, #3b82f6, #2563eb);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .anchor-nav__link:hover {
+    color: #1e293b;
+    background: rgba(59, 130, 246, 0.05);
+    transform: translateX(2px);
+  }
+
+  .anchor-nav__link:hover::before {
+    transform: scaleY(1);
+  }
+
+  .anchor-nav__link.active {
+    color: #1e40af;
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
+    font-weight: 600;
+  }
+
+  .anchor-nav__link.active::before {
+    transform: scaleY(1);
+  }
+
+  /* Pulse animation for active link */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .anchor-nav__link.active::after {
+    content: '';
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    background: #3b82f6;
+    border-radius: 50%;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Desktop only - hide on mobile */
+  .anchor-nav--desktop {
+    display: block;
+  }
+
+  @media (max-width: 1279px) {
+    .anchor-nav--desktop {
+      display: none;
+    }
+  }
+
+  /* Adjust positioning for very large screens */
+  @media (min-width: 1800px) {
+    .anchor-nav {
+      right: calc((100vw - 1600px) / 2);
+    }
+  }
+
+  /* ============================================
+     MOBILE NAVIGATION (FAB + Modal)
+     ============================================ */
+
+  /* Hide mobile nav on desktop */
+  .anchor-nav--mobile {
+    display: none;
+  }
+
+  @media (max-width: 1279px) {
+    .anchor-nav--mobile {
+      display: block;
+    }
+  }
+
+  /* FAB Button */
+  .anchor-fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .anchor-fab:hover {
+    transform: scale(1.05);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 20px 25px -5px rgba(59, 130, 246, 0.4);
+  }
+
+  .anchor-fab:active {
+    transform: scale(0.95);
+  }
+
+  .anchor-fab__icon {
+    flex-shrink: 0;
+    margin-top: -.5rem;
+  }
+
+  .anchor-fab__label {
+    position: absolute;
+    bottom: 10px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+
+  /* Modal */
+  .anchor-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .anchor-modal.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .anchor-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .anchor-modal__content {
+    position: relative;
+    width: 100%;
+    max-height: 80vh;
+    background: white;
+    border-radius: 1.5rem 1.5rem 0 0;
+    box-shadow:
+      0 -4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .anchor-modal.is-open .anchor-modal__content {
+    transform: translateY(0);
+  }
+
+  .anchor-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+
+  .anchor-modal__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .anchor-modal__close {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .anchor-modal__close:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .anchor-modal__close:active {
+    transform: scale(0.95);
+  }
+
+  .anchor-modal__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .anchor-modal__item {
+    margin: 0;
+  }
+
+  .anchor-modal__link {
+    display: block;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4b5563;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .anchor-modal__link:hover {
+    background: #f9fafb;
+    color: #1f2937;
+    border-left-color: #3b82f6;
+  }
+
+  .anchor-modal__link:active {
+    background: #f3f4f6;
+  }
+
+  .anchor-modal__link.active {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent);
+    color: #1e40af;
+    border-left-color: #3b82f6;
+    font-weight: 600;
+  }
+
+  .anchor-modal__link.active::after {
+    content: '✓';
+    position: absolute;
+    right: 1.5rem;
+    color: #3b82f6;
+    font-weight: 700;
+  }
+</style>
+
+<script>
+  // Smooth scroll behavior with custom easing
+  function smoothScrollTo(targetId: string) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    const targetPosition = target.getBoundingClientRect().top + window.pageYOffset;
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition - 48; // 3rem (48px) offset for breathing room (2rem sticky top + 1rem buffer)
+    const duration = 800; // milliseconds
+    let start: number | null = null;
+
+    // Easing function for smooth animation
+    function easeInOutCubic(t: number): number {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function animation(currentTime: number) {
+      if (start === null) start = currentTime;
+      const timeElapsed = currentTime - start;
+      const progress = Math.min(timeElapsed / duration, 1);
+      const ease = easeInOutCubic(progress);
+
+      window.scrollTo(0, startPosition + distance * ease);
+
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    }
+
+    requestAnimationFrame(animation);
+  }
+
+  // Intersection Observer for active link tracking and URL hash updates
+  function initializeAnchorNav() {
+    const links = document.querySelectorAll('.anchor-nav__link');
+    const sections = Array.from(links).map(link => {
+      const id = link.getAttribute('data-anchor-link');
+      return id ? document.getElementById(id) : null;
+    }).filter(Boolean) as HTMLElement[];
+
+    if (sections.length === 0) return;
+
+    // Observer options
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -60%',
+      threshold: [0, 0.1, 0.25, 0.5, 0.75, 1]
+    };
+
+    // Track if user is manually scrolling (not via click)
+    let isManualScroll = true;
+    let scrollTimeout: number | null = null;
+
+    // Track all visible sections
+    const visibleSections = new Set<string>();
+
+    const observer = new IntersectionObserver((entries) => {
+      // Update visible sections
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          visibleSections.add(entry.target.id);
+        } else {
+          visibleSections.delete(entry.target.id);
+        }
+      });
+
+      // Find the topmost visible section
+      let activeId: string | null = null;
+      for (const section of sections) {
+        if (visibleSections.has(section.id)) {
+          activeId = section.id;
+          break;
+        }
+      }
+
+      // Update active link and URL
+      if (activeId) {
+        links.forEach(link => {
+          const linkId = link.getAttribute('data-anchor-link');
+          if (linkId === activeId) {
+            link.classList.add('active');
+
+            // Scroll link into view in the nav if needed
+            link.scrollIntoView({
+              block: 'nearest',
+              behavior: 'smooth'
+            });
+
+            // Update URL hash if user is manually scrolling (not clicking links)
+            if (isManualScroll) {
+              // Use replaceState to avoid adding to browser history
+              const newUrl = `${window.location.pathname}#${activeId}`;
+              if (window.location.hash !== `#${activeId}`) {
+                window.history.replaceState(null, '', newUrl);
+              }
+            }
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
+    }, observerOptions);
+
+    // Observe all sections
+    sections.forEach(section => observer.observe(section));
+
+    // Click handlers for smooth scrolling
+    links.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('data-anchor-link');
+        if (targetId) {
+          // Disable automatic hash updates during click-based scrolling
+          isManualScroll = false;
+
+          // Clear any existing timeout
+          if (scrollTimeout !== null) {
+            clearTimeout(scrollTimeout);
+          }
+
+          smoothScrollTo(targetId);
+
+          // Update URL immediately when clicking
+          history.replaceState(null, '', `#${targetId}`);
+
+          // Re-enable automatic hash updates after scroll animation completes
+          scrollTimeout = window.setTimeout(() => {
+            isManualScroll = true;
+            scrollTimeout = null;
+          }, 1000); // 1000ms matches our 800ms animation + buffer
+        }
+      });
+    });
+
+    // Handle direct hash navigation on page load
+    if (window.location.hash) {
+      const targetId = window.location.hash.slice(1);
+      setTimeout(() => {
+        smoothScrollTo(targetId);
+      }, 100);
+    }
+  }
+
+  // Initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAnchorNav);
+  } else {
+    initializeAnchorNav();
+  }
+
+  // Re-initialize on Astro page transitions
+  document.addEventListener('astro:after-swap', initializeAnchorNav);
+
+  // ============================================
+  // MOBILE NAVIGATION
+  // ============================================
+
+  function initializeMobileNav() {
+    const fab = document.getElementById('anchorFab');
+    const modal = document.getElementById('anchorModal');
+    const modalBackdrop = document.getElementById('anchorModalBackdrop');
+    const modalClose = document.getElementById('anchorModalClose');
+    const mobileLinks = document.querySelectorAll('.anchor-modal__link');
+    const desktopLinks = document.querySelectorAll('.anchor-nav__link');
+
+    if (!fab || !modal || !modalBackdrop || !modalClose) return;
+
+    // Open modal
+    function openModal() {
+      modal?.classList.add('is-open');
+      document.body.style.overflow = 'hidden'; // Lock body scroll
+    }
+
+    // Close modal
+    function closeModal() {
+      modal?.classList.remove('is-open');
+      document.body.style.overflow = ''; // Restore body scroll
+    }
+
+    // FAB click handler
+    fab.addEventListener('click', openModal);
+
+    // Close button click handler
+    modalClose.addEventListener('click', closeModal);
+
+    // Backdrop click handler
+    modalBackdrop.addEventListener('click', closeModal);
+
+    // Link click handlers
+    mobileLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('data-anchor-link-mobile');
+        if (targetId) {
+          // Close modal first
+          closeModal();
+
+          // Wait for modal close animation, then scroll
+          setTimeout(() => {
+            smoothScrollTo(targetId);
+            history.replaceState(null, '', `#${targetId}`);
+          }, 300); // Match modal close animation duration
+        }
+      });
+    });
+
+    // Sync active state from desktop to mobile
+    // Use MutationObserver to watch for class changes on desktop links
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const desktopLink = mutation.target as HTMLElement;
+          const linkId = desktopLink.getAttribute('data-anchor-link');
+
+          if (linkId) {
+            const mobileLink = document.querySelector(`[data-anchor-link-mobile="${linkId}"]`);
+
+            if (desktopLink.classList.contains('active')) {
+              mobileLink?.classList.add('active');
+            } else {
+              mobileLink?.classList.remove('active');
+            }
+          }
+        }
+      });
+    });
+
+    // Observe all desktop links for class changes
+    desktopLinks.forEach(link => {
+      observer.observe(link, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Handle escape key to close modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal?.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
+  }
+
+  // Initialize mobile nav
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeMobileNav);
+  } else {
+    initializeMobileNav();
+  }
+
+  // Re-initialize on Astro page transitions
+  document.addEventListener('astro:after-swap', initializeMobileNav);
+</script>

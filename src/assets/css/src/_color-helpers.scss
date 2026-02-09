@@ -1,0 +1,18 @@
+@use "sass:color";
+@use "sass:math";
+
+@function _to-percent($amount) {
+  @if math.unit($amount) == "%" {
+    @return $amount;
+  }
+
+  @return $amount * 1%;
+}
+
+@function lighten($color, $amount) {
+  @return color.adjust($color, $lightness: _to-percent($amount));
+}
+
+@function darken($color, $amount) {
+  @return color.adjust($color, $lightness: -1 * _to-percent($amount));
+}

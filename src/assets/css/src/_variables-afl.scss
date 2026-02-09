@@ -1,0 +1,65 @@
+@use "./color-helpers" as *;
+@forward "colors/verns-blue-green" hide $accent-color, $dark-accent-color;
+
+//////////////////////Colors//////////////////////////
+$primary-color:#1c497c;//#33629b;
+$secondary-color:#1d4b7e;
+$accent-color:#b22222;
+$dark-accent-color:darken($accent-color, 10%);
+$today-bg-color:$accent-color;
+$today-border-color:lighten($today-bg-color, 1%);
+$button-bg-color:$accent-color;
+$secondary-menu-border-color:$accent-color;
+$secondary-menu-bg-color:$accent-color;
+$logo-secondary-color:$accent-color;
+$logo-secondary-text-color:$accent-color;
+$primary-text-color:#333333;
+$secondary-text-color:#333333;
+
+$link-color:$primary-color;
+$link-color-hover:#33629b;
+
+$add-color:green;
+$drop-color:red;
+
+$alert-warning-text:#8a6d3b;
+$alert-warning-bg:#fcf8e3;
+$alert-warning-border:#faf2cc;
+
+$alert-success-text:#3c763d;
+$alert-success-bg:#dff0d8;
+$alert-success-border:#d0e9c6;
+
+$alert-info-text:#31708f;
+$alert-info-bg:#d9edf7;
+$alert-info-border:#bcdff1;
+
+$codebg-color: #31382d;
+
+$gray1:#333;
+$gray2:#666;
+$gray3:#999;
+
+$oddtablerow:#fff;
+$eventablerow:#ececec;
+
+$offwhite:#eee;
+$offwhite2:#e0e0e0;
+
+$lightgray:#ddd;
+$lightgray2:#ccc;
+$lightgray3:#aaa;
+
+$white:#fff;
+
+$border-radius-sm: .25rem;
+$border-radius-default: .5rem;
+$border-radius-lg: 1rem;
+$border-radius-xl: 8rem;
+
+//////////////////////Fonts//////////////////////////
+$headline-font: "Gabarito";
+$headline-font-weight: 700;
+$body-font: "TikTok Sans";
+$body-font-weight: 400;
+$svg-text-font-size: 11.25px;

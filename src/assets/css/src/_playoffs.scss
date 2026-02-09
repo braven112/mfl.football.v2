@@ -1,0 +1,29 @@
+@use "./globals" as *;
+
+.playoffbracket.report {
+    td {
+        font-size: .8em;
+    }
+    .oddtablerow {
+        box-shadow: none;
+    }
+    .playoffbracketname {
+        font-size: 24px;
+    }
+    .bottomteam,
+    .topteam {
+        border-bottom: 2px solid;
+        border-bottom-color: $lightgray;
+    }
+    .bottomteam,
+    .bracket {
+        border-right: 2px solid;
+        border-right-color: $lightgray;
+    }
+    tr.header th {
+        border: 1px solid;
+        padding: 8px;
+        background-color: $offwhite;
+        border-color: $lightgray;
+    }
+}

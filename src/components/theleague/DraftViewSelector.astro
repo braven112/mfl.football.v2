@@ -1,0 +1,161 @@
+---
+export interface Props {
+  activeView: 'projected' | 'final' | 'history';
+}
+
+const { activeView } = Astro.props;
+---
+
+<div class="view-selector">
+  <button
+    class={`view-tab ${activeView === 'final' ? 'active' : ''}`}
+    data-view="final"
+    data-active={activeView === 'final' ? 'true' : 'false'}
+    aria-label="Final Draft Order"
+    title="Final Draft Order"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+      <use href="/assets/icons/sprite.svg#icon-podium-persona"></use>
+    </svg>
+    <span class="view-tab__label">Final</span>
+  </button>
+  <button
+    class={`view-tab ${activeView === 'projected' ? 'active' : ''}`}
+    data-view="projected"
+    data-active={activeView === 'projected' ? 'true' : 'false'}
+    aria-label="Projected Draft Order"
+    title="Projected Draft Order"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+      <use href="/assets/icons/sprite.svg#icon-podium-empty"></use>
+    </svg>
+    <span class="view-tab__label">Base</span>
+  </button>
+  <button
+    class={`view-tab ${activeView === 'history' ? 'active' : ''}`}
+    data-view="history"
+    data-active={activeView === 'history' ? 'true' : 'false'}
+    aria-label="Draft History"
+    title="Draft History"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+      <use href="/assets/icons/sprite.svg#icon-history"></use>
+    </svg>
+    <span class="view-tab__label">History</span>
+  </button>
+</div>
+
+<style>
+  .view-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .view-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem .7rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 69px;
+    
+  }
+  @media (min-width: 640px) {
+    .view-tab {
+    padding: 0.75rem;
+    }
+  }
+
+  .view-tab:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  .view-tab[data-active="true"] {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
+
+  .view-tab__icon {
+    max-width: var(--icon-btn-default-size, 30px);
+    max-height: var(--icon-btn-default-size, 30px);
+    width: 100%;
+    height: 100%;
+    fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
+  }
+
+  .view-tab[data-active="true"] .view-tab__icon {
+    fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
+  }
+
+  .view-tab__label {
+    position: absolute;
+    bottom: -1.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .view-tab:hover .view-tab__label,
+  .view-tab:focus .view-tab__label {
+    opacity: 1;
+  }
+
+  .view-tab[data-active="true"] .view-tab__label {
+    color: #3b82f6;
+  }
+
+  @media (max-width: 640px) {
+
+    .view-tab__label {
+      position: static;
+      transform: none;
+      opacity: 1;
+      font-size: 0.7rem;
+      margin-top: 0.25rem;
+    }
+  }
+</style>
+
+<script>
+  function setupViewSelector() {
+    const buttons = document.querySelectorAll('.view-tab');
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const view = button.dataset.view;
+
+        // Update URL and reload page to show correct view
+        const url = new URL(window.location);
+        url.searchParams.set('view', view);
+        window.location.href = url.toString();
+      });
+    });
+  }
+
+  // Initialize on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupViewSelector);
+  } else {
+    setupViewSelector();
+  }
+
+  // Re-run on page transitions (for Astro view transitions)
+  document.addEventListener('astro:after-swap', setupViewSelector);
+</script>

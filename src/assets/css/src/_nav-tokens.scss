@@ -1,0 +1,306 @@
+/**
+ * Navigation Drawer Design Tokens
+ *
+ * These tokens define the visual foundation for the unified navigation drawer.
+ * Supports both light and dark modes via:
+ * - @media (prefers-color-scheme: dark) for system preference
+ * - .dark class for manual toggle
+ *
+ * Token naming convention: --nav-{category}-{property}
+ * Categories: dimensions, transitions, colors, section, footer, badge, overlay
+ */
+
+:root {
+  /* ============================================
+   * DIMENSIONS
+   * ============================================ */
+  --nav-width-expanded: 320px;
+  --nav-width-collapsed: 64px;
+  --nav-header-height: 72px;
+  --nav-footer-height: 80px;
+
+  /* Spacing scale (consistent with global spacing) */
+  --nav-spacing-xs: 4px;
+  --nav-spacing-sm: 8px;
+  --nav-spacing-md: 12px;
+  --nav-spacing-lg: 16px;
+  --nav-spacing-xl: 24px;
+  --nav-spacing-2xl: 32px;
+
+  /* Border radius */
+  --nav-border-radius-sm: 4px;
+  --nav-border-radius-md: 8px;
+  --nav-border-radius-lg: 12px;
+
+  /* Touch targets (WCAG 2.1 AA minimum: 44x44px) */
+  --nav-touch-target-min: 44px;
+  --nav-link-height: 48px;
+  --nav-icon-size: 24px;
+  --nav-icon-size-collapsed: 28px;
+
+  /* ============================================
+   * TRANSITIONS
+   * ============================================ */
+  /* Primary animation curve - smooth and responsive */
+  --nav-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --nav-transition-duration: 0.3s;
+  --nav-transition: var(--nav-transition-duration) var(--nav-transition-timing);
+
+  /* Specific transitions for different elements */
+  --nav-drawer-transition: transform var(--nav-transition);
+  --nav-overlay-transition: opacity var(--nav-transition);
+  --nav-hover-transition: background-color 0.15s ease, color 0.15s ease;
+  --nav-focus-transition: box-shadow 0.15s ease;
+
+  /* ============================================
+   * Z-INDEX LAYERS
+   * ============================================ */
+  --nav-z-overlay: 900;
+  --nav-z-drawer: 950;
+  --nav-z-header: 960;
+  --nav-z-close-btn: 970;
+
+  /* ============================================
+   * LIGHT MODE COLORS (Default)
+   * ============================================ */
+
+  /* Background colors */
+  --nav-bg: var(--primary-content-bg-color, #ffffff);
+  --nav-bg-subtle: #f9fafb;
+
+  /* Text colors */
+  --nav-text: #333333;
+  --nav-text-muted: #6b7280;
+  --nav-text-subtle: #9ca3af;
+
+  /* Border colors */
+  --nav-border: #e5e7eb;
+  --nav-border-subtle: #f3f4f6;
+
+  /* Interactive states */
+  --nav-hover-bg: #f3f4f6;
+  --nav-hover-text: var(--nav-text);
+
+  /* Active/selected link */
+  --nav-active-bg: rgba(28, 73, 124, 0.1);
+  --nav-active-text: var(--primary-color, #1c497c);
+  --nav-active-border-left: var(--primary-color, #1c497c);
+  --nav-active-border-width: 3px;
+
+  /* Focus state (accessibility) */
+  --nav-focus-ring: 0 0 0 2px var(--primary-color, #1c497c);
+  --nav-focus-ring-offset: 2px;
+
+  /* Section styling */
+  --nav-section-color: var(--primary-link-hover-text-color, #b22222);
+  --nav-section-font-size: 0.75rem;
+  --nav-section-font-weight: 700;
+  --nav-section-letter-spacing: 0.05em;
+  --nav-section-margin-top: var(--nav-spacing-xl);
+  --nav-section-margin-bottom: var(--nav-spacing-md);
+
+  /* Footer styling */
+  --nav-footer-bg: #f9fafb;
+  --nav-footer-border: #e5e7eb;
+  --nav-footer-text: var(--nav-text);
+  --nav-footer-text-muted: var(--nav-text-muted);
+
+  /* Team info in footer */
+  --nav-team-logo-size: 40px;
+  --nav-team-name-size: 0.9375rem;
+  --nav-owner-name-size: 0.8125rem;
+
+  /* Verify team prompt styling */
+  --nav-verify-bg: rgba(28, 73, 124, 0.05);
+  --nav-verify-border: var(--primary-color, #1c497c);
+  --nav-verify-text: var(--primary-color, #1c497c);
+  --nav-verify-hover-bg: rgba(28, 73, 124, 0.1);
+
+  /* Overlay (backdrop) */
+  --nav-overlay-bg: rgba(0, 0, 0, 0.5);
+
+  /* Badge styling (for notifications) */
+  --nav-badge-bg: #ef4444;
+  --nav-badge-text: #ffffff;
+  --nav-badge-size: 18px;
+  --nav-badge-font-size: 0.6875rem;
+  --nav-badge-font-weight: 600;
+
+  /* League switcher */
+  --nav-switcher-bg: #f3f4f6;
+  --nav-switcher-border: #e5e7eb;
+  --nav-switcher-active-bg: var(--primary-color, #1c497c);
+  --nav-switcher-active-text: #ffffff;
+  --nav-switcher-inactive-text: var(--nav-text-muted);
+
+  /* Tooltip (collapsed state) */
+  --nav-tooltip-bg: #1f2937;
+  --nav-tooltip-text: #ffffff;
+  --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  /* Shadows */
+  --nav-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  --nav-shadow-sm: -2px 0 8px rgba(0, 0, 0, 0.08);
+
+  /* Scrollbar (for links area) */
+  --nav-scrollbar-width: 6px;
+  --nav-scrollbar-track: transparent;
+  --nav-scrollbar-thumb: #d1d5db;
+  --nav-scrollbar-thumb-hover: #9ca3af;
+}
+
+/* ============================================
+ * DARK MODE - System Preference
+ * ============================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Background colors */
+    --nav-bg: #1e293b;
+    --nav-bg-subtle: #0f172a;
+
+    /* Text colors */
+    --nav-text: #f1f5f9;
+    --nav-text-muted: #94a3b8;
+    --nav-text-subtle: #64748b;
+
+    /* Border colors */
+    --nav-border: #334155;
+    --nav-border-subtle: #1e293b;
+
+    /* Interactive states */
+    --nav-hover-bg: #334155;
+    --nav-hover-text: var(--nav-text);
+
+    /* Active/selected link */
+    --nav-active-bg: rgba(96, 165, 250, 0.15);
+    --nav-active-text: #60a5fa;
+    --nav-active-border-left: #60a5fa;
+
+    /* Focus state */
+    --nav-focus-ring: 0 0 0 2px #60a5fa;
+
+    /* Section styling */
+    --nav-section-color: #f87171;
+
+    /* Footer styling */
+    --nav-footer-bg: #0f172a;
+    --nav-footer-border: #334155;
+    --nav-footer-text: var(--nav-text);
+    --nav-footer-text-muted: var(--nav-text-muted);
+
+    /* Verify team prompt */
+    --nav-verify-bg: rgba(96, 165, 250, 0.1);
+    --nav-verify-border: #60a5fa;
+    --nav-verify-text: #60a5fa;
+    --nav-verify-hover-bg: rgba(96, 165, 250, 0.2);
+
+    /* Overlay */
+    --nav-overlay-bg: rgba(0, 0, 0, 0.7);
+
+    /* Badge - keep visible in dark mode */
+    --nav-badge-bg: #dc2626;
+    --nav-badge-text: #ffffff;
+
+    /* League switcher */
+    --nav-switcher-bg: #334155;
+    --nav-switcher-border: #475569;
+    --nav-switcher-active-bg: #60a5fa;
+    --nav-switcher-active-text: #0f172a;
+    --nav-switcher-inactive-text: var(--nav-text-muted);
+
+    /* Tooltip */
+    --nav-tooltip-bg: #f1f5f9;
+    --nav-tooltip-text: #1e293b;
+    --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    /* Shadows */
+    --nav-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+    --nav-shadow-sm: -2px 0 8px rgba(0, 0, 0, 0.25);
+
+    /* Scrollbar */
+    --nav-scrollbar-thumb: #475569;
+    --nav-scrollbar-thumb-hover: #64748b;
+  }
+}
+
+/* ============================================
+ * DARK MODE - Manual Toggle Class
+ * Duplicates the dark mode values for .dark class
+ * ============================================ */
+.dark {
+  /* Background colors */
+  --nav-bg: #1e293b;
+  --nav-bg-subtle: #0f172a;
+
+  /* Text colors */
+  --nav-text: #f1f5f9;
+  --nav-text-muted: #94a3b8;
+  --nav-text-subtle: #64748b;
+
+  /* Border colors */
+  --nav-border: #334155;
+  --nav-border-subtle: #1e293b;
+
+  /* Interactive states */
+  --nav-hover-bg: #334155;
+  --nav-hover-text: var(--nav-text);
+
+  /* Active/selected link */
+  --nav-active-bg: rgba(96, 165, 250, 0.15);
+  --nav-active-text: #60a5fa;
+  --nav-active-border-left: #60a5fa;
+
+  /* Focus state */
+  --nav-focus-ring: 0 0 0 2px #60a5fa;
+
+  /* Section styling */
+  --nav-section-color: #f87171;
+
+  /* Footer styling */
+  --nav-footer-bg: #0f172a;
+  --nav-footer-border: #334155;
+  --nav-footer-text: var(--nav-text);
+  --nav-footer-text-muted: var(--nav-text-muted);
+
+  /* Verify team prompt */
+  --nav-verify-bg: rgba(96, 165, 250, 0.1);
+  --nav-verify-border: #60a5fa;
+  --nav-verify-text: #60a5fa;
+  --nav-verify-hover-bg: rgba(96, 165, 250, 0.2);
+
+  /* Overlay */
+  --nav-overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Badge */
+  --nav-badge-bg: #dc2626;
+  --nav-badge-text: #ffffff;
+
+  /* League switcher */
+  --nav-switcher-bg: #334155;
+  --nav-switcher-border: #475569;
+  --nav-switcher-active-bg: #60a5fa;
+  --nav-switcher-active-text: #0f172a;
+  --nav-switcher-inactive-text: var(--nav-text-muted);
+
+  /* Tooltip */
+  --nav-tooltip-bg: #f1f5f9;
+  --nav-tooltip-text: #1e293b;
+  --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* Shadows */
+  --nav-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  --nav-shadow-sm: -2px 0 8px rgba(0, 0, 0, 0.25);
+
+  /* Scrollbar */
+  --nav-scrollbar-thumb: #475569;
+  --nav-scrollbar-thumb-hover: #64748b;
+}
+
+/* ============================================
+ * RESPONSIVE BREAKPOINTS
+ * These define when nav behavior changes
+ * ============================================ */
+:root {
+  --nav-breakpoint-mobile: 768px;
+  --nav-breakpoint-desktop: 1024px;
+}
