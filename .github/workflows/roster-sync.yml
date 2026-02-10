@@ -16,17 +16,6 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        league:
-          - name: theleague
-            slug: theleague
-            id: ${{ vars.MFL_LEAGUE_ID || '13522' }}
-          - name: afl
-            slug: afl
-            id: '19621'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,11 +36,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Fetch MFL data (${{ matrix.league.name }})
+      - name: Fetch MFL data (theleague)
         env:
-          MFL_LEAGUE_ID: ${{ matrix.league.id }}
-          MFL_LEAGUE_SLUG: ${{ matrix.league.slug }}
-          # Optional: use repository variables for non-secret config like year/season.
+          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
+          MFL_LEAGUE_SLUG: theleague
           MFL_YEAR: ${{ vars.MFL_YEAR }}
           MFL_SEASON: ${{ vars.MFL_SEASON }}
           MFL_WEEK: ${{ vars.MFL_WEEK }}
@@ -61,17 +49,28 @@ jobs:
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: node ./scripts/fetch-mfl-feeds.mjs --force
 
-      - name: Update salary averages (theleague only)
-        if: matrix.league.slug == 'theleague'
+      - name: Update salary averages (theleague)
         env:
-          MFL_LEAGUE_ID: ${{ matrix.league.id }}
-          MFL_LEAGUE_SLUG: ${{ matrix.league.slug }}
+          MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
+          MFL_LEAGUE_SLUG: theleague
           MFL_YEAR: ${{ vars.MFL_YEAR }}
         run: node ./scripts/update-salary-averages.mjs
 
-      - name: Fetch live NFL odds (theleague only)
-        if: matrix.league.slug == 'theleague'
+      - name: Fetch live NFL odds
         run: node ./scripts/fetch-live-odds.mjs
+
+      - name: Fetch MFL data (afl)
+        env:
+          MFL_LEAGUE_ID: '19621'
+          MFL_LEAGUE_SLUG: afl
+          MFL_YEAR: ${{ vars.MFL_YEAR }}
+          MFL_SEASON: ${{ vars.MFL_SEASON }}
+          MFL_WEEK: ${{ vars.MFL_WEEK }}
+          MFL_HOST: ${{ vars.MFL_HOST }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+        run: node ./scripts/fetch-mfl-feeds.mjs --force
 
       - name: Commit and push updates
         run: |
@@ -83,6 +82,6 @@ jobs:
           git config user.name "Roster Sync Bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/ src/data/
-          git commit -m "chore: sync rosters and playoff data (${{ matrix.league.slug }})"
+          git commit -m "chore: sync rosters and playoff data"
           git pull --rebase origin main
           git push
