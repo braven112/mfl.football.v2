@@ -25,6 +25,7 @@
     "sync:theleague": "node scripts/sync-theleague-assets.mjs",
     "sync:afl": "node scripts/sync-afl-asset-urls.mjs && node scripts/sync-afl-assets.mjs",
     "sync:afl-urls": "node scripts/sync-afl-asset-urls.mjs",
+    "upload:psds": "node --env-file=.env scripts/upload-psds-to-blob.mjs",
     "watch:theleague": "node scripts/watch-theleague-assets.mjs",
     "watch:afl": "node scripts/watch-afl-assets.mjs",
     "update:salary": "MFL_LEAGUE_SLUG=theleague node scripts/update-salary-averages.mjs",
@@ -64,6 +65,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@vercel/blob": "^2.2.0",
     "node-fetch": "^3.3.2"
   }
 }

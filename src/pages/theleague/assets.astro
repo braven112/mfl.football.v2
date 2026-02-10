@@ -26,6 +26,7 @@ type TeamEntry = {
 
 const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
 const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
+const blobDomain = normalizeDomain(leagueConfig.blobDomain || '');
 
 const formatBucketLabel = (bucket: string) =>
   bucket === 'group-me'
@@ -49,7 +50,10 @@ const teamList: TeamEntry[] = (aggregatedAssets?.teams ?? []).map((team) => {
       }))
     ])
   );
-  const psdAssets = PSD_FOLDERS.flatMap(folder => rawAssets[folder] as AssetEntry[] || []);
+  const psdAssets = PSD_FOLDERS.flatMap(folder => (rawAssets[folder] as AssetEntry[] || []).map(entry => ({
+    ...entry,
+    absoluteUrl: blobDomain ? `${blobDomain}${entry.relativePath}` : entry.absoluteUrl,
+  })));
   PSD_FOLDERS.forEach(folder => {
     if (rawAssets[folder]) {
       delete rawAssets[folder];
