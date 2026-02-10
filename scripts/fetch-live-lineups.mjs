@@ -178,8 +178,8 @@ async function fetchLiveStartingLineups() {
     
     fs.writeFileSync(fallbackPath, JSON.stringify(fallbackData, null, 2));
     console.log(`⚠️  Created fallback file: ${fallbackPath}`);
-    
-    throw error;
+
+    return fallbackData;
   }
 }
 
