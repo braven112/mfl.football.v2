@@ -101,6 +101,14 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       <div class="col right">
         <!-- Desktop Navigation Icons -->
         <nav class="desktop-nav" aria-label="Main navigation">
+          {!isAFL && (
+            <a href="https://theleague.us/forum/index.php" class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Message board">
+              <svg class="nav-icon" aria-hidden="true">
+                <use href="/assets/icons/sprite.svg#icon-comments"></use>
+              </svg>
+              <span class="nav-label">Message board</span>
+            </a>
+          )}
           <a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
             <svg class="nav-icon" aria-hidden="true">
               <use href={`/assets/icons/sprite.svg#icon-${isAFL ? "helmet" : "banknote"}`}></use>
