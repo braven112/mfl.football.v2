@@ -1,4 +1,18 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/theleague",
+      "has": [{ "type": "host", "value": "www.theleague.us" }],
+      "statusCode": 302
+    },
+    {
+      "source": "/",
+      "destination": "/theleague",
+      "has": [{ "type": "host", "value": "theleague.us" }],
+      "statusCode": 302
+    }
+  ],
   "rewrites": [
     {
       "source": "/forum/:path*",
