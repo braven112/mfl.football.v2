@@ -16,12 +16,12 @@
   "rewrites": [
     {
       "source": "/forum/:path*",
-      "destination": "https://104.244.124.23/forum/:path*",
+      "destination": "https://forum.theleague.us/forum/:path*",
       "has": [{ "type": "host", "value": "www.theleague.us" }]
     },
     {
       "source": "/forum/:path*",
-      "destination": "https://104.244.124.23/forum/:path*",
+      "destination": "https://forum.theleague.us/forum/:path*",
       "has": [{ "type": "host", "value": "theleague.us" }]
     },
     {
