@@ -1,18 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/theleague/:path*",
-      "destination": "/:path*",
-      "has": [{ "type": "host", "value": "www.theleague.us" }],
-      "statusCode": 301
-    },
-    {
-      "source": "/theleague/:path*",
-      "destination": "/:path*",
-      "has": [{ "type": "host", "value": "theleague.us" }],
-      "statusCode": 301
-    }
-  ],
   "rewrites": [
     {
       "source": "/forum/:path*",
@@ -22,16 +8,6 @@
     {
       "source": "/forum/:path*",
       "destination": "https://forum.theleague.us/forum/:path*",
-      "has": [{ "type": "host", "value": "theleague.us" }]
-    },
-    {
-      "source": "/:path*",
-      "destination": "/theleague/:path*",
-      "has": [{ "type": "host", "value": "www.theleague.us" }]
-    },
-    {
-      "source": "/:path*",
-      "destination": "/theleague/:path*",
       "has": [{ "type": "host", "value": "theleague.us" }]
     }
   ]
