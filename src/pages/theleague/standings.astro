@@ -18,6 +18,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { resolveConfigForYear } from '../../utils/team-names';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -66,10 +67,13 @@ const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : n
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
+// Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
+const yearResolvedConfig = resolveConfigForYear(leagueConfig, selectedYear);
+
 // Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises, leagueConfig);
-const leagueStandings = getLeagueStandings(franchises, leagueConfig);
-const allPlayStandings = getAllPlayStandings(franchises, leagueConfig);
+const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig);
+const leagueStandings = getLeagueStandings(franchises, yearResolvedConfig);
+const allPlayStandings = getAllPlayStandings(franchises, yearResolvedConfig);
 
 // Get view from query parameter (default to 'division')
 const view = (Astro.url.searchParams.get('view') ||

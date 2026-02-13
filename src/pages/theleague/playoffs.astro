@@ -13,8 +13,8 @@ import {
   type SeededTeam,
   type NormalizedBracket,
 } from '../../utils/playoffs';
-import { chooseTeamName } from '../../utils/team-names';
-import leagueConfig from '../../data/theleague.config.json';
+import { chooseTeamName, resolveConfigForYear } from '../../utils/team-names';
+import leagueConfigRaw from '../../data/theleague.config.json';
 import { getAuthUser } from '../../utils/auth';
 import {
   getTheLeaguePreference,
@@ -72,6 +72,10 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
 }
 
 const franchises = selectedFeed.leagueStandings.franchise;
+
+// Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
+const leagueConfig = resolveConfigForYear(leagueConfigRaw, selectedYear);
+
 const leagueStandings = getLeagueStandings(franchises, leagueConfig);
 
 const getModuleData = (mod: any) =>

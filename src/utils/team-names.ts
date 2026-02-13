@@ -108,6 +108,145 @@ export function chooseTeamName(
 }
 
 /**
+ * A historical identity entry for a franchise that changed names/logos.
+ */
+export interface FranchiseHistoryEntry {
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  aliases?: string[];
+  icon?: string;
+  banner?: string;
+  groupMe?: string;
+  yearStart: number;
+  yearEnd: number;
+}
+
+/**
+ * A team config entry from theleague.config.json (with optional history).
+ */
+export interface TeamConfig {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  aliases?: string[];
+  division?: string;
+  icon?: string;
+  banner?: string;
+  groupMe?: string;
+  history?: FranchiseHistoryEntry[];
+}
+
+/**
+ * Resolved team identity for a specific year. Contains all display fields
+ * needed to render a team's name, icon, and banner.
+ */
+export interface TeamIdentity {
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  aliases?: string[];
+  icon?: string;
+  banner?: string;
+  groupMe?: string;
+  isHistorical: boolean;
+}
+
+/**
+ * Get the correct team identity (name, icon, banner) for a specific year.
+ *
+ * If the team has a `history` array, checks whether the given year falls
+ * within any historical entry's yearStart–yearEnd range. If so, returns
+ * that historical identity. Otherwise returns the current (top-level) identity.
+ *
+ * @param team - Team config object (from theleague.config.json)
+ * @param year - The year to resolve identity for (e.g., 2025 for historical, 2026 for current)
+ * @returns TeamIdentity with the correct name/icon/banner for that year
+ *
+ * @example
+ * ```ts
+ * const team = leagueConfig.teams.find(t => t.franchiseId === '0004');
+ * getTeamIdentityForYear(team, 2025); // Returns Heavy Chevy identity
+ * getTeamIdentityForYear(team, 2026); // Returns Dead Cap Walking identity
+ * ```
+ */
+export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIdentity {
+  if (team.history) {
+    for (const entry of team.history) {
+      if (year >= entry.yearStart && year <= entry.yearEnd) {
+        return {
+          name: entry.name,
+          nameMedium: entry.nameMedium,
+          nameShort: entry.nameShort,
+          abbrev: entry.abbrev,
+          aliases: entry.aliases,
+          icon: entry.icon,
+          banner: entry.banner,
+          groupMe: entry.groupMe,
+          isHistorical: true,
+        };
+      }
+    }
+  }
+
+  return {
+    name: team.name,
+    nameMedium: team.nameMedium,
+    nameShort: team.nameShort,
+    abbrev: team.abbrev,
+    aliases: team.aliases,
+    icon: team.icon,
+    banner: team.banner,
+    groupMe: team.groupMe,
+    isHistorical: false,
+  };
+}
+
+/**
+ * Resolve all team identities in a league config for a specific year.
+ *
+ * Returns a shallow copy of the config with each team's name, icon, banner,
+ * etc. resolved to the correct historical identity for the given year.
+ * Teams without a `history` array are returned unchanged.
+ *
+ * This is the primary way to make any page year-aware — call this once
+ * with the viewing year, then pass the result to standings/playoffs/etc.
+ *
+ * @param config - League config object (e.g., from theleague.config.json)
+ * @param year - The year to resolve identities for
+ * @returns A new config with team identities resolved for the given year
+ *
+ * @example
+ * ```ts
+ * const resolvedConfig = resolveConfigForYear(leagueConfig, selectedYear);
+ * const standings = getDivisionStandings(franchises, resolvedConfig);
+ * ```
+ */
+export function resolveConfigForYear<T extends { teams: TeamConfig[] }>(config: T, year: number): T {
+  return {
+    ...config,
+    teams: config.teams.map(team => {
+      const identity = getTeamIdentityForYear(team, year);
+      return {
+        ...team,
+        name: identity.name,
+        nameMedium: identity.nameMedium,
+        nameShort: identity.nameShort,
+        abbrev: identity.abbrev,
+        aliases: identity.aliases,
+        icon: identity.icon,
+        banner: identity.banner,
+        groupMe: identity.groupMe,
+      };
+    }),
+  };
+}
+
+/**
  * Legacy array-based chooseTeamName for backward compatibility
  * @deprecated Use object-based chooseTeamName instead
  */
