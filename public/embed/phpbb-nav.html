@@ -1,0 +1,1545 @@
+<!--
+  ============================================================
+  TheLeague.us Navigation Embed for phpBB
+  ============================================================
+
+  INSTALLATION:
+  1. Copy the HEADER section into your phpBB template:
+     styles/your_theme/template/overall_header.html
+     Place it AFTER <body> and BEFORE any phpBB content.
+
+  2. Copy the FOOTER section into your phpBB template:
+     styles/your_theme/template/overall_footer.html
+     Place it AFTER the phpBB content and BEFORE </body>.
+
+  3. The CSS goes in a <style> tag in the <head>, or as a
+     separate .css file linked from the template.
+
+  4. The JS goes at the bottom before </body>.
+
+  NOTES:
+  - All CSS is scoped with .tl- prefix to avoid phpBB conflicts
+  - SVG icons load from https://www.theleague.us/theleague/assets/icons/sprite.svg
+  - The myteam cookie (set on theleague.us) is readable on
+    theleague.us/forum/ since they share the same domain
+  - "Message Board" is marked as the active link
+  - MFL year is set dynamically via JS (getCurrentLeagueYear logic)
+
+  Last synced from source: 2026-02-11
+  ============================================================
+-->
+
+
+<!-- ========================================================
+     CSS - Place in <head> or as separate stylesheet
+     ======================================================== -->
+<style>
+/* ==========================================================
+ * THELEAGUE NAV EMBED - Design Tokens
+ * All scoped with .tl- prefix to avoid phpBB conflicts
+ * ========================================================== */
+:root {
+  --tl-nav-width: 320px;
+  --tl-nav-header-height: 72px;
+  --tl-nav-footer-height: 80px;
+  --tl-nav-z-overlay: 9000;
+  --tl-nav-z-drawer: 9050;
+  --tl-nav-z-header: 9060;
+  --tl-nav-z-toggle: 9070;
+  --tl-nav-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --tl-nav-hover-transition: background-color 0.15s ease, color 0.15s ease;
+  --tl-primary: #1c497c;
+  --tl-secondary: #2e8743;
+  --tl-section-color: #b22222;
+  --tl-text: #333333;
+  --tl-text-muted: #6b7280;
+  --tl-bg: #ffffff;
+  --tl-hover-bg: #f3f4f6;
+  --tl-border: #e5e7eb;
+  --tl-border-subtle: #f3f4f6;
+  --tl-footer-bg: #f9fafb;
+  --tl-overlay-bg: rgba(0, 0, 0, 0.5);
+  --tl-focus-ring: 0 0 0 2px #1c497c;
+  --tl-inverse-bg: #1e293b;
+}
+
+/* ==========================================================
+ * BREADCRUMB BAR - Dark blue top bar
+ * ========================================================== */
+.tl-breadcrumb-bar {
+  background: #1c497c;
+  border-bottom: 1px solid #1c497c;
+  padding: 0.25rem 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.tl-breadcrumb-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tl-breadcrumb-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.tl-breadcrumb-list li {
+  display: flex;
+  align-items: center;
+}
+
+.tl-breadcrumb-link {
+  color: white;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tl-breadcrumb-link:hover {
+  color: #e2e8f0;
+  text-decoration: underline;
+}
+
+.tl-breadcrumb-arrow {
+  font-size: 1.1em;
+}
+
+/* ==========================================================
+ * TOGGLE BUTTON - Hamburger menu
+ * ========================================================== */
+.tl-nav-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color var(--tl-nav-transition);
+  position: relative;
+  z-index: var(--tl-nav-z-toggle);
+}
+
+.tl-nav-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tl-nav-toggle-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.tl-nav-toggle-btn__box {
+  width: 24px;
+  height: 18px;
+  display: inline-block;
+  position: relative;
+}
+
+.tl-nav-toggle-btn__inner {
+  display: block;
+  top: 50%;
+  margin-top: -1.5px;
+}
+
+.tl-nav-toggle-btn__inner,
+.tl-nav-toggle-btn__inner::before,
+.tl-nav-toggle-btn__inner::after {
+  width: 24px;
+  height: 3px;
+  background-color: #ffffff;
+  border-radius: 1px;
+  position: absolute;
+  transition: transform var(--tl-nav-transition), opacity var(--tl-nav-transition);
+}
+
+.tl-nav-toggle-btn__inner::before,
+.tl-nav-toggle-btn__inner::after {
+  content: '';
+  display: block;
+}
+
+.tl-nav-toggle-btn__inner::before {
+  top: -8px;
+}
+
+.tl-nav-toggle-btn__inner::after {
+  bottom: -8px;
+}
+
+.tl-nav-toggle-btn--open {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ==========================================================
+ * LEAGUE HEADER - Logo + Name + Desktop Nav Icons
+ * ========================================================== */
+.tl-header {
+  background: var(--tl-bg);
+  border-bottom: 1px solid var(--tl-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  padding: 1rem 0 1.25rem;
+  margin-bottom: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.tl-header .tl-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.tl-header .tl-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tl-header .tl-col-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tl-header .tl-col-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.tl-league-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.tl-league-logo img {
+  width: 90px;
+  height: 100px;
+  display: block;
+}
+
+.tl-leaguename {
+  font-weight: 700;
+  font-size: 2rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 640px) {
+  .tl-leaguename {
+    font-size: 2.5rem;
+  }
+}
+
+.tl-leaguename--the {
+  font-weight: 700;
+  margin-right: 0.2rem;
+  color: var(--tl-primary);
+}
+
+.tl-leaguename--league {
+  font-weight: 700;
+  color: var(--tl-secondary);
+}
+
+.tl-leaguename--dotus {
+  font-weight: 700;
+  color: var(--tl-primary);
+  margin-left: 0.15rem;
+  text-transform: lowercase;
+  font-size: 1rem;
+}
+
+/* Desktop Nav Icons */
+.tl-desktop-nav {
+  display: none;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .tl-desktop-nav {
+    display: flex;
+  }
+}
+
+.tl-nav-icon-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: var(--tl-primary);
+  transition: color 0.2s ease;
+}
+
+.tl-nav-icon-link:hover {
+  color: var(--tl-secondary);
+}
+
+.tl-nav-icon-link svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+}
+
+.tl-nav-icon-link .tl-nav-label {
+  font-size: 0.6rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Rotate banknote icon */
+.tl-nav-icon-link svg.tl-icon-banknote {
+  transform: rotate(25deg);
+}
+
+/* ==========================================================
+ * NAV OVERLAY - Mobile backdrop
+ * ========================================================== */
+.tl-nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--tl-overlay-bg);
+  z-index: var(--tl-nav-z-overlay);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--tl-nav-transition);
+  pointer-events: none;
+}
+
+.tl-nav-overlay--visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+@media (min-width: 1024px) {
+  .tl-nav-overlay {
+    display: none;
+  }
+}
+
+/* ==========================================================
+ * NAV DRAWER - Slide-in panel from right
+ * ========================================================== */
+.tl-nav-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: var(--tl-nav-width);
+  max-width: 85vw;
+  background: var(--tl-bg);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  z-index: var(--tl-nav-z-drawer);
+  transform: translateX(100%);
+  transition: transform var(--tl-nav-transition);
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.tl-nav-drawer--open {
+  transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .tl-nav-drawer {
+    max-width: none;
+  }
+  .tl-nav-drawer--open {
+    border-left: 1px solid var(--tl-border);
+  }
+}
+
+/* Drawer content layout */
+.tl-nav-drawer__content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ==========================================================
+ * DRAWER HEADER - Logo + Close button
+ * ========================================================== */
+.tl-nav-drawer-header {
+  display: flex;
+  align-items: center;
+  height: var(--tl-nav-header-height);
+  padding: 0 16px;
+  background: var(--tl-bg);
+  border-bottom: 1px solid var(--tl-border);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: var(--tl-nav-z-header);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tl-nav-drawer-header__content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tl-nav-drawer-header__logo-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--tl-text);
+  border-radius: 8px;
+  padding: 8px;
+  margin: -8px;
+  transition: var(--tl-nav-hover-transition);
+}
+
+.tl-nav-drawer-header__logo-link:hover {
+  background: var(--tl-hover-bg);
+}
+
+.tl-nav-drawer-header__logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.tl-nav-drawer-header__league-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.tl-nav-drawer-header__the {
+  color: var(--tl-primary);
+  margin-right: 0.125rem;
+}
+
+.tl-nav-drawer-header__league {
+  color: var(--tl-secondary);
+}
+
+.tl-nav-drawer-header__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--tl-text-muted);
+  border-radius: 4px;
+  transition: var(--tl-nav-hover-transition);
+  flex-shrink: 0;
+}
+
+.tl-nav-drawer-header__close:hover {
+  background: var(--tl-hover-bg);
+  color: var(--tl-text);
+}
+
+.tl-nav-drawer-header__close:focus-visible {
+  outline: none;
+  box-shadow: var(--tl-focus-ring);
+}
+
+/* ==========================================================
+ * NAV LINKS - Scrollable middle section
+ * ========================================================== */
+.tl-nav-links {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.tl-nav-links::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tl-nav-links::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tl-nav-links::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.tl-nav-links__list,
+.tl-nav-links__section-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tl-nav-links__section {
+  margin-bottom: 20px;
+}
+
+.tl-nav-links__section:last-child {
+  margin-bottom: 0;
+}
+
+.tl-nav-links__section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tl-section-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px 0;
+  padding: 0 8px;
+  line-height: 1.5;
+}
+
+.tl-nav-links__item {
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.tl-nav-links__item:last-child {
+  margin-bottom: 0;
+}
+
+.tl-nav-links__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  min-height: 44px;
+  color: var(--tl-text);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: var(--tl-nav-hover-transition);
+  box-sizing: border-box;
+}
+
+.tl-nav-links__link:hover {
+  background: var(--tl-hover-bg);
+  color: var(--tl-text);
+}
+
+.tl-nav-links__link:focus-visible {
+  outline: none;
+  box-shadow: var(--tl-focus-ring);
+}
+
+/* Active link */
+.tl-nav-links__link--active {
+  background: var(--tl-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.tl-nav-links__link--active:hover {
+  background: var(--tl-primary);
+  color: #ffffff;
+}
+
+.tl-nav-links__link--active .tl-nav-links__icon svg {
+  fill: #ffffff;
+}
+
+/* Icon */
+.tl-nav-links__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.tl-nav-links__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: var(--tl-primary);
+}
+
+/* Label */
+.tl-nav-links__label {
+  flex: 1;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* External link indicator */
+.tl-nav-links__external {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--tl-text-muted);
+  opacity: 0.6;
+}
+
+.tl-nav-links__external svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tl-nav-links__link:hover .tl-nav-links__external {
+  opacity: 1;
+}
+
+/* Separator */
+.tl-nav-links__separator {
+  border: none;
+  border-top: 1px solid var(--tl-border-subtle);
+  margin: 16px 0;
+}
+
+/* ==========================================================
+ * NAV FOOTER - Team info or verify prompt
+ * ========================================================== */
+.tl-nav-footer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--tl-footer-bg);
+  border-top: 1px solid var(--tl-border);
+  min-height: var(--tl-nav-footer-height);
+  box-sizing: border-box;
+  box-shadow: 0 -1px 1px hsl(220deg 3% 15% / 0.08),
+              0 -2px 2px hsl(220deg 3% 15% / 0.06),
+              0 -3px 4px hsl(220deg 3% 15% / 0.04);
+}
+
+/* Authenticated team info */
+.tl-nav-footer__team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 8px;
+  transition: var(--tl-nav-hover-transition);
+}
+
+.tl-nav-footer__team:hover {
+  background: var(--tl-hover-bg);
+}
+
+.tl-nav-footer__team-logo {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--tl-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tl-nav-footer__team-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tl-nav-footer__team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tl-nav-footer__team-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tl-text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-nav-footer__owner-name {
+  font-size: 0.8125rem;
+  color: var(--tl-text-muted);
+  line-height: 1.3;
+}
+
+/* Verify prompt (unauthenticated) */
+.tl-nav-footer__verify {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin: -12px;
+  margin-bottom: 0;
+  background: rgba(28, 73, 124, 0.05);
+  border: 1px dashed var(--tl-primary);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: var(--tl-nav-hover-transition);
+  min-height: 44px;
+}
+
+.tl-nav-footer__verify:hover {
+  background: rgba(28, 73, 124, 0.1);
+}
+
+.tl-nav-footer__verify-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--tl-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tl-nav-footer__verify-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: #ffffff;
+}
+
+.tl-nav-footer__verify-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tl-nav-footer__verify-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tl-primary);
+  line-height: 1.3;
+}
+
+.tl-nav-footer__verify-hint {
+  font-size: 0.8125rem;
+  color: var(--tl-text-muted);
+  line-height: 1.3;
+}
+
+.tl-nav-footer__verify-arrow {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--tl-primary);
+  transition: transform 0.15s ease;
+}
+
+.tl-nav-footer__verify:hover .tl-nav-footer__verify-arrow {
+  transform: translateX(2px);
+}
+
+/* Footer links (Back to MFL) */
+.tl-nav-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--tl-border-subtle);
+}
+
+.tl-nav-footer__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: var(--tl-text-muted);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  transition: var(--tl-nav-hover-transition);
+}
+
+.tl-nav-footer__link:hover {
+  color: var(--tl-text);
+}
+
+.tl-nav-footer__link-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* ==========================================================
+ * SITE FOOTER - Champion + Nav Columns
+ * ========================================================== */
+.tl-site-footer {
+  background: var(--tl-inverse-bg);
+  color: white;
+  margin-top: 0;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.tl-footer-container {
+  width: 100%;
+  padding: 3rem 1.5rem 2rem;
+  box-sizing: border-box;
+}
+
+.tl-footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+.tl-footer-champion {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tl-champion-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 0.5rem 0;
+  text-transform: none;
+}
+
+.tl-champion-banner {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+}
+
+.tl-champion-banner img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+
+.tl-footer-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+.tl-footer-column h4 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tl-footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tl-footer-column li {
+  margin: 0;
+}
+
+.tl-footer-column a {
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.tl-footer-column a:hover {
+  color: #2e8743;
+  text-decoration: none;
+}
+
+@media (max-width: 960px) {
+  .tl-footer-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .tl-footer-nav {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  .tl-champion-banner {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .tl-footer-nav {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .tl-league-logo img {
+    height: 3rem;
+    width: auto;
+  }
+  .tl-leaguename {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .tl-league-logo img {
+    height: 2rem;
+    width: auto;
+  }
+}
+
+/* ==========================================================
+ * VISUALLY HIDDEN - Screen reader only
+ * ========================================================== */
+.tl-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ==========================================================
+ * REDUCED MOTION
+ * ========================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .tl-nav-overlay,
+  .tl-nav-drawer,
+  .tl-nav-toggle-btn,
+  .tl-nav-toggle-btn__inner,
+  .tl-nav-toggle-btn__inner::before,
+  .tl-nav-toggle-btn__inner::after,
+  .tl-nav-links__link,
+  .tl-nav-footer__verify,
+  .tl-nav-footer__verify-arrow {
+    transition: none !important;
+  }
+}
+</style>
+
+
+<!-- ========================================================
+     HEADER HTML - Place after <body> in overall_header.html
+     ======================================================== -->
+
+<!-- Breadcrumb Bar -->
+<div class="tl-breadcrumb-bar">
+  <div class="tl-breadcrumb-container">
+    <nav aria-label="Breadcrumb">
+      <ul class="tl-breadcrumb-list">
+        <li>
+          <a href="#" class="tl-breadcrumb-link" id="tl-mfl-home-link" target="_blank" rel="noopener noreferrer">
+            <span class="tl-breadcrumb-arrow">←</span> Back to MFL
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <!-- Hamburger Toggle -->
+    <button
+      type="button"
+      class="tl-nav-toggle-btn"
+      id="tl-nav-toggle-btn"
+      aria-label="Toggle navigation menu"
+      aria-expanded="false"
+      aria-controls="tl-nav-drawer"
+    >
+      <span class="tl-nav-toggle-btn__box" aria-hidden="true">
+        <span class="tl-nav-toggle-btn__inner"></span>
+      </span>
+    </button>
+  </div>
+</div>
+
+<!-- League Header -->
+<div class="tl-header">
+  <div class="tl-container">
+    <div class="tl-row">
+      <div class="tl-col-left">
+        <a class="tl-league-link" href="https://www.theleague.us/theleague">
+          <div class="tl-league-logo">
+            <img src="https://www.theleague.us/theleague/assets/logos/theleague-logo.svg" alt="The League Logo" />
+          </div>
+          <div class="tl-leaguename">
+            <span class="tl-leaguename--the">The</span><span class="tl-leaguename--league">League</span><span class="tl-leaguename--dotus">.us</span>
+          </div>
+        </a>
+      </div>
+      <div class="tl-col-right">
+        <nav class="tl-desktop-nav" aria-label="Quick links">
+          <a href="https://www.theleague.us/forum/index.php" class="tl-nav-icon-link" title="Message board">
+            <svg class="tl-nav-icon" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-comments"></use></svg>
+            <span class="tl-nav-label">Message board</span>
+          </a>
+          <a href="https://www.theleague.us/theleague/rosters" class="tl-nav-icon-link" title="Roster/Salary">
+            <svg class="tl-nav-icon tl-icon-banknote" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-banknote"></use></svg>
+            <span class="tl-nav-label">Roster/Salary</span>
+          </a>
+          <a href="#" class="tl-nav-icon-link" id="tl-submit-lineup-link" target="_blank" rel="noopener noreferrer" title="Submit lineup">
+            <svg class="tl-nav-icon" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-submit"></use></svg>
+            <span class="tl-nav-label">Submit lineup</span>
+          </a>
+          <a href="#" class="tl-nav-icon-link" id="tl-add-drop-link" target="_blank" rel="noopener noreferrer" title="Add/drop">
+            <svg class="tl-nav-icon" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-user-plus"></use></svg>
+            <span class="tl-nav-label">Add/drop</span>
+          </a>
+          <a href="https://www.theleague.us/theleague/standings" class="tl-nav-icon-link" title="Standings">
+            <svg class="tl-nav-icon" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-numberone"></use></svg>
+            <span class="tl-nav-label">Standings</span>
+          </a>
+          <a href="#" class="tl-nav-icon-link" id="tl-live-scoring-link" target="_blank" rel="noopener noreferrer" title="Live scoring">
+            <svg class="tl-nav-icon" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-scoreboard"></use></svg>
+            <span class="tl-nav-label">Live scoring</span>
+          </a>
+          <a href="https://www.theleague.us/theleague/playoffs" class="tl-nav-icon-link" title="Playoffs">
+            <svg class="tl-nav-icon" aria-hidden="true"><use href="https://www.theleague.us/theleague/assets/icons/sprite.svg#icon-trophy"></use></svg>
+            <span class="tl-nav-label">Playoffs</span>
+          </a>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Nav Overlay (mobile backdrop) -->
+<div class="tl-nav-overlay" id="tl-nav-overlay" aria-hidden="true"></div>
+
+<!-- Nav Drawer -->
+<aside
+  class="tl-nav-drawer"
+  id="tl-nav-drawer"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Navigation drawer"
+  aria-hidden="true"
+>
+  <div class="tl-nav-drawer__content">
+    <!-- Drawer Header -->
+    <header class="tl-nav-drawer-header">
+      <div class="tl-nav-drawer-header__content">
+        <a href="https://www.theleague.us/theleague" class="tl-nav-drawer-header__logo-link" aria-label="Go to TheLeague home">
+          <img
+            src="https://www.theleague.us/theleague/assets/logos/theleague-logo.svg"
+            alt="TheLeague Logo"
+            class="tl-nav-drawer-header__logo"
+            width="48"
+            height="48"
+          />
+          <span class="tl-nav-drawer-header__league-name">
+            <span class="tl-nav-drawer-header__the">The</span>
+            <span class="tl-nav-drawer-header__league">League</span>
+          </span>
+        </a>
+        <button
+          type="button"
+          class="tl-nav-drawer-header__close"
+          aria-label="Close navigation"
+          id="tl-nav-close-btn"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Nav Links (populated by JS) -->
+    <nav class="tl-nav-links" aria-label="Main navigation" id="tl-nav-links-container">
+      <!-- JS will render sections here -->
+    </nav>
+
+    <!-- Nav Footer (populated by JS) -->
+    <footer class="tl-nav-footer" id="tl-nav-footer-container">
+      <!-- JS will render team info or verify prompt -->
+    </footer>
+  </div>
+
+  <!-- Screen reader announcements -->
+  <div class="tl-visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="tl-nav-announcer"></div>
+</aside>
+
+
+<!-- ========================================================
+     FOOTER HTML - Place after phpBB content in overall_footer.html
+     ======================================================== -->
+
+<footer class="tl-site-footer">
+  <div class="tl-footer-container">
+    <div class="tl-footer-content">
+      <div class="tl-footer-champion">
+        <h3 class="tl-champion-title">Defending League Champions</h3>
+        <div class="tl-champion-banner">
+          <img src="https://www.theleague.us/theleague/assets/theleague/banners/wascawy_wabbits.png" alt="Wascawy Wabbits - 2024 Champions" />
+        </div>
+      </div>
+      <div class="tl-footer-nav">
+        <div class="tl-footer-column">
+          <h4>Rules</h4>
+          <ul>
+            <li><a href="#">Constitution</a></li>
+            <li><a href="#">League Scoring</a></li>
+          </ul>
+        </div>
+        <div class="tl-footer-column">
+          <h4>Brand</h4>
+          <ul>
+            <li><a href="https://www.theleague.us/theleague/assets">Asset Library</a></li>
+            <li><a href="https://www.theleague.us/theleague/icons">Sprite Icons</a></li>
+          </ul>
+        </div>
+        <div class="tl-footer-column">
+          <h4>League</h4>
+          <ul>
+            <li><a href="https://www.theleague.us/theleague/rosters">Roster/Salary</a></li>
+            <li><a href="https://www.theleague.us/theleague/rosters?view=nextyear">Next Year Summary</a></li>
+            <li><a href="https://www.theleague.us/theleague/standings">Standings</a></li>
+          </ul>
+        </div>
+        <div class="tl-footer-column">
+          <h4>News</h4>
+          <ul>
+            <li><a href="https://www.theleague.us/theleague/draft-predictor">Draft Order</a></li>
+            <li><a href="https://www.theleague.us/theleague/draft-predictor?view=history">Draft History</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ========================================================
+     JAVASCRIPT - Place before </body>
+     ======================================================== -->
+<script>
+(function() {
+  'use strict';
+
+  // ============================================================
+  // CONFIGURATION - Matches nav-config.json for TheLeague
+  // ============================================================
+  var SITE_BASE = 'https://www.theleague.us';
+  var SITE_PATH = SITE_BASE + '/theleague';
+  var MFL_HOST = 'www49.myfantasyleague.com';
+  var LEAGUE_ID = '13522';
+  var SPRITE_URL = SITE_PATH + '/assets/icons/sprite.svg';
+  var DESKTOP_BREAKPOINT = 1024;
+
+  // Year calculation (mirrors getCurrentLeagueYear)
+  // New league year starts Feb 14 at 8:45 PT
+  function getCurrentLeagueYear() {
+    var now = new Date();
+    var year = now.getFullYear();
+    // Feb 14 at 8:45 PT = Feb 14 at 16:45 UTC
+    var cutoff = new Date(year, 1, 14, 16, 45, 0);
+    if (now < cutoff) {
+      return year - 1;
+    }
+    return year;
+  }
+
+  var YEAR = getCurrentLeagueYear();
+
+  // Build MFL URLs
+  var MFL_BASE = 'https://' + MFL_HOST + '/' + YEAR;
+  var MFL_HOME_URL = MFL_BASE + '/home/' + LEAGUE_ID;
+  var SUBMIT_LINEUP_URL = MFL_BASE + '/lineup?L=' + LEAGUE_ID;
+  var ADD_DROP_URL = MFL_BASE + '/add_drop?L=' + LEAGUE_ID;
+  var LIVE_SCORING_URL = MFL_HOME_URL + '?MODULE=MESSAGE6';
+  var VERIFY_TEAM_URL = MFL_HOME_URL + '?MODULE=MESSAGE20';
+
+  // Set dynamic MFL links
+  var mflHomeLink = document.getElementById('tl-mfl-home-link');
+  if (mflHomeLink) mflHomeLink.href = MFL_HOME_URL;
+
+  var submitLink = document.getElementById('tl-submit-lineup-link');
+  if (submitLink) submitLink.href = SUBMIT_LINEUP_URL;
+
+  var addDropLink = document.getElementById('tl-add-drop-link');
+  if (addDropLink) addDropLink.href = ADD_DROP_URL;
+
+  var liveScoringLink = document.getElementById('tl-live-scoring-link');
+  if (liveScoringLink) liveScoringLink.href = LIVE_SCORING_URL;
+
+  // ============================================================
+  // TEAM DATA - Maps franchise IDs to team info
+  // This enables personalized nav footer from myteam cookie
+  // ============================================================
+  var TEAMS = {
+    '0001': { name: 'Pacific Pigskins', icon: '/assets/theleague/icons/pigskins.png' },
+    '0002': { name: 'Da Dangsters', icon: '/assets/theleague/icons/da_dangsters.png' },
+    '0003': { name: 'Maverick', icon: '/assets/theleague/icons/maverick.png' },
+    '0004': { name: 'Boomtown', icon: '/assets/theleague/icons/boomtown.png' },
+    '0005': { name: 'Da Big Dawgs', icon: '/assets/theleague/icons/da_big_dawgs.png' },
+    '0006': { name: 'Midnight Riders', icon: '/assets/theleague/icons/midnight_riders.png' },
+    '0007': { name: 'The Thundercats', icon: '/assets/theleague/icons/the_thundercats.png' },
+    '0008': { name: 'Bring The Pain', icon: '/assets/theleague/icons/bring_the_pain.png' },
+    '0009': { name: 'Wascawy Wabbits', icon: '/assets/theleague/icons/wascawy_wabbits.png' },
+    '0010': { name: 'Computer Jocks', icon: '/assets/theleague/icons/computer_jocks.png' },
+    '0011': { name: 'Golden Eagles', icon: '/assets/theleague/icons/golden_eagles.png' },
+    '0012': { name: 'OC Hitmen', icon: '/assets/theleague/icons/oc_hitmen.png' },
+    '0013': { name: 'The Wolves', icon: '/assets/theleague/icons/the_wolves.png' },
+    '0014': { name: 'Assassins', icon: '/assets/theleague/icons/assassins.png' },
+    '0015': { name: 'Da Maniacs', icon: '/assets/theleague/icons/da_maniacs.png' },
+    '0016': { name: 'The Mob', icon: '/assets/theleague/icons/the_mob.png' }
+  };
+
+  // ============================================================
+  // NAV SECTIONS - Mirrors nav-config.json (TheLeague public links)
+  // ============================================================
+  var NAV_SECTIONS = [
+    {
+      id: 'popular',
+      label: 'Popular',
+      links: [
+        { id: 'rosters', label: 'Roster/Salary', icon: 'banknote', href: SITE_BASE + '/theleague/rosters' },
+        { id: 'next-year', label: 'Next Year Summary', icon: 'chalkboard', href: SITE_BASE + '/theleague/rosters?view=nextyear' },
+        { id: 'draft-predictor', label: 'Draft Order', icon: 'draft-podium', href: SITE_BASE + '/theleague/draft-predictor' },
+        { id: 'standings', label: 'Standings', icon: 'numberone', href: SITE_BASE + '/theleague/standings' },
+        { id: 'playoffs', label: 'Playoffs', icon: 'trophy', href: SITE_BASE + '/theleague/playoffs' }
+      ]
+    },
+    {
+      id: 'reports',
+      label: 'Advanced Reports',
+      links: [
+        { id: 'salary-benchmarks', label: 'Salary Benchmarks', icon: 'bar-chart', href: SITE_BASE + '/theleague/salary' },
+        { id: 'salary-history', label: 'Salary History', icon: 'history', href: SITE_BASE + '/theleague/salary-history' },
+        { id: 'mvp', label: 'Salary-Adjusted MVPs', icon: 'star', href: SITE_BASE + '/theleague/mvp' }
+      ]
+    },
+    {
+      id: 'mfl-links',
+      label: 'MFL Actions',
+      links: [
+        { id: 'submit-lineup', label: 'Submit Lineup', icon: 'submit', href: SUBMIT_LINEUP_URL, external: true },
+        { id: 'add-drop', label: 'Add/Drop', icon: 'user-plus', href: ADD_DROP_URL, external: true },
+        { id: 'live-scoring', label: 'Live Scoring', icon: 'scoreboard', href: LIVE_SCORING_URL, external: true }
+      ]
+    },
+    {
+      id: 'community',
+      label: 'Community',
+      links: [
+        { id: 'forum', label: 'Message Board', icon: 'comments', href: SITE_BASE + '/forum/index.php', external: true, active: true }
+      ]
+    },
+    {
+      id: 'tools',
+      label: 'Tools',
+      links: [
+        { id: 'calculator', label: 'Extension Calculator', icon: 'dollar', href: SITE_BASE + '/theleague/calculator' }
+      ]
+    },
+    {
+      id: 'leagues',
+      label: 'Leagues',
+      links: [
+        { id: 'theleague-site', label: 'TheLeague.us', icon: 'shield', href: SITE_BASE, external: true },
+        { id: 'afl-site', label: 'AFL Fantasy', icon: 'helmet', href: 'https://afl-fantasy.com', external: true }
+      ]
+    }
+  ];
+
+  // ============================================================
+  // EXTERNAL LINK SVG TEMPLATE
+  // ============================================================
+  var EXTERNAL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+
+  // ============================================================
+  // COOKIE UTILITIES
+  // ============================================================
+  function getCookie(name) {
+    var nameEQ = name + '=';
+    var ca = document.cookie.split(';');
+    for (var i = 0; i < ca.length; i++) {
+      var c = ca[i].trim();
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+    }
+    return null;
+  }
+
+  // ============================================================
+  // RENDER NAV LINKS
+  // ============================================================
+  function renderNavLinks() {
+    var container = document.getElementById('tl-nav-links-container');
+    if (!container) return;
+
+    var html = '<ul class="tl-nav-links__list" role="list">';
+
+    NAV_SECTIONS.forEach(function(section, sectionIndex) {
+      html += '<li class="tl-nav-links__section">';
+      html += '<h2 class="tl-nav-links__section-title" id="tl-nav-section-' + section.id + '">' + section.label + '</h2>';
+      html += '<ul class="tl-nav-links__section-links" role="list" aria-labelledby="tl-nav-section-' + section.id + '">';
+
+      section.links.forEach(function(link) {
+        var isActive = link.active === true;
+        var isExternal = link.external === true;
+        var activeClass = isActive ? ' tl-nav-links__link--active' : '';
+        var target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+        var ariaCurrent = isActive ? ' aria-current="page"' : '';
+
+        html += '<li class="tl-nav-links__item">';
+        html += '<a href="' + link.href + '" class="tl-nav-links__link' + activeClass + '"' + target + ariaCurrent + '>';
+        html += '<span class="tl-nav-links__icon" aria-hidden="true">';
+        html += '<svg width="24" height="24" viewBox="0 0 24 24"><use href="' + SPRITE_URL + '#icon-' + link.icon + '"/></svg>';
+        html += '</span>';
+        html += '<span class="tl-nav-links__label">' + link.label + '</span>';
+
+        if (isExternal) {
+          html += '<span class="tl-nav-links__external" aria-hidden="true">' + EXTERNAL_ICON_SVG + '</span>';
+        }
+
+        html += '</a></li>';
+      });
+
+      html += '</ul>';
+
+      // Separator (not after last section)
+      if (sectionIndex < NAV_SECTIONS.length - 1) {
+        html += '<hr class="tl-nav-links__separator" aria-hidden="true">';
+      }
+
+      html += '</li>';
+    });
+
+    html += '</ul>';
+    container.innerHTML = html;
+  }
+
+  // ============================================================
+  // RENDER NAV FOOTER (personalized if myteam cookie exists)
+  // ============================================================
+  function renderNavFooter() {
+    var container = document.getElementById('tl-nav-footer-container');
+    if (!container) return;
+
+    var franchiseId = getCookie('myteam');
+    var team = franchiseId ? TEAMS[franchiseId] : null;
+    var html = '';
+
+    if (team) {
+      // Authenticated: show team info
+      var iconUrl = SITE_PATH + team.icon;
+      html += '<a href="' + SITE_BASE + '/theleague/rosters" class="tl-nav-footer__team" aria-label="View ' + team.name + ' roster">';
+      html += '<div class="tl-nav-footer__team-logo">';
+      html += '<img src="' + iconUrl + '" alt="' + team.name + ' logo" class="tl-nav-footer__team-img" width="40" height="40" loading="lazy">';
+      html += '</div>';
+      html += '<div class="tl-nav-footer__team-info">';
+      html += '<span class="tl-nav-footer__team-name">' + team.name + '</span>';
+      html += '</div>';
+      html += '</a>';
+    } else {
+      // Unauthenticated: show verify prompt
+      html += '<a href="' + VERIFY_TEAM_URL + '" class="tl-nav-footer__verify" target="_blank" rel="noopener noreferrer" aria-label="Verify your team ownership on MFL">';
+      html += '<div class="tl-nav-footer__verify-icon">';
+      html += '<svg width="20" height="20" viewBox="0 0 24 24"><use href="' + SPRITE_URL + '#icon-user"/></svg>';
+      html += '</div>';
+      html += '<div class="tl-nav-footer__verify-info">';
+      html += '<span class="tl-nav-footer__verify-label">Verify Your Team</span>';
+      html += '<span class="tl-nav-footer__verify-hint">Link your MFL account</span>';
+      html += '</div>';
+      html += '<svg class="tl-nav-footer__verify-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>';
+      html += '</a>';
+    }
+
+    // "Back to MFL" footer link
+    html += '<div class="tl-nav-footer__links">';
+    html += '<a href="' + MFL_HOME_URL + '" class="tl-nav-footer__link" target="_blank" rel="noopener noreferrer">';
+    html += '<svg class="tl-nav-footer__link-icon" aria-hidden="true"><use href="' + SPRITE_URL + '#icon-external-link"/></svg>';
+    html += '<span>Back to MFL</span>';
+    html += '</a>';
+    html += '</div>';
+
+    container.innerHTML = html;
+  }
+
+  // ============================================================
+  // DRAWER OPEN/CLOSE LOGIC
+  // ============================================================
+  var drawer = document.getElementById('tl-nav-drawer');
+  var overlay = document.getElementById('tl-nav-overlay');
+  var toggleBtn = document.getElementById('tl-nav-toggle-btn');
+  var closeBtn = document.getElementById('tl-nav-close-btn');
+  var announcer = document.getElementById('tl-nav-announcer');
+
+  var isOpen = false;
+  var previousActiveElement = null;
+
+  function isDesktop() {
+    return window.innerWidth >= DESKTOP_BREAKPOINT;
+  }
+
+  function announce(message) {
+    if (announcer) {
+      announcer.textContent = message;
+      setTimeout(function() { announcer.textContent = ''; }, 1000);
+    }
+  }
+
+  function getFocusableElements() {
+    if (!drawer) return [];
+    return Array.from(drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+  }
+
+  function handleFocusTrap(e) {
+    if (e.key !== 'Tab') return;
+    var focusable = getFocusableElements();
+    if (focusable.length === 0) return;
+
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+
+  function openDrawer() {
+    if (!drawer) return;
+    previousActiveElement = document.activeElement;
+
+    isOpen = true;
+    drawer.classList.add('tl-nav-drawer--open');
+    drawer.setAttribute('aria-hidden', 'false');
+    if (overlay) overlay.classList.add('tl-nav-overlay--visible');
+
+    if (!isDesktop()) {
+      document.body.style.overflow = 'hidden';
+    }
+
+    document.addEventListener('keydown', handleFocusTrap);
+
+    requestAnimationFrame(function() {
+      var focusable = getFocusableElements();
+      if (focusable.length > 0) focusable[0].focus();
+    });
+
+    if (toggleBtn) {
+      toggleBtn.classList.add('tl-nav-toggle-btn--open');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    announce('Navigation drawer opened');
+  }
+
+  function closeDrawer() {
+    if (!drawer) return;
+
+    isOpen = false;
+    drawer.classList.remove('tl-nav-drawer--open');
+    drawer.setAttribute('aria-hidden', 'true');
+    if (overlay) overlay.classList.remove('tl-nav-overlay--visible');
+
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', handleFocusTrap);
+
+    if (previousActiveElement) {
+      previousActiveElement.focus();
+      previousActiveElement = null;
+    }
+
+    if (toggleBtn) {
+      toggleBtn.classList.remove('tl-nav-toggle-btn--open');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    announce('Navigation drawer closed');
+  }
+
+  function toggleDrawer() {
+    if (isOpen) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  }
+
+  // Event listeners
+  if (toggleBtn) toggleBtn.addEventListener('click', toggleDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (overlay) overlay.addEventListener('click', closeDrawer);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && isOpen) closeDrawer();
+  });
+
+  // Auto-close on internal link click (mobile)
+  if (drawer) {
+    drawer.addEventListener('click', function(e) {
+      var link = e.target.closest('a');
+      if (link && !link.getAttribute('target') && !isDesktop()) {
+        closeDrawer();
+      }
+    });
+  }
+
+  // ============================================================
+  // INITIALIZE
+  // ============================================================
+  renderNavLinks();
+  renderNavFooter();
+
+})();
+</script>
