@@ -235,8 +235,10 @@
     {
       "key": "dead_cap_walking",
       "slug": "dead_cap_walking",
+      "id": "0004",
       "name": "Dead Cap Walking",
-      "aliases": [],
+      "division": "Southwest",
+      "aliases": ["DCW"],
       "assets": {
         "banners": [
           {
@@ -360,51 +362,6 @@
             "type": "psds",
             "filename": "gridiron_geeks.psd",
             "relativePath": "/assets/theleague/psds/gridiron_geeks.psd",
-            "extension": ".psd"
-          }
-        ]
-      }
-    },
-    {
-      "key": "heavy_chevy",
-      "slug": "heavy_chevy",
-      "id": "0004",
-      "name": "Heavy Chevy",
-      "division": "Southwest",
-      "aliases": [
-        "Heavy",
-        "Chevy"
-      ],
-      "assets": {
-        "banners": [
-          {
-            "type": "banners",
-            "filename": "heavy_chevy.png",
-            "relativePath": "/assets/theleague/banners/heavy_chevy.png",
-            "extension": ".png"
-          }
-        ],
-        "group-me": [
-          {
-            "type": "group-me",
-            "filename": "heavy_chevy.png",
-            "relativePath": "/assets/theleague/group-me/heavy_chevy.png",
-            "extension": ".png"
-          }
-        ],
-        "icons": [
-          {
-            "type": "icons",
-            "filename": "heavy_chevy.png",
-            "relativePath": "/assets/theleague/icons/heavy_chevy.png",
-            "extension": ".png"
-          }
-        ],
-        "psds": [
-          {
-            "type": "psds",
-            "filename": "heavy-chevy.psd",
-            "relativePath": "/assets/theleague/psds/heavy-chevy.psd",
             "extension": ".psd"
           }
         ]

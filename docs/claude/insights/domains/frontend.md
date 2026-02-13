@@ -69,3 +69,32 @@ Both slide from the right and share similar patterns but have different link str
   --component-text: #f1f5f9;
 }
 ```
+
+---
+
+## 2026-02-12 - Franchise History System for Name/Logo Changes
+
+**Context:** Heavy Chevy (franchise 0004) rebranded to Dead Cap Walking for the 2026 season. Need historical views (standings, playoffs, salary history) to show the old name/logo while current views show the new one.
+
+**Insight:** Added a `history` array to team config entries in `theleague.config.json`. Each entry has `yearStart`/`yearEnd` plus all identity fields (name, nameMedium, nameShort, abbrev, aliases, icon, banner, groupMe). The `getTeamIdentityForYear()` function in `src/utils/team-names.ts` resolves the correct identity for any given year.
+
+**Evidence:**
+- Config: `src/data/theleague.config.json` → franchise 0004 has `history[]` with Heavy Chevy 2007-2025
+- Utility: `src/utils/team-names.ts` → `getTeamIdentityForYear(team, year)`
+- Tests: `tests/franchise-history.test.ts`
+- MFL API: No dedicated history endpoint. Year-scoped `league` exports return names as they were that year.
+
+**Recommendation:** For pages showing historical data, use `getTeamIdentityForYear()` to resolve team identity:
+```typescript
+import { getTeamIdentityForYear, type TeamConfig } from '../utils/team-names';
+
+const identity = getTeamIdentityForYear(team as TeamConfig, year);
+const displayName = chooseTeamName({
+  fullName: identity.name,
+  nameMedium: identity.nameMedium,
+  nameShort: identity.nameShort,
+  abbrev: identity.abbrev,
+});
+// identity.icon and identity.banner also resolve correctly
+```
+Future franchise rebrandings just need a new history entry added to the config.
