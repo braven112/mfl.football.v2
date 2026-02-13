@@ -175,10 +175,8 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         <thead>
           <tr>
             <th scope="col">Player</th>
-            <th scope="col" class="align-right">Current Years</th>
-            <th scope="col" class="align-right">Current Salary</th>
-            <th scope="col" class="align-right">New Years</th>
-            <th scope="col" class="align-right">New Salary</th>
+            <th scope="col" class="align-right">Current</th>
+            <th scope="col" class="align-right">Extended</th>
           </tr>
         </thead>
         <tbody>
@@ -218,10 +216,8 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
                   </div>
                 </div>
               </td>
-              <td data-label="Current Years" class="align-center">{player.contractYears}</td>
-              <td data-label="Current Salary" class="align-right">{currencyFormatter.format(player.salary)}</td>
-              <td data-label="New Years" class="align-center">{player.contractYears + 2}</td>
-              <td data-label="New Salary" class="align-right">{currencyFormatter.format(extensionCalc.newContractSalary)}</td>
+              <td data-label="Current" class="align-right contract-cell">{currencyFormatter.format(player.salary)} <span class="contract-cell__x">x</span> {player.contractYears}</td>
+              <td data-label="Extended" class="align-right contract-cell">{currencyFormatter.format(extensionCalc.newContractSalary)} <span class="contract-cell__x">x</span> {player.contractYears + 2}</td>
             </tr>
             );
           })}
@@ -370,10 +366,8 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
             <thead>
               <tr>
                 <th scope="col">Player</th>
-                <th scope="col" class="align-right">Current Years</th>
-                <th scope="col" class="align-right">Current Salary</th>
-                <th scope="col" class="align-right">New Years</th>
-                <th scope="col" class="align-right">New Salary</th>
+                <th scope="col" class="align-right">Current</th>
+                <th scope="col" class="align-right">Extended</th>
               </tr>
             </thead>
             <tbody>
@@ -426,10 +420,8 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
                 </div>
               </div>
             </td>
-            <td data-label="Current Years" class="align-center">${player.contractYears}</td>
-            <td data-label="Current Salary" class="align-right">${currencyFormatter.format(player.salary)}</td>
-            <td data-label="New Years" class="align-center">${player.contractYears + 2}</td>
-            <td data-label="New Salary" class="align-right">${currencyFormatter.format(extensionSalary)}</td>
+            <td data-label="Current" class="align-right contract-cell">${currencyFormatter.format(player.salary)} <span class="contract-cell__x">x</span> ${player.contractYears}</td>
+            <td data-label="Extended" class="align-right contract-cell">${currencyFormatter.format(extensionSalary)} <span class="contract-cell__x">x</span> ${player.contractYears + 2}</td>
           </tr>
         `;
       });
@@ -536,11 +528,15 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     text-align: center;
   }
 
-  .veteran-extension-candidates .eligibility-table td[data-label="Current Salary"],
-  .veteran-extension-candidates .eligibility-table td[data-label="Contract Years"],
-  .veteran-extension-candidates .eligibility-table td[data-label="PPG"] {
+  .veteran-extension-candidates .contract-cell {
+    white-space: nowrap;
     font-size: 0.85rem;
     color: #555;
+  }
+
+  .veteran-extension-candidates .contract-cell__x {
+    opacity: 0.5;
+    margin: 0 0.15em;
   }
 
   .veteran-extension-candidates .player-cell {
