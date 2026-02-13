@@ -224,7 +224,7 @@
   }
   
   .nav_buttons .svg-text {
-    font-size: $svg-text-font-size - 2px;
+    font-size: calc(var(--svg-text-font-size) - 1px);
     text-align: center;
   }
   
@@ -271,7 +271,7 @@
   }
 
 .container-header {
-  background-color: $white;
+  background-color: $header-bg;
 }
 
 .st1 {
@@ -280,11 +280,11 @@
 }
 
 .st2 {
-  fill: $accent-color;
+  fill: $logo-secondary-color;
 }
 
 .st3 {
-  fill: $primary-color;
+  fill: $logo-main-color;
 }
 
 .st4 {
@@ -293,30 +293,30 @@
 }
 
 .st5 {
-  fill: $lightgray;
+  fill: $logo-3rd-color;
 }
 
 .st6 {
-  fill: $white;
+  fill: $logo-4th-color;
 }
 
 .leaguename {
   font-family: $headline-font;
-  color: $accent-color;
+  color: $logo-name-primary-color;
 
   .leaguename--the,
   .leaguename--dotus {
-    color: $primary-color;
+    color: $logo-name-secondary-color;
   }
 }
 
 span.leaguename--the,
 span.leaguename--dotus {
-  color: $primary-color;
+  color: $logo-name-secondary-color;
 }
 
 .nav_buttons .svg-text {
-  color: $link-color;
+  color: $header-icon-text-color;
 }
 
 .welcome,

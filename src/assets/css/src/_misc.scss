@@ -308,6 +308,10 @@ body {
   color: $primary-text-color;
 }
 
+td.hint {
+  color: $alert-info-text;
+}
+
 td a,
 td a:link,
 td a:active,
@@ -377,15 +381,15 @@ a:visited {
 }
 
 .container-footer {
-  background-color: $primary-color;
+  background-color: $footer-bg-color;
 
   a,
   .defending-champ {
-    color: $white;
+    color: $footer-text-color;
   }
 
   ul li {
-    color: $white;
+    color: $footer-text-color;
     font-family: $headline-font;
   }
 }

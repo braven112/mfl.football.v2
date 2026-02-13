@@ -1,172 +1,170 @@
 /**
- * TheLeague Variables
+ * Dark Mode Variables
  *
- * SCSS variables that reference CSS custom properties.
- * The :root block defines ALL TheLeague default values.
- * This is the base variables file — AFL and Dark override it during build.
+ * Same SCSS var() wrappers as _variables.scss.
+ * The :root block below overrides ALL color values for the dark theme.
  */
 
-//////////////////////TheLeague :root//////////////////////////
+//////////////////////Dark :root overrides//////////////////////////
 :root {
-  //////////////////////Colors//////////////////////////
-  --primary-color: #1c497c;
-  --secondary-color: #1d4b7e;
-  --accent-color: #3c9950;
-  --dark-accent-color: #2e8743;
-  --primary-text-color: #333333;
-  --secondary-text-color: #333333;
+  --primary-color: #cccccc;
+  --secondary-color: #eeeeee;
+  --accent-color: #c9a94e;
+  --dark-accent-color: #a8893a;
+  --primary-text-color: #e0e0e8;
+  --secondary-text-color: #c0c0cc;
 
-  --link-color: #1c497c;
-  --link-color-hover: #33629b;
+  --link-color: #bbbbbb;
+  --link-color-hover: #c9a94e;
 
-  --add-color: green;
-  --drop-color: red;
+  --add-color: #4ade80;
+  --drop-color: #f87171;
 
   //////////////////////Alerts//////////////////////////
-  --alert-danger-text: #a94442;
-  --alert-danger-bg: #f2dede;
-  --alert-danger-border: #ebccd1;
+  --alert-danger-text: #fca5a5;
+  --alert-danger-bg: rgba(220, 38, 38, 0.15);
+  --alert-danger-border: rgba(220, 38, 38, 0.25);
 
-  --alert-warning-text: #8a6d3b;
-  --alert-warning-bg: #fcf8e3;
-  --alert-warning-border: #faf2cc;
+  --alert-warning-text: #fcd34d;
+  --alert-warning-bg: rgb(57, 36, 1);
+  --alert-warning-border: rgb(216, 155, 49);
 
-  --alert-success-text: #3c763d;
-  --alert-success-bg: #dff0d8;
-  --alert-success-border: #d0e9c6;
+  --alert-success-text: #6ee7b7;
+  --alert-success-bg: rgba(16, 185, 129, 0.12);
+  --alert-success-border: rgba(16, 185, 129, 0.25);
 
-  --alert-info-text: #31708f;
-  --alert-info-bg: #d9edf7;
-  --alert-info-border: #bcdff1;
+  --alert-info-text: #93bbfd;
+  --alert-info-bg: rgba(59, 130, 246, 0.12);
+  --alert-info-border: rgba(59, 130, 246, 0.25);
 
   //////////////////////Neutrals//////////////////////////
-  --gray1: #333;
-  --gray2: #666;
-  --gray3: #999;
+  --gray1: #d8d8e0;
+  --gray2: #8a8a9a;
+  --gray3: #6b6b80;
 
-  --offwhite: #eee;
-  --offwhite2: #e0e0e0;
+  --offwhite: #2e2e2e;
+  --offwhite2: #121220;
 
-  --lightgray: #ddd;
-  --lightgray2: #ccc;
-  --lightgray3: #aaa;
+  --lightgray: #2e2e44;
+  --lightgray2: #3a3a50;
+  --lightgray3: #5a5a70;
 
-  --white: #fff;
+  --white: #2e2e2e;
 
-  --codebg-color: #31382d;
+  --codebg-color: #151526;
 
   //////////////////////Tables//////////////////////////
-  --oddtablerow: #fff;
-  --eventablerow: #ececec;
-  --newposition-border-color: #ccc;
-  --table-header-color: #1c497c;
+  --oddtablerow: #2e2e2e;
+  --eventablerow: #393939;
+  --newposition-border-color: #3a3a50;
+  --table-header-color: #8a8a9a;
 
   //////////////////////Page Backgrounds//////////////////////////
-  --primary-bg-color: #fff;
-  --pagebody-bg: #e0e0e0;
-  --report-bg: #fff;
-  --header-bg: #fff;
+  --primary-bg-color: #2e2e2e;
+  --pagebody-bg: #121220;
+  --report-bg: #2e2e2e;
+  --header-bg: #10101c;
 
   //////////////////////Footer//////////////////////////
-  --footer-bg-color: #1c497c;
-  --footer-text-color: #fff;
-  --footer-header-text-color: #fff;
+  --footer-bg-color: #10101c;
+  --footer-text-color: #e0e0e8;
+  --footer-header-text-color: #e0e0e8;
 
   //////////////////////Borders//////////////////////////
-  --border-color: #ddd;
+  --border-color: #2e2e44;
 
   //////////////////////MFL Menu//////////////////////////
-  --menu-bg-color: #1c497c;
-  --menu-bg-hover-color: #173f6a;
-  --menu-border-color: #1c497c;
-  --menu-text-color: #fff;
+  --menu-bg-color: #10101c;
+  --menu-bg-hover-color: #1d1d2f;
+  --menu-border-color: #1a1a2e;
+  --menu-text-color: #e0e0e8;
 
   //////////////////////Report Navigation//////////////////////////
-  --secondary-menu-border-color: #3c9950;
-  --secondary-menu-bg-color: #3c9950;
-  --secondary-menu-text-color: #fff;
-  --secondary-menu-link-color: #fff;
-  --secondary-menu-icon-color: #fff;
-  --secondary-menu-icon-hover-color: #fff;
+  --secondary-menu-border-color: #c9a94e;
+  --secondary-menu-bg-color: #8a7230;
+  --secondary-menu-text-color: #e0e0e8;
+  --secondary-menu-link-color: #e0e0e8;
+  --secondary-menu-icon-color: #e0e0e8;
+  --secondary-menu-icon-hover-color: #ededf0;
   --secondary-menu-font-weight: normal;
 
   //////////////////////Buttons//////////////////////////
-  --button-bg-color: #3c9950;
-  --button-bg-color-hover: #2e8743;
-  --button-link-color: #fff;
+  --button-bg-color: #c9a94e;
+  --button-bg-color-hover: #d4b85e;
+  --button-link-color: #121220;
 
   //////////////////////Scrollbar//////////////////////////
-  --scrollbar-bg-color: #ddd;
-  --scrollbar-bg-hover-color: #eaeaea;
+  --scrollbar-bg-color: #3a3a50;
+  --scrollbar-bg-hover-color: #4a4a62;
 
   //////////////////////Captions and Headlines//////////////////////////
-  --caption-color: #1c497c;
-  --headline-font-color: #1c497c;
-  --h1-color: #1c497c;
-  --h2-color: #1c497c;
-  --h3-color: #1c497c;
-  --h4-color: #1c497c;
-  --h5-color: #1c497c;
-  --h6-color: #1c497c;
+  --caption-color: #c9a94e;
+  --headline-font-color: #c9a94e;
+  --h1-color: #c9a94e;
+  --h2-color: #c9a94e;
+  --h3-color: #c9a94e;
+  --h4-color: #c9a94e;
+  --h5-color: #c9a94e;
+  --h6-color: #c9a94e;
 
   //////////////////////Icons//////////////////////////
-  --icon-color: #1c497c;
-  --icon-color-hover: #235a91;
-  --icon-text-color: #1c497c;
+  --icon-color: #c9a94e;
+  --icon-color-hover: #d4b85e;
+  --icon-text-color: #c9a94e;
 
   //////////////////////Calendar//////////////////////////
-  --calendar-bg-color: #eee;
-  --calendar-eventablerow: #fff;
-  --calendar-border-color: #f0f0f0;
-  --calendar-text-color: #fff;
-  --today-bg-color: #3c9950;
-  --today-border-color: #2e8743;
-  --today-text-color: #fff;
+  --calendar-bg-color: #282828;
+  --calendar-eventablerow:#2e2e2e;
+  --calendar-border-color: #444033;
+  --calendar-text-color: #e0e0e8;
+  --today-bg-color: #c9a94e;
+  --today-border-color: #b89a42;
+  --today-text-color: #121220;
 
   //////////////////////Logo//////////////////////////
-  --logo-main-color: #1c497c;
-  --logo-secondary-color: #3c9950;
-  --logo-3rd-color: #ddd;
-  --logo-4th-color: #fff;
-  --logo-text-color: #1c497c;
-  --logo-secondary-text-color: #3c9950;
+  --logo-main-color: #c9a94e;
+  --logo-secondary-color: #1d1d1d;
+  --logo-3rd-color: #3a3a50;
+  --logo-4th-color: #c9a94e;
+  --logo-text-color: #c9a94e;
+  --logo-secondary-text-color: #1d1d1d;
+
+  //////////////////////Roster Page//////////////////////////
+  --color-bg-base: #323232;
+  --color-bg-subtle: #272727;
+  --color-bg-practice: rgba(59, 130, 246, 0.1);
+  --color-bg-practice-alt: rgba(59, 130, 246, 0.15);
+  --color-bg-injured: rgba(220, 38, 38, 0.1);
+  --color-bg-injured-alt: rgba(220, 38, 38, 0.15);
+  --color-border-practice: rgba(59, 130, 246, 0.3);
+  --color-border-injured: rgba(220, 38, 38, 0.3);
+
+  //////////////////////Header Icon Buttons//////////////////////////
+  --header-icon-color: #666666;
+  --header-icon-text-color: #eeeeee;
+  --header-icon-hover-color: #dddddd;
+
+  //////////////////////Logo Name//////////////////////////
+  --logo-name-primary-color: #c9a94e;
+  --logo-name-secondary-color: #e0e0e8;
+
+  //////////////////////Division Headings//////////////////////////
+  --division-heading-color: #e0e0e8;
+  --division-subheading-color: #c9a94e;
+  --division-border-color: #666666;
 
   //////////////////////Typography//////////////////////////
   --headline-font: "Vend Sans";
   --headline-font-weight: 700;
   --body-font: "Vend Sans";
   --body-font-weight: 300;
-  --svg-text-font-size: 11.25px;
+  --svg-text-font-size: 12px;
 
   //////////////////////Border Radius//////////////////////////
   --border-radius-sm: .25rem;
   --border-radius-default: .5rem;
   --border-radius-lg: 1rem;
   --border-radius-xl: 8rem;
-
-  //////////////////////Header Icon Buttons//////////////////////////
-  --header-icon-color: #1c497c;
-  --header-icon-text-color: #1c497c;
-  --header-icon-hover-color: #235a91;
-
-  //////////////////////Logo Name//////////////////////////
-  --logo-name-primary-color: #3c9950;
-  --logo-name-secondary-color: #1c497c;
-
-  //////////////////////Division Headings//////////////////////////
-  --division-heading-color: #1c497c;
-  --division-subheading-color: #1c497c;
-  --division-border-color: #ddd;
-
-  //////////////////////Roster Page//////////////////////////
-  --color-bg-base: #ffffff;
-  --color-bg-subtle: #f7f8fb;
-  --color-bg-practice: #f0f7ff;
-  --color-bg-practice-alt: #e0efff;
-  --color-bg-injured: #fff5f5;
-  --color-bg-injured-alt: #ffe8e8;
-  --color-border-practice: #bfdbfe;
-  --color-border-injured: #fecaca;
 }
 
 //////////////////////Colors//////////////////////////

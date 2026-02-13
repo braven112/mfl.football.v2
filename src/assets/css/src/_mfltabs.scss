@@ -230,7 +230,7 @@
 }
 
 .myfantasyleague_tabmenu #homepagetabs li:hover {
-  background: darken($primary-color, 0.5);
+  background: color-mix(in srgb, var(--primary-color) 99.5%, black);
 }
 
 .myfantasyleague_tabmenu #homepagetabs li:hover a {
@@ -263,6 +263,6 @@
 
   .myfantasyleague_tabmenu #homepagetabs li.currenttab,
   .myfantasyleague_tabmenu #homepagetabs li.currenttab:hover {
-    background: darken($primary-color, 0.5);
+    background: color-mix(in srgb, var(--primary-color) 99.5%, black);
   }
 }

@@ -1,0 +1,414 @@
+/**
+ * Design Tokens - Dark Mode Override
+ *
+ * This file overrides tokens from tokens.css for the dark mode theme.
+ * It provides CSS custom property values derived from the dark mode
+ * color spec (docs/DARK_MODE_COLOR_SPEC.md).
+ *
+ * Usage: Include this file AFTER tokens.css in dark mode layouts.
+ */
+
+:root {
+  /* ========================================
+     Colors - Dark Mode Theme
+     ======================================== */
+
+  /* Brand Colors */
+  --color-primary: #1c497c;
+  --color-primary-dark: #0f2d4a;
+  --color-primary-light: #3b82f6;
+
+  --color-secondary: #3c9950;
+  --color-secondary-dark: #2e8743;
+  --color-secondary-light: #4ade80;
+
+  --color-accent: #c9a94e;           /* Gold accent for dark mode */
+
+  /* Neutral Colors (inverted scale) */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-gray-50: #18182a;
+  --color-gray-100: #1e1e32;
+  --color-gray-200: #2a2a3d;
+  --color-gray-300: #3a3a50;
+  --color-gray-400: #6b6b80;
+  --color-gray-500: #8a8a9a;
+  --color-gray-600: #a0a0b0;
+  --color-gray-700: #c0c0cc;
+  --color-gray-800: #d8d8e0;
+  --color-gray-900: #ededf0;
+
+  /* Semantic Colors */
+  --color-success: #34d399;
+  --color-success-light: rgba(16, 185, 129, 0.15);
+  --color-success-dark: #6ee7b7;
+
+  --color-warning: #fbbf24;
+  --color-warning-light: rgba(245, 158, 11, 0.15);
+  --color-warning-dark: #fcd34d;
+
+  --color-error: #f87171;
+  --color-error-light: rgba(220, 38, 38, 0.15);
+  --color-error-dark: #fca5a5;
+
+  --color-info: #60a5fa;
+  --color-info-light: rgba(59, 130, 246, 0.15);
+  --color-info-dark: #93bbfd;
+
+  /* ========================================
+     Dark Mode Surface Elevation System
+     ======================================== */
+  --color-surface-1: #121220;         /* Lowest: page background */
+  --color-surface-2: #1e1e32;         /* Mid: cards, panels */
+  --color-surface-3: #2a2a3d;         /* Highest: dropdowns, tooltips */
+  --color-border-default: #2e2e44;    /* Standard borders */
+  --color-border-subtle: #232338;     /* Faint dividers */
+  --color-text-primary: #e0e0e8;      /* Body copy */
+  --color-text-secondary: #8a8a9a;    /* Labels, captions */
+  --color-text-disabled: #5a5a6a;     /* Disabled text */
+
+  /* ========================================
+     Component Tokens - Page
+     ======================================== */
+  --page-bg: #121220;
+  --page-text: #ededf0;
+
+  /* ========================================
+     Component Tokens - Content Areas
+     ======================================== */
+  --content-bg: #1e1e32;
+  --content-border: #2e2e44;
+  --content-shadow: var(--shadow-card);
+
+  --content-bg-muted: #18182a;
+  --content-bg-accent: #2a4a6e;
+  --content-text-muted: #8a8a9a;
+
+  /* ========================================
+     Component Tokens - Cards
+     ======================================== */
+  --card-bg: #1e1e32;
+  --card-border: #2e2e44;
+  --card-shadow: var(--shadow-card);
+
+  /* Legacy alias */
+  --card-bg-color: var(--card-bg);
+
+  /* ========================================
+     Component Tokens - Links
+     ======================================== */
+  --link-color: #7eb8da;
+  --link-color-hover: #c9a94e;
+  --link-color-focus: #c9a94e;
+
+  --link-color-inverse: #e2e8f0;
+  --link-color-inverse-hover: #c9a94e;
+
+  --link-color-accent: #60a5fa;
+  --link-color-accent-hover: #d4a44a;
+
+  /* Legacy aliases */
+  --primary-link-default-text-color: var(--link-color);
+  --primary-link-hover-text-color: var(--link-color-hover);
+  --primary-link-focus-text-color: var(--link-color-focus);
+
+  --inverse-link-default-text-color: var(--link-color-inverse);
+  --inverse-link-hover-text-color: var(--link-color-inverse-hover);
+  --inverse-link-focus-text-color: var(--link-color-inverse-hover);
+
+  --accent-link-default-text-color: var(--link-color-accent);
+  --accent-link-hover-text-color: var(--link-color-accent-hover);
+  --accent-link-focus-text-color: var(--link-color-accent-hover);
+
+  /* ========================================
+     Component Tokens - Buttons
+     ======================================== */
+
+  /* Primary Button */
+  --btn-primary-bg: #1c497c;
+  --btn-primary-bg-hover: #245a94;
+  --btn-primary-bg-focus: #245a94;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: #2e5f8f;
+  --btn-primary-border-hover: #c9a94e;
+
+  /* Secondary Button */
+  --btn-secondary-bg: #2e8743;
+  --btn-secondary-bg-hover: #3c9950;
+  --btn-secondary-bg-focus: #3c9950;
+  --btn-secondary-text: #ffffff;
+  --btn-secondary-border: #3c9950;
+  --btn-secondary-border-hover: #c9a94e;
+
+  /* Inverse Button */
+  --btn-inverse-bg: #2a2a3d;
+  --btn-inverse-bg-hover: #1c497c;
+  --btn-inverse-bg-focus: #1c497c;
+  --btn-inverse-text: #d8d8e0;
+  --btn-inverse-text-hover: #ffffff;
+
+  /* Icon Button */
+  --btn-icon-text: #8a8a9a;
+  --btn-icon-text-focus: #60a5fa;
+
+  /* Legacy aliases */
+  --primary-btn-default-bg-color: var(--btn-primary-bg);
+  --primary-btn-hover-bg-color: var(--btn-primary-bg-hover);
+  --primary-btn-focus-bg-color: var(--btn-primary-bg-focus);
+  --primary-btn-default-text-color: var(--btn-primary-text);
+  --primary-btn-hover-text-color: var(--btn-primary-text);
+  --primary-btn-focus-text-color: var(--btn-primary-text);
+  --primary-btn-default-border-color: var(--btn-primary-border);
+  --primary-btn-hover-border-color: var(--btn-primary-border-hover);
+  --primary-btn-focus-border-color: var(--btn-primary-border-hover);
+
+  --secondary-btn-default-bg-color: var(--btn-secondary-bg);
+  --secondary-btn-hover-bg-color: var(--btn-secondary-bg-hover);
+  --secondary-btn-focus-bg-color: var(--btn-secondary-bg-focus);
+  --secondary-btn-default-text-color: var(--btn-secondary-text);
+  --secondary-btn-hover-text-color: var(--btn-secondary-text);
+  --secondary-btn-focus-text-color: var(--btn-secondary-text);
+  --secondary-btn-default-border-color: var(--btn-secondary-border);
+  --secondary-btn-hover-border-color: var(--btn-secondary-border-hover);
+  --secondary-btn-focus-border-color: var(--btn-secondary-border-hover);
+
+  --inverse-btn-default-bg-color: var(--btn-inverse-bg);
+  --inverse-btn-hover-bg-color: var(--btn-inverse-bg-hover);
+  --inverse-btn-focus-bg-color: var(--btn-inverse-bg-focus);
+  --inverse-btn-default-text-color: var(--btn-inverse-text);
+  --inverse-btn-hover-text-color: var(--btn-inverse-text-hover);
+  --inverse-btn-focus-text-color: var(--btn-inverse-text-hover);
+
+  --icon-btn-default-text-color: var(--btn-icon-text);
+  --icon-btn-default-focus-color: var(--btn-icon-text-focus);
+
+  /* ========================================
+     Component Tokens - Tables
+     ======================================== */
+  --table-header-bg: #18182a;
+  --table-header-text: #8a8a9a;
+  --table-row-bg: #1e1e32;
+  --table-row-bg-alt: #232338;
+  --table-row-bg-hover: #2a2a3d;
+  --table-border: #2e2e44;
+
+  /* Legacy aliases */
+  --table-header-text-color: var(--table-header-text);
+  --oddtablerow: var(--table-row-bg);
+  --eventablerow: var(--table-row-bg-alt);
+
+  /* ========================================
+     Component Tokens - Inverse (Dark Sections)
+     ======================================== */
+  --inverse-bg: #10101c;
+  --inverse-bg-accent: #c9a94e;
+  --inverse-border: #1a1a2e;
+  --inverse-text: #e0e0e8;
+
+  /* Legacy aliases */
+  --inverse-content-bg: var(--inverse-bg);
+  --inverse-accent-bg: var(--inverse-bg-accent);
+  --inverse-content-border-color: var(--inverse-border);
+  --inverse-color: var(--inverse-text);
+
+  /* ========================================
+     Component Tokens - Accent Content
+     ======================================== */
+  --accent-content-bg-color: #1c3a5c;
+  --accent-content-border-color: #2a4a6e;
+  --accent-content-text-color: #e0e0e8;
+  --accent-content-boxshadow-color: rgba(0, 0, 0, 0.3);
+
+  /* ========================================
+     Component Tokens - Forms
+     ======================================== */
+  --input-bg: #18182a;
+  --input-border: #3a3a50;
+  --input-border-focus: #3b82f6;
+  --input-text: #e0e0e8;
+  --input-placeholder: #6b6b80;
+  --input-disabled-bg: #151526;
+
+  /* ========================================
+     Component Tokens - Badges/Status
+     ======================================== */
+  --badge-success-bg: rgba(16, 185, 129, 0.15);
+  --badge-success-text: #6ee7b7;
+  --badge-warning-bg: rgba(245, 158, 11, 0.15);
+  --badge-warning-text: #fcd34d;
+  --badge-error-bg: rgba(220, 38, 38, 0.15);
+  --badge-error-text: #fca5a5;
+  --badge-info-bg: rgba(59, 130, 246, 0.15);
+  --badge-info-text: #93bbfd;
+
+  /* Legacy status colors */
+  --error-color: #f87171;
+  --warning-color: #fbbf24;
+  --success-color: #34d399;
+
+  /* Alert styles (legacy) */
+  --alert-warning-text: #fcd34d;
+  --alert-warning-bg: rgba(245, 158, 11, 0.12);
+  --alert-warning-border: rgba(245, 158, 11, 0.25);
+  --alert-success-text: #6ee7b7;
+  --alert-success-bg: rgba(16, 185, 129, 0.12);
+  --alert-success-border: rgba(16, 185, 129, 0.25);
+  --alert-info-text: #93bbfd;
+  --alert-info-bg: rgba(59, 130, 246, 0.12);
+  --alert-info-border: rgba(59, 130, 246, 0.25);
+
+  /* ========================================
+     Legacy Color Aliases
+     ======================================== */
+  --primary-color: var(--color-primary);
+  --secondary-color: var(--color-secondary);
+  --accent-color: var(--color-accent);
+  --muted-text-color: var(--content-text-muted);
+  --primary-page-bg: var(--page-bg);
+  --primary-content-bg-color: var(--content-bg);
+  --primary-content-border-color: var(--content-border);
+  --primary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
+  --secondary-content-bg-color: var(--content-bg);
+  --secondary-content-border-color: var(--content-border);
+  --secondary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
+  --content-border-color: #2e2e44;
+  --gallery-content-bg: var(--content-bg-muted);
+
+  /* ========================================
+     Shadows (adjusted for dark surfaces)
+     ======================================== */
+  --shadow-color: 240deg 10% 4%;
+
+  --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.2);
+
+  --shadow-md:
+    0 1px 1px hsl(var(--shadow-color) / 0.18),
+    0 2px 2px hsl(var(--shadow-color) / 0.14),
+    0 3px 4px hsl(var(--shadow-color) / 0.10);
+
+  --shadow-lg:
+    0 1px 1px hsl(var(--shadow-color) / 0.15),
+    0 2px 2px hsl(var(--shadow-color) / 0.12),
+    0 4px 4px hsl(var(--shadow-color) / 0.10),
+    0 6px 8px hsl(var(--shadow-color) / 0.08);
+
+  --shadow-xl:
+    0 1px 1px hsl(var(--shadow-color) / 0.12),
+    0 2px 2px hsl(var(--shadow-color) / 0.10),
+    0 4px 4px hsl(var(--shadow-color) / 0.08),
+    0 8px 8px hsl(var(--shadow-color) / 0.06),
+    0 12px 16px hsl(var(--shadow-color) / 0.04);
+
+  --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.25);
+  --shadow-inset-md:
+    inset 0 1px 1px hsl(var(--shadow-color) / 0.2),
+    inset 0 2px 3px hsl(var(--shadow-color) / 0.16),
+    inset 0 3px 5px hsl(var(--shadow-color) / 0.12);
+
+  --shadow-card: var(--shadow-md);
+  --shadow-btn-hover: 0 10px 30px rgba(59, 130, 246, 0.3);
+  --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
+
+  /* Legacy shadow aliases */
+  --box-shadow-sm: var(--shadow-sm);
+  --box-shadow-md: var(--shadow-md);
+  --box-shadow-lg: var(--shadow-lg);
+  --box-shadow-btn-hover: var(--shadow-btn-hover);
+  --box-shadow-focus-ring: var(--shadow-focus-ring);
+
+  /* ========================================
+     Navigation Drawer Tokens (Dark)
+     ======================================== */
+
+  /* Background colors */
+  --nav-bg: #1e1e32;
+  --nav-bg-subtle: #18182a;
+
+  /* Text colors */
+  --nav-text: #d8d8e0;
+  --nav-text-muted: #8a8a9a;
+  --nav-text-subtle: #6b6b80;
+
+  /* Border colors */
+  --nav-border: #2e2e44;
+  --nav-border-subtle: #232338;
+
+  /* Interactive states */
+  --nav-hover-bg: #2a2a3d;
+  --nav-hover-text: var(--nav-text);
+
+  /* Active/selected link */
+  --nav-active-bg: rgba(201, 169, 78, 0.15);
+  --nav-active-text: #c9a94e;
+  --nav-active-border-left: #c9a94e;
+
+  /* Focus state */
+  --nav-focus-ring: 0 0 0 2px #3b82f6;
+
+  /* Section styling */
+  --nav-section-color: #8a8a9a;
+
+  /* Footer styling */
+  --nav-footer-bg: #151526;
+  --nav-footer-border: #2a2a3d;
+  --nav-footer-text: var(--nav-text);
+  --nav-footer-text-muted: #6b6b80;
+
+  /* Verify team prompt */
+  --nav-verify-bg: rgba(201, 169, 78, 0.08);
+  --nav-verify-border: #c9a94e;
+  --nav-verify-text: #c9a94e;
+  --nav-verify-hover-bg: rgba(201, 169, 78, 0.15);
+
+  /* Overlay */
+  --nav-overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Badge */
+  --nav-badge-bg: #ef4444;
+  --nav-badge-text: #ffffff;
+
+  /* League switcher */
+  --nav-switcher-bg: #18182a;
+  --nav-switcher-border: #2e2e44;
+  --nav-switcher-active-bg: #c9a94e;
+  --nav-switcher-active-text: #121220;
+  --nav-switcher-inactive-text: #6b6b80;
+
+  /* Tooltip */
+  --nav-tooltip-bg: #2a2a3d;
+  --nav-tooltip-text: #e0e0e8;
+  --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* Shadows */
+  --nav-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+  --nav-shadow-sm: -2px 0 8px rgba(0, 0, 0, 0.3);
+
+  /* Scrollbar */
+  --nav-scrollbar-thumb: #3a3a50;
+  --nav-scrollbar-thumb-hover: #5a5a70;
+}
+
+/* ========================================
+   Focus Visible Styles (Dark Mode)
+   ======================================== */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus-ring);
+}

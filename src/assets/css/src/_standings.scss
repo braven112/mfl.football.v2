@@ -92,13 +92,13 @@ table#standings th {
 .homepagecolumn .homepagemodule caption {
   background-color: $white;
   font-family: $headline-font;
-  color: $primary-color;
+  color: $division-heading-color;
 }
 
 .homepagecolumn #brief_standings h3,
 .homepagecolumn #standings h3 {
-  color: $primary-color;
-  border-bottom-color: $border-color;
+  color: $division-heading-color;
+  border-bottom-color: $division-border-color;
 }
 
 #body_standings {
@@ -106,7 +106,7 @@ table#standings th {
   h3 {
     background-color: transparent;
     font-family: $headline-font;
-    color: $primary-color;
+    color: $division-heading-color;
   }
   th {
     white-space: nowrap;

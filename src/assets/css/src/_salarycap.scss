@@ -110,7 +110,7 @@
     margin-left: 4px;
     padding: 0px 3px;
     vertical-align: top;
-    background-color: darken($drop-color, 0.5);
+    background-color: color-mix(in srgb, var(--drop-color) 99.5%, black);
   }
 
   .auditionStatus {

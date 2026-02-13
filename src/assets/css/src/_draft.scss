@@ -475,7 +475,7 @@
         i {
             color: $primary-color;
             &:hover {
-                color: lighten($primary-color, 5%);
+                color: color-mix(in srgb, var(--primary-color) 95%, white);
             }
         }
     }

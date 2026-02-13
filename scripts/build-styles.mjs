@@ -26,6 +26,12 @@ const leagues = [
     variablesFile: 'src/assets/css/src/_variables-afl.scss',
     outputFile: 'public/assets/css/dist/afl_main.css',
   },
+  {
+    name: 'dark',
+    sassFile: 'src/assets/css/src/dark_main.scss',
+    variablesFile: 'src/assets/css/src/_variables-dark.scss',
+    outputFile: 'public/assets/css/dist/dark_main.css',
+  },
 ];
 
 // Ensure output directory exists

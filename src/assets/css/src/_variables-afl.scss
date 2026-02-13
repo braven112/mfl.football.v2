@@ -1,65 +1,321 @@
-@use "./color-helpers" as *;
-@forward "colors/verns-blue-green" hide $accent-color, $dark-accent-color;
+/**
+ * AFL Fantasy Variables
+ *
+ * SCSS variables that reference CSS custom properties.
+ * The :root block defines ALL values — TheLeague defaults with AFL overrides applied.
+ * The build script copies this file over _variables.scss before compiling.
+ */
+
+//////////////////////AFL :root//////////////////////////
+:root {
+  //////////////////////Colors//////////////////////////
+  --primary-color: #1c497c;
+  --secondary-color: #1d4b7e;
+  --accent-color: #b22222;              /* AFL override */
+  --dark-accent-color: #8f1b1b;         /* AFL override */
+  --primary-text-color: #333333;
+  --secondary-text-color: #333333;
+
+  --link-color: #1c497c;
+  --link-color-hover: #33629b;
+
+  --add-color: green;
+  --drop-color: red;
+
+  //////////////////////Alerts//////////////////////////
+  --alert-danger-text: #a94442;
+  --alert-danger-bg: #f2dede;
+  --alert-danger-border: #ebccd1;
+
+  --alert-warning-text: #8a6d3b;
+  --alert-warning-bg: #fcf8e3;
+  --alert-warning-border: #faf2cc;
+
+  --alert-success-text: #3c763d;
+  --alert-success-bg: #dff0d8;
+  --alert-success-border: #d0e9c6;
+
+  --alert-info-text: #31708f;
+  --alert-info-bg: #d9edf7;
+  --alert-info-border: #bcdff1;
+
+  //////////////////////Neutrals//////////////////////////
+  --gray1: #333;
+  --gray2: #666;
+  --gray3: #999;
+
+  --offwhite: #eee;
+  --offwhite2: #e0e0e0;
+
+  --lightgray: #ddd;
+  --lightgray2: #ccc;
+  --lightgray3: #aaa;
+
+  --white: #fff;
+
+  --codebg-color: #31382d;
+
+  //////////////////////Tables//////////////////////////
+  --oddtablerow: #fff;
+  --eventablerow: #ececec;
+  --newposition-border-color: #ccc;
+  --table-header-color: #1c497c;
+
+  //////////////////////Page Backgrounds//////////////////////////
+  --primary-bg-color: #fff;
+  --pagebody-bg: #e0e0e0;
+  --report-bg: #fff;
+  --header-bg: #fff;
+
+  //////////////////////Footer//////////////////////////
+  --footer-bg-color: #1c497c;
+  --footer-text-color: #fff;
+  --footer-header-text-color: #fff;
+
+  //////////////////////Borders//////////////////////////
+  --border-color: #ddd;
+
+  //////////////////////MFL Menu//////////////////////////
+  --menu-bg-color: #1c497c;
+  --menu-bg-hover-color: #173f6a;
+  --menu-border-color: #1c497c;
+  --menu-text-color: #fff;
+
+  //////////////////////Report Navigation//////////////////////////
+  --secondary-menu-border-color: #b22222;  /* AFL override */
+  --secondary-menu-bg-color: #b22222;      /* AFL override */
+  --secondary-menu-text-color: #fff;
+  --secondary-menu-link-color: #fff;
+  --secondary-menu-icon-color: #fff;
+  --secondary-menu-icon-hover-color: #fff;
+  --secondary-menu-font-weight: normal;
+
+  //////////////////////Buttons//////////////////////////
+  --button-bg-color: #b22222;              /* AFL override */
+  --button-bg-color-hover: #bf2e2e;        /* AFL override */
+  --button-link-color: #fff;
+
+  //////////////////////Scrollbar//////////////////////////
+  --scrollbar-bg-color: #ddd;
+  --scrollbar-bg-hover-color: #eaeaea;
+
+  //////////////////////Captions and Headlines//////////////////////////
+  --caption-color: #1c497c;
+  --headline-font-color: #1c497c;
+  --h1-color: #1c497c;
+  --h2-color: #1c497c;
+  --h3-color: #1c497c;
+  --h4-color: #1c497c;
+  --h5-color: #1c497c;
+  --h6-color: #1c497c;
+
+  //////////////////////Icons//////////////////////////
+  --icon-color: #1c497c;
+  --icon-color-hover: #235a91;
+  --icon-text-color: #1c497c;
+
+  //////////////////////Calendar//////////////////////////
+  --calendar-bg-color: #eee;
+  --calendar-eventablerow: #fff;
+  --calendar-border-color: #f0f0f0;
+  --calendar-text-color: #fff;
+  --today-bg-color: #b22222;               /* AFL override */
+  --today-border-color: #b82727;            /* AFL override */
+  --today-text-color: #fff;
+
+  //////////////////////Logo//////////////////////////
+  --logo-main-color: #1c497c;
+  --logo-secondary-color: #b22222;         /* AFL override */
+  --logo-3rd-color: #ddd;
+  --logo-4th-color: #fff;
+  --logo-text-color: #1c497c;
+  --logo-secondary-text-color: #b22222;    /* AFL override */
+
+  //////////////////////Typography//////////////////////////
+  --headline-font: "Gabarito";             /* AFL override */
+  --headline-font-weight: 700;
+  --body-font: "TikTok Sans";             /* AFL override */
+  --body-font-weight: 400;                /* AFL override */
+  --svg-text-font-size: 11.25px;          /* AFL override */
+
+  //////////////////////Border Radius//////////////////////////
+  --border-radius-sm: .25rem;
+  --border-radius-default: .5rem;
+  --border-radius-lg: 1rem;
+  --border-radius-xl: 8rem;
+
+  //////////////////////Header Icon Buttons//////////////////////////
+  --header-icon-color: #1c497c;
+  --header-icon-text-color: #1c497c;
+  --header-icon-hover-color: #235a91;
+
+  //////////////////////Logo Name//////////////////////////
+  --logo-name-primary-color: #b22222;          /* AFL override */
+  --logo-name-secondary-color: #1c497c;
+
+  //////////////////////Division Headings//////////////////////////
+  --division-heading-color: #1c497c;
+  --division-subheading-color: #1c497c;
+  --division-border-color: #ddd;
+
+  //////////////////////Roster Page//////////////////////////
+  --color-bg-base: #ffffff;
+  --color-bg-subtle: #f7f8fb;
+  --color-bg-practice: #f0f7ff;
+  --color-bg-practice-alt: #e0efff;
+  --color-bg-injured: #fff5f5;
+  --color-bg-injured-alt: #ffe8e8;
+  --color-border-practice: #bfdbfe;
+  --color-border-injured: #fecaca;
+}
 
 //////////////////////Colors//////////////////////////
-$primary-color:#1c497c;//#33629b;
-$secondary-color:#1d4b7e;
-$accent-color:#b22222;
-$dark-accent-color:darken($accent-color, 10%);
-$today-bg-color:$accent-color;
-$today-border-color:lighten($today-bg-color, 1%);
-$button-bg-color:$accent-color;
-$secondary-menu-border-color:$accent-color;
-$secondary-menu-bg-color:$accent-color;
-$logo-secondary-color:$accent-color;
-$logo-secondary-text-color:$accent-color;
-$primary-text-color:#333333;
-$secondary-text-color:#333333;
+$primary-color: var(--primary-color);
+$secondary-color: var(--secondary-color);
+$accent-color: var(--accent-color);
+$dark-accent-color: var(--dark-accent-color);
+$today-bg-color: var(--today-bg-color);
+$today-border-color: var(--today-border-color);
+$button-bg-color: var(--button-bg-color);
+$secondary-menu-border-color: var(--secondary-menu-border-color);
+$secondary-menu-bg-color: var(--secondary-menu-bg-color);
+$logo-secondary-color: var(--logo-secondary-color);
+$logo-secondary-text-color: var(--logo-secondary-text-color);
+$primary-text-color: var(--primary-text-color);
+$secondary-text-color: var(--secondary-text-color);
 
-$link-color:$primary-color;
-$link-color-hover:#33629b;
+$link-color: var(--link-color);
+$link-color-hover: var(--link-color-hover);
 
-$add-color:green;
-$drop-color:red;
+$add-color: var(--add-color);
+$drop-color: var(--drop-color);
 
-$alert-warning-text:#8a6d3b;
-$alert-warning-bg:#fcf8e3;
-$alert-warning-border:#faf2cc;
+//////////////////////Alerts//////////////////////////
+$alert-danger-text: var(--alert-danger-text);
+$alert-danger-bg: var(--alert-danger-bg);
+$alert-danger-border: var(--alert-danger-border);
 
-$alert-success-text:#3c763d;
-$alert-success-bg:#dff0d8;
-$alert-success-border:#d0e9c6;
+$alert-warning-text: var(--alert-warning-text);
+$alert-warning-bg: var(--alert-warning-bg);
+$alert-warning-border: var(--alert-warning-border);
 
-$alert-info-text:#31708f;
-$alert-info-bg:#d9edf7;
-$alert-info-border:#bcdff1;
+$alert-success-text: var(--alert-success-text);
+$alert-success-bg: var(--alert-success-bg);
+$alert-success-border: var(--alert-success-border);
 
-$codebg-color: #31382d;
+$alert-info-text: var(--alert-info-text);
+$alert-info-bg: var(--alert-info-bg);
+$alert-info-border: var(--alert-info-border);
 
-$gray1:#333;
-$gray2:#666;
-$gray3:#999;
+//////////////////////Neutrals//////////////////////////
+$codebg-color: var(--codebg-color);
 
-$oddtablerow:#fff;
-$eventablerow:#ececec;
+$gray1: var(--gray1);
+$gray2: var(--gray2);
+$gray3: var(--gray3);
 
-$offwhite:#eee;
-$offwhite2:#e0e0e0;
+$oddtablerow: var(--oddtablerow);
+$eventablerow: var(--eventablerow);
 
-$lightgray:#ddd;
-$lightgray2:#ccc;
-$lightgray3:#aaa;
+$offwhite: var(--offwhite);
+$offwhite2: var(--offwhite2);
 
-$white:#fff;
+$lightgray: var(--lightgray);
+$lightgray2: var(--lightgray2);
+$lightgray3: var(--lightgray3);
 
-$border-radius-sm: .25rem;
-$border-radius-default: .5rem;
-$border-radius-lg: 1rem;
-$border-radius-xl: 8rem;
+$white: var(--white);
 
-//////////////////////Fonts//////////////////////////
-$headline-font: "Gabarito";
-$headline-font-weight: 700;
-$body-font: "TikTok Sans";
-$body-font-weight: 400;
-$svg-text-font-size: 11.25px;
+//////////////////////Page Backgrounds//////////////////////////
+$primary-bg-color: var(--primary-bg-color);
+$pagebody-bg: var(--pagebody-bg);
+$report-bg: var(--report-bg);
+$header-bg: var(--header-bg);
+
+//////////////////////Footer//////////////////////////
+$footer-bg-color: var(--footer-bg-color);
+$footer-text-color: var(--footer-text-color);
+$footer-header-text-color: var(--footer-header-text-color);
+
+//////////////////////Borders//////////////////////////
+$border-color: var(--border-color);
+
+//////////////////////MFL Menu//////////////////////////
+$menu-bg-color: var(--menu-bg-color);
+$menu-bg-hover-color: var(--menu-bg-hover-color);
+$menu-border-color: var(--menu-border-color);
+$menu-text-color: var(--menu-text-color);
+
+//////////////////////Report Navigation//////////////////////////
+$secondary-menu-text-color: var(--secondary-menu-text-color);
+$secondary-menu-link-color: var(--secondary-menu-link-color);
+$secondary-menu-icon-color: var(--secondary-menu-icon-color);
+$secondary-menu-icon-hover-color: var(--secondary-menu-icon-hover-color);
+$secondary-menu-font-weight: var(--secondary-menu-font-weight);
+
+//////////////////////Buttons//////////////////////////
+$button-bg-color-hover: var(--button-bg-color-hover);
+$button-link-color: var(--button-link-color);
+
+//////////////////////Scrollbar//////////////////////////
+$scrollbar-bg-color: var(--scrollbar-bg-color);
+$scrollbar-bg-hover-color: var(--scrollbar-bg-hover-color);
+
+//////////////////////Captions and Headlines//////////////////////////
+$caption-color: var(--caption-color);
+$headline-font-color: var(--headline-font-color);
+$h1-color: var(--h1-color);
+$h2-color: var(--h2-color);
+$h3-color: var(--h3-color);
+$h4-color: var(--h4-color);
+$h5-color: var(--h5-color);
+$h6-color: var(--h6-color);
+
+//////////////////////Icons//////////////////////////
+$icon-color: var(--icon-color);
+$icon-color-hover: var(--icon-color-hover);
+$icon-text-color: var(--icon-text-color);
+
+//////////////////////Calendar//////////////////////////
+$calendar-bg-color: var(--calendar-bg-color);
+$calendar-eventablerow: var(--calendar-eventablerow);
+$calendar-border-color: var(--calendar-border-color);
+$calendar-text-color: var(--calendar-text-color);
+$today-text-color: var(--today-text-color);
+
+//////////////////////Tables//////////////////////////
+$newposition-border-color: var(--newposition-border-color);
+$table-header-color: var(--table-header-color);
+
+//////////////////////Logo//////////////////////////
+$logo-main-color: var(--logo-main-color);
+$logo-3rd-color: var(--logo-3rd-color);
+$logo-4th-color: var(--logo-4th-color);
+$logo-text-color: var(--logo-text-color);
+
+//////////////////////Typography//////////////////////////
+$headline-font: var(--headline-font);
+$headline-font-weight: var(--headline-font-weight);
+$body-font: var(--body-font);
+$body-font-weight: var(--body-font-weight);
+$svg-text-font-size: var(--svg-text-font-size);
+
+//////////////////////Header Icon Buttons//////////////////////////
+$header-icon-color: var(--header-icon-color);
+$header-icon-text-color: var(--header-icon-text-color);
+$header-icon-hover-color: var(--header-icon-hover-color);
+
+//////////////////////Logo Name//////////////////////////
+$logo-name-primary-color: var(--logo-name-primary-color);
+$logo-name-secondary-color: var(--logo-name-secondary-color);
+
+//////////////////////Division Headings//////////////////////////
+$division-heading-color: var(--division-heading-color);
+$division-subheading-color: var(--division-subheading-color);
+$division-border-color: var(--division-border-color);
+
+//////////////////////Border Radius//////////////////////////
+$border-radius-sm: var(--border-radius-sm);
+$border-radius-default: var(--border-radius-default);
+$border-radius-lg: var(--border-radius-lg);
+$border-radius-xl: var(--border-radius-xl);

@@ -89,5 +89,5 @@ table.homepagemessage td {
 }
 
 .homepagemessage a {
-    color: darken($alert-warning-text, 10%) !important;
+    color: color-mix(in srgb, var(--alert-warning-text) 90%, black) !important;
 }

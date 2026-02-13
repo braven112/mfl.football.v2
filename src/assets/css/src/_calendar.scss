@@ -107,7 +107,7 @@
 #monthly_calendar td.today .calendarday {
   border-color: $today-border-color;
   background-color: $today-bg-color;
-  border-bottom-color: darken($today-border-color, 10%);
+  border-bottom-color: color-mix(in srgb, var(--today-border-color) 90%, black);
 
   a:link {
     color: $today-text-color;

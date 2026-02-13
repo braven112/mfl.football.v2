@@ -11,6 +11,7 @@
     "build": "pnpm run build:packages && pnpm run build:apps",
     "build:packages": "echo 'Skipping package builds for now'",
     "build:styles": "node scripts/build-styles.mjs",
+    "watch:styles": "node scripts/watch-styles.mjs",
     "build:tools": "node scripts/build-league-tools.mjs",
     "build:apps": "astro build",
     "prebuild": "npm run build:styles && npm run update:salary:all && npm run fetch:live:lineups",
