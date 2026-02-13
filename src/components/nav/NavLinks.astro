@@ -249,7 +249,7 @@ const visibleSections = getVisibleSections();
             const icon = getIcon(link, league);
             const iconUrl = aflOverride?.iconUrl ?? null;
             const active = isActive(link, currentPath, league);
-            const isExternal = link.external || !!link.url;
+            const isExternal = link.external;
             return (
               <li class="nav-links__item" key={link.id}>
                 <a
