@@ -25,6 +25,8 @@ const dateDisplay = event.definition.endDate
 const links = event.isPast ? event.resultLinks : event.actionLinks;
 const iconId = event.definition.icon ? `icon-${event.definition.icon}` : null;
 const category = event.definition.category;
+const MULTICOLOR_ICONS = ['nfl'];
+const isMulticolor = event.definition.icon ? MULTICOLOR_ICONS.includes(event.definition.icon) : false;
 
 const cardClasses = [
   'calendar-card',
@@ -41,7 +43,7 @@ const cardClasses = [
   )}
   <div class="calendar-card__header">
     {iconId && (
-      <svg class="calendar-card__icon" aria-hidden="true">
+      <svg class={`calendar-card__icon${isMulticolor ? ' calendar-card__icon--multicolor' : ''}`} aria-hidden="true">
         <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
       </svg>
     )}
@@ -146,6 +148,11 @@ const cardClasses = [
     flex-shrink: 0;
     fill: currentColor;
     color: var(--card-category-color);
+  }
+
+  .calendar-card__icon--multicolor {
+    fill: none;
+    color: unset;
   }
 
   .calendar-card--past .calendar-card__icon {

@@ -29,6 +29,8 @@ const dateDisplay = event.definition.endDate
 const links = event.isPast ? event.resultLinks : event.actionLinks;
 const iconId = event.definition.icon ? `icon-${event.definition.icon}` : null;
 const category = event.definition.category;
+const MULTICOLOR_ICONS = ['nfl'];
+const isMulticolor = event.definition.icon ? MULTICOLOR_ICONS.includes(event.definition.icon) : false;
 
 const cardClasses = [
   'whats-next-card',
@@ -44,7 +46,7 @@ const cardClasses = [
   <span class="whats-next-card__badge">{positionLabels[position]}</span>
   <div class="whats-next-card__header">
     {iconId && (
-      <svg class="whats-next-card__icon" aria-hidden="true">
+      <svg class={`whats-next-card__icon${isMulticolor ? ' whats-next-card__icon--multicolor' : ''}`} aria-hidden="true">
         <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
       </svg>
     )}
@@ -154,6 +156,11 @@ const cardClasses = [
     flex-shrink: 0;
     fill: currentColor;
     color: var(--card-category-color);
+  }
+
+  .whats-next-card__icon--multicolor {
+    fill: none;
+    color: unset;
   }
 
   .whats-next-card--past .whats-next-card__icon {
