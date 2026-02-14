@@ -11,8 +11,8 @@
   --secondary-color: #eeeeee;
   --accent-color: #c9a94e;
   --dark-accent-color: #a8893a;
-  --primary-text-color: #e0e0e8;
-  --secondary-text-color: #c0c0cc;
+  --primary-text-color: #e0e0e0;
+  --secondary-text-color: #c0c0c0;
 
   --link-color: #bbbbbb;
   --link-color-hover: #c9a94e;
@@ -38,64 +38,67 @@
   --alert-info-border: rgba(59, 130, 246, 0.25);
 
   //////////////////////Neutrals//////////////////////////
-  --gray1: #d8d8e0;
-  --gray2: #8a8a9a;
-  --gray3: #6b6b80;
+  --gray1: #d8d8d8;
+  --gray2: #8a8a8a;
+  --gray3: #6b6b6b;
 
   --offwhite: #2e2e2e;
-  --offwhite2: #121220;
+  --offwhite2: #121212;
 
-  --lightgray: #2e2e44;
-  --lightgray2: #3a3a50;
-  --lightgray3: #5a5a70;
+  --lightgray: #2e2e2e;
+  --lightgray2: #3a3a3a;
+  --lightgray3: #5a5a5a;
 
   --white: #2e2e2e;
 
-  --codebg-color: #151526;
+  --codebg-color: #151515;
 
   //////////////////////Tables//////////////////////////
   --oddtablerow: #2e2e2e;
   --eventablerow: #393939;
-  --newposition-border-color: #3a3a50;
-  --table-header-color: #8a8a9a;
+  --newposition-border-color: #3a3a3a;
+  --table-header-color: #8a8a8a;
 
   //////////////////////Page Backgrounds//////////////////////////
   --primary-bg-color: #2e2e2e;
-  --pagebody-bg: #121220;
+  --pagebody-bg: #121212;
   --report-bg: #2e2e2e;
-  --header-bg: #10101c;
+  --header-bg: #101010;
 
   //////////////////////Footer//////////////////////////
-  --footer-bg-color: #10101c;
-  --footer-text-color: #e0e0e8;
-  --footer-header-text-color: #e0e0e8;
+  --footer-bg-color: #101010;
+  --footer-text-color: #e0e0e0;
+  --footer-header-text-color: #e0e0e0;
 
   //////////////////////Borders//////////////////////////
-  --border-color: #2e2e44;
+  --border-color: #2e2e2e;
 
   //////////////////////MFL Menu//////////////////////////
-  --menu-bg-color: #10101c;
-  --menu-bg-hover-color: #1d1d2f;
-  --menu-border-color: #1a1a2e;
-  --menu-text-color: #e0e0e8;
+  --menu-bg-color: #101010;
+  --menu-bg-hover-color: #1d1d1d;
+  --menu-border-color: #1a1a1a;
+  --menu-text-color: #e0e0e0;
 
   //////////////////////Report Navigation//////////////////////////
   --secondary-menu-border-color: #c9a94e;
   --secondary-menu-bg-color: #8a7230;
-  --secondary-menu-text-color: #e0e0e8;
-  --secondary-menu-link-color: #e0e0e8;
-  --secondary-menu-icon-color: #e0e0e8;
-  --secondary-menu-icon-hover-color: #ededf0;
+  --secondary-menu-text-color: #e0e0e0;
+  --secondary-menu-link-color: #e0e0e0;
+  --secondary-menu-icon-color: #e0e0e0;
+  --secondary-menu-icon-hover-color: #ededed;
   --secondary-menu-font-weight: normal;
 
   //////////////////////Buttons//////////////////////////
   --button-bg-color: #c9a94e;
   --button-bg-color-hover: #d4b85e;
-  --button-link-color: #121220;
+  --button-link-color: #121212;
+
+  //////////////////////Tabs//////////////////////////
+  --tab-hover-color: #fff;
 
   //////////////////////Scrollbar//////////////////////////
-  --scrollbar-bg-color: #3a3a50;
-  --scrollbar-bg-hover-color: #4a4a62;
+  --scrollbar-bg-color: #3a3a3a;
+  --scrollbar-bg-hover-color: #4a4a4a;
 
   //////////////////////Captions and Headlines//////////////////////////
   --caption-color: #c9a94e;
@@ -116,15 +119,15 @@
   --calendar-bg-color: #282828;
   --calendar-eventablerow:#2e2e2e;
   --calendar-border-color: #444033;
-  --calendar-text-color: #e0e0e8;
+  --calendar-text-color: #e0e0e0;
   --today-bg-color: #c9a94e;
   --today-border-color: #b89a42;
-  --today-text-color: #121220;
+  --today-text-color: #121212;
 
   //////////////////////Logo//////////////////////////
   --logo-main-color: #c9a94e;
   --logo-secondary-color: #1d1d1d;
-  --logo-3rd-color: #3a3a50;
+  --logo-3rd-color: #3a3a3a;
   --logo-4th-color: #c9a94e;
   --logo-text-color: #c9a94e;
   --logo-secondary-text-color: #1d1d1d;
@@ -146,10 +149,10 @@
 
   //////////////////////Logo Name//////////////////////////
   --logo-name-primary-color: #c9a94e;
-  --logo-name-secondary-color: #e0e0e8;
+  --logo-name-secondary-color: #e0e0e0;
 
   //////////////////////Division Headings//////////////////////////
-  --division-heading-color: #e0e0e8;
+  --division-heading-color: #e0e0e0;
   --division-subheading-color: #c9a94e;
   --division-border-color: #666666;
 
