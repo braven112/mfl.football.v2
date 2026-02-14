@@ -1,6 +1,5 @@
 ---
 import fs from 'fs';
-import crypto from 'crypto';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
 // Resolve to the project-level public folder (src/pages/theleague -> ../../../public)
@@ -19,7 +18,7 @@ const uniqueIconEntries = iconEntries.filter(entry => {
 }).sort((a, b) => a.id.localeCompare(b.id));
 
 // Cache-bust the sprite URL so browsers always fetch the latest version
-const spriteHash = crypto.createHash('md5').update(spriteContent).digest('hex').slice(0, 8);
+const spriteHash = spriteContent.length.toString(36) + uniqueIconEntries.length.toString(36);
 const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
 ---
 
