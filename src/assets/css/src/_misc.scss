@@ -116,10 +116,8 @@ span.reportnavigation {
   border-radius: $border-radius-default;
   padding: 12px;
   box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
-  @media (max-width: 991px) {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .report {
