@@ -1,0 +1,99 @@
+---
+/**
+ * WhatsNext - League events timeline container.
+ * Shows the current, next, and upcoming league events at the top of the homepage.
+ *
+ * Renders at build time with current date, and re-evaluates client-side
+ * when ?testDate= parameter is present.
+ */
+import WhatsNextCard from './WhatsNextCard.astro';
+import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+
+const timeline = getWhatsNextTimeline();
+const hasEvents = timeline.current || timeline.next || timeline.upcoming;
+---
+
+{hasEvents && (
+  <section class="whats-next" aria-label="Upcoming league events">
+    <h2 class="whats-next__heading">What's Next</h2>
+    <div class="whats-next__grid">
+      {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}
+      {timeline.next && <WhatsNextCard event={timeline.next} position="next" />}
+      {timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" />}
+    </div>
+  </section>
+)}
+
+<script>
+  /**
+   * Resolve {franchiseId} placeholders in What's Next event links.
+   * Reads from theleague_team_pref cookie or ?myteam URL param.
+   */
+  function resolveWhatsNextLinks() {
+    const myTeamParam = new URLSearchParams(window.location.search).get('myteam');
+
+    let franchiseId = myTeamParam;
+    if (!franchiseId) {
+      try {
+        const cookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('theleague_team_pref='));
+        if (cookie) {
+          const pref = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+          franchiseId = pref?.franchiseId || null;
+        }
+      } catch {
+        // Cookie parse failed — leave links as-is
+      }
+    }
+
+    if (!franchiseId) return;
+
+    // Normalize to 4-digit zero-padded format
+    franchiseId = /^\d+$/.test(franchiseId) ? franchiseId.padStart(4, '0') : franchiseId;
+
+    const links = document.querySelectorAll('.whats-next-card__link');
+    links.forEach((link) => {
+      const anchor = /** @type {HTMLAnchorElement} */ (link);
+      if (anchor.href.includes('%7BfranchiseId%7D') || anchor.href.includes('{franchiseId}')) {
+        anchor.href = anchor.href
+          .replace(/%7BfranchiseId%7D/g, franchiseId)
+          .replace(/\{franchiseId\}/g, franchiseId);
+      }
+    });
+  }
+
+  // Run after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', resolveWhatsNextLinks);
+  } else {
+    resolveWhatsNextLinks();
+  }
+</script>
+
+<style>
+  .whats-next {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .whats-next__heading {
+    font-size: 1.5rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .whats-next__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .whats-next__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

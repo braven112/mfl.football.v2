@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import WhatsNext from '../../components/theleague/WhatsNext.astro';
 
 export const prerender = true;
 
@@ -28,6 +29,7 @@ const pages = {
 
 <TheLeagueLayout title="The League - Home">
   <main class="league-home">
+    <WhatsNext />
 
     {Object.entries(pages).map(([category, items]) => (
       <section class="page-category">
