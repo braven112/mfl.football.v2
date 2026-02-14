@@ -1,6 +1,7 @@
 @use "./globals" as *;
 
-#body_commissioner_setup {
+#body_commissioner_setup,
+#body_all_reports {
   .oddtablerow {
     background-color: transparent;
   }
@@ -21,9 +22,9 @@
   table.two_column_layout ul {
     box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.1);
     padding: 15px;
-    border-radius: $border-radius-default;
+    border-radius: var(--border-radius-default, .5rem);
     padding-top: 44px;
-    background-color: $report-bg;
+    background-color: var(--report-bg, #fff);
   }
   td.two_column_layout th {
     padding-left: 18px;
@@ -31,7 +32,7 @@
     font-size: 18px;
     position: relative;
     top: 40px;
-    color: $caption-color;
+    color: var(--caption-color, #1c497c);
   }
   td.two_column_layout {
     margin-top: -40px;

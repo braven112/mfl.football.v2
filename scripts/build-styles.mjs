@@ -42,7 +42,14 @@ if (!fs.existsSync(outputDir)) {
 
 console.log('🎨 Building league-specific CSS bundles...\n');
 
+const globalVarsPath = path.join(rootDir, 'src/assets/css/src/_variables.scss');
+
+// Read the original TheLeague variables into memory so we can always restore them
+const originalVariables = fs.readFileSync(globalVarsPath, 'utf8');
+
 for (const league of leagues) {
+  const needsSwap = league.variablesFile !== 'src/assets/css/src/_variables.scss';
+
   try {
     console.log(`📦 Compiling ${league.name}...`);
 
@@ -60,16 +67,8 @@ for (const league of leagues) {
       continue;
     }
 
-    // Backup current _variables.scss
-    const globalVarsPath = path.join(rootDir, 'src/assets/css/src/_variables.scss');
-    const backupPath = path.join(rootDir, 'src/assets/css/src/_variables.scss.backup');
-
-    // Only backup if compiling non-default league
-    if (league.variablesFile !== 'src/assets/css/src/_variables.scss') {
-      if (fs.existsSync(globalVarsPath)) {
-        fs.copyFileSync(globalVarsPath, backupPath);
-      }
-      // Copy league-specific variables to _variables.scss
+    // Swap in league-specific variables
+    if (needsSwap) {
       fs.copyFileSync(variablesPath, globalVarsPath);
     }
 
@@ -78,12 +77,6 @@ for (const league of leagues) {
       style: 'compressed',
       sourceMap: false,
     });
-
-    // Restore backup if we modified variables
-    if (league.variablesFile !== 'src/assets/css/src/_variables.scss' && fs.existsSync(backupPath)) {
-      fs.copyFileSync(backupPath, globalVarsPath);
-      fs.unlinkSync(backupPath);
-    }
 
     // Write output
     fs.writeFileSync(outputPath, result.css);
@@ -94,6 +87,11 @@ for (const league of leagues) {
 
   } catch (error) {
     console.error(`   ❌ Error compiling ${league.name}:`, error.message);
+  } finally {
+    // Always restore the original TheLeague variables after a swap
+    if (needsSwap) {
+      fs.writeFileSync(globalVarsPath, originalVariables);
+    }
   }
 }
 
