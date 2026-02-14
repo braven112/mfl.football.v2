@@ -194,6 +194,13 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     icon: 'nfl',
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'nfl-kickoff' },
+    actionLinks: [
+      {
+        label: 'Submit Lineup',
+        url: 'https://{mflHost}/{year}/lineup?L={leagueId}',
+        external: true,
+      },
+    ],
     sortOrder: 12,
   },
   {
