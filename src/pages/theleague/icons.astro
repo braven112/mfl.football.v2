@@ -231,6 +231,7 @@ for (const { id } of uniqueIconEntries) {
         <button class="copy-sprite-btn" data-sprite-url={spriteUrl} type="button">Copy Full SVG Sprite</button>
       </div>
       <div class="color-picker-panel" id="color-picker-panel" hidden>
+        <p class="color-note">These colors are for testing only. The site's theme handles icon colors automatically.</p>
         <div class="color-pickers">
           <div class="color-picker-group">
             <label for="icon-color">Fill</label>
@@ -516,6 +517,7 @@ for (const { id } of uniqueIconEntries) {
   }
 
   .color-picker-panel {
+    margin-top: 1rem;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
     background: #fff;
@@ -525,6 +527,13 @@ for (const { id } of uniqueIconEntries) {
 
   .color-picker-panel[hidden] {
     display: none;
+  }
+
+  .color-note {
+    margin: 0 0 0.6rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-style: italic;
   }
 
   .color-pickers {
@@ -776,18 +785,17 @@ for (const { id } of uniqueIconEntries) {
   const previews = document.querySelectorAll<HTMLElement>('.icon-preview');
   const svgs = document.querySelectorAll<SVGElement>('.icon-preview svg');
 
+  const STORAGE_KEY = 'icon-gallery-colors';
+
   // Read --primary-color from CSS at runtime, fallback to TheLeague blue
   const computedPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#1c497c';
-  // Resolve the CSS variable to an actual hex value
   function resolveColor(raw: string): string {
     if (raw.startsWith('#')) return raw;
-    // If it's a var() reference, compute from a temp element
     const tmp = document.createElement('div');
     tmp.style.color = raw;
     document.body.appendChild(tmp);
     const resolved = getComputedStyle(tmp).color;
     tmp.remove();
-    // Convert rgb(r, g, b) → #hex
     const m = resolved.match(/\d+/g);
     if (m && m.length >= 3) {
       return '#' + m.slice(0, 3).map(n => parseInt(n).toString(16).padStart(2, '0')).join('');
@@ -797,16 +805,51 @@ for (const { id } of uniqueIconEntries) {
   const primaryHex = resolveColor(computedPrimary);
 
   const DEFAULTS = { fill: primaryHex, fillOpacity: 100, hover: '#3b82f6', hoverOpacity: 100, bg: '#f8fafc', bgOpacity: 100 };
-  let currentFill = DEFAULTS.fill;
-  let currentFillOpacity = DEFAULTS.fillOpacity;
-  let currentHover = DEFAULTS.hover;
-  let currentHoverOpacity = DEFAULTS.hoverOpacity;
-  let currentBg = DEFAULTS.bg;
-  let currentBgOpacity = DEFAULTS.bgOpacity;
 
-  // Set initial picker values to resolved primary color
-  colorPicker.value = primaryHex;
-  colorHex.value = primaryHex.toUpperCase();
+  // Restore saved colors from localStorage, or use defaults
+  function loadSaved() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    } catch { /* ignore */ }
+    return { ...DEFAULTS };
+  }
+
+  function saveColors() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        fill: currentFill, fillOpacity: currentFillOpacity,
+        hover: currentHover, hoverOpacity: currentHoverOpacity,
+        bg: currentBg, bgOpacity: currentBgOpacity,
+      }));
+    } catch { /* ignore */ }
+  }
+
+  const saved = loadSaved();
+  let currentFill = saved.fill;
+  let currentFillOpacity = saved.fillOpacity;
+  let currentHover = saved.hover;
+  let currentHoverOpacity = saved.hoverOpacity;
+  let currentBg = saved.bg;
+  let currentBgOpacity = saved.bgOpacity;
+
+  // Sync all inputs to current state
+  function syncInputs() {
+    colorPicker.value = currentFill;
+    colorHex.value = currentFill.toUpperCase();
+    colorOpacity.value = String(currentFillOpacity);
+    colorOpacityVal.textContent = currentFillOpacity + '%';
+    hoverPicker.value = currentHover;
+    hoverHex.value = currentHover.toUpperCase();
+    hoverOpacity.value = String(currentHoverOpacity);
+    hoverOpacityVal.textContent = currentHoverOpacity + '%';
+    bgPicker.value = currentBg;
+    bgHex.value = currentBg.toUpperCase();
+    bgOpacity.value = String(currentBgOpacity);
+    bgOpacityVal.textContent = currentBgOpacity + '%';
+  }
+
+  syncInputs();
 
   function isValidHex(v: string) {
     return /^#[0-9a-fA-F]{6}$/.test(v);
@@ -838,11 +881,16 @@ for (const { id } of uniqueIconEntries) {
     previews.forEach(p => { p.style.backgroundColor = rgba; });
   }
 
+  // Apply saved colors on load
+  applyFillColor();
+  applyBgColor();
+
   // Fill color picker
   colorPicker?.addEventListener('input', () => {
     currentFill = colorPicker.value;
     colorHex.value = colorPicker.value.toUpperCase();
     applyFillColor();
+    saveColors();
   });
   colorHex?.addEventListener('input', () => {
     const v = colorHex.value.startsWith('#') ? colorHex.value : '#' + colorHex.value;
@@ -850,29 +898,34 @@ for (const { id } of uniqueIconEntries) {
       currentFill = v;
       colorPicker.value = v;
       applyFillColor();
+      saveColors();
     }
   });
   colorOpacity?.addEventListener('input', () => {
     currentFillOpacity = parseInt(colorOpacity.value);
     colorOpacityVal.textContent = currentFillOpacity + '%';
     applyFillColor();
+    saveColors();
   });
 
   // Hover color picker
   hoverPicker?.addEventListener('input', () => {
     currentHover = hoverPicker.value;
     hoverHex.value = hoverPicker.value.toUpperCase();
+    saveColors();
   });
   hoverHex?.addEventListener('input', () => {
     const v = hoverHex.value.startsWith('#') ? hoverHex.value : '#' + hoverHex.value;
     if (isValidHex(v)) {
       currentHover = v;
       hoverPicker.value = v;
+      saveColors();
     }
   });
   hoverOpacity?.addEventListener('input', () => {
     currentHoverOpacity = parseInt(hoverOpacity.value);
     hoverOpacityVal.textContent = currentHoverOpacity + '%';
+    saveColors();
   });
 
   // BG color picker
@@ -880,6 +933,7 @@ for (const { id } of uniqueIconEntries) {
     currentBg = bgPicker.value;
     bgHex.value = bgPicker.value.toUpperCase();
     applyBgColor();
+    saveColors();
   });
   bgHex?.addEventListener('input', () => {
     const v = bgHex.value.startsWith('#') ? bgHex.value : '#' + bgHex.value;
@@ -887,12 +941,14 @@ for (const { id } of uniqueIconEntries) {
       currentBg = v;
       bgPicker.value = v;
       applyBgColor();
+      saveColors();
     }
   });
   bgOpacity?.addEventListener('input', () => {
     currentBgOpacity = parseInt(bgOpacity.value);
     bgOpacityVal.textContent = currentBgOpacity + '%';
     applyBgColor();
+    saveColors();
   });
 
   // Hover effect on individual cards
@@ -901,7 +957,7 @@ for (const { id } of uniqueIconEntries) {
     svg.addEventListener('mouseleave', () => { applyFillColor(); });
   });
 
-  // Reset button
+  // Reset button — clears saved colors and restores defaults
   resetBtn?.addEventListener('click', () => {
     currentFill = DEFAULTS.fill;
     currentFillOpacity = DEFAULTS.fillOpacity;
@@ -909,19 +965,9 @@ for (const { id } of uniqueIconEntries) {
     currentHoverOpacity = DEFAULTS.hoverOpacity;
     currentBg = DEFAULTS.bg;
     currentBgOpacity = DEFAULTS.bgOpacity;
-    colorPicker.value = DEFAULTS.fill;
-    colorHex.value = DEFAULTS.fill.toUpperCase();
-    colorOpacity.value = String(DEFAULTS.fillOpacity);
-    colorOpacityVal.textContent = DEFAULTS.fillOpacity + '%';
-    hoverPicker.value = DEFAULTS.hover;
-    hoverHex.value = DEFAULTS.hover.toUpperCase();
-    hoverOpacity.value = String(DEFAULTS.hoverOpacity);
-    hoverOpacityVal.textContent = DEFAULTS.hoverOpacity + '%';
-    bgPicker.value = DEFAULTS.bg;
-    bgHex.value = DEFAULTS.bg.toUpperCase();
-    bgOpacity.value = String(DEFAULTS.bgOpacity);
-    bgOpacityVal.textContent = DEFAULTS.bgOpacity + '%';
+    syncInputs();
     applyFillColor();
     applyBgColor();
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
   });
 </script>
