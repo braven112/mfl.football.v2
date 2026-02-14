@@ -34,7 +34,7 @@
         {
           "id": "standings",
           "label": "Standings",
-          "icon": "numberone",
+          "icon": "shield",
           "path": "/standings",
           "external": false,
           "description": "Current league standings"
@@ -51,7 +51,7 @@
         {
           "id": "playoffs",
           "label": "Playoffs",
-          "icon": "trophy",
+          "icon": "champ",
           "path": "/playoffs",
           "external": false,
           "description": "Playoff bracket and results"
@@ -144,7 +144,7 @@
         {
           "id": "submit-lineup",
           "label": "Submit Lineup",
-          "icon": "submit",
+          "icon": "lineup",
           "urlTemplate": "https://{host}/{year}/lineup?L={leagueId}",
           "external": true,
           "description": "Set your starting lineup on MFL"
@@ -152,7 +152,7 @@
         {
           "id": "add-drop",
           "label": "Add/Drop",
-          "icon": "user-plus",
+          "icon": "plus",
           "urlTemplate": "https://{host}/{year}/add_drop?L={leagueId}",
           "external": true,
           "description": "Add or drop players on MFL"
@@ -160,7 +160,7 @@
         {
           "id": "live-scoring",
           "label": "Live Scoring",
-          "icon": "scoreboard",
+          "icon": "goals",
           "urlTemplate": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE6",
           "external": true,
           "description": "Real-time scoring on MFL"
