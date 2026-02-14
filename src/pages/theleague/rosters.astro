@@ -1301,13 +1301,13 @@ const initialAllPlayers: any[] = initialSeasonData
     ])
   : [];
 
-// Calculate draft predictions for 2026 roster view - use getCurrentLeagueYear() for roster data
-const currentYear = currentLeagueYear;
-const nextYear = currentYear + 1;
+// Draft predictions use season year (standings come from the season played, not the new league year)
+const draftSeasonYear = getCurrentSeasonYear();
+const draftNextYear = draftSeasonYear + 1;
 
 // Get last fetched timestamp from meta file
 const fetchMetaKey = Object.keys(fetchMetaFeeds).find(
-  (path) => path.includes(`/${currentYear}/`)
+  (path) => path.includes(`/${currentLeagueYear}/`)
 );
 const fetchMeta = fetchMetaKey ? getModuleData(fetchMetaFeeds[fetchMetaKey]) : null;
 const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
@@ -1317,26 +1317,26 @@ let assetsPredictions = [];
 let toiletBowlWinners = [];
 let assetTeamIds: string[] = [];
 
-// Load standings and bracket data for draft predictions (from current season)
+// Load standings and bracket data for draft predictions (from the season that was played)
 const standingsKey = Object.keys(standingsFeeds).find(
-  (path) => extractFeedSeason(path) === String(currentYear)
+  (path) => extractFeedSeason(path) === String(draftSeasonYear)
 );
 const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
 
 const bracketKey = Object.keys(playoffBracketFeeds).find(
-  (path) => extractFeedSeason(path) === String(currentYear)
+  (path) => extractFeedSeason(path) === String(draftSeasonYear)
 );
 const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
 
 // Load draft results from next year to show actual picks with trades
 const draftResultsKey = Object.keys(draftResultsFeeds).find(
-  (path) => extractFeedSeason(path) === String(nextYear)
+  (path) => extractFeedSeason(path) === String(draftNextYear)
 );
 const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
 
-// Load transactions from current year to extract trade information
+// Load transactions from season year to extract trade information
 const transactionsKey = Object.keys(transactionsFeeds).find(
-  (path) => extractFeedSeason(path) === String(currentYear)
+  (path) => extractFeedSeason(path) === String(draftSeasonYear)
 );
 const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
 
@@ -1377,7 +1377,7 @@ if (standingsData?.leagueStandings?.franchise) {
 
   // Extract draft assets from transactions (trades)
   if (transactionsData) {
-    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, nextYear);
+    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear);
     if (isValidAssetsData(assetsData)) {
       assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
     }

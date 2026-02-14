@@ -109,10 +109,10 @@ export function getLeagueYear(referenceDate?: Date): LeagueYearConfig {
     ? parseInt(envBaseYear, 10)
     : calculateBaseYear(date);
 
-  // Feb 14th @ 8:45 PT cutoff
+  // Feb 14th @ 8:45 PM PT cutoff
   // PT timezone: PST (UTC-8) in winter, PDT (UTC-7) in summer
-  // Feb 14th is always PST, so 8:45 PT = 16:45 UTC
-  const febCutoff = new Date(date.getFullYear(), 1, 14, 16, 45, 0, 0); // Feb = month 1 (0-indexed)
+  // Feb 14th is always PST, so 8:45 PM PST = 4:45 AM UTC on Feb 15th
+  const febCutoff = new Date(Date.UTC(date.getFullYear(), 1, 15, 4, 45, 0, 0)); // Feb 15 04:45 UTC = Feb 14 20:45 PST
 
   // Labor Day cutoff (first Monday in September)
   const laborDay = getLaborDay(date.getFullYear());
