@@ -23,6 +23,103 @@ const uniqueIconEntries = iconEntries.filter(entry => {
 // Cache-bust the sprite URL so browsers always fetch the latest version
 const spriteHash = spriteContent.length.toString(36) + uniqueIconEntries.length.toString(36);
 const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
+
+// Synonym map for search — each icon gets related keywords
+const synonyms: Record<string, string[]> = {
+  'icon-activity': ['pulse', 'heartbeat', 'health', 'vital', 'status', 'active'],
+  'icon-align-left': ['text', 'paragraph', 'format', 'left-align', 'justify'],
+  'icon-ambulance': ['emergency', 'medical', 'hospital', 'injury', 'hurt', 'ir'],
+  'icon-ambulance-2': ['emergency', 'medical', 'hospital', 'injury', 'hurt', 'ir'],
+  'icon-banknote': ['money', 'cash', 'salary', 'pay', 'currency', 'dollar', 'cap', 'contract'],
+  'icon-bar-chart': ['graph', 'stats', 'statistics', 'analytics', 'data', 'chart'],
+  'icon-beer': ['drink', 'pub', 'bar', 'cheers', 'celebrate', 'party', 'alcohol'],
+  'icon-beer-1': ['drink', 'pub', 'bar', 'cheers', 'celebrate', 'party', 'alcohol'],
+  'icon-bookmark': ['save', 'favorite', 'flag', 'mark', 'tag', 'saved', 'watchlist'],
+  'icon-calendar': ['date', 'schedule', 'event', 'time', 'week', 'month', 'day'],
+  'icon-calendar-2': ['date', 'schedule', 'event', 'time', 'week', 'month', 'day'],
+  'icon-calendar-3': ['date', 'schedule', 'event', 'time', 'week', 'month', 'day'],
+  'icon-cash': ['money', 'dollar', 'salary', 'pay', 'currency', 'bills', 'cap', 'contract'],
+  'icon-chalkboard': ['board', 'teach', 'lesson', 'strategy', 'playbook', 'presentation'],
+  'icon-champ': ['champion', 'winner', 'trophy', 'first', 'gold', 'victory', 'title'],
+  'icon-cheer': ['celebrate', 'fan', 'crowd', 'pom-pom', 'support', 'spirit', 'cheerleader'],
+  'icon-chevron-left': ['arrow', 'back', 'previous', 'navigate', 'left', 'nav'],
+  'icon-chevron-right': ['arrow', 'forward', 'next', 'navigate', 'right', 'nav'],
+  'icon-clipboard': ['copy', 'paste', 'notes', 'list', 'tasks', 'document'],
+  'icon-commenting': ['chat', 'message', 'talk', 'speech', 'bubble', 'comment', 'discuss'],
+  'icon-comments': ['chat', 'message', 'talk', 'discussion', 'forum', 'board', 'conversation'],
+  'icon-dollar': ['money', 'cash', 'salary', 'pay', 'currency', 'price', 'cost', 'cap'],
+  'icon-draft-podium': ['draft', 'podium', 'stage', 'pick', 'selection', 'rookie'],
+  'icon-exchange': ['trade', 'swap', 'transfer', 'arrows', 'switch', 'deal'],
+  'icon-eye': ['view', 'visible', 'watch', 'see', 'show', 'look', 'preview'],
+  'icon-eye-slash': ['hidden', 'invisible', 'hide', 'private', 'blind', 'secret'],
+  'icon-fans': ['crowd', 'audience', 'spectators', 'supporters', 'people', 'game-day'],
+  'icon-file-text': ['document', 'page', 'paper', 'report', 'article', 'rules', 'text'],
+  'icon-fingerprint': ['identity', 'auth', 'biometric', 'security', 'login', 'unique', 'verify'],
+  'icon-football': ['ball', 'nfl', 'pigskin', 'game', 'sports', 'gridiron'],
+  'icon-football-2': ['ball', 'nfl', 'pigskin', 'game', 'sports', 'gridiron'],
+  'icon-gavel': ['judge', 'auction', 'bid', 'hammer', 'law', 'rule', 'ruling', 'commish'],
+  'icon-goals': ['score', 'scoring', 'points', 'live', 'touchdown', 'field-goal', 'target'],
+  'icon-helmet': ['player', 'equipment', 'head', 'gear', 'football', 'protection', 'team'],
+  'icon-helmet-2': ['player', 'equipment', 'head', 'gear', 'football', 'protection', 'team'],
+  'icon-history': ['clock', 'time', 'past', 'previous', 'log', 'archive', 'undo'],
+  'icon-home': ['house', 'main', 'start', 'dashboard', 'landing', 'nav', 'homepage'],
+  'icon-house': ['home', 'main', 'start', 'dashboard', 'landing', 'nav', 'homepage'],
+  'icon-kick': ['punt', 'field-goal', 'kicker', 'boot', 'leg', 'special-teams'],
+  'icon-line-chart': ['graph', 'trend', 'analytics', 'data', 'stats', 'growth', 'chart'],
+  'icon-lineup': ['roster', 'starters', 'formation', 'submit', 'set', 'starting', 'players'],
+  'icon-lion': ['mascot', 'animal', 'pride', 'brave', 'courage', 'premier', 'english'],
+  'icon-matchups': ['versus', 'vs', 'head-to-head', 'opponent', 'game', 'week', 'schedule', 'h2h'],
+  'icon-money-bag': ['cash', 'salary', 'rich', 'wealth', 'cap', 'budget', 'contract', 'pay'],
+  'icon-numberone': ['first', 'one', 'top', 'best', 'winner', 'rank', 'number'],
+  'icon-pass': ['throw', 'quarterback', 'qb', 'aerial', 'passing', 'arm', 'spiral'],
+  'icon-paypal': ['payment', 'money', 'pay', 'online', 'dues', 'fees', 'transaction'],
+  'icon-playoff': ['bracket', 'tournament', 'postseason', 'elimination', 'championship'],
+  'icon-plus': ['add', 'new', 'create', 'include', 'drop', 'waiver', 'pickup'],
+  'icon-podium-empty': ['podium', 'stage', 'rank', 'place', 'standing', 'position'],
+  'icon-podium-persona': ['podium', 'person', 'winner', 'rank', 'place', 'standing', 'mvp'],
+  'icon-power': ['strength', 'energy', 'force', 'electric', 'bolt', 'lightning', 'ranking'],
+  'icon-premier-league': ['epl', 'english', 'soccer', 'football', 'england', 'league', 'premier'],
+  'icon-rank': ['position', 'number', 'order', 'leaderboard', 'standing', 'tier'],
+  'icon-rush': ['run', 'running', 'rb', 'running-back', 'ground', 'rushing', 'carry'],
+  'icon-scoreboard': ['score', 'board', 'display', 'live', 'points', 'game', 'results'],
+  'icon-scoreboard-2': ['score', 'board', 'display', 'live', 'points', 'game', 'results'],
+  'icon-shield': ['defense', 'protect', 'guard', 'security', 'badge', 'crest', 'team', 'logo'],
+  'icon-shield-2': ['defense', 'protect', 'guard', 'security', 'badge', 'crest', 'team', 'logo'],
+  'icon-sign-in': ['login', 'enter', 'access', 'authenticate', 'account', 'door'],
+  'icon-sort': ['order', 'arrange', 'filter', 'ascending', 'descending', 'organize'],
+  'icon-sort-alpha-asc': ['alphabetical', 'a-z', 'order', 'arrange', 'ascending', 'sort'],
+  'icon-sort-alpha-desc': ['alphabetical', 'z-a', 'order', 'arrange', 'descending', 'sort'],
+  'icon-sort-amount-asc': ['order', 'arrange', 'ascending', 'low-high', 'smallest', 'sort'],
+  'icon-sort-amount-desc': ['order', 'arrange', 'descending', 'high-low', 'largest', 'sort'],
+  'icon-stadium': ['field', 'arena', 'venue', 'game-day', 'stands', 'crowd', 'football'],
+  'icon-standings': ['leaderboard', 'rank', 'table', 'position', 'record', 'wins', 'losses'],
+  'icon-standings-2': ['leaderboard', 'rank', 'table', 'position', 'record', 'chart', 'graph'],
+  'icon-star': ['favorite', 'rating', 'best', 'top', 'featured', 'highlight', 'mvp'],
+  'icon-submit': ['send', 'upload', 'confirm', 'lineup', 'publish', 'save', 'done'],
+  'icon-toilet': ['bathroom', 'sacko', 'loser', 'last', 'punishment', 'toilet-bowl', 'worst'],
+  'icon-touchdowns': ['td', 'score', 'endzone', 'celebration', 'points', 'six'],
+  'icon-transactions': ['trade', 'deal', 'handshake', 'swap', 'transfer', 'agreement', 'move'],
+  'icon-trophy': ['winner', 'champion', 'award', 'prize', 'cup', 'first', 'gold'],
+  'icon-trophy-1': ['winner', 'champion', 'award', 'prize', 'cup', 'first', 'gold'],
+  'icon-user': ['person', 'profile', 'account', 'member', 'player', 'owner'],
+  'icon-user-md': ['doctor', 'medical', 'injury', 'health', 'ir', 'injured-reserve'],
+  'icon-user-plus': ['add', 'new-member', 'invite', 'join', 'register', 'signup', 'pickup'],
+  'icon-user-secret': ['spy', 'hidden', 'anonymous', 'incognito', 'private', 'secret', 'mystery'],
+  'icon-user-times': ['remove', 'delete', 'drop', 'cut', 'release', 'waiver', 'kick'],
+  'icon-users': ['team', 'group', 'people', 'members', 'league', 'owners', 'roster'],
+  'icon-whistle': ['referee', 'ref', 'official', 'call', 'foul', 'penalty', 'flag'],
+  'icon-whistle-2': ['referee', 'ref', 'official', 'call', 'foul', 'penalty', 'flag'],
+  'icon-wrench': ['settings', 'tools', 'config', 'options', 'preferences', 'fix', 'repair', 'admin'],
+  'icon-yards': ['distance', 'yardage', 'field', 'measure', 'gain', 'receiving', 'stats'],
+};
+
+// Build search data: icon id words + synonyms joined into a single searchable string per icon
+const searchData: Record<string, string> = {};
+for (const { id } of uniqueIconEntries) {
+  const idWords = id.replace('icon-', '').replace(/-/g, ' ');
+  const syns = synonyms[id] || [];
+  searchData[id] = [idWords, ...syns].join(' ').toLowerCase();
+}
 ---
 
 <TheLeagueLayout title="Sprite Icon Gallery">
@@ -30,12 +127,23 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
     <header class="icon-gallery__header">
       <h1>Sprite Icon Gallery</h1>
       <p>All {uniqueIconEntries.length} symbols currently registered in <code>public/assets/icons/sprite.svg</code>.</p>
-      <button class="copy-sprite-btn" data-sprite-url={spriteUrl} type="button">Copy Full SVG Sprite</button>
+      <div class="icon-gallery__actions">
+        <div class="search-wrapper">
+          <input
+            type="search"
+            class="icon-search"
+            placeholder="Search icons... (e.g. money, trade, roster)"
+            autocomplete="off"
+          />
+          <span class="search-count">{uniqueIconEntries.length} icons</span>
+        </div>
+        <button class="copy-sprite-btn" data-sprite-url={spriteUrl} type="button">Copy Full SVG Sprite</button>
+      </div>
     </header>
 
     <div class="icon-grid">
       {uniqueIconEntries.map(({ id, viewBox }) => (
-        <article class="icon-card">
+        <article class="icon-card" data-icon-id={id} data-search={searchData[id]}>
           <p class="icon-name">{id}</p>
           <div class="icon-preview">
             <svg viewBox={viewBox} role="img" aria-label={id}>
@@ -45,6 +153,8 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
         </article>
       ))}
     </div>
+
+    <p class="no-results" style="display:none;">No icons match your search.</p>
   </section>
 </TheLeagueLayout>
 
@@ -67,6 +177,50 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
     color: #475569;
   }
 
+  .icon-gallery__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 240px;
+  }
+
+  .icon-search {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    max-width: 400px;
+  }
+
+  .icon-search:focus {
+    border-color: #3b82f6;
+  }
+
+  .icon-search::placeholder {
+    color: #94a3b8;
+  }
+
+  .search-count {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   .icon-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -82,6 +236,10 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
     flex-direction: column;
     gap: 0.5rem;
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  }
+
+  .icon-card[hidden] {
+    display: none;
   }
 
   .icon-name {
@@ -117,9 +275,19 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
       width: 56px;
       height: 56px;
     }
+    .icon-gallery__actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .search-wrapper {
+      min-width: 0;
+    }
+    .icon-search {
+      max-width: none;
+    }
   }
+
   .copy-sprite-btn {
-    margin-top: 0.75rem;
     padding: 0.5rem 1.25rem;
     background: #0f172a;
     color: #fff;
@@ -129,15 +297,23 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
-    align-self: flex-start;
+    white-space: nowrap;
   }
 
   .copy-sprite-btn:hover {
     background: #1e293b;
   }
+
+  .no-results {
+    text-align: center;
+    color: #64748b;
+    font-size: 1rem;
+    padding: 2rem 0;
+  }
 </style>
 
 <script>
+  // Copy sprite button
   const btn = document.querySelector('.copy-sprite-btn') as HTMLButtonElement;
   btn?.addEventListener('click', async () => {
     const url = btn.dataset.spriteUrl;
@@ -152,6 +328,38 @@ const spriteUrl = `/assets/icons/sprite.svg?v=${spriteHash}`;
     } catch {
       btn.textContent = 'Failed to copy';
       setTimeout(() => { btn.textContent = 'Copy Full SVG Sprite'; }, 2000);
+    }
+  });
+
+  // Search / filter
+  const searchInput = document.querySelector('.icon-search') as HTMLInputElement;
+  const cards = document.querySelectorAll<HTMLElement>('.icon-card');
+  const countEl = document.querySelector('.search-count') as HTMLSpanElement;
+  const noResults = document.querySelector('.no-results') as HTMLParagraphElement;
+  const total = cards.length;
+
+  searchInput?.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    let visible = 0;
+
+    cards.forEach(card => {
+      if (!query) {
+        card.hidden = false;
+        visible++;
+        return;
+      }
+      const searchStr = card.dataset.search || '';
+      const iconId = (card.dataset.iconId || '').toLowerCase();
+      const match = iconId.includes(query) || searchStr.includes(query);
+      card.hidden = !match;
+      if (match) visible++;
+    });
+
+    if (countEl) {
+      countEl.textContent = query ? `${visible} of ${total} icons` : `${total} icons`;
+    }
+    if (noResults) {
+      noResults.style.display = visible === 0 ? 'block' : 'none';
     }
   });
 </script>
