@@ -113,15 +113,19 @@ const synonyms: Record<string, string[]> = {
   'icon-yards': ['distance', 'yardage', 'field', 'measure', 'gain', 'receiving', 'stats'],
 };
 
-// Category tags — icons can belong to multiple categories
+// Category tags — icons can belong to multiple categories (ordered most → least icons)
 const categories: Record<string, string[]> = {
-  navigation: [
-    'icon-home', 'icon-house', 'icon-chevron-left', 'icon-chevron-right',
-    'icon-sign-in', 'icon-wrench', 'icon-bookmark',
+  gameday: [
+    'icon-stadium', 'icon-football', 'icon-football-2', 'icon-helmet', 'icon-helmet-2',
+    'icon-scoreboard', 'icon-scoreboard-2', 'icon-transactions', 'icon-whistle', 'icon-whistle-2',
+    'icon-fans', 'icon-cheer', 'icon-goals', 'icon-touchdowns', 'icon-kick',
+    'icon-pass', 'icon-rush', 'icon-yards', 'icon-beer', 'icon-beer-1',
   ],
-  roster: [
-    'icon-lineup', 'icon-user', 'icon-users', 'icon-user-plus', 'icon-user-times',
-    'icon-helmet', 'icon-helmet-2', 'icon-clipboard', 'icon-submit',
+  draft: [
+    'icon-draft-podium', 'icon-podium-empty', 'icon-podium-persona', 'icon-clipboard',
+    'icon-football', 'icon-football-2', 'icon-helmet', 'icon-helmet-2',
+    'icon-exchange', 'icon-history', 'icon-rank', 'icon-numberone',
+    'icon-calendar', 'icon-calendar-2', 'icon-calendar-3', 'icon-star',
   ],
   scoring: [
     'icon-goals', 'icon-scoreboard', 'icon-scoreboard-2', 'icon-touchdowns',
@@ -133,48 +137,44 @@ const categories: Record<string, string[]> = {
     'icon-shield', 'icon-shield-2', 'icon-star', 'icon-podium-persona', 'icon-podium-empty',
     'icon-bar-chart', 'icon-line-chart', 'icon-power',
   ],
-  playoffs: [
-    'icon-champ', 'icon-trophy', 'icon-trophy-1', 'icon-playoff',
-    'icon-podium-persona', 'icon-podium-empty', 'icon-star', 'icon-toilet',
-    'icon-transactions', 'icon-stadium',
-  ],
-  money: [
-    'icon-banknote', 'icon-cash', 'icon-dollar', 'icon-money-bag', 'icon-paypal',
-  ],
-  trades: [
-    'icon-exchange', 'icon-transactions', 'icon-transactions-2',
-    'icon-clipboard', 'icon-file-text', 'icon-history',
+  auction: [
+    'icon-gavel', 'icon-banknote', 'icon-cash', 'icon-dollar', 'icon-money-bag',
+    'icon-users', 'icon-chalkboard', 'icon-history', 'icon-bar-chart',
+    'icon-line-chart', 'icon-star', 'icon-power',
   ],
   waivers: [
     'icon-plus', 'icon-user-plus', 'icon-user-times', 'icon-clipboard',
     'icon-file-text', 'icon-history', 'icon-eye', 'icon-eye-slash',
     'icon-calendar', 'icon-calendar-2', 'icon-calendar-3',
   ],
-  auction: [
-    'icon-gavel', 'icon-banknote', 'icon-cash', 'icon-dollar', 'icon-money-bag',
-    'icon-users', 'icon-chalkboard', 'icon-history', 'icon-bar-chart',
-    'icon-line-chart', 'icon-star', 'icon-power',
+  playoffs: [
+    'icon-champ', 'icon-trophy', 'icon-trophy-1', 'icon-playoff',
+    'icon-podium-persona', 'icon-podium-empty', 'icon-star', 'icon-toilet',
+    'icon-transactions', 'icon-stadium',
   ],
-  draft: [
-    'icon-draft-podium', 'icon-podium-empty', 'icon-podium-persona', 'icon-clipboard',
-    'icon-football', 'icon-football-2', 'icon-helmet', 'icon-helmet-2',
-    'icon-exchange', 'icon-history', 'icon-rank', 'icon-numberone',
-    'icon-calendar', 'icon-calendar-2', 'icon-calendar-3', 'icon-star',
+  roster: [
+    'icon-lineup', 'icon-user', 'icon-users', 'icon-user-plus', 'icon-user-times',
+    'icon-helmet', 'icon-helmet-2', 'icon-clipboard', 'icon-submit',
   ],
   people: [
     'icon-user', 'icon-users', 'icon-user-plus', 'icon-user-times',
     'icon-user-md', 'icon-user-secret', 'icon-fans', 'icon-cheer',
     'icon-podium-persona',
   ],
+  navigation: [
+    'icon-home', 'icon-house', 'icon-chevron-left', 'icon-chevron-right',
+    'icon-sign-in', 'icon-wrench', 'icon-bookmark',
+  ],
+  trades: [
+    'icon-exchange', 'icon-transactions', 'icon-transactions-2',
+    'icon-clipboard', 'icon-file-text', 'icon-history',
+  ],
   communication: [
     'icon-commenting', 'icon-comments', 'icon-clipboard', 'icon-file-text',
     'icon-align-left', 'icon-chalkboard',
   ],
-  gameday: [
-    'icon-stadium', 'icon-football', 'icon-football-2', 'icon-helmet', 'icon-helmet-2',
-    'icon-scoreboard', 'icon-scoreboard-2', 'icon-matchups', 'icon-whistle', 'icon-whistle-2',
-    'icon-fans', 'icon-cheer', 'icon-goals', 'icon-touchdowns', 'icon-kick',
-    'icon-pass', 'icon-rush', 'icon-yards', 'icon-beer', 'icon-beer-1',
+  money: [
+    'icon-banknote', 'icon-cash', 'icon-dollar', 'icon-money-bag', 'icon-paypal',
   ],
   sorting: [
     'icon-sort', 'icon-sort-alpha-asc', 'icon-sort-alpha-desc',
@@ -217,6 +217,30 @@ for (const { id } of uniqueIconEntries) {
             autocomplete="off"
           />
           <span class="search-count">{uniqueIconEntries.length} icons</span>
+        </div>
+        <div class="color-pickers">
+          <div class="color-picker-group">
+            <label for="icon-color">Fill</label>
+            <div class="color-input-wrapper">
+              <input type="color" id="icon-color" value="#0f172a" />
+              <input type="text" class="color-hex" id="icon-color-hex" value="#0f172a" maxlength="7" spellcheck="false" />
+            </div>
+          </div>
+          <div class="color-picker-group">
+            <label for="icon-hover-color">Hover</label>
+            <div class="color-input-wrapper">
+              <input type="color" id="icon-hover-color" value="#3b82f6" />
+              <input type="text" class="color-hex" id="icon-hover-color-hex" value="#3b82f6" maxlength="7" spellcheck="false" />
+            </div>
+          </div>
+          <div class="color-picker-group">
+            <label for="icon-bg-color">BG</label>
+            <div class="color-input-wrapper">
+              <input type="color" id="icon-bg-color" value="#f8fafc" />
+              <input type="text" class="color-hex" id="icon-bg-color-hex" value="#f8fafc" maxlength="7" spellcheck="false" />
+            </div>
+          </div>
+          <button class="color-reset-btn" type="button" title="Reset colors">Reset</button>
         </div>
         <button class="copy-sprite-btn" data-sprite-url={spriteUrl} type="button">Copy Full SVG Sprite</button>
       </div>
@@ -442,6 +466,97 @@ for (const { id } of uniqueIconEntries) {
     background: #1e293b;
   }
 
+  .color-pickers {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .color-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .color-picker-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .color-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.2rem 0.4rem;
+    background: #fff;
+    transition: border-color 0.15s;
+  }
+
+  .color-input-wrapper:focus-within {
+    border-color: #3b82f6;
+  }
+
+  .color-picker-group input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    background: none;
+  }
+
+  .color-picker-group input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  .color-picker-group input[type="color"]::-webkit-color-swatch {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .color-picker-group input[type="color"]::-moz-color-swatch {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .color-hex {
+    width: 70px;
+    border: none;
+    background: transparent;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: monospace;
+    color: #0f172a;
+    outline: none;
+    text-transform: uppercase;
+  }
+
+  .color-reset-btn {
+    padding: 0.35rem 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .color-reset-btn:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+  }
+
   .no-results {
     text-align: center;
     color: #64748b;
@@ -531,5 +646,104 @@ for (const { id } of uniqueIconEntries) {
       }
       filterIcons();
     });
+  });
+
+  // Color pickers
+  const colorPicker = document.getElementById('icon-color') as HTMLInputElement;
+  const colorHex = document.getElementById('icon-color-hex') as HTMLInputElement;
+  const hoverPicker = document.getElementById('icon-hover-color') as HTMLInputElement;
+  const hoverHex = document.getElementById('icon-hover-color-hex') as HTMLInputElement;
+  const bgPicker = document.getElementById('icon-bg-color') as HTMLInputElement;
+  const bgHex = document.getElementById('icon-bg-color-hex') as HTMLInputElement;
+  const resetBtn = document.querySelector('.color-reset-btn') as HTMLButtonElement;
+  const previews = document.querySelectorAll<HTMLElement>('.icon-preview');
+  const svgs = document.querySelectorAll<SVGElement>('.icon-preview svg');
+
+  const DEFAULTS = { fill: '#0f172a', hover: '#3b82f6', bg: '#f8fafc' };
+  let currentFill = DEFAULTS.fill;
+  let currentHover = DEFAULTS.hover;
+  let currentBg = DEFAULTS.bg;
+
+  function isValidHex(v: string) {
+    return /^#[0-9a-fA-F]{6}$/.test(v);
+  }
+
+  function applyFillColor(color: string) {
+    currentFill = color;
+    svgs.forEach(svg => {
+      svg.style.fill = color;
+      svg.style.color = color;
+    });
+  }
+
+  function applyBgColor(color: string) {
+    currentBg = color;
+    previews.forEach(p => { p.style.backgroundColor = color; });
+  }
+
+  // Sync color picker → hex input → icons
+  colorPicker?.addEventListener('input', () => {
+    colorHex.value = colorPicker.value.toUpperCase();
+    applyFillColor(colorPicker.value);
+  });
+  colorHex?.addEventListener('input', () => {
+    const v = colorHex.value.startsWith('#') ? colorHex.value : '#' + colorHex.value;
+    if (isValidHex(v)) {
+      colorPicker.value = v;
+      applyFillColor(v);
+    }
+  });
+
+  // Hover color picker
+  hoverPicker?.addEventListener('input', () => {
+    hoverHex.value = hoverPicker.value.toUpperCase();
+    currentHover = hoverPicker.value;
+  });
+  hoverHex?.addEventListener('input', () => {
+    const v = hoverHex.value.startsWith('#') ? hoverHex.value : '#' + hoverHex.value;
+    if (isValidHex(v)) {
+      hoverPicker.value = v;
+      currentHover = v;
+    }
+  });
+
+  // BG color picker
+  bgPicker?.addEventListener('input', () => {
+    bgHex.value = bgPicker.value.toUpperCase();
+    applyBgColor(bgPicker.value);
+  });
+  bgHex?.addEventListener('input', () => {
+    const v = bgHex.value.startsWith('#') ? bgHex.value : '#' + bgHex.value;
+    if (isValidHex(v)) {
+      bgPicker.value = v;
+      applyBgColor(v);
+    }
+  });
+
+  // Hover effect on individual cards
+  svgs.forEach(svg => {
+    svg.addEventListener('mouseenter', () => {
+      svg.style.fill = currentHover;
+      svg.style.color = currentHover;
+    });
+    svg.addEventListener('mouseleave', () => {
+      svg.style.fill = currentFill;
+      svg.style.color = currentFill;
+    });
+  });
+
+  // Reset button
+  resetBtn?.addEventListener('click', () => {
+    currentFill = DEFAULTS.fill;
+    currentHover = DEFAULTS.hover;
+    currentBg = DEFAULTS.bg;
+    colorPicker.value = DEFAULTS.fill;
+    colorHex.value = DEFAULTS.fill.toUpperCase();
+    hoverPicker.value = DEFAULTS.hover;
+    hoverHex.value = DEFAULTS.hover.toUpperCase();
+    bgPicker.value = DEFAULTS.bg;
+    bgHex.value = DEFAULTS.bg.toUpperCase();
+    applyFillColor(DEFAULTS.fill);
+    applyBgColor(DEFAULTS.bg);
   });
 </script>
