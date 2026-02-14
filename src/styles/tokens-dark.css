@@ -14,9 +14,9 @@
      ======================================== */
 
   /* Brand Colors */
-  --color-primary: #1c497c;
-  --color-primary-dark: #0f2d4a;
-  --color-primary-light: #3b82f6;
+  --color-primary: #c9a94e;
+  --color-primary-dark: #a8893a;
+  --color-primary-light: #d4b85e;
 
   --color-secondary: #3c9950;
   --color-secondary-dark: #2e8743;
@@ -28,16 +28,16 @@
   --color-white: #ffffff;
   --color-black: #000000;
 
-  --color-gray-50: #18182a;
-  --color-gray-100: #1e1e32;
-  --color-gray-200: #2a2a3d;
-  --color-gray-300: #3a3a50;
-  --color-gray-400: #6b6b80;
-  --color-gray-500: #8a8a9a;
-  --color-gray-600: #a0a0b0;
-  --color-gray-700: #c0c0cc;
-  --color-gray-800: #d8d8e0;
-  --color-gray-900: #ededf0;
+  --color-gray-50: #181818;
+  --color-gray-100: #1e1e1e;
+  --color-gray-200: #2a2a2a;
+  --color-gray-300: #3a3a3a;
+  --color-gray-400: #6b6b6b;
+  --color-gray-500: #8a8a8a;
+  --color-gray-600: #a0a0a0;
+  --color-gray-700: #c0c0c0;
+  --color-gray-800: #d8d8d8;
+  --color-gray-900: #ededed;
 
   /* Semantic Colors */
   --color-success: #34d399;
@@ -59,37 +59,37 @@
   /* ========================================
      Dark Mode Surface Elevation System
      ======================================== */
-  --color-surface-1: #121220;         /* Lowest: page background */
-  --color-surface-2: #1e1e32;         /* Mid: cards, panels */
-  --color-surface-3: #2a2a3d;         /* Highest: dropdowns, tooltips */
-  --color-border-default: #2e2e44;    /* Standard borders */
-  --color-border-subtle: #232338;     /* Faint dividers */
-  --color-text-primary: #e0e0e8;      /* Body copy */
-  --color-text-secondary: #8a8a9a;    /* Labels, captions */
-  --color-text-disabled: #5a5a6a;     /* Disabled text */
+  --color-surface-1: #121212;         /* Lowest: page background */
+  --color-surface-2: #1e1e1e;         /* Mid: cards, panels */
+  --color-surface-3: #2a2a2a;         /* Highest: dropdowns, tooltips */
+  --color-border-default: #2e2e2e;    /* Standard borders */
+  --color-border-subtle: #232323;     /* Faint dividers */
+  --color-text-primary: #e0e0e0;      /* Body copy */
+  --color-text-secondary: #8a8a8a;    /* Labels, captions */
+  --color-text-disabled: #5a5a5a;     /* Disabled text */
 
   /* ========================================
      Component Tokens - Page
      ======================================== */
-  --page-bg: #121220;
-  --page-text: #ededf0;
+  --page-bg: #121212;
+  --page-text: #ededed;
 
   /* ========================================
      Component Tokens - Content Areas
      ======================================== */
-  --content-bg: #1e1e32;
-  --content-border: #2e2e44;
+  --content-bg: #1e1e1e;
+  --content-border: #2e2e2e;
   --content-shadow: var(--shadow-card);
 
-  --content-bg-muted: #18182a;
-  --content-bg-accent: #2a4a6e;
-  --content-text-muted: #8a8a9a;
+  --content-bg-muted: #181818;
+  --content-bg-accent: #2a2a2a;
+  --content-text-muted: #8a8a8a;
 
   /* ========================================
      Component Tokens - Cards
      ======================================== */
-  --card-bg: #1e1e32;
-  --card-border: #2e2e44;
+  --card-bg: #1e1e1e;
+  --card-border: #2e2e2e;
   --card-shadow: var(--shadow-card);
 
   /* Legacy alias */
@@ -102,7 +102,7 @@
   --link-color-hover: #c9a94e;
   --link-color-focus: #c9a94e;
 
-  --link-color-inverse: #e2e8f0;
+  --link-color-inverse: #e2e2e2;
   --link-color-inverse-hover: #c9a94e;
 
   --link-color-accent: #60a5fa;
@@ -126,11 +126,11 @@
      ======================================== */
 
   /* Primary Button */
-  --btn-primary-bg: #1c497c;
-  --btn-primary-bg-hover: #245a94;
-  --btn-primary-bg-focus: #245a94;
-  --btn-primary-text: #ffffff;
-  --btn-primary-border: #2e5f8f;
+  --btn-primary-bg: #c9a94e;
+  --btn-primary-bg-hover: #d4b85e;
+  --btn-primary-bg-focus: #d4b85e;
+  --btn-primary-text: #121212;
+  --btn-primary-border: #a8893a;
   --btn-primary-border-hover: #c9a94e;
 
   /* Secondary Button */
@@ -142,14 +142,14 @@
   --btn-secondary-border-hover: #c9a94e;
 
   /* Inverse Button */
-  --btn-inverse-bg: #2a2a3d;
-  --btn-inverse-bg-hover: #1c497c;
-  --btn-inverse-bg-focus: #1c497c;
-  --btn-inverse-text: #d8d8e0;
+  --btn-inverse-bg: #2a2a2a;
+  --btn-inverse-bg-hover: #3a3a3a;
+  --btn-inverse-bg-focus: #3a3a3a;
+  --btn-inverse-text: #d8d8d8;
   --btn-inverse-text-hover: #ffffff;
 
   /* Icon Button */
-  --btn-icon-text: #8a8a9a;
+  --btn-icon-text: #8a8a8a;
   --btn-icon-text-focus: #60a5fa;
 
   /* Legacy aliases */
@@ -186,12 +186,12 @@
   /* ========================================
      Component Tokens - Tables
      ======================================== */
-  --table-header-bg: #18182a;
-  --table-header-text: #8a8a9a;
-  --table-row-bg: #1e1e32;
-  --table-row-bg-alt: #232338;
-  --table-row-bg-hover: #2a2a3d;
-  --table-border: #2e2e44;
+  --table-header-bg: #181818;
+  --table-header-text: #8a8a8a;
+  --table-row-bg: #1e1e1e;
+  --table-row-bg-alt: #232323;
+  --table-row-bg-hover: #2a2a2a;
+  --table-border: #2e2e2e;
 
   /* Legacy aliases */
   --table-header-text-color: var(--table-header-text);
@@ -201,10 +201,10 @@
   /* ========================================
      Component Tokens - Inverse (Dark Sections)
      ======================================== */
-  --inverse-bg: #10101c;
+  --inverse-bg: #101010;
   --inverse-bg-accent: #c9a94e;
-  --inverse-border: #1a1a2e;
-  --inverse-text: #e0e0e8;
+  --inverse-border: #1a1a1a;
+  --inverse-text: #e0e0e0;
 
   /* Legacy aliases */
   --inverse-content-bg: var(--inverse-bg);
@@ -215,20 +215,20 @@
   /* ========================================
      Component Tokens - Accent Content
      ======================================== */
-  --accent-content-bg-color: #1c3a5c;
-  --accent-content-border-color: #2a4a6e;
-  --accent-content-text-color: #e0e0e8;
+  --accent-content-bg-color: #2a2a2a;
+  --accent-content-border-color: #3a3a3a;
+  --accent-content-text-color: #e0e0e0;
   --accent-content-boxshadow-color: rgba(0, 0, 0, 0.3);
 
   /* ========================================
      Component Tokens - Forms
      ======================================== */
-  --input-bg: #18182a;
-  --input-border: #3a3a50;
+  --input-bg: #181818;
+  --input-border: #3a3a3a;
   --input-border-focus: #3b82f6;
-  --input-text: #e0e0e8;
-  --input-placeholder: #6b6b80;
-  --input-disabled-bg: #151526;
+  --input-text: #e0e0e0;
+  --input-placeholder: #6b6b6b;
+  --input-disabled-bg: #151515;
 
   /* ========================================
      Component Tokens - Badges/Status
@@ -272,13 +272,13 @@
   --secondary-content-bg-color: var(--content-bg);
   --secondary-content-border-color: var(--content-border);
   --secondary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
-  --content-border-color: #2e2e44;
+  --content-border-color: #2e2e2e;
   --gallery-content-bg: var(--content-bg-muted);
 
   /* ========================================
      Shadows (adjusted for dark surfaces)
      ======================================== */
-  --shadow-color: 240deg 10% 4%;
+  --shadow-color: 0deg 0% 4%;
 
   --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.2);
 
@@ -322,20 +322,20 @@
      ======================================== */
 
   /* Background colors */
-  --nav-bg: #1e1e32;
-  --nav-bg-subtle: #18182a;
+  --nav-bg: #1e1e1e;
+  --nav-bg-subtle: #181818;
 
   /* Text colors */
-  --nav-text: #d8d8e0;
-  --nav-text-muted: #8a8a9a;
-  --nav-text-subtle: #6b6b80;
+  --nav-text: #d8d8d8;
+  --nav-text-muted: #8a8a8a;
+  --nav-text-subtle: #6b6b6b;
 
   /* Border colors */
-  --nav-border: #2e2e44;
-  --nav-border-subtle: #232338;
+  --nav-border: #2e2e2e;
+  --nav-border-subtle: #232323;
 
   /* Interactive states */
-  --nav-hover-bg: #2a2a3d;
+  --nav-hover-bg: #2a2a2a;
   --nav-hover-text: var(--nav-text);
 
   /* Active/selected link */
@@ -347,13 +347,13 @@
   --nav-focus-ring: 0 0 0 2px #3b82f6;
 
   /* Section styling */
-  --nav-section-color: #8a8a9a;
+  --nav-section-color: #8a8a8a;
 
   /* Footer styling */
-  --nav-footer-bg: #151526;
-  --nav-footer-border: #2a2a3d;
+  --nav-footer-bg: #151515;
+  --nav-footer-border: #2a2a2a;
   --nav-footer-text: var(--nav-text);
-  --nav-footer-text-muted: #6b6b80;
+  --nav-footer-text-muted: #6b6b6b;
 
   /* Verify team prompt */
   --nav-verify-bg: rgba(201, 169, 78, 0.08);
@@ -369,15 +369,15 @@
   --nav-badge-text: #ffffff;
 
   /* League switcher */
-  --nav-switcher-bg: #18182a;
-  --nav-switcher-border: #2e2e44;
+  --nav-switcher-bg: #181818;
+  --nav-switcher-border: #2e2e2e;
   --nav-switcher-active-bg: #c9a94e;
-  --nav-switcher-active-text: #121220;
-  --nav-switcher-inactive-text: #6b6b80;
+  --nav-switcher-active-text: #121212;
+  --nav-switcher-inactive-text: #6b6b6b;
 
   /* Tooltip */
-  --nav-tooltip-bg: #2a2a3d;
-  --nav-tooltip-text: #e0e0e8;
+  --nav-tooltip-bg: #2a2a2a;
+  --nav-tooltip-text: #e0e0e0;
   --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 
   /* Shadows */
@@ -385,8 +385,8 @@
   --nav-shadow-sm: -2px 0 8px rgba(0, 0, 0, 0.3);
 
   /* Scrollbar */
-  --nav-scrollbar-thumb: #3a3a50;
-  --nav-scrollbar-thumb-hover: #5a5a70;
+  --nav-scrollbar-thumb: #3a3a3a;
+  --nav-scrollbar-thumb-hover: #5a5a5a;
 }
 
 /* ========================================

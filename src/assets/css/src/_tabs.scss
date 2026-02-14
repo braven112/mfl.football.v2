@@ -25,18 +25,23 @@
      transition: none;
      line-height:25px;
      font-weight: $headline-font-weight;
-     color: $white;
+     color: var(--button-link-color, $white);
      background-color: $accent-color;
      border-left-color: $accent-color;
      border-right-color: $accent-color;
 }
 
-.tabbed-reports li:hover,
-.tabbed-reports li.active,
-.tabbed-reports li.current { 
+.tabbed-reports li:hover {
      background-color: $dark-accent-color;
-     color: $white;
-} 
+     color: var(--tab-hover-color, $accent-color);
+}
+
+.tabbed-reports li.active,
+.tabbed-reports li.current {
+     background-color: $dark-accent-color;
+     color: var(--button-link-color, $white);
+     border-right-color: grey;
+}
 
 .tabbed-reports li:last-of-type {
      border-right:0;
