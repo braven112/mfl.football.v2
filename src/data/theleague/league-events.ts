@@ -131,7 +131,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     name: 'Rookie Draft',
     description: '3-round rookie draft, 12-hour pick timer',
     category: 'draft',
-    startDate: { type: 'relative', rule: '1-week-after', relativeTo: 'nfl-draft' },
+    startDate: { type: 'relative', rule: 'saturday-after-next-week', relativeTo: 'nfl-draft' },
     actionLinks: [
       {
         label: 'Draft Room',

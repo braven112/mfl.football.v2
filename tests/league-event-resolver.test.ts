@@ -108,16 +108,17 @@ describe('resolveDateForYear', () => {
     expect(date.getDay()).toBe(4); // Thursday
   });
 
-  it('should resolve relative dates (1-week-after)', () => {
+  it('should resolve relative dates (saturday-after-next-week)', () => {
     const events = THE_LEAGUE_EVENTS;
     const date = resolveDateForYear(
-      { type: 'relative', rule: '1-week-after', relativeTo: 'nfl-draft' },
+      { type: 'relative', rule: 'saturday-after-next-week', relativeTo: 'nfl-draft' },
       2026,
       events,
     );
-    // NFL Draft 2026 = April 23, 1 week later = April 30
-    expect(date.getMonth()).toBe(3); // April
-    expect(date.getDate()).toBe(30);
+    // NFL Draft 2026 = April 23 (Thursday), full week later on Saturday = May 2
+    expect(date.getDay()).toBe(6); // Saturday
+    expect(date.getMonth()).toBe(4); // May
+    expect(date.getDate()).toBe(2);
   });
 });
 

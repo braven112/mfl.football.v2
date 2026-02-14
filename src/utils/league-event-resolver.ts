@@ -111,6 +111,11 @@ function applyRelativeRule(rule: string, baseDate: Date): Date {
   const result = new Date(baseDate);
   if (rule === '1-week-after') {
     result.setDate(result.getDate() + 7);
+  } else if (rule === 'saturday-after-next-week') {
+    // Full week after, then Saturday (e.g., Thursday + 9 days = Saturday)
+    const dayOfWeek = result.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const daysUntilNextSaturday = (6 - dayOfWeek + 7) % 7 + 7;
+    result.setDate(result.getDate() + daysUntilNextSaturday);
   }
   return result;
 }
