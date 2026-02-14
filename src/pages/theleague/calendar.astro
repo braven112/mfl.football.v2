@@ -11,15 +11,16 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CalendarEventCard from '../../components/theleague/CalendarEventCard.astro';
 import { getAllResolvedEvents } from '../../utils/league-event-resolver';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../../types/league-events';
-import { getCurrentLeagueYear } from '../../utils/league-year';
 
 export const prerender = true;
 
-const currentYear = getCurrentLeagueYear();
-const nextYear = currentYear + 1;
+const calendarYear = new Date().getFullYear();
+const prevCalendarYear = calendarYear - 1;
+const nextCalendarYear = calendarYear + 1;
 
-const currentYearEvents = getAllResolvedEvents({ leagueYear: currentYear });
-const nextYearEvents = getAllResolvedEvents({ leagueYear: nextYear });
+const prevYearEvents = getAllResolvedEvents({ leagueYear: prevCalendarYear });
+const currentYearEvents = getAllResolvedEvents({ leagueYear: calendarYear });
+const nextYearEvents = getAllResolvedEvents({ leagueYear: nextCalendarYear });
 
 function groupByCategory(events: typeof currentYearEvents) {
   return CATEGORY_ORDER.map((category) => ({
@@ -29,6 +30,7 @@ function groupByCategory(events: typeof currentYearEvents) {
   })).filter((group) => group.events.length > 0);
 }
 
+const prevYearGroups = groupByCategory(prevYearEvents);
 const currentYearGroups = groupByCategory(currentYearEvents);
 const nextYearGroups = groupByCategory(nextYearEvents);
 ---
@@ -38,13 +40,27 @@ const nextYearGroups = groupByCategory(nextYearEvents);
     <header class="calendar-hero">
       <h1 class="calendar-hero__title">League Calendar</h1>
       <div class="calendar-hero__controls">
-        <label for="year-select" class="calendar-hero__label">Season</label>
+        <label for="year-select" class="calendar-hero__label">Year</label>
         <select id="year-select" class="calendar-hero__select">
-          <option value="current" selected>{currentYear} – {currentYear + 1}</option>
-          <option value="next">{nextYear} – {nextYear + 1}</option>
+          <option value="prev">{prevCalendarYear}</option>
+          <option value="current" selected>{calendarYear}</option>
+          <option value="next">{nextCalendarYear}</option>
         </select>
       </div>
     </header>
+
+    <div id="calendar-prev" class="calendar-year" style="display: none;">
+      {prevYearGroups.map((group) => (
+        <section class="calendar-section">
+          <h2 class="calendar-section__heading">{group.label}</h2>
+          <div class="calendar-section__grid">
+            {group.events.map((event) => (
+              <CalendarEventCard event={event} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
 
     <div id="calendar-current" class="calendar-year">
       {currentYearGroups.map((group) => (
@@ -76,23 +92,22 @@ const nextYearGroups = groupByCategory(nextYearEvents);
 
 <script>
   /**
-   * Year selector — toggle between pre-rendered current/next year event grids.
+   * Year selector — toggle between pre-rendered year event grids.
    */
   function initYearSelect() {
     const select = document.getElementById('year-select') as HTMLSelectElement | null;
-    const currentDiv = document.getElementById('calendar-current');
-    const nextDiv = document.getElementById('calendar-next');
+    const yearDivs = {
+      prev: document.getElementById('calendar-prev'),
+      current: document.getElementById('calendar-current'),
+      next: document.getElementById('calendar-next'),
+    };
 
-    if (!select || !currentDiv || !nextDiv) return;
+    if (!select || !yearDivs.prev || !yearDivs.current || !yearDivs.next) return;
 
     select.addEventListener('change', () => {
-      if (select.value === 'current') {
-        currentDiv.style.display = '';
-        nextDiv.style.display = 'none';
-      } else {
-        currentDiv.style.display = 'none';
-        nextDiv.style.display = '';
-      }
+      Object.entries(yearDivs).forEach(([key, div]) => {
+        if (div) div.style.display = key === select.value ? '' : 'none';
+      });
     });
   }
 
