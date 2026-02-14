@@ -88,6 +88,26 @@ function resolveComputedDate(rule: string, year: number): Date {
       return week16End;
     }
 
+    case 'playoffs-start': {
+      // Fantasy playoffs begin NFL Week 15 (Thursday, 14 weeks after kickoff)
+      const laborDay = getLaborDayForYear(year);
+      const kickoff = new Date(laborDay);
+      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
+      const week15 = new Date(kickoff);
+      week15.setDate(week15.getDate() + 14 * 7); // Thursday of Week 15
+      return week15;
+    }
+
+    case 'championship-week': {
+      // Fantasy championship is NFL Week 17 (Thursday, 16 weeks after kickoff)
+      const laborDay = getLaborDayForYear(year);
+      const kickoff = new Date(laborDay);
+      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
+      const week17 = new Date(kickoff);
+      week17.setDate(week17.getDate() + 16 * 7); // Thursday of Week 17
+      return week17;
+    }
+
     default:
       return new Date(year, 0, 1);
   }

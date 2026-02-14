@@ -65,6 +65,13 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     icon: 'star',
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 15 },
+    actionLinks: [
+      {
+        label: 'View Rosters',
+        url: '/theleague/rosters',
+        external: false,
+      },
+    ],
     sortOrder: 4,
   },
   {
@@ -228,5 +235,53 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'after-week-16' },
     sortOrder: 14,
+  },
+  {
+    id: 'playoffs-start',
+    name: 'Playoffs Begin',
+    description: 'Fantasy playoff brackets start — top 6 teams compete',
+    icon: 'playoff',
+    category: 'regular-season',
+    startDate: { type: 'computed', rule: 'playoffs-start' },
+    actionLinks: [
+      {
+        label: 'Playoff Standings',
+        url: '/theleague/standings?view=league',
+        external: false,
+      },
+    ],
+    resultLinks: [
+      {
+        label: 'Playoff Standings',
+        url: '/theleague/standings?view=league',
+        external: false,
+      },
+    ],
+    urgencyDays: 7,
+    sortOrder: 15,
+  },
+  {
+    id: 'league-championship',
+    name: 'League Championship',
+    description: 'Championship week — the final matchup to crown a champion',
+    icon: 'champ',
+    category: 'regular-season',
+    startDate: { type: 'computed', rule: 'championship-week' },
+    actionLinks: [
+      {
+        label: 'Playoff Bracket',
+        url: '/theleague/playoffs',
+        external: false,
+      },
+    ],
+    resultLinks: [
+      {
+        label: 'Playoff Bracket',
+        url: '/theleague/playoffs',
+        external: false,
+      },
+    ],
+    urgencyDays: 7,
+    sortOrder: 16,
   },
 ];
