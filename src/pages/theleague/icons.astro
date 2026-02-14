@@ -231,13 +231,12 @@ for (const { id } of uniqueIconEntries) {
         <button class="copy-sprite-btn" data-sprite-url={spriteUrl} type="button">Copy Full SVG Sprite</button>
       </div>
       <div class="color-picker-panel" id="color-picker-panel" hidden>
-        <p class="color-note">These colors are for testing only. The site's theme handles icon colors automatically.</p>
         <div class="color-pickers">
           <div class="color-picker-group">
             <label for="icon-color">Fill</label>
             <div class="color-input-wrapper">
-              <input type="color" id="icon-color" value="#1c497c" />
-              <input type="text" class="color-hex" id="icon-color-hex" value="#1c497c" maxlength="7" spellcheck="false" />
+              <input type="color" id="icon-color" value="#2f4865" />
+              <input type="text" class="color-hex" id="icon-color-hex" value="#2f4865" maxlength="7" spellcheck="false" />
             </div>
             <input type="range" class="opacity-slider" id="icon-color-opacity" min="0" max="100" value="100" />
             <span class="opacity-value" id="icon-color-opacity-val">100%</span>
@@ -245,8 +244,8 @@ for (const { id } of uniqueIconEntries) {
           <div class="color-picker-group">
             <label for="icon-hover-color">Hover</label>
             <div class="color-input-wrapper">
-              <input type="color" id="icon-hover-color" value="#3b82f6" />
-              <input type="text" class="color-hex" id="icon-hover-color-hex" value="#3b82f6" maxlength="7" spellcheck="false" />
+              <input type="color" id="icon-hover-color" value="#2e8743" />
+              <input type="text" class="color-hex" id="icon-hover-color-hex" value="#2e8743" maxlength="7" spellcheck="false" />
             </div>
             <input type="range" class="opacity-slider" id="icon-hover-opacity" min="0" max="100" value="100" />
             <span class="opacity-value" id="icon-hover-opacity-val">100%</span>
@@ -254,14 +253,15 @@ for (const { id } of uniqueIconEntries) {
           <div class="color-picker-group">
             <label for="icon-bg-color">BG</label>
             <div class="color-input-wrapper">
-              <input type="color" id="icon-bg-color" value="#f8fafc" />
-              <input type="text" class="color-hex" id="icon-bg-color-hex" value="#f8fafc" maxlength="7" spellcheck="false" />
+              <input type="color" id="icon-bg-color" value="#eeeeee" />
+              <input type="text" class="color-hex" id="icon-bg-color-hex" value="#eeeeee" maxlength="7" spellcheck="false" />
             </div>
             <input type="range" class="opacity-slider" id="icon-bg-opacity" min="0" max="100" value="100" />
             <span class="opacity-value" id="icon-bg-opacity-val">100%</span>
           </div>
           <button class="color-reset-btn" type="button" title="Reset colors">Reset</button>
         </div>
+        <p class="color-note">These colors are for testing only. The site's theme handles icon colors automatically.</p>
       </div>
     </header>
 
@@ -444,8 +444,8 @@ for (const { id } of uniqueIconEntries) {
   .icon-preview svg {
     width: 72px;
     height: 72px;
-    fill: var(--primary-color, #1c497c);
-    color: var(--primary-color, #1c497c);
+    fill: #2f4865;
+    color: #2f4865;
   }
 
   @media (max-width: 640px) {
@@ -530,7 +530,8 @@ for (const { id } of uniqueIconEntries) {
   }
 
   .color-note {
-    margin: 0 0 0.6rem;
+    margin: 0;
+    padding-top: 0.75rem;
     font-size: 0.75rem;
     color: #94a3b8;
     font-style: italic;
@@ -787,24 +788,7 @@ for (const { id } of uniqueIconEntries) {
 
   const STORAGE_KEY = 'icon-gallery-colors';
 
-  // Read --primary-color from CSS at runtime, fallback to TheLeague blue
-  const computedPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#1c497c';
-  function resolveColor(raw: string): string {
-    if (raw.startsWith('#')) return raw;
-    const tmp = document.createElement('div');
-    tmp.style.color = raw;
-    document.body.appendChild(tmp);
-    const resolved = getComputedStyle(tmp).color;
-    tmp.remove();
-    const m = resolved.match(/\d+/g);
-    if (m && m.length >= 3) {
-      return '#' + m.slice(0, 3).map(n => parseInt(n).toString(16).padStart(2, '0')).join('');
-    }
-    return '#1c497c';
-  }
-  const primaryHex = resolveColor(computedPrimary);
-
-  const DEFAULTS = { fill: primaryHex, fillOpacity: 100, hover: '#3b82f6', hoverOpacity: 100, bg: '#f8fafc', bgOpacity: 100 };
+  const DEFAULTS = { fill: '#2f4865', fillOpacity: 100, hover: '#2e8743', hoverOpacity: 100, bg: '#eeeeee', bgOpacity: 100 };
 
   // Restore saved colors from localStorage, or use defaults
   function loadSaved() {
