@@ -25,6 +25,8 @@ export interface LeagueEventDefinition {
   id: string;
   name: string;
   description: string;
+  /** Icon ID from the SVG sprite (without "icon-" prefix) */
+  icon?: string;
   category: 'preseason' | 'free-agency' | 'draft' | 'regular-season';
   startDate: DateResolution;
   endDate?: DateResolution;
@@ -65,6 +67,25 @@ export interface LinkTemplateVars {
   prevYear: string;
   leagueId: string;
 }
+
+/** Event category type alias for convenience */
+export type EventCategory = LeagueEventDefinition['category'];
+
+/** Human-readable labels for event categories */
+export const CATEGORY_LABELS: Record<EventCategory, string> = {
+  'preseason': 'Preseason',
+  'free-agency': 'Free Agency',
+  'draft': 'Draft',
+  'regular-season': 'Regular Season',
+};
+
+/** Category display order for the full calendar page */
+export const CATEGORY_ORDER: EventCategory[] = [
+  'preseason',
+  'free-agency',
+  'draft',
+  'regular-season',
+];
 
 /** Annual overrides for dates that can't be computed */
 export interface LeagueYearOverrides {

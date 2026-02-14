@@ -1,25 +1,21 @@
 ---
 /**
- * WhatsNextCard - Individual event card for the "What's Next" timeline.
- * Shows event name, date, description, countdown, and relevant links.
+ * CalendarEventCard - Event card for the full League Calendar page.
+ * Shows event name, icon, date, description, countdown, and action/result links.
+ *
+ * Color system:
+ * - Border-left: category color (preseason=blue, free-agency=green, draft=purple, regular-season=red)
+ * - Badge: urgency indicator (active=green, urgent=amber, past=gray, default=neutral)
+ * - Icon: category color, dimmed when past
  */
 import type { ResolvedLeagueEvent } from '../../types/league-events';
 import { formatEventDate, formatEventDateRange, getStatusText } from '../../utils/event-date-formatter';
 
 export interface Props {
-  event: ResolvedLeagueEvent | null;
-  position: 'current' | 'next' | 'upcoming';
+  event: ResolvedLeagueEvent;
 }
 
-const { event, position } = Astro.props;
-
-if (!event) return;
-
-const positionLabels = {
-  current: event.isActive ? 'Happening Now' : 'Most Recent',
-  next: 'Up Next',
-  upcoming: 'Coming Soon',
-};
+const { event } = Astro.props;
 
 const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
 const dateDisplay = event.definition.endDate
@@ -31,41 +27,42 @@ const iconId = event.definition.icon ? `icon-${event.definition.icon}` : null;
 const category = event.definition.category;
 
 const cardClasses = [
-  'whats-next-card',
-  `whats-next-card--${position}`,
-  `whats-next-card--${category}`,
-  event.isActive && 'whats-next-card--active',
-  event.isPast && 'whats-next-card--past',
-  event.isUrgent && 'whats-next-card--urgent',
+  'calendar-card',
+  `calendar-card--${category}`,
+  event.isActive && 'calendar-card--active',
+  event.isPast && 'calendar-card--past',
+  event.isUrgent && 'calendar-card--urgent',
 ].filter(Boolean).join(' ');
 ---
 
 <article class={cardClasses}>
-  <span class="whats-next-card__badge">{positionLabels[position]}</span>
-  <div class="whats-next-card__header">
+  {(event.isPast || event.isActive) && (
+    <span class="calendar-card__badge">{statusText}</span>
+  )}
+  <div class="calendar-card__header">
     {iconId && (
-      <svg class="whats-next-card__icon" aria-hidden="true">
+      <svg class="calendar-card__icon" aria-hidden="true">
         <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
       </svg>
     )}
-    <h3 class="whats-next-card__title">{event.definition.name}</h3>
+    <h3 class="calendar-card__title">{event.definition.name}</h3>
   </div>
-  <p class="whats-next-card__date">{dateDisplay}</p>
-  <p class="whats-next-card__description">{event.definition.description}</p>
-  {!event.isPast && !event.isActive && (
-    <p class="whats-next-card__countdown">{statusText}</p>
+  <p class="calendar-card__date">{dateDisplay}</p>
+  <p class="calendar-card__description">{event.definition.description}</p>
+  {!event.isPast && !event.isActive && event.daysUntilStart > 0 && (
+    <p class="calendar-card__countdown">{statusText}</p>
   )}
   {links.length > 0 && (
-    <div class="whats-next-card__links">
+    <div class="calendar-card__links">
       {links.map((link) => (
         <a
           href={link.url}
-          class="whats-next-card__link"
+          class="calendar-card__link"
           target={link.external ? '_blank' : undefined}
           rel={link.external ? 'noopener noreferrer' : undefined}
         >
           {link.label}
-          {link.external && <span class="whats-next-card__external-icon" aria-hidden="true">&nearr;</span>}
+          {link.external && <span class="calendar-card__external-icon" aria-hidden="true">&nearr;</span>}
         </a>
       ))}
     </div>
@@ -81,7 +78,7 @@ const cardClasses = [
     --cat-regular-season: #dc2626;
   }
 
-  .whats-next-card {
+  .calendar-card {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -94,30 +91,25 @@ const cardClasses = [
     position: relative;
   }
 
-  .whats-next-card:hover {
+  .calendar-card:hover {
     box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
     transform: translateY(-2px);
   }
 
   /* ── Category variants (border-left + icon color) ── */
-  .whats-next-card--preseason { --card-category-color: var(--cat-preseason); }
-  .whats-next-card--free-agency { --card-category-color: var(--cat-free-agency); }
-  .whats-next-card--draft { --card-category-color: var(--cat-draft); }
-  .whats-next-card--regular-season { --card-category-color: var(--cat-regular-season); }
-
-  /* Position variants (opacity only for upcoming) */
-  .whats-next-card--upcoming {
-    opacity: 0.85;
-  }
+  .calendar-card--preseason { --card-category-color: var(--cat-preseason); }
+  .calendar-card--free-agency { --card-category-color: var(--cat-free-agency); }
+  .calendar-card--draft { --card-category-color: var(--cat-draft); }
+  .calendar-card--regular-season { --card-category-color: var(--cat-regular-season); }
 
   /* ── State modifiers (affect badge, not border) ── */
-  .whats-next-card--past {
+  .calendar-card--past {
     opacity: 0.7;
     border-left-color: var(--color-gray-300, #d1d5db);
   }
 
-  /* Badge */
-  .whats-next-card__badge {
+  /* ── Badge (urgency/status indicator) ── */
+  .calendar-card__badge {
     display: inline-block;
     font-size: 0.7rem;
     font-weight: 700;
@@ -130,25 +122,25 @@ const cardClasses = [
     background: var(--color-gray-100, #f3f4f6);
   }
 
-  .whats-next-card--active .whats-next-card__badge {
+  .calendar-card--active .calendar-card__badge {
     color: #fff;
     background: var(--color-success, #10b981);
   }
 
-  .whats-next-card--urgent .whats-next-card__badge {
+  .calendar-card--urgent .calendar-card__badge {
     color: #fff;
     background: var(--color-warning, #f59e0b);
   }
 
-  /* Header (icon + title) */
-  .whats-next-card__header {
+  /* ── Header (icon + title) ── */
+  .calendar-card__header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
 
-  /* Icon (category colored, gray when past) */
-  .whats-next-card__icon {
+  /* ── Icon (category colored, gray when past) ── */
+  .calendar-card__icon {
     width: 1.25rem;
     height: 1.25rem;
     flex-shrink: 0;
@@ -156,12 +148,12 @@ const cardClasses = [
     color: var(--card-category-color);
   }
 
-  .whats-next-card--past .whats-next-card__icon {
+  .calendar-card--past .calendar-card__icon {
     color: var(--color-gray-400, #9ca3af);
   }
 
-  /* Title */
-  .whats-next-card__title {
+  /* ── Title ── */
+  .calendar-card__title {
     font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
@@ -169,43 +161,43 @@ const cardClasses = [
     line-height: 1.3;
   }
 
-  /* Date */
-  .whats-next-card__date {
+  /* ── Date ── */
+  .calendar-card__date {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-secondary-color, #64748b);
     margin: 0;
   }
 
-  /* Description */
-  .whats-next-card__description {
+  /* ── Description ── */
+  .calendar-card__description {
     font-size: 0.875rem;
     color: var(--muted-text-color, #6b7280);
     margin: 0;
     line-height: 1.5;
   }
 
-  /* Countdown */
-  .whats-next-card__countdown {
+  /* ── Countdown ── */
+  .calendar-card__countdown {
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--color-info, #3b82f6);
     margin: 0;
   }
 
-  .whats-next-card--urgent .whats-next-card__countdown {
+  .calendar-card--urgent .calendar-card__countdown {
     color: var(--color-warning, #f59e0b);
   }
 
-  /* Links */
-  .whats-next-card__links {
+  /* ── Links ── */
+  .calendar-card__links {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 0.25rem;
   }
 
-  .whats-next-card__link {
+  .calendar-card__link {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -220,22 +212,22 @@ const cardClasses = [
     transition: all 0.15s ease;
   }
 
-  .whats-next-card__link:hover {
+  .calendar-card__link:hover {
     background: var(--color-primary, #1c497c);
     color: #fff;
     border-color: var(--color-primary, #1c497c);
   }
 
-  .whats-next-card__external-icon {
+  .calendar-card__external-icon {
     font-size: 0.7rem;
   }
 
   @media (max-width: 767px) {
-    .whats-next-card {
+    .calendar-card {
       padding: 1rem;
     }
 
-    .whats-next-card__title {
+    .calendar-card__title {
       font-size: 1rem;
     }
   }

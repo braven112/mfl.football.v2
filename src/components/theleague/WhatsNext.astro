@@ -15,7 +15,10 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
 
 {hasEvents && (
   <section class="whats-next" aria-label="Upcoming league events">
-    <h2 class="whats-next__heading">What's Next</h2>
+    <div class="whats-next__header">
+      <h2 class="whats-next__heading">What's Next</h2>
+      <a href="/theleague/calendar" class="whats-next__calendar-link">View full calendar &rarr;</a>
+    </div>
     <div class="whats-next__grid">
       {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}
       {timeline.next && <WhatsNextCard event={timeline.next} position="next" />}
@@ -78,11 +81,30 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
     gap: 1rem;
   }
 
+  .whats-next__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
   .whats-next__heading {
     font-size: 1.5rem;
     color: var(--primary-link-default-text-color, #1c497c);
     margin: 0;
     padding-bottom: 0.5rem;
+  }
+
+  .whats-next__calendar-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .whats-next__calendar-link:hover {
+    text-decoration: underline;
   }
 
   .whats-next__grid {

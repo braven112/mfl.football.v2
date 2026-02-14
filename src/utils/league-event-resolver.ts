@@ -300,3 +300,29 @@ export function getWhatsNextTimeline(
 
   return selectWhatsNextTimeline(allResolved, now, leagueYear);
 }
+
+/**
+ * Get all resolved league events for a specific or current league year.
+ * Used by the full calendar page.
+ *
+ * @param options.leagueYear - Explicit league year (defaults to current)
+ * @param options.referenceDate - Date for active/past/urgent computation
+ * @param options.linkVars - Template vars for link URLs
+ */
+export function getAllResolvedEvents(options?: {
+  leagueYear?: number;
+  referenceDate?: Date;
+  linkVars?: LinkTemplateVars;
+}): ResolvedLeagueEvent[] {
+  const now = options?.referenceDate || new Date();
+  const year = options?.leagueYear || getCurrentLeagueYear(now);
+
+  const vars: LinkTemplateVars = options?.linkVars || {
+    mflHost: 'www49.myfantasyleague.com',
+    year: year.toString(),
+    prevYear: (year - 1).toString(),
+    leagueId: '13522',
+  };
+
+  return resolveAllEvents(THE_LEAGUE_EVENTS, year, now, vars);
+}

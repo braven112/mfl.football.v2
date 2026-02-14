@@ -1,0 +1,247 @@
+---
+/**
+ * League Calendar — full grid of all league events grouped by category.
+ * Linked from the "What's Next" section on the homepage.
+ *
+ * Pre-renders events for both the current and next league year, with a
+ * dropdown to toggle between them. The next year's events are hidden by
+ * default and shown via client-side JS.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import CalendarEventCard from '../../components/theleague/CalendarEventCard.astro';
+import { getAllResolvedEvents } from '../../utils/league-event-resolver';
+import { CATEGORY_LABELS, CATEGORY_ORDER } from '../../types/league-events';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+
+export const prerender = true;
+
+const currentYear = getCurrentLeagueYear();
+const nextYear = currentYear + 1;
+
+const currentYearEvents = getAllResolvedEvents({ leagueYear: currentYear });
+const nextYearEvents = getAllResolvedEvents({ leagueYear: nextYear });
+
+function groupByCategory(events: typeof currentYearEvents) {
+  return CATEGORY_ORDER.map((category) => ({
+    category,
+    label: CATEGORY_LABELS[category],
+    events: events.filter((e) => e.definition.category === category),
+  })).filter((group) => group.events.length > 0);
+}
+
+const currentYearGroups = groupByCategory(currentYearEvents);
+const nextYearGroups = groupByCategory(nextYearEvents);
+---
+
+<TheLeagueLayout title="League Calendar">
+  <div class="calendar-page">
+    <header class="calendar-hero">
+      <h1 class="calendar-hero__title">League Calendar</h1>
+      <div class="calendar-hero__controls">
+        <label for="year-select" class="calendar-hero__label">Season</label>
+        <select id="year-select" class="calendar-hero__select">
+          <option value="current" selected>{currentYear} – {currentYear + 1}</option>
+          <option value="next">{nextYear} – {nextYear + 1}</option>
+        </select>
+      </div>
+    </header>
+
+    <div id="calendar-current" class="calendar-year">
+      {currentYearGroups.map((group) => (
+        <section class="calendar-section">
+          <h2 class="calendar-section__heading">{group.label}</h2>
+          <div class="calendar-section__grid">
+            {group.events.map((event) => (
+              <CalendarEventCard event={event} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+
+    <div id="calendar-next" class="calendar-year" style="display: none;">
+      {nextYearGroups.map((group) => (
+        <section class="calendar-section">
+          <h2 class="calendar-section__heading">{group.label}</h2>
+          <div class="calendar-section__grid">
+            {group.events.map((event) => (
+              <CalendarEventCard event={event} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<script>
+  /**
+   * Year selector — toggle between pre-rendered current/next year event grids.
+   */
+  function initYearSelect() {
+    const select = document.getElementById('year-select') as HTMLSelectElement | null;
+    const currentDiv = document.getElementById('calendar-current');
+    const nextDiv = document.getElementById('calendar-next');
+
+    if (!select || !currentDiv || !nextDiv) return;
+
+    select.addEventListener('change', () => {
+      if (select.value === 'current') {
+        currentDiv.style.display = '';
+        nextDiv.style.display = 'none';
+      } else {
+        currentDiv.style.display = 'none';
+        nextDiv.style.display = '';
+      }
+    });
+  }
+
+  /**
+   * Resolve {franchiseId} placeholders in calendar event links.
+   * Reads from theleague_team_pref cookie or ?myteam URL param.
+   */
+  function resolveCalendarLinks() {
+    const myTeamParam = new URLSearchParams(window.location.search).get('myteam');
+
+    let franchiseId = myTeamParam;
+    if (!franchiseId) {
+      try {
+        const cookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('theleague_team_pref='));
+        if (cookie) {
+          const pref = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+          franchiseId = pref?.franchiseId || null;
+        }
+      } catch {
+        // Cookie parse failed — leave links as-is
+      }
+    }
+
+    if (!franchiseId) return;
+
+    // Normalize to 4-digit zero-padded format
+    franchiseId = /^\d+$/.test(franchiseId) ? franchiseId.padStart(4, '0') : franchiseId;
+
+    const links = document.querySelectorAll('.calendar-card__link');
+    links.forEach((link) => {
+      const anchor = /** @type {HTMLAnchorElement} */ (link);
+      if (anchor.href.includes('%7BfranchiseId%7D') || anchor.href.includes('{franchiseId}')) {
+        anchor.href = anchor.href
+          .replace(/%7BfranchiseId%7D/g, franchiseId)
+          .replace(/\{franchiseId\}/g, franchiseId);
+      }
+    });
+  }
+
+  // Run after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initYearSelect();
+      resolveCalendarLinks();
+    });
+  } else {
+    initYearSelect();
+    resolveCalendarLinks();
+  }
+</script>
+
+<style>
+  .calendar-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* Hero */
+  .calendar-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  .calendar-hero__title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+  }
+
+  .calendar-hero__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .calendar-hero__label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary-color, #64748b);
+  }
+
+  .calendar-hero__select {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 0.375rem;
+    background: var(--content-bg, #fff);
+    color: var(--primary-link-default-text-color, #1c497c);
+    cursor: pointer;
+  }
+
+  .calendar-hero__select:focus {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* Year containers */
+  .calendar-year {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* Category sections */
+  .calendar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .calendar-section__heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-gray-200, #e5e7eb);
+  }
+
+  .calendar-section__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .calendar-hero {
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.5rem 1rem;
+      text-align: center;
+    }
+
+    .calendar-hero__title {
+      font-size: 1.5rem;
+    }
+
+    .calendar-section__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -9,12 +9,15 @@ import type { LeagueEventDefinition } from '../../types/league-events';
  * - 'computed': rule-based (Labor Day, 3rd Thursday of March, etc.)
  * - 'configured': from league-year-config.ts (NFL Draft date)
  * - 'relative': offset from another event (rookie draft = 1 week after NFL draft)
+ *
+ * Icon IDs reference symbols in public/assets/icons/sprite.svg (without "icon-" prefix).
  */
 export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   {
     id: 'team-purchase-deadline',
     name: 'Team Purchase Deadline',
     description: 'Deadline to purchase your team for the following season',
+    icon: 'dollar',
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 1, time: '20:45' },
     urgencyDays: 7,
@@ -24,6 +27,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'tagging-period',
     name: 'Tagging Period',
     description: 'Apply franchise tags to expiring players',
+    icon: 'bookmark',
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 1 },
     endDate: { type: 'fixed', month: 2, day: 14, time: '20:45' },
@@ -41,6 +45,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'last-day-release',
     name: 'Last Day to Release Players',
     description: 'Final opportunity to release players in the current season',
+    icon: 'user-times',
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 14, time: '20:45' },
     actionLinks: [
@@ -57,6 +62,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'new-season-starts',
     name: 'New Season Starts',
     description: 'Contracts roll over, 10% salary escalation applied',
+    icon: 'star',
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 15 },
     sortOrder: 4,
@@ -65,6 +71,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'tag-offer-period',
     name: 'Offer Period on Tagged Players',
     description: 'Teams may bid on franchise-tagged players from other teams',
+    icon: 'bookmark',
     category: 'preseason',
     startDate: { type: 'fixed', month: 2, day: 15 },
     endDate: { type: 'fixed', month: 2, day: 28, time: '20:45' },
@@ -82,6 +89,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'tag-matching-period',
     name: 'Tag Matching Period',
     description: 'Original teams must match offers or lose tagged players',
+    icon: 'bookmark',
     category: 'preseason',
     startDate: { type: 'fixed', month: 3, day: 1 },
     endDate: { type: 'fixed', month: 3, day: 7, time: '20:45' },
@@ -99,6 +107,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'offseason-fa-opens',
     name: 'Offseason Free Agency Opens',
     description: 'Blind-bid auction for all free agents begins',
+    icon: 'banknote',
     category: 'free-agency',
     startDate: { type: 'computed', rule: 'third-thursday-march' },
     actionLinks: [
@@ -122,6 +131,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'nfl-draft',
     name: 'NFL Draft',
     description: 'NFL Draft weekend',
+    icon: 'football',
     category: 'draft',
     startDate: { type: 'configured', configKey: 'nflDraftDate' },
     sortOrder: 8,
@@ -130,6 +140,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'rookie-draft',
     name: 'Rookie Draft',
     description: '3-round rookie draft, 12-hour pick timer',
+    icon: 'draft-podium',
     category: 'draft',
     startDate: { type: 'relative', rule: 'saturday-after-next-week', relativeTo: 'nfl-draft' },
     actionLinks: [
@@ -153,6 +164,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'declare-rookie-contracts',
     name: 'Declare Contracts / Cut to 22',
     description: 'Set contract years for rookies and trim roster to 22 active',
+    icon: 'clipboard',
     category: 'draft',
     startDate: { type: 'computed', rule: 'third-sunday-august' },
     actionLinks: [
@@ -167,10 +179,11 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   },
   {
     id: 'offseason-fa-closes',
-    name: 'Offseason FA Closes',
-    description: 'Last day to sign free agents before the NFL season',
+    name: 'Offseason FA Closes for New Bids',
+    description: 'No new auctions can start after this date. Remaining blind bids and live auctions will finish.',
+    icon: 'podium-persona',
     category: 'free-agency',
-    startDate: { type: 'computed', rule: 'day-before-nfl-kickoff' },
+    startDate: { type: 'computed', rule: 'third-sunday-august' },
     urgencyDays: 7,
     sortOrder: 11,
   },
@@ -178,6 +191,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'nfl-season-starts',
     name: 'NFL Season Starts',
     description: 'NFL kickoff and the start of weekly fantasy matchups',
+    icon: 'whistle',
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'nfl-kickoff' },
     sortOrder: 12,
@@ -186,6 +200,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'trading-deadline',
     name: 'Trading Deadline',
     description: 'Last day to execute trades this season',
+    icon: 'exchange',
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'friday-before-week-11' },
     actionLinks: [
@@ -202,6 +217,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     id: 'in-season-fa-ends',
     name: 'In-Season FA Ends',
     description: 'No more free agent pickups after Week 16',
+    icon: 'gavel',
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'after-week-16' },
     sortOrder: 14,
