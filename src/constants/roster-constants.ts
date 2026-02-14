@@ -39,8 +39,22 @@ export const DEFAULT_HEADSHOT_URL =
  */
 export function getPlayerImageUrl(playerId?: string): string {
   return playerId
-    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
+}
+
+/**
+ * Get player headshot URL, preferring ESPN high-quality images when available.
+ * Falls back to MFL photo, then to default placeholder.
+ * @param mflId - MFL player ID
+ * @param espnId - Optional ESPN player ID for higher quality headshots
+ * @returns URL to player headshot image
+ */
+export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
+  if (espnId) {
+    return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70&cb=1`;
+  }
+  return getPlayerImageUrl(mflId);
 }
 
 /**

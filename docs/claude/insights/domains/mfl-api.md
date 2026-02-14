@@ -110,3 +110,72 @@ Response:
 - Franchise names can change mid-season on MFL (owner just edits it), so the cached data reflects the name at time of last sync
 - Pre-2016 years have different league IDs; the `history.league` array in the current year's league data maps years to their correct league IDs and hosts
 - The `api.myfantasyleague.com` base URL works for 2016+ (league ID 13522) but earlier years need their specific host and league ID
+
+---
+
+## 2026-02-13 - MFL Rosters API Inconsistency During Pre-Rollover Window
+
+**Context:** Investigating why dropped players still appear on franchise 0001's roster in the 2025 API
+
+**Insight:** During the pre-rollover window (after the season ends but before the Feb 14 league year rollover), the MFL `rosters` endpoint can return STALE data for recent drops, even though the `transactions` and `freeAgents` endpoints correctly reflect the changes.
+
+**Evidence:**
+- Saquon Barkley (13604) and Justin Jefferson (14836) were dropped by franchise 0001 on 2026-02-13 05:21-05:22 UTC
+- The `transactions` API correctly shows these as `FREE_AGENT` transactions with format `|{player_id},` (pipe prefix = drop-only, no add)
+- The `freeAgents` API correctly lists both players as free agents with `status: "locked"`
+- The `rosters` API (even when queried 18+ hours after the drops) STILL returns these players on franchise 0001's roster
+- Older drops from January 2026 and earlier ARE correctly removed from the rosters endpoint
+- This appears to be an MFL API caching/propagation delay specific to the pre-rollover period
+
+**Transaction format notes:**
+- `|{player_id},` = drop only (no add)
+- `{add_id}|{drop_id},` = add/drop swap
+- `{add_id}|,` = add only (no drop)
+
+**Key finding:** The `rosters` endpoint should NOT be treated as the sole source of truth for current roster state during the offseason window. Cross-reference with `transactions` and `freeAgents` for accurate data.
+
+**Verification URLs:**
+```
+# Rosters (may be stale):
+https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&FRANCHISE=0001&JSON=1
+
+# Transactions (accurate):
+https://api.myfantasyleague.com/2025/export?TYPE=transactions&L=13522&TRANS_TYPE=FREE_AGENT&FRANCHISE=0001&JSON=1
+
+# Free agents (accurate):
+https://api.myfantasyleague.com/2025/export?TYPE=freeAgents&L=13522&JSON=1
+```
+
+**Impact on sync:** The `fetch-mfl-feeds.mjs` script fetches `rosters` once daily and caches it. During the pre-rollover window, this cached data will include dropped players that MFL hasn't yet removed from the rosters endpoint.
+
+**Recommendation:** For accurate roster display during the offseason:
+1. After fetching rosters, also fetch recent transactions (`TRANS_TYPE=FREE_AGENT`)
+2. Filter out any players that appear in drop-only transactions (`|{id},` format)
+3. OR wait until after Feb 14 rollover when the new 2026 league is created and rosters are clean
+
+**Additional finding:** The 2026 league (ID 13522) does NOT exist yet as of Feb 13, 2026. Querying `TYPE=league&L=13522&JSON=1` for year 2026 returns `"Invalid league ID 13522"`. This confirms the Feb 14 rollover hasn't happened yet.
+
+**Follow-up confirmation (2026-02-14 04:54 UTC):** Re-verified this issue 31+ hours after the drops occurred. The `rosters` API (both live and cached) STILL returns Barkley and Jefferson on franchise 0001. The `transactions` API correctly shows the drops at timestamps 2026-02-12T21:21-21:22 UTC (formatted as `|13604,` and `|14836,`). The `freeAgents` API correctly lists both as free agents with `status: "locked"`. The cached `transactions.json` (fetched 2026-02-13T23:15 UTC) also contains these drop records. This confirms the staleness persists until the Feb 14 league rollover, not just for hours but potentially for days.
+
+**Note on transactions API redirect:** The `transactions` endpoint with `FRANCHISE` filter parameter requires following HTTP 302 redirects. The `api.myfantasyleague.com` host redirects to `www49.myfantasyleague.com` for league 13522. Use `-L` flag with curl or ensure your HTTP client follows redirects.
+
+---
+
+## 2026-02-13 - Free Agent Status "locked" During Offseason
+
+**Context:** Checking freeAgents endpoint during pre-rollover window
+
+**Insight:** Players dropped during the offseason appear in the `freeAgents` endpoint with `status: "locked"`. This likely indicates they cannot be picked up until the new league year begins or waivers open.
+
+**Evidence:**
+```json
+{
+  "contractInfo": "",
+  "contractYear": "1",
+  "id": "13604",
+  "salary": "425000.00",
+  "status": "locked"
+}
+```
+
+**Recommendation:** The `status: "locked"` field on free agents indicates roster moves are frozen. Display these players differently in the UI (e.g., grayed out or with a lock icon).

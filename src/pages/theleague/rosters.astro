@@ -433,8 +433,12 @@ const DEFAULT_HEADSHOT_URL =
   'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 const getPlayerImageUrl = (playerId) =>
   playerId
-    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
+const getPlayerHeadshot = (mflId, espnId) => {
+  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+  return getPlayerImageUrl(mflId);
+};
 
 const getNflLogoUrl = (teamCode) => {
   if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
@@ -450,42 +454,43 @@ const getCollegeAssets = (collegeName?: string | null) => {
   return collegeLogosNormalized[collegeName.toLowerCase()] ?? null;
 };
 
-const parseAdjustmentMeta = (description = '') => {
-  // Normalize team codes from various formats to standard 2-letter codes
-  const normalizeTeamCode = (team) => {
-    const map = {
-      // AFC East
-      BUF: 'BUF', MIA: 'MIA', NE: 'NE', NEP: 'NE',
-      NYJ: 'NYJ',
-      // AFC North
-      BAL: 'BAL', CIN: 'CIN', CLE: 'CLE', CLV: 'CLE',
-      PIT: 'PIT',
-      // AFC South
-      HOU: 'HOU', IND: 'IND', JAX: 'JAX', JAC: 'JAX',
-      TEN: 'TEN',
-      // AFC West
-      DEN: 'DEN', KC: 'KC', KCC: 'KC',
-      LAC: 'LAC', SD: 'LAC',
-      LV: 'LV', LVR: 'LV', OAK: 'LV',
-      // NFC East
-      DAL: 'DAL', PHI: 'PHI', WAS: 'WAS', WSH: 'WAS',
-      NYG: 'NYG',
-      // NFC North
-      CHI: 'CHI', DET: 'DET', GB: 'GB', GBP: 'GB',
-      MIN: 'MIN',
-      // NFC South
-      ATL: 'ATL', CAR: 'CAR', NO: 'NO', NOR: 'NO', NOS: 'NO',
-      TB: 'TB', TBB: 'TB',
-      // NFC West
-      ARI: 'ARI', ARZ: 'ARI', LA: 'LAR', LAR: 'LAR', STL: 'LAR',
-      SF: 'SF', SFO: 'SF', SEA: 'SEA',
-      // Other
-      FA: 'FA',
-    };
-    if (!team) return '';
-    const upper = team.toString().toUpperCase();
-    return map[upper] ?? upper;
+// Normalize team codes from various MFL formats to standard 2-3 letter codes
+const normalizeTeamCode = (team) => {
+  const map = {
+    // AFC East
+    BUF: 'BUF', MIA: 'MIA', NE: 'NE', NEP: 'NE',
+    NYJ: 'NYJ',
+    // AFC North
+    BAL: 'BAL', CIN: 'CIN', CLE: 'CLE', CLV: 'CLE',
+    PIT: 'PIT',
+    // AFC South
+    HOU: 'HOU', IND: 'IND', JAX: 'JAX', JAC: 'JAX',
+    TEN: 'TEN',
+    // AFC West
+    DEN: 'DEN', KC: 'KC', KCC: 'KC',
+    LAC: 'LAC', SD: 'LAC',
+    LV: 'LV', LVR: 'LV', OAK: 'LV',
+    // NFC East
+    DAL: 'DAL', PHI: 'PHI', WAS: 'WAS', WSH: 'WAS',
+    NYG: 'NYG',
+    // NFC North
+    CHI: 'CHI', DET: 'DET', GB: 'GB', GBP: 'GB',
+    MIN: 'MIN',
+    // NFC South
+    ATL: 'ATL', CAR: 'CAR', NO: 'NO', NOR: 'NO', NOS: 'NO',
+    TB: 'TB', TBB: 'TB',
+    // NFC West
+    ARI: 'ARI', ARZ: 'ARI', LA: 'LAR', LAR: 'LAR', STL: 'LAR',
+    SF: 'SF', SFO: 'SF', SEA: 'SEA',
+    // Other
+    FA: 'FA',
   };
+  if (!team) return '';
+  const upper = team.toString().toUpperCase();
+  return map[upper] ?? upper;
+};
+
+const parseAdjustmentMeta = (description = '') => {
 
   const meta = {
     name: '',
@@ -727,6 +732,46 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
   });
 });
 
+// Cross-reference transactions to fix stale roster data
+// MFL's rosters API can be stale during the offseason pre-rollover window,
+// so we replay roster-affecting transactions chronologically to reconcile
+const ROSTER_TXN_TYPES = new Set(['FREE_AGENT', 'BBID_WAIVER', 'AUCTION_WON']);
+const isPlayerId = (val) => /^\d{3,6}$/.test(val); // Player IDs are 3-6 digit numbers
+Object.entries(transactionsFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  if (!season || !liveRosterDataByPlayerId[season]) return;
+  const data = getModuleData(mod);
+  const txns = data?.transactions?.transaction ?? [];
+  if (!Array.isArray(txns)) return;
+  // Sort by timestamp ascending so we replay in order
+  const rosterTxns = txns
+    .filter((t) => ROSTER_TXN_TYPES.has(t.type) && t.transaction)
+    .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+  rosterTxns.forEach((txn) => {
+    const franchiseId = txn.franchise;
+    const parts = txn.transaction.split('|');
+    // FREE_AGENT: "adds|drops" (2 parts)
+    // BBID_WAIVER: "adds|bidAmount|drops" (3 parts)
+    // AUCTION_WON: "playerId|bidAmount|" (3 parts)
+    const addPart = parts[0] || '';
+    const dropPart = parts.length === 3 ? (parts[2] || '') : (parts[1] || '');
+    // Process drops first (remove from roster)
+    dropPart.split(',').filter(isPlayerId).forEach((playerId) => {
+      delete liveRosterDataByPlayerId[season][playerId];
+    });
+    // Process adds (add to franchise roster)
+    addPart.split(',').filter(isPlayerId).forEach((playerId) => {
+      liveRosterDataByPlayerId[season][playerId] = {
+        franchiseId,
+        salary: null,
+        contractYear: null,
+        contractInfo: null,
+        status: 'ROSTER',
+      };
+    });
+  });
+});
+
 // Load MFL injury data for current season (dynamically determined week)
 const currentWeek = getCurrentWeek();
 let mflInjuryData = {};
@@ -814,7 +859,10 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
     projectionMap.set(projectedScores.id, projectedScores.score);
   }
 
-  const players = (rawData?.players ?? []).map((player) => {
+  const players = (rawData?.players ?? []).filter((player) => {
+    // Filter out players no longer on any roster (dropped/released)
+    return !!liveRosterData[player.id];
+  }).map((player) => {
     // Get live roster data for this player (includes current salary, contract, franchise)
     const liveData = liveRosterData[player.id];
 
@@ -844,7 +892,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
         : player.draftYear && seasonYear - Number(player.draftYear) <= 2
           ? 'Rookie'
           : 'Standard');
-    const nflTeam = (player.team ?? '').toUpperCase();
+    const nflTeam = normalizeTeamCode(player.team ?? '');
 
     // Helper to get odds data
     const getOddsData = (team) => {
@@ -900,10 +948,10 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       ? (seasonScores.reduce((sum, s) => sum + s, 0) / seasonScores.length).toFixed(1)
       : '-';
 
-    const headshot = player.headshot ?? getPlayerImageUrl(player.id);
+    const feedPlayer = feedPlayers[player.id] ?? null;
+    const headshot = getPlayerHeadshot(player.id, feedPlayer?.espn_id);
     const collegeName = player.sleeper?.college ?? player.college ?? null;
     const collegeAssets = getCollegeAssets(collegeName);
-    const feedPlayer = feedPlayers[player.id] ?? null;
     const parseDraft = (val) => {
       if (val === undefined || val === null || val === '') return null;
       const num = parseInt(val, 10);
@@ -916,6 +964,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
 
     const playerObj = {
       id: player.id,
+      espnId: feedPlayer?.espn_id || null,
       name: player.name,
       position: player.position ?? 'N/A',
       salary,
@@ -1619,6 +1668,7 @@ const serializedConfig = JSON.stringify({
                         data-player-sleeper-status={player.sleeperStatus}
                         data-player-sleeper-active={player.sleeperActive}
                         data-player-depth-chart-ahead={player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}
+                        data-player-espn-id={player.espnId || ''}
                         style="cursor: pointer;"
                         title="Click to view full player details"
                       >
@@ -2361,6 +2411,7 @@ const serializedConfig = JSON.stringify({
 
     .team-card {
       display:grid;
+      padding-top: 1rem;
       padding-bottom: var(--padding-xxl);/* Make room for tabs below */
       justify-items: center;
       gap: var(--padding-md);
@@ -3044,13 +3095,16 @@ const serializedConfig = JSON.stringify({
   }
 
   :global(.player-cell__avatar img) {
-    width: 100%;
+    width: 150%;
     height: 100%;
     object-fit: cover;
+    object-position: top;
   }
 
   :global(.player-cell__avatar--def img) {
+    width: 100%;
     object-fit: contain;
+    object-position: center;
     border: 0;
     background: transparent;
   }
@@ -4131,8 +4185,12 @@ const serializedConfig = JSON.stringify({
     'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
   const getPlayerImageUrl = (playerId) =>
     playerId
-      ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+      ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
       : DEFAULT_HEADSHOT_URL;
+  const getPlayerHeadshot = (mflId, espnId) => {
+    if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+    return getPlayerImageUrl(mflId);
+  };
 
   const getNflLogoUrl = (teamCode) => {
     if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
@@ -4409,7 +4467,7 @@ const serializedConfig = JSON.stringify({
       }
     }
     if (playerHeadshotDisplay) {
-      const imgUrl = playerData.headshot ?? getPlayerImageUrl(playerData.id);
+      const imgUrl = playerData.headshot ?? getPlayerHeadshot(playerData.id, playerData.espnId);
       playerHeadshotDisplay.src = imgUrl;
       playerHeadshotDisplay.alt = `${playerData.name} headshot`;
       playerHeadshotDisplay.onerror = () => {
@@ -4899,7 +4957,7 @@ const serializedConfig = JSON.stringify({
         ...player,
         displayTag: tag,
         nflTeam,
-        headshot: player.headshot ?? getPlayerImageUrl(player.id),
+        headshot: player.headshot ?? getPlayerHeadshot(player.id, player.espnId),
         nflLogo: player.nflLogo ?? getNflLogoUrl(nflTeam),
         contractYears:
           Number.parseInt(player.contractYears ?? player.contractYear ?? 0, 10) || 0,
@@ -5081,7 +5139,7 @@ const serializedConfig = JSON.stringify({
         const teamPlayers = playersByTeam[team];
         const playersHtml = teamPlayers.map((player) => {
           const nflLogo = getNflLogoUrl(player.nflTeam);
-          const headshot = player.headshot || getPlayerImageUrl(player.id);
+          const headshot = player.headshot || getPlayerHeadshot(player.id, player.espnId);
           const position = player.position || 'UNK';
           // All salaries increase by 10% per year (year 0 = current year)
           const baseSalary = Number(player.salary || 0);
@@ -5144,7 +5202,7 @@ const serializedConfig = JSON.stringify({
       const collegesHtml = sortedColleges.map((college) => {
         const collegePlayers = playersByCollege[college];
         const playersHtml = collegePlayers.map((player) => {
-          const headshot = player.headshot || getPlayerImageUrl(player.id);
+          const headshot = player.headshot || getPlayerHeadshot(player.id, player.espnId);
           const position = player.position || 'UNK';
           const baseSalary = Number(player.salary || 0);
           const salaryForYear = Math.round(baseSalary * Math.pow(1.1, 0));
@@ -5322,7 +5380,7 @@ const serializedConfig = JSON.stringify({
             (player.position ?? '').toUpperCase() === 'DEF' && player.nflLogo;
           const avatarSrc = useDefenseLogo
             ? player.nflLogo
-            : player.headshot ?? getPlayerImageUrl(player.id);
+            : player.headshot ?? getPlayerHeadshot(player.id, player.espnId);
 
           const salaryCells = (salaryYears && salaryYears.length > 0 ? salaryYears : [2025, 2026, 2027, 2028, 2029])
             .map((year, index) => {
@@ -5599,6 +5657,7 @@ const serializedConfig = JSON.stringify({
                     data-player-defense-snaps="${player.defenseSnaps ?? ''}"
                     data-player-st-snaps="${player.stSnaps ?? ''}"
                     data-player-depth-chart-ahead="${player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}"
+                    data-player-espn-id="${player.espnId || ''}"
                     data-player-trade-bait="${player.tradeBait ? 'true' : 'false'}"
                     style="cursor: pointer;"
                     title="Click to view full player details"
@@ -5696,6 +5755,7 @@ const serializedConfig = JSON.stringify({
             };
             const playerData = {
               id: nameEl.dataset.playerId,
+              espnId: nameEl.dataset.playerEspnId || null,
               name: nameEl.dataset.playerName,
               position: nameEl.dataset.playerPosition,
               nflTeam: nameEl.dataset.playerNflTeam,

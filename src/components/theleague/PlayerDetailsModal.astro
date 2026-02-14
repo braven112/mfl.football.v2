@@ -419,19 +419,19 @@ const NFL_TEAM_NAMES: Record<string, string> = {
   }
 
   .profile-headshot {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 120px;
+    height: 120px;
+    border-radius: 2rem;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
   }
 
   .profile-headshot img {
     width: 100%;
-    max-width: 80px;
-    height: auto;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    height: 100%;
     object-fit: cover;
-    aspect-ratio: 1;
+    object-position: top;
   }
 
   .position-display {
@@ -453,13 +453,13 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 
   .profile-teams-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 3fr 1fr 2fr;
     gap: 1rem;
   }
 
   .profile-background-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 3fr 1fr 2fr;
     gap: 1rem;
   }
 
@@ -498,8 +498,9 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       gap: 1rem;
     }
 
-    .profile-headshot img {
-      max-width: 60px;
+    .profile-headshot {
+      width: 90px;
+      height: 90px;
     }
 
     .profile-teams-row,
@@ -561,7 +562,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
         ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
         CAR: 'Carolina', CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland',
         DAL: 'Dallas', DEN: 'Denver', DET: 'Detroit', GB: 'Green Bay',
-        HOU: 'Houston', IND: 'Indianapolis', JAC: 'Jacksonville', KC: 'Kansas City',
+        HOU: 'Houston', IND: 'Indianapolis', JAX: 'Jacksonville', KC: 'Kansas City',
         LV: 'Las Vegas', LAC: 'Los Angeles', LAR: 'Los Angeles', MIA: 'Miami',
         MIN: 'Minnesota', NE: 'New England', NO: 'New Orleans', NYG: 'New York',
         NYJ: 'New York', PHI: 'Philadelphia', PIT: 'Pittsburgh', SEA: 'Seattle',
@@ -722,11 +723,15 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       setSectionVisibility('section-physical-attributes', !isDefense);
       setSectionVisibility('section-nfl-status', !isDefense);
 
-      // Set headshot image
+      // Set headshot image — prefer ESPN, fall back to MFL
       const headshot = document.getElementById('detail-headshot') as HTMLImageElement | null;
       if (headshot && playerData.id) {
         const DEFAULT_HEADSHOT_URL = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
-        headshot.src = `https://www49.myfantasyleague.com/player_photos_2014/${playerData.id}_thumb.jpg`;
+        if (playerData.espnId) {
+          headshot.src = `https://a.espncdn.com/i/headshots/nfl/players/full/${playerData.espnId}.png`;
+        } else {
+          headshot.src = `https://www49.myfantasyleague.com/player_photos_big_2014/${playerData.id}_thumb.jpg`;
+        }
         headshot.onerror = () => {
           headshot.src = DEFAULT_HEADSHOT_URL;
         };

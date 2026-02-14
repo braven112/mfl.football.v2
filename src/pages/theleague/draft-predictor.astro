@@ -12,7 +12,7 @@ import leagueAssets from '../../data/theleague.assets.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, parseTradeFromComment } from '../../utils/draft-utils';
 import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { mergeStandingsWithFuturePicks, isValidFutureDraftPicksData } from '../../utils/future-draft-picks-utils';
-import { getPlayerImageUrl, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { getPlayerImageUrl, getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
@@ -228,12 +228,7 @@ const buildPlayerLookup = (playersData: any) => {
   return lookup;
 };
 
-const buildHeadshotUrl = (playerId: string, espnId?: string) => {
-  if (espnId) {
-    return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
-  }
-  return getPlayerImageUrl(playerId);
-};
+const buildHeadshotUrl = (playerId: string, espnId?: string) => getPlayerHeadshot(playerId, espnId);
 
 const normalizeNflTeamCode = (code = '') => {
   const upper = code.toUpperCase();

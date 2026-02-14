@@ -1169,8 +1169,12 @@
     const DEFAULT_HEADSHOT_URL = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
     const getPlayerImageUrl = (playerId: string): string => {
       return playerId
-        ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+        ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
         : DEFAULT_HEADSHOT_URL;
+    };
+    const getPlayerHeadshot = (mflId: string, espnId?: string): string => {
+      if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+      return getPlayerImageUrl(mflId);
     };
 
     /**
@@ -1345,7 +1349,7 @@
         const price5yr = isContracted ? 0 : (contracts?.fiveYear ?? Math.max(425_000, Math.round(baseEstimate * 0.8)));
         const recommended = isContracted ? 1 : (contracts?.recommended?.years || 3);
 
-        const headshot = getPlayerImageUrl(player.id);
+        const headshot = getPlayerHeadshot(player.id, player.espn_id);
         const nflLogo = getNflLogoPath(player.team);
 
         // Check if player is already targeted

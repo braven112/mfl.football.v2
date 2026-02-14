@@ -80,9 +80,16 @@ const showNflLogo = position?.toUpperCase() !== 'DEF' && nflLogo;
   }
 
   .player-cell__avatar img {
-    width: 100%;
+    width: 150%;
     height: 100%;
     object-fit: cover;
+    object-position: top;
+  }
+
+  .player-cell__avatar--def img {
+    width: 100%;
+    object-fit: contain;
+    object-position: center;
   }
 
   .player-cell__info {

@@ -7,6 +7,7 @@
 import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import InjuryManager from './InjuryManager.astro';
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
+import { getPlayerHeadshot, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 
 export interface Props {
   player: FantasyPlayer;
@@ -32,11 +33,8 @@ const {
   className = '' 
 } = Astro.props;
 
-// Helper to get ESPN player headshot URL
-function getPlayerHeadshot(espnId?: string) {
-  if (!espnId) return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
-  return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
-}
+// Player headshot: use espnId if available on player, otherwise use id as espnId (matchup preview context)
+const playerEspnId = (player as any).espnId || player.id;
 
 // Determine matchup quality styling
 const matchupQuality = player.matchupData ? 
@@ -58,7 +56,7 @@ const cardClasses = [
     {showHeadshot && (
       <div class="player-headshot-container">
         <img
-          src={getPlayerHeadshot(player.id)}
+          src={getPlayerHeadshot(player.id, playerEspnId)}
           alt={player.name}
           class="player-headshot"
           onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
@@ -224,14 +222,18 @@ const cardClasses = [
 
   .player-headshot-container {
     flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #f3f4f6;
   }
 
   .player-headshot {
-    width: 48px;
-    height: 48px;
+    width: 150%;
+    height: 100%;
     object-fit: cover;
-    border-radius: 0.5rem;
-    background: #f3f4f6;
+    object-position: top;
   }
 
   .player-info {
@@ -416,7 +418,7 @@ const cardClasses = [
       gap: 0.5rem;
     }
 
-    .player-headshot {
+    .player-headshot-container {
       width: 40px;
       height: 40px;
     }

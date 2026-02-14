@@ -164,6 +164,15 @@ https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&W=15&JSON=1
 - [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
 - [src/utils/mfl-matchup-api.ts](src/utils/mfl-matchup-api.ts)
 
+**Key Insights (updated 2026-02-13):**
+- **WARNING:** During the offseason pre-rollover window (season end through Feb 14), the `rosters` endpoint can return STALE data. Players that have been dropped may still appear on rosters, even hours after the drop.
+- The `transactions` (TYPE=FREE_AGENT) and `freeAgents` endpoints correctly reflect recent drops during this period.
+- Transaction format for drops: `|{player_id},` (pipe prefix = drop-only, no add)
+- To get accurate rosters during the offseason, cross-reference with recent transactions and filter out dropped players.
+- The `FRANCHISE` parameter filters to a single franchise (e.g., `FRANCHISE=0001`)
+- The `W` (week) parameter returns the roster as of that week; omitting it returns the current/latest roster
+- Response includes `week` field on each franchise indicating the roster snapshot week
+
 ---
 
 #### `freeAgents`

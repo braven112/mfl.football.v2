@@ -185,6 +185,7 @@ const playerMap = new Map(
       position: normalizePosition(p.position),
       team: p.team,
       draft_year: p.draft_year,
+      espn_id: p.espn_id,
     },
   ])
 );
@@ -221,6 +222,7 @@ const allMFLPlayers = players.map((p: any) => ({
   position: normalizePosition(p.position),
   team: p.team,
   draft_year: p.draft_year,
+  espn_id: p.espn_id,
 }));
 
 // =============================================================================

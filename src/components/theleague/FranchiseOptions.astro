@@ -489,19 +489,29 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
   .player-cell__avatar {
     flex-shrink: 0;
-  }
-
-  .player-cell__avatar img {
     width: 40px;
     height: 40px;
     border-radius: 50%;
+    overflow: hidden;
+    background: #f3f4f6;
+  }
+
+  .player-cell__avatar img {
+    width: 150%;
+    height: 100%;
     object-fit: cover;
+    object-position: top;
+  }
+
+  .player-cell__avatar--def {
+    border-radius: 4px;
+    background: #f0f0f0;
   }
 
   .player-cell__avatar--def img {
-    border-radius: 4px;
+    width: 100%;
     object-fit: contain;
-    background: #f0f0f0;
+    object-position: center;
   }
 
   .player-cell strong {
@@ -562,7 +572,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
       padding: 0.5rem;
     }
 
-    .player-cell__avatar img {
+    .player-cell__avatar {
       width: 32px;
       height: 32px;
     }

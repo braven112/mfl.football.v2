@@ -7,6 +7,7 @@
 
 import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import type { FantasyPlayer, StartingLineup } from '../../types/matchup-previews';
+import { getPlayerHeadshot as getHeadshot } from '../../constants/roster-constants';
 
 interface Props {
   homeLineup: StartingLineup;
@@ -30,14 +31,10 @@ const {
   className = ''
 } = Astro.props;
 
-// Helper to get ESPN player headshot URL
+// Player headshot: use espnId if available on player, otherwise use id as espnId (matchup preview context)
 function getPlayerHeadshot(player: FantasyPlayer): string {
-  // Use espnId if available, otherwise fall back to MFL photo
-  const espnId = (player as any).espnId;
-  if (espnId) {
-    return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
-  }
-  return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  const espnId = (player as any).espnId || player.id;
+  return getHeadshot(player.id, espnId);
 }
 
 // Helper to sort players: starters first (by position), then bench (alphabetically)
@@ -155,12 +152,14 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
           <div class="players-list">
             {awaySorted.starters.map((player) => (
               <div class="player-row starter">
-                <img
-                  src={getPlayerHeadshot(player)}
-                  alt={player.name}
-                  class="player-headshot"
-                  onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
-                />
+                <div class="player-headshot-container">
+                  <img
+                    src={getPlayerHeadshot(player)}
+                    alt={player.name}
+                    class="player-headshot"
+                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                  />
+                </div>
                 <div class="player-info">
                   <div class="player-name">{player.name}</div>
                   <div class="player-details">
@@ -191,12 +190,14 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
             <div class="players-list bench-list">
               {awaySorted.bench.map((player) => (
                 <div class="player-row bench">
-                  <img
-                    src={getPlayerHeadshot(player)}
-                    alt={player.name}
-                    class="player-headshot"
-                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
-                  />
+                  <div class="player-headshot-container">
+                    <img
+                      src={getPlayerHeadshot(player)}
+                      alt={player.name}
+                      class="player-headshot"
+                      onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                    />
+                  </div>
                   <div class="player-info">
                     <div class="player-name">{player.name}</div>
                     <div class="player-details">
@@ -246,12 +247,14 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
           <div class="players-list">
             {homeSorted.starters.map((player) => (
               <div class="player-row starter">
-                <img
-                  src={getPlayerHeadshot(player)}
-                  alt={player.name}
-                  class="player-headshot"
-                  onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
-                />
+                <div class="player-headshot-container">
+                  <img
+                    src={getPlayerHeadshot(player)}
+                    alt={player.name}
+                    class="player-headshot"
+                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                  />
+                </div>
                 <div class="player-info">
                   <div class="player-name">{player.name}</div>
                   <div class="player-details">
@@ -282,12 +285,14 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
             <div class="players-list bench-list">
               {homeSorted.bench.map((player) => (
                 <div class="player-row bench">
-                  <img
-                    src={getPlayerHeadshot(player)}
-                    alt={player.name}
-                    class="player-headshot"
-                    onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
-                  />
+                  <div class="player-headshot-container">
+                    <img
+                      src={getPlayerHeadshot(player)}
+                      alt={player.name}
+                      class="player-headshot"
+                      onerror="this.src='https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg'"
+                    />
+                  </div>
                   <div class="player-info">
                     <div class="player-name">{player.name}</div>
                     <div class="player-details">
@@ -524,13 +529,20 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
     border-left: 2px solid #d1d5db;
   }
 
-  .player-headshot {
+  .player-headshot-container {
     width: 32px;
     height: 32px;
     border-radius: 0.25rem;
-    object-fit: cover;
+    overflow: hidden;
     background: #f3f4f6;
     flex-shrink: 0;
+  }
+
+  .player-headshot {
+    width: 150%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
   }
 
   .player-info {
@@ -613,7 +625,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
       padding: 0.375rem;
     }
 
-    .player-headshot {
+    .player-headshot-container {
       width: 28px;
       height: 28px;
     }

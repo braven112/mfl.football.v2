@@ -97,8 +97,13 @@ const buildNameKey = (name = '', team = '') =>
 
 const buildMflHeadshotUrl = (playerId) =>
   playerId
-    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
+    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
+
+const buildHeadshotUrl = (mflId, espnId) => {
+  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+  return buildMflHeadshotUrl(mflId);
+};
 
 const average = (values = []) => {
   if (!values.length) return 0;
@@ -307,6 +312,7 @@ const fetchPlayerMeta = async (playerIds) => {
         draftYear: player?.draft_year ? Number.parseInt(player.draft_year, 10) : null,
         draftTeam: player?.draft_team ?? null,
         birthdate: player?.birthdate ? Number.parseInt(player.birthdate, 10) : null,
+        espnId: player?.espn_id || null,
       });
     });
   });
@@ -410,9 +416,11 @@ const normalizePlayers = (
       const sleeperMatch = matchSleeperPlayer(meta, sleeperByKey);
       const nflverse = matchNflverseUsage(meta, sleeperMatch, nflverseMap);
       const headshot =
-        sleeperMatch?.photo_url ||
-        sleeperMatch?.headshot_url ||
-        buildMflHeadshotUrl(meta.id);
+        meta.espnId
+          ? buildHeadshotUrl(meta.id, meta.espnId)
+          : sleeperMatch?.photo_url ||
+            sleeperMatch?.headshot_url ||
+            buildMflHeadshotUrl(meta.id);
       normalized.push({
         id: meta.id,
         name: meta.name,

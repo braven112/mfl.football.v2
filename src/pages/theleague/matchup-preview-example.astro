@@ -10,6 +10,7 @@ import { parseMatchupParams, resolveCurrentMatchup } from '../../utils/matchup-r
 import { getCalendarIcon } from '../../utils/timezone-utils';
 import { MFLMatchupApiClient } from '../../utils/mfl-matchup-api';
 import { buildMatchupLineups } from '../../utils/lineup-data-builder';
+import { getPlayerHeadshot as getHeadshot } from '../../constants/roster-constants';
 import type { Matchup, FantasyTeam, NFLGame } from '../../types/matchup-previews';
 
 export const prerender = false; // Enable server-side rendering for URL parameter handling
@@ -433,10 +434,9 @@ const matchup = {
   bracket: week >= 15 ? 'Playoffs - First Round' : 'Regular Season'
 };
 
-// Helper to get ESPN player headshot URL
+// Player headshot: use espnId for ESPN image, fall back to MFL
 function getPlayerHeadshot(espnId: string) {
-  if (!espnId) return 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
-  return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70`;
+  return getHeadshot(undefined, espnId);
 }
 
 // Helper to get live starting lineup data from build-time fetched data
