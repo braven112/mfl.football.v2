@@ -40,7 +40,7 @@ const synonyms: Record<string, string[]> = {
   'icon-calendar-3': ['date', 'schedule', 'event', 'time', 'week', 'month', 'day'],
   'icon-cash': ['money', 'dollar', 'salary', 'pay', 'currency', 'bills', 'cap', 'contract'],
   'icon-chalkboard': ['board', 'teach', 'lesson', 'strategy', 'playbook', 'presentation'],
-  'icon-champ': ['champion', 'winner', 'trophy', 'first', 'gold', 'victory', 'title'],
+  'icon-champ': ['champion', 'winner', 'trophy', 'first', 'gold', 'victory', 'title', 'playoffs', 'championship'],
   'icon-cheer': ['celebrate', 'fan', 'crowd', 'pom-pom', 'support', 'spirit', 'cheerleader'],
   'icon-chevron-left': ['arrow', 'back', 'previous', 'navigate', 'left', 'nav'],
   'icon-chevron-right': ['arrow', 'forward', 'next', 'navigate', 'right', 'nav'],
@@ -68,15 +68,15 @@ const synonyms: Record<string, string[]> = {
   'icon-line-chart': ['graph', 'trend', 'analytics', 'data', 'stats', 'growth', 'chart'],
   'icon-lineup': ['roster', 'starters', 'formation', 'submit', 'set', 'starting', 'players'],
   'icon-lion': ['mascot', 'animal', 'pride', 'brave', 'courage', 'premier', 'english'],
-  'icon-matchups': ['versus', 'vs', 'head-to-head', 'opponent', 'game', 'week', 'schedule', 'h2h'],
+  'icon-transactions': ['versus', 'vs', 'head-to-head', 'opponent', 'game', 'week', 'schedule', 'h2h', 'handshake', 'matchups'],
   'icon-money-bag': ['cash', 'salary', 'rich', 'wealth', 'cap', 'budget', 'contract', 'pay'],
   'icon-numberone': ['first', 'one', 'top', 'best', 'winner', 'rank', 'number'],
   'icon-pass': ['throw', 'quarterback', 'qb', 'aerial', 'passing', 'arm', 'spiral'],
   'icon-paypal': ['payment', 'money', 'pay', 'online', 'dues', 'fees', 'transaction'],
-  'icon-playoff': ['bracket', 'tournament', 'postseason', 'elimination', 'championship'],
+  'icon-playoff': ['bracket', 'tournament', 'postseason', 'elimination', 'championship', 'playoffs'],
   'icon-plus': ['add', 'new', 'create', 'include', 'drop', 'waiver', 'pickup'],
   'icon-podium-empty': ['podium', 'stage', 'rank', 'place', 'standing', 'position'],
-  'icon-podium-persona': ['podium', 'person', 'winner', 'rank', 'place', 'standing', 'mvp'],
+  'icon-podium-persona': ['podium', 'person', 'winner', 'rank', 'place', 'standing', 'mvp', 'playoffs', 'championship'],
   'icon-power': ['strength', 'energy', 'force', 'electric', 'bolt', 'lightning', 'ranking'],
   'icon-premier-league': ['epl', 'english', 'soccer', 'football', 'england', 'league', 'premier'],
   'icon-rank': ['position', 'number', 'order', 'leaderboard', 'standing', 'tier'],
@@ -94,13 +94,13 @@ const synonyms: Record<string, string[]> = {
   'icon-stadium': ['field', 'arena', 'venue', 'game-day', 'stands', 'crowd', 'football'],
   'icon-standings': ['leaderboard', 'rank', 'table', 'position', 'record', 'wins', 'losses'],
   'icon-standings-2': ['leaderboard', 'rank', 'table', 'position', 'record', 'chart', 'graph'],
-  'icon-star': ['favorite', 'rating', 'best', 'top', 'featured', 'highlight', 'mvp'],
+  'icon-star': ['favorite', 'rating', 'best', 'top', 'featured', 'highlight', 'mvp', 'playoffs', 'championship'],
   'icon-submit': ['send', 'upload', 'confirm', 'lineup', 'publish', 'save', 'done'],
-  'icon-toilet': ['bathroom', 'sacko', 'loser', 'last', 'punishment', 'toilet-bowl', 'worst'],
+  'icon-toilet': ['bathroom', 'sacko', 'loser', 'last', 'punishment', 'toilet-bowl', 'worst', 'playoffs', 'championship'],
   'icon-touchdowns': ['td', 'score', 'endzone', 'celebration', 'points', 'six'],
-  'icon-transactions': ['trade', 'deal', 'handshake', 'swap', 'transfer', 'agreement', 'move'],
-  'icon-trophy': ['winner', 'champion', 'award', 'prize', 'cup', 'first', 'gold'],
-  'icon-trophy-1': ['winner', 'champion', 'award', 'prize', 'cup', 'first', 'gold'],
+  'icon-transactions-2': ['trade', 'deal', 'handshake', 'swap', 'transfer', 'agreement', 'move'],
+  'icon-trophy': ['winner', 'champion', 'award', 'prize', 'cup', 'first', 'gold', 'playoffs', 'championship'],
+  'icon-trophy-1': ['winner', 'champion', 'award', 'prize', 'cup', 'first', 'gold', 'playoffs', 'championship'],
   'icon-user': ['person', 'profile', 'account', 'member', 'player', 'owner'],
   'icon-user-md': ['doctor', 'medical', 'injury', 'health', 'ir', 'injured-reserve'],
   'icon-user-plus': ['add', 'new-member', 'invite', 'join', 'register', 'signup', 'pickup'],
@@ -113,12 +113,53 @@ const synonyms: Record<string, string[]> = {
   'icon-yards': ['distance', 'yardage', 'field', 'measure', 'gain', 'receiving', 'stats'],
 };
 
-// Build search data: icon id words + synonyms joined into a single searchable string per icon
+// Category tags — icons can belong to multiple categories
+const categories: Record<string, string[]> = {
+  trades: [
+    'icon-exchange', 'icon-transactions', 'icon-transactions-2', 'icon-chevron-left', 'icon-chevron-right',
+    'icon-clipboard', 'icon-file-text', 'icon-history',
+  ],
+  transactions: [
+    'icon-exchange', 'icon-transactions', 'icon-transactions-2', 'icon-plus', 'icon-user-plus', 'icon-user-times',
+    'icon-banknote', 'icon-cash', 'icon-dollar', 'icon-money-bag', 'icon-history',
+    'icon-clipboard', 'icon-file-text',
+  ],
+  waivers: [
+    'icon-plus', 'icon-user-plus', 'icon-user-times', 'icon-clipboard',
+    'icon-file-text', 'icon-history', 'icon-eye', 'icon-eye-slash',
+    'icon-calendar', 'icon-calendar-2', 'icon-calendar-3',
+  ],
+  auction: [
+    'icon-gavel', 'icon-banknote', 'icon-cash', 'icon-dollar', 'icon-money-bag',
+    'icon-users', 'icon-chalkboard', 'icon-history', 'icon-bar-chart',
+    'icon-line-chart', 'icon-star', 'icon-power',
+  ],
+  draft: [
+    'icon-draft-podium', 'icon-podium-empty', 'icon-podium-persona', 'icon-clipboard',
+    'icon-football', 'icon-football-2', 'icon-helmet', 'icon-helmet-2',
+    'icon-exchange', 'icon-history', 'icon-rank', 'icon-numberone',
+    'icon-calendar', 'icon-calendar-2', 'icon-calendar-3', 'icon-star',
+  ],
+};
+
+// Invert: build a set of categories per icon
+const iconCategories: Record<string, string[]> = {};
+for (const [cat, ids] of Object.entries(categories)) {
+  for (const id of ids) {
+    if (!iconCategories[id]) iconCategories[id] = [];
+    iconCategories[id].push(cat);
+  }
+}
+
+const allCategories = Object.keys(categories);
+
+// Build search data: icon id words + synonyms + categories joined into a single searchable string per icon
 const searchData: Record<string, string> = {};
 for (const { id } of uniqueIconEntries) {
   const idWords = id.replace('icon-', '').replace(/-/g, ' ');
   const syns = synonyms[id] || [];
-  searchData[id] = [idWords, ...syns].join(' ').toLowerCase();
+  const cats = iconCategories[id] || [];
+  searchData[id] = [idWords, ...syns, ...cats].join(' ').toLowerCase();
 }
 ---
 
@@ -141,10 +182,30 @@ for (const { id } of uniqueIconEntries) {
       </div>
     </header>
 
+    <nav class="category-filters" aria-label="Filter by category">
+      {allCategories.map(cat => (
+        <button class="category-chip" data-category={cat} type="button">
+          {cat}
+        </button>
+      ))}
+    </nav>
+
     <div class="icon-grid">
       {uniqueIconEntries.map(({ id, viewBox }) => (
-        <article class="icon-card" data-icon-id={id} data-search={searchData[id]}>
+        <article
+          class="icon-card"
+          data-icon-id={id}
+          data-search={searchData[id]}
+          data-categories={(iconCategories[id] || []).join(' ')}
+        >
           <p class="icon-name">{id}</p>
+          {(iconCategories[id] || []).length > 0 && (
+            <div class="icon-tags">
+              {(iconCategories[id] || []).map(cat => (
+                <span class="icon-tag" data-tag-category={cat}>{cat}</span>
+              ))}
+            </div>
+          )}
           <div class="icon-preview">
             <svg viewBox={viewBox} role="img" aria-label={id}>
               <use href={`${spriteUrl}#${id}`}></use>
@@ -220,6 +281,59 @@ for (const { id } of uniqueIconEntries) {
     font-weight: 600;
     white-space: nowrap;
   }
+
+  .category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .category-chip {
+    padding: 0.35rem 0.85rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    background: #fff;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: capitalize;
+  }
+
+  .category-chip:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+  }
+
+  .category-chip.active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #fff;
+  }
+
+  .icon-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: center;
+  }
+
+  .icon-tag {
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .icon-tag[data-tag-category="trades"] { background: #dbeafe; color: #1e40af; }
+  .icon-tag[data-tag-category="transactions"] { background: #dcfce7; color: #166534; }
+  .icon-tag[data-tag-category="waivers"] { background: #fef3c7; color: #92400e; }
+  .icon-tag[data-tag-category="auction"] { background: #fce7f3; color: #9d174d; }
+  .icon-tag[data-tag-category="draft"] { background: #ede9fe; color: #5b21b6; }
 
   .icon-grid {
     display: grid;
@@ -331,35 +445,57 @@ for (const { id } of uniqueIconEntries) {
     }
   });
 
-  // Search / filter
+  // Search + category filter
   const searchInput = document.querySelector('.icon-search') as HTMLInputElement;
   const cards = document.querySelectorAll<HTMLElement>('.icon-card');
+  const chips = document.querySelectorAll<HTMLButtonElement>('.category-chip');
   const countEl = document.querySelector('.search-count') as HTMLSpanElement;
   const noResults = document.querySelector('.no-results') as HTMLParagraphElement;
   const total = cards.length;
+  let activeCategory: string | null = null;
 
-  searchInput?.addEventListener('input', () => {
-    const query = searchInput.value.trim().toLowerCase();
+  function filterIcons() {
+    const query = searchInput?.value.trim().toLowerCase() || '';
     let visible = 0;
 
     cards.forEach(card => {
-      if (!query) {
-        card.hidden = false;
-        visible++;
-        return;
-      }
       const searchStr = card.dataset.search || '';
       const iconId = (card.dataset.iconId || '').toLowerCase();
-      const match = iconId.includes(query) || searchStr.includes(query);
-      card.hidden = !match;
-      if (match) visible++;
+      const cardCats = card.dataset.categories || '';
+
+      const matchesSearch = !query || iconId.includes(query) || searchStr.includes(query);
+      const matchesCategory = !activeCategory || cardCats.includes(activeCategory);
+
+      const show = matchesSearch && matchesCategory;
+      card.hidden = !show;
+      if (show) visible++;
     });
 
+    const hasFilter = query || activeCategory;
     if (countEl) {
-      countEl.textContent = query ? `${visible} of ${total} icons` : `${total} icons`;
+      countEl.textContent = hasFilter ? `${visible} of ${total} icons` : `${total} icons`;
     }
     if (noResults) {
       noResults.style.display = visible === 0 ? 'block' : 'none';
     }
+  }
+
+  searchInput?.addEventListener('input', filterIcons);
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cat = chip.dataset.category || '';
+      if (activeCategory === cat) {
+        // Deselect
+        activeCategory = null;
+        chip.classList.remove('active');
+      } else {
+        // Select new
+        chips.forEach(c => c.classList.remove('active'));
+        activeCategory = cat;
+        chip.classList.add('active');
+      }
+      filterIcons();
+    });
   });
 </script>
