@@ -13,9 +13,9 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
-    "fetchedAt": "2026-02-14T21:12:05.206Z",
+    "fetchedAt": "2026-02-14T21:35:04.926Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-02-14T21:12:05.223Z"
+    "generatedAt": "2026-02-14T21:35:04.940Z"
   },
   "positions": {
     "RB": {
@@ -131,20 +131,14 @@
     },
     "PK": {
       "totalPlayers": 31,
-      "top3Average": 740400,
-      "top5Average": 684240,
+      "top3Average": 690400,
+      "top5Average": 649240,
       "topPlayers": [
         {
           "id": "13354",
           "name": "Butker, Harrison",
           "salary": 871200,
           "franchiseId": "0004"
-        },
-        {
-          "id": "13303",
-          "name": "Elliott, Jake",
-          "salary": 750000,
-          "franchiseId": "0005"
         },
         {
           "id": "12956",
@@ -163,25 +157,25 @@
           "name": "Loop, Tyler",
           "salary": 600000,
           "franchiseId": "0016"
+        },
+        {
+          "id": "15979",
+          "name": "Dicker, Cameron",
+          "salary": 575000,
+          "franchiseId": "0003"
         }
       ]
     },
     "Def": {
       "totalPlayers": 32,
-      "top3Average": 1347500,
-      "top5Average": 1255435.5,
+      "top3Average": 1276559.17,
+      "top5Average": 1194935.5,
       "topPlayers": [
         {
           "id": "0523",
           "name": "Packers, Green Bay",
           "salary": 1375000,
           "franchiseId": "0007"
-        },
-        {
-          "id": "0518",
-          "name": "Eagles, Philadelphia",
-          "salary": 1347500,
-          "franchiseId": "0005"
         },
         {
           "id": "0530",
@@ -200,6 +194,12 @@
           "name": "Vikings, Minnesota",
           "salary": 1100000,
           "franchiseId": "0011"
+        },
+        {
+          "id": "0501",
+          "name": "Bills, Buffalo",
+          "salary": 1045000,
+          "franchiseId": "0005"
         }
       ]
     },
