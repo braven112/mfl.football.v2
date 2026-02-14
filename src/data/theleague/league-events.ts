@@ -120,7 +120,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     resultLinks: [
       {
         label: 'Auction Results',
-        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=171',
+        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=44',
         external: true,
       },
     ],
