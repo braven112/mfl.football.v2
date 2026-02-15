@@ -30,7 +30,7 @@ export function updateFranchiseLinks(scope = document) {
   }
 
   if (gmCentralLink) {
-    const newHref = `https://mflfootballv2.vercel.app/theleague/rosters?myteam=${window.franchise_id}`;
+    const newHref = `https://www.theleague.us/theleague/rosters?myteam=${window.franchise_id}`;
     if (DEBUG) {
       console.log('[franchiseLinks] Updating href to:', newHref);
     }
