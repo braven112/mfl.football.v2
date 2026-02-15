@@ -7,6 +7,7 @@ import {
   computeLeagueSummary,
   parseSalaryAdjustment,
   CATEGORY_DEFINITIONS,
+  SUMMARY_YEARS,
   type SalaryPlayer,
   type TeamConfig,
 } from '../../utils/league-summary-utils';
@@ -137,32 +138,18 @@ const teamsForDisplay = teamSummaries.map((team) => {
   };
 });
 
-// ---------------------------------------------------------------------------
-// Trim first year (current year) — league summary focuses on future years
-// ---------------------------------------------------------------------------
-
-const DISPLAY_YEARS = SALARY_YEARS.slice(1); // e.g., [2026, 2027, 2028, 2029]
-
-const teamsForTable = teamsForDisplay.map((team) => ({
-  ...team,
-  metrics: Object.fromEntries(
-    Object.entries(team.metrics).map(([key, values]) => [key, values.slice(1)])
-  ),
-  positionalDepth: team.positionalDepth.slice(1),
-  positionalSpend: team.positionalSpend.slice(1),
-}));
 ---
 
 <TheLeagueLayout title="League Summary">
   <div class="league-summary-container">
     <h1>League Summary</h1>
     <p class="subtitle">
-      Compare all 16 teams across cap, roster, and contract metrics — projected {DISPLAY_YEARS[0]}–{DISPLAY_YEARS[DISPLAY_YEARS.length - 1]}
+      Compare all 16 teams across cap, roster, and contract metrics — projected {SUMMARY_YEARS[0]}–{SUMMARY_YEARS[SUMMARY_YEARS.length - 1]}
     </p>
 
     <LeagueSummaryTable
-      teams={teamsForTable}
-      years={DISPLAY_YEARS}
+      teams={teamsForDisplay}
+      years={SUMMARY_YEARS}
       categories={CATEGORY_DEFINITIONS}
     />
   </div>
