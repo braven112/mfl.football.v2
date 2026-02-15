@@ -61,7 +61,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
                 {team.teamIcon && (
                   <img src={team.teamIcon} alt="" class="league-summary__team-icon" loading="lazy" />
                 )}
-                <span class="league-summary__team-name">{team.teamName}</span>
+                <span class="league-summary__team-name league-summary__team-name--default">{team.teamName}</span>
+                <span class="league-summary__team-name league-summary__team-name--short">{team.teamNameShort || team.teamName}</span>
               </div>
             </td>
             {years.map((_, yi) => (
@@ -294,6 +295,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
 <style>
   .league-summary {
     font-family: system-ui, -apple-system, sans-serif;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .league-summary__controls {
@@ -380,6 +383,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
     border: 1px solid var(--primary-content-border-color, #e2e8f0);
     border-radius: 0.5rem;
     box-shadow: var(--shadow-sm, 0.5px 1px 1px hsl(220deg 3% 15% / 0.1));
+    box-sizing: border-box;
+    max-width: 100%;
   }
 
   .league-summary__table {
@@ -479,6 +484,10 @@ const serializedData = JSON.stringify({ teams, years, categories });
     text-overflow: ellipsis;
   }
 
+  .league-summary__team-name--short {
+    display: none;
+  }
+
   .league-summary__legend {
     display: flex;
     gap: 1.5rem;
@@ -508,21 +517,48 @@ const serializedData = JSON.stringify({ teams, years, categories });
   }
 
   @media (max-width: 640px) {
+    .league-summary__table {
+      font-size: 0.75rem;
+      table-layout: fixed;
+      width: 100%;
+    }
+
     .league-summary__th--team {
-      min-width: 120px;
+      min-width: unset;
+      width: 28%;
     }
 
     .league-summary__th--year {
-      min-width: 80px;
+      min-width: unset;
+    }
+
+    .league-summary__th {
+      padding: 0.5rem 0.25rem;
+    }
+
+    .league-summary__td {
+      padding: 0.375rem 0.25rem;
+    }
+
+    .league-summary__td--team {
+      padding: 0.375rem 0.375rem;
     }
 
     .league-summary__team-icon {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
     }
 
-    .league-summary__table {
-      font-size: 0.8rem;
+    .league-summary__team-name--default {
+      display: none;
+    }
+
+    .league-summary__team-name--short {
+      display: inline;
+    }
+
+    .league-summary__team-cell {
+      gap: 0.25rem;
     }
 
     .league-summary__select {

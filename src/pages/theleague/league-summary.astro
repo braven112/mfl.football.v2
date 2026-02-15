@@ -121,19 +121,21 @@ const teamSummaries = computeLeagueSummary(
 );
 
 // Apply team name display rules
+// Limit to 4 projected years
+const displayYears = SALARY_YEARS.slice(0, 4);
+
 const teamsForDisplay = teamSummaries.map((team) => {
   const config = teamConfigs.find((t) => t.franchiseId === team.franchiseId);
+  const nameOpts = {
+    fullName: team.teamName,
+    nameMedium: config?.nameMedium,
+    nameShort: config?.nameShort,
+    abbrev: config?.abbrev,
+  };
   return {
     ...team,
-    teamName: chooseTeamName(
-      {
-        fullName: team.teamName,
-        nameMedium: config?.nameMedium,
-        nameShort: config?.nameShort,
-        abbrev: config?.abbrev,
-      },
-      'default'
-    ),
+    teamName: chooseTeamName(nameOpts, 'default'),
+    teamNameShort: chooseTeamName(nameOpts, 'short'),
   };
 });
 
@@ -143,12 +145,12 @@ const teamsForDisplay = teamSummaries.map((team) => {
   <div class="league-summary-container">
     <h1>League Summary</h1>
     <p class="subtitle">
-      Compare all 16 teams across cap, roster, and contract metrics — projected {SALARY_YEARS[0]}–{SALARY_YEARS[SALARY_YEARS.length - 1]}
+      Compare all 16 teams across cap, roster, and contract metrics — projected {displayYears[0]}–{displayYears[displayYears.length - 1]}
     </p>
 
     <LeagueSummaryTable
       teams={teamsForDisplay}
-      years={SALARY_YEARS}
+      years={displayYears}
       categories={CATEGORY_DEFINITIONS}
     />
   </div>
@@ -159,7 +161,11 @@ const teamsForDisplay = teamSummaries.map((team) => {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: 2rem 0.5rem;
+    background-color: var(--content-bg);
+    border-radius: var(--radius-md);
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   h1 {
