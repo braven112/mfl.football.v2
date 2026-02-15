@@ -4,15 +4,21 @@
  * Formatting helpers for league event dates and countdowns.
  */
 
+const DAY_NAMES = [
+  'Sun', 'Mon', 'Tue', 'Wed',
+  'Thu', 'Fri', 'Sat',
+];
+
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
 /**
- * Format a date as "Feb 14" or "Feb 14, 8:45 PM PT" if time is set.
+ * Format a date as "Thu, Mar 19" or "Thu, Mar 19, 8:45 PM PT" if time is set.
  */
 export function formatEventDate(date: Date): string {
+  const dayName = DAY_NAMES[date.getDay()];
   const month = MONTH_NAMES[date.getMonth()];
   const day = date.getDate();
 
@@ -21,20 +27,20 @@ export function formatEventDate(date: Date): string {
 
   // If time is midnight (0:00), treat as date-only
   if (hours === 0 && minutes === 0) {
-    return `${month} ${day}`;
+    return `${dayName}, ${month} ${day}`;
   }
 
   const period = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours % 12 || 12;
   const displayMinutes = minutes.toString().padStart(2, '0');
 
-  return `${month} ${day}, ${displayHours}:${displayMinutes} ${period} PT`;
+  return `${dayName}, ${month} ${day}, ${displayHours}:${displayMinutes} ${period} PT`;
 }
 
 /**
  * Format a date range:
- * - Same month: "Feb 1 - 14"
- * - Cross month: "Feb 15 - Mar 7"
+ * - Same month: "Sun, Feb 1 - 14"
+ * - Cross month: "Sun, Feb 15 - Mar 7"
  * - Same day: just the single date
  */
 export function formatEventDateRange(start: Date, end: Date): string {
@@ -42,14 +48,15 @@ export function formatEventDateRange(start: Date, end: Date): string {
     return formatEventDate(start);
   }
 
+  const startDay = DAY_NAMES[start.getDay()];
   const startMonth = MONTH_NAMES[start.getMonth()];
   const endMonth = MONTH_NAMES[end.getMonth()];
 
   if (start.getMonth() === end.getMonth()) {
-    return `${startMonth} ${start.getDate()} - ${end.getDate()}`;
+    return `${startDay}, ${startMonth} ${start.getDate()} - ${end.getDate()}`;
   }
 
-  return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
+  return `${startDay}, ${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
 }
 
 /**
