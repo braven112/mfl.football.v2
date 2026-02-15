@@ -219,9 +219,9 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     startDate: { type: 'computed', rule: 'friday-before-week-11' },
     actionLinks: [
       {
-        label: 'Trade Center',
-        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=03',
-        external: true,
+        label: 'Trade Builder',
+        url: '/theleague/trade-builder',
+        external: false,
       },
     ],
     urgencyDays: 7,
