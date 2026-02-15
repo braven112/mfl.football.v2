@@ -76,11 +76,11 @@ const serializedData = JSON.stringify({ teams, years, categories });
   <!-- Legend -->
   <div class="league-summary__legend">
     <span class="league-summary__legend-item">
-      <span class="league-summary__legend-swatch league-summary__legend-swatch--top"></span>
+      <span class="league-summary__legend-sample league-summary__legend-sample--top">$12.3M</span>
       Top quartile
     </span>
     <span class="league-summary__legend-item">
-      <span class="league-summary__legend-swatch league-summary__legend-swatch--bottom"></span>
+      <span class="league-summary__legend-sample league-summary__legend-sample--bottom">$12.3M</span>
       Bottom quartile
     </span>
   </div>
@@ -161,8 +161,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
       const quartile = Math.ceil(total / 4);
       const isTop = direction === 'asc' ? rank <= quartile : rank > total - quartile;
       const isBottom = direction === 'asc' ? rank > total - quartile : rank <= quartile;
-      if (isTop) return 'hsl(142, 71%, 93%)';
-      if (isBottom) return 'hsl(0, 84%, 95%)';
+      if (isTop) return 'hsl(142, 60%, 35%)';
+      if (isBottom) return 'hsl(0, 70%, 45%)';
       return '';
     }
 
@@ -210,7 +210,10 @@ const serializedData = JSON.stringify({ teams, years, categories });
           const value = getTeamValue(team, yi);
           (cell as HTMLElement).textContent = formatValue(value, cat.format);
           const rank = ranksByYear[yi][teamIndex];
-          (cell as HTMLElement).style.backgroundColor = getCellColor(rank, teams.length, cat.direction);
+          const color = getCellColor(rank, teams.length, cat.direction);
+          (cell as HTMLElement).style.color = color;
+          (cell as HTMLElement).style.fontWeight = color ? '600' : '';
+          (cell as HTMLElement).style.backgroundColor = '';
         });
       });
 
@@ -455,7 +458,7 @@ const serializedData = JSON.stringify({ teams, years, categories });
   .league-summary__td--value {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    transition: background-color 0.2s ease;
+    transition: color 0.2s ease;
   }
 
   .league-summary__team-cell {
@@ -490,20 +493,18 @@ const serializedData = JSON.stringify({ teams, years, categories });
     gap: 0.375rem;
   }
 
-  .league-summary__legend-swatch {
-    width: 14px;
-    height: 14px;
-    border-radius: 2px;
-    border: 1px solid var(--primary-content-border-color, #e2e8f0);
-    flex-shrink: 0;
+  .league-summary__legend-sample {
+    font-weight: 600;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
   }
 
-  .league-summary__legend-swatch--top {
-    background-color: hsl(142, 71%, 93%);
+  .league-summary__legend-sample--top {
+    color: hsl(142, 60%, 35%);
   }
 
-  .league-summary__legend-swatch--bottom {
-    background-color: hsl(0, 84%, 95%);
+  .league-summary__legend-sample--bottom {
+    color: hsl(0, 70%, 45%);
   }
 
   @media (max-width: 640px) {
