@@ -9,46 +9,46 @@ import {
 describe('formatEventDate', () => {
   it('should format a date without time', () => {
     const date = new Date(2026, 1, 15, 0, 0); // Feb 15 at midnight
-    expect(formatEventDate(date)).toBe('Feb 15');
+    expect(formatEventDate(date)).toBe('Sun, Feb 15');
   });
 
   it('should format a date with evening time', () => {
     const date = new Date(2026, 1, 14, 20, 45); // Feb 14 at 8:45 PM
-    expect(formatEventDate(date)).toBe('Feb 14, 8:45 PM PT');
+    expect(formatEventDate(date)).toBe('Sat, Feb 14, 8:45 PM PT');
   });
 
   it('should format a date with morning time', () => {
     const date = new Date(2026, 2, 19, 7, 0); // Mar 19 at 7:00 AM
-    expect(formatEventDate(date)).toBe('Mar 19, 7:00 AM PT');
+    expect(formatEventDate(date)).toBe('Thu, Mar 19, 7:00 AM PT');
   });
 
   it('should format noon correctly', () => {
     const date = new Date(2026, 5, 1, 12, 0); // Jun 1 at noon
-    expect(formatEventDate(date)).toBe('Jun 1, 12:00 PM PT');
+    expect(formatEventDate(date)).toBe('Mon, Jun 1, 12:00 PM PT');
   });
 
   it('should zero-pad minutes', () => {
     const date = new Date(2026, 8, 10, 9, 5); // Sep 10 at 9:05 AM
-    expect(formatEventDate(date)).toBe('Sep 10, 9:05 AM PT');
+    expect(formatEventDate(date)).toBe('Thu, Sep 10, 9:05 AM PT');
   });
 });
 
 describe('formatEventDateRange', () => {
-  it('should format same-month range as "Feb 1 - 14"', () => {
+  it('should format same-month range as "Sun, Feb 1 - 14"', () => {
     const start = new Date(2026, 1, 1);
     const end = new Date(2026, 1, 14);
-    expect(formatEventDateRange(start, end)).toBe('Feb 1 - 14');
+    expect(formatEventDateRange(start, end)).toBe('Sun, Feb 1 - 14');
   });
 
-  it('should format cross-month range as "Feb 15 - Mar 7"', () => {
+  it('should format cross-month range as "Sun, Feb 15 - Mar 7"', () => {
     const start = new Date(2026, 1, 15);
     const end = new Date(2026, 2, 7);
-    expect(formatEventDateRange(start, end)).toBe('Feb 15 - Mar 7');
+    expect(formatEventDateRange(start, end)).toBe('Sun, Feb 15 - Mar 7');
   });
 
   it('should format same day as single date', () => {
     const date = new Date(2026, 1, 15);
-    expect(formatEventDateRange(date, date)).toBe('Feb 15');
+    expect(formatEventDateRange(date, date)).toBe('Sun, Feb 15');
   });
 });
 
