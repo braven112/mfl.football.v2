@@ -239,11 +239,16 @@ const teams = franchises.map((franchise: any) => {
 
 // Determine default team from user preferences
 const theLeaguePref = getTheLeaguePreference(Astro.cookies);
-const defaultTeam = resolveTeamSelection({
-  myTeamParam: Astro.url.searchParams.get('myteam'),
-  cookiePreference: theLeaguePref?.franchiseId,
-  defaultTeam: '0001',
-});
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const cookiePref = theLeaguePref?.franchiseId;
+const hasPreference = !!(myTeamParam || cookiePref);
+const defaultTeam = hasPreference
+  ? resolveTeamSelection({
+      myTeamParam,
+      cookiePreference: cookiePref,
+      defaultTeam: '0001',
+    })
+  : '';
 
 const pageData = {
   teams,

@@ -157,12 +157,25 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         };
       }
     }
+
+    // No user preference — pick the 2 teams with the most cap room
+    if (!defaultTeamId && data.teams.length >= 2) {
+      const byCapSpace = [...data.teams].sort(
+        (a, b) => b.currentCapSpace - a.currentCapSpace
+      );
+      return {
+        teamA: { ...EMPTY_SIDE, franchiseId: byCapSpace[0].franchiseId },
+        teamB: { ...EMPTY_SIDE, franchiseId: byCapSpace[1].franchiseId },
+        rookieModalTarget: null,
+      };
+    }
+
     return {
-      teamA: { ...EMPTY_SIDE, franchiseId: defaultTeamId },
+      teamA: { ...EMPTY_SIDE, franchiseId: defaultTeamId || null },
       teamB: { ...EMPTY_SIDE },
       rookieModalTarget: null,
     };
-  }, [defaultTeamId]);
+  }, [defaultTeamId, data.teams]);
 
   const [state, dispatch] = useReducer(tradeReducer, initialState);
 
