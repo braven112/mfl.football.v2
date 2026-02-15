@@ -24,6 +24,19 @@ import {
 } from './future-draft-picks-utils';
 
 // ---------------------------------------------------------------------------
+// League Summary shows 5 future years starting from the current league year.
+// SALARY_YEARS = [2025, 2026, 2027, 2028, 2029] (indices 0-4).
+// SUMMARY_YEARS = [2026, 2027, 2028, 2029, 2030] — shift forward by 1.
+// For years 2026-2029 we reuse calculateCapCharges() indices 1-4.
+// For year 2030 (index 5) no existing contracts can reach that far
+// (max contract = 5 years, which expires at index 5) so cap charges = 0.
+// ---------------------------------------------------------------------------
+export const SUMMARY_YEARS = [
+  ...SALARY_YEARS.slice(1),
+  SALARY_YEARS[SALARY_YEARS.length - 1] + 1,
+];
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -297,8 +310,8 @@ export function computeLeagueSummary(
   // Parse adjustments
   const adjustments = rawAdjustments.map(parseSalaryAdjustment);
 
-  // Draft capital for the next year (year index 0 = SALARY_YEARS[0])
-  const draftYear = SALARY_YEARS[0] + 1; // e.g., 2026 if SALARY_YEARS[0]=2025
+  // Draft capital for year 1 of SUMMARY_YEARS (e.g., 2026)
+  const draftYear = SUMMARY_YEARS[0]; // e.g., 2026
   const draftCapitalMap = futureDraftPicksData
     ? getDraftCapitalSummary(futureDraftPicksData, draftYear)
     : new Map<string, { total: number; byRound: Map<number, number> }>();
@@ -310,10 +323,14 @@ export function computeLeagueSummary(
     const capPlayers = teamPlayers.map(toCapPlayer);
 
     // --- Cap charges (reuse exact same function as roster page) ---
-    const capCharges = calculateCapCharges(capPlayers);
+    // Returns 5 elements for SALARY_YEARS indices 0-4.
+    // SUMMARY_YEARS maps to original indices 1-5. Index 5 is beyond
+    // the max contract length so cap charges are always 0 there.
+    const capChargesBase = calculateCapCharges(capPlayers);
 
     // --- Dead money ---
-    const deadMoney = aggregateDeadMoney(adjustments, team.franchiseId);
+    // Same structure: 5 elements for indices 0-4. Index 5 = 0.
+    const deadMoneyBase = aggregateDeadMoney(adjustments, team.franchiseId);
 
     // --- Per-year metrics ---
     const capSpaceArr: number[] = [];
@@ -335,22 +352,28 @@ export function computeLeagueSummary(
     const sortedByPoints = [...teamPlayers].sort((a, b) => b.points - a.points);
     const top10Players = sortedByPoints.slice(0, 10);
 
-    for (let i = 0; i < SALARY_YEARS.length; i++) {
-      const year = SALARY_YEARS[i];
+    for (let si = 0; si < SUMMARY_YEARS.length; si++) {
+      const year = SUMMARY_YEARS[si];
+      // `oi` is the original SALARY_YEARS index: SUMMARY_YEARS[0]=2026 → oi=1
+      const oi = si + 1;
       const refDate = new Date(Date.UTC(year, 6, 1)); // July 1 of the projection year
 
-      // Players still under contract in this year
+      // Cap charges and dead money: use base arrays for indices 1-4, 0 for index 5
+      const capCharge = oi < capChargesBase.length ? capChargesBase[oi] : 0;
+      const deadMoneyCharge = oi < deadMoneyBase.length ? (deadMoneyBase[oi] ?? 0) : 0;
+
+      // Players still under contract in this year (original index perspective)
       const underContract = teamPlayers.filter(
-        (p) => parseNumber(p.contractYear) > i
+        (p) => parseNumber(p.contractYear) > oi
       );
       const underContractCount = underContract.length;
 
       // 1. Cap space = cap - charges - dead money
-      const cs = SALARY_CAP - capCharges[i] - (deadMoney[i] ?? 0);
+      const cs = SALARY_CAP - capCharge - deadMoneyCharge;
       capSpaceArr.push(cs);
 
       // 2. Dead money
-      deadMoneyArr.push(deadMoney[i] ?? 0);
+      deadMoneyArr.push(deadMoneyCharge);
 
       // 3. Effective cap space
       effectiveCapSpaceArr.push(cs - RESERVE_FOR_ROOKIES);
@@ -364,9 +387,9 @@ export function computeLeagueSummary(
       // 5. Players under contract
       playersUnderContractArr.push(underContractCount);
 
-      // 6. Expiring contracts (contract ends this year → contractYear === i + 1)
+      // 6. Expiring contracts (contract ends this year → contractYear === oi + 1)
       const expiringCount = teamPlayers.filter(
-        (p) => parseNumber(p.contractYear) === i + 1
+        (p) => parseNumber(p.contractYear) === oi + 1
       ).length;
       expiringContractsArr.push(expiringCount);
 
@@ -382,7 +405,7 @@ export function computeLeagueSummary(
       // 8. Average contract length remaining
       if (underContractCount > 0) {
         const totalYearsLeft = underContract.reduce(
-          (sum, p) => sum + (parseNumber(p.contractYear) - i),
+          (sum, p) => sum + (parseNumber(p.contractYear) - oi),
           0
         );
         avgContractLengthArr.push(totalYearsLeft / underContractCount);
@@ -392,7 +415,7 @@ export function computeLeagueSummary(
 
       // 9. Committed salary % of cap
       committedSalaryPctArr.push(
-        SALARY_CAP > 0 ? (capCharges[i] / SALARY_CAP) * 100 : 0
+        SALARY_CAP > 0 ? (capCharge / SALARY_CAP) * 100 : 0
       );
 
       // 10. Roster holes
@@ -400,7 +423,7 @@ export function computeLeagueSummary(
 
       // 11. Top player retention
       const retainedTop = top10Players.filter(
-        (p) => parseNumber(p.contractYear) > i
+        (p) => parseNumber(p.contractYear) > oi
       ).length;
       topPlayerRetentionArr.push(retainedTop);
 
@@ -410,7 +433,7 @@ export function computeLeagueSummary(
       for (const p of underContract) {
         const age = ageAsOf(p.birthdate, refDate);
         if (age <= 0) continue;
-        const escalatedSalary = p.salary * Math.pow(1.10, i);
+        const escalatedSalary = p.salary * Math.pow(1.10, oi);
         weightedAgeSum += age * escalatedSalary;
         weightedSalarySum += escalatedSalary;
       }
@@ -424,25 +447,23 @@ export function computeLeagueSummary(
       for (const p of underContract) {
         const pos = normalizePosition(p.position);
         if (!(pos in posSpend)) continue;
-        const isCurrent = i === 0;
-        const status = normalizeStatus(p.status);
-        const pct = isCurrent && status === 'PRACTICE' ? 0.5 : 1;
-        posSpend[pos] += p.salary * Math.pow(1.10, i) * pct;
+        // All summary years are future years — no taxi-squad 50% discount
+        posSpend[pos] += p.salary * Math.pow(1.10, oi);
       }
       // Convert to % of cap
-      const totalCapCharge = capCharges[i] || 1; // avoid div by 0
+      const totalCapCharge = capCharge || 1; // avoid div by 0
       for (const pos of POSITIONS) {
         posSpend[pos] = (posSpend[pos] / totalCapCharge) * 100;
       }
       positionalSpendArr.push(posSpend);
 
       // 14. Draft capital
-      if (i === 1) {
-        // Year index 1 = next year (e.g., 2026) — use actual futureDraftPicks data
+      if (si === 0) {
+        // First summary year (e.g., 2026) — use actual futureDraftPicks data
         const teamDraftCapital = draftCapitalMap.get(team.franchiseId);
         draftCapitalArr.push(teamDraftCapital?.total ?? 3);
       } else {
-        // Year 0 (current) and years 2-4: standard allocation of 3 picks
+        // Years 2-5: standard allocation of 3 picks
         draftCapitalArr.push(3);
       }
     }
