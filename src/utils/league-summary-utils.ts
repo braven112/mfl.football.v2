@@ -55,6 +55,7 @@ export interface CategoryDefinition {
 export interface TeamSummary {
   franchiseId: string;
   teamName: string;
+  teamNameShort?: string;
   teamIcon: string;
   division: string;
   /** categoryId → [value per SALARY_YEAR] */

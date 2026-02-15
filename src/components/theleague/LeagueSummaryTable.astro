@@ -61,7 +61,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
                 {team.teamIcon && (
                   <img src={team.teamIcon} alt="" class="league-summary__team-icon" loading="lazy" />
                 )}
-                <span class="league-summary__team-name">{team.teamName}</span>
+                <span class="league-summary__team-name league-summary__team-name--default">{team.teamName}</span>
+                <span class="league-summary__team-name league-summary__team-name--short">{team.teamNameShort || team.teamName}</span>
               </div>
             </td>
             {years.map((_, yi) => (
@@ -479,6 +480,10 @@ const serializedData = JSON.stringify({ teams, years, categories });
     text-overflow: ellipsis;
   }
 
+  .league-summary__team-name--short {
+    display: none;
+  }
+
   .league-summary__legend {
     display: flex;
     gap: 1.5rem;
@@ -509,7 +514,7 @@ const serializedData = JSON.stringify({ teams, years, categories });
 
   @media (max-width: 640px) {
     .league-summary__th--team {
-      min-width: 120px;
+      min-width: 90px;
     }
 
     .league-summary__th--year {
@@ -517,8 +522,24 @@ const serializedData = JSON.stringify({ teams, years, categories });
     }
 
     .league-summary__team-icon {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .league-summary__team-name--default {
+      display: none;
+    }
+
+    .league-summary__team-name--short {
+      display: inline;
+    }
+
+    .league-summary__td--team {
+      padding: 0.375rem 0.5rem;
+    }
+
+    .league-summary__team-cell {
+      gap: 0.375rem;
     }
 
     .league-summary__table {

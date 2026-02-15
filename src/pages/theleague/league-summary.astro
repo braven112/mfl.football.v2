@@ -126,17 +126,16 @@ const displayYears = SALARY_YEARS.slice(0, 4);
 
 const teamsForDisplay = teamSummaries.map((team) => {
   const config = teamConfigs.find((t) => t.franchiseId === team.franchiseId);
+  const nameOpts = {
+    fullName: team.teamName,
+    nameMedium: config?.nameMedium,
+    nameShort: config?.nameShort,
+    abbrev: config?.abbrev,
+  };
   return {
     ...team,
-    teamName: chooseTeamName(
-      {
-        fullName: team.teamName,
-        nameMedium: config?.nameMedium,
-        nameShort: config?.nameShort,
-        abbrev: config?.abbrev,
-      },
-      'default'
-    ),
+    teamName: chooseTeamName(nameOpts, 'default'),
+    teamNameShort: chooseTeamName(nameOpts, 'short'),
   };
 });
 
