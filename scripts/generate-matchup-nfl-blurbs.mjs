@@ -28,11 +28,20 @@ const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
 const week = process.env.WEEK || '15';
-const year = process.env.YEAR || '2025';
+// Auto-detect season year based on Labor Day
+const autoDetectSeasonYear = () => {
+  const now = new Date();
+  const calYear = now.getFullYear();
+  const sept1 = new Date(calYear, 8, 1);
+  const dayOfWeek = sept1.getDay();
+  const laborDay = new Date(calYear, 8, 1 + (dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : 8 - dayOfWeek));
+  return String(now >= laborDay ? calYear : calYear - 1);
+};
+const year = process.env.YEAR || autoDetectSeasonYear();
 const homeTeamId = process.env.HOME_TEAM_ID || '0013';
 const awayTeamId = process.env.AWAY_TEAM_ID || '0015';
 
-const dataDir = path.join(root, 'data/theleague/mfl-feeds/2025');
+const dataDir = path.join(root, `data/theleague/mfl-feeds/${year}`);
 const outputPath = path.join(root, `data/theleague/matchup-nfl-blurbs-${homeTeamId}-${awayTeamId}.json`);
 
 function loadJson(filename) {

@@ -1,0 +1,244 @@
+{
+  "metadata": {
+    "leagueId": "13522",
+    "season": "2026",
+    "week": 1,
+    "detectedWeek": 17,
+    "freezeWeek": 14,
+    "frozenWeek": 14,
+    "sources": {
+      "rosters": "https://api.myfantasyleague.com/2026/export?TYPE=rosters&L=13522&JSON=1&W=1",
+      "players": "https://api.myfantasyleague.com/2026/export?TYPE=players&DETAILS=1",
+      "weeklyResults": "https://api.myfantasyleague.com/2026/export?TYPE=weeklyResults&L=13522&W=YTD&JSON=1",
+      "sleeper": "cached",
+      "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
+    },
+    "fetchedAt": "2026-02-15T07:24:00.559Z",
+    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
+    "generatedAt": "2026-02-15T07:24:00.561Z"
+  },
+  "positions": {
+    "WR": {
+      "totalPlayers": 94,
+      "top3Average": 7449847.9,
+      "top5Average": 6363558.74,
+      "topPlayers": [
+        {
+          "id": "15751",
+          "name": "London, Drake",
+          "salary": 8544543.7,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "14104",
+          "name": "Brown, A.J.",
+          "salary": 8360000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "13164",
+          "name": "Kupp, Cooper",
+          "salary": 5445000,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry",
+          "salary": 5142500,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "13163",
+          "name": "Godwin, Chris",
+          "salary": 4325750,
+          "franchiseId": "0010"
+        }
+      ]
+    },
+    "RB": {
+      "totalPlayers": 67,
+      "top3Average": 9100000,
+      "top5Average": 8027244.9,
+      "topPlayers": [
+        {
+          "id": "13130",
+          "name": "McCaffrey, Christian",
+          "salary": 10800000,
+          "franchiseId": "0015"
+        },
+        {
+          "id": "12626",
+          "name": "Henry, Derrick",
+          "salary": 8800000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "14802",
+          "name": "Taylor, Jonathan",
+          "salary": 7700000,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "13319",
+          "name": "Jones, Aaron",
+          "salary": 6490000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "15715",
+          "name": "Cook, James",
+          "salary": 6346224.5,
+          "franchiseId": "0005"
+        }
+      ]
+    },
+    "PK": {
+      "totalPlayers": 16,
+      "top3Average": 759440,
+      "top5Average": 701112.5,
+      "topPlayers": [
+        {
+          "id": "13354",
+          "name": "Butker, Harrison",
+          "salary": 958320,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "12956",
+          "name": "Lutz, Wil",
+          "salary": 660000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "17222",
+          "name": "Loop, Tyler",
+          "salary": 660000,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "14717",
+          "name": "McLaughlin, Chase",
+          "salary": 622242.5,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "11936",
+          "name": "Boswell, Chris",
+          "salary": 605000,
+          "franchiseId": "0001"
+        }
+      ]
+    },
+    "Def": {
+      "totalPlayers": 22,
+      "top3Average": 1391500,
+      "top5Average": 1262800,
+      "topPlayers": [
+        {
+          "id": "0523",
+          "name": "Packers, Green Bay",
+          "salary": 1512500,
+          "franchiseId": "0007"
+        },
+        {
+          "id": "0530",
+          "name": "49ers, San Francisco",
+          "salary": 1452000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0524",
+          "name": "Vikings, Minnesota",
+          "salary": 1210000,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "0501",
+          "name": "Bills, Buffalo",
+          "salary": 1149500,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "0504",
+          "name": "Patriots, New England",
+          "salary": 990000,
+          "franchiseId": "0015"
+        }
+      ]
+    },
+    "TE": {
+      "totalPlayers": 37,
+      "top3Average": 4045790.83,
+      "top5Average": 3169974.5,
+      "topPlayers": [
+        {
+          "id": "15794",
+          "name": "McBride, Trey",
+          "salary": 4463360,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "15799",
+          "name": "Ferguson, Jake",
+          "salary": 4207142.5,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "16222",
+          "name": "Kraft, Tucker",
+          "salary": 3466870,
+          "franchiseId": "0011"
+        },
+        {
+          "id": "16269",
+          "name": "Strange, Brenton",
+          "salary": 2200000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "16641",
+          "name": "Bowers, Brock",
+          "salary": 1512500,
+          "franchiseId": "0009"
+        }
+      ]
+    },
+    "QB": {
+      "totalPlayers": 26,
+      "top3Average": 4209425,
+      "top5Average": 3058055,
+      "topPlayers": [
+        {
+          "id": "14783",
+          "name": "Hurts, Jalen",
+          "salary": 7150000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "16579",
+          "name": "Williams, Caleb",
+          "salary": 2783000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "15698",
+          "name": "Purdy, Brock",
+          "salary": 2695275,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "16152",
+          "name": "Richardson, Anthony",
+          "salary": 1331000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "16581",
+          "name": "Daniels, Jayden",
+          "salary": 1331000,
+          "franchiseId": "0015"
+        }
+      ]
+    }
+  }
+}

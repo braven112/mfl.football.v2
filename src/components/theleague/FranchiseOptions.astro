@@ -39,7 +39,8 @@ const NFL_TEAM_NAMES: Record<string, string> = {
   SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
 };
 
-const { players = [], salaryAverages = {}, season = '2025', showTeamLogo = true } = Astro.props;
+import { getCurrentLeagueYear } from '../../utils/league-year';
+const { players = [], salaryAverages = {}, season = String(getCurrentLeagueYear()), showTeamLogo = true } = Astro.props;
 
 // Helper function to calculate franchise tag value
 // Formula: max(currentSalary * 1.2, top3Average)
@@ -230,7 +231,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     const allPlayersJson = containerEl.dataset.allPlayers;
     const currentTeam = containerEl.dataset.currentTeam;
     const salaryAveragesJson = containerEl.dataset.salaryAverages || '{}';
-    const season = containerEl.dataset.season || '2025';
+    const season = containerEl.dataset.season || String(new Date().getFullYear());
     if (!allPlayersJson) return;
 
     try {

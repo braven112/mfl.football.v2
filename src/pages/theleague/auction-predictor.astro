@@ -36,11 +36,7 @@ import LiveAuctionPanel from '../../components/theleague/LiveAuctionPanel.astro'
 import AuctionNotificationSettings from '../../components/theleague/AuctionNotificationSettings.astro';
 import HelpModal from '../../components/theleague/HelpModal.astro';
 
-// Import MFL data feeds
-import rostersData from '../../../data/theleague/mfl-feeds/2025/rosters.json';
-import playersData from '../../../data/theleague/mfl-feeds/2025/players.json';
-import salaryAdjustmentsData from '../../../data/theleague/mfl-feeds/2025/salaryAdjustments.json';
-import leagueData from '../../../data/theleague/mfl-feeds/2025/league.json';
+// Import MFL data feeds dynamically — auto-discovers all years
 import historicalCurves from '../../../data/theleague/historical-salary-curves.json';
 
 // Import utility functions
@@ -67,6 +63,25 @@ import type { PositionalNeed } from '../../utils/draft-pick-cap-impact';
 const currentLeagueYear = getCurrentLeagueYear();
 // Next auction year (always currentLeagueYear + 1) - predicting NEXT year's auction
 const auctionYear = getNextAuctionYear();
+
+// Load MFL data feeds for current league year using fs (avoids globbing large JSON files)
+const loadMflFeed = (year: number, filename: string) => {
+  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
+  try {
+    if (fs.existsSync(feedPath)) {
+      return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
+    }
+  } catch (e) {
+    console.warn(`⚠️ Failed to load MFL feed ${feedPath}:`, e);
+  }
+  return null;
+};
+
+// Select data for current league year (auto-updates each Feb 14th)
+const rostersData = loadMflFeed(currentLeagueYear, 'rosters.json');
+const playersData = loadMflFeed(currentLeagueYear, 'players.json');
+const salaryAdjustmentsData = loadMflFeed(currentLeagueYear, 'salaryAdjustments.json');
+const leagueData = loadMflFeed(currentLeagueYear, 'league.json');
 
 // =============================================================================
 // CONSTANTS

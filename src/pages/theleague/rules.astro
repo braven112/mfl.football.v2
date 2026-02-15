@@ -1,6 +1,9 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import AnchorNav from '../../components/theleague/AnchorNav.astro';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+
+const mflYear = getCurrentLeagueYear();
 
 // Define all the section links for the anchor navigation
 const sectionLinks = [
@@ -718,7 +721,7 @@ const sectionLinks = [
                 <li>Year 4: $5,656,750</li>
               </ul>
             </li>
-            <li>Link to our <a href="https://www49.myfantasyleague.com/2025/home/13522?MODULE=MESSAGE11">calculator</a> </li>
+            <li>Link to our <a href="{`https://www49.myfantasyleague.com/${mflYear}/home/13522?MODULE=MESSAGE11`}">calculator</a> </li>
           </ul>
         </li>
         <li><strong>Mutual Exclusivity:</strong>
