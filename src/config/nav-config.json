@@ -195,7 +195,14 @@
       "label": "Tools",
       "leagueOnly": "theleague",
       "links": [
-        
+        {
+          "id": "trade-builder",
+          "label": "Trade Builder",
+          "icon": "transactions-2",
+          "path": "/trade-builder",
+          "external": false,
+          "description": "Simulate trades and see cap impact"
+        },
         {
           "id": "calculator",
           "label": "Extension Calculator",
@@ -204,7 +211,6 @@
           "external": false,
           "description": "Calculate contract extension values"
         }
-        
       ]
     },
     {
@@ -251,7 +257,8 @@
     "/mvp": "/mvp",
     "/draft-predictor": "/draft-predictor",
     "/icons": "/icons",
-    "/assets": "/assets"
+    "/assets": "/assets",
+    "/trade-builder": "/trade-builder"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

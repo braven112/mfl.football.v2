@@ -1,0 +1,264 @@
+---
+/**
+ * Trade Builder
+ * Simulate trades between two franchises and see cap impact
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfigData from '../../data/theleague.config.json';
+import TradeBuilder from '../../components/theleague/trade-builder/TradeBuilder';
+import {
+  parseNumber,
+} from '../../utils/formatters';
+import {
+  SALARY_CAP,
+  ROSTER_LIMIT,
+  SALARY_YEARS,
+  normalizeStatus,
+  getCapPercent,
+  calculateCapCharges,
+  aggregateDeadMoney,
+} from '../../utils/salary-calculations';
+import {
+  getTheLeaguePreference,
+  resolveTeamSelection,
+} from '../../utils/team-preferences';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import { chooseTeamName } from '../../utils/team-names';
+import { calculatePlayerCapHitByYear } from '../../utils/trade-calculations';
+import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+
+export const prerender = true;
+
+const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
+
+// Load data feeds for the current league year
+const rostersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/rosters.json',
+  { eager: true }
+);
+const playersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true }
+);
+const salaryAdjFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  { eager: true }
+);
+const draftPickFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
+  { eager: true }
+);
+const salaryAvgModules = import.meta.glob(
+  '../../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+const extractSeason = (filepath: string) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+// Resolve feeds for current league year
+const findFeed = (feeds: Record<string, unknown>, year: string, extractFn: (fp: string) => string | null) => {
+  for (const [path, mod] of Object.entries(feeds)) {
+    if (extractFn(path) === year) return getModuleData(mod) as any;
+  }
+  return null;
+};
+
+const rostersData = findFeed(rostersFeeds, leagueYearStr, extractFeedSeason);
+const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
+const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
+const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
+let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
+// Fallback to most recent available salary averages if current year not found
+if (!salaryAvgData) {
+  const years = Object.keys(salaryAvgModules)
+    .map(extractSeason)
+    .filter((y): y is string => y !== null)
+    .sort()
+    .reverse();
+  if (years.length > 0) {
+    salaryAvgData = findFeed(salaryAvgModules, years[0], extractSeason);
+  }
+}
+
+// Build player lookup from players.json
+const rawPlayers = playersData?.players?.player ?? [];
+const playerMap = new Map<string, any>();
+for (const p of rawPlayers) {
+  playerMap.set(p.id, p);
+}
+
+// Build team config lookup
+const teamConfigMap = new Map(
+  (leagueConfigData.teams ?? []).map((t: any) => [t.franchiseId, t])
+);
+
+// Normalize NFL team codes
+const normalizeTeamCode = (team: string) => {
+  const map: Record<string, string> = {
+    NEP: 'NE', CLV: 'CLE', JAC: 'JAX', KCC: 'KC', LVR: 'LV', OAK: 'LV',
+    SD: 'LAC', ARZ: 'ARI', SFO: 'SF', STL: 'LAR', LA: 'LAR', GBP: 'GB',
+    NOR: 'NO', NOS: 'NO', TBB: 'TB', WSH: 'WAS',
+  };
+  if (!team) return '';
+  const upper = team.toUpperCase();
+  return map[upper] ?? upper;
+};
+
+// Salary adjustments
+const rawAdjustments = salaryAdjData?.salaryAdjustments?.salaryAdjustment ?? [];
+
+// Future draft picks
+const rawDraftPicks = draftPickData?.futureDraftPicks?.franchise ?? [];
+
+// Position salary averages for rookie extension calc
+const positionAverages: Record<string, { top3Average: number; top5Average: number }> = {};
+if (salaryAvgData?.positions) {
+  for (const [pos, data] of Object.entries(salaryAvgData.positions as Record<string, any>)) {
+    positionAverages[pos] = {
+      top3Average: data.top3Average ?? 0,
+      top5Average: data.top5Average ?? 0,
+    };
+  }
+}
+
+// Process all 16 teams
+const franchises = rostersData?.rosters?.franchise ?? [];
+
+const teams = franchises.map((franchise: any) => {
+  const config = teamConfigMap.get(franchise.id) as any;
+  const teamName = config
+    ? chooseTeamName({
+        fullName: config.name,
+        nameMedium: config.nameMedium,
+        nameShort: config.nameShort,
+        abbrev: config.abbrev,
+      })
+    : `Team ${franchise.id}`;
+
+  // Process players
+  const rawRosterPlayers = Array.isArray(franchise.player) ? franchise.player : [];
+  const players = rawRosterPlayers.map((rp: any) => {
+    const pData = playerMap.get(rp.id);
+    const salary = parseNumber(rp.salary);
+    const contractYears = parseInt(rp.contractYear ?? '0', 10) || 0;
+    const contractInfo = rp.contractInfo ?? '';
+    const status = rp.status ?? 'ROSTER';
+    const norm = normalizeStatus(status);
+    const position = pData?.position ?? 'N/A';
+    const nflTeam = normalizeTeamCode(pData?.team ?? '');
+
+    return {
+      id: rp.id,
+      name: pData?.name ?? `Player ${rp.id}`,
+      position,
+      salary,
+      contractYears,
+      contractInfo,
+      status,
+      normalizedStatus: norm,
+      nflTeam,
+      headshot: getPlayerHeadshot(rp.id, pData?.espn_id),
+      nflLogo: getNflLogoUrl(nflTeam),
+      isRookie: contractInfo.startsWith('R'),
+      isFranchiseTagged: contractInfo === 'F',
+      capHitByYear: calculatePlayerCapHitByYear(salary, contractYears, norm),
+    };
+  });
+
+  // Cap charges and dead money
+  const capPlayers = players.map((p: any) => ({
+    salary: p.salary,
+    contractYears: p.contractYears,
+    displayTag: p.normalizedStatus === 'PRACTICE' ? 'practice'
+      : p.normalizedStatus === 'INJURED' ? 'injured'
+      : 'active',
+  }));
+  const capCharges = calculateCapCharges(capPlayers);
+
+  // Dead money for this franchise
+  const teamAdjustments = rawAdjustments
+    .filter((adj: any) => adj.franchise_id === franchise.id)
+    .map((adj: any) => ({
+      franchiseId: adj.franchise_id,
+      amount: adj.amount,
+    }));
+  const deadMoney = aggregateDeadMoney(teamAdjustments);
+
+  const currentCapSpace = SALARY_CAP - capCharges[0] - (deadMoney[0] ?? 0);
+  const totalSalary = players.reduce((sum: number, p: any) => sum + p.salary, 0);
+
+  // Draft picks
+  const picksFranchise = rawDraftPicks.find((f: any) => f.id === franchise.id);
+  const rawPicks = picksFranchise?.futureDraftPick ?? [];
+  const draftPicks = (Array.isArray(rawPicks) ? rawPicks : [rawPicks]).map((dp: any) => {
+    const origTeamConfig = teamConfigMap.get(dp.originalPickFor) as any;
+    return {
+      year: dp.year,
+      round: dp.round,
+      originalPickFor: dp.originalPickFor,
+      originalTeamName: origTeamConfig
+        ? chooseTeamName({
+            fullName: origTeamConfig.name,
+            nameMedium: origTeamConfig.nameMedium,
+            nameShort: origTeamConfig.nameShort,
+            abbrev: origTeamConfig.abbrev,
+          }, 'short')
+        : `Team ${dp.originalPickFor}`,
+    };
+  });
+
+  return {
+    franchiseId: franchise.id,
+    name: config?.name ?? `Team ${franchise.id}`,
+    nameMedium: config?.nameMedium ?? teamName,
+    nameShort: config?.nameShort ?? teamName,
+    abbrev: config?.abbrev ?? franchise.id,
+    icon: config?.icon ?? '',
+    division: config?.division ?? '',
+    players,
+    draftPicks,
+    capCharges,
+    deadMoney,
+    currentCapSpace,
+    totalSalary,
+    rosterCount: players.length,
+  };
+});
+
+// Determine default team from user preferences
+const theLeaguePref = getTheLeaguePreference(Astro.cookies);
+const defaultTeam = resolveTeamSelection({
+  myTeamParam: Astro.url.searchParams.get('myteam'),
+  cookiePreference: theLeaguePref?.franchiseId,
+  defaultTeam: '0001',
+});
+
+const pageData = {
+  teams,
+  salaryYears: SALARY_YEARS,
+  salaryCap: SALARY_CAP,
+  rosterLimit: ROSTER_LIMIT,
+  leagueYear,
+  positionAverages,
+};
+---
+
+<TheLeagueLayout title="Trade Builder | The League">
+  <TradeBuilder
+    client:load
+    pageData={JSON.stringify(pageData)}
+    defaultTeamId={defaultTeam}
+  />
+</TheLeagueLayout>
