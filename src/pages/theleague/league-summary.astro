@@ -7,7 +7,6 @@ import {
   computeLeagueSummary,
   parseSalaryAdjustment,
   CATEGORY_DEFINITIONS,
-  SUMMARY_YEARS,
   type SalaryPlayer,
   type TeamConfig,
 } from '../../utils/league-summary-utils';
@@ -144,12 +143,12 @@ const teamsForDisplay = teamSummaries.map((team) => {
   <div class="league-summary-container">
     <h1>League Summary</h1>
     <p class="subtitle">
-      Compare all 16 teams across cap, roster, and contract metrics — projected {SUMMARY_YEARS[0]}–{SUMMARY_YEARS[SUMMARY_YEARS.length - 1]}
+      Compare all 16 teams across cap, roster, and contract metrics — projected {SALARY_YEARS[0]}–{SALARY_YEARS[SALARY_YEARS.length - 1]}
     </p>
 
     <LeagueSummaryTable
       teams={teamsForDisplay}
-      years={SUMMARY_YEARS}
+      years={SALARY_YEARS}
       categories={CATEGORY_DEFINITIONS}
     />
   </div>
