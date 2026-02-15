@@ -125,7 +125,7 @@ Vercel will automatically deploy with the auth system.
 
 ### 3. Test on Production
 
-Visit: `https://mflfootballv2.vercel.app/login`
+Visit: `https://www.theleague.us/login`
 
 ---
 

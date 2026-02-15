@@ -981,7 +981,7 @@ if (newSourceRank) ranks.push(newSourceRank);
 
 1. Build static site: `pnpm run build`
 2. Deploy to Vercel (automatic on push to main)
-3. Access at: `https://mflfootballv2.vercel.app/theleague/auction-predictor`
+3. Access at: `https://www.theleague.us/theleague/auction-predictor`
 4. No authentication required (unlisted URL)
 
 ---
