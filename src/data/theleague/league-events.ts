@@ -113,7 +113,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   {
     id: 'offseason-fa-opens',
     name: 'Offseason Free Agency Opens',
-    description: 'Blind-bid auction for all free agents begins',
+    description: 'Auction for all free agents begins',
     icon: 'banknote',
     category: 'free-agency',
     startDate: { type: 'computed', rule: 'third-thursday-march' },
@@ -187,7 +187,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   {
     id: 'offseason-fa-closes',
     name: 'Offseason FA Closes for New Bids',
-    description: 'No new auctions can start after this date. Remaining blind bids and live auctions will finish.',
+    description: 'No new auctions can start after this date. Remaining bids and live auctions will finish.',
     icon: 'podium-persona',
     category: 'free-agency',
     startDate: { type: 'computed', rule: 'third-sunday-august' },
