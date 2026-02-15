@@ -3,6 +3,7 @@
  */
 
 import { parseNumber } from './formatters';
+import { getCurrentLeagueYear } from './league-year';
 
 /**
  * Fantasy football salary cap constants
@@ -13,9 +14,13 @@ export const TARGET_ACTIVE_COUNT = 22;
 export const RESERVE_FOR_ROOKIES = 5_000_000;
 
 /**
- * Salary years for multi-year contract projections
+ * Salary years for multi-year contract projections.
+ * Derived from getCurrentLeagueYear() so it auto-updates each year.
  */
-export const SALARY_YEARS = [2025, 2026, 2027, 2028, 2029];
+export const SALARY_YEARS = (() => {
+  const base = getCurrentLeagueYear();
+  return [base, base + 1, base + 2, base + 3, base + 4];
+})();
 
 /**
  * Cap inclusion percentages by player status

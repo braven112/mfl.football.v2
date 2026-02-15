@@ -12,10 +12,17 @@ const getNonEmpty = (value) => {
   const trimmed = String(value).trim();
   return trimmed.length ? trimmed : undefined;
 };
+// Auto-detect current league year (after Feb 14 → next calendar year)
+const autoDetectLeagueYear = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const febCutoff = new Date(year, 1, 14, 16, 45, 0, 0); // Feb 14 @ 8:45 PT (16:45 UTC)
+  return now >= febCutoff ? String(year + 1) : String(year);
+};
 const season =
   getNonEmpty(env.MFL_SEASON) ??
   getNonEmpty(env.MFL_YEAR) ??
-  '2025';
+  autoDetectLeagueYear();
 const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
 const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? leagueId;
 const apiBase = getNonEmpty(env.MFL_API_BASE) ?? 'https://api.myfantasyleague.com';

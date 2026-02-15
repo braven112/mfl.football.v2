@@ -43,7 +43,8 @@ const NFL_TEAM_NAMES: Record<string, string> = {
   SF: 'San Francisco', TB: 'Tampa Bay', TEN: 'Tennessee', WAS: 'Washington',
 };
 
-const { players = [], salaryAverages = {}, season = '2025', showTeamLogo = true } = Astro.props;
+import { getCurrentLeagueYear } from '../../utils/league-year';
+const { players = [], salaryAverages = {}, season = String(getCurrentLeagueYear()), showTeamLogo = true } = Astro.props;
 const seasonAverages = salaryAverages[season] ?? {};
 
 const SALARY_THRESHOLD = 2_500_000; // $2.5 million

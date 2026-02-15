@@ -36,10 +36,8 @@ import {
   calculateContractYearsMeta,
 } from '../../utils/salary-calculations';
 import { getAuthUser } from '../../utils/auth';
-import tradeBait2025Data from '../../../data/theleague/mfl-feeds/2025/tradeBait.json';
-import projectedScores2025Data from '../../../data/theleague/mfl-feeds/2025/projectedScores.json';
-import weeklyResultsRaw2025Data from '../../../data/theleague/mfl-feeds/2025/weekly-results-raw.json';
-import fantasyPointsAllowed2025Data from '../../../data/theleague/mfl-feeds/2025/fantasyPointsAllowed.json';
+import fs from 'fs';
+import path from 'path';
 import espnNewsData from '../../../data/theleague/nfl-news-week15.json';
 import { calculateDraftOrder, buildActualDraftPicks } from '../../utils/draft-utils';
 import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
@@ -351,7 +349,10 @@ for (let i = 0; i < 3; i++) {
   if (w > 0) trendWeeks.unshift(w);
 }
 
-const playerScoresMap = processWeeklyScores(weeklyResultsRaw2025Data, currentWeekNum);
+// Use season year for game-related data (results, projections, etc.)
+const currentSeasonYearStr = String(getCurrentSeasonYear());
+// weeklyResultsRawData is loaded below with other season-specific feeds
+// playerScoresMap is computed after the feed loading block
 
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
@@ -404,6 +405,43 @@ const extractFeedSeason = (filepath) => {
   const match = filepath.match(/mfl-feeds\/(\d{4})\//);
   return match ? match[1] : null;
 };
+
+// Load season-specific feed data using fs — avoids globbing massive JSON files
+const loadFeedJson = (year: string | number, filename: string) => {
+  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
+  try {
+    if (fs.existsSync(feedPath)) {
+      return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
+    }
+  } catch (e) {
+    console.warn(`⚠️ Failed to load feed ${feedPath}:`, e);
+  }
+  return null;
+};
+
+// Build season-indexed lookups — load current league year + current season year
+const currentLeagueYearStr = String(getCurrentLeagueYear());
+const feedYears = [...new Set([currentLeagueYearStr, currentSeasonYearStr])];
+
+const tradeBaitBySeason = {};
+const projectedScoresBySeason = {};
+const weeklyResultsRawBySeason = {};
+const fantasyPointsAllowedBySeason = {};
+
+feedYears.forEach((yr) => {
+  const tb = loadFeedJson(yr, 'tradeBait.json');
+  if (tb) tradeBaitBySeason[yr] = new Set(tb);
+  const ps = loadFeedJson(yr, 'projectedScores.json');
+  if (ps) projectedScoresBySeason[yr] = ps;
+  const wr = loadFeedJson(yr, 'weekly-results-raw.json');
+  if (wr) weeklyResultsRawBySeason[yr] = wr;
+  const fpa = loadFeedJson(yr, 'fantasyPointsAllowed.json');
+  if (fpa) fantasyPointsAllowedBySeason[yr] = fpa;
+});
+
+// Now compute playerScoresMap from the loaded weekly results
+const weeklyResultsRawData = weeklyResultsRawBySeason[currentSeasonYearStr] ?? {};
+const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum);
 
 const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
 
@@ -732,45 +770,11 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
   });
 });
 
-// Cross-reference transactions to fix stale roster data
-// MFL's rosters API can be stale during the offseason pre-rollover window,
-// so we replay roster-affecting transactions chronologically to reconcile
-const ROSTER_TXN_TYPES = new Set(['FREE_AGENT', 'BBID_WAIVER', 'AUCTION_WON']);
-const isPlayerId = (val) => /^\d{3,6}$/.test(val); // Player IDs are 3-6 digit numbers
-Object.entries(transactionsFeeds).forEach(([path, mod]) => {
-  const season = extractFeedSeason(path);
-  if (!season || !liveRosterDataByPlayerId[season]) return;
-  const data = getModuleData(mod);
-  const txns = data?.transactions?.transaction ?? [];
-  if (!Array.isArray(txns)) return;
-  // Sort by timestamp ascending so we replay in order
-  const rosterTxns = txns
-    .filter((t) => ROSTER_TXN_TYPES.has(t.type) && t.transaction)
-    .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
-  rosterTxns.forEach((txn) => {
-    const franchiseId = txn.franchise;
-    const parts = txn.transaction.split('|');
-    // FREE_AGENT: "adds|drops" (2 parts)
-    // BBID_WAIVER: "adds|bidAmount|drops" (3 parts)
-    // AUCTION_WON: "playerId|bidAmount|" (3 parts)
-    const addPart = parts[0] || '';
-    const dropPart = parts.length === 3 ? (parts[2] || '') : (parts[1] || '');
-    // Process drops first (remove from roster)
-    dropPart.split(',').filter(isPlayerId).forEach((playerId) => {
-      delete liveRosterDataByPlayerId[season][playerId];
-    });
-    // Process adds (add to franchise roster)
-    addPart.split(',').filter(isPlayerId).forEach((playerId) => {
-      liveRosterDataByPlayerId[season][playerId] = {
-        franchiseId,
-        salary: null,
-        contractYear: null,
-        contractInfo: null,
-        status: 'ROSTER',
-      };
-    });
-  });
-});
+// MFL rosters API is the single source of truth for roster assignments.
+// Previously, transaction replay logic was used here to fix stale pre-rollover data,
+// but now that we fetch fresh MFL feeds directly, this is no longer needed.
+// The liveRosterDataByPlayerId map built above from mfl-feeds/*/rosters.json
+// already reflects the authoritative roster state from MFL.
 
 // Load MFL injury data for current season (dynamically determined week)
 const currentWeek = getCurrentWeek();
@@ -850,8 +854,9 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
   const feedPlayers = playersFeedBySeason[season] ?? {};
   const liveRosterData = liveRosterDataByPlayerId[season] ?? {};
 
-  // Projections Map (only for current season usually, but simplified for now)
-  const projectedScores = projectedScores2025Data?.projectedScores?.playerScore || [];
+  // Projections Map — use the season's projected scores data
+  const projectedScoresData = projectedScoresBySeason[season] ?? projectedScoresBySeason[currentSeasonYearStr] ?? {};
+  const projectedScores = projectedScoresData?.projectedScores?.playerScore || [];
   const projectionMap = new Map();
   if (Array.isArray(projectedScores)) {
     projectedScores.forEach(p => projectionMap.set(p.id, p.score));
@@ -917,9 +922,10 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
 
     // Get Opponent Stats (Rank/Avg)
     let oppStats = null;
-    if (gameOdds && season === '2025') {
+    const fpaData = fantasyPointsAllowedBySeason[season] ?? fantasyPointsAllowedBySeason[currentSeasonYearStr];
+    if (gameOdds && fpaData?.fantasyPointsAllowed) {
       const oppCode = gameOdds.opponent === 'JAX' ? 'JAC' : gameOdds.opponent === 'WAS' ? 'WSH' : gameOdds.opponent;
-      const teamStats = fantasyPointsAllowed2025Data.fantasyPointsAllowed[oppCode] || fantasyPointsAllowed2025Data.fantasyPointsAllowed[gameOdds.opponent];
+      const teamStats = fpaData.fantasyPointsAllowed[oppCode] || fpaData.fantasyPointsAllowed[gameOdds.opponent];
       if (teamStats) {
         oppStats = teamStats[player.position];
       }
@@ -1111,12 +1117,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
   };
 };
 
-// Build tradeBait lookup by season
-const tradeBaitBySeason = {
-  '2025': new Set(tradeBait2025Data ?? []),
-};
-console.log('DEBUG: tradeBait2025Data =', tradeBait2025Data);
-console.log('DEBUG: tradeBaitBySeason["2025"] =', tradeBaitBySeason['2025']);
+// tradeBaitBySeason is built dynamically from glob feeds above
 
 const rostersBySeason = {};
 Object.entries(rosterModules).forEach(([path, mod]) => {
@@ -1164,7 +1165,7 @@ const currentLeagueYear = getCurrentLeagueYear();
 const preferredSeason = seasonOptions.find(
   (season) => Number(season) === currentLeagueYear
 );
-const defaultSeason = preferredSeason ?? seasonOptions[0] ?? seasonOptions.at(-1) ?? '2025';
+const defaultSeason = preferredSeason ?? seasonOptions[0] ?? seasonOptions.at(-1) ?? String(currentLeagueYear);
 
 // Normalize franchise ids so "8" and "0008" resolve to the same team
 const normalizeFranchiseId = (id) => {
@@ -5382,7 +5383,7 @@ const serializedConfig = JSON.stringify({
             ? player.nflLogo
             : player.headshot ?? getPlayerHeadshot(player.id, player.espnId);
 
-          const salaryCells = (salaryYears && salaryYears.length > 0 ? salaryYears : [2025, 2026, 2027, 2028, 2029])
+          const salaryCells = salaryYears
             .map((year, index) => {
               const columnKey = `year${index + 1}`;
               const isUfa = !(parseInt(player.contractYears, 10) > index);

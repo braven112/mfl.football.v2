@@ -51,7 +51,17 @@ function getCurrentNFLWeek(seasonYear = 2025) {
 }
 
 const leagueId = process.env.MFL_LEAGUE_ID || '13522';
-const year = process.env.MFL_YEAR || '2025';
+// Auto-detect season year based on Labor Day boundary
+const autoDetectSeasonYear = () => {
+  const now = new Date();
+  const calYear = now.getFullYear();
+  // Labor Day = first Monday in September
+  const sept1 = new Date(calYear, 8, 1);
+  const dayOfWeek = sept1.getDay();
+  const laborDay = new Date(calYear, 8, 1 + (dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : 8 - dayOfWeek));
+  return String(now >= laborDay ? calYear : calYear - 1);
+};
+const year = process.env.MFL_YEAR || autoDetectSeasonYear();
 const currentWeek = process.env.CURRENT_WEEK || String(getCurrentNFLWeek(parseInt(year)));
 
 /**
