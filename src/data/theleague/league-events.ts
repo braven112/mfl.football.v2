@@ -239,7 +239,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   {
     id: 'playoffs-start',
     name: 'Playoffs Begin',
-    description: 'Fantasy playoff brackets start — top 6 teams compete',
+    description: 'Fantasy playoff brackets start — top 7 teams compete',
     icon: 'playoff',
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'playoffs-start' },
