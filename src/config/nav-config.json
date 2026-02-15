@@ -55,6 +55,15 @@
           "path": "/playoffs",
           "external": false,
           "description": "Playoff bracket and results"
+        },
+        {
+          "id": "league-calendar",
+          "label": "League Calendar",
+          "icon": "calendar",
+          "path": "/calendar",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "View upcoming league events and deadlines"
         }
       ]
     },
@@ -258,7 +267,8 @@
     "/draft-predictor": "/draft-predictor",
     "/icons": "/icons",
     "/assets": "/assets",
-    "/trade-builder": "/trade-builder"
+    "/trade-builder": "/trade-builder",
+    "/calendar": "/calendar"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
