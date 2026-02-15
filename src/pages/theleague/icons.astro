@@ -429,8 +429,14 @@ for (const { id } of uniqueIconEntries) {
     font-weight: 700;
     color: #0f172a;
     font-size: 0.8rem;
-    word-break: break-all;
     text-align: center;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .icon-name::-webkit-scrollbar {
+    display: none;
   }
 
   .icon-preview {
