@@ -1,0 +1,191 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import LeagueSummaryTable from '../../components/theleague/LeagueSummaryTable.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { SALARY_YEARS } from '../../utils/salary-calculations';
+import {
+  computeLeagueSummary,
+  parseSalaryAdjustment,
+  CATEGORY_DEFINITIONS,
+  type SalaryPlayer,
+  type TeamConfig,
+} from '../../utils/league-summary-utils';
+import { chooseTeamName } from '../../utils/team-names';
+import { parseNumber } from '../../utils/formatters';
+
+export const prerender = true;
+
+// ---------------------------------------------------------------------------
+// Data loading — same patterns as league-comparison.astro and rosters.astro
+// ---------------------------------------------------------------------------
+
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
+  eager: true,
+});
+
+const salaryAdjustmentFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  { eager: true }
+);
+
+const futureDraftPicksFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath: string): string | null => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const extractFeedSeason = (filepath: string): string | null => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Get latest roster data
+const rosterEntries = Object.entries(rosterModules)
+  .map(([path, mod]) => ({
+    season: extractSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season && item.data)
+  .sort((a, b) => parseInt(b.season!) - parseInt(a.season!));
+
+const latestRoster = rosterEntries[0]?.data || {};
+const currentYear = rosterEntries[0]?.season || String(SALARY_YEARS[0]);
+
+// Get salary adjustments for the current year
+const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
+  .map(([path, mod]) => ({
+    season: extractFeedSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season === currentYear && item.data);
+
+const adjustmentData = adjustmentEntries[0]?.data || {};
+const rawAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
+
+// Get future draft picks for the current year
+const draftPicksEntries = Object.entries(futureDraftPicksFeeds)
+  .map(([path, mod]) => ({
+    season: extractFeedSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season === currentYear && item.data);
+
+const futureDraftPicksData = draftPicksEntries[0]?.data || null;
+
+// ---------------------------------------------------------------------------
+// Build team configs from league config
+// ---------------------------------------------------------------------------
+
+const teamConfigs: TeamConfig[] = (leagueConfig.teams ?? []).map((team: any) => ({
+  franchiseId: team.franchiseId,
+  name: team.name,
+  nameMedium: team.nameMedium,
+  nameShort: team.nameShort,
+  abbrev: team.abbrev,
+  icon: team.icon,
+  division: team.division,
+}));
+
+// ---------------------------------------------------------------------------
+// Build flat player array from salary data
+// ---------------------------------------------------------------------------
+
+const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  position: p.position ?? '',
+  salary: parseNumber(p.salary),
+  franchiseId: p.franchiseId ?? '',
+  status: p.status ?? 'ROSTER',
+  contractYear: p.contractYear ?? '0',
+  points: parseNumber(p.points),
+  birthdate: parseNumber(p.birthdate),
+}));
+
+// ---------------------------------------------------------------------------
+// Compute summary data
+// ---------------------------------------------------------------------------
+
+const teamSummaries = computeLeagueSummary(
+  players,
+  rawAdjustments,
+  futureDraftPicksData,
+  teamConfigs,
+);
+
+// Apply team name display rules
+const teamsForDisplay = teamSummaries.map((team) => {
+  const config = teamConfigs.find((t) => t.franchiseId === team.franchiseId);
+  return {
+    ...team,
+    teamName: chooseTeamName(
+      {
+        fullName: team.teamName,
+        nameMedium: config?.nameMedium,
+        nameShort: config?.nameShort,
+        abbrev: config?.abbrev,
+      },
+      'default'
+    ),
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Trim first year (current year) — league summary focuses on future years
+// ---------------------------------------------------------------------------
+
+const DISPLAY_YEARS = SALARY_YEARS.slice(1); // e.g., [2026, 2027, 2028, 2029]
+
+const teamsForTable = teamsForDisplay.map((team) => ({
+  ...team,
+  metrics: Object.fromEntries(
+    Object.entries(team.metrics).map(([key, values]) => [key, values.slice(1)])
+  ),
+  positionalDepth: team.positionalDepth.slice(1),
+  positionalSpend: team.positionalSpend.slice(1),
+}));
+---
+
+<TheLeagueLayout title="League Summary">
+  <div class="league-summary-container">
+    <h1>League Summary</h1>
+    <p class="subtitle">
+      Compare all 16 teams across cap, roster, and contract metrics — projected {DISPLAY_YEARS[0]}–{DISPLAY_YEARS[DISPLAY_YEARS.length - 1]}
+    </p>
+
+    <LeagueSummaryTable
+      teams={teamsForTable}
+      years={DISPLAY_YEARS}
+      categories={CATEGORY_DEFINITIONS}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .league-summary-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1a1a1a;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: 2rem;
+  }
+</style>

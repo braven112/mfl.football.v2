@@ -1,0 +1,531 @@
+---
+import type { TeamSummary, CategoryDefinition } from '../../utils/league-summary-utils';
+
+interface Props {
+  teams: TeamSummary[];
+  years: number[];
+  categories: CategoryDefinition[];
+}
+
+const { teams, years, categories } = Astro.props;
+
+// Serialize data for client-side JS
+const serializedData = JSON.stringify({ teams, years, categories });
+---
+
+<div class="league-summary" id="league-summary" data-config={serializedData}>
+  <!-- Controls -->
+  <div class="league-summary__controls">
+    <div class="league-summary__category-group">
+      <label for="category-select" class="league-summary__label">Category</label>
+      <select id="category-select" class="league-summary__select">
+        <optgroup label="Core Metrics">
+          {categories.filter(c => c.milestone === 1).map(c => (
+            <option value={c.id} selected={c.id === 'capSpace'}>{c.name}</option>
+          ))}
+        </optgroup>
+        <optgroup label="Advanced Metrics">
+          {categories.filter(c => c.milestone === 2).map(c => (
+            <option value={c.id}>{c.name}</option>
+          ))}
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="league-summary__subcategory-group" id="subcategory-group" style="display: none;">
+      <label class="league-summary__label">Position</label>
+      <div class="league-summary__pills" id="subcategory-pills"></div>
+    </div>
+  </div>
+
+  <p class="league-summary__description" id="category-description">
+    {categories.find(c => c.id === 'capSpace')?.description ?? ''}
+  </p>
+
+  <!-- Table -->
+  <div class="league-summary__table-wrapper">
+    <table class="league-summary__table" id="summary-table">
+      <thead>
+        <tr>
+          <th class="league-summary__th league-summary__th--team" data-sort="team">Team</th>
+          {years.map((year, yi) => (
+            <th class="league-summary__th league-summary__th--year" data-sort={String(yi)}>{year}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody id="summary-tbody">
+        {teams.map(team => (
+          <tr class="league-summary__row" data-franchise-id={team.franchiseId}>
+            <td class="league-summary__td league-summary__td--team">
+              <div class="league-summary__team-cell">
+                {team.teamIcon && (
+                  <img src={team.teamIcon} alt="" class="league-summary__team-icon" loading="lazy" />
+                )}
+                <span class="league-summary__team-name">{team.teamName}</span>
+              </div>
+            </td>
+            {years.map((_, yi) => (
+              <td class="league-summary__td league-summary__td--value" data-year-index={String(yi)}></td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legend -->
+  <div class="league-summary__legend">
+    <span class="league-summary__legend-item">
+      <span class="league-summary__legend-swatch league-summary__legend-swatch--top"></span>
+      Top quartile
+    </span>
+    <span class="league-summary__legend-item">
+      <span class="league-summary__legend-swatch league-summary__legend-swatch--bottom"></span>
+      Bottom quartile
+    </span>
+  </div>
+</div>
+
+<script>
+  const container = document.getElementById('league-summary');
+  if (container) {
+    const config = JSON.parse(container.dataset.config || '{}');
+    const { teams, years, categories } = config;
+
+    // State
+    let selectedCategory = 'capSpace';
+    let selectedSubCategory = null;
+    let sortColumn = 'team';
+    let sortDirection = 'asc';
+    let preferredTeamId = null;
+
+    // Read preferred team from cookie
+    try {
+      const match = document.cookie.match(/theleague_team_pref=([^;]+)/);
+      if (match) {
+        const pref = JSON.parse(decodeURIComponent(match[1]));
+        preferredTeamId = pref?.franchiseId ?? null;
+      }
+    } catch {}
+
+    // DOM references
+    const categorySelect = document.getElementById('category-select') as HTMLSelectElement;
+    const descriptionEl = document.getElementById('category-description');
+    const tbody = document.getElementById('summary-tbody');
+    const subcategoryGroup = document.getElementById('subcategory-group');
+    const subcategoryPills = document.getElementById('subcategory-pills');
+    const headerCells = container.querySelectorAll('.league-summary__th');
+
+    // Helpers
+    function getCategory() {
+      return categories.find((c: any) => c.id === selectedCategory) || categories[0];
+    }
+
+    function getTeamValue(team: any, yearIndex: number): number {
+      const cat = getCategory();
+      if (cat.id === 'positionalDepth' && selectedSubCategory) {
+        return team.positionalDepth[yearIndex]?.[selectedSubCategory] ?? 0;
+      }
+      if (cat.id === 'positionalSpend' && selectedSubCategory) {
+        return team.positionalSpend[yearIndex]?.[selectedSubCategory] ?? 0;
+      }
+      return team.metrics[cat.id]?.[yearIndex] ?? 0;
+    }
+
+    function formatValue(value: number, format: string): string {
+      if (!Number.isFinite(value)) return '\u2014';
+      switch (format) {
+        case 'currency':
+          return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+        case 'compactCurrency': {
+          if (Math.abs(value) >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+          if (Math.abs(value) >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+          return `$${value.toFixed(0)}`;
+        }
+        case 'number': return String(Math.round(value));
+        case 'decimal': case 'age': return value.toFixed(1);
+        case 'percentage': return `${value.toFixed(1)}%`;
+        default: return String(value);
+      }
+    }
+
+    function rankTeamsForColumn(values: number[], direction: string): number[] {
+      const indexed = values.map((v, i) => ({ i, v }));
+      indexed.sort((a, b) => direction === 'asc' ? b.v - a.v : a.v - b.v);
+      const ranks = new Array(values.length);
+      indexed.forEach((item, rank) => { ranks[item.i] = rank + 1; });
+      return ranks;
+    }
+
+    function getCellColor(rank: number, total: number, direction: string): string {
+      const quartile = Math.ceil(total / 4);
+      const isTop = direction === 'asc' ? rank <= quartile : rank > total - quartile;
+      const isBottom = direction === 'asc' ? rank > total - quartile : rank <= quartile;
+      if (isTop) return 'hsl(142, 71%, 93%)';
+      if (isBottom) return 'hsl(0, 84%, 95%)';
+      return '';
+    }
+
+    function renderTable() {
+      if (!tbody) return;
+      const cat = getCategory();
+
+      // Sort teams
+      const sorted = [...teams];
+      sorted.sort((a: any, b: any) => {
+        if (sortColumn === 'team') {
+          return sortDirection === 'asc'
+            ? a.teamName.localeCompare(b.teamName)
+            : b.teamName.localeCompare(a.teamName);
+        }
+        const yi = Number(sortColumn);
+        const aVal = getTeamValue(a, yi);
+        const bVal = getTeamValue(b, yi);
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+
+      // Calculate ranks per year column
+      const ranksByYear = years.map((_: any, yi: number) => {
+        const values = sorted.map((t: any) => getTeamValue(t, yi));
+        return rankTeamsForColumn(values, cat.direction);
+      });
+
+      // Reorder rows
+      sorted.forEach((team: any) => {
+        const row = tbody.querySelector(`[data-franchise-id="${team.franchiseId}"]`);
+        if (row) tbody.appendChild(row);
+      });
+
+      // Update cells
+      sorted.forEach((team: any, teamIndex: number) => {
+        const row = tbody.querySelector(`[data-franchise-id="${team.franchiseId}"]`) as HTMLElement;
+        if (!row) return;
+
+        // Preferred team highlight
+        row.classList.toggle('league-summary__row--preferred', team.franchiseId === preferredTeamId);
+
+        // Update value cells
+        const cells = row.querySelectorAll('.league-summary__td--value');
+        cells.forEach((cell: Element, yi: number) => {
+          const value = getTeamValue(team, yi);
+          (cell as HTMLElement).textContent = formatValue(value, cat.format);
+          const rank = ranksByYear[yi][teamIndex];
+          (cell as HTMLElement).style.backgroundColor = getCellColor(rank, teams.length, cat.direction);
+        });
+      });
+
+      // Update sort indicators in headers
+      headerCells.forEach((th: Element) => {
+        const sortKey = (th as HTMLElement).dataset.sort;
+        const isSorted = sortKey === sortColumn;
+        th.classList.toggle('league-summary__th--sorted', isSorted);
+        // Update text to include arrow
+        const baseText = sortKey === 'team' ? 'Team' : years[Number(sortKey)];
+        (th as HTMLElement).textContent = isSorted
+          ? `${baseText} ${sortDirection === 'asc' ? '\u25B2' : '\u25BC'}`
+          : String(baseText);
+      });
+    }
+
+    function renderSubCategories() {
+      if (!subcategoryGroup || !subcategoryPills) return;
+      const cat = getCategory();
+      if (cat.subCategories && cat.subCategories.length > 0) {
+        subcategoryGroup.style.display = '';
+        subcategoryPills.innerHTML = cat.subCategories.map((sub: any) =>
+          `<button class="league-summary__pill ${selectedSubCategory === sub.id ? 'league-summary__pill--active' : ''}" data-sub-id="${sub.id}">${sub.name}</button>`
+        ).join('');
+
+        // Bind pill clicks
+        subcategoryPills.querySelectorAll('.league-summary__pill').forEach((btn: Element) => {
+          btn.addEventListener('click', () => {
+            selectedSubCategory = (btn as HTMLElement).dataset.subId || null;
+            renderSubCategories();
+            renderTable();
+          });
+        });
+      } else {
+        subcategoryGroup.style.display = 'none';
+        selectedSubCategory = null;
+      }
+    }
+
+    // Event: category change
+    categorySelect?.addEventListener('change', () => {
+      selectedCategory = categorySelect.value;
+      const cat = getCategory();
+      if (descriptionEl) descriptionEl.textContent = cat.description;
+
+      // Reset sub-category
+      if (cat.subCategories && cat.subCategories.length > 0) {
+        selectedSubCategory = cat.subCategories[0].id;
+      } else {
+        selectedSubCategory = null;
+      }
+
+      renderSubCategories();
+      renderTable();
+    });
+
+    // Event: column sorting
+    headerCells.forEach((th: Element) => {
+      th.addEventListener('click', () => {
+        const col = (th as HTMLElement).dataset.sort || 'team';
+        if (sortColumn === col) {
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortColumn = col;
+          const cat = getCategory();
+          sortDirection = cat.direction === 'asc' ? 'desc' : 'asc';
+        }
+        renderTable();
+      });
+    });
+
+    // Initial render
+    renderSubCategories();
+    renderTable();
+  }
+</script>
+
+<style>
+  .league-summary {
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .league-summary__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+  }
+
+  .league-summary__category-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .league-summary__subcategory-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .league-summary__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .league-summary__select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: #1a1a1a;
+    background: #fff;
+    cursor: pointer;
+    min-width: 220px;
+  }
+
+  .league-summary__select:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+  }
+
+  .league-summary__pills {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  :global(.league-summary__pill) {
+    padding: 0.375rem 0.625rem;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 0.25rem;
+    background: #fff;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  :global(.league-summary__pill:hover) {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  :global(.league-summary__pill--active) {
+    background: #3b82f6;
+    color: #fff;
+    border-color: #2563eb;
+  }
+
+  .league-summary__description {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+  }
+
+  .league-summary__table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm, 0.5px 1px 1px hsl(220deg 3% 15% / 0.1));
+  }
+
+  .league-summary__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .league-summary__th {
+    padding: 0.625rem 0.75rem;
+    background: #f8fafc;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e8f0);
+    font-weight: 600;
+    color: #475569;
+    text-align: right;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .league-summary__th:hover {
+    background: #f1f5f9;
+  }
+
+  :global(.league-summary__th--sorted) {
+    color: var(--primary-color, #1c497c);
+    background: #eff6ff;
+  }
+
+  .league-summary__th--team {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 160px;
+  }
+
+  .league-summary__th--year {
+    min-width: 100px;
+  }
+
+  .league-summary__row {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.1s ease;
+  }
+
+  .league-summary__row:hover {
+    filter: brightness(0.97);
+  }
+
+  :global(.league-summary__row--preferred) {
+    border-left: 3px solid var(--primary-color, #1c497c);
+  }
+
+  :global(.league-summary__row--preferred) .league-summary__td--team {
+    background: rgba(28, 73, 124, 0.05);
+    font-weight: 600;
+  }
+
+  .league-summary__td {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .league-summary__td--team {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 1;
+    border-right: 1px solid var(--primary-content-border-color, #e2e8f0);
+  }
+
+  .league-summary__td--value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    transition: background-color 0.2s ease;
+  }
+
+  .league-summary__team-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .league-summary__team-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .league-summary__team-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .league-summary__legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  .league-summary__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .league-summary__legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .league-summary__legend-swatch--top {
+    background-color: hsl(142, 71%, 93%);
+  }
+
+  .league-summary__legend-swatch--bottom {
+    background-color: hsl(0, 84%, 95%);
+  }
+
+  @media (max-width: 640px) {
+    .league-summary__th--team {
+      min-width: 120px;
+    }
+
+    .league-summary__th--year {
+      min-width: 80px;
+    }
+
+    .league-summary__team-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .league-summary__table {
+      font-size: 0.8rem;
+    }
+
+    .league-summary__select {
+      min-width: 180px;
+    }
+  }
+</style>
