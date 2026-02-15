@@ -244,8 +244,8 @@ describe('selectWhatsNextTimeline', () => {
   });
 
   it('should handle end-of-year gracefully', () => {
-    // December 31 - after all events
-    const timeline = getTimeline(new Date(2026, 11, 31));
+    // December 31 at 11pm - after all events (deadlines default to 8:45 PM PT)
+    const timeline = getTimeline(new Date(2026, 11, 31, 23, 0));
 
     expect(timeline.current).not.toBeNull();
     expect(timeline.current?.isPast).toBe(true);

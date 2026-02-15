@@ -199,6 +199,14 @@ function resolveLinks(links: EventLink[] | undefined, vars: LinkTemplateVars): E
 }
 
 /**
+ * Check if a date resolution has an explicit time set.
+ * Only 'fixed' dates can have an explicit time via the `time` field.
+ */
+function hasExplicitTime(resolution: DateResolution): boolean {
+  return resolution.type === 'fixed' && !!resolution.time;
+}
+
+/**
  * Resolve all event definitions into concrete events for a given league year.
  */
 export function resolveAllEvents(
@@ -210,9 +218,17 @@ export function resolveAllEvents(
   return events
     .map((def) => {
       const startDate = resolveDateForYear(def.startDate, leagueYear, events);
-      const endDate = def.endDate
-        ? resolveDateForYear(def.endDate, leagueYear, events)
-        : startDate;
+      let endDate: Date;
+      if (def.endDate) {
+        endDate = resolveDateForYear(def.endDate, leagueYear, events);
+      } else {
+        // Single-day events: default deadline is 8:45 PM PT on that day
+        // unless the start already has an explicit time set
+        endDate = new Date(startDate);
+        if (!hasExplicitTime(def.startDate)) {
+          endDate.setHours(20, 45, 0, 0);
+        }
+      }
 
       const now = referenceDate.getTime();
       const startMs = startDate.getTime();
