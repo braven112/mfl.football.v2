@@ -18,10 +18,7 @@ import {
   type DeadMoneyAdjustment,
 } from './salary-calculations';
 import { parseNumber } from './formatters';
-import {
-  getDraftCapitalSummary,
-  type FutureDraftPicksData,
-} from './future-draft-picks-utils';
+export type DraftCapitalMap = Map<string, { total: number; byRound: Map<number, number> }>;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,6 +52,7 @@ export interface CategoryDefinition {
 export interface TeamSummary {
   franchiseId: string;
   teamName: string;
+  teamNameShort?: string;
   teamIcon: string;
   division: string;
   /** categoryId → [value per SALARY_YEAR] */
@@ -281,7 +279,7 @@ function toCapPlayer(player: SalaryPlayer): CapPlayer {
 export function computeLeagueSummary(
   players: SalaryPlayer[],
   rawAdjustments: RawSalaryAdjustment[],
-  futureDraftPicksData: FutureDraftPicksData | null,
+  draftCapitalMap: DraftCapitalMap,
   teamConfigs: TeamConfig[],
 ): TeamSummary[] {
   // Group players by franchise
@@ -296,12 +294,6 @@ export function computeLeagueSummary(
 
   // Parse adjustments
   const adjustments = rawAdjustments.map(parseSalaryAdjustment);
-
-  // Draft capital for the current year's draft
-  const draftYear = SALARY_YEARS[0];
-  const draftCapitalMap = futureDraftPicksData
-    ? getDraftCapitalSummary(futureDraftPicksData, draftYear)
-    : new Map<string, { total: number; byRound: Map<number, number> }>();
 
   const results: TeamSummary[] = [];
 

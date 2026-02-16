@@ -15,12 +15,22 @@ interface Props {
 export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props) {
   const [search, setSearch] = useState('');
   const [posFilter, setPosFilter] = useState('ALL');
+  const [tradeBaitOnly, setTradeBaitOnly] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  const tradeBaitCount = useMemo(
+    () => team.players.filter((p) => p.tradeBait && !selectedPlayerIds.includes(p.id)).length,
+    [team.players, selectedPlayerIds]
+  );
 
   const filteredPlayers = useMemo(() => {
     let players = team.players.filter(
       (p) => !selectedPlayerIds.includes(p.id)
     );
+
+    if (tradeBaitOnly) {
+      players = players.filter((p) => p.tradeBait);
+    }
 
     if (posFilter !== 'ALL') {
       players = players.filter((p) => p.position === posFilter);
@@ -36,9 +46,14 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
       );
     }
 
-    // Sort by position order, then salary desc
+    // Sort: trade bait first, then by position order, then salary desc
     const posOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
     players.sort((a, b) => {
+      // Trade bait players float to the top when not filtering
+      if (!tradeBaitOnly) {
+        if (a.tradeBait && !b.tradeBait) return -1;
+        if (!a.tradeBait && b.tradeBait) return 1;
+      }
       const posA = posOrder.indexOf(a.position);
       const posB = posOrder.indexOf(b.position);
       if (posA !== posB) return posA - posB;
@@ -46,7 +61,7 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
     });
 
     return players;
-  }, [team.players, selectedPlayerIds, search, posFilter]);
+  }, [team.players, selectedPlayerIds, search, posFilter, tradeBaitOnly]);
 
   const displayPlayers = expanded ? filteredPlayers : filteredPlayers.slice(0, 8);
 
@@ -72,6 +87,15 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
               {pos}
             </button>
           ))}
+          {tradeBaitCount > 0 && (
+            <button
+              className={`player-selector__pos-btn player-selector__pos-btn--bait ${tradeBaitOnly ? 'player-selector__pos-btn--active' : ''}`}
+              onClick={() => setTradeBaitOnly(!tradeBaitOnly)}
+              title="Show only players on the trade block"
+            >
+              🏷️ Trade Bait ({tradeBaitCount})
+            </button>
+          )}
         </div>
       </div>
 
@@ -145,6 +169,16 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
           color: #fff;
           border-color: var(--primary-color, #1c497c);
         }
+        .player-selector__pos-btn--bait {
+          margin-left: 0.25rem;
+          border-color: #f59e0b;
+          color: #92400e;
+        }
+        .player-selector__pos-btn--bait.player-selector__pos-btn--active {
+          background: #f59e0b;
+          border-color: #f59e0b;
+          color: #fff;
+        }
         .player-selector__list {
           display: flex;
           flex-direction: column;
@@ -189,7 +223,7 @@ function PlayerRow({
   const avatarSrc = isDef && player.nflLogo ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
 
   return (
-    <div className="player-row">
+    <div className={`player-row${player.tradeBait ? ' player-row--trade-bait' : ''}`}>
       <div className={`player-row__avatar${isDef ? ' player-row__avatar--def' : ''}`}>
         <img
           src={avatarSrc}
@@ -208,6 +242,7 @@ function PlayerRow({
           <span className="player-row__pos">{player.position}</span>
           {player.isRookie && <span className="player-row__badge player-row__badge--rookie">R</span>}
           {player.isFranchiseTagged && <span className="player-row__badge player-row__badge--tag">F</span>}
+          {player.tradeBait && <span className="player-row__trade-bait" title="On Trade Block">🏷️</span>}
         </div>
       </div>
       <div className="player-row__contract">
@@ -234,6 +269,13 @@ function PlayerRow({
         }
         .player-row:hover {
           background: var(--primary-light-bg, #f0f4f8);
+        }
+        .player-row--trade-bait {
+          background: #fffbeb;
+          border-left: 2px solid #f59e0b;
+        }
+        .player-row--trade-bait:hover {
+          background: #fef3c7;
         }
         .player-row__avatar {
           flex-shrink: 0;
@@ -320,6 +362,10 @@ function PlayerRow({
         .player-row__badge--tag {
           background: #fef3c7;
           color: #92400e;
+        }
+        .player-row__trade-bait {
+          font-size: 0.75rem;
+          cursor: default;
         }
         .player-row__add {
           background: var(--secondary-color, #2e8743);

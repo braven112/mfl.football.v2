@@ -49,6 +49,10 @@ const draftPickFeeds = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
   { eager: true }
 );
+const tradeBaitFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/tradeBait.json',
+  { eager: true }
+);
 const salaryAvgModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
   { eager: true }
@@ -79,6 +83,19 @@ const rostersData = findFeed(rostersFeeds, leagueYearStr, extractFeedSeason);
 const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
+const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
+const currentTradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
+// Feb 15–28/29: transition window after the league year rolls over (Feb 14 @ 8:45 PT).
+// A team uses its current year trade bait if any of its rostered players appear there;
+// otherwise it falls back to previous year. Outside this window, only current year is used.
+const now = new Date();
+const isTransitionWindow = now.getMonth() === 1 && now.getDate() >= 15; // Feb 15–end of Feb
+const prevTradeBaitIds = (() => {
+  if (!isTransitionWindow) return new Set<string>();
+  const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
+  return new Set<string>(Array.isArray(prev) ? prev : []);
+})();
+
 let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
 // Fallback to most recent available salary averages if current year not found
 if (!salaryAvgData) {
@@ -149,6 +166,10 @@ const teams = franchises.map((franchise: any) => {
 
   // Process players
   const rawRosterPlayers = Array.isArray(franchise.player) ? franchise.player : [];
+  // Per-team trade bait: use current year if any rostered player is on it, else fall back to previous year
+  const teamPlayerIds = rawRosterPlayers.map((rp: any) => String(rp.id));
+  const teamHasCurrentBait = teamPlayerIds.some((id: string) => currentTradeBaitIds.has(id));
+  const tradeBaitSet = teamHasCurrentBait ? currentTradeBaitIds : prevTradeBaitIds;
   const players = rawRosterPlayers.map((rp: any) => {
     const pData = playerMap.get(rp.id);
     const salary = parseNumber(rp.salary);
@@ -173,6 +194,7 @@ const teams = franchises.map((franchise: any) => {
       nflLogo: getNflLogoUrl(nflTeam),
       isRookie: contractInfo.startsWith('R'),
       isFranchiseTagged: contractInfo === 'F',
+      tradeBait: tradeBaitSet.has(String(rp.id)),
       capHitByYear: calculatePlayerCapHitByYear(salary, contractYears, norm),
     };
   });
@@ -239,11 +261,16 @@ const teams = franchises.map((franchise: any) => {
 
 // Determine default team from user preferences
 const theLeaguePref = getTheLeaguePreference(Astro.cookies);
-const defaultTeam = resolveTeamSelection({
-  myTeamParam: Astro.url.searchParams.get('myteam'),
-  cookiePreference: theLeaguePref?.franchiseId,
-  defaultTeam: '0001',
-});
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const cookiePref = theLeaguePref?.franchiseId;
+const hasPreference = !!(myTeamParam || cookiePref);
+const defaultTeam = hasPreference
+  ? resolveTeamSelection({
+      myTeamParam,
+      cookiePreference: cookiePref,
+      defaultTeam: '0001',
+    })
+  : '';
 
 const pageData = {
   teams,

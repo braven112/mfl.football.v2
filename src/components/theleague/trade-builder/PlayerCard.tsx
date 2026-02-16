@@ -27,7 +27,7 @@ export default function PlayerCard({
         : null;
 
   return (
-    <div className="player-card">
+    <div className={`player-card${player.tradeBait ? ' player-card--trade-bait' : ''}`}>
       <div className="player-card__header">
         <div className={`player-card__avatar${isDef ? ' player-card__avatar--def' : ''}`}>
           <img
@@ -47,6 +47,9 @@ export default function PlayerCard({
             <span className="player-card__pos">{player.position}</span>
             {statusLabel && (
               <span className="player-card__status">{statusLabel}</span>
+            )}
+            {player.tradeBait && (
+              <span className="player-card__trade-bait" title="On Trade Block">🏷️</span>
             )}
           </div>
         </div>
@@ -130,6 +133,10 @@ export default function PlayerCard({
           flex-direction: column;
           gap: 0.5rem;
         }
+        .player-card--trade-bait {
+          border-left: 3px solid #f59e0b;
+          background: #fffbeb;
+        }
         .player-card__header {
           display: flex;
           align-items: center;
@@ -197,6 +204,10 @@ export default function PlayerCard({
           font-size: 0.625rem;
           font-weight: 700;
           border-radius: 0.1875rem;
+        }
+        .player-card__trade-bait {
+          font-size: 0.75rem;
+          cursor: default;
         }
         .player-card__remove {
           background: none;

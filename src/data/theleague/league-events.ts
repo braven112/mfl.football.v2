@@ -113,7 +113,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   {
     id: 'offseason-fa-opens',
     name: 'Offseason Free Agency Opens',
-    description: 'Blind-bid auction for all free agents begins',
+    description: 'Auction for all free agents begins',
     icon: 'banknote',
     category: 'free-agency',
     startDate: { type: 'computed', rule: 'third-thursday-march' },
@@ -187,7 +187,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
   {
     id: 'offseason-fa-closes',
     name: 'Offseason FA Closes for New Bids',
-    description: 'No new auctions can start after this date. Remaining blind bids and live auctions will finish.',
+    description: 'No new auctions can start after this date. Remaining bids and live auctions will finish.',
     icon: 'podium-persona',
     category: 'free-agency',
     startDate: { type: 'computed', rule: 'third-sunday-august' },
@@ -219,9 +219,9 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     startDate: { type: 'computed', rule: 'friday-before-week-11' },
     actionLinks: [
       {
-        label: 'Trade Center',
-        url: 'https://{mflHost}/{year}/options?L={leagueId}&O=03',
-        external: true,
+        label: 'Trade Builder',
+        url: '/theleague/trade-builder',
+        external: false,
       },
     ],
     urgencyDays: 7,

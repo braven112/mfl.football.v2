@@ -10,6 +10,7 @@ import {
   type SalaryPlayer,
   type TeamConfig,
 } from '../../utils/league-summary-utils';
+import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
 
@@ -28,8 +29,8 @@ const salaryAdjustmentFeeds = import.meta.glob(
   { eager: true }
 );
 
-const futureDraftPicksFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
+const draftResultsFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
   { eager: true }
 );
 
@@ -69,15 +70,18 @@ const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
 const adjustmentData = adjustmentEntries[0]?.data || {};
 const rawAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
 
-// Get future draft picks for the current year
-const draftPicksEntries = Object.entries(futureDraftPicksFeeds)
+// Get draft capital from the current year's draftResults API.
+// Unlike futureDraftPicks (which only has *future* years), draftResults shows
+// the current year's draft board with live ownership after trades.
+const draftResultsEntries = Object.entries(draftResultsFeeds)
   .map(([path, mod]) => ({
     season: extractFeedSeason(path),
     data: getModuleData(mod),
   }))
   .filter((item) => item.season === currentYear && item.data);
 
-const futureDraftPicksData = draftPicksEntries[0]?.data || null;
+const draftResultsData = draftResultsEntries[0]?.data || null;
+const draftCapitalMap = getDraftCapitalFromDraftResults(draftResultsData);
 
 // ---------------------------------------------------------------------------
 // Build team configs from league config
@@ -116,24 +120,26 @@ const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
 const teamSummaries = computeLeagueSummary(
   players,
   rawAdjustments,
-  futureDraftPicksData,
+  draftCapitalMap,
   teamConfigs,
 );
 
 // Apply team name display rules
+// Limit to 4 projected years
+const displayYears = SALARY_YEARS.slice(0, 4);
+
 const teamsForDisplay = teamSummaries.map((team) => {
   const config = teamConfigs.find((t) => t.franchiseId === team.franchiseId);
+  const nameOpts = {
+    fullName: team.teamName,
+    nameMedium: config?.nameMedium,
+    nameShort: config?.nameShort,
+    abbrev: config?.abbrev,
+  };
   return {
     ...team,
-    teamName: chooseTeamName(
-      {
-        fullName: team.teamName,
-        nameMedium: config?.nameMedium,
-        nameShort: config?.nameShort,
-        abbrev: config?.abbrev,
-      },
-      'default'
-    ),
+    teamName: chooseTeamName(nameOpts, 'default'),
+    teamNameShort: chooseTeamName(nameOpts, 'short'),
   };
 });
 
@@ -143,12 +149,12 @@ const teamsForDisplay = teamSummaries.map((team) => {
   <div class="league-summary-container">
     <h1>League Summary</h1>
     <p class="subtitle">
-      Compare all 16 teams across cap, roster, and contract metrics — projected {SALARY_YEARS[0]}–{SALARY_YEARS[SALARY_YEARS.length - 1]}
+      Compare all 16 teams across cap, roster, and contract metrics — projected {displayYears[0]}–{displayYears[displayYears.length - 1]}
     </p>
 
     <LeagueSummaryTable
       teams={teamsForDisplay}
-      years={SALARY_YEARS}
+      years={displayYears}
       categories={CATEGORY_DEFINITIONS}
     />
   </div>
@@ -159,7 +165,11 @@ const teamsForDisplay = teamSummaries.map((team) => {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: 2rem 1.125rem;
+    background-color: var(--content-bg);
+    border-radius: var(--radius-md);
+    overflow: visible;
+    box-sizing: border-box;
   }
 
   h1 {
@@ -172,6 +182,6 @@ const teamsForDisplay = teamSummaries.map((team) => {
   .subtitle {
     font-size: 1rem;
     color: #64748b;
-    margin-bottom: 2rem;
+    margin-bottom: 5rem;
   }
 </style>
