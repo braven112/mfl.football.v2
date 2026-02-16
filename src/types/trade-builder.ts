@@ -114,7 +114,8 @@ export type TradeAction =
   | { type: 'SHOW_ROOKIE_MODAL'; playerId: string; side: 'A' | 'B' }
   | { type: 'HIDE_ROOKIE_MODAL' }
   | { type: 'RESET' }
-  | { type: 'SWAP_TEAMS' };
+  | { type: 'SWAP_TEAMS' }
+  | { type: 'START_TRADE_FOR_PLAYER'; franchiseId: string; playerId: string };
 
 /** Computed cap impact for one team in a trade */
 export interface TeamTradeImpact {

@@ -12,6 +12,7 @@ import {
   deserializeTradeFromParams,
 } from '../../../utils/trade-calculations';
 import TeamPanel from './TeamPanel';
+import TradeBaitMarketplace from './TradeBaitMarketplace';
 import MultiYearCapTable from './MultiYearCapTable';
 import TradeAnalysisSummary from './TradeAnalysisSummary';
 import RookieExtensionModal from './RookieExtensionModal';
@@ -118,6 +119,51 @@ function tradeReducer(state: TradeState, action: TradeAction): TradeState {
         teamB: { ...EMPTY_SIDE, franchiseId: state.teamB.franchiseId },
         rookieModalTarget: null,
       };
+    case 'START_TRADE_FOR_PLAYER': {
+      // If the clicked player's team is already Team A, swap so it becomes B
+      const targetFranchise = action.franchiseId;
+      const currentA = state.teamA.franchiseId;
+      const currentB = state.teamB.franchiseId;
+
+      if (targetFranchise === currentA) {
+        // Swap teams so this franchise moves to B side, then add player
+        return {
+          ...state,
+          teamA: { ...state.teamB },
+          teamB: {
+            ...state.teamA,
+            playerIds: state.teamA.playerIds.includes(action.playerId)
+              ? state.teamA.playerIds
+              : [...state.teamA.playerIds, action.playerId],
+          },
+          rookieModalTarget: null,
+        };
+      }
+
+      // If it's already Team B, just add the player
+      if (targetFranchise === currentB) {
+        return {
+          ...state,
+          teamB: {
+            ...state.teamB,
+            playerIds: state.teamB.playerIds.includes(action.playerId)
+              ? state.teamB.playerIds
+              : [...state.teamB.playerIds, action.playerId],
+          },
+        };
+      }
+
+      // New team — set as Team B, reset that side, add the player
+      return {
+        ...state,
+        teamB: {
+          ...EMPTY_SIDE,
+          franchiseId: targetFranchise,
+          playerIds: [action.playerId],
+        },
+        rookieModalTarget: null,
+      };
+    }
     default:
       return state;
   }
@@ -291,6 +337,14 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
           </button>
         </div>
       </div>
+
+      <TradeBaitMarketplace
+        teams={data.teams}
+        leagueYear={data.leagueYear}
+        onStartTrade={(franchiseId, playerId) =>
+          dispatch({ type: 'START_TRADE_FOR_PLAYER', franchiseId, playerId })
+        }
+      />
 
       <div className="trade-builder__panels">
         <TeamPanel
