@@ -84,7 +84,14 @@ const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
 const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
-const tradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
+// Fallback to previous year if current year's trade bait is empty
+const tradeBaitArr = Array.isArray(tradeBaitRaw) && tradeBaitRaw.length > 0
+  ? tradeBaitRaw
+  : (() => {
+      const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
+      return Array.isArray(prev) ? prev : [];
+    })();
+const tradeBaitIds = new Set<string>(tradeBaitArr);
 
 let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
 // Fallback to most recent available salary averages if current year not found
