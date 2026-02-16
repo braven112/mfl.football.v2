@@ -20,6 +20,8 @@ export interface TradeBuilderPlayer {
   nflLogo: string;
   isRookie: boolean;
   isFranchiseTagged: boolean;
+  /** Whether the player is on their team's trade bait list */
+  tradeBait: boolean;
   /** Pre-computed cap hit for each of SALARY_YEARS */
   capHitByYear: number[];
 }

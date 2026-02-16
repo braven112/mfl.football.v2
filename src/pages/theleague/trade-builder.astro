@@ -49,6 +49,10 @@ const draftPickFeeds = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
   { eager: true }
 );
+const tradeBaitFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/tradeBait.json',
+  { eager: true }
+);
 const salaryAvgModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
   { eager: true }
@@ -79,6 +83,9 @@ const rostersData = findFeed(rostersFeeds, leagueYearStr, extractFeedSeason);
 const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
+const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
+const tradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
+
 let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
 // Fallback to most recent available salary averages if current year not found
 if (!salaryAvgData) {
@@ -173,6 +180,7 @@ const teams = franchises.map((franchise: any) => {
       nflLogo: getNflLogoUrl(nflTeam),
       isRookie: contractInfo.startsWith('R'),
       isFranchiseTagged: contractInfo === 'F',
+      tradeBait: tradeBaitIds.has(String(rp.id)),
       capHitByYear: calculatePlayerCapHitByYear(salary, contractYears, norm),
     };
   });

@@ -1675,13 +1675,15 @@ const serializedConfig = JSON.stringify({
                       >
                         {player.name}
                         {player.tradeBait && (
-                          <span
-                            class="trade-bait-badge"
-                            title="On Trade Block"
-                            style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer;"
+                          <a
+                            href={`/theleague/trade-builder?b=${player.franchiseId}`}
+                            class="trade-bait-link"
+                            title="On Trade Block — Open in Trade Builder"
+                            style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"
+                            onclick="event.stopPropagation();"
                           >
                             🏷️
-                          </span>
+                          </a>
                         )}
                         {player.injuryStatus && (
                           <button
@@ -5685,10 +5687,8 @@ const serializedConfig = JSON.stringify({
                     }
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
                     ${
-                      player.tradeBait && config.authUser?.leagueId
-                        ? `<a href="https://www49.myfantasyleague.com/${defaultSeason}/options?L=${config.authUser.leagueId}&O=05"><span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block; cursor: pointer">🏷️</span></a>`
-                        : player.tradeBait
-                        ? `<span class="trade-bait-badge" title="On Trade Block" style="font-size: 1rem; display: inline-block;">🏷️</span>`
+                      player.tradeBait
+                        ? `<a href="/theleague/trade-builder?b=${player.franchiseId}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" onclick="event.stopPropagation();" style="font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"><span class="trade-bait-badge">🏷️</span></a>`
                         : ''
                     }
                   </div>
