@@ -375,14 +375,6 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         />
       </div>
 
-      <TradeBaitMarketplace
-        teams={data.teams}
-        leagueYear={data.leagueYear}
-        onStartTrade={(franchiseId, playerId) =>
-          dispatch({ type: 'START_TRADE_FOR_PLAYER', franchiseId, playerId })
-        }
-      />
-
       {hasTrade && tradeImpactA && tradeImpactB && teamA && teamB && (
         <>
           <MultiYearCapTable
@@ -407,6 +399,14 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
           />
         </>
       )}
+
+      <TradeBaitMarketplace
+        teams={data.teams}
+        leagueYear={data.leagueYear}
+        onStartTrade={(franchiseId, playerId) =>
+          dispatch({ type: 'START_TRADE_FOR_PLAYER', franchiseId, playerId })
+        }
+      />
 
       {state.rookieModalTarget && rookieModalPlayer && (
         <RookieExtensionModal
