@@ -84,20 +84,17 @@ const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
 const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
-const tradeBaitCurrent = Array.isArray(tradeBaitRaw) ? tradeBaitRaw : [];
-// In February, show trade bait from both current and previous year (transition period).
-// From March onward, only show the current year.
+const currentTradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
+// In February, load previous year's trade bait as a per-team fallback.
+// A team uses its current year trade bait if any of its rostered players appear there;
+// otherwise it falls back to previous year. From March onward, only current year is used.
 const now = new Date();
 const isFebruary = now.getMonth() === 1; // 0-indexed: 1 = February
-const tradeBaitArr = isFebruary
-  ? (() => {
-      const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
-      const prevArr = Array.isArray(prev) ? prev : [];
-      // Merge both years, deduplicate player IDs
-      return [...new Set([...tradeBaitCurrent, ...prevArr])];
-    })()
-  : tradeBaitCurrent;
-const tradeBaitIds = new Set<string>(tradeBaitArr);
+const prevTradeBaitIds = (() => {
+  if (!isFebruary) return new Set<string>();
+  const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
+  return new Set<string>(Array.isArray(prev) ? prev : []);
+})();
 
 let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
 // Fallback to most recent available salary averages if current year not found
@@ -169,6 +166,10 @@ const teams = franchises.map((franchise: any) => {
 
   // Process players
   const rawRosterPlayers = Array.isArray(franchise.player) ? franchise.player : [];
+  // Per-team trade bait: use current year if any rostered player is on it, else fall back to previous year
+  const teamPlayerIds = rawRosterPlayers.map((rp: any) => String(rp.id));
+  const teamHasCurrentBait = teamPlayerIds.some((id: string) => currentTradeBaitIds.has(id));
+  const tradeBaitSet = teamHasCurrentBait ? currentTradeBaitIds : prevTradeBaitIds;
   const players = rawRosterPlayers.map((rp: any) => {
     const pData = playerMap.get(rp.id);
     const salary = parseNumber(rp.salary);
@@ -193,7 +194,7 @@ const teams = franchises.map((franchise: any) => {
       nflLogo: getNflLogoUrl(nflTeam),
       isRookie: contractInfo.startsWith('R'),
       isFranchiseTagged: contractInfo === 'F',
-      tradeBait: tradeBaitIds.has(String(rp.id)),
+      tradeBait: tradeBaitSet.has(String(rp.id)),
       capHitByYear: calculatePlayerCapHitByYear(salary, contractYears, norm),
     };
   });
