@@ -10,6 +10,7 @@ import {
   type SalaryPlayer,
   type TeamConfig,
 } from '../../utils/league-summary-utils';
+import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
 
@@ -28,8 +29,8 @@ const salaryAdjustmentFeeds = import.meta.glob(
   { eager: true }
 );
 
-const futureDraftPicksFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
+const draftResultsFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
   { eager: true }
 );
 
@@ -69,19 +70,18 @@ const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
 const adjustmentData = adjustmentEntries[0]?.data || {};
 const rawAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
 
-// Get future draft picks — MFL's futureDraftPicks API only returns picks for
-// drafts that haven't happened yet. So the current year's draft pick ownership
-// (SALARY_YEARS[0]) is stored in the *previous* year's feed, where it was still
-// considered "future."
-const draftPicksFeedYear = String(SALARY_YEARS[0] - 1);
-const draftPicksEntries = Object.entries(futureDraftPicksFeeds)
+// Get draft capital from the current year's draftResults API.
+// Unlike futureDraftPicks (which only has *future* years), draftResults shows
+// the current year's draft board with live ownership after trades.
+const draftResultsEntries = Object.entries(draftResultsFeeds)
   .map(([path, mod]) => ({
     season: extractFeedSeason(path),
     data: getModuleData(mod),
   }))
-  .filter((item) => item.season === draftPicksFeedYear && item.data);
+  .filter((item) => item.season === currentYear && item.data);
 
-const futureDraftPicksData = draftPicksEntries[0]?.data || null;
+const draftResultsData = draftResultsEntries[0]?.data || null;
+const draftCapitalMap = getDraftCapitalFromDraftResults(draftResultsData);
 
 // ---------------------------------------------------------------------------
 // Build team configs from league config
@@ -120,7 +120,7 @@ const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
 const teamSummaries = computeLeagueSummary(
   players,
   rawAdjustments,
-  futureDraftPicksData,
+  draftCapitalMap,
   teamConfigs,
 );
 

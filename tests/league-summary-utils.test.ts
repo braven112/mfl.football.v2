@@ -5,8 +5,11 @@ import {
   CATEGORY_DEFINITIONS,
   type SalaryPlayer,
   type TeamConfig,
+  type DraftCapitalMap,
 } from '../src/utils/league-summary-utils';
 import { calculateCapCharges, SALARY_YEARS, SALARY_CAP, RESERVE_FOR_ROOKIES, TARGET_ACTIVE_COUNT } from '../src/utils/salary-calculations';
+
+const emptyDraftCapital: DraftCapitalMap = new Map();
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -87,7 +90,7 @@ describe('computeLeagueSummary cap charges', () => {
     ];
 
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Build CapPlayer[] the same way the utility does
@@ -109,7 +112,7 @@ describe('computeLeagueSummary cap charges', () => {
       makePlayer({ salary: 10_000_000, contractYear: '5', status: 'ROSTER' }),
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Year 0: 10M, Year 1: 11M, Year 2: 12.1M, Year 3: 13.31M, Year 4: 14.641M
@@ -123,7 +126,7 @@ describe('computeLeagueSummary cap charges', () => {
       makePlayer({ salary: 2_000_000, contractYear: '3', status: 'TAXI_SQUAD' }),
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Year 0: 2M * 50% = 1M cap hit
@@ -147,7 +150,7 @@ describe('computeLeagueSummary roster metrics', () => {
       makePlayer({ id: '5', contractYear: '5' }),
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.playersUnderContract).toEqual([5, 4, 3, 2, 1]);
@@ -161,7 +164,7 @@ describe('computeLeagueSummary roster metrics', () => {
       makePlayer({ id: '4', contractYear: '5' }), // expires year 4
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // contractYear === i + 1 means expires at year i
@@ -178,7 +181,7 @@ describe('computeLeagueSummary roster metrics', () => {
       makePlayer({ id: String(i), contractYear: '5' })
     );
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.rosterHoles[0]).toBe(TARGET_ACTIVE_COUNT - 10);
@@ -196,7 +199,7 @@ describe('computeLeagueSummary age metrics', () => {
       makePlayer({ contractYear: '5', birthdate: 852076800 }),
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Ages should increase by approximately 1 year between each SALARY_YEAR
@@ -213,7 +216,7 @@ describe('computeLeagueSummary age metrics', () => {
       makePlayer({ id: '2', contractYear: '5', birthdate: 631152000 }), // born 1990 (old)
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Year 0: average of both players
@@ -235,7 +238,7 @@ describe('computeLeagueSummary positional depth', () => {
       makePlayer({ id: '4', position: 'WR', contractYear: '2' }),
     ];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Year 0: QB=1, RB=2, WR=1
@@ -265,7 +268,7 @@ describe('computeLeagueSummary top player retention', () => {
       })
     );
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     // Year 0: all 10 top scorers under contract
@@ -283,7 +286,7 @@ describe('computeLeagueSummary top player retention', () => {
 describe('computeLeagueSummary draft capital', () => {
   it('should return 3 picks for years 1-4 (standard allocation)', () => {
     const teams = [makeTeam()];
-    const result = computeLeagueSummary([], [], null, teams);
+    const result = computeLeagueSummary([], [], emptyDraftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.draftCapital[1]).toBe(3);
@@ -292,25 +295,15 @@ describe('computeLeagueSummary draft capital', () => {
     expect(team.metrics.draftCapital[4]).toBe(3);
   });
 
-  it('should use actual pick count from futureDraftPicks for year 0', () => {
-    const draftYear = SALARY_YEARS[0];
-    const futureDraftPicksData = {
-      futureDraftPicks: {
-        franchise: [
-          {
-            id: '0001',
-            futureDraftPick: [
-              { year: String(draftYear), round: '1', originalPickFor: '0001' },
-              { year: String(draftYear), round: '2', originalPickFor: '0001' },
-              { year: String(draftYear), round: '2', originalPickFor: '0005' }, // traded pick
-              { year: String(draftYear), round: '3', originalPickFor: '0001' },
-            ],
-          },
-        ],
-      },
-    };
+  it('should use actual pick count from draft capital map for year 0', () => {
+    const draftCapital: DraftCapitalMap = new Map([
+      ['0001', {
+        total: 4,
+        byRound: new Map([[1, 1], [2, 2], [3, 1]]),
+      }],
+    ]);
     const teams = [makeTeam()];
-    const result = computeLeagueSummary([], [], futureDraftPicksData, teams);
+    const result = computeLeagueSummary([], [], draftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.draftCapital[0]).toBe(4); // has 4 picks for current year
@@ -324,7 +317,7 @@ describe('computeLeagueSummary draft capital', () => {
 describe('computeLeagueSummary edge cases', () => {
   it('should handle a team with no players', () => {
     const teams = [makeTeam()];
-    const result = computeLeagueSummary([], [], null, teams);
+    const result = computeLeagueSummary([], [], emptyDraftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.capSpace[0]).toBe(SALARY_CAP);
@@ -339,7 +332,7 @@ describe('computeLeagueSummary edge cases', () => {
       makePlayer({ id: String(i), contractYear: '1' })
     );
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.playersUnderContract[0]).toBe(5);
@@ -350,7 +343,7 @@ describe('computeLeagueSummary edge cases', () => {
   it('should produce 5 elements per metric (matching SALARY_YEARS length)', () => {
     const players: SalaryPlayer[] = [makePlayer({ contractYear: '5' })];
     const teams = [makeTeam()];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
     const team = result[0];
 
     expect(team.metrics.capSpace.length).toBe(5);
@@ -370,7 +363,7 @@ describe('computeLeagueSummary edge cases', () => {
       makeTeam({ franchiseId: '0001', name: 'Team A' }),
       makeTeam({ franchiseId: '0002', name: 'Team B' }),
     ];
-    const result = computeLeagueSummary(players, [], null, teams);
+    const result = computeLeagueSummary(players, [], emptyDraftCapital, teams);
 
     expect(result[0].metrics.capSpace[0]).not.toBe(result[1].metrics.capSpace[0]);
     expect(result[0].franchiseId).toBe('0001');
