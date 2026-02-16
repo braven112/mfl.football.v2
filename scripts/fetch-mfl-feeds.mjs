@@ -228,10 +228,15 @@ const withAuth = (baseUrl) => {
 const parseTradeBait = (data) => {
   // Handle MFL trade bait API response
   // Structure: { tradeBaits: { tradeBait: [ { willGiveUp: "id1,id2,id3", ... }, ... ] } }
+  // NOTE: MFL returns a single object (not an array) when only one franchise has trade bait
   const playerIds = new Set();
 
   if (typeof data === 'object' && data !== null) {
-    const tradeBaitArray = data?.tradeBaits?.tradeBait;
+    let tradeBaitArray = data?.tradeBaits?.tradeBait;
+    // MFL returns a single object when only one franchise has trade bait — normalize to array
+    if (tradeBaitArray && !Array.isArray(tradeBaitArray)) {
+      tradeBaitArray = [tradeBaitArray];
+    }
     if (Array.isArray(tradeBaitArray)) {
       tradeBaitArray.forEach((item) => {
         if (item.willGiveUp) {
