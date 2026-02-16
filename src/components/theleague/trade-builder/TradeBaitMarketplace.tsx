@@ -77,7 +77,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
             Be the first to put players on the trade block and let the league know you're open for business.
           </p>
           <a
-            href={`https://www49.myfantasyleague.com/${leagueYear}/options?L=13522&O=05`}
+            href={`https://www49.myfantasyleague.com/${leagueYear}/options?L=13522&O=133`}
             target="_blank"
             rel="noopener noreferrer"
             className="marketplace__cta-btn"
@@ -192,7 +192,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
 
           <div className="marketplace__footer">
             <a
-              href={`https://www49.myfantasyleague.com/${leagueYear}/options?L=13522&O=05`}
+              href={`https://www49.myfantasyleague.com/${leagueYear}/options?L=13522&O=133`}
               target="_blank"
               rel="noopener noreferrer"
               className="marketplace__cta-btn"
