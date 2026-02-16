@@ -216,6 +216,7 @@ const marketplaceStyles = `
     background: var(--primary-content-bg-color, #fff);
     border: 1px solid var(--primary-content-border-color, #e2e8f0);
     border-radius: 0.75rem;
+    margin-top: 2.5rem;
     margin-bottom: 1.5rem;
     overflow: hidden;
   }
