@@ -109,7 +109,6 @@
     {
       "id": "my-team",
       "label": "My Team",
-      "visibility": "admin",
       "leagueOnly": "theleague",
       "links": [
         {
@@ -118,7 +117,7 @@
           "icon": "submit",
           "path": "/rosters?view=coach",
           "external": false,
-          "description": "Your team's coach view"
+          "description": "Coach mode with matchups & odds"
         },
         {
           "id": "auction-predictor",
@@ -126,6 +125,7 @@
           "icon": "line-chart",
           "path": "/auction-predictor",
           "external": false,
+          "visibility": "admin",
           "description": "Predict auction values for players"
         },
         {
@@ -134,6 +134,7 @@
           "icon": "eye",
           "urlTemplate": "https://{host}/{year}/options?L={leagueId}&F={franchiseId}&O=02",
           "external": true,
+          "visibility": "admin",
           "description": "Your team's overview on MFL"
         }
       ]
