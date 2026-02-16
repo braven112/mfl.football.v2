@@ -998,6 +998,16 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       }
     }
 
+    // In demo mode, generate unique oppStats per player for sorting demonstration
+    if (isDemoMode && gameOdds) {
+      // Simple hash from player ID to get a consistent pseudo-random value
+      const idNum = parseInt(player.id, 10) || 0;
+      const seed = ((idNum * 2654435761) >>> 0) % 1000; // Knuth multiplicative hash
+      const rank = (seed % 32) + 1; // 1-32
+      const avg = (15 + (seed % 200) / 10).toFixed(1); // 15.0 - 35.0
+      oppStats = { rank, avg };
+    }
+
     // Get Recent Scores
     const recentScores = trendWeeks.map(week => ({
       week,
