@@ -134,6 +134,39 @@ export function getDraftCapitalSummary(
 }
 
 /**
+ * Extract draft capital per team from the current year's draftResults API.
+ * Unlike futureDraftPicks (which only contains *future* years), draftResults
+ * shows the current year's draft board with live ownership — including trades
+ * and commissioner-added picks — so it stays fresh throughout the season.
+ */
+export function getDraftCapitalFromDraftResults(
+  data: any
+): Map<string, { total: number; byRound: Map<number, number> }> {
+  const summary = new Map<string, { total: number; byRound: Map<number, number> }>();
+
+  const picks = data?.draftResults?.draftUnit?.draftPick;
+  if (!Array.isArray(picks)) return summary;
+
+  for (const pick of picks) {
+    const franchiseId = pick.franchise;
+    if (!franchiseId) continue;
+
+    const round = parseInt(pick.round, 10);
+
+    let entry = summary.get(franchiseId);
+    if (!entry) {
+      entry = { total: 0, byRound: new Map() };
+      summary.set(franchiseId, entry);
+    }
+
+    entry.total++;
+    entry.byRound.set(round, (entry.byRound.get(round) || 0) + 1);
+  }
+
+  return summary;
+}
+
+/**
  * Merges standings-based draft predictions with futureDraftPicks ownership
  * The standings tell us the pick order, futureDraftPicks tells us who owns each pick
  *
