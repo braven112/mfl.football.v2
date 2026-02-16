@@ -85,13 +85,13 @@ const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason)
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
 const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
 const currentTradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
-// In February, load previous year's trade bait as a per-team fallback.
+// Feb 15–28/29: transition window after the league year rolls over (Feb 14 @ 8:45 PT).
 // A team uses its current year trade bait if any of its rostered players appear there;
-// otherwise it falls back to previous year. From March onward, only current year is used.
+// otherwise it falls back to previous year. Outside this window, only current year is used.
 const now = new Date();
-const isFebruary = now.getMonth() === 1; // 0-indexed: 1 = February
+const isTransitionWindow = now.getMonth() === 1 && now.getDate() >= 15; // Feb 15–end of Feb
 const prevTradeBaitIds = (() => {
-  if (!isFebruary) return new Set<string>();
+  if (!isTransitionWindow) return new Set<string>();
   const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
   return new Set<string>(Array.isArray(prev) ? prev : []);
 })();
