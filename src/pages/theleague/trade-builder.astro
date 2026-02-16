@@ -84,13 +84,19 @@ const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
 const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
-// Fallback to previous year if current year's trade bait is empty
-const tradeBaitArr = Array.isArray(tradeBaitRaw) && tradeBaitRaw.length > 0
-  ? tradeBaitRaw
-  : (() => {
+const tradeBaitCurrent = Array.isArray(tradeBaitRaw) ? tradeBaitRaw : [];
+// In February, show trade bait from both current and previous year (transition period).
+// From March onward, only show the current year.
+const now = new Date();
+const isFebruary = now.getMonth() === 1; // 0-indexed: 1 = February
+const tradeBaitArr = isFebruary
+  ? (() => {
       const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
-      return Array.isArray(prev) ? prev : [];
-    })();
+      const prevArr = Array.isArray(prev) ? prev : [];
+      // Merge both years, deduplicate player IDs
+      return [...new Set([...tradeBaitCurrent, ...prevArr])];
+    })()
+  : tradeBaitCurrent;
 const tradeBaitIds = new Set<string>(tradeBaitArr);
 
 let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
