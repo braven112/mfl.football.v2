@@ -338,14 +338,6 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         </div>
       </div>
 
-      <TradeBaitMarketplace
-        teams={data.teams}
-        leagueYear={data.leagueYear}
-        onStartTrade={(franchiseId, playerId) =>
-          dispatch({ type: 'START_TRADE_FOR_PLAYER', franchiseId, playerId })
-        }
-      />
-
       <div className="trade-builder__panels">
         <TeamPanel
           side="A"
@@ -382,6 +374,14 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
           dispatch={dispatch}
         />
       </div>
+
+      <TradeBaitMarketplace
+        teams={data.teams}
+        leagueYear={data.leagueYear}
+        onStartTrade={(franchiseId, playerId) =>
+          dispatch({ type: 'START_TRADE_FOR_PLAYER', franchiseId, playerId })
+        }
+      />
 
       {hasTrade && tradeImpactA && tradeImpactB && teamA && teamB && (
         <>
