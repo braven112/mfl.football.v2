@@ -338,10 +338,77 @@ const processWeeklyScores = (rawData, currentWeek) => {
   return scoresByPlayer;
 };
 
+// Demo mode: ?demo=true populates coach mode with mock data
+const isDemoMode = Astro.url?.searchParams?.get('demo') === 'true';
+
+const generateDemoOddsData = () => {
+  // 16 matchups covering all 32 teams
+  const matchups: [string, string][] = [
+    ['KC', 'BUF'], ['PHI', 'DAL'], ['SF', 'SEA'], ['DET', 'GB'],
+    ['BAL', 'CIN'], ['MIA', 'NYJ'], ['MIN', 'CHI'], ['HOU', 'JAX'],
+    ['LAR', 'ARI'], ['DEN', 'LV'], ['PIT', 'CLE'], ['ATL', 'TB'],
+    ['LAC', 'IND'], ['NO', 'CAR'], ['WAS', 'NYG'], ['TEN', 'NE'],
+  ];
+
+  const weatherOptions = [
+    { temperature: 72, displayValue: 'Clear' },
+    { temperature: 45, displayValue: 'Partly Cloudy' },
+    { temperature: 28, displayValue: 'Snow' },
+    { temperature: 62, displayValue: 'Rain' },
+    { temperature: 55, displayValue: 'Overcast' },
+    { temperature: 72, displayValue: 'Dome' },
+    { temperature: 80, displayValue: 'Sunny' },
+    { temperature: 38, displayValue: 'Windy' },
+  ];
+
+  const oddsData: Record<string, any> = {};
+
+  matchups.forEach(([home, away], i) => {
+    const favoredHome = Math.random() > 0.5;
+    const spreadNum = (Math.floor(Math.random() * 14) + 1) + 0.5;
+    const favored = favoredHome ? home : away;
+    const spread = `${favored} -${spreadNum}`;
+    const overUnder = String(Math.floor(Math.random() * 15) + 40 + 0.5);
+    const weather = weatherOptions[i % weatherOptions.length];
+
+    oddsData[home] = {
+      id: `demo-${i}`,
+      date: new Date().toISOString(),
+      homeTeam: home,
+      awayTeam: away,
+      status: 'Scheduled',
+      spread,
+      overUnder,
+      homeScore: null,
+      awayScore: null,
+      weather,
+      isHome: true,
+      opponent: away,
+    };
+
+    oddsData[away] = {
+      id: `demo-${i}`,
+      date: new Date().toISOString(),
+      homeTeam: home,
+      awayTeam: away,
+      status: 'Scheduled',
+      spread,
+      overUnder,
+      homeScore: null,
+      awayScore: null,
+      weather,
+      isHome: false,
+      opponent: home,
+    };
+  });
+
+  return oddsData;
+};
+
 // Determine last 3 completed weeks
 // League ends week 17, so cap at 17
 const currentWeekNum = getCurrentWeek();
-const liveOddsData = await loadLiveOddsData(currentWeekNum);
+const liveOddsData = isDemoMode ? generateDemoOddsData() : await loadLiveOddsData(currentWeekNum);
 const lastCompletedWeek = Math.min(currentWeekNum > 1 ? currentWeekNum - 1 : 0, 17);
 const trendWeeks = [];
 for (let i = 0; i < 3; i++) {
@@ -1526,7 +1593,7 @@ const serializedConfig = JSON.stringify({
             Clear All Tags
           </button>
 
-          <div class="mode-toggle" style={(cookiePreference?.franchiseId === '0001' || myTeamParam === '0001') ? '' : 'display:none'}>
+          <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
               <svg class="mode-icon"><use href="/assets/icons/sprite.svg#icon-banknote"></use></svg> GM
             </button>
@@ -3926,13 +3993,12 @@ const serializedConfig = JSON.stringify({
     border-radius: .5rem;
     font-weight: 700;
     font-size: 0.75rem;
-    color: #fff;
   }
 
-  :global(.rank-tier-4) { background-color: #10b981; border: 1px solid #079767; } /* Rank 25-32 (Best Matchup) */
-  :global(.rank-tier-3) { background-color: #99e625; border: 1px solid #6bab0c; color: #365705; } /* Rank 17-24 (Good) */
-  :global(.rank-tier-2) { background-color: #ff710f; border: 1px solid #ed6100;} /* Rank 9-16 (Bad) */
-  :global(.rank-tier-1) { background-color: #ef4444; border: 1px solid #c01c1c; } /* Rank 1-8 (Worst Matchup) */
+  :global(.rank-tier-4) { background-color: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }      /* Rank 25-32 (Best) */
+  :global(.rank-tier-3) { background-color: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }      /* Rank 17-24 (Good) */
+  :global(.rank-tier-2) { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }      /* Rank 9-16 (Bad) */
+  :global(.rank-tier-1) { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }      /* Rank 1-8 (Worst) */
 
   :global(.vs-at) {
     font-size: 0.75rem;
@@ -3979,10 +4045,6 @@ const serializedConfig = JSON.stringify({
     text-align: center;
     color: #015a73;
     font-size: .85rem;
-    background: #d3e1f0;
-    padding: .12rem .25rem;
-    border-radius: .5rem;
-    border: 1px solid #a5c0dc;
   }
 
   :global(.weather-temp) {
@@ -3996,13 +4058,8 @@ const serializedConfig = JSON.stringify({
   }
 
   :global(.proj-points) {
-        font-weight: 600;
-    color: #01734f;
+    font-weight: 600;
     font-size: 1rem;
-    background: #d7e2d7;
-    padding: 0 .35rem;
-    border-radius: .5rem;
-    border: 1px solid #b2d7b2;
   }
 
   :global(.avg-points) {
@@ -4749,14 +4806,7 @@ const serializedConfig = JSON.stringify({
 
     // Coach Mode Logic
     const modeBtns = document.querySelectorAll('.mode-btn');
-    const modeToggleContainer = document.querySelector('.mode-toggle');
     const rosterPage = document.querySelector('.roster-page');
-
-    // Check storage for team preference to show toggle if cookie was missed by SSR
-    const storedTeam = localStorage.getItem('mfl_team_preference');
-    if (storedTeam === '0001' && modeToggleContainer) {
-      modeToggleContainer.style.display = 'flex';
-    }
 
     // Trend weeks toggle state
     let trendWeeksExpanded = localStorage.getItem('trendWeeksExpanded') === 'true';
@@ -4808,10 +4858,12 @@ const serializedConfig = JSON.stringify({
       localStorage.setItem('rosterViewMode', mode);
     }
 
-    // Init Mode - URL param takes precedence over saved mode
-    const urlModeParam = new URL(window.location.href).searchParams.get('view');
+    // Init Mode - demo and view params take precedence over saved mode
+    const urlParams = new URL(window.location.href).searchParams;
+    const urlModeParam = urlParams.get('view');
+    const isDemoParam = urlParams.get('demo') === 'true';
     const savedMode = localStorage.getItem('rosterViewMode') || 'gm';
-    const initialMode = urlModeParam === 'coach' ? 'coach' : savedMode;
+    const initialMode = isDemoParam ? 'coach' : (urlModeParam === 'coach' ? 'coach' : savedMode);
     // Small delay to ensure DOM is fully ready/hydrated if needed, or just run it
     setTimeout(() => setMode(initialMode), 0);
 
@@ -5514,7 +5566,7 @@ const serializedConfig = JSON.stringify({
 
           const oppAvgCell = `
             <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
-              <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end; background: #dbdada;border-radius: .5rem; padding: 0 .35rem; border: 1px solid #cccccc;">
+              <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end;">
                 ${player.gameOdds?.opponent ? `
                   <img
                     src="${getLogoUrl(player.gameOdds.opponent)}"
