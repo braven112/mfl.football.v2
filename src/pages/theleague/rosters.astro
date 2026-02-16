@@ -1606,33 +1606,33 @@ const serializedConfig = JSON.stringify({
         <table class="roster-table" data-hidden-columns="">
           <thead>
             <tr>
-              <th scope="col" data-column="player">Player</th>
+              <th scope="col" data-column="player" data-sortable data-sort-key="position">Player <span class="sort-arrow"></span></th>
 
               <!-- Coach Mode Columns -->
-              <th scope="col" data-column="oppRank" class="coach-col" style="display:none">Opp #</th>
-              <th scope="col" data-column="opponent" class="coach-col" style="display:none">Opponent</th>
-              <th scope="col" data-column="ou" class="coach-col" style="display:none">O/U</th>
-              <th scope="col" data-column="weather" class="coach-col" style="display:none">Weather</th>
+              <th scope="col" data-column="oppRank" class="coach-col" style="display:none" data-sortable data-sort-key="oppRank">Opp # <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="opponent" class="coach-col" style="display:none" data-sortable data-sort-key="spreadAmount">Opponent <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="ou" class="coach-col" style="display:none" data-sortable data-sort-key="overUnder">O/U <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="weather" class="coach-col" style="display:none" data-sortable data-sort-key="temperature">Weather <span class="sort-arrow"></span></th>
               {trendWeeks.map(week => (
                 <th scope="col" data-column={`trend-${week}`} class="coach-col trend-week-col trend-header" style="display:none">W{week}</th>
               ))}
-              <th scope="col" data-column="avgRecent" class="coach-col trend-toggle-header" style="display:none; text-align: right;">
+              <th scope="col" data-column="avgRecent" class="coach-col trend-toggle-header" style="display:none; text-align: right;" data-sortable data-sort-key="avgRecent">
                 <button type="button" class="trend-toggle-btn" id="trendToggleBtn" title="Show/hide weekly scores">
                   <svg class="trend-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 18 9 12 15 6"></polyline>
                   </svg>
                 </button>
-                <span>Trend</span>
+                <span>Trend</span> <span class="sort-arrow"></span>
               </th>
-              <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">Avg</th>
-              <th scope="col" data-column="oppAvg" class="coach-col" style="display:none">Opp Avg</th>
-              <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;">Proj</th>
+              <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="avgSeason">Avg <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="oppAvg" class="coach-col" style="display:none" data-sortable data-sort-key="oppAvg">Opp Avg <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="projectedPoints">Proj <span class="sort-arrow"></span></th>
 
               <!-- GM Mode Columns -->
-              <th scope="col" data-column="years" class="gm-col">Yrs</th>
+              <th scope="col" data-column="years" class="gm-col" data-sortable data-sort-key="contractYears">Yrs <span class="sort-arrow"></span></th>
               <th scope="col" data-column="actions" class="actions-column gm-col">Actions</th>
               {SALARY_YEARS.map((year, index) => (
-                <th scope="col" data-column={`year${index + 1}`} class="gm-col">{year}</th>
+                <th scope="col" data-column={`year${index + 1}`} class="gm-col" data-sortable data-sort-key={`salary_${index}`}>{year} <span class="sort-arrow"></span></th>
               ))}
             </tr>
           </thead>
@@ -3881,7 +3881,7 @@ const serializedConfig = JSON.stringify({
   .mode-toggle {
     display: flex;
     gap: 0.25rem;
-    background: var(--color-gray-200);
+    background: var(--page-bg, var(--color-gray-200));
     border-radius: 0 0 0.5rem 0.5rem;
     width: fit-content;
     padding: 0.75rem .5rem .5rem;
@@ -3999,6 +3999,50 @@ const serializedConfig = JSON.stringify({
   :global(.rank-tier-3) { background-color: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }      /* Rank 17-24 (Good) */
   :global(.rank-tier-2) { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }      /* Rank 9-16 (Bad) */
   :global(.rank-tier-1) { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }      /* Rank 1-8 (Worst) */
+
+  /* Sortable Column Headers */
+  :global(th[data-sortable]) {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+  }
+
+  :global(th[data-sortable]:hover) {
+    color: var(--color-primary, #1c497c);
+  }
+
+  :global(th[data-sortable].sort-active) {
+    color: var(--color-primary, #1c497c);
+  }
+
+  :global(.sort-arrow) {
+    display: inline-block;
+    font-size: 0.65rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  :global(th[data-sortable]:hover .sort-arrow) {
+    opacity: 0.4;
+  }
+
+  :global(th[data-sortable]:hover .sort-arrow::after) {
+    content: '▼';
+  }
+
+  :global(th[data-sortable].sort-active .sort-arrow) {
+    opacity: 1;
+  }
+
+  :global(th[data-sortable].sort-desc .sort-arrow::after) {
+    content: '▼';
+  }
+
+  :global(th[data-sortable].sort-asc .sort-arrow::after) {
+    content: '▲';
+  }
 
   :global(.vs-at) {
     font-size: 0.75rem;
@@ -4876,6 +4920,200 @@ const serializedConfig = JSON.stringify({
     if (trendToggleBtn) {
       trendToggleBtn.addEventListener('click', toggleTrendWeeks);
     }
+
+    // ============================================
+    // Column Sorting Logic
+    // ============================================
+    let currentSortKey = 'position';
+    let currentSortDir = 'asc';
+    let lastRenderedRows = []; // Store rows from updateView for re-sorting
+
+    const getSortValue = (player, key) => {
+      switch (key) {
+        case 'oppRank': return player.oppStats?.rank ?? Infinity;
+        case 'spreadAmount': return parseFloat(player.gameOdds?.spreadAmount) || 0;
+        case 'overUnder': return parseFloat(player.gameOdds?.overUnder) || 0;
+        case 'temperature': return player.gameOdds?.weather?.temperature ?? 0;
+        case 'avgRecent': return parseFloat(player.avgRecent) || 0;
+        case 'avgSeason': return parseFloat(player.avgSeason) || 0;
+        case 'oppAvg': return parseFloat(player.oppStats?.avg) || 0;
+        case 'projectedPoints': return parseFloat(player.projectedPoints) || 0;
+        case 'contractYears': {
+          const yrs = player.contractYears ?? 0;
+          // 0 years = UFA/no contract → push to bottom
+          return yrs > 0 ? yrs : Infinity;
+        }
+        case 'salary': {
+          const sal = player.salary ?? 0;
+          // No salary → push to bottom
+          return sal > 0 ? sal : Infinity;
+        }
+        default: {
+          // Handle salary_N keys (e.g. salary_0, salary_1, ...)
+          const salaryMatch = key.match(/^salary_(\d+)$/);
+          if (salaryMatch) {
+            const yearIndex = parseInt(salaryMatch[1], 10);
+            const yrs = player.contractYears ?? 0;
+            const baseSal = player.salary ?? 0;
+            const isUfa = !(yrs > yearIndex);
+            const isFirstYearUfa = isUfa && yrs === yearIndex;
+            const isFutureUfa = isUfa && yrs < yearIndex;
+            if (isFutureUfa) {
+              // Dash (—) → sort absolute last
+              return Number.MAX_SAFE_INTEGER;
+            }
+            if (isFirstYearUfa) {
+              // UFA → sort after real salaries but before dashes
+              return Number.MAX_SAFE_INTEGER - 1;
+            }
+            // Has salary for this year — use escalated value
+            return baseSal * Math.pow(1.10, yearIndex);
+          }
+          return 0;
+        }
+      }
+    };
+
+    const sortWithinGroups = (rows, sortKey, direction) => {
+      // Default sort: re-sort by position then salary (original order)
+      if (sortKey === 'position') {
+        const tierOrder = ['active', 'practice', 'injured'];
+        const tiers = {};
+        tierOrder.forEach(t => tiers[t] = []);
+        rows.forEach(player => {
+          const tier = player.displayTag ?? 'active';
+          if (!tiers[tier]) tiers[tier] = [];
+          tiers[tier].push(player);
+        });
+        const sorted = [];
+        tierOrder.forEach(tier => {
+          tiers[tier].sort((a, b) => {
+            const diff = getPositionRank(a.position ?? '') - getPositionRank(b.position ?? '');
+            if (diff !== 0) return diff;
+            return (b.salary ?? 0) - (a.salary ?? 0);
+          });
+          sorted.push(...tiers[tier]);
+        });
+        return annotateActiveStriping(
+          annotateTierDividers(annotatePositionDividers(sorted))
+        );
+      }
+
+      const tierOrder = ['active', 'practice', 'injured'];
+
+      // Group by tier, then by position within each tier
+      const tiers = {};
+      tierOrder.forEach(t => tiers[t] = {});
+
+      rows.forEach(player => {
+        const tier = player.displayTag ?? 'active';
+        const pos = (player.position ?? '').toUpperCase();
+        if (!tiers[tier]) tiers[tier] = {};
+        if (!tiers[tier][pos]) tiers[tier][pos] = [];
+        tiers[tier][pos].push(player);
+      });
+
+      // Sort within each position group
+      const multiplier = direction === 'desc' ? -1 : 1;
+      const sorted = [];
+
+      tierOrder.forEach(tier => {
+        // Maintain position order within each tier
+        const positions = Object.keys(tiers[tier]).sort((a, b) =>
+          getPositionRank(a) - getPositionRank(b)
+        );
+        positions.forEach(pos => {
+          tiers[tier][pos].sort((a, b) => {
+            const aVal = getSortValue(a, sortKey);
+            const bVal = getSortValue(b, sortKey);
+            // Push sentinel values (Infinity, MAX_SAFE_INTEGER, MAX_SAFE_INTEGER-1) to end always
+            const SENTINEL = Number.MAX_SAFE_INTEGER - 1;
+            const aIsSentinel = aVal >= SENTINEL || aVal === Infinity;
+            const bIsSentinel = bVal >= SENTINEL || bVal === Infinity;
+            if (aIsSentinel && bIsSentinel) return aVal - bVal; // UFA before dash
+            if (aIsSentinel) return 1;
+            if (bIsSentinel) return -1;
+            return (aVal - bVal) * multiplier;
+          });
+          sorted.push(...tiers[tier][pos]);
+        });
+      });
+
+      // Re-annotate dividers and striping
+      return annotateActiveStriping(
+        annotateTierDividers(annotatePositionDividers(sorted))
+      );
+    };
+
+    const updateSortIndicators = (activeKey, direction) => {
+      document.querySelectorAll('th[data-sortable]').forEach(th => {
+        th.classList.remove('sort-active', 'sort-asc', 'sort-desc');
+      });
+
+      if (activeKey !== 'position') {
+        const activeTh = document.querySelector(`th[data-sort-key="${activeKey}"]`);
+        if (activeTh) {
+          activeTh.classList.add('sort-active', `sort-${direction}`);
+        }
+      }
+    };
+
+    const reapplyModeVisibility = () => {
+      const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
+      const rosterPageEl = document.querySelector('.roster-page');
+      if (rosterPageEl) {
+        rosterPageEl.classList.toggle('coach-mode', currentMode === 'coach');
+        rosterPageEl.classList.toggle('gm-mode', currentMode === 'gm');
+      }
+      document.querySelectorAll('.coach-col:not(.trend-week-col)').forEach(col =>
+        col.style.display = currentMode === 'coach' ? 'table-cell' : 'none');
+      document.querySelectorAll('.gm-col').forEach(col =>
+        col.style.display = currentMode === 'gm' ? 'table-cell' : 'none');
+      document.querySelectorAll('.gm-row').forEach(row =>
+        row.style.display = currentMode === 'gm' ? 'table-row' : 'none');
+      updateTrendWeeksVisibility(currentMode);
+    };
+
+    const applySort = () => {
+      if (!lastRenderedRows.length) return;
+      const sorted = sortWithinGroups(lastRenderedRows, currentSortKey, currentSortDir);
+      renderTableRows(sorted);
+      reapplyModeVisibility();
+    };
+
+    const resetSort = () => {
+      currentSortKey = 'position';
+      currentSortDir = 'asc';
+      updateSortIndicators('position', 'asc');
+    };
+
+    // Attach click handlers to sortable headers
+    document.querySelectorAll('th[data-sortable]').forEach(th => {
+      th.addEventListener('click', (e) => {
+        // Don't sort when clicking the trend toggle button
+        if (e.target.closest('.trend-toggle-btn')) return;
+
+        const sortKey = th.dataset.sortKey;
+
+        if (sortKey === 'position') {
+          // Player column always resets to default
+          resetSort();
+          applySort();
+          return;
+        }
+
+        if (currentSortKey === sortKey) {
+          // Toggle: desc <-> asc
+          currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
+        } else {
+          currentSortKey = sortKey;
+          currentSortDir = 'desc';
+        }
+
+        updateSortIndicators(currentSortKey, currentSortDir);
+        applySort();
+      });
+    });
 
     const formatCurrency = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -6290,6 +6528,7 @@ const serializedConfig = JSON.stringify({
 
     const updateView = () => {
       console.log('updateView called, contractActions:', contractActions);
+      resetSort();
       const { seasonData, teamData } = getTeamData();
       let rows = buildDisplayRows(teamData);
       console.log('Initial rows count:', rows.length);
@@ -6364,6 +6603,7 @@ const serializedConfig = JSON.stringify({
       const bucketCapsCurrent = calculateBucketCaps(rows);
       setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
       renderTeamIdentity(teamData.record ?? '');
+      lastRenderedRows = rows;
       renderTableRows(rows);
 
       // Re-apply view mode logic after rendering
