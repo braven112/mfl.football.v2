@@ -151,12 +151,6 @@ export function getDraftCapitalFromDraftResults(
     const franchiseId = pick.franchise;
     if (!franchiseId) continue;
 
-    // Skip commissioner-added compensatory picks — they aren't reflected
-    // in the futureDraftPicks ownership data and inflate totals.
-    if (typeof pick.comments === 'string' && pick.comments.includes('Pick added by commissioner.')) {
-      continue;
-    }
-
     const round = parseInt(pick.round, 10);
 
     let entry = summary.get(franchiseId);
