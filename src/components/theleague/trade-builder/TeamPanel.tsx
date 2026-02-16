@@ -38,6 +38,8 @@ export default function TeamPanel({
       tradeSide.playerIds.includes(p.id)
     ) ?? [];
 
+  const tradeBaitCount = selectedTeam?.players.filter((p) => p.tradeBait).length ?? 0;
+
   return (
     <div className="team-panel">
       <div className="team-panel__selector">
@@ -61,17 +63,25 @@ export default function TeamPanel({
             }
           >
             <option value="">Select a team...</option>
-            {teams.map((team) => (
-              <option
-                key={team.franchiseId}
-                value={team.franchiseId}
-                disabled={team.franchiseId === otherSideFranchiseId}
-              >
-                {team.name}
-              </option>
-            ))}
+            {teams.map((team) => {
+              const baitCount = team.players.filter((p) => p.tradeBait).length;
+              return (
+                <option
+                  key={team.franchiseId}
+                  value={team.franchiseId}
+                  disabled={team.franchiseId === otherSideFranchiseId}
+                >
+                  {team.name}{baitCount > 0 ? ` (${baitCount} on trade block)` : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
+        {tradeBaitCount > 0 && (
+          <div className="team-panel__trade-bait-hint">
+            🏷️ {tradeBaitCount} player{tradeBaitCount !== 1 ? 's' : ''} on the trade block
+          </div>
+        )}
       </div>
 
       {selectedTeam && (
@@ -176,6 +186,16 @@ export default function TeamPanel({
           outline: none;
           border-color: var(--primary-color, #1c497c);
           box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
+        }
+        .team-panel__trade-bait-hint {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #92400e;
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-radius: 0.375rem;
+          padding: 0.375rem 0.5rem;
+          margin-top: 0.25rem;
         }
         .team-panel__section-title {
           font-size: 0.8125rem;
