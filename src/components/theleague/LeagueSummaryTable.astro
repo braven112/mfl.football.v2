@@ -381,10 +381,13 @@ const serializedData = JSON.stringify({ teams, years, categories });
   .league-summary__table-wrapper {
     overflow-x: auto;
     border: 1px solid var(--primary-content-border-color, #e2e8f0);
-    border-radius: 0.5rem;
+    border-radius: 0;
     box-shadow: var(--shadow-sm, 0.5px 1px 1px hsl(220deg 3% 15% / 0.1));
     box-sizing: border-box;
-    max-width: 100%;
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    border-left: none;
+    border-right: none;
   }
 
   .league-summary__table {
