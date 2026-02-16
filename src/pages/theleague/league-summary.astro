@@ -69,13 +69,17 @@ const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
 const adjustmentData = adjustmentEntries[0]?.data || {};
 const rawAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
 
-// Get future draft picks for the current year
+// Get future draft picks — MFL's futureDraftPicks API only returns picks for
+// drafts that haven't happened yet. So the current year's draft pick ownership
+// (SALARY_YEARS[0]) is stored in the *previous* year's feed, where it was still
+// considered "future."
+const draftPicksFeedYear = String(SALARY_YEARS[0] - 1);
 const draftPicksEntries = Object.entries(futureDraftPicksFeeds)
   .map(([path, mod]) => ({
     season: extractFeedSeason(path),
     data: getModuleData(mod),
   }))
-  .filter((item) => item.season === currentYear && item.data);
+  .filter((item) => item.season === draftPicksFeedYear && item.data);
 
 const futureDraftPicksData = draftPicksEntries[0]?.data || null;
 
