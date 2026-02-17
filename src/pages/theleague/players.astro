@@ -3,7 +3,7 @@
  * Free Agents Page - Player research tool focused on available players
  *
  * Displays free agents (and optionally rostered players) with sorting by:
- * - Redraft ADP, Dynasty ADP, Total Points, Age
+ * - Projected Points, Age, Name
  *
  * Data is loaded at build time from MFL feed JSON files.
  */
@@ -28,16 +28,8 @@ const playerModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/players.json',
   { eager: true }
 );
-const adpRedraftModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-redraft.json',
-  { eager: true }
-);
-const adpDynastyModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
-  { eager: true }
-);
-const playerScoresModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/playerScores.json',
+const projectedScoresModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
   { eager: true }
 );
 const rostersModules = import.meta.glob(
@@ -54,42 +46,19 @@ const findForYear = (modules: Record<string, any>, yr: number) => {
 };
 
 const playersData = findForYear(playerModules, currentYear);
-const adpRedraftData = findForYear(adpRedraftModules, currentYear);
-const adpDynastyData = findForYear(adpDynastyModules, currentYear);
-const playerScoresData = findForYear(playerScoresModules, currentYear);
+const projectedScoresData = findForYear(projectedScoresModules, currentYear);
 const rostersData = findForYear(rostersModules, currentYear);
 
-// Build ADP lookup maps
-const buildAdpMap = (data: any): Map<string, { averagePick: number; minPick: number; maxPick: number; draftSelPct: number }> => {
-  const map = new Map();
-  if (!data?.adp?.player) return map;
-  const players = Array.isArray(data.adp.player) ? data.adp.player : [data.adp.player];
-  for (const p of players) {
-    if (p?.id) {
-      map.set(p.id, {
-        averagePick: parseFloat(p.averagePick) || 999,
-        minPick: parseFloat(p.minPick) || 999,
-        maxPick: parseFloat(p.maxPick) || 999,
-        draftSelPct: parseFloat(p.draftSelPct) || 0,
-      });
-    }
-  }
-  return map;
-};
-
-const adpRedraftMap = buildAdpMap(adpRedraftData);
-const adpDynastyMap = buildAdpMap(adpDynastyData);
-
-// Build player scores lookup
-const scoresMap = new Map<string, number>();
-if (playerScoresData?.playerScores?.playerScore) {
-  const scores = Array.isArray(playerScoresData.playerScores.playerScore)
-    ? playerScoresData.playerScores.playerScore
-    : [playerScoresData.playerScores.playerScore];
+// Build projected scores lookup
+const projectedMap = new Map<string, number>();
+if (projectedScoresData?.projectedScores?.playerScore) {
+  const scores = Array.isArray(projectedScoresData.projectedScores.playerScore)
+    ? projectedScoresData.projectedScores.playerScore
+    : [projectedScoresData.projectedScores.playerScore];
   for (const s of scores) {
     if (s?.id && s?.score) {
       const score = parseFloat(s.score);
-      if (score > 0) scoresMap.set(s.id, score);
+      if (score > 0) projectedMap.set(s.id, score);
     }
   }
 }
@@ -121,9 +90,7 @@ interface PlayerRow {
   team: string;
   age: number | null;
   espnId: string | null;
-  adpRedraft: number | null;
-  adpDynasty: number | null;
-  totalPoints: number | null;
+  projected: number | null;
   rostered: boolean;
 }
 
@@ -136,12 +103,11 @@ if (Array.isArray(allPlayers)) {
     if (!p?.id || !p?.name || !p?.position) continue;
     if (!fantasyPositions.has(p.position)) continue;
 
-    const redraftAdp = adpRedraftMap.get(p.id);
-    const dynastyAdp = adpDynastyMap.get(p.id);
-    const points = scoresMap.get(p.id) ?? null;
+    const projected = projectedMap.get(p.id) ?? null;
     const isRostered = rosteredPlayers.has(p.id);
 
-    if (!redraftAdp && !dynastyAdp && !points && !isRostered) continue;
+    // Include players with projected scores or on a roster
+    if (!projected && !isRostered) continue;
 
     let age: number | null = null;
     if (p.birthdate) {
@@ -164,24 +130,20 @@ if (Array.isArray(allPlayers)) {
       team: normalizeMflTeam(p.team || ''),
       age,
       espnId: p.espn_id || null,
-      adpRedraft: redraftAdp?.averagePick ?? null,
-      adpDynasty: dynastyAdp?.averagePick ?? null,
-      totalPoints: points,
+      projected,
       rostered: isRostered,
     });
   }
 }
 
-// Default sort by ADP
+// Default sort by projected points (highest first)
 playerList.sort((a, b) => {
-  const aVal = a.adpRedraft ?? a.adpDynasty ?? 9999;
-  const bVal = b.adpRedraft ?? b.adpDynasty ?? 9999;
-  return aVal - bVal;
+  const aVal = a.projected ?? -1;
+  const bVal = b.projected ?? -1;
+  return bVal - aVal;
 });
 
-const hasRedraftAdp = adpRedraftMap.size > 0;
-const hasDynastyAdp = adpDynastyMap.size > 0;
-const hasPoints = scoresMap.size > 0;
+const hasProjected = projectedMap.size > 0;
 
 // Count free agents by position for category tabs
 const freeAgents = playerList.filter(p => !p.rostered);
@@ -262,19 +224,9 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age<span class="sort-arrow"></span></div>
             </th>
-            {hasRedraftAdp && (
-              <th class="sortable col-num" data-sort="adpRedraft">
-                <div class="th-content">Redraft<span class="sort-arrow"></span></div>
-              </th>
-            )}
-            {hasDynastyAdp && (
-              <th class="sortable col-num" data-sort="adpDynasty">
-                <div class="th-content">Dynasty<span class="sort-arrow"></span></div>
-              </th>
-            )}
-            {hasPoints && (
-              <th class="sortable col-num" data-sort="totalPoints">
-                <div class="th-content">Points<span class="sort-arrow"></span></div>
+            {hasProjected && (
+              <th class="sortable col-num" data-sort="projected">
+                <div class="th-content">Projected<span class="sort-arrow"></span></div>
               </th>
             )}
           </tr>
@@ -291,13 +243,13 @@ const faCountsJson = JSON.stringify(faCounts);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasRedraftAdp, hasDynastyAdp, hasPoints, faCountsJson }}>
+<script define:vars={{ playerDataJson, hasProjected, faCountsJson }}>
   const players = JSON.parse(playerDataJson);
 
   // State — default to free agents only
   let filteredPlayers = [];
-  let currentSort = hasRedraftAdp ? 'adpRedraft' : (hasDynastyAdp ? 'adpDynasty' : 'totalPoints');
-  let sortDirection = currentSort === 'totalPoints' ? 'desc' : 'asc';
+  let currentSort = 'projected';
+  let sortDirection = 'desc';
   let currentPage = 1;
   let activePosition = 'ALL';
   let searchQuery = '';
@@ -345,21 +297,13 @@ const faCountsJson = JSON.stringify(faCounts);
           aVal = a.age ?? 999;
           bVal = b.age ?? 999;
           break;
-        case 'adpRedraft':
-          aVal = a.adpRedraft ?? 999;
-          bVal = b.adpRedraft ?? 999;
-          break;
-        case 'adpDynasty':
-          aVal = a.adpDynasty ?? 999;
-          bVal = b.adpDynasty ?? 999;
-          break;
-        case 'totalPoints':
-          aVal = a.totalPoints ?? -1;
-          bVal = b.totalPoints ?? -1;
+        case 'projected':
+          aVal = a.projected ?? -1;
+          bVal = b.projected ?? -1;
           break;
         default:
-          aVal = a.adpRedraft ?? a.adpDynasty ?? 9999;
-          bVal = b.adpRedraft ?? b.adpDynasty ?? 9999;
+          aVal = a.projected ?? -1;
+          bVal = b.projected ?? -1;
       }
       const diff = aVal - bVal;
       return sortDirection === 'desc' ? -diff : diff;
@@ -465,14 +409,8 @@ const faCountsJson = JSON.stringify(faCounts);
         </td>
         <td class="cell-age">${p.age ?? '-'}</td>`;
 
-      if (hasRedraftAdp) {
-        html += `<td class="cell-num">${p.adpRedraft != null ? p.adpRedraft.toFixed(1) : '<span class="na">-</span>'}</td>`;
-      }
-      if (hasDynastyAdp) {
-        html += `<td class="cell-num">${p.adpDynasty != null ? p.adpDynasty.toFixed(1) : '<span class="na">-</span>'}</td>`;
-      }
-      if (hasPoints) {
-        html += `<td class="cell-num cell-pts">${p.totalPoints != null ? p.totalPoints.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      if (hasProjected) {
+        html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
       html += `</tr>`;
@@ -543,7 +481,7 @@ const faCountsJson = JSON.stringify(faCounts);
           sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
           currentSort = sortKey;
-          sortDirection = (sortKey === 'totalPoints') ? 'desc' : 'asc';
+          sortDirection = (sortKey === 'projected') ? 'desc' : 'asc';
         }
         sortPlayers();
         render();
