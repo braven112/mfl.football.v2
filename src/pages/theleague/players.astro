@@ -8,7 +8,7 @@
  * Data is loaded at build time from MFL feed JSON files.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { positionOrder, POSITION_COLORS } from '../../constants/roster-constants';
+import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 
 // MFL team code → local SVG filename normalization
@@ -175,7 +175,6 @@ const faCountsJson = JSON.stringify(faCounts);
         <button
           class="cat-tab"
           data-pos={pos}
-          style={`--pos-color: ${POSITION_COLORS[pos]}`}
         >
           {pos === 'PK' ? 'K' : pos}
           <span class="cat-count" id={`count-${pos}`}>{faCounts[pos] || 0}</span>
@@ -258,10 +257,6 @@ const faCountsJson = JSON.stringify(faCounts);
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
-  const posColors = {
-    QB: '#6366f1', RB: '#f97316', WR: '#22c55e',
-    TE: '#14b8a6', PK: '#0ea5e9', DEF: '#475569',
-  };
 
   function getHeadshotUrl(playerId, espnId) {
     if (espnId) {
@@ -386,7 +381,6 @@ const faCountsJson = JSON.stringify(faCounts);
       const headshot = getHeadshotUrl(p.id, p.espnId);
       const logo = getNflLogo(p.team);
       const isDef = p.position === 'DEF';
-      const posColor = posColors[p.position] || '#6b7280';
       const posLabel = p.position === 'PK' ? 'K' : p.position;
       const rosteredClass = p.rostered ? ' row--rostered' : '';
 
@@ -401,7 +395,7 @@ const faCountsJson = JSON.stringify(faCounts);
             <div class="p-row__info">
               <span class="p-row__name">${p.name}${p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : ''}</span>
               <span class="p-row__meta">
-                <span class="p-row__pos" style="color:${posColor}">${posLabel}</span>
+                <span class="p-row__pos">${posLabel}</span>
                 ${!isDef ? `<span class="p-row__sep">&middot;</span><img src="${logo}" alt="${p.team}" class="p-row__logo" /><span class="p-row__team">${p.team}</span>` : ''}
               </span>
             </div>
@@ -554,13 +548,13 @@ const faCountsJson = JSON.stringify(faCounts);
     color: #4b5563;
   }
   .cat-tab:hover {
-    border-color: var(--pos-color, var(--color-primary, #1c497c));
-    color: var(--pos-color, var(--color-primary, #1c497c));
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
   }
   .cat-tab.active {
-    background: var(--pos-color, var(--color-primary, #1c497c));
+    background: var(--color-primary, #1c497c);
     color: white;
-    border-color: var(--pos-color, var(--color-primary, #1c497c));
+    border-color: var(--color-primary, #1c497c);
   }
   .cat-count {
     font-size: 0.7rem;
