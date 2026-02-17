@@ -1,0 +1,70 @@
+/**
+ * What's New / Changelog Types
+ *
+ * Data model for feature announcements and the automated hero banner system.
+ * The hero resolver uses these types alongside league events to determine
+ * what to promote on the homepage.
+ */
+
+/** Entry category determines badge color and hero accent */
+export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'league-event';
+
+/** A single feature announcement entry in whats-new.json */
+export interface WhatsNewEntry {
+  /** Unique ID for the entry (kebab-case) */
+  id: string;
+  /** Display date (YYYY-MM-DD) — used for sorting & hero freshness */
+  date: string;
+  /** Headline title */
+  title: string;
+  /** Short summary (1-2 sentences, shown in hero and cards) */
+  summary: string;
+  /** Longer description paragraphs (shown on the What's New page only) */
+  description: string[];
+  /** Entry category */
+  category: WhatsNewCategory;
+  /** Optional link to the relevant page */
+  link?: string;
+  /** Optional link label (defaults to "Check it out") */
+  linkLabel?: string;
+  /** Optional icon ID from sprite.svg (without "icon-" prefix) */
+  icon?: string;
+  /** Override: force hero display regardless of age (for major launches) */
+  pinToHero?: boolean;
+  /** Override: never auto-promote to hero (for minor updates) */
+  excludeFromHero?: boolean;
+}
+
+/** Hero content source type */
+export type HeroSource = 'feature' | 'event' | 'default';
+
+/** What the hero resolver returns */
+export interface HeroContent {
+  source: HeroSource;
+  title: string;
+  summary: string;
+  link?: string;
+  linkLabel?: string;
+  icon?: string;
+  accentColor?: string;
+  /** When source is 'event', the event definition ID so What's Next can skip it */
+  heroEventId?: string;
+  /** Event-only: formatted date or date range (e.g., "Sun, Mar 1 - 7") */
+  dateDisplay?: string;
+  /** Event-only: countdown or status text (e.g., "In 5 days", "Happening now") */
+  statusText?: string;
+  /** Event-only: whether the event is currently active */
+  isActive?: boolean;
+  /** Event-only: whether the event is urgent (approaching deadline) */
+  isUrgent?: boolean;
+  /** Event-only: whether the link is external */
+  isExternal?: boolean;
+}
+
+/** Human-readable labels for What's New categories */
+export const WHATS_NEW_CATEGORY_LABELS: Record<WhatsNewCategory, string> = {
+  'new-page': 'New Page',
+  'new-feature': 'New Feature',
+  'enhancement': 'Enhancement',
+  'league-event': 'League Event',
+};

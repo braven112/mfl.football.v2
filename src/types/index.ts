@@ -21,3 +21,6 @@ export * from './auction-predictor';
 
 // Navigation types
 export * from './nav';
+
+// What's New / Changelog types
+export * from './whats-new';

@@ -100,6 +100,47 @@ docs/claude/insights/
 
 ---
 
+## What's New Changelog
+
+**IMPORTANT:** When completing a feature that adds a new page, new user-facing feature, or significant enhancement, you MUST update `src/data/whats-new.json`.
+
+### When to Add a New Entry
+- New page added to the site
+- New user-facing feature (e.g., a new tool, mode, or interactive element)
+- Major enhancement that changes how an existing feature works
+
+### When NOT to Add an Entry
+- Bug fixes, style tweaks, data syncs, refactors
+- Internal tooling or build changes
+- Documentation-only changes
+- Admin-only features (visibility: "admin" in nav-config.json)
+- Unreleased or in-progress features not yet available to all users
+
+### Entry Format
+Add the new entry at the **top** of the array (newest first):
+```json
+{
+  "id": "kebab-case-id",
+  "date": "YYYY-MM-DD",
+  "title": "Short Title",
+  "summary": "One sentence shown in hero banner and cards.",
+  "description": ["Full paragraph(s) for the What's New page."],
+  "category": "new-page | new-feature | enhancement",
+  "link": "/theleague/page-path",
+  "linkLabel": "CTA text (e.g., 'Try it now')",
+  "icon": "sprite-icon-id"
+}
+```
+
+### Hero Banner Behavior
+- New entries automatically appear in the homepage hero for **7 days**
+- If multiple features are within the 7-day window, one is **randomly selected** per page load
+- Set `"excludeFromHero": true` for minor enhancements that shouldn't get hero treatment
+- After 7 days, the hero falls back to upcoming league events or the default "What's New" promo
+- Priority rules are defined in `src/utils/hero-resolver.ts`
+
+---
+
 ## Documentation Index
 
 For detailed documentation, see `docs/claude/`:

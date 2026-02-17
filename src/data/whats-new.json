@@ -1,0 +1,268 @@
+[
+  {
+    "id": "whats-new-page",
+    "date": "2026-02-16",
+    "title": "What's New Page",
+    "summary": "Track every new feature and improvement in one place.",
+    "description": [
+      "A dedicated changelog page that documents all new features, enhancements, and improvements as they ship. Each entry links to the relevant page so you can try new features immediately."
+    ],
+    "category": "new-page",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "star"
+  },
+  {
+    "id": "gm-coach-mode",
+    "date": "2026-02-16",
+    "title": "GM/Coach Mode Toggle",
+    "summary": "Switch between GM and Coach views on your roster page.",
+    "description": [
+      "A new toggle lets you switch between GM mode (salary, contracts, trade value) and Coach mode (matchups, injury status, start/sit decisions). Coach mode is available to all users with a demo experience for visitors."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/rosters?view=coach",
+    "linkLabel": "Try Coach Mode",
+    "icon": "submit"
+  },
+  {
+    "id": "trade-bait-marketplace",
+    "date": "2026-02-16",
+    "title": "Trade Bait Marketplace",
+    "summary": "See which players teams have listed as available for trade.",
+    "description": [
+      "The Trade Builder includes a Trade Bait Marketplace showing players that other owners have flagged as available. During the February transition period, trade bait from both the current and incoming league years is displayed."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Open Trade Builder",
+    "icon": "transactions-2"
+  },
+  {
+    "id": "league-summary",
+    "date": "2026-02-15",
+    "title": "League Summary Page",
+    "summary": "Compare all 16 teams across cap, roster, and contract metrics.",
+    "description": [
+      "A comprehensive comparison dashboard with 14 categories including salary cap usage, roster construction, contract lengths, draft capital, and more. Data spans 5 years for trend analysis."
+    ],
+    "category": "new-page",
+    "link": "/theleague/league-summary",
+    "linkLabel": "View League Summary",
+    "icon": "standings-2"
+  },
+  {
+    "id": "trade-builder",
+    "date": "2026-02-15",
+    "title": "Trade Builder",
+    "summary": "Simulate trades and instantly see salary cap impact for both teams.",
+    "description": [
+      "Build hypothetical trades by selecting players from any two teams. The tool shows cap impact, contract details, and roster changes in real time. Defaults to the two teams with the most cap room."
+    ],
+    "category": "new-page",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Build a Trade",
+    "icon": "transactions-2"
+  },
+  {
+    "id": "whats-next-timeline",
+    "date": "2026-02-14",
+    "title": "What's Next Timeline",
+    "summary": "The homepage now shows your current, next, and upcoming league events.",
+    "description": [
+      "A 3-card timeline at the top of the homepage showing the most relevant league events. Cards display countdown timers, action links, and automatically update as events pass."
+    ],
+    "category": "new-feature",
+    "link": "/theleague",
+    "linkLabel": "View Homepage",
+    "icon": "calendar"
+  },
+  {
+    "id": "league-calendar",
+    "date": "2026-02-14",
+    "title": "League Calendar",
+    "summary": "View all important league dates and deadlines in one place.",
+    "description": [
+      "A full calendar page showing every league event for the season. Events are color-coded by category with countdown timers for tagging periods, free agency windows, draft dates, trading deadline, and playoffs."
+    ],
+    "category": "new-page",
+    "link": "/theleague/calendar",
+    "linkLabel": "View Calendar",
+    "icon": "calendar"
+  },
+  {
+    "id": "espn-headshots",
+    "date": "2026-02-14",
+    "title": "ESPN Player Headshots",
+    "summary": "Player cards now show real ESPN headshot photos.",
+    "description": [
+      "All player cards across the site now display actual player headshots sourced from ESPN. Avatars are displayed at 150% zoom for a cleaner look."
+    ],
+    "category": "enhancement",
+    "icon": "helmet"
+  },
+  {
+    "id": "dark-mode-css-migration",
+    "date": "2026-02-13",
+    "title": "Design System & Dark Mode Foundation",
+    "summary": "Migrated all styles to CSS custom properties with dark mode support.",
+    "description": [
+      "All SCSS variables have been replaced with native CSS custom properties in a single tokens.css file. This lays the foundation for a dark mode toggle and ensures consistent theming across every component."
+    ],
+    "category": "enhancement",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "custom-football-icons",
+    "date": "2026-02-13",
+    "title": "Custom Football Icon Set",
+    "summary": "A complete set of custom-designed football icons throughout the app.",
+    "description": [
+      "The navigation drawer and header now use a custom-designed SVG football icon set replacing generic icons. Includes icons for lineups, trades, drafts, standings, and more."
+    ],
+    "category": "enhancement",
+    "icon": "shield"
+  },
+  {
+    "id": "nav-drawer-redesign",
+    "date": "2026-01-18",
+    "title": "Navigation Drawer Redesign",
+    "summary": "A new collapsible side drawer for faster navigation between pages.",
+    "description": [
+      "The navigation has been completely rebuilt as a slide-out drawer with sections, league switching, team info, and keyboard support. It collapses to a slim icon rail on desktop and overlays on mobile."
+    ],
+    "category": "new-feature",
+    "icon": "home"
+  },
+  {
+    "id": "rules-constitution",
+    "date": "2025-12-20",
+    "title": "League Rules & Constitution",
+    "summary": "The full league constitution is now available on the site.",
+    "description": [
+      "All league rules, scoring settings, roster requirements, and contract details are documented in a searchable, browsable format. No more digging through PDFs or message board posts."
+    ],
+    "category": "new-page",
+    "link": "/theleague/rules",
+    "linkLabel": "Read the Rules",
+    "icon": "clipboard"
+  },
+  {
+    "id": "playoffs",
+    "date": "2025-11-30",
+    "title": "Playoff Brackets",
+    "summary": "View the full playoff bracket with matchups, results, and prizes.",
+    "description": [
+      "A visual playoff bracket page showing all tournament matchups, winners bracket, consolation rounds, and prize payouts. Updates automatically as the playoffs progress."
+    ],
+    "category": "new-page",
+    "link": "/theleague/playoffs",
+    "linkLabel": "View Playoffs",
+    "icon": "champ"
+  },
+  {
+    "id": "draft-predictor",
+    "date": "2025-11-29",
+    "title": "Draft Order Predictor",
+    "summary": "See the projected draft order for next season based on current standings.",
+    "description": [
+      "Predicts next year's draft order using current season standings, playoff results, and the league's draft order rules. Updates weekly during the season."
+    ],
+    "category": "new-page",
+    "link": "/theleague/draft-predictor",
+    "linkLabel": "View Draft Order",
+    "icon": "draft-podium"
+  },
+  {
+    "id": "standings",
+    "date": "2025-11-28",
+    "title": "Standings Page",
+    "summary": "View current standings with division, playoff, and all-play views.",
+    "description": [
+      "A complete standings page with multiple views: division standings, league-wide playoff race, and all-play records. Includes win/loss records, points for/against, and tiebreaker details."
+    ],
+    "category": "new-page",
+    "link": "/theleague/standings",
+    "linkLabel": "View Standings",
+    "icon": "shield"
+  },
+  {
+    "id": "rosters",
+    "date": "2025-11-19",
+    "title": "Team Rosters",
+    "summary": "View all team rosters with player details, salaries, and contracts.",
+    "description": [
+      "The core roster page showing every team's players with salary, contract length, position, and status. Includes next-year salary projections with the 10% escalation rule applied."
+    ],
+    "category": "new-page",
+    "link": "/theleague/rosters",
+    "linkLabel": "View Rosters",
+    "icon": "banknote"
+  },
+  {
+    "id": "salary-history",
+    "date": "2025-11-17",
+    "title": "Salary History Charts",
+    "summary": "Track how team salary spending has changed across seasons.",
+    "description": [
+      "Interactive charts showing salary cap trends over time. Toggle between total spending, position breakdowns, and individual team views."
+    ],
+    "category": "new-page",
+    "link": "/theleague/salary-history",
+    "linkLabel": "View Salary History",
+    "icon": "history"
+  },
+  {
+    "id": "mvp-rankings",
+    "date": "2025-11-17",
+    "title": "Salary-Adjusted MVP Rankings",
+    "summary": "See which players deliver the most value relative to their salary.",
+    "description": [
+      "MVP rankings that factor in player salary to find the best value performers. A $1M player scoring like a $5M player ranks higher than the reverse."
+    ],
+    "category": "new-page",
+    "link": "/theleague/mvp",
+    "linkLabel": "View MVPs",
+    "icon": "star"
+  },
+  {
+    "id": "salary-benchmarks",
+    "date": "2025-11-16",
+    "title": "Salary Analytics",
+    "summary": "Compare your team's spending against league averages by position.",
+    "description": [
+      "A benchmarking tool that shows how each team's positional spending compares to the league-wide average. Helps identify overpays and value contracts."
+    ],
+    "category": "new-page",
+    "link": "/theleague/salary",
+    "linkLabel": "View Benchmarks",
+    "icon": "bar-chart"
+  },
+  {
+    "id": "extension-calculator",
+    "date": "2025-11-16",
+    "title": "Extension Calculator",
+    "summary": "Calculate the future cost of contract extensions with 10% annual escalation.",
+    "description": [
+      "A calculator that projects contract costs across multiple years, factoring in the league's 10% annual salary escalation. Essential for planning long-term roster moves."
+    ],
+    "category": "new-page",
+    "link": "/theleague/calculator",
+    "linkLabel": "Open Calculator",
+    "icon": "dollar"
+  },
+  {
+    "id": "asset-library",
+    "date": "2025-11-15",
+    "title": "Asset Library",
+    "summary": "Browse team logos, banners, and brand graphics for all 16 teams.",
+    "description": [
+      "A gallery of all team visual assets including logos, banners, and icons. Useful for message board posts, fantasy content, and league communications."
+    ],
+    "category": "new-page",
+    "link": "/theleague/assets",
+    "linkLabel": "Browse Assets",
+    "icon": "eye"
+  }
+]

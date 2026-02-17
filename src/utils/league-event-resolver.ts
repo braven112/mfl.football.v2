@@ -290,16 +290,13 @@ export function selectWhatsNextTimeline(
 }
 
 /**
- * Main entry point: get the "What's Next" timeline for TheLeague.
- *
- * Resolves events for both the current and next league year so that
- * the transition period (e.g., Feb 14 before the 8:45 PM cutoff) still
- * shows upcoming events from the new year.
+ * Get all resolved events for both current and next league year, merged and sorted.
+ * This is the shared base for both getWhatsNextTimeline and getWhatsNextTimelineExcluding.
  */
-export function getWhatsNextTimeline(
+function getMergedResolvedEvents(
   referenceDate?: Date,
   linkVars?: LinkTemplateVars,
-): WhatsNextTimeline {
+): { allResolved: ResolvedLeagueEvent[]; now: Date; leagueYear: number } {
   const now = referenceDate || new Date();
   const leagueYear = getCurrentLeagueYear(now);
   const nextLeagueYear = leagueYear + 1;
@@ -318,8 +315,6 @@ export function getWhatsNextTimeline(
 
   // Deduplicate: if an event ID exists in both years with the same start date,
   // keep only the current year's version (it has the correct MFL year in links).
-  // For next-year events with different dates, include them (they represent the
-  // next cycle — e.g., next year's tagging period, FA, etc.).
   const currentYearIds = new Set(
     currentYearEvents.map((e) => `${e.definition.id}:${e.startDate.getTime()}`),
   );
@@ -334,7 +329,37 @@ export function getWhatsNextTimeline(
     return a.definition.sortOrder - b.definition.sortOrder;
   });
 
+  return { allResolved, now, leagueYear };
+}
+
+/**
+ * Main entry point: get the "What's Next" timeline for TheLeague.
+ *
+ * Resolves events for both the current and next league year so that
+ * the transition period (e.g., Feb 14 before the 8:45 PM cutoff) still
+ * shows upcoming events from the new year.
+ */
+export function getWhatsNextTimeline(
+  referenceDate?: Date,
+  linkVars?: LinkTemplateVars,
+): WhatsNextTimeline {
+  const { allResolved, now, leagueYear } = getMergedResolvedEvents(referenceDate, linkVars);
   return selectWhatsNextTimeline(allResolved, now, leagueYear);
+}
+
+/**
+ * Get the "What's Next" timeline but exclude a specific event by ID.
+ * Used when the hero banner is already promoting that event, so the
+ * What's Next section can show different content and avoid duplication.
+ */
+export function getWhatsNextTimelineExcluding(
+  excludeEventId: string,
+  referenceDate?: Date,
+  linkVars?: LinkTemplateVars,
+): WhatsNextTimeline {
+  const { allResolved, now, leagueYear } = getMergedResolvedEvents(referenceDate, linkVars);
+  const filtered = allResolved.filter((e) => e.definition.id !== excludeEventId);
+  return selectWhatsNextTimeline(filtered, now, leagueYear);
 }
 
 /**

@@ -5,11 +5,24 @@
  *
  * Renders at build time with current date, and re-evaluates client-side
  * when ?testDate= parameter is present.
+ *
+ * @prop excludeEventId - Optional event ID to hide (when already shown in the hero banner)
  */
 import WhatsNextCard from './WhatsNextCard.astro';
-import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+import { getWhatsNextTimeline, getWhatsNextTimelineExcluding } from '../../utils/league-event-resolver';
 
-const timeline = getWhatsNextTimeline();
+interface Props {
+  /** Event ID to exclude from the timeline (already shown in hero) */
+  excludeEventId?: string;
+  /** Override date for demo/testing purposes */
+  demoDate?: Date;
+}
+
+const { excludeEventId, demoDate } = Astro.props;
+
+const timeline = excludeEventId
+  ? getWhatsNextTimelineExcluding(excludeEventId, demoDate)
+  : getWhatsNextTimeline(demoDate);
 const hasEvents = timeline.current || timeline.next || timeline.upcoming;
 ---
 

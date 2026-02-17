@@ -64,6 +64,15 @@
           "external": false,
           "leagueOnly": "theleague",
           "description": "View upcoming league events and deadlines"
+        },
+        {
+          "id": "whats-new",
+          "label": "What's New",
+          "icon": "star",
+          "path": "/whats-new",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "See the latest features and improvements"
         }
       ]
     },
@@ -74,7 +83,7 @@
       "links": [
         {
           "id": "salary-benchmarks",
-          "label": "Salary Benchmarks",
+          "label": "Salary Analytics",
           "icon": "bar-chart",
           "path": "/salary",
           "external": false,
@@ -91,7 +100,7 @@
         {
           "id": "mvp",
           "label": "Salary-Adjusted MVPs",
-          "icon": "star",
+          "icon": "standings",
           "path": "/mvp",
           "external": false,
           "description": "Top performers relative to salary"
@@ -269,7 +278,8 @@
     "/icons": "/icons",
     "/assets": "/assets",
     "/trade-builder": "/trade-builder",
-    "/calendar": "/calendar"
+    "/calendar": "/calendar",
+    "/whats-new": "/whats-new"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

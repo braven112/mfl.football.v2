@@ -1,35 +1,75 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import HeroBanner from '../../components/theleague/HeroBanner.astro';
 import WhatsNext from '../../components/theleague/WhatsNext.astro';
+import { resolveHeroContent } from '../../utils/hero-resolver';
+import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+import type { WhatsNewEntry } from '../../types/whats-new';
+import whatsNewData from '../../data/whats-new.json';
 
-export const prerender = true;
+export const prerender = false;
+
+// Support ?testDate=YYYY-MM-DD for testing different hero/timeline states
+const testDateParam = Astro.url.searchParams.get('testDate');
+const referenceDate = testDateParam ? new Date(testDateParam) : undefined;
+const isValidTestDate = referenceDate && !isNaN(referenceDate.getTime());
+const effectiveDate = isValidTestDate ? referenceDate : undefined;
+
+const timeline = getWhatsNextTimeline(effectiveDate);
+const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effectiveDate);
 
 const pages = {
+  'Team Management': [
+    { title: 'Coach Tab', href: '/theleague/rosters?view=coach', description: 'Coach mode with matchups and odds', icon: 'submit' },
+    { title: 'Next Year Summary', href: '/theleague/rosters?view=nextyear', description: "Preview next year's roster and salary commitments", icon: 'chalkboard' },
+  ],
   'League Management': [
-    { title: 'Standings', href: '/theleague/standings', description: 'View current season standings and rankings' },
-    { title: 'Rosters', href: '/theleague/rosters', description: 'Team rosters and player details' },
-    { title: 'Playoffs', href: '/theleague/playoffs', description: 'Playoff brackets and tournament results' },
-    { title: 'Draft Predictor', href: '/theleague/draft-predictor', description: 'Projected draft order for next season' },
+    { title: 'Standings', href: '/theleague/standings', description: 'View current season standings and rankings', icon: 'shield' },
+    { title: 'Playoffs', href: '/theleague/playoffs', description: 'Playoff brackets and tournament results', icon: 'champ' },
+    { title: 'Draft Predictor', href: '/theleague/draft-predictor', description: 'Projected draft order for next season', icon: 'draft-podium' },
+    { title: 'League Calendar', href: '/theleague/calendar', description: 'All important league dates and deadlines', icon: 'calendar' },
   ],
   'Salary & Contracts': [
-    { title: 'Salary Cap', href: '/theleague/salary', description: 'Team salary cap status and management' },
-    { title: 'Contracts', href: '/theleague/contracts', description: 'Coming Soon!' },
-    { title: 'Salary History', href: '/theleague/salary-history', description: 'Track salary changes over time' },
-    { title: 'Salary Calculator', href: '/theleague/calculator', description: 'Calculate salary cap scenarios' },
+    { title: 'Roster/Salary', href: '/theleague/rosters', description: 'Team rosters and salary cap details', icon: 'banknote' },
+    { title: 'Salary History', href: '/theleague/salary-history', description: 'Track salary changes over time', icon: 'history' },
+    { title: 'Salary Analytics', href: '/theleague/salary', description: 'Salary benchmarks and spending analysis', icon: 'bar-chart' },
   ],
-  'League Info & Stats': [
-    { title: 'MVP Rankings', href: '/theleague/mvp', description: 'Most valuable player rankings' },
-    { title: 'League Comparison', href: '/theleague/league-comparison', description: 'Compare league statistics' },
+  'Trading & Analysis': [
+    { title: 'Trade Builder', href: '/theleague/trade-builder', description: 'Simulate trades and see salary cap impact', icon: 'transactions-2' },
+    { title: 'MVP Rankings', href: '/theleague/mvp', description: 'Salary-adjusted most valuable player rankings', icon: 'standings' },
+    { title: 'League Summary', href: '/theleague/league-summary', description: 'Compare all 16 teams across cap, roster, and contract metrics', icon: 'standings-2' },
   ],
   'Assets & Resources': [
-    { title: 'Asset Library', href: '/theleague/assets', description: 'Team logos, banners, and graphics' },
+    { title: 'Asset Library', href: '/theleague/assets', description: 'Team logos, banners, and graphics', icon: 'eye' },
+    { title: "What's New", href: '/theleague/whats-new', description: 'Latest features and improvements', icon: 'star' },
   ],
 };
 ---
 
 <TheLeagueLayout title="The League - Home">
   <main class="league-home">
-    <WhatsNext />
+    <section class="featured-news">
+      <div class="featured-news__header">
+        <h2 class="featured-news__heading">Featured News</h2>
+        <a href="/theleague/whats-new" class="featured-news__releases-link">View all releases &rarr;</a>
+      </div>
+      <HeroBanner
+        title={hero.title}
+        summary={hero.summary}
+        link={hero.link}
+        linkLabel={hero.linkLabel}
+        icon={hero.icon}
+        accentColor={hero.accentColor}
+        variant={hero.source}
+        dateDisplay={hero.dateDisplay}
+        statusText={hero.statusText}
+        isActive={hero.isActive}
+        isUrgent={hero.isUrgent}
+        isExternal={hero.isExternal}
+      />
+    </section>
+
+    <WhatsNext demoDate={effectiveDate} />
 
     {Object.entries(pages).map(([category, items]) => (
       <section class="page-category">
@@ -37,7 +77,12 @@ const pages = {
         <div class="page-grid">
           {items.map(page => (
             <a href={page.href} class="page-card">
-              <h3>{page.title}</h3>
+              <div class="page-card__header">
+                <svg class="page-card__icon" aria-hidden="true">
+                  <use href={`/assets/icons/sprite.svg#icon-${page.icon}`}></use>
+                </svg>
+                <h3>{page.title}</h3>
+              </div>
               <p>{page.description}</p>
             </a>
           ))}
@@ -72,6 +117,38 @@ const pages = {
     margin: 0;
   }
 
+  .featured-news {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .featured-news__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .featured-news__heading {
+    font-size: 1.5rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .featured-news__releases-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .featured-news__releases-link:hover {
+    text-decoration: underline;
+  }
+
   .page-category {
     display: flex;
     flex-direction: column;
@@ -88,7 +165,7 @@ const pages = {
   .page-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
+    gap: var(--spacing-xl, 2rem);
   }
 
   .page-card {
@@ -108,6 +185,25 @@ const pages = {
     border-color: var(--accent-link-hover-text-color, #3c9950);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
+  }
+
+  .page-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .page-card__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: var(--color-primary, #1c497c);
+    transition: color 0.2s ease;
+  }
+
+  .page-card:hover .page-card__icon {
+    color: var(--accent-link-hover-text-color, #3c9950);
   }
 
   .page-card h3 {
