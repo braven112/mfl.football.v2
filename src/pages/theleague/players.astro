@@ -429,9 +429,9 @@ const faCountsJson = JSON.stringify(faCounts);
     for (let i = 0; i < pageData.length; i++) {
       const p = pageData[i];
       const rank = start + i + 1;
-      const headshot = getHeadshotUrl(p.id, p.espnId);
-      const logo = getNflLogo(p.team);
       const isDef = p.position === 'DEF';
+      const headshot = isDef ? getNflLogo(p.team) : getHeadshotUrl(p.id, p.espnId);
+      const logo = getNflLogo(p.team);
       const posLabel = p.position === 'PK' ? 'K' : p.position;
       const rosteredClass = p.rostered ? ' row--rostered' : '';
 
@@ -923,10 +923,6 @@ const faCountsJson = JSON.stringify(faCounts);
     :global(.p-row__avatar) {
       width: 34px;
       height: 34px;
-    }
-    .col-text, :global(.cell-text),
-    .col-sm:nth-of-type(n+5), :global(.cell-sm:nth-of-type(n+5)) {
-      display: none;
     }
     .category-tabs {
       gap: 0.25rem;
