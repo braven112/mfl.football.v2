@@ -157,6 +157,7 @@ interface PlayerRow {
   adpDyn: number | null;
   adpRdf: number | null;
   lastYrPts: number | null;
+  rookie: boolean;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -231,6 +232,7 @@ if (Array.isArray(allPlayers)) {
       adpDyn: adpDynMap.get(p.id) ?? null,
       adpRdf: adpRdfMap.get(p.id) ?? null,
       lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
+      rookie: p.status === 'R',
     });
   }
 }
@@ -294,6 +296,10 @@ const faCountsJson = JSON.stringify(faCounts);
       <label class="roster-toggle">
         <input type="checkbox" id="show-rostered" />
         <span>Include rostered</span>
+      </label>
+      <label class="roster-toggle">
+        <input type="checkbox" id="show-rookies" checked />
+        <span>Include rookies</span>
       </label>
     </div>
 
@@ -379,6 +385,7 @@ const faCountsJson = JSON.stringify(faCounts);
   let activePosition = 'ALL';
   let searchQuery = '';
   let showRostered = false;
+  let showRookies = true;
   const PAGE_SIZE = 50;
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
@@ -469,6 +476,9 @@ const faCountsJson = JSON.stringify(faCounts);
       // Free agent filter (default on)
       if (!showRostered && p.rostered) return false;
 
+      // Rookie filter (default on)
+      if (!showRookies && p.rookie) return false;
+
       // Position filter
       if (activePosition !== 'ALL' && p.position !== activePosition) return false;
 
@@ -480,9 +490,10 @@ const faCountsJson = JSON.stringify(faCounts);
       return true;
     });
 
-    // Update category counts based on current showRostered + search
+    // Update category counts based on current filters + search
     const pool = players.filter(p => {
       if (!showRostered && p.rostered) return false;
+      if (!showRookies && p.rookie) return false;
       if (query) {
         return p.name.toLowerCase().includes(query) ||
                p.team.toLowerCase().includes(query);
@@ -643,6 +654,15 @@ const faCountsJson = JSON.stringify(faCounts);
     if (rosterCheck) {
       rosterCheck.addEventListener('change', (e) => {
         showRostered = e.target.checked;
+        filterPlayers();
+      });
+    }
+
+    // Include rookies toggle
+    const rookieCheck = document.getElementById('show-rookies');
+    if (rookieCheck) {
+      rookieCheck.addEventListener('change', (e) => {
+        showRookies = e.target.checked;
         filterPlayers();
       });
     }
