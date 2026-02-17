@@ -243,8 +243,6 @@ playerList.sort((a, b) => {
 });
 
 const hasProjected = projectedMap.size > 0;
-const hasAdpDyn = adpDynMap.size > 0;
-const hasAdpRdf = adpRdfMap.size > 0;
 const hasLastYrPts = lastYrPtsMap.size > 0;
 
 // Count free agents by position for category tabs
@@ -333,16 +331,12 @@ const faCountsJson = JSON.stringify(faCounts);
                 <div class="th-content">Projected<span class="sort-arrow"></span></div>
               </th>
             )}
-            {hasAdpDyn && (
-              <th class="sortable col-num" data-sort="adpDyn">
-                <div class="th-content">ADP Dyn<span class="sort-arrow"></span></div>
-              </th>
-            )}
-            {hasAdpRdf && (
-              <th class="sortable col-num" data-sort="adpRdf">
-                <div class="th-content">ADP Rdf<span class="sort-arrow"></span></div>
-              </th>
-            )}
+            <th class="sortable col-num" data-sort="adpRdf">
+              <div class="th-content">ADP Rdf<span class="sort-arrow"></span></div>
+            </th>
+            <th class="sortable col-num" data-sort="adpDyn">
+              <div class="th-content">ADP Dyn<span class="sort-arrow"></span></div>
+            </th>
             {hasLastYrPts && (
               <th class="sortable col-num" data-sort="lastYrPts">
                 <div class="th-content">Last Yr<span class="sort-arrow"></span></div>
@@ -374,7 +368,7 @@ const faCountsJson = JSON.stringify(faCounts);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasAdpDyn, hasAdpRdf, hasLastYrPts, faCountsJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, faCountsJson }}>
   const players = JSON.parse(playerDataJson);
 
   // State — default to free agents only
@@ -572,12 +566,8 @@ const faCountsJson = JSON.stringify(faCounts);
         html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasAdpDyn) {
-        html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
-      }
-      if (hasAdpRdf) {
-        html += `<td class="cell-num">${p.adpRdf != null ? p.adpRdf.toFixed(1) : '<span class="na">-</span>'}</td>`;
-      }
+      html += `<td class="cell-num">${p.adpRdf != null ? p.adpRdf.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
 
       if (hasLastYrPts) {
         html += `<td class="cell-num">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
