@@ -344,7 +344,7 @@ const endpoints = [
   },
   {
     key: 'adp-dynasty',
-    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=1&IS_MOCK=0&JSON=1`,
+    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_MOCK=0&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
   {
@@ -737,6 +737,7 @@ const run = async () => {
       }
     }
   }
+
 
   fs.writeFileSync(
     metaFile,
