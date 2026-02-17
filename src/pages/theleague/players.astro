@@ -940,11 +940,16 @@ const faCountsJson = JSON.stringify(faCounts);
   }
   :global(.p-row__avatar--def) {
     border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
   }
   :global(.p-row__avatar--def img) {
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     object-position: center;
-    padding: 4px;
   }
   :global(.p-row__info) {
     display: flex;
