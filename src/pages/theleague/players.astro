@@ -37,8 +37,12 @@ const rostersModules = import.meta.glob(
   { eager: true }
 );
 
-const adpModules = import.meta.glob(
+const adpDynastyModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
+  { eager: true }
+);
+const adpRedraftModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/adp-redraft.json',
   { eager: true }
 );
 const lastYearWeeklyModules = import.meta.glob(
@@ -58,20 +62,23 @@ const playersData = findForYear(playerModules, currentYear);
 const projectedScoresData = findForYear(projectedScoresModules, currentYear);
 const rostersData = findForYear(rostersModules, currentYear);
 
-// ADP data (dynasty) — try current year, fall back to previous year
-const adpData = findForYear(adpModules, currentYear) || findForYear(adpModules, currentYear - 1);
-const adpMap = new Map<string, number>();
-if (adpData?.adp?.player) {
-  const adpPlayers = Array.isArray(adpData.adp.player)
-    ? adpData.adp.player
-    : [adpData.adp.player];
-  for (const p of adpPlayers) {
-    if (p?.id && p?.averagePick) {
-      const pick = parseFloat(p.averagePick);
-      if (pick > 0) adpMap.set(p.id, pick);
+// ADP data — try current year, fall back to previous year
+function buildAdpMap(modules: Record<string, any>): Map<string, number> {
+  const data = findForYear(modules, currentYear) || findForYear(modules, currentYear - 1);
+  const map = new Map<string, number>();
+  if (data?.adp?.player) {
+    const players = Array.isArray(data.adp.player) ? data.adp.player : [data.adp.player];
+    for (const p of players) {
+      if (p?.id && p?.averagePick) {
+        const pick = parseFloat(p.averagePick);
+        if (pick > 0) map.set(p.id, pick);
+      }
     }
   }
+  return map;
 }
+const adpDynMap = buildAdpMap(adpDynastyModules);
+const adpRdfMap = buildAdpMap(adpRedraftModules);
 
 // Last year total points (from weekly results)
 const lastSeasonYear = getCurrentSeasonYear();
@@ -147,7 +154,8 @@ interface PlayerRow {
   htWt: string | null;
   height: number | null;
   weight: number | null;
-  adp: number | null;
+  adpDyn: number | null;
+  adpRdf: number | null;
   lastYrPts: number | null;
 }
 
@@ -220,7 +228,8 @@ if (Array.isArray(allPlayers)) {
       htWt,
       height: heightInches,
       weight: weightLbs,
-      adp: adpMap.get(p.id) ?? null,
+      adpDyn: adpDynMap.get(p.id) ?? null,
+      adpRdf: adpRdfMap.get(p.id) ?? null,
       lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
     });
   }
@@ -234,7 +243,8 @@ playerList.sort((a, b) => {
 });
 
 const hasProjected = projectedMap.size > 0;
-const hasAdp = adpMap.size > 0;
+const hasAdpDyn = adpDynMap.size > 0;
+const hasAdpRdf = adpRdfMap.size > 0;
 const hasLastYrPts = lastYrPtsMap.size > 0;
 
 // Count free agents by position for category tabs
@@ -323,9 +333,14 @@ const faCountsJson = JSON.stringify(faCounts);
                 <div class="th-content">Projected<span class="sort-arrow"></span></div>
               </th>
             )}
-            {hasAdp && (
-              <th class="sortable col-num" data-sort="adp">
-                <div class="th-content">ADP<span class="sort-arrow"></span></div>
+            {hasAdpDyn && (
+              <th class="sortable col-num" data-sort="adpDyn">
+                <div class="th-content">ADP Dyn<span class="sort-arrow"></span></div>
+              </th>
+            )}
+            {hasAdpRdf && (
+              <th class="sortable col-num" data-sort="adpRdf">
+                <div class="th-content">ADP Rdf<span class="sort-arrow"></span></div>
               </th>
             )}
             {hasLastYrPts && (
@@ -359,7 +374,7 @@ const faCountsJson = JSON.stringify(faCounts);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasAdp, hasLastYrPts, faCountsJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasAdpDyn, hasAdpRdf, hasLastYrPts, faCountsJson }}>
   const players = JSON.parse(playerDataJson);
 
   // State — default to free agents only
@@ -433,9 +448,13 @@ const faCountsJson = JSON.stringify(faCounts);
           aVal = a.weight ?? -1;
           bVal = b.weight ?? -1;
           break;
-        case 'adp':
-          aVal = a.adp ?? 999;
-          bVal = b.adp ?? 999;
+        case 'adpDyn':
+          aVal = a.adpDyn ?? 999;
+          bVal = b.adpDyn ?? 999;
+          break;
+        case 'adpRdf':
+          aVal = a.adpRdf ?? 999;
+          bVal = b.adpRdf ?? 999;
           break;
         case 'lastYrPts':
           aVal = a.lastYrPts ?? -1;
@@ -553,8 +572,11 @@ const faCountsJson = JSON.stringify(faCounts);
         html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasAdp) {
-        html += `<td class="cell-num">${p.adp != null ? p.adp.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      if (hasAdpDyn) {
+        html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+      if (hasAdpRdf) {
+        html += `<td class="cell-num">${p.adpRdf != null ? p.adpRdf.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasLastYrPts) {
