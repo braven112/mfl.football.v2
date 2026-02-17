@@ -24,6 +24,15 @@
           "description": "View all team rosters and salary cap details"
         },
         {
+          "id": "players",
+          "label": "Players",
+          "icon": "users",
+          "path": "/players",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Browse all players with ADP rankings and season points"
+        },
+        {
           "id": "next-year",
           "label": "Next Year Summary",
           "icon": "chalkboard",
@@ -234,6 +243,7 @@
     "/icons": "/icons",
     "/assets": "/assets",
     "/trade-builder": "/trade-builder",
+    "/players": "/players",
     "/calendar": "/calendar",
     "/whats-new": "/whats-new"
   },
