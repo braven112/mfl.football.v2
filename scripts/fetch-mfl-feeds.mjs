@@ -337,6 +337,21 @@ const endpoints = [
     url: withWeek(`${host}/${year}/export?TYPE=projectedScores&L=${leagueId}&JSON=1`),
     parser: (t) => JSON.parse(t),
   },
+  {
+    key: 'adp-redraft',
+    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=0&IS_MOCK=0&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
+    key: 'adp-dynasty',
+    url: `${host}/${year}/export?TYPE=adp&IS_PPR=1&IS_KEEPER=1&IS_MOCK=0&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
+    key: 'playerScores',
+    url: `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
 ];
 
 const fetchText = async (url) => {
