@@ -988,7 +988,7 @@ const faCountsJson = JSON.stringify(faCounts);
   }
 
   /* Columns */
-  .col-rank { width: 36px; text-align: center; }
+  .col-rank { width: min-content; text-align: center; }
   .col-player { min-width: 200px; }
   .col-player .th-content { justify-content: flex-start; }
   .col-age { width: 42px; text-align: center; }
@@ -1002,9 +1002,6 @@ const faCountsJson = JSON.stringify(faCounts);
     padding: 0.375rem 0.325rem;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
-  }
-  :global(.players-table td:first-child) {
-    padding-left: 0.625rem;
   }
   :global(.players-table td:last-child) {
     padding-right: 0.625rem;
