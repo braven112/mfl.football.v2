@@ -9,7 +9,7 @@
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { positionOrder } from '../../constants/roster-constants';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 
 // MFL team code → local SVG filename normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -37,6 +37,15 @@ const rostersModules = import.meta.glob(
   { eager: true }
 );
 
+const adpModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
+  { eager: true }
+);
+const lastYearWeeklyModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/weekly-results-raw.json',
+  { eager: true }
+);
+
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -48,6 +57,46 @@ const findForYear = (modules: Record<string, any>, yr: number) => {
 const playersData = findForYear(playerModules, currentYear);
 const projectedScoresData = findForYear(projectedScoresModules, currentYear);
 const rostersData = findForYear(rostersModules, currentYear);
+
+// ADP data (dynasty)
+const adpData = findForYear(adpModules, currentYear);
+const adpMap = new Map<string, number>();
+if (adpData?.adp?.player) {
+  const adpPlayers = Array.isArray(adpData.adp.player)
+    ? adpData.adp.player
+    : [adpData.adp.player];
+  for (const p of adpPlayers) {
+    if (p?.id && p?.averagePick) {
+      const pick = parseFloat(p.averagePick);
+      if (pick > 0) adpMap.set(p.id, pick);
+    }
+  }
+}
+
+// Last year total points (from weekly results)
+const lastSeasonYear = getCurrentSeasonYear();
+const lastYearData = findForYear(lastYearWeeklyModules, lastSeasonYear);
+const lastYrPtsMap = new Map<string, number>();
+if (Array.isArray(lastYearData)) {
+  for (const weekPayload of lastYearData) {
+    const matchups = weekPayload?.weeklyResults?.matchup;
+    if (!matchups) continue;
+    const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
+    for (const m of matchupArr) {
+      const franchises = m?.franchise ? (Array.isArray(m.franchise) ? m.franchise : [m.franchise]) : [];
+      for (const f of franchises) {
+        const players = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
+        for (const p of players) {
+          if (!p?.id || !p?.score) continue;
+          const score = parseFloat(p.score);
+          if (!isNaN(score)) {
+            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
+          }
+        }
+      }
+    }
+  }
+}
 
 // Build projected scores lookup
 const projectedMap = new Map<string, number>();
@@ -98,6 +147,8 @@ interface PlayerRow {
   htWt: string | null;
   height: number | null;
   weight: number | null;
+  adp: number | null;
+  lastYrPts: number | null;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -169,6 +220,8 @@ if (Array.isArray(allPlayers)) {
       htWt,
       height: heightInches,
       weight: weightLbs,
+      adp: adpMap.get(p.id) ?? null,
+      lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
     });
   }
 }
@@ -181,6 +234,8 @@ playerList.sort((a, b) => {
 });
 
 const hasProjected = projectedMap.size > 0;
+const hasAdp = adpMap.size > 0;
+const hasLastYrPts = lastYrPtsMap.size > 0;
 
 // Count free agents by position for category tabs
 const freeAgents = playerList.filter(p => !p.rostered);
@@ -268,6 +323,16 @@ const faCountsJson = JSON.stringify(faCounts);
                 <div class="th-content">Projected<span class="sort-arrow"></span></div>
               </th>
             )}
+            {hasAdp && (
+              <th class="sortable col-num" data-sort="adp">
+                <div class="th-content">ADP<span class="sort-arrow"></span></div>
+              </th>
+            )}
+            {hasLastYrPts && (
+              <th class="sortable col-num" data-sort="lastYrPts">
+                <div class="th-content">Last Yr<span class="sort-arrow"></span></div>
+              </th>
+            )}
             <th class="sortable col-sm" data-sort="draftRd">
               <div class="th-content">Draft<span class="sort-arrow"></span></div>
             </th>
@@ -294,7 +359,7 @@ const faCountsJson = JSON.stringify(faCounts);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, faCountsJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasAdp, hasLastYrPts, faCountsJson }}>
   const players = JSON.parse(playerDataJson);
 
   // State — default to free agents only
@@ -367,6 +432,14 @@ const faCountsJson = JSON.stringify(faCounts);
         case 'weight':
           aVal = a.weight ?? -1;
           bVal = b.weight ?? -1;
+          break;
+        case 'adp':
+          aVal = a.adp ?? 999;
+          bVal = b.adp ?? 999;
+          break;
+        case 'lastYrPts':
+          aVal = a.lastYrPts ?? -1;
+          bVal = b.lastYrPts ?? -1;
           break;
         default:
           aVal = a.projected ?? -1;
@@ -480,6 +553,14 @@ const faCountsJson = JSON.stringify(faCounts);
         html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
+      if (hasAdp) {
+        html += `<td class="cell-num">${p.adp != null ? p.adp.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+
+      if (hasLastYrPts) {
+        html += `<td class="cell-num">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
       html += `<td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
@@ -511,7 +592,7 @@ const faCountsJson = JSON.stringify(faCounts);
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts']);
 
   function init() {
     // Prevent duplicate listeners on re-init (Astro view transitions)
