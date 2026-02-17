@@ -106,8 +106,8 @@ if (Array.isArray(allPlayers)) {
     const projected = projectedMap.get(p.id) ?? null;
     const isRostered = rosteredPlayers.has(p.id);
 
-    // Include players with projected scores or on a roster
-    if (!projected && !isRostered) continue;
+    // Skip only players with zero data relevance (no projections, not rostered, no NFL team)
+    // This filters out practice squad/obscure players while keeping real NFL free agents
 
     let age: number | null = null;
     if (p.birthdate) {
