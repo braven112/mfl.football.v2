@@ -5,6 +5,15 @@
       "label": "Popular",
       "links": [
         {
+          "id": "forum",
+          "label": "Message Board",
+          "icon": "comments",
+          "url": "https://theleague.us/forum/index.php",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Discussion forum for league members"
+        },
+        {
           "id": "rosters",
           "label": "Roster/Salary",
           "labelAFL": "Rosters",
@@ -77,45 +86,6 @@
       ]
     },
     {
-      "id": "reports",
-      "label": "Advanced Reports",
-      "leagueOnly": "theleague",
-      "links": [
-        {
-          "id": "salary-benchmarks",
-          "label": "Salary Analytics",
-          "icon": "bar-chart",
-          "path": "/salary",
-          "external": false,
-          "description": "Compare salary spending across positions"
-        },
-        {
-          "id": "salary-history",
-          "label": "Salary History",
-          "icon": "history",
-          "path": "/salary-history",
-          "external": false,
-          "description": "Historical salary cap trends"
-        },
-        {
-          "id": "mvp",
-          "label": "Salary-Adjusted MVPs",
-          "icon": "standings",
-          "path": "/mvp",
-          "external": false,
-          "description": "Top performers relative to salary"
-        },
-        {
-          "id": "league-summary",
-          "label": "League Summary",
-          "icon": "standings-2",
-          "path": "/league-summary",
-          "external": false,
-          "description": "Compare all teams across cap, roster, and contract metrics over 5 years"
-        }
-      ]
-    },
-    {
       "id": "my-team",
       "label": "My Team",
       "leagueOnly": "theleague",
@@ -127,6 +97,14 @@
           "path": "/rosters?view=coach",
           "external": false,
           "description": "Coach mode with matchups & odds"
+        },
+        {
+          "id": "trade-builder",
+          "label": "Trade Builder",
+          "icon": "transactions-2",
+          "path": "/trade-builder",
+          "external": false,
+          "description": "Simulate trades and see cap impact"
         },
         {
           "id": "auction-predictor",
@@ -145,29 +123,7 @@
           "external": true,
           "visibility": "admin",
           "description": "Your team's overview on MFL"
-        }
-      ]
-    },
-    {
-      "id": "admin",
-      "label": "Admin",
-      "visibility": "admin",
-      "leagueOnly": "theleague",
-      "links": [
-        {
-          "id": "feature-flags",
-          "label": "Feature Flags",
-          "icon": "wrench",
-          "path": "/admin/features",
-          "external": false,
-          "description": "Manage feature flags"
-        }
-      ]
-    },
-    {
-      "id": "mfl-links",
-      "label": "MFL Actions",
-      "links": [
+        },
         {
           "id": "submit-lineup",
           "label": "Submit Lineup",
@@ -194,41 +150,42 @@
         }
       ]
     },
-        {
-      "id": "community",
-      "label": "Community",
+    {
+      "id": "reports",
+      "label": "Advanced Reports",
       "leagueOnly": "theleague",
       "links": [
         {
-          "id": "forum",
-          "label": "Message Board",
-          "icon": "comments",
-          "url": "https://theleague.us/forum/index.php",
+          "id": "league-summary",
+          "label": "League Summary",
+          "icon": "standings-2",
+          "path": "/league-summary",
           "external": false,
-          "description": "Discussion forum for league members"
-        }
-      ]
-    },
-        {
-      "id": "tools",
-      "label": "Tools",
-      "leagueOnly": "theleague",
-      "links": [
-        {
-          "id": "trade-builder",
-          "label": "Trade Builder",
-          "icon": "transactions-2",
-          "path": "/trade-builder",
-          "external": false,
-          "description": "Simulate trades and see cap impact"
+          "description": "Compare all teams across cap, roster, and contract metrics over 5 years"
         },
         {
-          "id": "calculator",
-          "label": "Extension Calculator",
-          "icon": "dollar",
-          "path": "/calculator",
+          "id": "salary-benchmarks",
+          "label": "Salary Analytics",
+          "icon": "bar-chart",
+          "path": "/salary",
           "external": false,
-          "description": "Calculate contract extension values"
+          "description": "Compare salary spending across positions"
+        },
+        {
+          "id": "salary-history",
+          "label": "Salary History",
+          "icon": "history",
+          "path": "/salary-history",
+          "external": false,
+          "description": "Historical salary cap trends"
+        },
+        {
+          "id": "mvp",
+          "label": "Salary-Adjusted MVPs",
+          "icon": "standings",
+          "path": "/mvp",
+          "external": false,
+          "description": "Top performers relative to salary"
         }
       ]
     },
@@ -268,7 +225,6 @@
   "routeEquivalence": {
     "/rosters": "/rosters",
     "/rosters?view=nextyear": "/rosters?view=nextyear",
-    "/calculator": "/calculator",
     "/standings": "/standings",
     "/playoffs": "/playoffs",
     "/salary": "/salary",
