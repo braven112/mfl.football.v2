@@ -96,6 +96,8 @@ interface PlayerRow {
   draftRd: number | null;
   college: string | null;
   htWt: string | null;
+  height: number | null;
+  weight: number | null;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -136,13 +138,19 @@ if (Array.isArray(allPlayers)) {
 
     // Height/Weight formatting
     let htWt: string | null = null;
+    let heightInches: number | null = null;
+    let weightLbs: number | null = null;
     if (p.height) {
       const inches = parseInt(p.height, 10);
       if (inches > 0) {
+        heightInches = inches;
         const ft = Math.floor(inches / 12);
         const rem = inches % 12;
         htWt = `${ft}'${rem}"`;
-        if (p.weight) htWt += ` ${p.weight}`;
+        if (p.weight) {
+          weightLbs = parseInt(p.weight, 10) || null;
+          htWt += ` ${p.weight}`;
+        }
       }
     }
 
@@ -159,6 +167,8 @@ if (Array.isArray(allPlayers)) {
       draftRd: (draftRd && draftRd > 0) ? draftRd : null,
       college: p.college || null,
       htWt,
+      height: heightInches,
+      weight: weightLbs,
     });
   }
 }
@@ -264,8 +274,11 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-text" data-sort="college">
               <div class="th-content">College<span class="sort-arrow"></span></div>
             </th>
-            <th class="col-text">
-              <div class="th-content">Ht/Wt</div>
+            <th class="sortable col-sm" data-sort="height">
+              <div class="th-content">Ht<span class="sort-arrow"></span></div>
+            </th>
+            <th class="sortable col-sm" data-sort="weight">
+              <div class="th-content">Wt<span class="sort-arrow"></span></div>
             </th>
           </tr>
         </thead>
@@ -346,6 +359,14 @@ const faCountsJson = JSON.stringify(faCounts);
         case 'draftRd':
           aVal = a.draftRd ?? 99;
           bVal = b.draftRd ?? 99;
+          break;
+        case 'height':
+          aVal = a.height ?? -1;
+          bVal = b.height ?? -1;
+          break;
+        case 'weight':
+          aVal = a.weight ?? -1;
+          bVal = b.weight ?? -1;
           break;
         default:
           aVal = a.projected ?? -1;
@@ -459,9 +480,12 @@ const faCountsJson = JSON.stringify(faCounts);
         html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
+      const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
+      const wtDisplay = p.weight ? p.weight + '' : '-';
       html += `<td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
         <td class="cell-text">${p.college || '<span class="na">-</span>'}</td>
-        <td class="cell-text">${p.htWt || '-'}</td>
+        <td class="cell-sm">${htDisplay}</td>
+        <td class="cell-sm">${wtDisplay}</td>
       </tr>`;
     }
 
@@ -487,7 +511,7 @@ const faCountsJson = JSON.stringify(faCounts);
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight']);
 
   function init() {
     // Prevent duplicate listeners on re-init (Astro view transitions)
