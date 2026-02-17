@@ -92,6 +92,10 @@ interface PlayerRow {
   espnId: string | null;
   projected: number | null;
   rostered: boolean;
+  exp: number | null;
+  draftRd: number | null;
+  college: string | null;
+  htWt: string | null;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -123,6 +127,25 @@ if (Array.isArray(allPlayers)) {
       ? `${nameParts[1]} ${nameParts[0]}`
       : p.name;
 
+    // Experience (years in NFL)
+    const draftYr = p.draft_year ? parseInt(p.draft_year, 10) : null;
+    const exp = draftYr && draftYr > 0 ? currentYear - draftYr : null;
+
+    // Draft round
+    const draftRd = p.draft_round ? parseInt(p.draft_round, 10) : null;
+
+    // Height/Weight formatting
+    let htWt: string | null = null;
+    if (p.height) {
+      const inches = parseInt(p.height, 10);
+      if (inches > 0) {
+        const ft = Math.floor(inches / 12);
+        const rem = inches % 12;
+        htWt = `${ft}'${rem}"`;
+        if (p.weight) htWt += ` ${p.weight}`;
+      }
+    }
+
     playerList.push({
       id: p.id,
       name: displayName,
@@ -132,6 +155,10 @@ if (Array.isArray(allPlayers)) {
       espnId: p.espn_id || null,
       projected,
       rostered: isRostered,
+      exp,
+      draftRd: (draftRd && draftRd > 0) ? draftRd : null,
+      college: p.college || null,
+      htWt,
     });
   }
 }
@@ -223,11 +250,23 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age<span class="sort-arrow"></span></div>
             </th>
+            <th class="sortable col-sm" data-sort="exp">
+              <div class="th-content">Exp<span class="sort-arrow"></span></div>
+            </th>
             {hasProjected && (
               <th class="sortable col-num" data-sort="projected">
                 <div class="th-content">Projected<span class="sort-arrow"></span></div>
               </th>
             )}
+            <th class="sortable col-sm" data-sort="draftRd">
+              <div class="th-content">Draft<span class="sort-arrow"></span></div>
+            </th>
+            <th class="sortable col-text" data-sort="college">
+              <div class="th-content">College<span class="sort-arrow"></span></div>
+            </th>
+            <th class="col-text">
+              <div class="th-content">Ht/Wt</div>
+            </th>
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
@@ -288,13 +327,25 @@ const faCountsJson = JSON.stringify(faCounts);
           return sortDirection === 'asc'
             ? a.team.localeCompare(b.team)
             : b.team.localeCompare(a.team);
+        case 'college':
+          return sortDirection === 'asc'
+            ? (a.college || '').localeCompare(b.college || '')
+            : (b.college || '').localeCompare(a.college || '');
         case 'age':
           aVal = a.age ?? 999;
           bVal = b.age ?? 999;
           break;
+        case 'exp':
+          aVal = a.exp ?? -1;
+          bVal = b.exp ?? -1;
+          break;
         case 'projected':
           aVal = a.projected ?? -1;
           bVal = b.projected ?? -1;
+          break;
+        case 'draftRd':
+          aVal = a.draftRd ?? 99;
+          bVal = b.draftRd ?? 99;
           break;
         default:
           aVal = a.projected ?? -1;
@@ -401,13 +452,17 @@ const faCountsJson = JSON.stringify(faCounts);
             </div>
           </div>
         </td>
-        <td class="cell-age">${p.age ?? '-'}</td>`;
+        <td class="cell-age">${p.age ?? '-'}</td>
+        <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>`;
 
       if (hasProjected) {
         html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      html += `</tr>`;
+      html += `<td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="cell-text">${p.college || '<span class="na">-</span>'}</td>
+        <td class="cell-text">${p.htWt || '-'}</td>
+      </tr>`;
     }
 
     tbody.innerHTML = html;
@@ -431,7 +486,15 @@ const faCountsJson = JSON.stringify(faCounts);
     }
   }
 
+  // Columns that default to desc when first clicked
+  const descDefaults = new Set(['projected', 'exp']);
+
   function init() {
+    // Prevent duplicate listeners on re-init (Astro view transitions)
+    const table = document.getElementById('players-table');
+    if (!table || table.dataset.init) return;
+    table.dataset.init = 'true';
+
     // Category tabs
     const tabsEl = document.getElementById('category-tabs');
     if (tabsEl) {
@@ -475,7 +538,7 @@ const faCountsJson = JSON.stringify(faCounts);
           sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
           currentSort = sortKey;
-          sortDirection = (sortKey === 'projected') ? 'desc' : 'asc';
+          sortDirection = descDefaults.has(sortKey) ? 'desc' : 'asc';
         }
         sortPlayers();
         render();
@@ -694,7 +757,9 @@ const faCountsJson = JSON.stringify(faCounts);
   .col-rank { width: 36px; text-align: center; }
   .col-player { min-width: 200px; }
   .col-age { width: 42px; text-align: center; }
+  .col-sm { width: 48px; text-align: center; }
   .col-num { width: 72px; text-align: right; }
+  .col-text { text-align: left; }
 
   /* Cells */
   .players-table td {
@@ -727,6 +792,16 @@ const faCountsJson = JSON.stringify(faCounts);
   }
   :global(.na) {
     color: #d1d5db;
+  }
+  :global(.cell-sm) {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: #64748b;
+  }
+  :global(.cell-text) {
+    font-size: 0.8125rem;
+    color: #64748b;
+    white-space: nowrap;
   }
 
   /* Rostered row dim */
@@ -848,6 +923,10 @@ const faCountsJson = JSON.stringify(faCounts);
     :global(.p-row__avatar) {
       width: 34px;
       height: 34px;
+    }
+    .col-text, :global(.cell-text),
+    .col-sm:nth-of-type(n+5), :global(.cell-sm:nth-of-type(n+5)) {
+      display: none;
     }
     .category-tabs {
       gap: 0.25rem;
