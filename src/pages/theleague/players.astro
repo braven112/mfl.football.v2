@@ -58,8 +58,8 @@ const playersData = findForYear(playerModules, currentYear);
 const projectedScoresData = findForYear(projectedScoresModules, currentYear);
 const rostersData = findForYear(rostersModules, currentYear);
 
-// ADP data (dynasty)
-const adpData = findForYear(adpModules, currentYear);
+// ADP data (dynasty) — try current year, fall back to previous year
+const adpData = findForYear(adpModules, currentYear) || findForYear(adpModules, currentYear - 1);
 const adpMap = new Map<string, number>();
 if (adpData?.adp?.player) {
   const adpPlayers = Array.isArray(adpData.adp.player)

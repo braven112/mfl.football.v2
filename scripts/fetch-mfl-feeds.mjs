@@ -567,8 +567,8 @@ const generatePredictedBrackets = (standingsData) => {
 };
 
 const run = async () => {
-  // Always fetch tradeBait to get latest trade bait info (updates every build)
-  const alwaysFetchKeys = new Set(['tradeBait']);
+  // Always fetch tradeBait + ADP (public, no auth) to get latest data every build
+  const alwaysFetchKeys = new Set(['tradeBait', 'adp-redraft', 'adp-dynasty']);
 
   // Check if historical data is already cached (skip to avoid rate limits)
   if (!force && isHistoricalDataCached()) {
