@@ -41,6 +41,10 @@ const adpDynastyModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
   { eager: true }
 );
+const sleeperAdpModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/sleeper-adp.json',
+  { eager: true }
+);
 const adpRedraftModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/adp-redraft.json',
   { eager: true }
@@ -77,8 +81,23 @@ function buildAdpMap(modules: Record<string, any>): Map<string, number> {
   }
   return map;
 }
-const adpDynMap = buildAdpMap(adpDynastyModules);
 const adpRdfMap = buildAdpMap(adpRedraftModules);
+
+// Dynasty ADP: prefer Sleeper (larger sample), fall back to MFL
+const sleeperAdpData = findForYear(sleeperAdpModules, currentYear) || findForYear(sleeperAdpModules, currentYear - 1);
+const adpDynMap = new Map<string, number>();
+if (sleeperAdpData && typeof sleeperAdpData === 'object') {
+  const entries = Object.entries(sleeperAdpData);
+  for (const [mflId, adp] of entries) {
+    const val = typeof adp === 'number' ? adp : parseFloat(adp as string);
+    if (val > 0) adpDynMap.set(mflId, val);
+  }
+}
+// Fill gaps with MFL dynasty ADP
+if (adpDynMap.size === 0) {
+  const mflDynMap = buildAdpMap(adpDynastyModules);
+  for (const [id, val] of mflDynMap) adpDynMap.set(id, val);
+}
 
 // Last year total points (from weekly results)
 const lastSeasonYear = getCurrentSeasonYear();

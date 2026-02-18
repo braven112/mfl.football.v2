@@ -738,6 +738,81 @@ const run = async () => {
     }
   }
 
+  // ── Sleeper Dynasty ADP ──────────────────────────────────────────────
+  // Fetch Sleeper projections (season-level) for dynasty PPR ADP, then
+  // map Sleeper player IDs → MFL IDs via name+team matching.
+  try {
+    console.log('Fetching Sleeper dynasty ADP data...');
+
+    // 1) Sleeper player directory (name/team/ID mapping)
+    const sleeperPlayersRes = await fetch('https://api.sleeper.app/v1/players/nfl');
+    if (!sleeperPlayersRes.ok) throw new Error(`Sleeper players ${sleeperPlayersRes.status}`);
+    const sleeperPlayers = await sleeperPlayersRes.json();
+
+    // 2) Sleeper season projections (week 0 = full-season) – contains adp_dd_ppr
+    const sleeperProjUrl = `https://api.sleeper.app/projections/nfl/${year}/0?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`;
+    const sleeperProjRes = await fetch(sleeperProjUrl);
+    if (!sleeperProjRes.ok) throw new Error(`Sleeper projections ${sleeperProjRes.status}`);
+    const sleeperProj = await sleeperProjRes.json();
+
+    // Build Sleeper ID → dynasty ADP map
+    const sleeperAdpById = new Map();
+    for (const entry of sleeperProj) {
+      const adp = entry?.stats?.adp_dd_ppr;
+      const pid = entry?.player_id ?? entry?.player?.player_id;
+      if (pid && adp && adp > 0) {
+        sleeperAdpById.set(String(pid), adp);
+      }
+    }
+    console.log(`  Sleeper projections: ${sleeperAdpById.size} players with dynasty ADP`);
+
+    // 3) Build name+team → MFL ID lookup from the already-fetched players.json
+    const MFL_TEAM_NORMALIZE = {
+      GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO',
+      SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
+      BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
+    };
+    const normTeam = (t) => MFL_TEAM_NORMALIZE[t] || t || '';
+    const normName = (n) => (n || '').toLowerCase().replace(/[^a-z]/g, '');
+
+    const mflPlayersFile = path.join(outDir, 'players.json');
+    const mflRaw = JSON.parse(fs.readFileSync(mflPlayersFile, 'utf8'));
+    const mflList = mflRaw?.players?.player ?? [];
+
+    // MFL names are "Last, First" – build key as "firstlast|TEAM"
+    const mflByNameTeam = new Map();
+    for (const p of mflList) {
+      if (!p?.id || !p?.name) continue;
+      const parts = p.name.split(',').map(s => s.trim());
+      const first = parts[1] || '';
+      const last = parts[0] || '';
+      const key = `${normName(first + last)}|${normTeam(p.team)}`;
+      if (!mflByNameTeam.has(key)) mflByNameTeam.set(key, p.id);
+    }
+
+    // 4) Map Sleeper ADP → MFL ID
+    const result = {};
+    let matched = 0;
+    for (const [sleeperId, adp] of sleeperAdpById) {
+      const sp = sleeperPlayers[sleeperId];
+      if (!sp) continue;
+      const first = sp.first_name || '';
+      const last = sp.last_name || '';
+      const team = normTeam(sp.team || '');
+      const key = `${normName(first + last)}|${team}`;
+      const mflId = mflByNameTeam.get(key);
+      if (mflId) {
+        result[mflId] = adp;
+        matched++;
+      }
+    }
+
+    writeOut('sleeper-adp', result);
+    console.log(`  Wrote sleeper-adp.json: ${matched} players mapped to MFL IDs`);
+  } catch (err) {
+    console.warn('Sleeper ADP fetch failed (non-fatal):', err.message);
+  }
+
   fs.writeFileSync(
     metaFile,
     JSON.stringify({ lastFetched: new Date().toISOString(), leagueId, year, week }, null, 2),
