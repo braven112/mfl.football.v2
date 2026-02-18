@@ -82,21 +82,16 @@ function buildAdpMap(modules: Record<string, any>): Map<string, number> {
   return map;
 }
 const adpRdfMap = buildAdpMap(adpRedraftModules);
+const adpDynMap = buildAdpMap(adpDynastyModules);
 
-// Dynasty ADP: prefer Sleeper (larger sample), fall back to MFL
+// Sleeper dynasty ADP (separate column)
 const sleeperAdpData = findForYear(sleeperAdpModules, currentYear) || findForYear(sleeperAdpModules, currentYear - 1);
-const adpDynMap = new Map<string, number>();
+const adpSlpMap = new Map<string, number>();
 if (sleeperAdpData && typeof sleeperAdpData === 'object') {
-  const entries = Object.entries(sleeperAdpData);
-  for (const [mflId, adp] of entries) {
+  for (const [mflId, adp] of Object.entries(sleeperAdpData)) {
     const val = typeof adp === 'number' ? adp : parseFloat(adp as string);
-    if (val > 0) adpDynMap.set(mflId, val);
+    if (val > 0) adpSlpMap.set(mflId, val);
   }
-}
-// Fill gaps with MFL dynasty ADP
-if (adpDynMap.size === 0) {
-  const mflDynMap = buildAdpMap(adpDynastyModules);
-  for (const [id, val] of mflDynMap) adpDynMap.set(id, val);
 }
 
 // Last year total points (from weekly results)
@@ -175,6 +170,7 @@ interface PlayerRow {
   weight: number | null;
   adpDyn: number | null;
   adpRdf: number | null;
+  adpSlp: number | null;
   lastYrPts: number | null;
   rookie: boolean;
 }
@@ -250,6 +246,7 @@ if (Array.isArray(allPlayers)) {
       weight: weightLbs,
       adpDyn: adpDynMap.get(p.id) ?? null,
       adpRdf: adpRdfMap.get(p.id) ?? null,
+      adpSlp: adpSlpMap.get(p.id) ?? null,
       lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
       rookie: p.status === 'R',
     });
@@ -361,6 +358,9 @@ const faCountsJson = JSON.stringify(faCounts);
             </th>
             <th class="sortable col-num" data-sort="adpDyn">
               <div class="th-content">ADP Dyn<span class="sort-arrow"></span></div>
+            </th>
+            <th class="sortable col-num" data-sort="adpSlp">
+              <div class="th-content">Slpr Dyn<span class="sort-arrow"></span></div>
             </th>
             {hasLastYrPts && (
               <th class="sortable col-num" data-sort="lastYrPts">
@@ -475,6 +475,10 @@ const faCountsJson = JSON.stringify(faCounts);
         case 'adpRdf':
           aVal = a.adpRdf ?? 999;
           bVal = b.adpRdf ?? 999;
+          break;
+        case 'adpSlp':
+          aVal = a.adpSlp ?? 999;
+          bVal = b.adpSlp ?? 999;
           break;
         case 'lastYrPts':
           aVal = a.lastYrPts ?? -1;
@@ -598,6 +602,7 @@ const faCountsJson = JSON.stringify(faCounts);
 
       html += `<td class="cell-num">${p.adpRdf != null ? p.adpRdf.toFixed(1) : '<span class="na">-</span>'}</td>`;
       html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      html += `<td class="cell-num">${p.adpSlp != null ? p.adpSlp.toFixed(1) : '<span class="na">-</span>'}</td>`;
 
       if (hasLastYrPts) {
         html += `<td class="cell-num">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
