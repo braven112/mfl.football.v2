@@ -116,6 +116,14 @@
           "description": "Simulate trades and see cap impact"
         },
         {
+          "id": "import-rankings",
+          "label": "Import Rankings",
+          "icon": "clipboard",
+          "path": "/import-rankings",
+          "external": false,
+          "description": "Import player rankings from external sites using bookmarklets"
+        },
+        {
           "id": "auction-predictor",
           "label": "Auction Predictor",
           "icon": "line-chart",
@@ -245,7 +253,8 @@
     "/trade-builder": "/trade-builder",
     "/players": "/players",
     "/calendar": "/calendar",
-    "/whats-new": "/whats-new"
+    "/whats-new": "/whats-new",
+    "/import-rankings": "/import-rankings"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

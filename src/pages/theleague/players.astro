@@ -341,6 +341,12 @@ const faCountsJson = JSON.stringify(faCounts);
         <input type="checkbox" id="show-rookies" />
         <span>Include rookies</span>
       </label>
+      <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns">
+        <span class="col-group-toggles__label">Columns:</span>
+        <button class="col-group-btn" data-group="profile" type="button" aria-pressed="false">Profile</button>
+        <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
+        <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+      </div>
     </div>
 
     <!-- Table Controls -->
@@ -364,41 +370,35 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
             </th>
-            <th class="sortable col-sm" data-sort="exp">
+            <th class="sortable col-sm col-group--profile" data-sort="exp">
               <div class="th-content">Exp</div>
             </th>
-            <th class="sortable col-sm" data-sort="draftRd">
+            <th class="sortable col-sm col-group--profile" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
-            <th class="sortable col-sm" data-sort="height">
+            <th class="sortable col-sm col-group--profile" data-sort="height">
               <div class="th-content">Ht</div>
             </th>
-            <th class="sortable col-sm" data-sort="weight">
+            <th class="sortable col-sm col-group--profile" data-sort="weight">
               <div class="th-content">Wt</div>
             </th>
-            <th class="sortable col-num" data-sort="adpRdf">
-              <div class="th-content">ADP Rdf</div>
-            </th>
-            <th class="sortable col-num" data-sort="adpDyn">
-              <div class="th-content">ADP Dyn</div>
-            </th>
             {hasSnapCounts && (
-              <th class="sortable col-num" data-sort="snaps">
+              <th class="sortable col-num col-group--stats" data-sort="snaps">
                 <div class="th-content">Snaps</div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-num" data-sort="snapPct">
+              <th class="sortable col-num col-group--stats" data-sort="snapPct">
                 <div class="th-content">Snap%</div>
               </th>
             )}
             {hasLastYrPts && (
-              <th class="sortable col-num" data-sort="lastYrPts">
+              <th class="sortable col-num col-group--stats" data-sort="lastYrPts">
                 <div class="th-content">Last Yr</div>
               </th>
             )}
             {hasProjected && (
-              <th class="sortable col-num" data-sort="projected">
+              <th class="sortable col-num col-group--stats" data-sort="projected">
                 <div class="th-content">Proj</div>
               </th>
             )}
@@ -435,6 +435,54 @@ const faCountsJson = JSON.stringify(faCounts);
   let showRostered = false;
   let showRookies = false;
   const BATCH_SIZE = 50;
+
+  // Rankings lookup — populated by the rankings module script
+  let rankingLookup = { byImport: new Map(), columns: [] };
+
+  // Column group visibility — null means "not set by user yet" (auto-default)
+  let groupVisibility = { profile: false, stats: true, rankings: null };
+
+  function loadGroupPrefs() {
+    try {
+      const saved = localStorage.getItem('playersViewColumns');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.profile === 'boolean') groupVisibility.profile = parsed.profile;
+        if (typeof parsed.stats === 'boolean') groupVisibility.stats = parsed.stats;
+        if (typeof parsed.rankings === 'boolean') groupVisibility.rankings = parsed.rankings;
+      }
+    } catch (_) {}
+  }
+
+  function saveGroupPrefs() {
+    try {
+      localStorage.setItem('playersViewColumns', JSON.stringify(groupVisibility));
+    } catch (_) {}
+  }
+
+  function applyGroupVisibility() {
+    for (const group of ['profile', 'stats', 'rankings']) {
+      const visible = groupVisibility[group] === true;
+      const display = visible ? '' : 'none';
+      document.querySelectorAll(`.col-group--${group}`).forEach(el => {
+        el.style.display = display;
+      });
+      // Update button active state
+      const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
+      if (btn) {
+        btn.classList.toggle('active', visible);
+        btn.setAttribute('aria-pressed', String(visible));
+      }
+    }
+  }
+
+  function setGroupVisible(group, visible) {
+    groupVisibility[group] = visible;
+    saveGroupPrefs();
+    applyGroupVisibility();
+  }
+
+  loadGroupPrefs();
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
@@ -493,14 +541,6 @@ const faCountsJson = JSON.stringify(faCounts);
           aVal = a.weight ?? -1;
           bVal = b.weight ?? -1;
           break;
-        case 'adpDyn':
-          aVal = a.adpDyn ?? 999;
-          bVal = b.adpDyn ?? 999;
-          break;
-        case 'adpRdf':
-          aVal = a.adpRdf ?? 999;
-          bVal = b.adpRdf ?? 999;
-          break;
         case 'lastYrPts':
           aVal = a.lastYrPts ?? -1;
           bVal = b.lastYrPts ?? -1;
@@ -514,8 +554,16 @@ const faCountsJson = JSON.stringify(faCounts);
           bVal = b.snapPct ?? -1;
           break;
         default:
-          aVal = a.projected ?? -1;
-          bVal = b.projected ?? -1;
+          // Dynamic ranking columns: sort key is "ranking_{importId}"
+          if (currentSort.startsWith('ranking_')) {
+            const importId = currentSort.slice(8); // skip "ranking_"
+            const map = rankingLookup.byImport.get(importId);
+            aVal = map?.get(a.id) ?? 9999;
+            bVal = map?.get(b.id) ?? 9999;
+          } else {
+            aVal = a.projected ?? -1;
+            bVal = b.projected ?? -1;
+          }
       }
       const diff = aVal - bVal;
       return sortDirection === 'desc' ? -diff : diff;
@@ -610,28 +658,31 @@ const faCountsJson = JSON.stringify(faCounts);
           </div>
         </td>
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>`;
+        <td class="cell-sm col-group--profile">${p.exp != null ? p.exp : '-'}</td>`;
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
-      html += `<td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-sm">${htDisplay}</td>
-        <td class="cell-sm">${wtDisplay}</td>`;
+      html += `<td class="cell-sm col-group--profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="cell-sm col-group--profile">${htDisplay}</td>
+        <td class="cell-sm col-group--profile">${wtDisplay}</td>`;
 
-      html += `<td class="cell-num">${p.adpRdf != null ? p.adpRdf.toFixed(1) : '<span class="na">-</span>'}</td>`;
-      html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      // Dynamic ranking columns
+      for (const col of rankingLookup.columns) {
+        const rnk = rankingLookup.byImport.get(col.importId)?.get(p.id);
+        html += `<td class="cell-num col-group--rankings">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
+      }
 
       if (hasSnapCounts) {
-        html += `<td class="cell-num">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-num">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasLastYrPts) {
-        html += `<td class="cell-num">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasProjected) {
-        html += `<td class="cell-num cell-pts">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num cell-pts col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
       html += `</tr>`;
@@ -664,10 +715,42 @@ const faCountsJson = JSON.stringify(faCounts);
     if (noDataEl) {
       noDataEl.style.display = players.length === 0 ? 'block' : 'none';
     }
+
+    // Re-apply column group visibility after tbody re-render
+    applyGroupVisibility();
   }
 
   // Columns that default to desc when first clicked
   const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct']);
+
+  // Expose API for the rankings module script to interact with this page
+  window.__playersPage = {
+    setRankingLookup(lookup) {
+      rankingLookup = lookup;
+    },
+    getCurrentSort() { return currentSort; },
+    setSort(key, dir) {
+      currentSort = key;
+      sortDirection = dir;
+    },
+    getDescDefaults() { return descDefaults; },
+    refreshTable() {
+      sortPlayers();
+      render();
+    },
+    refilter() {
+      filterPlayers();
+    },
+    // Called by rankings module after setRankingLookup to auto-activate
+    // the Rankings toggle on first visit if the user has imported rankings.
+    setRankingsGroupDefault(hasColumns) {
+      if (groupVisibility.rankings === null) {
+        // User hasn't explicitly set a preference yet — use the auto-default
+        groupVisibility.rankings = hasColumns;
+        applyGroupVisibility();
+      }
+    },
+  };
 
   function init() {
     // Prevent duplicate listeners on re-init (Astro view transitions)
@@ -733,6 +816,18 @@ const faCountsJson = JSON.stringify(faCounts);
         render();
       });
     });
+
+    // Column group toggles
+    const colGroupToggles = document.getElementById('col-group-toggles');
+    if (colGroupToggles) {
+      colGroupToggles.addEventListener('click', (e) => {
+        const btn = e.target.closest('.col-group-btn');
+        if (!btn) return;
+        const group = btn.getAttribute('data-group');
+        if (!group) return;
+        setGroupVisible(group, groupVisibility[group] !== true);
+      });
+    }
 
     // Show More
     const showMoreBtn = document.getElementById('show-more-btn');
@@ -801,6 +896,100 @@ const faCountsJson = JSON.stringify(faCounts);
     init();
   }
   document.addEventListener('astro:page-load', init);
+</script>
+
+<!-- Rankings integration: dynamically injects ranking columns from localStorage imports -->
+<script>
+  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+
+  let unsubscribe: (() => void) | null = null;
+
+  function injectRankingColumns() {
+    const api = (window as any).__playersPage;
+    if (!api) return;
+
+    const lookup = buildRankingLookup();
+    api.setRankingLookup(lookup);
+    api.setRankingsGroupDefault(lookup.columns.length > 0);
+
+    // Remove any previously injected ranking <th> elements
+    document.querySelectorAll('.players-table th[data-ranking-col]').forEach(th => th.remove());
+
+    if (lookup.columns.length === 0) {
+      api.refilter();
+      return;
+    }
+
+    // Find the Wt header to insert ranking columns after it
+    const headerRow = document.querySelector('.players-table thead tr');
+    if (!headerRow) return;
+
+    const anchorTh = headerRow.querySelector('[data-sort="weight"]');
+    if (!anchorTh) return;
+
+    // Insert ranking <th> elements in reverse order (so they end up in correct order after anchor)
+    const columnsReversed = [...lookup.columns].reverse();
+    for (const col of columnsReversed) {
+      const th = document.createElement('th');
+      th.className = 'sortable col-num col-group--rankings';
+      th.dataset.sort = `ranking_${col.importId}`;
+      th.dataset.rankingCol = 'true';
+      th.title = `${col.fullName} (${col.playerCount} players)`;
+      th.innerHTML = `<div class="th-content">${col.header}</div>`;
+
+      // Sort click handler
+      th.addEventListener('click', () => {
+        const sortKey = `ranking_${col.importId}`;
+        if (sortKey === api.getCurrentSort()) {
+          // Toggle direction — check current arrow to determine state
+          const arrow = th.querySelector('.sort-arrow');
+          const wasAsc = arrow && arrow.textContent === '\u25B2';
+          api.setSort(sortKey, wasAsc ? 'desc' : 'asc');
+        } else {
+          // Ranking columns default to ascending (rank 1 = best at top)
+          api.setSort(sortKey, 'asc');
+        }
+        api.refreshTable();
+      });
+
+      anchorTh.after(th);
+    }
+
+    // Re-render with the new columns
+    api.refilter();
+  }
+
+  function initRankings() {
+    // Clean up previous subscription
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+
+    injectRankingColumns();
+
+    // Subscribe to ranking changes (import/delete on another page or tab)
+    unsubscribe = onRankingsChanged(() => {
+      injectRankingColumns();
+    });
+  }
+
+  // Run after the main script has initialized
+  function tryInit() {
+    if ((window as any).__playersPage) {
+      initRankings();
+    } else {
+      // Retry shortly — the define:vars script may not have run yet
+      setTimeout(tryInit, 50);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInit);
+  } else {
+    tryInit();
+  }
+  document.addEventListener('astro:page-load', tryInit);
 </script>
 
 <style>
@@ -899,6 +1088,40 @@ const faCountsJson = JSON.stringify(faCounts);
     accent-color: var(--color-primary, #1c497c);
   }
 
+  /* Column group toggles */
+  .col-group-toggles {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .col-group-toggles__label {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-right: 0.1rem;
+  }
+  .col-group-btn {
+    padding: 0.25rem 0.65rem;
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 999px;
+    background: white;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+  }
+  .col-group-btn:hover {
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+  .col-group-btn.active {
+    background: var(--color-primary, #1c497c);
+    border-color: var(--color-primary, #1c497c);
+    color: white;
+  }
+
   /* Table Controls */
   .table-controls {
     display: flex;
@@ -986,6 +1209,9 @@ const faCountsJson = JSON.stringify(faCounts);
     font-size: 0.6rem;
     opacity: 0.85;
   }
+
+  /* Column group hidden states (JS applies inline display:none after render) */
+  :global(.col-group--profile) { display: none; }
 
   /* Columns */
   .col-rank { width: min-content; text-align: center; }

@@ -76,20 +76,48 @@ function levenshteinDistance(str1: string, str2: string): number {
 /**
  * Calculate similarity score between two names (0-1, higher is better)
  */
+function reverseName(name: string): string {
+  // "Last, First" → "first last" or "First Last" → "last first"
+  if (name.includes(',')) {
+    const [last, first] = name.split(',').map(s => s.trim());
+    return `${first} ${last}`;
+  }
+  const parts = name.split(/\s+/);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    const first = parts.slice(0, -1).join(' ');
+    return `${last} ${first}`;
+  }
+  return name;
+}
+
 function calculateSimilarity(name1: string, name2: string): number {
   const norm1 = normalizePlayerName(name1);
   const norm2 = normalizePlayerName(name2);
-  
+
   // Exact match
   if (norm1 === norm2) {
     return 1.0;
   }
-  
-  // Levenshtein-based similarity
+
+  // Also try reversed name order (handles "Last, First" vs "First Last")
+  const norm1Rev = normalizePlayerName(reverseName(name1));
+  const norm2Rev = normalizePlayerName(reverseName(name2));
+
+  if (norm1 === norm2Rev || norm1Rev === norm2) {
+    return 1.0;
+  }
+
+  // Levenshtein-based similarity — take best of normal and reversed comparisons
   const maxLen = Math.max(norm1.length, norm2.length);
   const distance = levenshteinDistance(norm1, norm2);
-  const similarity = 1 - (distance / maxLen);
-  
+  const distanceRev = Math.min(
+    levenshteinDistance(norm1, norm2Rev),
+    levenshteinDistance(norm1Rev, norm2),
+  );
+  const bestDistance = Math.min(distance, distanceRev);
+  const similarity = 1 - (bestDistance / maxLen);
+
   return similarity;
 }
 

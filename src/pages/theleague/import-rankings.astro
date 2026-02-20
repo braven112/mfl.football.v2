@@ -1,0 +1,832 @@
+---
+/**
+ * Import Rankings
+ *
+ * Bookmarklet-based rankings import page. Users drag bookmarklets to their
+ * bookmarks bar, visit ranking sites, click to export, then paste here.
+ * All data stored in localStorage only — private per user.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import RankingsImportPage from '../../components/theleague/rankings-import/RankingsImportPage';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import bookmarkletManifest from '../../data/bookmarklet-manifest.json';
+
+export const prerender = true;
+
+const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
+
+// ---------------------------------------------------------------------------
+// Load MFL players for fuzzy matching
+// ---------------------------------------------------------------------------
+const playersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true },
+);
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+let playersData: any = null;
+for (const [filepath, mod] of Object.entries(playersFeeds)) {
+  if (extractFeedSeason(filepath) === leagueYearStr) {
+    playersData = getModuleData(mod);
+    break;
+  }
+}
+
+// Build simplified player array for client-side matching
+const rawPlayers = playersData?.players?.player ?? [];
+const mflPlayers = rawPlayers
+  .filter((p: any) => p.name && p.position)
+  .map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    team: p.team || '',
+  }));
+
+// ---------------------------------------------------------------------------
+// Site configurations for bookmarklet cards
+// ---------------------------------------------------------------------------
+const manifest = bookmarkletManifest as Record<string, string>;
+
+const siteConfigs = [
+  {
+    id: 'fantasypros',
+    name: 'FantasyPros',
+    description: 'Reads consensus rankings from the page data. One bookmarklet works for both dynasty and redraft — the type is auto-detected from the page.',
+    instructions: 'Click a rankings page button below, then click the bookmarklet. Repeat for the other type if needed.',
+    bookmarkletUri: manifest.fantasypros || '',
+    bookmarkletLabel: 'Export FantasyPros',
+    requiresAuth: false,
+    defaultType: 'dynasty',
+    difficulty: 'easy',
+    links: [
+      { url: 'https://www.fantasypros.com/nfl/rankings/dynasty-overall.php', label: 'Dynasty', type: 'dynasty' },
+      { url: 'https://www.fantasypros.com/nfl/rankings/consensus-cheatsheets.php', label: 'Redraft', type: 'redraft' },
+    ],
+  },
+  {
+    id: 'footballguys',
+    name: 'FootballGuys',
+    description: 'One bookmarklet works for both dynasty and redraft — the type is auto-detected from the URL.',
+    instructions: 'Log in, click a rankings page button below, then click the bookmarklet. Repeat for the other type if needed.',
+    bookmarkletUri: manifest.footballguys || '',
+    bookmarkletLabel: 'Export FBG',
+    requiresAuth: true,
+    authNote: 'Requires FootballGuys account',
+    defaultType: 'dynasty',
+    difficulty: 'easy',
+    links: [
+      { url: 'https://www.footballguys.com/rankings/duration/dynasty', label: 'Dynasty', type: 'dynasty' },
+      { url: 'https://www.footballguys.com/rankings', label: 'Redraft', type: 'redraft' },
+    ],
+  },
+  {
+    id: 'dlf',
+    name: 'Dynasty League Football',
+    description: 'Extracts dynasty rankings from the DLF rankings table.',
+    instructions: 'Log in, click the Dynasty Rankings button below, then click the bookmarklet.',
+    bookmarkletUri: manifest.dlf || '',
+    bookmarkletLabel: 'Export DLF',
+    requiresAuth: true,
+    authNote: 'Requires DLF Premium subscription',
+    defaultType: 'dynasty',
+    difficulty: 'medium',
+    links: [
+      { url: 'https://dynastyleaguefootball.com/rankings/dynasty-rankings/', label: 'Dynasty Rankings', type: 'dynasty' },
+    ],
+  },
+  {
+    id: 'keeptradecut',
+    name: 'KeepTradeCut',
+    description: 'Extracts dynasty values from the KTC rankings page. KTC paginates 50 players at a time.',
+    instructions: 'Click the Dynasty Rankings button below, then click the bookmarklet. Navigate to the next page and repeat to get more players.',
+    bookmarkletUri: manifest.keeptradecut || '',
+    bookmarkletLabel: 'Export KTC',
+    requiresAuth: false,
+    defaultType: 'dynasty',
+    difficulty: 'medium',
+    links: [
+      { url: 'https://keeptradecut.com/dynasty-rankings', label: 'Dynasty Rankings', type: 'dynasty' },
+    ],
+  },
+  {
+    id: 'sleeper',
+    name: 'Sleeper',
+    description: 'Fetches ADP data directly from the Sleeper API — no need to navigate to a specific page first.',
+    instructions: 'Click the bookmarklet from any page. It fetches top-500 players by search rank from the Sleeper API.',
+    bookmarkletUri: manifest.sleeper || '',
+    bookmarkletLabel: 'Export Sleeper ADP',
+    requiresAuth: false,
+    defaultType: 'adp',
+    difficulty: 'easy',
+  },
+  {
+    id: 'yahoo',
+    name: 'Yahoo',
+    description: 'Extracts ADP data from Yahoo Fantasy Football draft analysis.',
+    instructions: 'Click the ADP button below to go to Yahoo draft analysis, then click the bookmarklet.',
+    bookmarkletUri: manifest.yahoo || '',
+    bookmarkletLabel: 'Export Yahoo ADP',
+    requiresAuth: false,
+    defaultType: 'adp',
+    difficulty: 'medium',
+    links: [
+      { url: 'https://football.fantasysports.yahoo.com/f1/draftanalysis', label: 'ADP', type: 'adp' },
+    ],
+  },
+  {
+    id: 'cbs',
+    name: 'CBS Sports',
+    description: 'Extracts rankings from the CBS Fantasy Football rankings table.',
+    instructions: 'Click the Redraft button below to go to CBS rankings, then click the bookmarklet.',
+    bookmarkletUri: manifest.cbs || '',
+    bookmarkletLabel: 'Export CBS',
+    requiresAuth: false,
+    defaultType: 'redraft',
+    difficulty: 'easy',
+    links: [
+      { url: 'https://www.cbssports.com/fantasy/football/rankings/', label: 'Redraft', type: 'redraft' },
+    ],
+  },
+];
+---
+
+<TheLeagueLayout title="Import Rankings | The League">
+  <RankingsImportPage
+    client:load
+    mflPlayersJson={JSON.stringify(mflPlayers)}
+    siteConfigsJson={JSON.stringify(siteConfigs)}
+  />
+</TheLeagueLayout>
+
+<style is:global>
+  /* ================================================================
+     Rankings Import Page Styles
+     ================================================================ */
+
+  .ri-page {
+    max-width: 100%;
+    padding: 1.5rem 1rem;
+  }
+
+  .ri-page__header {
+    margin-bottom: 2rem;
+  }
+
+  .ri-page__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color, #1c497c);
+    margin: 0 0 0.5rem;
+  }
+
+  .ri-page__subtitle {
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* ---- Sections ---- */
+
+  .ri-section {
+    margin-bottom: 2rem;
+    background: var(--primary-content-bg-color, #fff);
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ri-section__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color, #1c497c);
+    margin: 0 0 0.75rem;
+  }
+
+  .ri-section__desc {
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+    line-height: 1.5;
+  }
+
+  .ri-section__empty {
+    color: var(--text-secondary-color, #64748b);
+    font-style: italic;
+    margin: 0;
+  }
+
+  /* ---- Bookmarklet Grid ---- */
+
+  .bm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .bm-card {
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bm-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .bm-card__name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--primary-color, #1c497c);
+  }
+
+  .bm-card__badges {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .bm-card__badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    color: #fff;
+  }
+
+  .bm-card__badge--auth {
+    background: #6366f1;
+  }
+
+  .bm-card__desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary-color, #64748b);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .bm-card__instructions {
+    font-size: 0.8rem;
+    color: #475569;
+    line-height: 1.4;
+  }
+
+  .bm-card__auth-note {
+    font-size: 0.78rem;
+    color: #6366f1;
+    font-style: italic;
+    margin: 0;
+  }
+
+  .bm-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .bm-card__links {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .bm-card__site-link {
+    font-size: 0.78rem;
+    color: var(--primary-color, #1c497c);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .bm-card__site-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Rankings page link buttons (dynasty / redraft) */
+  .bm-card__rankings-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+    transition: filter 0.15s;
+  }
+
+  .bm-card__rankings-btn::after {
+    content: '↗';
+    font-size: 0.7rem;
+    opacity: 0.75;
+  }
+
+  .bm-card__rankings-btn:hover {
+    filter: brightness(0.9);
+  }
+
+  .bm-card__rankings-btn--dynasty {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .bm-card__rankings-btn--redraft {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .bm-card__rankings-btn--adp {
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+
+  .bm-card__rankings-btn--overall {
+    background: #e0e7ff;
+    color: #4338ca;
+  }
+
+  .bm-card__drag-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--primary-color, #1c497c);
+    border: 2px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: grab;
+    text-decoration: none;
+    user-select: none;
+    align-self: flex-start;
+    transition: background 0.15s;
+  }
+
+  .bm-card__drag-link:hover {
+    background: #163c65;
+  }
+
+  /* ---- Import Section ---- */
+
+  .ri-import__controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+
+  .ri-import__type-label {
+    font-size: 0.85rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ri-import__type-select {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+
+  .ri-import__textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    resize: vertical;
+    margin-bottom: 0.75rem;
+    box-sizing: border-box;
+  }
+
+  .ri-import__textarea:focus {
+    outline: 2px solid var(--primary-color, #1c497c);
+    outline-offset: -1px;
+  }
+
+  .ri-import__result {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+
+  .ri-import__result--success {
+    background: #ecfdf5;
+    border: 1px solid #10b981;
+    color: #065f46;
+  }
+
+  .ri-import__result--error {
+    background: #fef2f2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+  }
+
+  .ri-import__result p {
+    margin: 0 0 0.5rem;
+  }
+
+  .ri-import__stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+
+  .ri-import__stat strong {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ri-import__unmatched {
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .ri-import__unmatched summary {
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .ri-import__unmatched ul {
+    margin: 0.25rem 0 0 1rem;
+    padding: 0;
+  }
+
+  .ri-import__unmatched li {
+    line-height: 1.5;
+  }
+
+  /* ---- Buttons ---- */
+
+  .ri-btn {
+    padding: 0.45rem 0.9rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .ri-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ri-btn--primary {
+    background: var(--primary-color, #1c497c);
+    color: #fff;
+    border-color: var(--primary-color, #1c497c);
+  }
+
+  .ri-btn--primary:hover:not(:disabled) {
+    background: #163c65;
+  }
+
+  .ri-btn--sm {
+    padding: 0.25rem 0.55rem;
+    font-size: 0.78rem;
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  .ri-btn--sm:hover {
+    background: #e2e8f0;
+  }
+
+  .ri-btn--danger {
+    color: #dc2626;
+    background: #fef2f2;
+  }
+
+  .ri-btn--danger:hover {
+    background: #fee2e2;
+  }
+
+  /* ---- Manage Table ---- */
+
+  .ri-manage__table-wrap {
+    overflow-x: auto;
+  }
+
+  .ri-manage__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .ri-manage__table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--primary-color, #1c497c);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid var(--primary-content-border-color, #e2e8f0);
+    white-space: nowrap;
+  }
+
+  .ri-manage__table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+  }
+
+  .ri-manage__source {
+    font-weight: 500;
+  }
+
+  .ri-manage__type {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  .ri-manage__type--dynasty {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .ri-manage__type--redraft {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .ri-manage__type--adp {
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+
+  .ri-manage__type--overall {
+    background: #e0e7ff;
+    color: #4338ca;
+  }
+
+  .ri-manage__rate {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ri-manage__rate--good { color: #059669; }
+  .ri-manage__rate--ok { color: #d97706; }
+  .ri-manage__rate--low { color: #dc2626; }
+
+  .ri-manage__actions {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  /* ---- Modal ---- */
+
+  .ri-modal {
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+    max-width: 700px;
+    width: 90vw;
+    max-height: 80vh;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ri-modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .ri-modal__content {
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+  }
+
+  .ri-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+  }
+
+  .ri-modal__header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color, #1c497c);
+    margin: 0;
+    text-transform: capitalize;
+  }
+
+  .ri-modal__close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .ri-modal__meta {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary-color, #64748b);
+    border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+    flex-wrap: wrap;
+  }
+
+  .ri-modal__section {
+    padding: 0.75rem 1.25rem;
+    overflow-y: auto;
+  }
+
+  .ri-modal__section h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+
+  .ri-modal__table-wrap {
+    overflow-y: auto;
+    max-height: 250px;
+  }
+
+  .ri-modal__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .ri-modal__table th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+  }
+
+  .ri-modal__table td {
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .ri-modal__footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--primary-content-border-color, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* ---- Custom Guide ---- */
+
+  .ri-guide__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+
+  .ri-guide__arrow {
+    font-size: 0.75rem;
+    color: #64748b;
+    transition: transform 0.2s;
+  }
+
+  .ri-guide__content {
+    margin-top: 1rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .ri-guide__content h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary-color, #1c497c);
+    margin: 1.25rem 0 0.5rem;
+  }
+
+  .ri-guide__content p {
+    margin: 0 0 0.75rem;
+    color: #475569;
+  }
+
+  .ri-guide__code {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0 0 0.75rem;
+  }
+
+  .ri-guide__code--sm {
+    font-size: 0.72rem;
+  }
+
+  .ri-guide__fields-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .ri-guide__fields-table th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    color: var(--primary-color, #1c497c);
+  }
+
+  .ri-guide__fields-table td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .ri-guide__fields-table code {
+    background: #f1f5f9;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.78rem;
+  }
+
+  .ri-guide__tips {
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    color: #475569;
+  }
+
+  .ri-guide__tips li {
+    margin-bottom: 0.35rem;
+  }
+
+  /* ---- Responsive ---- */
+
+  @media (max-width: 640px) {
+    .ri-page {
+      padding: 1rem 0.75rem;
+    }
+
+    .ri-section {
+      padding: 1rem;
+    }
+
+    .bm-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .ri-import__controls {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .ri-import__stats {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .ri-manage__table {
+      font-size: 0.78rem;
+    }
+
+    .ri-manage__actions {
+      flex-direction: column;
+    }
+  }
+</style>
