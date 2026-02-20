@@ -341,9 +341,8 @@ const faCountsJson = JSON.stringify(faCounts);
         <input type="checkbox" id="show-rookies" />
         <span>Include rookies</span>
       </label>
-      <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns">
-        <span class="col-group-toggles__label">Columns:</span>
-        <button class="col-group-btn" data-group="profile" type="button" aria-pressed="false">Profile</button>
+      <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
+        <span class="col-group-toggles__label">View:</span>
         <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
         <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
       </div>
@@ -370,16 +369,16 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
             </th>
-            <th class="sortable col-sm col-group--profile" data-sort="exp">
+            <th class="sortable col-sm col-always-profile" data-sort="exp">
               <div class="th-content">Exp</div>
             </th>
-            <th class="sortable col-sm col-group--profile" data-sort="draftRd">
+            <th class="sortable col-sm col-always-profile" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
-            <th class="sortable col-sm col-group--profile" data-sort="height">
+            <th class="sortable col-sm col-always-profile" data-sort="height">
               <div class="th-content">Ht</div>
             </th>
-            <th class="sortable col-sm col-group--profile" data-sort="weight">
+            <th class="sortable col-sm col-always-profile" data-sort="weight">
               <div class="th-content">Wt</div>
             </th>
             {hasSnapCounts && (
@@ -439,50 +438,59 @@ const faCountsJson = JSON.stringify(faCounts);
   // Rankings lookup — populated by the rankings module script
   let rankingLookup = { byImport: new Map(), columns: [] };
 
-  // Column group visibility — null means "not set by user yet" (auto-default)
-  let groupVisibility = { profile: false, stats: true, rankings: null };
+  // Column group visibility — stats and rankings are mutually exclusive
+  // 'stats' = show stats columns, 'rankings' = show ranking columns
+  let activeView = 'stats';
+  let hasRankingColumns = false;
 
-  function loadGroupPrefs() {
+  function loadViewPref() {
     try {
-      const saved = localStorage.getItem('playersViewColumns');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed.profile === 'boolean') groupVisibility.profile = parsed.profile;
-        if (typeof parsed.stats === 'boolean') groupVisibility.stats = parsed.stats;
-        if (typeof parsed.rankings === 'boolean') groupVisibility.rankings = parsed.rankings;
-      }
+      const saved = localStorage.getItem('playersViewMode');
+      if (saved === 'rankings' || saved === 'stats') activeView = saved;
     } catch (_) {}
   }
 
-  function saveGroupPrefs() {
+  function saveViewPref() {
     try {
-      localStorage.setItem('playersViewColumns', JSON.stringify(groupVisibility));
+      localStorage.setItem('playersViewMode', activeView);
     } catch (_) {}
   }
 
   function applyGroupVisibility() {
-    for (const group of ['profile', 'stats', 'rankings']) {
-      const visible = groupVisibility[group] === true;
-      const display = visible ? '' : 'none';
-      document.querySelectorAll(`.col-group--${group}`).forEach(el => {
-        el.style.display = display;
-      });
-      // Update button active state
+    const showStats = activeView === 'stats';
+    const showRankings = activeView === 'rankings' && hasRankingColumns;
+
+    document.querySelectorAll('.col-group--stats').forEach(el => {
+      el.style.display = showStats ? '' : 'none';
+    });
+    document.querySelectorAll('.col-group--rankings').forEach(el => {
+      el.style.display = showRankings ? '' : 'none';
+    });
+
+    // Update button active states
+    for (const group of ['stats', 'rankings']) {
       const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
       if (btn) {
-        btn.classList.toggle('active', visible);
-        btn.setAttribute('aria-pressed', String(visible));
+        const isActive = group === activeView;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
       }
+    }
+
+    // Show/hide the toggle bar — only visible when rankings are available
+    const toggleBar = document.getElementById('col-group-toggles');
+    if (toggleBar) {
+      toggleBar.style.display = hasRankingColumns ? '' : 'none';
     }
   }
 
-  function setGroupVisible(group, visible) {
-    groupVisibility[group] = visible;
-    saveGroupPrefs();
+  function setActiveView(view) {
+    activeView = view;
+    saveViewPref();
     applyGroupVisibility();
   }
 
-  loadGroupPrefs();
+  loadViewPref();
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
@@ -658,13 +666,13 @@ const faCountsJson = JSON.stringify(faCounts);
           </div>
         </td>
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm col-group--profile">${p.exp != null ? p.exp : '-'}</td>`;
+        <td class="cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
-      html += `<td class="cell-sm col-group--profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-sm col-group--profile">${htDisplay}</td>
-        <td class="cell-sm col-group--profile">${wtDisplay}</td>`;
+      html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="cell-sm col-always-profile">${htDisplay}</td>
+        <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
 
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
@@ -741,14 +749,16 @@ const faCountsJson = JSON.stringify(faCounts);
     refilter() {
       filterPlayers();
     },
-    // Called by rankings module after setRankingLookup to auto-activate
-    // the Rankings toggle on first visit if the user has imported rankings.
+    // Called by rankings module after setRankingLookup to show/hide
+    // the Stats/Rankings toggle when rankings are available.
     setRankingsGroupDefault(hasColumns) {
-      if (groupVisibility.rankings === null) {
-        // User hasn't explicitly set a preference yet — use the auto-default
-        groupVisibility.rankings = hasColumns;
-        applyGroupVisibility();
+      hasRankingColumns = hasColumns;
+      // If rankings were removed and user was viewing them, switch back to stats
+      if (!hasColumns && activeView === 'rankings') {
+        activeView = 'stats';
+        saveViewPref();
       }
+      applyGroupVisibility();
     },
   };
 
@@ -817,7 +827,7 @@ const faCountsJson = JSON.stringify(faCounts);
       });
     });
 
-    // Column group toggles
+    // Column group toggles — mutually exclusive stats vs rankings
     const colGroupToggles = document.getElementById('col-group-toggles');
     if (colGroupToggles) {
       colGroupToggles.addEventListener('click', (e) => {
@@ -825,7 +835,7 @@ const faCountsJson = JSON.stringify(faCounts);
         if (!btn) return;
         const group = btn.getAttribute('data-group');
         if (!group) return;
-        setGroupVisible(group, groupVisibility[group] !== true);
+        setActiveView(group);
       });
     }
 
@@ -1211,7 +1221,7 @@ const faCountsJson = JSON.stringify(faCounts);
   }
 
   /* Column group hidden states (JS applies inline display:none after render) */
-  :global(.col-group--profile) { display: none; }
+  :global(.col-always-profile) { display: none; }
 
   /* Columns */
   .col-rank { width: min-content; text-align: center; }
