@@ -49,9 +49,18 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
         </p>
       </div>
 
-      <BookmarkletSection siteConfigs={siteConfigs} />
-      <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
-      <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
+      {savedImports.length > 0 ? (
+        <>
+          <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
+          <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+          <BookmarkletSection siteConfigs={siteConfigs} />
+        </>
+      ) : (
+        <>
+          <BookmarkletSection siteConfigs={siteConfigs} />
+          <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+        </>
+      )}
       <CustomBookmarkletGuide />
     </div>
   );
