@@ -39,6 +39,8 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
     setSavedImports(getAllImports());
   }, []);
 
+  const hasImports = savedImports.length > 0;
+
   return (
     <div className="ri-page">
       <div className="ri-page__header">
@@ -49,18 +51,19 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
         </p>
       </div>
 
-      {savedImports.length > 0 ? (
-        <>
+      {/* When imports exist: manage first, bookmarklets last.
+          CSS flex order ensures layout swaps without unmounting components. */}
+      <div className="ri-page__sections" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ order: hasImports ? 0 : 2 }}>
           <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
+        </div>
+        <div style={{ order: 1 }}>
           <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+        </div>
+        <div style={{ order: hasImports ? 2 : 0 }}>
           <BookmarkletSection siteConfigs={siteConfigs} />
-        </>
-      ) : (
-        <>
-          <BookmarkletSection siteConfigs={siteConfigs} />
-          <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
-        </>
-      )}
+        </div>
+      </div>
       <CustomBookmarkletGuide />
     </div>
   );
