@@ -24,14 +24,11 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
     try { return JSON.parse(siteConfigsJson); } catch { return []; }
   }, [siteConfigsJson]);
 
-  // Read from localStorage synchronously on first render so the layout
-  // is correct immediately — no flash of wrong section order.
   const [savedImports, setSavedImports] = useState<StoredRankingImport[]>(() => {
     migrateFromLegacyKeys();
     return getAllImports();
   });
 
-  // Re-read on mount in case migration changed anything
   useEffect(() => {
     setSavedImports(getAllImports());
   }, []);
@@ -44,8 +41,6 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
     setSavedImports(getAllImports());
   }, []);
 
-  const hasImports = savedImports.length > 0;
-
   return (
     <div className="ri-page">
       <div className="ri-page__header">
@@ -56,21 +51,11 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
         </p>
       </div>
 
-      {/* When imports exist: manage first, bookmarklets last.
-          CSS flex order ensures layout swaps without unmounting components. */}
-      <div className="ri-page__sections" style={{ display: 'flex', flexDirection: 'column' }}>
-        {hasImports && (
-          <div style={{ order: 0 }}>
-            <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
-          </div>
-        )}
-        <div style={{ order: 1 }}>
-          <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
-        </div>
-        <div style={{ order: hasImports ? 2 : 0 }}>
-          <BookmarkletSection siteConfigs={siteConfigs} />
-        </div>
-      </div>
+      {savedImports.length > 0 && (
+        <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
+      )}
+      <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+      <BookmarkletSection siteConfigs={siteConfigs} />
       <CustomBookmarkletGuide />
     </div>
   );
