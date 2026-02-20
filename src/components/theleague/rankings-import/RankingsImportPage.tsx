@@ -24,10 +24,15 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
     try { return JSON.parse(siteConfigsJson); } catch { return []; }
   }, [siteConfigsJson]);
 
-  const [savedImports, setSavedImports] = useState<StoredRankingImport[]>([]);
-
-  useEffect(() => {
+  // Read from localStorage synchronously on first render so the layout
+  // is correct immediately — no flash of wrong section order.
+  const [savedImports, setSavedImports] = useState<StoredRankingImport[]>(() => {
     migrateFromLegacyKeys();
+    return getAllImports();
+  });
+
+  // Re-read on mount in case migration changed anything
+  useEffect(() => {
     setSavedImports(getAllImports());
   }, []);
 
@@ -54,9 +59,11 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
       {/* When imports exist: manage first, bookmarklets last.
           CSS flex order ensures layout swaps without unmounting components. */}
       <div className="ri-page__sections" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ order: hasImports ? 0 : 2 }}>
-          <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
-        </div>
+        {hasImports && (
+          <div style={{ order: 0 }}>
+            <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
+          </div>
+        )}
         <div style={{ order: 1 }}>
           <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
         </div>
