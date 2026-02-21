@@ -7,6 +7,7 @@ import {
   SOURCE_LABELS,
   SOURCE_ABBREVS,
   TYPE_LABELS,
+  AVERAGE_IMPORT_ID,
 } from '../src/utils/rankings-lookup';
 import type {
   StoredRankingImport,
@@ -257,9 +258,10 @@ describe('buildRankingLookup', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
 
-    expect(lookup.byImport.size).toBe(2);
+    expect(lookup.byImport.size).toBe(3); // 2 imports + average
     expect(lookup.byImport.get('import-1')?.size).toBe(2);
     expect(lookup.byImport.get('import-2')?.size).toBe(2);
+    expect(lookup.byImport.has(AVERAGE_IMPORT_ID)).toBe(true);
   });
 
   it('should create column metadata with correct properties', () => {
@@ -297,8 +299,9 @@ describe('buildRankingLookup', () => {
 
     const lookup = buildRankingLookup(imps);
 
-    // Columns should match the input array order exactly
-    expect(lookup.columns.map((c) => `${c.source}-${c.type}`)).toEqual([
+    // First column is the average (2+ imports), rest match input order
+    const individual = lookup.columns.filter((c) => !c.isAverage);
+    expect(individual.map((c) => `${c.source}-${c.type}`)).toEqual([
       'sleeper-redraft',
       'fantasypros-dynasty',
       'fantasypros-redraft',
@@ -317,7 +320,8 @@ describe('buildRankingLookup', () => {
 
     const lookup = buildRankingLookup(imps);
 
-    expect(lookup.columns.map((c) => c.type)).toEqual(['redraft', 'overall', 'dynasty', 'adp']);
+    const individual = lookup.columns.filter((c) => !c.isAverage);
+    expect(individual.map((c) => c.type)).toEqual(['redraft', 'overall', 'dynasty', 'adp']);
   });
 });
 
@@ -500,5 +504,176 @@ describe('TYPE_LABELS', () => {
 
   it('should only have exactly 4 entries', () => {
     expect(Object.keys(TYPE_LABELS)).toHaveLength(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Average rank column tests
+// ---------------------------------------------------------------------------
+
+describe('average rank column', () => {
+  it('should NOT add average column when only 1 import exists', () => {
+    const imp = createMockRankingImport({ id: 'import-1' });
+    const lookup = buildRankingLookup([imp]);
+
+    expect(lookup.columns).toHaveLength(1);
+    expect(lookup.columns[0].isAverage).toBeUndefined();
+    expect(lookup.byImport.has(AVERAGE_IMPORT_ID)).toBe(false);
+  });
+
+  it('should add average column as FIRST column when 2+ imports exist', () => {
+    const imp1 = createMockRankingImport({ id: 'import-1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: 'import-2', source: 'sleeper' });
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    expect(lookup.columns).toHaveLength(3); // avg + 2 individual
+    expect(lookup.columns[0].isAverage).toBe(true);
+    expect(lookup.columns[0].importId).toBe(AVERAGE_IMPORT_ID);
+    expect(lookup.columns[0].header).toBe('Avg');
+    expect(lookup.columns[0].fullName).toBe('Average Rank');
+  });
+
+  it('should compute correct average for player ranked in all imports', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 20, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
+    expect(avgMap?.get('p1')).toBe(15); // (10 + 20) / 2
+  });
+
+  it('should compute average for player ranked in only 1 of 2 imports', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 7, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 3, playerId: 'p2' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
+    expect(avgMap?.get('p1')).toBe(7);
+    expect(avgMap?.get('p2')).toBe(3);
+  });
+
+  it('should round average to nearest integer', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 3, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 8, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
+    expect(avgMap?.get('p1')).toBe(6); // (3 + 8) / 2 = 5.5 → 6
+  });
+
+  it('should compute average across 3 imports correctly', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 5, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+    });
+    const imp3 = createMockRankingImport({
+      id: 'import-3',
+      source: 'keeptradecut',
+      rankings: [createMockRankingEntry({ rank: 15, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2, imp3]);
+    const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
+    expect(avgMap?.get('p1')).toBe(10); // (5 + 10 + 15) / 3
+  });
+
+  it('should NOT include unmatched players in average', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 1, playerId: null, matched: false })],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 1, playerId: null, matched: false })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
+    expect(avgMap?.size).toBe(0);
+  });
+
+  it('should preserve individual column order after average column', () => {
+    const imp1 = createMockRankingImport({ id: '1', source: 'sleeper' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'fantasypros' });
+    const imp3 = createMockRankingImport({ id: '3', source: 'keeptradecut' });
+
+    const lookup = buildRankingLookup([imp1, imp2, imp3]);
+
+    expect(lookup.columns[0].isAverage).toBe(true);
+    expect(lookup.columns[1].importId).toBe('1');
+    expect(lookup.columns[2].importId).toBe('2');
+    expect(lookup.columns[3].importId).toBe('3');
+  });
+
+  it('should report correct playerCount for average column', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [
+        createMockRankingEntry({ rank: 1, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 2, playerId: 'p2' }),
+      ],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [
+        createMockRankingEntry({ rank: 1, playerId: 'p2' }),
+        createMockRankingEntry({ rank: 2, playerId: 'p3' }),
+      ],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const avgCol = lookup.columns[0];
+    expect(avgCol.playerCount).toBe(3); // p1, p2, p3
+  });
+
+  it('should work with getPlayerRank using AVERAGE_IMPORT_ID', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 20, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    expect(getPlayerRank(lookup, 'p1', AVERAGE_IMPORT_ID)).toBe(15);
+    expect(getPlayerRank(lookup, 'p-unknown', AVERAGE_IMPORT_ID)).toBeNull();
   });
 });
