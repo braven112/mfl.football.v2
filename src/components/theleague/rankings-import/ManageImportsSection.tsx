@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -17,9 +17,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-import { deleteImport, reorderImports } from '../../../utils/rankings-storage';
+import { deleteImport, reorderImports, getAveragePosition } from '../../../utils/rankings-storage';
 import type { StoredRankingImport } from '../../../types/rankings-import';
-import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
+import { SOURCE_LABELS, AVERAGE_IMPORT_ID } from '../../../utils/rankings-lookup';
 import ImportDetailModal from './ImportDetailModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 
@@ -28,6 +28,11 @@ interface Props {
   onDelete: (id: string) => void;
   onReorder: () => void;
 }
+
+/** A sortable item that is either a real import or the synthetic average row. */
+type SortableItem =
+  | { kind: 'import'; id: string; data: StoredRankingImport }
+  | { kind: 'average'; id: typeof AVERAGE_IMPORT_ID };
 
 export default function ManageImportsSection({ imports, onDelete, onReorder }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
@@ -40,13 +45,32 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }),
   );
 
+  const showAverage = imports.length >= 2;
+
+  // Build the combined sortable list: real imports + average at stored position
+  const items: SortableItem[] = useMemo(() => {
+    const realItems: SortableItem[] = imports.map((imp) => ({
+      kind: 'import' as const,
+      id: imp.id,
+      data: imp,
+    }));
+
+    if (!showAverage) return realItems;
+
+    const storedPos = getAveragePosition();
+    const insertAt = Math.max(0, Math.min(storedPos, realItems.length));
+    const result = [...realItems];
+    result.splice(insertAt, 0, { kind: 'average', id: AVERAGE_IMPORT_ID });
+    return result;
+  }, [imports, showAverage]);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = imports.findIndex((imp) => imp.id === active.id);
-      const newIndex = imports.findIndex((imp) => imp.id === over.id);
-      const reordered = arrayMove(imports, oldIndex, newIndex);
-      reorderImports(reordered.map((imp) => imp.id));
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+      const reordered = arrayMove(items, oldIndex, newIndex);
+      reorderImports(reordered.map((item) => item.id));
       onReorder();
     }
   };
@@ -88,16 +112,20 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
                   <th>Actions</th>
                 </tr>
               </thead>
-              <SortableContext items={imports.map((imp) => imp.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
-                  {imports.map((imp) => (
-                    <SortableRow
-                      key={imp.id}
-                      imp={imp}
-                      onView={setSelectedImport}
-                      onDelete={setDeleteTarget}
-                    />
-                  ))}
+                  {items.map((item) =>
+                    item.kind === 'average' ? (
+                      <AverageRow key={AVERAGE_IMPORT_ID} imports={imports} />
+                    ) : (
+                      <SortableRow
+                        key={item.id}
+                        imp={item.data}
+                        onView={setSelectedImport}
+                        onDelete={setDeleteTarget}
+                      />
+                    ),
+                  )}
                 </tbody>
               </SortableContext>
             </table>
@@ -120,6 +148,65 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         />
       )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Average rank row (sortable but no view/delete)
+// ---------------------------------------------------------------------------
+
+interface AverageRowProps {
+  imports: StoredRankingImport[];
+}
+
+function AverageRow({ imports }: AverageRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: AVERAGE_IMPORT_ID });
+
+  // Count unique matched players across all imports
+  const playerCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const imp of imports) {
+      for (const entry of imp.rankings) {
+        if (entry.matched && entry.playerId) ids.add(entry.playerId);
+      }
+    }
+    return ids.size;
+  }, [imports]);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className={`ri-manage__row--average${isDragging ? ' ri-manage__row--dragging' : ''}`}>
+      <td className="ri-manage__drag-handle" {...attributes} {...listeners}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="9" cy="5" r="1.5" />
+          <circle cx="9" cy="12" r="1.5" />
+          <circle cx="9" cy="19" r="1.5" />
+          <circle cx="15" cy="5" r="1.5" />
+          <circle cx="15" cy="12" r="1.5" />
+          <circle cx="15" cy="19" r="1.5" />
+        </svg>
+      </td>
+      <td className="ri-manage__source">Average Rank</td>
+      <td>
+        <span className="ri-manage__type ri-manage__type--overall">computed</span>
+      </td>
+      <td>—</td>
+      <td>{playerCount}</td>
+      <td>—</td>
+      <td className="ri-manage__actions"></td>
+    </tr>
   );
 }
 

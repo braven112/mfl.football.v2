@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   formatColumnHeader,
   formatFullName,
@@ -15,6 +15,17 @@ import type {
   RankingSourceId,
   RankingType,
 } from '../src/types/rankings-import';
+
+// Mock getAveragePosition — defaults to 0 (first position) unless overridden
+const mockGetAveragePosition = vi.fn(() => 0);
+vi.mock('../src/utils/rankings-storage', () => ({
+  getAllImports: vi.fn(() => []),
+  getAveragePosition: () => mockGetAveragePosition(),
+}));
+
+beforeEach(() => {
+  mockGetAveragePosition.mockReturnValue(0);
+});
 
 // ---------------------------------------------------------------------------
 // Test Helpers
@@ -675,5 +686,60 @@ describe('average rank column', () => {
     const lookup = buildRankingLookup([imp1, imp2]);
     expect(getPlayerRank(lookup, 'p1', AVERAGE_IMPORT_ID)).toBe(15);
     expect(getPlayerRank(lookup, 'p-unknown', AVERAGE_IMPORT_ID)).toBeNull();
+  });
+
+  it('should place average column at stored position when set to middle', () => {
+    mockGetAveragePosition.mockReturnValue(1);
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const imp3 = createMockRankingImport({ id: '3', source: 'keeptradecut' });
+
+    const lookup = buildRankingLookup([imp1, imp2, imp3]);
+
+    expect(lookup.columns[0].importId).toBe('1');
+    expect(lookup.columns[1].isAverage).toBe(true);
+    expect(lookup.columns[2].importId).toBe('2');
+    expect(lookup.columns[3].importId).toBe('3');
+  });
+
+  it('should place average column at end when position equals import count', () => {
+    mockGetAveragePosition.mockReturnValue(3);
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const imp3 = createMockRankingImport({ id: '3', source: 'keeptradecut' });
+
+    const lookup = buildRankingLookup([imp1, imp2, imp3]);
+
+    expect(lookup.columns[0].importId).toBe('1');
+    expect(lookup.columns[1].importId).toBe('2');
+    expect(lookup.columns[2].importId).toBe('3');
+    expect(lookup.columns[3].isAverage).toBe(true);
+  });
+
+  it('should clamp average position to valid range when out of bounds', () => {
+    mockGetAveragePosition.mockReturnValue(100);
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    // Should clamp to last position
+    expect(lookup.columns[2].isAverage).toBe(true);
+    expect(lookup.columns[0].importId).toBe('1');
+    expect(lookup.columns[1].importId).toBe('2');
+  });
+
+  it('should clamp negative average position to 0', () => {
+    mockGetAveragePosition.mockReturnValue(-5);
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    expect(lookup.columns[0].isAverage).toBe(true);
   });
 });

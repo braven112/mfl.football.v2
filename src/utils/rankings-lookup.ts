@@ -24,7 +24,7 @@ import type {
   RankingType,
   StoredRankingImport,
 } from '../types/rankings-import';
-import { getAllImports } from './rankings-storage';
+import { getAllImports, getAveragePosition } from './rankings-storage';
 
 /** Synthetic importId used for the computed average rank column. */
 export const AVERAGE_IMPORT_ID = '__average__';
@@ -185,8 +185,8 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
 
     byImport.set(AVERAGE_IMPORT_ID, averageMap);
 
-    // Prepend the average column — always first (leftmost on the table)
-    columns.unshift({
+    // Insert the average column at the user-configured position
+    const avgColumn: RankingColumn = {
       importId: AVERAGE_IMPORT_ID,
       source: 'custom',
       type: 'overall',
@@ -195,7 +195,12 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
       playerCount: averageMap.size,
       importDate: new Date().toISOString(),
       isAverage: true,
-    });
+    };
+
+    const storedPosition = getAveragePosition();
+    // Clamp to valid range [0, columns.length]
+    const insertAt = Math.max(0, Math.min(storedPosition, columns.length));
+    columns.splice(insertAt, 0, avgColumn);
   }
 
   return { byImport, columns };

@@ -10,6 +10,7 @@
 import type { StoredRankingImport } from '../types/rankings-import';
 
 const STORAGE_KEY = 'rankings.imports';
+const AVG_POSITION_KEY = 'rankings.averagePosition';
 
 // Legacy keys from the old auction predictor rankings import
 const LEGACY_KEYS = [
@@ -108,18 +109,46 @@ export function getImportById(id: string): StoredRankingImport | null {
 /**
  * Reorder imports to match the provided ID sequence.
  * IDs not found in storage are skipped.
+ *
+ * The special '__average__' ID may appear in the list to indicate
+ * where the average rank column should be positioned. Its index
+ * is stored separately in localStorage.
  */
 export function reorderImports(importIds: string[]): void {
+  const AVERAGE_ID = '__average__';
+  const averageIndex = importIds.indexOf(AVERAGE_ID);
+
+  // Filter out the synthetic average ID before matching real imports
+  const realIds = importIds.filter((id) => id !== AVERAGE_ID);
+
   const currentImports = getAllImports();
   const byId = new Map(currentImports.map((imp) => [imp.id, imp]));
 
   const reordered: StoredRankingImport[] = [];
-  for (const id of importIds) {
+  for (const id of realIds) {
     const imp = byId.get(id);
     if (imp) reordered.push(imp);
   }
 
   writeToStorage(reordered);
+
+  // Persist average column position (only meaningful when 2+ imports)
+  if (averageIndex !== -1) {
+    localStorage.setItem(AVG_POSITION_KEY, String(averageIndex));
+  }
+}
+
+/**
+ * Get the stored position index for the average rank column.
+ * Returns 0 (first) if no position has been explicitly set.
+ */
+export function getAveragePosition(): number {
+  try {
+    const raw = localStorage.getItem(AVG_POSITION_KEY);
+    return raw != null ? parseInt(raw, 10) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 export function getLatestImportByType(
