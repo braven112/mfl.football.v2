@@ -145,8 +145,8 @@ if (projectedScoresData?.projectedScores?.playerScore) {
   }
 }
 
-// Build rostered player set
-const rosteredPlayers = new Set<string>();
+// Build rostered player map with contract info
+const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null }>();
 if (rostersData?.rosters?.franchise) {
   const franchises = Array.isArray(rostersData.rosters.franchise)
     ? rostersData.rosters.franchise
@@ -156,7 +156,13 @@ if (rostersData?.rosters?.franchise) {
       ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
       : [];
     for (const p of rosterPlayers) {
-      if (p?.id) rosteredPlayers.add(p.id);
+      if (!p?.id) continue;
+      const salary = p.salary ? parseFloat(p.salary) : null;
+      const contractYrs = p.contractYear ? parseInt(p.contractYear, 10) : null;
+      rosteredPlayers.set(p.id, {
+        salary: salary && salary > 0 ? salary : null,
+        contractYrs: contractYrs && contractYrs > 0 ? contractYrs : null,
+      });
     }
   }
 }
@@ -191,6 +197,10 @@ interface PlayerRow {
   draftYear: number | null;
   draftTeam: string | null;
   draftPick: number | null;
+  salary: number | null;
+  contractYrs: number | null;
+  games: number | null;
+  ppg: number | null;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -204,6 +214,7 @@ if (Array.isArray(allPlayers)) {
 
     const projected = projectedMap.get(p.id) ?? null;
     const isRostered = rosteredPlayers.has(p.id);
+    const rosterInfo = rosteredPlayers.get(p.id);
 
     // Skip only players with zero data relevance (no projections, not rostered, no NFL team)
     // This filters out practice squad/obscure players while keeping real NFL free agents
@@ -267,12 +278,20 @@ if (Array.isArray(allPlayers)) {
       lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
       snaps: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.snaps : null,
       snapPct: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.pct : null,
+      games: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.games : null,
       rookie: p.status === 'R',
       birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
       jersey: p.jersey || null,
       draftYear: draftYr,
       draftTeam: p.draft_team || null,
       draftPick: p.draft_pick ? parseInt(p.draft_pick, 10) : null,
+      salary: rosterInfo?.salary ?? null,
+      contractYrs: rosterInfo?.contractYrs ?? null,
+      ppg: (() => {
+        const pts = lastYrPtsMap.get(p.id);
+        const gp = snapCountMap.get(p.id)?.games;
+        return (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null;
+      })(),
     });
   }
 }
@@ -333,6 +352,11 @@ const faCountsJson = JSON.stringify(faCounts);
         placeholder="Search players..."
         autocomplete="off"
       />
+      <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
+        <span class="col-group-toggles__label">View:</span>
+        <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
+        <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+      </div>
       <label class="roster-toggle">
         <input type="checkbox" id="show-rostered" />
         <span>Include rostered</span>
@@ -341,11 +365,6 @@ const faCountsJson = JSON.stringify(faCounts);
         <input type="checkbox" id="show-rookies" />
         <span>Include rookies</span>
       </label>
-      <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
-        <span class="col-group-toggles__label">View:</span>
-        <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
-        <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
-      </div>
     </div>
 
     <!-- Table Controls -->
@@ -381,6 +400,14 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-sm col-always-profile" data-sort="weight">
               <div class="th-content">Wt</div>
             </th>
+            <th class="sortable col-text col-group--stats" data-sort="college">
+              <div class="th-content th-content--left">College</div>
+            </th>
+            {hasSnapCounts && (
+              <th class="sortable col-sm col-group--stats" data-sort="games">
+                <div class="th-content">GP</div>
+              </th>
+            )}
             {hasSnapCounts && (
               <th class="sortable col-num col-group--stats" data-sort="snaps">
                 <div class="th-content">Snaps</div>
@@ -396,11 +423,22 @@ const faCountsJson = JSON.stringify(faCounts);
                 <div class="th-content">Last Yr</div>
               </th>
             )}
+            {hasLastYrPts && hasSnapCounts && (
+              <th class="sortable col-num col-group--stats" data-sort="ppg">
+                <div class="th-content">PPG</div>
+              </th>
+            )}
             {hasProjected && (
               <th class="sortable col-num col-group--stats" data-sort="projected">
                 <div class="th-content">Proj</div>
               </th>
             )}
+            <th class="sortable col-sm col-contract" data-sort="contractYrs" style="display: none;">
+              <div class="th-content">Yrs</div>
+            </th>
+            <th class="sortable col-num col-contract" data-sort="salary" style="display: none;">
+              <div class="th-content">Salary</div>
+            </th>
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
@@ -442,11 +480,15 @@ const faCountsJson = JSON.stringify(faCounts);
   // 'stats' = show stats columns, 'rankings' = show ranking columns
   let activeView = 'stats';
   let hasRankingColumns = false;
+  let hasExplicitViewPref = false;
 
   function loadViewPref() {
     try {
       const saved = localStorage.getItem('playersViewMode');
-      if (saved === 'rankings' || saved === 'stats') activeView = saved;
+      if (saved === 'rankings' || saved === 'stats') {
+        activeView = saved;
+        hasExplicitViewPref = true;
+      }
     } catch (_) {}
   }
 
@@ -482,10 +524,47 @@ const faCountsJson = JSON.stringify(faCounts);
     if (toggleBar) {
       toggleBar.style.display = hasRankingColumns ? '' : 'none';
     }
+
+    updateLastVisibleCol();
+  }
+
+  function applyContractVisibility() {
+    const display = showRostered ? '' : 'none';
+    document.querySelectorAll('.col-contract').forEach(el => {
+      el.style.display = display;
+    });
+    updateLastVisibleCol();
+  }
+
+  function updateLastVisibleCol() {
+    // Update header row
+    const headerRow = document.querySelector('.players-table thead tr');
+    if (headerRow) {
+      const ths = headerRow.querySelectorAll('th');
+      ths.forEach(th => th.classList.remove('last-visible-col'));
+      for (let i = ths.length - 1; i >= 0; i--) {
+        if (ths[i].style.display !== 'none') {
+          ths[i].classList.add('last-visible-col');
+          break;
+        }
+      }
+    }
+    // Update body rows
+    document.querySelectorAll('.players-table tbody tr').forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      tds.forEach(td => td.classList.remove('last-visible-col'));
+      for (let i = tds.length - 1; i >= 0; i--) {
+        if (tds[i].style.display !== 'none') {
+          tds[i].classList.add('last-visible-col');
+          break;
+        }
+      }
+    });
   }
 
   function setActiveView(view) {
     activeView = view;
+    hasExplicitViewPref = true;
     saveViewPref();
     applyGroupVisibility();
   }
@@ -560,6 +639,26 @@ const faCountsJson = JSON.stringify(faCounts);
         case 'snapPct':
           aVal = a.snapPct ?? -1;
           bVal = b.snapPct ?? -1;
+          break;
+        case 'college':
+          return sortDirection === 'asc'
+            ? (a.college || 'zzz').localeCompare(b.college || 'zzz')
+            : (b.college || 'zzz').localeCompare(a.college || 'zzz');
+        case 'contractYrs':
+          aVal = a.contractYrs ?? -1;
+          bVal = b.contractYrs ?? -1;
+          break;
+        case 'salary':
+          aVal = a.salary ?? -1;
+          bVal = b.salary ?? -1;
+          break;
+        case 'games':
+          aVal = a.games ?? -1;
+          bVal = b.games ?? -1;
+          break;
+        case 'ppg':
+          aVal = a.ppg ?? -1;
+          bVal = b.ppg ?? -1;
           break;
         default:
           // Dynamic ranking columns: sort key is "ranking_{importId}"
@@ -672,7 +771,8 @@ const faCountsJson = JSON.stringify(faCounts);
       const wtDisplay = p.weight ? p.weight + '' : '-';
       html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
         <td class="cell-sm col-always-profile">${htDisplay}</td>
-        <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
+        <td class="cell-sm col-always-profile">${wtDisplay}</td>
+        <td class="cell-text col-group--stats">${p.college ? p.college : '<span class="na">-</span>'}</td>`;
 
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
@@ -681,6 +781,7 @@ const faCountsJson = JSON.stringify(faCounts);
       }
 
       if (hasSnapCounts) {
+        html += `<td class="cell-sm col-group--stats">${p.games != null ? p.games : '<span class="na">-</span>'}</td>`;
         html += `<td class="cell-num col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
         html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
@@ -689,9 +790,16 @@ const faCountsJson = JSON.stringify(faCounts);
         html += `<td class="cell-num col-group--stats">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
+      if (hasLastYrPts && hasSnapCounts) {
+        html += `<td class="cell-num col-group--stats">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+
       if (hasProjected) {
         html += `<td class="cell-num cell-pts col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
+
+      html += `<td class="cell-sm col-contract">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
+      html += `<td class="cell-num col-contract">${p.salary != null ? '$' + (p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K') : '<span class="na">-</span>'}</td>`;
 
       html += `</tr>`;
     }
@@ -726,20 +834,23 @@ const faCountsJson = JSON.stringify(faCounts);
 
     // Re-apply column group visibility after tbody re-render
     applyGroupVisibility();
+    applyContractVisibility();
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg']);
 
   // CustomEvent-based API for the rankings module script to interact with this page.
   // All events use the document as the event bus — no global window properties needed.
   document.addEventListener('rankings:set-lookup', function (e) {
     rankingLookup = e.detail.lookup;
     hasRankingColumns = e.detail.hasColumns;
-    // If rankings were removed and user was viewing them, switch back to stats
-    if (!e.detail.hasColumns && activeView === 'rankings') {
+    if (e.detail.hasColumns && !hasExplicitViewPref) {
+      // Default to rankings view when available and user hasn't explicitly chosen
+      activeView = 'rankings';
+    } else if (!e.detail.hasColumns && activeView === 'rankings') {
+      // If rankings were removed and user was viewing them, switch back to stats
       activeView = 'stats';
-      saveViewPref();
     }
     applyGroupVisibility();
   });
@@ -1216,12 +1327,16 @@ const faCountsJson = JSON.stringify(faCounts);
   .players-table th:first-child {
     padding-left: 0.625rem;
   }
-  .players-table th:last-child {
+  .players-table th.last-visible-col {
     padding-right: 0.625rem;
   }
   .players-table th.sortable {
-    cursor: pointer;
+    cursor: pointer !important;
     user-select: none;
+    -webkit-user-select: none;
+  }
+  :global(.players-table th.sortable *) {
+    cursor: pointer !important;
   }
   .players-table th.sortable:hover {
     background: rgba(255,255,255,0.1);
@@ -1240,8 +1355,7 @@ const faCountsJson = JSON.stringify(faCounts);
     opacity: 0.85;
   }
 
-  /* Column group hidden states (JS applies inline display:none after render) */
-  :global(.col-always-profile) { display: none; }
+  /* Profile columns (Exp, Draft, Ht, Wt) are always visible — no toggle needed */
 
   /* Columns */
   .col-rank { width: min-content; text-align: center; }
@@ -1252,6 +1366,7 @@ const faCountsJson = JSON.stringify(faCounts);
   .col-num { width: 72px; text-align: right; }
   .col-num .th-content { justify-content: flex-end; }
   .col-text { text-align: left; }
+  .th-content--left { justify-content: flex-start; }
 
   /* Cells */
   :global(.players-table td) {
@@ -1259,7 +1374,7 @@ const faCountsJson = JSON.stringify(faCounts);
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
   }
-  :global(.players-table td:last-child) {
+  :global(.players-table td.last-visible-col) {
     padding-right: 0.625rem;
   }
   :global(.players-table tbody tr:first-child td) {
@@ -1290,6 +1405,10 @@ const faCountsJson = JSON.stringify(faCounts);
   }
   :global(.na) {
     color: #d1d5db;
+  }
+  :global(.fa-tag) {
+    color: #94a3b8;
+    font-size: 0.75rem;
   }
   :global(.cell-sm) {
     text-align: center;
