@@ -12,19 +12,31 @@ const getNonEmpty = (value) => {
   const trimmed = String(value).trim();
   return trimmed.length ? trimmed : undefined;
 };
-// Auto-detect current league year (after Feb 14 → next calendar year)
-const autoDetectLeagueYear = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const febCutoff = new Date(year, 1, 14, 16, 45, 0, 0); // Feb 14 @ 8:45 PT (16:45 UTC)
-  return now >= febCutoff ? String(year + 1) : String(year);
+
+/**
+ * Port of getCurrentLeagueYear from src/utils/league-year.ts
+ * League year advances on Feb 14th @ 8:45 PT (16:45 UTC).
+ */
+const calculateCurrentLeagueYear = (date = new Date()) => {
+  const calendarYear = date.getFullYear();
+  // Labor Day: first Monday in September
+  const septFirst = new Date(calendarYear, 8, 1);
+  const dayOfWeek = septFirst.getDay();
+  const laborDayOffset = dayOfWeek === 1 ? 0 : dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+  const laborDay = new Date(calendarYear, 8, 1 + laborDayOffset);
+  const baseYear = date >= laborDay ? calendarYear : calendarYear - 1;
+  // Feb 14th @ 8:45 PT = 16:45 UTC
+  const febCutoff = new Date(calendarYear, 1, 14, 16, 45, 0, 0);
+  return date >= febCutoff ? baseYear + 1 : baseYear;
 };
+
 const season =
   getNonEmpty(env.MFL_SEASON) ??
   getNonEmpty(env.MFL_YEAR) ??
-  autoDetectLeagueYear();
+  String(calculateCurrentLeagueYear());
 const leagueId = getNonEmpty(env.MFL_LEAGUE_ID) ?? '13522';
-const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? leagueId;
+const LEAGUE_SLUG_DEFAULTS = { '13522': 'theleague', '19621': 'afl' };
+const leagueKey = getNonEmpty(env.MFL_LEAGUE_SLUG) ?? LEAGUE_SLUG_DEFAULTS[leagueId] ?? leagueId;
 const apiBase = getNonEmpty(env.MFL_API_BASE) ?? 'https://api.myfantasyleague.com';
 const configuredWeek = getNonEmpty(env.MFL_WEEK);
 const username = getNonEmpty(env.MFL_USERNAME);
@@ -33,6 +45,8 @@ const apiKey = getNonEmpty(env.MFL_API_KEY);
 const freezeWeek = Number.parseInt(getNonEmpty(env.MFL_FREEZE_WEEK) ?? '14', 10);
 const outputRaw = path.join(dataDir, leagueKey, `mfl-player-salaries-${season}.json`);
 const outputSummary = path.join(dataDir, leagueKey, `mfl-salary-averages-${season}.json`);
+// Also write summary to root data dir where the salary page reads from
+const outputSummaryRoot = path.join(dataDir, `mfl-salary-averages-${season}.json`);
 const historyDir = path.join(dataDir, 'salary-history', leagueKey, season);
 const seasonStateFile = path.join(dataDir, `mfl-season-state-${leagueKey}.json`);
 const cachedRostersFile = path.join(dataDir, 'mfl-feeds', leagueKey, season, 'rosters.json');
@@ -104,18 +118,22 @@ const buildNameKey = (name = '', team = '') =>
 
 const buildMflHeadshotUrl = (playerId) =>
   playerId
-    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`
+    ? `https://www49.myfantasyleague.com/player_photos_2014/${playerId}_thumb.jpg`
     : DEFAULT_HEADSHOT_URL;
-
-const buildHeadshotUrl = (mflId, espnId) => {
-  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
-  return buildMflHeadshotUrl(mflId);
-};
 
 const average = (values = []) => {
   if (!values.length) return 0;
   const total = values.reduce((sum, value) => sum + value, 0);
   return Math.round((total / values.length) * 100) / 100;
+};
+
+const median = (values = []) => {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 100) / 100;
 };
 
 const buildUrl = (type, params = {}, options = {}) => {
@@ -319,7 +337,6 @@ const fetchPlayerMeta = async (playerIds) => {
         draftYear: player?.draft_year ? Number.parseInt(player.draft_year, 10) : null,
         draftTeam: player?.draft_team ?? null,
         birthdate: player?.birthdate ? Number.parseInt(player.birthdate, 10) : null,
-        espnId: player?.espn_id || null,
       });
     });
   });
@@ -423,11 +440,9 @@ const normalizePlayers = (
       const sleeperMatch = matchSleeperPlayer(meta, sleeperByKey);
       const nflverse = matchNflverseUsage(meta, sleeperMatch, nflverseMap);
       const headshot =
-        meta.espnId
-          ? buildHeadshotUrl(meta.id, meta.espnId)
-          : sleeperMatch?.photo_url ||
-            sleeperMatch?.headshot_url ||
-            buildMflHeadshotUrl(meta.id);
+        sleeperMatch?.photo_url ||
+        sleeperMatch?.headshot_url ||
+        buildMflHeadshotUrl(meta.id);
       normalized.push({
         id: meta.id,
         name: meta.name,
@@ -553,6 +568,10 @@ const calculateDepthChartAhead = (players) => {
   });
 };
 
+// Number of "starters" per position across a 16-team league.
+// Used to calculate the average starter salary (top N players at each position).
+const STARTER_COUNTS = { QB: 16, RB: 30, WR: 48, TE: 18, PK: 16, Def: 16 };
+
 const summarizeByPosition = (players) => {
   const buckets = new Map();
   players.forEach((player) => {
@@ -565,11 +584,19 @@ const summarizeByPosition = (players) => {
     list.sort((a, b) => b.salary - a.salary);
     const top3 = list.slice(0, 3);
     const top5 = list.slice(0, 5);
+    const starterCount = STARTER_COUNTS[position] ?? list.length;
+    const starters = list.slice(0, starterCount);
+    const allSalaries = list.map((player) => player.salary);
     summary[position] = {
       totalPlayers: list.length,
       top3Average: average(top3.map((player) => player.salary)),
       top5Average: average(top5.map((player) => player.salary)),
-      topPlayers: list.slice(0, 5).map((player) => ({
+      starterAverage: average(starters.map((player) => player.salary)),
+      starterMedian: median(starters.map((player) => player.salary)),
+      starterCount,
+      averageSalary: average(allSalaries),
+      medianSalary: median(allSalaries),
+      topPlayers: list.map((player) => ({
         id: player.id,
         name: player.name,
         salary: player.salary,
@@ -877,13 +904,41 @@ const run = async () => {
     },
     positions: summarizeByPosition(players),
   };
-  await writeJson(outputSummary, summary);
-  console.log(
-    `[salary-averages] Saved per-position averages -> ${path.relative(
-      projectRoot,
-      outputSummary
-    )}`
-  );
+
+  // When frozen, don't overwrite the Season Total summary — MFL may no longer
+  // return accurate historical rosters after the season ends. The frozen summary
+  // from the original freeze run is the source of truth.
+  if (lockedWeek) {
+    let existingSummary = null;
+    try {
+      existingSummary = JSON.parse(await fs.readFile(outputSummaryRoot, 'utf8'));
+    } catch {
+      // No existing summary
+    }
+    if (existingSummary?.positions) {
+      console.log(
+        `[salary-averages] Season is frozen — preserving existing Season Total summary.`
+      );
+    } else {
+      await writeJson(outputSummary, summary);
+      await writeJson(outputSummaryRoot, summary);
+      console.log(
+        `[salary-averages] Saved per-position averages -> ${path.relative(
+          projectRoot,
+          outputSummary
+        )} + ${path.relative(projectRoot, outputSummaryRoot)}`
+      );
+    }
+  } else {
+    await writeJson(outputSummary, summary);
+    await writeJson(outputSummaryRoot, summary);
+    console.log(
+      `[salary-averages] Saved per-position averages -> ${path.relative(
+        projectRoot,
+        outputSummary
+      )} + ${path.relative(projectRoot, outputSummaryRoot)}`
+    );
+  }
 
   const snapshot = timestampSlug();
   const historyRaw = path.join(historyDir, `raw-${snapshot}.json`);
@@ -920,6 +975,147 @@ const run = async () => {
         weekSummary
       )}`
     );
+  }
+
+  // Post-freeze tracking: fetch the latest (unfrozen) roster and save a weekly snapshot
+  // so we can track salary changes year-round (trades, cuts, signings).
+  //
+  // Week labeling scheme (all weeks are Sundays at 10am PT = 18:00 UTC):
+  //   Week 15, 16, ... 23 — continuing count after freeze through Super Bowl
+  //   off-1, off-2, ... — offseason, starting first Sunday after Feb 15 at 10am PT
+  //
+  // We calculate weeks by counting Sundays from the freeze date rather than
+  // relying on MFL's detectedWeek (which may stop advancing after the season).
+
+  /**
+   * Calculate the current post-freeze week number and whether we're in the offseason.
+   * Week boundaries are Sundays at 10am PT (18:00 UTC).
+   *
+   * @param {number} frozenWeek - The frozen week number (e.g., 14)
+   * @param {string} frozenAt - ISO date string when the freeze occurred
+   * @param {Date} now - Current date
+   * @returns {{ weekLabel: number|string|null, isOffseason: boolean }}
+   */
+  const calculatePostFreezeWeek = (frozenWeek, frozenAt, now = new Date()) => {
+    // Find the first Sunday at 10am PT (18:00 UTC) after the freeze date
+    const freezeDate = new Date(frozenAt);
+    const MS_PER_DAY = 86400000;
+
+    // Walk forward from freeze date to find first Sunday at 18:00 UTC
+    const freezeDay = freezeDate.getUTCDay(); // 0=Sun
+    const daysToNextSunday = freezeDay === 0 ? 7 : 7 - freezeDay; // always advance to NEXT Sunday
+    const firstPostFreezeSunday = new Date(
+      Date.UTC(
+        freezeDate.getUTCFullYear(),
+        freezeDate.getUTCMonth(),
+        freezeDate.getUTCDate() + daysToNextSunday,
+        18, 0, 0
+      )
+    );
+
+    // If we haven't reached the first post-freeze Sunday, no snapshot yet
+    if (now < firstPostFreezeSunday) {
+      return { weekLabel: null, isOffseason: false };
+    }
+
+    // Count Sundays elapsed since the first post-freeze Sunday
+    const msElapsed = now.getTime() - firstPostFreezeSunday.getTime();
+    const sundaysElapsed = Math.floor(msElapsed / (7 * MS_PER_DAY));
+    const weekNumber = frozenWeek + 1 + sundaysElapsed;
+
+    // Check if we've crossed the Feb 15 offseason boundary.
+    // The offseason starts the Feb 15 AFTER the freeze date (next calendar year if frozen in fall).
+    const offseasonYear = freezeDate.getUTCMonth() >= 6 ? freezeDate.getUTCFullYear() + 1 : freezeDate.getUTCFullYear();
+    const offseasonStart = new Date(Date.UTC(offseasonYear, 1, 15, 18, 0, 0)); // Feb 15 at 10am PT
+
+    if (now >= offseasonStart) {
+      // Find first Sunday at 10am PT on or after Feb 16
+      const feb16 = new Date(Date.UTC(offseasonYear, 1, 16, 18, 0, 0));
+      const feb16Day = feb16.getUTCDay();
+      const daysUntilSunday = feb16Day === 0 ? 0 : 7 - feb16Day;
+      const firstOffseasonSunday = new Date(feb16.getTime() + daysUntilSunday * MS_PER_DAY);
+
+      if (now >= firstOffseasonSunday) {
+        const offMs = now.getTime() - firstOffseasonSunday.getTime();
+        const offWeekNum = Math.floor(offMs / (7 * MS_PER_DAY)) + 1;
+        return { weekLabel: `off-${offWeekNum}`, isOffseason: true };
+      }
+    }
+
+    return { weekLabel: weekNumber, isOffseason: false };
+  };
+
+  if (lockedWeek) {
+    const frozenAt = state?.frozenAt ?? new Date().toISOString();
+    const { weekLabel: currentWeekLabel, isOffseason } = calculatePostFreezeWeek(
+      lockedWeek,
+      frozenAt
+    );
+
+    if (currentWeekLabel !== null) {
+      console.log(`[salary-averages] Fetching current roster for ${isOffseason ? 'Off Season Week ' + String(currentWeekLabel).slice(4) : 'week ' + currentWeekLabel}...`);
+      const { payload: currentRosterPayload } = await fetchRostersWithFallback(null);
+      if (currentRosterPayload) {
+        const currentRosterPlayers = new Set();
+        ensureArray(currentRosterPayload?.rosters?.franchise).forEach((franchise) => {
+          ensureArray(franchise?.player).forEach((player) => {
+            if (player?.id) currentRosterPlayers.add(player.id);
+          });
+        });
+
+        if (currentRosterPlayers.size) {
+          const newPlayerIds = [...currentRosterPlayers].filter((id) => !playerMeta.has(id));
+          if (newPlayerIds.length) {
+            console.log(`[salary-averages] Fetching metadata for ${newPlayerIds.length} new players...`);
+            const { meta: newMeta } = await fetchPlayerMeta(newPlayerIds);
+            newMeta.forEach((value, key) => playerMeta.set(key, value));
+          }
+
+          const currentPlayers = normalizePlayers(currentRosterPayload, playerMeta, playerPointsMap, {
+            sleeperByKey: sleeperDirectory.byKey,
+            nflverseMap: nflverseSnapCounts,
+          });
+
+          if (currentPlayers.length) {
+            const currentMetadata = {
+              ...metadata,
+              week: currentWeekLabel,
+              frozenWeek: lockedWeek,
+              ...(isOffseason ? { isOffseason: true } : {}),
+              fetchedAt: new Date().toISOString(),
+            };
+
+            const currentSummary = {
+              metadata: {
+                ...currentMetadata,
+                description: isOffseason
+                  ? `Offseason salary snapshot (${currentWeekLabel}).`
+                  : `Post-freeze salary snapshot for week ${currentWeekLabel}.`,
+                generatedAt: new Date().toISOString(),
+              },
+              positions: summarizeByPosition(currentPlayers),
+            };
+
+            const weekSummaryPath = path.join(historyDir, `summary-week-${currentWeekLabel}.json`);
+            await writeJson(weekSummaryPath, { snapshot, week: currentWeekLabel, ...currentSummary });
+
+            const weekRawPath = path.join(historyDir, `raw-week-${currentWeekLabel}.json`);
+            await writeJson(weekRawPath, {
+              snapshot,
+              week: currentWeekLabel,
+              rosters: currentRosterPayload,
+            });
+
+            console.log(
+              `[salary-averages] Saved ${isOffseason ? 'offseason' : 'post-freeze'} snapshot (${currentWeekLabel}) -> ${path.relative(
+                projectRoot,
+                weekSummaryPath
+              )}`
+            );
+          }
+        }
+      }
+    }
   }
 };
 

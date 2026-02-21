@@ -12,6 +12,8 @@ const weeklyModules = import.meta.glob(
   { eager: true }
 );
 
+const STARTER_COUNTS: Record<string, number> = { QB: 16, RB: 30, WR: 48, TE: 18, PK: 16, Def: 16 };
+
 const positionLabels = [
   { key: 'QB', label: 'Quarterback' },
   { key: 'RB', label: 'Running Back' },
@@ -42,7 +44,7 @@ const extractSeason = (filepath: string) => {
 
 const extractSeasonAndWeek = (filepath: string) => {
   const seasonMatch = filepath.match(/\/(\d{4})\//);
-  const weekMatch = filepath.match(/week-(\d+)\.json$/);
+  const weekMatch = filepath.match(/week-([\w-]+)\.json$/);
   return {
     season: seasonMatch ? seasonMatch[1] : null,
     week: weekMatch ? weekMatch[1] : null,
@@ -114,11 +116,17 @@ const franchiseLookup = Object.fromEntries(
 );
 
 // Get available weeks for each season
+// Sort order (desc): off-N (highest first), then regular weeks (highest first)
 const weekOptionsBySeason: Record<string, string[]> = {};
 Object.entries(weeklyDataBySeasonAndWeek).forEach(([season, weeks]) => {
-  weekOptionsBySeason[season] = Object.keys(weeks).sort(
-    (a, b) => Number(b) - Number(a)
-  );
+  weekOptionsBySeason[season] = Object.keys(weeks).sort((a, b) => {
+    const aIsOff = a.startsWith('off-');
+    const bIsOff = b.startsWith('off-');
+    if (aIsOff && bIsOff) return Number(b.slice(4)) - Number(a.slice(4));
+    if (aIsOff) return -1; // offseason weeks sort first (most recent at top)
+    if (bIsOff) return 1;
+    return Number(b) - Number(a);
+  });
 });
 
 const serializedConfig = JSON.stringify({
@@ -192,6 +200,22 @@ const serializedConfig = JSON.stringify({
                     <dt>Extension (Top 5)</dt>
                     <dd data-extension-average={key}>{formatValue(data.top5Average)}</dd>
                   </div>
+                  <div>
+                    <dt data-starter-label={key}>Starter Avg (Top {data.starterCount ?? STARTER_COUNTS[key] ?? '?'})</dt>
+                    <dd data-starter-average={key}>{formatValue(data.starterAverage)}</dd>
+                  </div>
+                  <div>
+                    <dt>Starter Median (Top {data.starterCount ?? STARTER_COUNTS[key] ?? '?'})</dt>
+                    <dd data-starter-median={key}>{formatValue(data.starterMedian)}</dd>
+                  </div>
+                  <div>
+                    <dt>Average Salary</dt>
+                    <dd data-average-salary={key}>{formatValue(data.averageSalary)}</dd>
+                  </div>
+                  <div>
+                    <dt>Median Salary</dt>
+                    <dd data-median-salary={key}>{formatValue(data.medianSalary)}</dd>
+                  </div>
                 </dl>
                 <p class="salary-card__total" data-total={key}>
                   Tracked Players: {data.totalPlayers ?? 0}
@@ -206,7 +230,7 @@ const serializedConfig = JSON.stringify({
                     </tr>
                   </thead>
                   <tbody data-top-players={key}>
-                    {(data.topPlayers ?? []).map((player) => {
+                    {(data.topPlayers ?? []).slice(0, 5).map((player) => {
                       const franchise = player?.franchiseId
                         ? franchiseMeta.get(player.franchiseId)
                         : null;
@@ -228,6 +252,11 @@ const serializedConfig = JSON.stringify({
                     })}
                   </tbody>
                 </table>
+                {(data.topPlayers ?? []).length > 5 && (
+                  <button class="salary-card__show-more" data-show-more={key} type="button">
+                    Show More
+                  </button>
+                )}
               </>
             ) : (
               <p class="salary-card__empty">
@@ -383,6 +412,15 @@ const serializedConfig = JSON.stringify({
     object-fit: cover;
   }
 
+  :global(.salary-card__show-more) {
+    width: 100%;
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    background: transparent;
+    cursor: pointer;
+  }
+
   .salary-card__empty {
     margin: 0;
     font-size: 0.95rem;
@@ -420,8 +458,13 @@ const serializedConfig = JSON.stringify({
     const weekLabel = document.getElementById('salaryWeekLabel');
     const snapshotLabel = document.getElementById('salarySnapshotLabel');
 
+    const STARTER_COUNTS = { QB: 16, RB: 30, WR: 48, TE: 18, PK: 16, Def: 16 };
+
     let currentSeason = defaultSeason;
     let currentWeek = 'season';
+    const INITIAL_COUNT = 5;
+    const PAGE_SIZE = 10;
+    const visibleCounts = {};
 
     const currencyFormatter = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -434,6 +477,69 @@ const serializedConfig = JSON.stringify({
       return currencyFormatter.format(Math.round(value));
     };
 
+    const buildPlayerRows = (players, franchiseMeta) =>
+      players
+        .map((player) => {
+          const franchise = player?.franchiseId
+            ? franchiseMeta[player.franchiseId]
+            : null;
+          const iconMarkup = franchise?.icon
+            ? `<img src="${franchise.icon}" alt="${franchise.name ?? 'Franchise'} icon" loading="lazy" />`
+            : '';
+          return `
+            <tr>
+              <td class="player-cell">
+                ${iconMarkup}
+                <span>${player.name ?? ''}</span>
+              </td>
+              <td>${formatCurrency(player.salary)}</td>
+            </tr>`;
+        })
+        .join('');
+
+    const renderPlayersForPosition = (position, allPlayers, count) => {
+      const playersBody = document.querySelector(
+        `[data-top-players="${position}"]`
+      );
+      const showMoreBtn = document.querySelector(
+        `[data-show-more="${position}"]`
+      );
+      if (!playersBody) return;
+
+      const visible = allPlayers.slice(0, count);
+      const rows = buildPlayerRows(visible, franchiseMeta);
+      playersBody.innerHTML =
+        rows || '<tr><td colspan="2" class="player-cell">No players tracked.</td></tr>';
+
+      if (showMoreBtn) {
+        if (count >= allPlayers.length) {
+          showMoreBtn.style.display = 'none';
+        } else {
+          showMoreBtn.style.display = '';
+          showMoreBtn.textContent = `Show More (${Math.min(allPlayers.length - count, PAGE_SIZE)} more)`;
+        }
+      } else if (count < allPlayers.length) {
+        // Create the button if it doesn't exist yet (e.g. switching to a dataset with more players)
+        const card = document.querySelector(`[data-position="${position}"]`);
+        if (card) {
+          const btn = document.createElement('button');
+          btn.className = 'salary-card__show-more';
+          btn.dataset.showMore = position;
+          btn.type = 'button';
+          btn.textContent = `Show More (${Math.min(allPlayers.length - count, PAGE_SIZE)} more)`;
+          card.appendChild(btn);
+        }
+      }
+    };
+
+    const formatWeekLabel = (week) => {
+      if (typeof week === 'string' && week.startsWith('off-')) {
+        const num = week.slice(4);
+        return `Off Season Week ${num}`;
+      }
+      return `Week ${week}`;
+    };
+
     const populateWeekDropdown = (seasonKey) => {
       const weeks = weekOptions[seasonKey] || [];
       weekSelectEl.innerHTML = '<option value="season">Season Total</option>';
@@ -442,7 +548,7 @@ const serializedConfig = JSON.stringify({
         weeks.forEach((week) => {
           const option = document.createElement('option');
           option.value = week;
-          option.textContent = `Week ${week}`;
+          option.textContent = formatWeekLabel(week);
           weekSelectEl.appendChild(option);
         });
         weekToggleContainer.style.display = 'inline-flex';
@@ -473,7 +579,7 @@ const serializedConfig = JSON.stringify({
           ? ` · Week ${summary.metadata.week}`
           : '';
       } else {
-        weekLabel.textContent = ` · Week ${weekKey}`;
+        weekLabel.textContent = ` · ${formatWeekLabel(weekKey)}`;
       }
 
       const generatedAt = summary?.metadata?.generatedAt
@@ -498,36 +604,38 @@ const serializedConfig = JSON.stringify({
         const extCell = document.querySelector(
           `[data-extension-average="${position}"]`
         );
-        const totalEl = document.querySelector(`[data-total="${position}"]`);
-        const playersBody = document.querySelector(
-          `[data-top-players="${position}"]`
+        const starterCell = document.querySelector(
+          `[data-starter-average="${position}"]`
         );
+        const starterLabel = document.querySelector(
+          `[data-starter-label="${position}"]`
+        );
+        const avgCell = document.querySelector(
+          `[data-average-salary="${position}"]`
+        );
+        const medCell = document.querySelector(
+          `[data-median-salary="${position}"]`
+        );
+        const totalEl = document.querySelector(`[data-total="${position}"]`);
 
         if (franCell) franCell.textContent = formatCurrency(data?.top3Average ?? 0);
         if (extCell) extCell.textContent = formatCurrency(data?.top5Average ?? 0);
-        if (totalEl) totalEl.textContent = `Tracked Players: ${data?.totalPlayers ?? 0}`;
-        if (playersBody) {
-          const rows = (data?.topPlayers ?? [])
-            .map((player) => {
-              const franchise = player?.franchiseId
-                ? franchiseMeta[player.franchiseId]
-                : null;
-              const iconMarkup = franchise?.icon
-                ? `<img src="${franchise.icon}" alt="${franchise.name ?? 'Franchise'} icon" loading="lazy" />`
-                : '';
-              return `
-                <tr>
-                  <td class="player-cell">
-                    ${iconMarkup}
-                    <span>${player.name ?? ''}</span>
-                  </td>
-                  <td>${formatCurrency(player.salary)}</td>
-                </tr>`;
-            })
-            .join('');
-          playersBody.innerHTML =
-            rows || '<tr><td colspan="2" class="player-cell">No players tracked.</td></tr>';
+        if (starterLabel) {
+          const count = data?.starterCount ?? STARTER_COUNTS[position] ?? '?';
+          starterLabel.textContent = `Starter Avg (Top ${count})`;
         }
+        if (starterCell) starterCell.textContent = data?.starterAverage != null ? formatCurrency(data.starterAverage) : 'N/A';
+        const starterMedCell = document.querySelector(
+          `[data-starter-median="${position}"]`
+        );
+        if (starterMedCell) starterMedCell.textContent = data?.starterMedian != null ? formatCurrency(data.starterMedian) : 'N/A';
+        if (avgCell) avgCell.textContent = data?.averageSalary != null ? formatCurrency(data.averageSalary) : 'N/A';
+        if (medCell) medCell.textContent = data?.medianSalary != null ? formatCurrency(data.medianSalary) : 'N/A';
+        if (totalEl) totalEl.textContent = `Tracked Players: ${data?.totalPlayers ?? 0}`;
+
+        // Reset pagination on data change
+        visibleCounts[position] = INITIAL_COUNT;
+        renderPlayersForPosition(position, data?.topPlayers ?? [], INITIAL_COUNT);
       });
     };
 
@@ -545,6 +653,19 @@ const serializedConfig = JSON.stringify({
     weekSelectEl?.addEventListener('change', (event) => {
       currentWeek = event.target.value;
       renderData(currentSeason, currentWeek);
+    });
+
+    // Show More click handler (delegated)
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-show-more]');
+      if (!btn) return;
+      const position = btn.dataset.showMore;
+      const summary = currentWeek === 'season'
+        ? seasons?.[currentSeason]
+        : weeklyData?.[currentSeason]?.[currentWeek];
+      const allPlayers = summary?.positions?.[position]?.topPlayers ?? [];
+      visibleCounts[position] = (visibleCounts[position] ?? INITIAL_COUNT) + PAGE_SIZE;
+      renderPlayersForPosition(position, allPlayers, visibleCounts[position]);
     });
   }
 </script>
