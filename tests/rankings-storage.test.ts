@@ -7,6 +7,7 @@ import {
   getLatestImportByType,
   findDuplicateImport,
   migrateFromLegacyKeys,
+  _clearCache,
 } from '../src/utils/rankings-storage';
 import type { StoredRankingImport } from '../src/types/rankings-import';
 
@@ -105,6 +106,7 @@ if (typeof CustomEvent === 'undefined') {
 describe('rankings-storage', () => {
   beforeEach(() => {
     localStorageMock.clear();
+    _clearCache();
     vi.clearAllMocks();
   });
 

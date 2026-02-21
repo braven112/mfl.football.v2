@@ -20,16 +20,48 @@ const LEGACY_KEYS = [
 ];
 
 // ---------------------------------------------------------------------------
-// CRUD
+// In-memory cache — avoids repeated localStorage.getItem + JSON.parse.
+// Invalidated on every write (saveImport, deleteImport, migrateFromLegacyKeys).
 // ---------------------------------------------------------------------------
 
-export function getAllImports(): StoredRankingImport[] {
+let _cache: StoredRankingImport[] | null = null;
+
+function readFromStorage(): StoredRankingImport[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
+}
+
+function writeToStorage(imports: StoredRankingImport[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(imports));
+  _cache = imports;
+  writeLegacyKeys(imports);
+  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+}
+
+/** Exported for tests — clears the in-memory cache. */
+export function _clearCache(): void {
+  _cache = null;
+}
+
+// Invalidate cache when another tab writes to localStorage
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) _cache = null;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
+export function getAllImports(): StoredRankingImport[] {
+  if (_cache !== null) return _cache;
+  _cache = readFromStorage();
+  return _cache;
 }
 
 /**
@@ -49,7 +81,7 @@ export function findDuplicateImport(
  * duplicate columns on the Free Agents page.
  */
 export function saveImport(importData: StoredRankingImport): void {
-  let imports = getAllImports();
+  const imports = [...getAllImports()];
 
   // Replace existing import with same source+type (prevents duplicate columns)
   const existingIdx = imports.findIndex(
@@ -61,20 +93,12 @@ export function saveImport(importData: StoredRankingImport): void {
     imports.push(importData);
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(imports));
-
-  // Backward compat: also write to legacy keys for the auction predictor
-  writeLegacyKeys(imports);
-
-  // Notify other components
-  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  writeToStorage(imports);
 }
 
 export function deleteImport(id: string): void {
   const imports = getAllImports().filter((i) => i.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(imports));
-  writeLegacyKeys(imports);
-  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  writeToStorage(imports);
 }
 
 export function getImportById(id: string): StoredRankingImport | null {
@@ -152,6 +176,7 @@ export function migrateFromLegacyKeys(): void {
 
   if (migrated) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    _cache = existing;
     // Remove legacy keys
     for (const key of LEGACY_KEYS) {
       localStorage.removeItem(key);
