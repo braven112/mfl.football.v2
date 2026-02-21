@@ -11,6 +11,7 @@
  */
 
 import type { PlayerRankingImport } from '../types/auction-predictor';
+import { normalizePosition } from './normalize-position';
 
 // =============================================================================
 // NAME NORMALIZATION & MATCHING
@@ -142,6 +143,41 @@ interface RankingMatch {
   }>;
 }
 
+/**
+ * Pre-built index for fast exact-match lookups.
+ * Maps normalized name → player for each position.
+ * Avoids O(n) Levenshtein scans when an exact match exists.
+ */
+let _nameIndexCache: {
+  players: MFLPlayer[];
+  byPositionAndName: Map<string, MFLPlayer>;
+  byPositionAndReversedName: Map<string, MFLPlayer>;
+} | null = null;
+
+function getNameIndex(mflPlayers: MFLPlayer[]) {
+  // Reuse cache if the player array reference hasn't changed
+  if (_nameIndexCache && _nameIndexCache.players === mflPlayers) {
+    return _nameIndexCache;
+  }
+
+  const byPositionAndName = new Map<string, MFLPlayer>();
+  const byPositionAndReversedName = new Map<string, MFLPlayer>();
+
+  for (const p of mflPlayers) {
+    const norm = normalizePlayerName(p.name);
+    const key = `${p.position}:${norm}`;
+    byPositionAndName.set(key, p);
+
+    const rev = normalizePlayerName(reverseName(p.name));
+    if (rev !== norm) {
+      byPositionAndReversedName.set(`${p.position}:${rev}`, p);
+    }
+  }
+
+  _nameIndexCache = { players: mflPlayers, byPositionAndName, byPositionAndReversedName };
+  return _nameIndexCache;
+}
+
 export function matchPlayerToMFL(
   rankingName: string,
   rankingPosition: string,
@@ -150,24 +186,45 @@ export function matchPlayerToMFL(
 ): RankingMatch {
   // Filter to same position
   const positionPlayers = mflPlayers.filter(p => p.position === rankingPosition);
-  
+
   if (positionPlayers.length === 0) {
     return { playerId: null, confidence: 0, matched: false };
   }
-  
-  // Calculate similarity scores
+
+  // Fast path: exact normalized name match (O(1) lookup)
+  const index = getNameIndex(mflPlayers);
+  const normName = normalizePlayerName(rankingName);
+  const normNameRev = normalizePlayerName(reverseName(rankingName));
+  const lookupKey = `${rankingPosition}:${normName}`;
+  const lookupKeyRev = `${rankingPosition}:${normNameRev}`;
+
+  const exactMatch =
+    index.byPositionAndName.get(lookupKey) ||
+    index.byPositionAndReversedName.get(lookupKey) ||
+    index.byPositionAndName.get(lookupKeyRev) ||
+    index.byPositionAndReversedName.get(lookupKeyRev);
+
+  if (exactMatch) {
+    return {
+      playerId: exactMatch.id,
+      confidence: 1.0,
+      matched: true,
+    };
+  }
+
+  // Slow path: Levenshtein fuzzy matching against position-filtered players
   const scores = positionPlayers.map(player => ({
     playerId: player.id,
     name: player.name,
     confidence: calculateSimilarity(rankingName, player.name),
   }));
-  
+
   // Sort by confidence descending
   scores.sort((a, b) => b.confidence - a.confidence);
-  
+
   const bestMatch = scores[0];
   const alternatives = scores.slice(1, 4); // Top 3 alternatives
-  
+
   if (bestMatch.confidence >= threshold) {
     return {
       playerId: bestMatch.playerId,
@@ -343,39 +400,6 @@ export function parseJSON(text: string): ParsedRanking[] {
     console.error('Failed to parse JSON:', error);
     return [];
   }
-}
-
-/**
- * Normalize position abbreviations
- */
-function normalizePosition(pos: string): string {
-  const normalized = pos.toUpperCase().trim();
-  
-  // Map common variations
-  const positionMap: Record<string, string> = {
-    'QB': 'QB',
-    'QUARTERBACK': 'QB',
-    'RB': 'RB',
-    'HB': 'RB',
-    'RUNNING BACK': 'RB',
-    'RUNNINGBACK': 'RB',
-    'WR': 'WR',
-    'WIDE RECEIVER': 'WR',
-    'WIDERECEIVER': 'WR',
-    'RECEIVER': 'WR',
-    'TE': 'TE',
-    'TIGHT END': 'TE',
-    'TIGHTEND': 'TE',
-    'K': 'PK',
-    'PK': 'PK',
-    'KICKER': 'PK',
-    'DST': 'DEF',
-    'DEF': 'DEF',
-    'DEFENSE': 'DEF',
-    'D/ST': 'DEF',
-  };
-  
-  return positionMap[normalized] || normalized;
 }
 
 // =============================================================================

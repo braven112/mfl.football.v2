@@ -1,7 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { parseBookmarkletJson } from '../../../utils/bookmarklet-json-parser';
 import { matchPlayerToMFL } from '../../../utils/rankings-importer';
-import { saveImport } from '../../../utils/rankings-storage';
+import { saveImport, findDuplicateImport } from '../../../utils/rankings-storage';
+import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
+import { useBookmarkletTransfer } from '../../../hooks/useBookmarkletTransfer';
 import type {
   MFLPlayerForMatching,
   StoredRankingImport,
@@ -27,8 +29,6 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
   const [rankingType, setRankingType] = useState<RankingType>('dynasty');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const handledTransferIdsRef = useRef<Set<string>>(new Set());
-  const hashProcessedRef = useRef(false);
 
   const processImportText = useCallback((rawText: string, sourceLabel?: string) => {
     if (!rawText.trim()) {
@@ -76,8 +76,12 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
         const unmatched = total - matched;
         const matchRate = total > 0 ? Math.round((matched / total) * 1000) / 10 : 0;
 
+        // Check if this replaces an existing import of the same source+type
+        const existing = findDuplicateImport(data.source, type);
+        const replaced = !!existing;
+
         const importData: StoredRankingImport = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          id: replaced ? existing!.id : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           source: data.source,
           type,
           importDate: new Date().toISOString(),
@@ -94,9 +98,11 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
           .map((r) => `${r.playerName} (${r.position})`);
 
         const sourceText = sourceLabel ? ` via ${sourceLabel}` : '';
+        const sourceName = SOURCE_LABELS[data.source] || data.source;
+        const replaceNote = replaced ? ` (replaced previous ${sourceName} ${type} import)` : '';
         setResult({
           success: true,
-          message: `Imported ${total} players from ${data.source}${sourceText}. ${matched} matched, ${unmatched} unmatched.`,
+          message: `Imported ${total} players from ${sourceName}${sourceText}. ${matched} matched, ${unmatched} unmatched.${replaceNote}`,
           stats: { total, matched, unmatched, matchRate },
           unmatchedNames: unmatched > 0 ? unmatchedNames : undefined,
         });
@@ -109,6 +115,12 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
       }
     }, 50);
   }, [rankingType, mflPlayers, onImportComplete]);
+
+  // Listen for bookmarklet transfers (hash, window.name, postMessage)
+  useBookmarkletTransfer(useCallback((payload: string, sourceLabel: string) => {
+    setPasteText(payload);
+    processImportText(payload, sourceLabel);
+  }, [processImportText]));
 
   const handlePasteFromClipboard = useCallback(async () => {
     try {
@@ -130,143 +142,6 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
   const handleImport = useCallback(() => {
     processImportText(pasteText);
   }, [pasteText, processImportText]);
-
-  const applyTransferEnvelope = useCallback((parsed: any) => {
-    const payload = typeof parsed?.payload === 'string' ? parsed.payload : '';
-    const source = typeof parsed?.source === 'string' ? parsed.source : 'bookmarklet';
-    const transferId = typeof parsed?.id === 'string' ? parsed.id : '';
-
-    if (!payload) {
-      setResult({
-        success: false,
-        message: 'Received bookmarklet data, but payload was empty.',
-      });
-      return { ok: false, id: transferId };
-    }
-
-    if (transferId) {
-      if (handledTransferIdsRef.current.has(transferId)) {
-        return { ok: true, id: transferId };
-      }
-      handledTransferIdsRef.current.add(transferId);
-    }
-
-    setPasteText(payload);
-    processImportText(payload, `${source} bookmarklet`);
-    return { ok: true, id: transferId };
-  }, [processImportText]);
-
-  useEffect(() => {
-    if (hashProcessedRef.current) return;
-
-    const hash = window.location.hash.startsWith('#')
-      ? window.location.hash.slice(1)
-      : '';
-    if (!hash) return;
-
-    const params = new URLSearchParams(hash);
-    const encodedBm = params.get('bm');
-    if (!encodedBm) return;
-
-    // Mark as processed before doing anything else to prevent double-fire
-    // (React strict mode or dependency-change re-runs).
-    hashProcessedRef.current = true;
-
-    // Clear hash immediately so refresh/navigation doesn't repeat import.
-    try {
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.hash = '';
-      window.history.replaceState({}, document.title, cleanUrl.toString());
-    } catch {
-      // Non-fatal if history replacement fails.
-    }
-
-    try {
-      const decoded = decodeURIComponent(escape(atob(encodedBm)));
-      const parsed = JSON.parse(decoded);
-      applyTransferEnvelope(parsed);
-    } catch {
-      setResult({
-        success: false,
-        message: 'Received bookmarklet hash data, but it could not be parsed.',
-      });
-    }
-  }, [applyTransferEnvelope]);
-
-  useEffect(() => {
-    const prefix = 'mfl-rankings-import:';
-    const transferData = window.name || '';
-    if (!transferData.startsWith(prefix)) return;
-
-    // Clear immediately so refresh/navigation doesn't duplicate imports.
-    window.name = '';
-
-    try {
-      const decoded = decodeURIComponent(transferData.slice(prefix.length));
-      const parsed = JSON.parse(decoded);
-      applyTransferEnvelope(parsed);
-    } catch {
-      setResult({
-        success: false,
-        message: 'Received bookmarklet transfer data, but it could not be parsed.',
-      });
-    }
-  }, [applyTransferEnvelope]);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
-
-      // Only accept opener-originated messages for bookmarklet transfers.
-      if (window.opener && event.source !== window.opener) return;
-
-      if (data.type === 'mfl-rankings-import-probe') {
-        try {
-          (event.source as Window | null)?.postMessage(
-            { type: 'mfl-rankings-import-ready' },
-            event.origin || '*',
-          );
-        } catch {
-          // Ignore postMessage failures.
-        }
-        return;
-      }
-
-      if (data.type !== 'mfl-rankings-import-payload') return;
-
-      const envelope = (data as any).envelope;
-      const transferResult = applyTransferEnvelope(envelope);
-
-      try {
-        (event.source as Window | null)?.postMessage(
-          {
-            type: 'mfl-rankings-import-ack',
-            id: transferResult.id || null,
-            ok: transferResult.ok,
-          },
-          event.origin || '*',
-        );
-      } catch {
-        // Ignore postMessage failures.
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    // Proactively notify opener that this page is ready to receive payloads.
-    try {
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ type: 'mfl-rankings-import-ready' }, '*');
-      }
-    } catch {
-      // Ignore postMessage failures.
-    }
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [applyTransferEnvelope]);
 
   return (
     <section className="ri-section">

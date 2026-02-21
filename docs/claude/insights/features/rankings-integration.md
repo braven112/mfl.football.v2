@@ -20,21 +20,43 @@
 
 For Astro pages that use `define:vars` inline scripts:
 
-1. **Expose a page API on `window`** from the inline script:
+1. **Listen for CustomEvents on `document`** from the inline script:
    ```js
-   window.__playersPage = {
-     setRankingLookup(lookup) { rankingLookup = lookup; },
-     getCurrentSort() { return currentSort; },
-     setSort(key, dir) { currentSort = key; sortDirection = dir; },
-     refreshTable() { sortPlayers(); render(); },
-     refilter() { filterPlayers(); },
-   };
+   document.addEventListener('rankings:set-lookup', function (e) {
+     rankingLookup = e.detail.lookup;
+     // ... update visibility state
+   });
+   document.addEventListener('rankings:set-sort', function (e) {
+     currentSort = e.detail.key;
+     sortDirection = e.detail.dir;
+   });
+   document.addEventListener('rankings:refresh-table', function () {
+     sortPlayers(); render();
+   });
+   document.addEventListener('rankings:refilter', function () {
+     filterPlayers();
+   });
+   // Synchronous data request — module reads e.detail after dispatch
+   document.addEventListener('rankings:get-sort', function (e) {
+     e.detail.currentSort = currentSort;
+     e.detail.descDefaults = descDefaults;
+   });
+   // Signal readiness
+   document.dispatchEvent(new CustomEvent('rankings:page-ready'));
    ```
 
-2. **Add a separate module `<script>` tag** that imports from `rankings-lookup.ts`:
+2. **Add a separate module `<script>` tag** that imports from `rankings-lookup.ts` and dispatches events:
    ```html
    <script>
      import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+     function emit(name, detail) {
+       document.dispatchEvent(new CustomEvent(name, { detail: detail ?? {} }));
+     }
+     function getSortState() {
+       const detail = {};
+       document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
+       return detail; // populated synchronously by the listener
+     }
      // ... inject columns, subscribe to changes
    </script>
    ```
@@ -59,7 +81,7 @@ For Astro pages that use `define:vars` inline scripts:
 
 5. **Inject `<th>` elements via JS** using `data-ranking-col="true"` attribute for easy cleanup on re-inject.
 
-**Key gotcha:** Astro's `define:vars` scripts are classic (non-module) scripts, so they can't use `import`. The rankings module must be a separate `<script>` tag. Communication between them happens through `window.__pageName`.
+**Key gotcha:** Astro's `define:vars` scripts are classic (non-module) scripts, so they can't use `import`. The rankings module must be a separate `<script>` tag. Communication between them uses **CustomEvents on `document`** — no global `window` properties needed. The inline script fires `rankings:page-ready` when ready; the module script listens for it. For synchronous data reads (e.g., getting current sort state), the module dispatches an event with a mutable `detail` object that the inline listener populates in-place.
 
 ### Integration Pattern for React Components
 

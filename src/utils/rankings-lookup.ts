@@ -35,11 +35,9 @@ export const SOURCE_LABELS: Record<RankingSourceId, string> = {
   fantasypros: 'FantasyPros',
   cbs: 'CBS Sports',
   sleeper: 'Sleeper',
-  nfl: 'NFL.com',
   keeptradecut: 'KeepTradeCut',
   dlf: 'DLF',
   yahoo: 'Yahoo',
-  espn: 'ESPN',
   footballguys: 'FootballGuys',
   custom: 'Custom',
 };
@@ -49,11 +47,9 @@ export const SOURCE_ABBREVS: Record<RankingSourceId, string> = {
   fantasypros: 'FPros',
   cbs: 'CBS',
   sleeper: 'Sleep',
-  nfl: 'NFL',
   keeptradecut: 'KTC',
   dlf: 'DLF',
   yahoo: 'Yahoo',
-  espn: 'ESPN',
   footballguys: 'FBG',
   custom: 'Cust',
 };
@@ -62,6 +58,7 @@ export const SOURCE_ABBREVS: Record<RankingSourceId, string> = {
 export const TYPE_LABELS: Record<RankingType, string> = {
   dynasty: 'Dyn',
   redraft: 'Rdf',
+  adp: 'ADP',
   overall: 'All',
 };
 
@@ -84,6 +81,7 @@ export function formatFullName(imp: StoredRankingImport): string {
   const typeLabel: Record<RankingType, string> = {
     dynasty: 'Dynasty',
     redraft: 'Redraft',
+    adp: 'ADP',
     overall: 'Overall',
   };
   return `${label} ${typeLabel[imp.type] || imp.type}`;

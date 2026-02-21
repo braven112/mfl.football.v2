@@ -731,36 +731,41 @@ const faCountsJson = JSON.stringify(faCounts);
   // Columns that default to desc when first clicked
   const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct']);
 
-  // Expose API for the rankings module script to interact with this page
-  window.__playersPage = {
-    setRankingLookup(lookup) {
-      rankingLookup = lookup;
-    },
-    getCurrentSort() { return currentSort; },
-    setSort(key, dir) {
-      currentSort = key;
-      sortDirection = dir;
-    },
-    getDescDefaults() { return descDefaults; },
-    refreshTable() {
-      sortPlayers();
-      render();
-    },
-    refilter() {
-      filterPlayers();
-    },
-    // Called by rankings module after setRankingLookup to show/hide
-    // the Stats/Rankings toggle when rankings are available.
-    setRankingsGroupDefault(hasColumns) {
-      hasRankingColumns = hasColumns;
-      // If rankings were removed and user was viewing them, switch back to stats
-      if (!hasColumns && activeView === 'rankings') {
-        activeView = 'stats';
-        saveViewPref();
-      }
-      applyGroupVisibility();
-    },
-  };
+  // CustomEvent-based API for the rankings module script to interact with this page.
+  // All events use the document as the event bus — no global window properties needed.
+  document.addEventListener('rankings:set-lookup', function (e) {
+    rankingLookup = e.detail.lookup;
+    hasRankingColumns = e.detail.hasColumns;
+    // If rankings were removed and user was viewing them, switch back to stats
+    if (!e.detail.hasColumns && activeView === 'rankings') {
+      activeView = 'stats';
+      saveViewPref();
+    }
+    applyGroupVisibility();
+  });
+
+  document.addEventListener('rankings:set-sort', function (e) {
+    currentSort = e.detail.key;
+    sortDirection = e.detail.dir;
+  });
+
+  document.addEventListener('rankings:refresh-table', function () {
+    sortPlayers();
+    render();
+  });
+
+  document.addEventListener('rankings:refilter', function () {
+    filterPlayers();
+  });
+
+  // Synchronous request for sort state — the module script reads detail after dispatch
+  document.addEventListener('rankings:get-sort', function (e) {
+    e.detail.currentSort = currentSort;
+    e.detail.descDefaults = descDefaults;
+  });
+
+  // Signal that the inline script is ready for the module script
+  document.dispatchEvent(new CustomEvent('rankings:page-ready'));
 
   function init() {
     // Prevent duplicate listeners on re-init (Astro view transitions)
@@ -914,19 +919,32 @@ const faCountsJson = JSON.stringify(faCounts);
 
   let unsubscribe: (() => void) | null = null;
 
-  function injectRankingColumns() {
-    const api = (window as any).__playersPage;
-    if (!api) return;
+  /** Dispatch a CustomEvent on document (synchronous). */
+  function emit(name: string, detail?: Record<string, unknown>) {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail ?? {} }));
+  }
 
+  /** Read current sort state from the inline script via synchronous CustomEvent. */
+  function getSortState(): { currentSort: string; descDefaults: Set<string> } {
+    const detail: Record<string, unknown> = {};
+    document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
+    return {
+      currentSort: detail.currentSort as string,
+      descDefaults: detail.descDefaults as Set<string>,
+    };
+  }
+
+  function injectRankingColumns() {
     const lookup = buildRankingLookup();
-    api.setRankingLookup(lookup);
-    api.setRankingsGroupDefault(lookup.columns.length > 0);
+
+    // Tell the inline script about the new lookup and whether ranking columns exist
+    emit('rankings:set-lookup', { lookup, hasColumns: lookup.columns.length > 0 });
 
     // Remove any previously injected ranking <th> elements
     document.querySelectorAll('.players-table th[data-ranking-col]').forEach(th => th.remove());
 
     if (lookup.columns.length === 0) {
-      api.refilter();
+      emit('rankings:refilter');
       return;
     }
 
@@ -950,23 +968,24 @@ const faCountsJson = JSON.stringify(faCounts);
       // Sort click handler
       th.addEventListener('click', () => {
         const sortKey = `ranking_${col.importId}`;
-        if (sortKey === api.getCurrentSort()) {
+        const { currentSort } = getSortState();
+        if (sortKey === currentSort) {
           // Toggle direction — check current arrow to determine state
           const arrow = th.querySelector('.sort-arrow');
           const wasAsc = arrow && arrow.textContent === '\u25B2';
-          api.setSort(sortKey, wasAsc ? 'desc' : 'asc');
+          emit('rankings:set-sort', { key: sortKey, dir: wasAsc ? 'desc' : 'asc' });
         } else {
           // Ranking columns default to ascending (rank 1 = best at top)
-          api.setSort(sortKey, 'asc');
+          emit('rankings:set-sort', { key: sortKey, dir: 'asc' });
         }
-        api.refreshTable();
+        emit('rankings:refresh-table');
       });
 
       anchorTh.after(th);
     }
 
     // Re-render with the new columns
-    api.refilter();
+    emit('rankings:refilter');
   }
 
   function initRankings() {
@@ -984,22 +1003,23 @@ const faCountsJson = JSON.stringify(faCounts);
     });
   }
 
-  // Run after the main script has initialized
-  function tryInit() {
-    if ((window as any).__playersPage) {
-      initRankings();
-    } else {
-      // Retry shortly — the define:vars script may not have run yet
-      setTimeout(tryInit, 50);
-    }
-  }
+  // Listen for the inline script's ready signal
+  document.addEventListener('rankings:page-ready', () => initRankings());
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryInit);
-  } else {
-    tryInit();
-  }
-  document.addEventListener('astro:page-load', tryInit);
+  // Also handle Astro page transitions
+  document.addEventListener('astro:page-load', () => {
+    // On page load via Astro transitions, the inline script re-runs and fires
+    // rankings:page-ready — but if this module script was already loaded and the
+    // event was missed, try init after a microtask.
+    queueMicrotask(() => {
+      // Check if the page script is ready by dispatching get-sort and seeing if it responds
+      const detail: Record<string, unknown> = {};
+      document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
+      if (detail.currentSort !== undefined) {
+        initRankings();
+      }
+    });
+  });
 </script>
 
 <style>

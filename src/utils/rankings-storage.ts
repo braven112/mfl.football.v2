@@ -32,13 +32,34 @@ export function getAllImports(): StoredRankingImport[] {
   }
 }
 
-export function saveImport(importData: StoredRankingImport): void {
-  const imports = getAllImports();
+/**
+ * Find an existing import with the same source and type.
+ * Returns the import if found, null otherwise.
+ */
+export function findDuplicateImport(
+  source: StoredRankingImport['source'],
+  type: StoredRankingImport['type'],
+): StoredRankingImport | null {
+  return getAllImports().find((i) => i.source === source && i.type === type) ?? null;
+}
 
-  // Each import gets its own entry keyed by unique ID.
-  // Users can import the same source multiple times (e.g. KTC dynasty AND KTC redraft),
-  // and each one becomes a separate column on the Free Agents page.
-  imports.push(importData);
+/**
+ * Save a new import. If an import with the same source and type already
+ * exists, it is automatically replaced (merged by replacement) to prevent
+ * duplicate columns on the Free Agents page.
+ */
+export function saveImport(importData: StoredRankingImport): void {
+  let imports = getAllImports();
+
+  // Replace existing import with same source+type (prevents duplicate columns)
+  const existingIdx = imports.findIndex(
+    (i) => i.source === importData.source && i.type === importData.type,
+  );
+  if (existingIdx !== -1) {
+    imports[existingIdx] = importData;
+  } else {
+    imports.push(importData);
+  }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(imports));
 

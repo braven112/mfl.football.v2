@@ -11,6 +11,7 @@ import type {
   RankingSourceId,
   RankingType,
 } from '../types/rankings-import';
+import { normalizePosition } from './normalize-position';
 
 export interface ParseResult {
   success: boolean;
@@ -19,34 +20,11 @@ export interface ParseResult {
 }
 
 const VALID_SOURCES: RankingSourceId[] = [
-  'fantasypros', 'cbs', 'sleeper', 'nfl', 'keeptradecut',
-  'dlf', 'yahoo', 'espn', 'footballguys', 'custom',
+  'fantasypros', 'cbs', 'sleeper', 'keeptradecut',
+  'dlf', 'yahoo', 'footballguys', 'custom',
 ];
 
 const VALID_TYPES: RankingType[] = ['dynasty', 'redraft', 'adp', 'overall'];
-
-/** Map common position variations to canonical forms */
-const POSITION_MAP: Record<string, string> = {
-  QB: 'QB',
-  QUARTERBACK: 'QB',
-  RB: 'RB',
-  HB: 'RB',
-  WR: 'WR',
-  TE: 'TE',
-  K: 'PK',
-  PK: 'PK',
-  KICKER: 'PK',
-  DST: 'DEF',
-  DEF: 'DEF',
-  'D/ST': 'DEF',
-  DEFENSE: 'DEF',
-};
-
-function normalizePosition(pos: string): string {
-  // Strip trailing digits — DLF uses "WR1", "RB2", "QB1" etc.
-  const upper = (pos ?? '').toUpperCase().trim().replace(/\d+$/, '');
-  return POSITION_MAP[upper] ?? upper;
-}
 
 /**
  * Parse and validate pasted JSON from a bookmarklet.

@@ -3,6 +3,7 @@ import { deleteImport } from '../../../utils/rankings-storage';
 import type { StoredRankingImport } from '../../../types/rankings-import';
 import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
 import ImportDetailModal from './ImportDetailModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 interface Props {
   imports: StoredRankingImport[];
@@ -11,11 +12,13 @@ interface Props {
 
 export default function ManageImportsSection({ imports, onDelete }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StoredRankingImport | null>(null);
 
-  const handleDelete = (imp: StoredRankingImport) => {
-    if (confirm(`Delete ${SOURCE_LABELS[imp.source] || imp.source} ${imp.type} rankings?`)) {
-      deleteImport(imp.id);
-      onDelete(imp.id);
+  const handleDeleteConfirm = () => {
+    if (deleteTarget) {
+      deleteImport(deleteTarget.id);
+      onDelete(deleteTarget.id);
+      setDeleteTarget(null);
     }
   };
 
@@ -73,7 +76,7 @@ export default function ManageImportsSection({ imports, onDelete }: Props) {
                     <button
                       type="button"
                       className="ri-btn ri-btn--sm ri-btn--danger"
-                      onClick={() => handleDelete(imp)}
+                      onClick={() => setDeleteTarget(imp)}
                     >
                       Delete
                     </button>
@@ -89,6 +92,14 @@ export default function ManageImportsSection({ imports, onDelete }: Props) {
         <ImportDetailModal
           importData={selectedImport}
           onClose={() => setSelectedImport(null)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          itemName={`${SOURCE_LABELS[deleteTarget.source] || deleteTarget.source} ${deleteTarget.type} rankings`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </section>
