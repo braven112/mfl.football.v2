@@ -777,7 +777,8 @@ const faCountsJson = JSON.stringify(faCounts);
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
         const rnk = rankingLookup.byImport.get(col.importId)?.get(p.id);
-        html += `<td class="cell-num col-group--rankings">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
+        const avgCls = col.isAverage ? ' col-ranking-avg' : '';
+        html += `<td class="cell-num col-group--rankings${avgCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasSnapCounts) {
@@ -1089,7 +1090,14 @@ const faCountsJson = JSON.stringify(faCounts);
       th.className = 'sortable col-num col-group--rankings';
       th.dataset.sort = `ranking_${col.importId}`;
       th.dataset.rankingCol = 'true';
-      th.title = `${col.fullName} (${col.playerCount} players)`;
+
+      if (col.isAverage) {
+        th.classList.add('col-ranking-avg');
+        th.title = `Average Rank across ${limitedColumns.length - 1} imports`;
+      } else {
+        th.title = `${col.fullName} (${col.playerCount} players)`;
+      }
+
       th.innerHTML = `<div class="th-content">${col.header}</div>`;
 
       // Sort click handler
@@ -1420,6 +1428,14 @@ const faCountsJson = JSON.stringify(faCounts);
     text-align: right;
     font-variant-numeric: tabular-nums;
     font-size: 0.8125rem;
+  }
+  :global(.col-ranking-avg) {
+    font-weight: 600;
+    background: rgba(28, 73, 124, 0.04);
+    border-right: 2px solid rgba(28, 73, 124, 0.12);
+  }
+  :global(th.col-ranking-avg .th-content) {
+    font-weight: 700;
   }
   :global(.cell-pts) {
     font-weight: 600;

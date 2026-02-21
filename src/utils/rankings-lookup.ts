@@ -26,6 +26,9 @@ import type {
 } from '../types/rankings-import';
 import { getAllImports } from './rankings-storage';
 
+/** Synthetic importId used for the computed average rank column. */
+export const AVERAGE_IMPORT_ID = '__average__';
+
 // ---------------------------------------------------------------------------
 // Labels & display constants
 // ---------------------------------------------------------------------------
@@ -99,10 +102,12 @@ export interface RankingColumn {
   importId: string;
   source: RankingSourceId;
   type: RankingType;
-  header: string;       // Short header like "FBG Dyn"
+  header: string;       // Short header like "FBG" or "Avg"
   fullName: string;     // Full name like "FootballGuys Dynasty"
   playerCount: number;
   importDate: string;
+  /** True only for the synthetic average rank column */
+  isAverage?: boolean;
 }
 
 export interface RankingLookup {
@@ -149,6 +154,49 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
 
   // Column order matches the user-defined array order from localStorage
   // (controlled by drag-and-drop in ManageImportsSection)
+
+  // Compute average rank column when 2+ imports exist
+  if (allImports.length >= 2) {
+    const averageMap = new Map<string, number>();
+
+    // Collect all unique player IDs across all imports
+    const allPlayerIds = new Set<string>();
+    for (const [, playerMap] of byImport) {
+      for (const playerId of playerMap.keys()) {
+        allPlayerIds.add(playerId);
+      }
+    }
+
+    // For each player, average only the imports where they appear
+    for (const playerId of allPlayerIds) {
+      let sum = 0;
+      let count = 0;
+      for (const [, playerMap] of byImport) {
+        const rank = playerMap.get(playerId);
+        if (rank != null) {
+          sum += rank;
+          count++;
+        }
+      }
+      if (count > 0) {
+        averageMap.set(playerId, Math.round(sum / count));
+      }
+    }
+
+    byImport.set(AVERAGE_IMPORT_ID, averageMap);
+
+    // Prepend the average column — always first (leftmost on the table)
+    columns.unshift({
+      importId: AVERAGE_IMPORT_ID,
+      source: 'custom',
+      type: 'overall',
+      header: 'Avg',
+      fullName: 'Average Rank',
+      playerCount: averageMap.size,
+      importDate: new Date().toISOString(),
+      isAverage: true,
+    });
+  }
 
   return { byImport, columns };
 }
