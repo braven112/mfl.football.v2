@@ -104,7 +104,7 @@ export interface RankingColumn {
 export interface RankingLookup {
   /** Map<playerId, rank> for each import, keyed by import ID */
   byImport: Map<string, Map<string, number>>;
-  /** Column metadata in display order (sorted by source name, then type) */
+  /** Column metadata in user-defined display order (controlled by drag-and-drop) */
   columns: RankingColumn[];
 }
 
@@ -143,13 +143,8 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
     });
   }
 
-  // Sort columns: by source name alphabetically, then by type (dynasty → overall → redraft)
-  const typeOrder: Record<string, number> = { dynasty: 0, overall: 1, redraft: 2 };
-  columns.sort((a, b) => {
-    const sourceCompare = a.source.localeCompare(b.source);
-    if (sourceCompare !== 0) return sourceCompare;
-    return (typeOrder[a.type] ?? 3) - (typeOrder[b.type] ?? 3);
-  });
+  // Column order matches the user-defined array order from localStorage
+  // (controlled by drag-and-drop in ManageImportsSection)
 
   return { byImport, columns };
 }

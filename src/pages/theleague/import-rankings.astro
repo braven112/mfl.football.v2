@@ -650,6 +650,42 @@ const siteConfigs = [
     gap: 0.35rem;
   }
 
+  /* ---- Drag Handle ---- */
+
+  .ri-manage__drag-col {
+    width: 32px;
+    padding: 0;
+  }
+
+  .ri-manage__drag-handle {
+    cursor: grab;
+    padding: 0.5rem !important;
+    color: var(--text-secondary-color, #64748b);
+    user-select: none;
+    text-align: center;
+    touch-action: none;
+  }
+
+  .ri-manage__drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .ri-manage__drag-handle svg {
+    display: block;
+    margin: 0 auto;
+    opacity: 0.35;
+    transition: opacity 0.15s;
+  }
+
+  .ri-manage__table tr:hover .ri-manage__drag-handle svg {
+    opacity: 1;
+  }
+
+  .ri-manage__row--dragging {
+    background: var(--primary-content-bg-color, #fff);
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+  }
+
   /* ---- Modal ---- */
 
   .ri-modal {
@@ -898,6 +934,10 @@ const siteConfigs = [
 
     .ri-manage__actions {
       flex-direction: column;
+    }
+
+    .ri-manage__drag-handle svg {
+      opacity: 0.6;
     }
   }
 </style>

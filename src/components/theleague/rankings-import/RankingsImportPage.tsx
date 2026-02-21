@@ -40,6 +40,10 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
     setSavedImports(getAllImports());
   }, []);
 
+  const handleReorder = useCallback(() => {
+    setSavedImports(getAllImports());
+  }, []);
+
   return (
     <div className="ri-page">
       <div className="ri-page__header">
@@ -51,7 +55,7 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
       </div>
 
       {savedImports.length > 0 && (
-        <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
+        <ManageImportsSection imports={savedImports} onDelete={handleDelete} onReorder={handleReorder} />
       )}
       <BookmarkletSection siteConfigs={siteConfigs} />
       <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />

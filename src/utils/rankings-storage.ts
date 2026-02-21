@@ -105,6 +105,23 @@ export function getImportById(id: string): StoredRankingImport | null {
   return getAllImports().find((i) => i.id === id) ?? null;
 }
 
+/**
+ * Reorder imports to match the provided ID sequence.
+ * IDs not found in storage are skipped.
+ */
+export function reorderImports(importIds: string[]): void {
+  const currentImports = getAllImports();
+  const byId = new Map(currentImports.map((imp) => [imp.id, imp]));
+
+  const reordered: StoredRankingImport[] = [];
+  for (const id of importIds) {
+    const imp = byId.get(id);
+    if (imp) reordered.push(imp);
+  }
+
+  writeToStorage(reordered);
+}
+
 export function getLatestImportByType(
   type: 'dynasty' | 'redraft' | 'adp' | 'overall',
 ): StoredRankingImport | null {

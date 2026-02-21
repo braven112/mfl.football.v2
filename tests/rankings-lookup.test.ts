@@ -286,7 +286,7 @@ describe('buildRankingLookup', () => {
     expect(column.importDate).toBe('2025-02-20T15:30:00Z');
   });
 
-  it('should sort columns by source name alphabetically, then by type', () => {
+  it('should preserve array order (user-defined via drag-and-drop)', () => {
     const imps = [
       createMockRankingImport({ id: '1', source: 'sleeper', type: 'redraft' }),
       createMockRankingImport({ id: '2', source: 'fantasypros', type: 'dynasty' }),
@@ -297,32 +297,27 @@ describe('buildRankingLookup', () => {
 
     const lookup = buildRankingLookup(imps);
 
-    // Expected order:
-    // 1. cbs overall
-    // 2. fantasypros dynasty
-    // 3. fantasypros redraft
-    // 4. sleeper dynasty
-    // 5. sleeper redraft
+    // Columns should match the input array order exactly
     expect(lookup.columns.map((c) => `${c.source}-${c.type}`)).toEqual([
-      'cbs-overall',
+      'sleeper-redraft',
       'fantasypros-dynasty',
       'fantasypros-redraft',
       'sleeper-dynasty',
-      'sleeper-redraft',
+      'cbs-overall',
     ]);
   });
 
-  it('should sort types in correct order: dynasty → overall → redraft', () => {
+  it('should preserve input order regardless of type', () => {
     const imps = [
       createMockRankingImport({ id: '1', source: 'cbs', type: 'redraft' }),
       createMockRankingImport({ id: '2', source: 'cbs', type: 'overall' }),
       createMockRankingImport({ id: '3', source: 'cbs', type: 'dynasty' }),
-      createMockRankingImport({ id: '4', source: 'cbs', type: 'adp' }), // Should sort last
+      createMockRankingImport({ id: '4', source: 'cbs', type: 'adp' }),
     ];
 
     const lookup = buildRankingLookup(imps);
 
-    expect(lookup.columns.map((c) => c.type)).toEqual(['dynasty', 'overall', 'redraft', 'adp']);
+    expect(lookup.columns.map((c) => c.type)).toEqual(['redraft', 'overall', 'dynasty', 'adp']);
   });
 });
 
