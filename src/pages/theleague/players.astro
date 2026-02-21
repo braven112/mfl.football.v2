@@ -875,6 +875,12 @@ const faCountsJson = JSON.stringify(faCounts);
     e.detail.descDefaults = descDefaults;
   });
 
+  // Synchronous request for rostered toggle state — used by module script
+  // to limit visible ranking columns (5 when rostered, 8 when free agents only)
+  document.addEventListener('rankings:get-rostered-state', function (e) {
+    e.detail.showRostered = showRostered;
+  });
+
   // Signal that the inline script is ready for the module script
   document.dispatchEvent(new CustomEvent('rankings:page-ready'));
 
@@ -915,6 +921,8 @@ const faCountsJson = JSON.stringify(faCounts);
     if (rosterCheck) {
       rosterCheck.addEventListener('change', (e) => {
         showRostered = e.target.checked;
+        // Notify module script to re-inject ranking columns (column limit changes)
+        document.dispatchEvent(new CustomEvent('rankings:rostered-changed'));
         filterPlayers();
       });
     }
@@ -1048,13 +1056,21 @@ const faCountsJson = JSON.stringify(faCounts);
   function injectRankingColumns() {
     const lookup = buildRankingLookup();
 
+    // Query the rostered toggle state to determine max visible ranking columns.
+    // More columns fit when only free agents are shown (fewer data columns visible).
+    const rosteredDetail: Record<string, unknown> = {};
+    document.dispatchEvent(new CustomEvent('rankings:get-rostered-state', { detail: rosteredDetail }));
+    const maxRankingCols = rosteredDetail.showRostered ? 5 : 8;
+    const limitedColumns = lookup.columns.slice(0, maxRankingCols);
+    const limitedLookup = { ...lookup, columns: limitedColumns };
+
     // Tell the inline script about the new lookup and whether ranking columns exist
-    emit('rankings:set-lookup', { lookup, hasColumns: lookup.columns.length > 0 });
+    emit('rankings:set-lookup', { lookup: limitedLookup, hasColumns: limitedLookup.columns.length > 0 });
 
     // Remove any previously injected ranking <th> elements
     document.querySelectorAll('.players-table th[data-ranking-col]').forEach(th => th.remove());
 
-    if (lookup.columns.length === 0) {
+    if (limitedColumns.length === 0) {
       emit('rankings:refilter');
       return;
     }
@@ -1067,7 +1083,7 @@ const faCountsJson = JSON.stringify(faCounts);
     if (!anchorTh) return;
 
     // Insert ranking <th> elements in reverse order (so they end up in correct order after anchor)
-    const columnsReversed = [...lookup.columns].reverse();
+    const columnsReversed = [...limitedColumns].reverse();
     for (const col of columnsReversed) {
       const th = document.createElement('th');
       th.className = 'sortable col-num col-group--rankings';
@@ -1110,6 +1126,11 @@ const faCountsJson = JSON.stringify(faCounts);
 
     // Subscribe to ranking changes (import/delete on another page or tab)
     unsubscribe = onRankingsChanged(() => {
+      injectRankingColumns();
+    });
+
+    // Re-inject columns when rostered toggle changes (column limit differs)
+    document.addEventListener('rankings:rostered-changed', () => {
       injectRankingColumns();
     });
   }

@@ -94,42 +94,42 @@ function createMockRankingImport(overrides?: {
 // ---------------------------------------------------------------------------
 
 describe('formatColumnHeader', () => {
-  it('should format footballguys dynasty to "FBG Dyn"', () => {
+  it('should format dynasty as just the source abbreviation', () => {
     const imp = createMockRankingImport({ source: 'footballguys', type: 'dynasty' });
-    expect(formatColumnHeader(imp)).toBe('FBG Dyn');
+    expect(formatColumnHeader(imp)).toBe('FBG');
   });
 
-  it('should format fantasypros redraft to "FPros Rdf"', () => {
+  it('should format redraft with ® symbol', () => {
     const imp = createMockRankingImport({ source: 'fantasypros', type: 'redraft' });
-    expect(formatColumnHeader(imp)).toBe('FPros Rdf');
+    expect(formatColumnHeader(imp)).toBe('FPros ®');
   });
 
-  it('should format sleeper adp to "Sleep ADP"', () => {
+  it('should format adp with type label', () => {
     const imp = createMockRankingImport({ source: 'sleeper', type: 'adp' });
     expect(formatColumnHeader(imp)).toBe('Sleep ADP');
   });
 
-  it('should format keeptradecut overall to "KTC All"', () => {
+  it('should format overall with type label', () => {
     const imp = createMockRankingImport({ source: 'keeptradecut', type: 'overall' });
     expect(formatColumnHeader(imp)).toBe('KTC All');
   });
 
-  it('should format custom dynasty to "Cust Dyn"', () => {
+  it('should format custom dynasty as just abbreviation', () => {
     const imp = createMockRankingImport({ source: 'custom', type: 'dynasty' });
-    expect(formatColumnHeader(imp)).toBe('Cust Dyn');
+    expect(formatColumnHeader(imp)).toBe('Cust');
   });
 
-  it('should format cbs redraft to "CBS Rdf"', () => {
+  it('should format cbs redraft with ®', () => {
     const imp = createMockRankingImport({ source: 'cbs', type: 'redraft' });
-    expect(formatColumnHeader(imp)).toBe('CBS Rdf');
+    expect(formatColumnHeader(imp)).toBe('CBS ®');
   });
 
-  it('should format dlf overall to "DLF All"', () => {
+  it('should format dlf overall with type label', () => {
     const imp = createMockRankingImport({ source: 'dlf', type: 'overall' });
     expect(formatColumnHeader(imp)).toBe('DLF All');
   });
 
-  it('should format yahoo adp to "Yahoo ADP"', () => {
+  it('should format yahoo adp with type label', () => {
     const imp = createMockRankingImport({ source: 'yahoo', type: 'adp' });
     expect(formatColumnHeader(imp)).toBe('Yahoo ADP');
   });
@@ -280,7 +280,7 @@ describe('buildRankingLookup', () => {
     expect(column.importId).toBe('import-fbg-dyn');
     expect(column.source).toBe('footballguys');
     expect(column.type).toBe('dynasty');
-    expect(column.header).toBe('FBG Dyn');
+    expect(column.header).toBe('FBG');
     expect(column.fullName).toBe('FootballGuys Dynasty');
     expect(column.playerCount).toBe(2);
     expect(column.importDate).toBe('2025-02-20T15:30:00Z');

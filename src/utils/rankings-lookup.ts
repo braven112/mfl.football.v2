@@ -64,10 +64,14 @@ export const TYPE_LABELS: Record<RankingType, string> = {
 
 /**
  * Format a short column header for a ranking import.
- * e.g. "FBG Dyn", "KTC Rdf", "FPros All"
+ * Dynasty is the assumed default — just the source abbreviation (e.g. "FBG").
+ * Redraft is marked with ® (e.g. "FBG ®").
+ * Other types append a short label (e.g. "FBG ADP").
  */
 export function formatColumnHeader(imp: StoredRankingImport): string {
   const abbrev = SOURCE_ABBREVS[imp.source] || imp.source;
+  if (imp.type === 'dynasty') return abbrev;
+  if (imp.type === 'redraft') return `${abbrev} ®`;
   const type = TYPE_LABELS[imp.type] || imp.type;
   return `${abbrev} ${type}`;
 }

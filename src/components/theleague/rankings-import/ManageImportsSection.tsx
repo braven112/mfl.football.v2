@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 import { deleteImport, reorderImports } from '../../../utils/rankings-storage';
 import type { StoredRankingImport } from '../../../types/rankings-import';
 import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
@@ -73,7 +74,7 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
       {imports.length === 0 ? (
         <p className="ri-section__empty">No rankings imported yet. Use a bookmarklet above to get started.</p>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleDragEnd}>
           <div className="ri-manage__table-wrap">
             <table className="ri-manage__table">
               <thead>
