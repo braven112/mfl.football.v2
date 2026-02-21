@@ -11,6 +11,7 @@
  */
 
 import type { PlayerRankingImport } from '../types/auction-predictor';
+import { normalizePosition } from './normalize-position';
 
 // =============================================================================
 // NAME NORMALIZATION & MATCHING
@@ -76,20 +77,48 @@ function levenshteinDistance(str1: string, str2: string): number {
 /**
  * Calculate similarity score between two names (0-1, higher is better)
  */
+function reverseName(name: string): string {
+  // "Last, First" → "first last" or "First Last" → "last first"
+  if (name.includes(',')) {
+    const [last, first] = name.split(',').map(s => s.trim());
+    return `${first} ${last}`;
+  }
+  const parts = name.split(/\s+/);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    const first = parts.slice(0, -1).join(' ');
+    return `${last} ${first}`;
+  }
+  return name;
+}
+
 function calculateSimilarity(name1: string, name2: string): number {
   const norm1 = normalizePlayerName(name1);
   const norm2 = normalizePlayerName(name2);
-  
+
   // Exact match
   if (norm1 === norm2) {
     return 1.0;
   }
-  
-  // Levenshtein-based similarity
+
+  // Also try reversed name order (handles "Last, First" vs "First Last")
+  const norm1Rev = normalizePlayerName(reverseName(name1));
+  const norm2Rev = normalizePlayerName(reverseName(name2));
+
+  if (norm1 === norm2Rev || norm1Rev === norm2) {
+    return 1.0;
+  }
+
+  // Levenshtein-based similarity — take best of normal and reversed comparisons
   const maxLen = Math.max(norm1.length, norm2.length);
   const distance = levenshteinDistance(norm1, norm2);
-  const similarity = 1 - (distance / maxLen);
-  
+  const distanceRev = Math.min(
+    levenshteinDistance(norm1, norm2Rev),
+    levenshteinDistance(norm1Rev, norm2),
+  );
+  const bestDistance = Math.min(distance, distanceRev);
+  const similarity = 1 - (bestDistance / maxLen);
+
   return similarity;
 }
 
@@ -114,6 +143,41 @@ interface RankingMatch {
   }>;
 }
 
+/**
+ * Pre-built index for fast exact-match lookups.
+ * Maps normalized name → player for each position.
+ * Avoids O(n) Levenshtein scans when an exact match exists.
+ */
+let _nameIndexCache: {
+  players: MFLPlayer[];
+  byPositionAndName: Map<string, MFLPlayer>;
+  byPositionAndReversedName: Map<string, MFLPlayer>;
+} | null = null;
+
+function getNameIndex(mflPlayers: MFLPlayer[]) {
+  // Reuse cache if the player array reference hasn't changed
+  if (_nameIndexCache && _nameIndexCache.players === mflPlayers) {
+    return _nameIndexCache;
+  }
+
+  const byPositionAndName = new Map<string, MFLPlayer>();
+  const byPositionAndReversedName = new Map<string, MFLPlayer>();
+
+  for (const p of mflPlayers) {
+    const norm = normalizePlayerName(p.name);
+    const key = `${p.position}:${norm}`;
+    byPositionAndName.set(key, p);
+
+    const rev = normalizePlayerName(reverseName(p.name));
+    if (rev !== norm) {
+      byPositionAndReversedName.set(`${p.position}:${rev}`, p);
+    }
+  }
+
+  _nameIndexCache = { players: mflPlayers, byPositionAndName, byPositionAndReversedName };
+  return _nameIndexCache;
+}
+
 export function matchPlayerToMFL(
   rankingName: string,
   rankingPosition: string,
@@ -122,24 +186,45 @@ export function matchPlayerToMFL(
 ): RankingMatch {
   // Filter to same position
   const positionPlayers = mflPlayers.filter(p => p.position === rankingPosition);
-  
+
   if (positionPlayers.length === 0) {
     return { playerId: null, confidence: 0, matched: false };
   }
-  
-  // Calculate similarity scores
+
+  // Fast path: exact normalized name match (O(1) lookup)
+  const index = getNameIndex(mflPlayers);
+  const normName = normalizePlayerName(rankingName);
+  const normNameRev = normalizePlayerName(reverseName(rankingName));
+  const lookupKey = `${rankingPosition}:${normName}`;
+  const lookupKeyRev = `${rankingPosition}:${normNameRev}`;
+
+  const exactMatch =
+    index.byPositionAndName.get(lookupKey) ||
+    index.byPositionAndReversedName.get(lookupKey) ||
+    index.byPositionAndName.get(lookupKeyRev) ||
+    index.byPositionAndReversedName.get(lookupKeyRev);
+
+  if (exactMatch) {
+    return {
+      playerId: exactMatch.id,
+      confidence: 1.0,
+      matched: true,
+    };
+  }
+
+  // Slow path: Levenshtein fuzzy matching against position-filtered players
   const scores = positionPlayers.map(player => ({
     playerId: player.id,
     name: player.name,
     confidence: calculateSimilarity(rankingName, player.name),
   }));
-  
+
   // Sort by confidence descending
   scores.sort((a, b) => b.confidence - a.confidence);
-  
+
   const bestMatch = scores[0];
   const alternatives = scores.slice(1, 4); // Top 3 alternatives
-  
+
   if (bestMatch.confidence >= threshold) {
     return {
       playerId: bestMatch.playerId,
@@ -315,39 +400,6 @@ export function parseJSON(text: string): ParsedRanking[] {
     console.error('Failed to parse JSON:', error);
     return [];
   }
-}
-
-/**
- * Normalize position abbreviations
- */
-function normalizePosition(pos: string): string {
-  const normalized = pos.toUpperCase().trim();
-  
-  // Map common variations
-  const positionMap: Record<string, string> = {
-    'QB': 'QB',
-    'QUARTERBACK': 'QB',
-    'RB': 'RB',
-    'HB': 'RB',
-    'RUNNING BACK': 'RB',
-    'RUNNINGBACK': 'RB',
-    'WR': 'WR',
-    'WIDE RECEIVER': 'WR',
-    'WIDERECEIVER': 'WR',
-    'RECEIVER': 'WR',
-    'TE': 'TE',
-    'TIGHT END': 'TE',
-    'TIGHTEND': 'TE',
-    'K': 'PK',
-    'PK': 'PK',
-    'KICKER': 'PK',
-    'DST': 'DEF',
-    'DEF': 'DEF',
-    'DEFENSE': 'DEF',
-    'D/ST': 'DEF',
-  };
-  
-  return positionMap[normalized] || normalized;
 }
 
 // =============================================================================
