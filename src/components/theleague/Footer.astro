@@ -2,14 +2,42 @@
 // TheLeague Footer component
 import { getLeagueContext } from '../../utils/league-context';
 import leagueAssets from '../../data/theleague.assets.json';
+import { extractLeagueChampion } from '../../utils/toilet-bowl-utils';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 // Detect which league we're in
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
 
-// 2024 Champion - Wascawy Wabbits (The League only)
-const championTeamId = '0009';
-const championTeam = !isAFL ? leagueAssets.teams.find(team => team.id === championTeamId) : null;
+// Dynamically resolve the defending champion from playoff bracket data
+// Try current season first; if no champion yet (mid-season), fall back to previous season
+const seasonYear = getCurrentSeasonYear();
+const playoffBracketFeeds = import.meta.glob(
+	'../../../data/theleague/mfl-feeds/*/playoff-brackets.json',
+	{ eager: true }
+);
+const getModuleData = (mod: any) =>
+	mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+function resolveChampion(year: number): { teamId: string; year: number } {
+	const path = Object.keys(playoffBracketFeeds).find(p => p.includes(`/${year}/`));
+	const data = path ? getModuleData(playoffBracketFeeds[path]) : null;
+	const id = data ? extractLeagueChampion(data) : '';
+	return { teamId: id, year };
+}
+
+// Current season champion, or fall back to previous season's champion
+let champion = resolveChampion(seasonYear);
+if (!champion.teamId) {
+	champion = resolveChampion(seasonYear - 1);
+}
+
+const championTeamId = champion.teamId;
+const championYear = champion.year;
+
+const championTeam = (!isAFL && championTeamId)
+	? leagueAssets.teams.find(team => team.id === championTeamId)
+	: null;
 const championBanner = championTeam?.assets?.banners?.[0]?.relativePath;
 const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 ---
@@ -17,12 +45,12 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 <footer class="site-footer">
 	<div class="footer-container">
 		<div class="footer-content">
-			{!isAFL && (
+			{!isAFL && championTeam && (
 			<div class="footer-champion">
 				<h3 class="champion-title">Defending League Champions</h3>
 				<div class="champion-banner">
 					{championBanner && (
-						<img src={championBanner} alt={`${championTeam?.name} - 2024 Champions`} />
+						<img src={championBanner} alt={`${championTeam?.name} - ${championYear} Champions`} />
 					)}
 				</div>
 			</div>
