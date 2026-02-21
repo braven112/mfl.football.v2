@@ -118,17 +118,6 @@ const siteConfigs = [
     ],
   },
   {
-    id: 'sleeper',
-    name: 'Sleeper',
-    description: 'Fetches ADP data directly from the Sleeper API — no need to navigate to a specific page first.',
-    instructions: 'Click the bookmarklet from any page. It fetches top-500 players by search rank from the Sleeper API.',
-    bookmarkletUri: manifest.sleeper || '',
-    bookmarkletLabel: 'Export Sleeper ADP',
-    requiresAuth: false,
-    defaultType: 'adp',
-    difficulty: 'easy',
-  },
-  {
     id: 'yahoo',
     name: 'Yahoo',
     description: 'Extracts ADP data from Yahoo Fantasy Football draft analysis.',
@@ -223,10 +212,49 @@ const siteConfigs = [
     line-height: 1.5;
   }
 
+  .ri-section__note {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--text-secondary-color, #64748b);
+  }
+
   .ri-section__empty {
     color: var(--text-secondary-color, #64748b);
     font-style: italic;
     margin: 0;
+  }
+
+  /* ---- Sleeper Direct Import ---- */
+
+  .ri-sleeper__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ri-sleeper__badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: #10b981;
+    color: #fff;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .ri-sleeper__btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.25rem;
+  }
+
+  .ri-sleeper .ri-import__result {
+    margin-top: 1rem;
   }
 
   /* ---- Bookmarklet Grid ---- */
@@ -555,6 +583,16 @@ const siteConfigs = [
 
   .ri-btn--primary:hover:not(:disabled) {
     background: #163c65;
+  }
+
+  .ri-btn--secondary {
+    background: var(--secondary-color, #2e8743);
+    color: #fff;
+    border-color: var(--secondary-color, #2e8743);
+  }
+
+  .ri-btn--secondary:hover:not(:disabled) {
+    background: var(--color-secondary-dark, #26743a);
   }
 
   .ri-btn--sm {

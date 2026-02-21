@@ -15,7 +15,8 @@ export default function BookmarkletSection({ siteConfigs }: Props) {
         Get Bookmarklets
       </h2>
       <p className="ri-section__desc">
-        Drag a bookmarklet to your bookmarks bar, or right-click it and choose "Add to Bookmarks." Then visit the rankings site and click it — your rankings will be automatically imported.
+        Bookmarklets scrape rankings directly from your favorite sites by creating a special bookmark in your browser. Drag a bookmark button below to your bookmarks bar (or right-click and choose "Add to Bookmarks"), then visit the site and click it to import.
+        <span className="ri-section__note">Desktop only — bookmarklets require a browser with a bookmarks bar. On mobile, use the Sleeper button above.</span>
       </p>
       <div className="bm-grid">
         {siteConfigs.map((site) => (

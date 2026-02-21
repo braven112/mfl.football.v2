@@ -8,6 +8,7 @@ import type {
 import BookmarkletSection from './BookmarkletSection';
 import ImportSection from './ImportSection';
 import ManageImportsSection from './ManageImportsSection';
+import SleeperDirectImport from './SleeperDirectImport';
 
 interface Props {
   mflPlayersJson: string;
@@ -57,6 +58,7 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
       {savedImports.length > 0 && (
         <ManageImportsSection imports={savedImports} onDelete={handleDelete} onReorder={handleReorder} />
       )}
+      <SleeperDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
       <BookmarkletSection siteConfigs={siteConfigs} />
       <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
     </div>
