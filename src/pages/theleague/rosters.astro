@@ -1639,6 +1639,7 @@ const serializedConfig = JSON.stringify({
               <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="projectedPoints">Proj <span class="sort-arrow"></span></th>
 
               <!-- GM Mode Columns -->
+              <th scope="col" data-column="rank" class="gm-col ranking-col" data-sortable data-sort-key="topRanking" id="rankColHeader">Rank <span class="sort-arrow"></span></th>
               <th scope="col" data-column="years" class="gm-col" data-sortable data-sort-key="contractYears">Yrs <span class="sort-arrow"></span></th>
               <th scope="col" data-column="actions" class="actions-column gm-col">Actions</th>
               {SALARY_YEARS.map((year, index) => (
@@ -1649,6 +1650,7 @@ const serializedConfig = JSON.stringify({
           <tfoot>
             <tr class="roster-totals roster-totals--dead gm-row">
               <td data-column="player" class="roster-totals__label">Dead Money</td>
+              <td data-column="rank" class="gm-col ranking-col"></td>
               <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
@@ -1659,6 +1661,7 @@ const serializedConfig = JSON.stringify({
             </tr>
             <tr class="roster-totals gm-row">
               <td data-column="player" class="roster-totals__label">Total Salary</td>
+              <td data-column="rank" class="gm-col ranking-col"></td>
               <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
@@ -1669,6 +1672,7 @@ const serializedConfig = JSON.stringify({
             </tr>
             <tr class="roster-totals roster-totals--cap gm-row">
               <td data-column="player" class="roster-totals__label">Salary Cap</td>
+              <td data-column="rank" class="gm-col ranking-col"></td>
               <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
@@ -1679,6 +1683,7 @@ const serializedConfig = JSON.stringify({
             </tr>
             <tr class="roster-totals roster-totals--space gm-row">
               <td data-column="player" class="roster-totals__label">Cap Space</td>
+              <td data-column="rank" class="gm-col ranking-col"></td>
               <td data-column="years" class="gm-col"></td>
               <td data-column="actions" class="gm-col"></td>
               {SALARY_YEARS.map((year, index) => (
@@ -1893,6 +1898,7 @@ const serializedConfig = JSON.stringify({
                 </td>
 
                 {/* GM Mode Cells */}
+                <td data-label="Rank" data-column="rank" class="gm-col ranking-col ranking-cell"></td>
                 <td data-label="Yrs" data-column="years" class="gm-col">{player.contractYears || 0}</td>
                 <td data-label="Actions" data-column="actions" class="actions-cell gm-col">
                   <button
@@ -1948,7 +1954,7 @@ const serializedConfig = JSON.stringify({
             ))
           ) : (
             <tr>
-              <td colspan={2 + SALARY_YEARS.length} class="roster-empty">
+              <td colspan={4 + SALARY_YEARS.length} class="roster-empty">
                 This franchise has no players recorded for this season snapshot.
               </td>
             </tr>
@@ -3058,6 +3064,23 @@ const serializedConfig = JSON.stringify({
     vertical-align: middle;
     padding: 0.5rem;
     width: 60px;
+  }
+
+  :global(.roster-table th[data-column='rank']) {
+    text-align: center !important;
+    white-space: nowrap;
+  }
+
+  :global(.roster-table td[data-column='rank']) {
+    text-align: center !important;
+    width: 50px;
+    vertical-align: middle;
+  }
+
+  :global(.roster-table td.ranking-cell) {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
   }
 
   :global(.actions-column) {
@@ -4950,6 +4973,13 @@ const serializedConfig = JSON.stringify({
         case 'avgSeason': return parseFloat(player.avgSeason) || 0;
         case 'oppAvg': return parseFloat(player.oppStats?.avg) || 0;
         case 'projectedPoints': return parseFloat(player.projectedPoints) || 0;
+        case 'topRanking': {
+          // Use the top ranking from imported rankings (stored in window.__rosterRankingLookup)
+          const rl = window.__rosterRankingLookup;
+          if (!rl || !rl.columns.length) return Infinity;
+          const rank = rl.byImport.get(rl.columns[0].importId)?.get(player.id);
+          return rank ?? Infinity;
+        }
         case 'contractYears': {
           const yrs = player.contractYears ?? 0;
           // 0 years = UFA/no contract → push to bottom
@@ -5119,7 +5149,8 @@ const serializedConfig = JSON.stringify({
           currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
         } else {
           currentSortKey = sortKey;
-          currentSortDir = 'desc';
+          // Rank defaults to ascending (1 = best at top), everything else descending
+          currentSortDir = sortKey === 'topRanking' ? 'asc' : 'desc';
         }
 
         updateSortIndicators(currentSortKey, currentSortDir);
@@ -5663,7 +5694,7 @@ const serializedConfig = JSON.stringify({
     const renderTableRows = (rows = []) => {
       if (!rosterTableBody) return;
       if (!rows.length) {
-        rosterTableBody.innerHTML = `<tr><td colspan="${5 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
+        rosterTableBody.innerHTML = `<tr><td colspan="${6 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
         return;
       }
 
@@ -6007,6 +6038,7 @@ const serializedConfig = JSON.stringify({
             ${projectedCell}
 
             ${/* GM Mode Cells */ ''}
+            <td data-label="Rank" data-column="rank" class="gm-col ranking-col ranking-cell"></td>
             <td data-label="Yrs" data-column="years" class="gm-col">${displayYears || 0}</td>
             ${actionsCell}
             ${salaryCells}
@@ -6902,4 +6934,79 @@ const serializedConfig = JSON.stringify({
 
   // Re-initialize after View Transitions (Astro page navigation)
   document.addEventListener('astro:page-load', initRosterPage);
+</script>
+
+<!-- Rankings integration: populates rank column from top imported ranking in localStorage -->
+<script>
+  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+
+  let unsubscribe: (() => void) | null = null;
+
+  function populateRankCells() {
+    const lookup = buildRankingLookup();
+    // Expose on window so the sort function can access it
+    (window as any).__rosterRankingLookup = lookup;
+
+    const topColumn = lookup.columns[0];
+    const headerEl = document.getElementById('rankColHeader');
+
+    // Update header tooltip with ranking source name
+    if (headerEl && topColumn) {
+      headerEl.title = topColumn.fullName;
+    }
+
+    // If no rankings imported, hide the column
+    const rankCols = document.querySelectorAll('.ranking-col');
+    if (!topColumn) {
+      rankCols.forEach(el => (el as HTMLElement).style.display = 'none');
+      return;
+    }
+
+    const playerRanks = lookup.byImport.get(topColumn.importId);
+    if (!playerRanks) return;
+
+    // Populate rank cells in all visible rows
+    document.querySelectorAll('#rosterTableBody tr[data-player-id]').forEach(row => {
+      const playerId = (row as HTMLElement).dataset.playerId;
+      const cell = row.querySelector('.ranking-cell');
+      if (!cell || !playerId) return;
+
+      const rank = playerRanks.get(playerId);
+      cell.textContent = rank != null ? String(rank) : '—';
+    });
+
+    // Re-apply mode visibility so ranking-col cells respect GM/Coach toggle
+    const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
+    rankCols.forEach(el => {
+      (el as HTMLElement).style.display = currentMode === 'gm' ? 'table-cell' : 'none';
+    });
+  }
+
+  function initRankings() {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+
+    populateRankCells();
+
+    // Re-populate when rankings change (import/delete on another page or tab)
+    unsubscribe = onRankingsChanged(() => populateRankCells());
+
+    // Re-populate after the main script re-renders table rows
+    const observer = new MutationObserver(() => populateRankCells());
+    const tbody = document.getElementById('rosterTableBody');
+    if (tbody) {
+      observer.observe(tbody, { childList: true });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRankings);
+  } else {
+    // Small delay to ensure main script has rendered rows first
+    setTimeout(initRankings, 50);
+  }
+
+  document.addEventListener('astro:page-load', () => setTimeout(initRankings, 50));
 </script>
