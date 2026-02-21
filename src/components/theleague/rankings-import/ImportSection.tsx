@@ -194,7 +194,7 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
         </summary>
         <div className="ri-import__manual-content">
           <p className="ri-section__desc">
-            Paste ranking data copied from a bookmarklet.
+            If auto-import didn't work, paste the bookmarklet JSON output here.
           </p>
 
           <div className="ri-import__controls">

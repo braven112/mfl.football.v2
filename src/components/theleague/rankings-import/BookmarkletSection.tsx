@@ -15,7 +15,7 @@ export default function BookmarkletSection({ siteConfigs }: Props) {
         Get Bookmarklets
       </h2>
       <p className="ri-section__desc">
-        Drag a bookmarklet to your bookmarks bar, or right-click it and choose "Add to Bookmarks." Then visit the rankings site and click it — your rankings will be copied to your clipboard.
+        Drag a bookmarklet to your bookmarks bar, or right-click it and choose "Add to Bookmarks." Then visit the rankings site and click it — your rankings will be automatically imported.
       </p>
       <div className="bm-grid">
         {siteConfigs.map((site) => (

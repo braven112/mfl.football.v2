@@ -66,7 +66,7 @@ export default function BookmarkletCard({ site }: Props) {
               `To install this bookmarklet:\n\n` +
               `• Drag the "${site.bookmarkletLabel}" link to your bookmarks bar\n` +
               `• Or right-click it and choose "Add to Bookmarks" / "Bookmark This Link"\n\n` +
-              `Then visit ${site.name} and click the bookmark to export rankings.`,
+              `Then visit ${site.name} and click the bookmark — your rankings will be automatically imported.`,
             );
           }}
         >
