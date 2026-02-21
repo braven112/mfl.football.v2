@@ -30,7 +30,7 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
-  const processImportText = useCallback((rawText: string, sourceLabel?: string) => {
+  const processImportText = useCallback((rawText: string, typeOverride?: RankingType, sourceLabel?: string) => {
     if (!rawText.trim()) {
       setResult({ success: false, message: 'Paste ranking data first.' });
       return;
@@ -50,7 +50,9 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
         }
 
         const data: BookmarkletOutput = parsed.data;
-        const type = (data.type !== 'overall' && data.type !== undefined) ? data.type : rankingType;
+        const type = (data.type !== 'overall' && data.type !== undefined)
+          ? data.type
+          : (typeOverride ?? rankingType);
 
         // Match players to MFL database
         const rankings: StoredRankingEntry[] = data.players.map((p) => {
@@ -118,8 +120,7 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
 
   // Listen for bookmarklet transfers (hash, window.name, postMessage)
   useBookmarkletTransfer(useCallback((payload: string, sourceLabel: string) => {
-    setPasteText(payload);
-    processImportText(payload, sourceLabel);
+    processImportText(payload, undefined, sourceLabel);
   }, [processImportText]));
 
   const handlePasteFromClipboard = useCallback(async () => {
@@ -144,57 +145,12 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
   }, [pasteText, processImportText]);
 
   return (
-    <section className="ri-section">
-      <h2 className="ri-section__title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-        </svg>
-        Import Rankings
-      </h2>
-      <p className="ri-section__desc">
-        After running a bookmarklet, paste the copied data here.
-      </p>
-
-      <div className="ri-import__controls">
-        <button
-          type="button"
-          className="ri-btn ri-btn--primary"
-          onClick={handlePasteFromClipboard}
-        >
-          Paste from Clipboard
-        </button>
-
-        <label className="ri-import__type-label">
-          Ranking type:
-          <select
-            value={rankingType}
-            onChange={(e) => setRankingType(e.target.value as RankingType)}
-            className="ri-import__type-select"
-          >
-            <option value="dynasty">Dynasty</option>
-            <option value="redraft">Redraft</option>
-            <option value="adp">ADP</option>
-          </select>
-        </label>
-      </div>
-
-      <textarea
-        className="ri-import__textarea"
-        placeholder='Paste bookmarklet output here (JSON)...'
-        value={pasteText}
-        onChange={(e) => { setPasteText(e.target.value); setResult(null); }}
-        rows={6}
-      />
-
-      <button
-        type="button"
-        className="ri-btn ri-btn--primary"
-        onClick={handleImport}
-        disabled={importing || !pasteText.trim()}
-      >
-        {importing ? 'Importing...' : 'Import Rankings'}
-      </button>
+    <>
+      {/* Result display lives outside the accordion so it's always visible after
+          a bookmarklet auto-import even when the manual section is collapsed */}
+      {importing && (
+        <p className="ri-import__status">Importing...</p>
+      )}
 
       {result && (
         <div className={`ri-import__result ${result.success ? 'ri-import__result--success' : 'ri-import__result--error'}`}>
@@ -227,6 +183,61 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
           )}
         </div>
       )}
-    </section>
+
+      <details className="ri-section ri-import__manual">
+        <summary className="ri-import__manual-summary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          Manual Import
+        </summary>
+        <div className="ri-import__manual-content">
+          <p className="ri-section__desc">
+            Paste ranking data copied from a bookmarklet.
+          </p>
+
+          <div className="ri-import__controls">
+            <button
+              type="button"
+              className="ri-btn ri-btn--primary"
+              onClick={handlePasteFromClipboard}
+            >
+              Paste from Clipboard
+            </button>
+
+            <label className="ri-import__type-label">
+              Ranking type:
+              <select
+                value={rankingType}
+                onChange={(e) => setRankingType(e.target.value as RankingType)}
+                className="ri-import__type-select"
+              >
+                <option value="dynasty">Dynasty</option>
+                <option value="redraft">Redraft</option>
+                <option value="adp">ADP</option>
+              </select>
+            </label>
+          </div>
+
+          <textarea
+            className="ri-import__textarea"
+            placeholder='Paste bookmarklet output here (JSON)...'
+            value={pasteText}
+            onChange={(e) => { setPasteText(e.target.value); setResult(null); }}
+            rows={6}
+          />
+
+          <button
+            type="button"
+            className="ri-btn ri-btn--primary"
+            onClick={handleImport}
+            disabled={importing || !pasteText.trim()}
+          >
+            {importing ? 'Importing...' : 'Import Rankings'}
+          </button>
+        </div>
+      </details>
+    </>
   );
 }

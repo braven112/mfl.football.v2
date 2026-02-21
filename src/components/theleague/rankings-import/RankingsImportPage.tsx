@@ -8,7 +8,6 @@ import type {
 import BookmarkletSection from './BookmarkletSection';
 import ImportSection from './ImportSection';
 import ManageImportsSection from './ManageImportsSection';
-import CustomBookmarkletGuide from './CustomBookmarkletGuide';
 
 interface Props {
   mflPlayersJson: string;
@@ -54,9 +53,8 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
       {savedImports.length > 0 && (
         <ManageImportsSection imports={savedImports} onDelete={handleDelete} />
       )}
-      <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
       <BookmarkletSection siteConfigs={siteConfigs} />
-      <CustomBookmarkletGuide />
+      <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
     </div>
   );
 }
