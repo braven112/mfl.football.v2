@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
+import archiveUrls from '../../data/theleague/salary-archive-urls.json';
 
 const summaryModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
@@ -136,6 +137,7 @@ const serializedConfig = JSON.stringify({
   seasonOptions,
   defaultSeason,
   franchiseMeta: franchiseLookup,
+  archiveUrls: archiveUrls ?? {},
 });
 ---
 
@@ -165,6 +167,9 @@ const serializedConfig = JSON.stringify({
         <button type="button" id="exportXlsxBtn" class="salary-export-btn">
           Export to Excel
         </button>
+        <a id="archiveSheetLink" class="salary-archive-link" href="#" target="_blank" rel="noopener" style="display: none;">
+          View Original Spreadsheet
+        </a>
       </div>
       <p>
         League {currentSummary?.metadata?.leagueId ?? 'Unknown'} &middot; Season{' '}
@@ -183,6 +188,9 @@ const serializedConfig = JSON.stringify({
       <p>
         Franchise tag figures use the average of the top three salaries at a
         position, while contract extensions use the average of the top five.
+      </p>
+      <p class="salary-report__archive-link">
+        <a href="/theleague/salary-archive">View Historical Spreadsheets (2009&ndash;2025) &rarr;</a>
       </p>
     </header>
 
@@ -293,6 +301,20 @@ const serializedConfig = JSON.stringify({
     color: #555;
   }
 
+  .salary-report__archive-link {
+    margin-top: 0.5rem;
+  }
+
+  .salary-report__archive-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .salary-report__archive-link a:hover {
+    text-decoration: underline;
+  }
+
   .salary-report__filters {
     display: flex;
     gap: 1rem;
@@ -330,6 +352,21 @@ const serializedConfig = JSON.stringify({
 
   .salary-export-btn:hover {
     opacity: 0.85;
+  }
+
+  .salary-archive-link {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid #ccd3df;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-color, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .salary-archive-link:hover {
+    background: #f0f4f8;
   }
 
   .salary-report__grid {
@@ -467,6 +504,7 @@ const serializedConfig = JSON.stringify({
       weeklyData = {},
       weekOptions = {},
       defaultSeason,
+      archiveUrls = {},
       franchiseMeta = {}
     } = JSON.parse(summaryConfigEl.textContent);
 
@@ -476,6 +514,7 @@ const serializedConfig = JSON.stringify({
     const seasonLabel = document.getElementById('salarySeasonLabel');
     const weekLabel = document.getElementById('salaryWeekLabel');
     const snapshotLabel = document.getElementById('salarySnapshotLabel');
+    const archiveLink = document.getElementById('archiveSheetLink');
 
     const STARTER_COUNTS = { QB: 16, RB: 30, WR: 48, TE: 18, PK: 16, Def: 16 };
 
@@ -557,6 +596,17 @@ const serializedConfig = JSON.stringify({
         return `Off Season Week ${num}`;
       }
       return `Week ${week}`;
+    };
+
+    const updateArchiveLink = (seasonKey) => {
+      if (!archiveLink) return;
+      const url = archiveUrls[seasonKey];
+      if (url) {
+        archiveLink.href = url;
+        archiveLink.style.display = 'inline-flex';
+      } else {
+        archiveLink.style.display = 'none';
+      }
     };
 
     const populateWeekDropdown = (seasonKey) => {
@@ -660,12 +710,14 @@ const serializedConfig = JSON.stringify({
 
     // Initialize
     populateWeekDropdown(defaultSeason);
+    updateArchiveLink(defaultSeason);
     renderData(defaultSeason, 'season');
 
     // Event listeners
     seasonSelectEl?.addEventListener('change', (event) => {
       currentSeason = event.target.value;
       populateWeekDropdown(currentSeason);
+      updateArchiveLink(currentSeason);
       renderData(currentSeason, currentWeek);
     });
 
