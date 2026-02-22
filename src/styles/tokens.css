@@ -40,6 +40,16 @@
   --line-height-relaxed: 1.75;
 
   /* ========================================
+     Team Icon Sizes
+     ======================================== */
+  --team-icon-xs: 24px;    /* Compact table rows, selectors */
+  --team-icon-sm: 32px;    /* Small / mobile table rows */
+  --team-icon-md: 40px;    /* Standard table rows */
+  --team-icon-lg: 48px;    /* Nav buttons */
+  --team-icon-xl: 60px;    /* Roster nav, matchup previews */
+  --team-icon-2xl: 90px;   /* Roster team cards */
+
+  /* ========================================
      Spacing Scale
      ======================================== */
   --spacing-0: 0;

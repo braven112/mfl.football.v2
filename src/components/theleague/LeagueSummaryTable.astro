@@ -294,7 +294,7 @@ const serializedData = JSON.stringify({ teams, years, categories });
 
 <style>
   .league-summary {
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: var(--font-family-base);
     max-width: 100%;
     overflow: visible;
   }
@@ -487,13 +487,14 @@ const serializedData = JSON.stringify({ teams, years, categories });
   }
 
   .league-summary__team-icon {
-    width: 24px;
-    height: 24px;
+    width: var(--team-icon-md);
+    height: var(--team-icon-md);
     border-radius: 2px;
     flex-shrink: 0;
   }
 
   .league-summary__team-name {
+    font-weight: var(--font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -572,8 +573,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
     }
 
     .league-summary__team-icon {
-      width: 18px;
-      height: 18px;
+      width: var(--team-icon-xs);
+      height: var(--team-icon-xs);
     }
 
     .league-summary__team-name--default {

@@ -268,7 +268,7 @@ export default function RookieExtensionModal({
           .rookie-modal__formula-text {
             font-size: 0.8125rem;
             color: var(--text-color, #1f2937);
-            font-family: monospace;
+            font-family: var(--font-family-mono);
           }
           .rookie-modal__cap-preview {
             margin-top: 0.5rem;
