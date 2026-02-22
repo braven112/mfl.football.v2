@@ -73,27 +73,28 @@ function buildSummaryRows(positions: Record<string, PositionData>) {
     });
 }
 
-function buildPlayerRows(
-  positions: Record<string, PositionData>,
+const POSITION_LABELS: Record<string, string> = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+  PK: 'PK',
+  Def: 'Def',
+};
+
+function buildPositionPlayerRows(
+  players: TopPlayer[],
   franchiseMeta: Record<string, FranchiseInfo>
 ) {
-  const rows: Record<string, unknown>[] = [];
-  for (const pos of POSITION_ORDER) {
-    const data = positions[pos];
-    if (!data?.topPlayers) continue;
-    for (let i = 0; i < data.topPlayers.length; i++) {
-      const player = data.topPlayers[i];
-      const franchise = franchiseMeta[player.franchiseId];
-      rows.push({
-        Rank: i + 1,
-        Position: pos,
-        Player: player.name,
-        Salary: player.salary,
-        Team: franchise?.name ?? player.franchiseId,
-      });
-    }
-  }
-  return rows;
+  return players.map((player, i) => {
+    const franchise = franchiseMeta[player.franchiseId];
+    return {
+      Rank: i + 1,
+      Player: player.name,
+      Salary: player.salary,
+      Team: franchise?.name ?? player.franchiseId ?? '',
+    };
+  });
 }
 
 function formatWeekLabel(week: string): string {
@@ -127,18 +128,19 @@ export async function exportSalaryToXLSX(options: ExportOptions): Promise<void> 
   ];
   XLSX.utils.book_append_sheet(wb, summarySheet, 'Position Summary');
 
-  // Sheet 2: Top Earners
-  const playerData = buildPlayerRows(positions, franchiseMeta);
-  if (playerData.length > 0) {
-    const playerSheet = XLSX.utils.json_to_sheet(playerData);
-    playerSheet['!cols'] = [
+  // One sheet per position
+  for (const pos of POSITION_ORDER) {
+    const data = positions[pos];
+    if (!data?.topPlayers?.length) continue;
+    const rows = buildPositionPlayerRows(data.topPlayers, franchiseMeta);
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    sheet['!cols'] = [
       { wch: 6 },  // Rank
-      { wch: 10 }, // Position
       { wch: 28 }, // Player
       { wch: 16 }, // Salary
       { wch: 24 }, // Team
     ];
-    XLSX.utils.book_append_sheet(wb, playerSheet, 'Top Earners');
+    XLSX.utils.book_append_sheet(wb, sheet, POSITION_LABELS[pos] ?? pos);
   }
 
   const weekLabel = formatWeekLabel(week);
