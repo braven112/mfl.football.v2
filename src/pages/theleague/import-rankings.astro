@@ -226,35 +226,48 @@ const siteConfigs = [
     margin: 0;
   }
 
-  /* ---- Sleeper Direct Import ---- */
+  /* ---- Direct Import Grid (FantasyCalc + Sleeper) ---- */
 
-  .ri-sleeper__header {
+  .ri-direct-import-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .ri-direct-card {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
   }
 
-  .ri-sleeper__badge {
-    display: inline-block;
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
+  .ri-direct-card__badge {
     background: #10b981;
-    color: #fff;
-    margin-left: 0.5rem;
-    vertical-align: middle;
+  }
+
+  .bm-card__badge--dynasty {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .bm-card__badge--adp {
+    background: #ede9fe;
+    color: #6d28d9;
   }
 
   .ri-sleeper__btn {
     font-size: 0.95rem;
     padding: 0.6rem 1.25rem;
+    align-self: flex-start;
   }
 
-  .ri-sleeper .ri-import__result {
-    margin-top: 1rem;
+  .ri-direct-card .ri-import__result {
+    margin-top: 0.5rem;
+  }
+
+  .ri-direct-card .ri-import__stats {
+    flex-direction: column;
+    gap: 0.15rem;
   }
 
   /* ---- Bookmarklet Grid ---- */
@@ -955,6 +968,10 @@ const siteConfigs = [
 
     .ri-section {
       padding: 1rem;
+    }
+
+    .ri-direct-import-grid {
+      grid-template-columns: 1fr;
     }
 
     .bm-grid {

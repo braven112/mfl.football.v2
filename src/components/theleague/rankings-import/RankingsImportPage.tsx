@@ -9,6 +9,7 @@ import BookmarkletSection from './BookmarkletSection';
 import ImportSection from './ImportSection';
 import ManageImportsSection from './ManageImportsSection';
 import SleeperDirectImport from './SleeperDirectImport';
+import FantasyCalcDirectImport from './FantasyCalcDirectImport';
 
 interface Props {
   mflPlayersJson: string;
@@ -58,7 +59,10 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
       {savedImports.length > 0 && (
         <ManageImportsSection imports={savedImports} onDelete={handleDelete} onReorder={handleReorder} />
       )}
-      <SleeperDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+      <div className="ri-direct-import-grid">
+        <FantasyCalcDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+        <SleeperDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+      </div>
       <BookmarkletSection siteConfigs={siteConfigs} />
       <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
     </div>

@@ -20,7 +20,7 @@ export interface ParseResult {
 }
 
 const VALID_SOURCES: RankingSourceId[] = [
-  'fantasypros', 'cbs', 'sleeper', 'keeptradecut',
+  'fantasypros', 'cbs', 'sleeper', 'fantasycalc', 'keeptradecut',
   'dlf', 'yahoo', 'footballguys', 'custom',
 ];
 
