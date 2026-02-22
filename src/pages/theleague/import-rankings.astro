@@ -106,13 +106,13 @@ const siteConfigs = [
   {
     id: 'keeptradecut',
     name: 'KeepTradeCut',
-    description: 'Extracts dynasty values from the KTC rankings page. KTC paginates 50 players at a time.',
-    instructions: 'Click the Dynasty Rankings button below, then click the bookmarklet. Navigate to the next page and repeat to get more players.',
+    description: 'Extracts all dynasty values from the KTC rankings page in one click. Includes tier data.',
+    instructions: 'Click the Dynasty Rankings button below, then click the bookmarklet.',
     bookmarkletUri: manifest.keeptradecut || '',
     bookmarkletLabel: 'Export KTC',
     requiresAuth: false,
     defaultType: 'dynasty',
-    difficulty: 'medium',
+    difficulty: 'easy',
     links: [
       { url: 'https://keeptradecut.com/dynasty-rankings', label: 'Dynasty Rankings', type: 'dynasty' },
     ],
