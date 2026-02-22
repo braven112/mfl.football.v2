@@ -197,6 +197,14 @@
           "description": "Historical salary cap trends"
         },
         {
+          "id": "salary-archive",
+          "label": "Salary Archive",
+          "icon": "file-text",
+          "path": "/salary-archive",
+          "external": false,
+          "description": "Historical salary spreadsheets (2009–2025)"
+        },
+        {
           "id": "mvp",
           "label": "Salary-Adjusted MVPs",
           "icon": "standings",
@@ -246,6 +254,7 @@
     "/playoffs": "/playoffs",
     "/salary": "/salary",
     "/salary-history": "/salary-history",
+    "/salary-archive": "/salary-archive",
     "/mvp": "/mvp",
     "/draft-predictor": "/draft-predictor",
     "/icons": "/icons",

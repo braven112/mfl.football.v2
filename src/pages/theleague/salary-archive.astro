@@ -1,0 +1,135 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import archiveLinks from '../../data/theleague/salary-archive-links.json';
+---
+
+<TheLeagueLayout title="Salary Archive">
+  <section class="salary-archive">
+    <header class="salary-archive__intro">
+      <h1>Salary Archive</h1>
+      <p>
+        Historical salary spreadsheets from 2009&ndash;2025. These Google Sheets
+        were manually maintained before salary data was generated from the MFL API.
+      </p>
+      <p class="salary-archive__back">
+        <a href="/theleague/salary">&larr; Back to Salary Analytics</a>
+      </p>
+    </header>
+
+    <table class="salary-archive__table">
+      <thead>
+        <tr>
+          <th scope="col">Year</th>
+          <th scope="col">Spreadsheet</th>
+          <th scope="col">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {archiveLinks.map((entry) => (
+          <tr>
+            <td class="salary-archive__year">{entry.year}</td>
+            <td>
+              {entry.url && entry.url !== '#' ? (
+                <a href={entry.url} target="_blank" rel="noopener noreferrer">
+                  {entry.title}
+                </a>
+              ) : (
+                <span class="salary-archive__pending">{entry.title}</span>
+              )}
+            </td>
+            <td class="salary-archive__notes">{entry.description}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .salary-archive {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .salary-archive__intro h1 {
+    margin-bottom: 0.25rem;
+  }
+
+  .salary-archive__intro p {
+    margin: 0.25rem 0;
+  }
+
+  .salary-archive__back {
+    margin-top: 0.5rem;
+  }
+
+  .salary-archive__back a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .salary-archive__back a:hover {
+    text-decoration: underline;
+  }
+
+  .salary-archive__table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--primary-content-bg-color);
+    border: 1px solid var(--primary-content-border-color);
+    box-shadow: var(--primary-content-boxshadow-size)
+      var(--primary-content-boxshadow-color);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .salary-archive__table th,
+  .salary-archive__table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--primary-content-border-color);
+  }
+
+  .salary-archive__table thead th {
+    font-size: 0.85rem;
+    color: #555;
+    font-weight: 600;
+  }
+
+  .salary-archive__table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .salary-archive__year {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .salary-archive__table a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .salary-archive__table a:hover {
+    text-decoration: underline;
+  }
+
+  .salary-archive__pending {
+    color: #888;
+  }
+
+  .salary-archive__notes {
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  @media (max-width: 600px) {
+    .salary-archive__table th,
+    .salary-archive__table td {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+    }
+  }
+</style>
