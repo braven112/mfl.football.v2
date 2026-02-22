@@ -1339,8 +1339,8 @@ const faCountsJson = JSON.stringify(faCounts);
     font-size: 0.875rem;
   }
   .players-table thead {
-    background: linear-gradient(120deg, var(--accent-content-bg-color, #1c497c) 0%, #478fd1 100%);
-    color: white;
+    background: var(--table-header-gradient);
+    color: var(--table-header-gradient-text);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -1432,11 +1432,6 @@ const faCountsJson = JSON.stringify(faCounts);
   :global(.col-ranking-avg) {
     font-weight: 600;
     background: rgba(28, 73, 124, 0.04);
-    border-left: 1px solid rgb(170, 201, 229);
-    border-right: 1px solid rgb(170, 201, 229);
-  }
-  :global(td.col-ranking-avg) {
-    background: #ddd;
   }
   :global(th.col-ranking-avg .th-content) {
     font-weight: 700;
