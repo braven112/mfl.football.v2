@@ -6950,9 +6950,14 @@ const serializedConfig = JSON.stringify({
     const topColumn = lookup.columns[0];
     const headerEl = document.getElementById('rankColHeader');
 
-    // Update header tooltip with ranking source name
+    // Update header text and tooltip with ranking source name
     if (headerEl && topColumn) {
       headerEl.title = topColumn.fullName;
+      // Show source abbreviation as the column header
+      const sortArrow = headerEl.querySelector('.sort-arrow');
+      headerEl.textContent = '';
+      headerEl.append(`${topColumn.header} `, sortArrow || document.createElement('span'));
+      if (sortArrow) sortArrow.className = 'sort-arrow';
     }
 
     // If no rankings imported, hide the column
