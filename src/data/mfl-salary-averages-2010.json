@@ -13,80 +13,418 @@
     },
     "fetchedAt": "2025-11-22T08:35:50.421Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2025-11-22T08:35:50.423Z"
+    "generatedAt": "2025-11-22T08:35:50.423Z",
+    "backfilledFrom": "2011_tagged_salary_avg.xls",
+    "backfilledAt": "2026-02-22T19:49:20.916Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 122,
+      "totalPlayers": 15,
       "top3Average": 7666908.33,
       "top5Average": 7256145,
+      "starterAverage": 5742218.33,
+      "starterMedian": 6155875,
+      "starterCount": 48,
+      "averageSalary": 5742218.33,
+      "medianSalary": 6155875,
       "topPlayers": [
-        {"id": "6931", "name": "Johnson, Andre", "salary": 8078400, "franchiseId": "0016"},
-        {"id": "8657", "name": "Johnson, Calvin", "salary": 7768200, "franchiseId": "0016"},
-        {"id": "4923", "name": "Wayne, Reggie", "salary": 7154125, "franchiseId": "0004"},
-        {"id": "6982", "name": "Boldin, Anquan", "salary": 6655000, "franchiseId": "0013"},
-        {"id": "8293", "name": "Jennings, Greg", "salary": 6625000, "franchiseId": "0007"}
+        {
+          "salary": 8784600
+        },
+        {
+          "id": "6931",
+          "name": "Johnson, Andre",
+          "salary": 8078400,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "8657",
+          "name": "Johnson, Calvin",
+          "salary": 7768200,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "4923",
+          "name": "Wayne, Reggie",
+          "salary": 7154125,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "6982",
+          "name": "Boldin, Anquan",
+          "salary": 6655000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "8293",
+          "name": "Jennings, Greg",
+          "salary": 6625000,
+          "franchiseId": "0007"
+        },
+        {
+          "salary": 6500000
+        },
+        {
+          "salary": 6155875
+        },
+        {
+          "salary": 5600000
+        },
+        {
+          "salary": 4758325
+        },
+        {
+          "salary": 4427500
+        },
+        {
+          "salary": 3850000
+        },
+        {
+          "salary": 3525000
+        },
+        {
+          "salary": 3176250
+        },
+        {
+          "salary": 3075000
+        }
       ]
     },
     "Def": {
-      "totalPlayers": 20,
+      "totalPlayers": 13,
       "top3Average": 830166.67,
       "top5Average": 749100,
+      "starterAverage": 826459.62,
+      "starterMedian": 665500,
+      "starterCount": 16,
+      "averageSalary": 826459.62,
+      "medianSalary": 665500,
       "topPlayers": [
-        {"id": "0505", "name": "Jets, New York", "salary": 1100000, "franchiseId": "0010"},
-        {"id": "0524", "name": "Vikings, Minnesota", "salary": 725000, "franchiseId": "0003"},
-        {"id": "0530", "name": "49ers, San Francisco", "salary": 665500, "franchiseId": "0009"},
-        {"id": "0526", "name": "Falcons, Atlanta", "salary": 650000, "franchiseId": "0016"},
-        {"id": "0531", "name": "Ravens, Baltimore", "salary": 605000, "franchiseId": "0006"}
+        {
+          "salary": 1800000
+        },
+        {
+          "id": "0505",
+          "name": "Jets, New York",
+          "salary": 1100000,
+          "franchiseId": "0010"
+        },
+        {
+          "salary": 1025000
+        },
+        {
+          "salary": 1000000
+        },
+        {
+          "salary": 765325
+        },
+        {
+          "id": "0524",
+          "name": "Vikings, Minnesota",
+          "salary": 725000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "0530",
+          "name": "49ers, San Francisco",
+          "salary": 665500,
+          "franchiseId": "0009"
+        },
+        {
+          "id": "0526",
+          "name": "Falcons, Atlanta",
+          "salary": 650000,
+          "franchiseId": "0016"
+        },
+        {
+          "salary": 635250
+        },
+        {
+          "salary": 632225
+        },
+        {
+          "id": "0531",
+          "name": "Ravens, Baltimore",
+          "salary": 605000,
+          "franchiseId": "0006"
+        },
+        {
+          "salary": 575000
+        },
+        {
+          "salary": 565675
+        }
       ]
     },
     "RB": {
-      "totalPlayers": 72,
+      "totalPlayers": 14,
       "top3Average": 9870758.33,
       "top5Average": 9037455,
+      "starterAverage": 7808039.29,
+      "starterMedian": 7787500,
+      "starterCount": 30,
+      "averageSalary": 7808039.29,
+      "medianSalary": 7787500,
       "topPlayers": [
-        {"id": "8658", "name": "Peterson, Adrian", "salary": 12012275, "franchiseId": "0009"},
-        {"id": "7544", "name": "Turner, Michael", "salary": 8800000, "franchiseId": "0008"},
-        {"id": "7877", "name": "Gore, Frank", "salary": 8800000, "franchiseId": "0015"},
-        {"id": "7816", "name": "Benson, Cedric", "salary": 7875000, "franchiseId": "0013"},
-        {"id": "8271", "name": "Addai, Joseph", "salary": 7700000, "franchiseId": "0010"}
+        {
+          "id": "8658",
+          "name": "Peterson, Adrian",
+          "salary": 12012275,
+          "franchiseId": "0009"
+        },
+        {
+          "salary": 10015775
+        },
+        {
+          "salary": 9550000
+        },
+        {
+          "id": "7544",
+          "name": "Turner, Michael",
+          "salary": 8800000,
+          "franchiseId": "0008"
+        },
+        {
+          "id": "7877",
+          "name": "Gore, Frank",
+          "salary": 8800000,
+          "franchiseId": "0015"
+        },
+        {
+          "salary": 8197750
+        },
+        {
+          "id": "7816",
+          "name": "Benson, Cedric",
+          "salary": 7875000,
+          "franchiseId": "0013"
+        },
+        {
+          "id": "8271",
+          "name": "Addai, Joseph",
+          "salary": 7700000,
+          "franchiseId": "0010"
+        },
+        {
+          "salary": 6655000
+        },
+        {
+          "salary": 6500000
+        },
+        {
+          "salary": 6050000
+        },
+        {
+          "salary": 6000000
+        },
+        {
+          "salary": 5656750
+        },
+        {
+          "salary": 5500000
+        }
       ]
     },
     "TE": {
-      "totalPlayers": 37,
+      "totalPlayers": 15,
       "top3Average": 4074608.33,
       "top5Average": 3376465,
+      "starterAverage": 2613788.33,
+      "starterMedian": 2495625,
+      "starterCount": 18,
+      "averageSalary": 2613788.33,
+      "medianSalary": 2495625,
       "topPlayers": [
-        {"id": "7236", "name": "Gates, Antonio", "salary": 5423825, "franchiseId": "0010"},
-        {"id": "8339", "name": "Daniels, Owen", "salary": 4000000, "franchiseId": "0013"},
-        {"id": "6997", "name": "Witten, Jason", "salary": 2800000, "franchiseId": "0007"},
-        {"id": "7396", "name": "Winslow, Kellen", "salary": 2495625, "franchiseId": "0002"},
-        {"id": "7471", "name": "Cooley, Chris", "salary": 2162875, "franchiseId": "0007"}
+        {
+          "id": "7236",
+          "name": "Gates, Antonio",
+          "salary": 5423825,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "8339",
+          "name": "Daniels, Owen",
+          "salary": 4000000,
+          "franchiseId": "0013"
+        },
+        {
+          "salary": 3702600
+        },
+        {
+          "salary": 3666300
+        },
+        {
+          "salary": 2825000
+        },
+        {
+          "id": "6997",
+          "name": "Witten, Jason",
+          "salary": 2800000,
+          "franchiseId": "0007"
+        },
+        {
+          "salary": 2671725
+        },
+        {
+          "id": "7396",
+          "name": "Winslow, Kellen",
+          "salary": 2495625,
+          "franchiseId": "0002"
+        },
+        {
+          "salary": 2480500
+        },
+        {
+          "id": "7471",
+          "name": "Cooley, Chris",
+          "salary": 2162875,
+          "franchiseId": "0007"
+        },
+        {
+          "salary": 1650000
+        },
+        {
+          "salary": 1500000
+        },
+        {
+          "salary": 1497375
+        },
+        {
+          "salary": 1331000
+        },
+        {
+          "salary": 1000000
+        }
       ]
     },
     "QB": {
-      "totalPlayers": 39,
+      "totalPlayers": 15,
       "top3Average": 5799533.33,
       "top5Average": 5177350,
+      "starterAverage": 4186680.6,
+      "starterMedian": 4059550,
+      "starterCount": 16,
+      "averageSalary": 4186680.6,
+      "medianSalary": 4059550,
       "topPlayers": [
-        {"id": "5848", "name": "Brady, Tom", "salary": 6655000, "franchiseId": "0002"},
-        {"id": "4925", "name": "Brees, Drew", "salary": 6243600, "franchiseId": "0007"},
-        {"id": "3866", "name": "McNabb, Donovan", "salary": 4500000, "franchiseId": "0010"},
-        {"id": "7260", "name": "Romo, Tony", "salary": 4428600, "franchiseId": "0016"},
-        {"id": "7394", "name": "Rivers, Philip", "salary": 4059550, "franchiseId": "0004"}
+        {
+          "id": "5848",
+          "name": "Brady, Tom",
+          "salary": 6655000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "4925",
+          "name": "Brees, Drew",
+          "salary": 6243600,
+          "franchiseId": "0007"
+        },
+        {
+          "salary": 5500000
+        },
+        {
+          "salary": 5154600
+        },
+        {
+          "salary": 5000000
+        },
+        {
+          "id": "3866",
+          "name": "McNabb, Donovan",
+          "salary": 4500000,
+          "franchiseId": "0010"
+        },
+        {
+          "id": "7260",
+          "name": "Romo, Tony",
+          "salary": 4428600,
+          "franchiseId": "0016"
+        },
+        {
+          "id": "7394",
+          "name": "Rivers, Philip",
+          "salary": 4059550,
+          "franchiseId": "0004"
+        },
+        {
+          "salary": 4000317
+        },
+        {
+          "salary": 3850317
+        },
+        {
+          "salary": 3200000
+        },
+        {
+          "salary": 2800000
+        },
+        {
+          "salary": 2662000
+        },
+        {
+          "salary": 2628725
+        },
+        {
+          "salary": 2117500
+        }
       ]
     },
     "PK": {
-      "totalPlayers": 12,
+      "totalPlayers": 10,
       "top3Average": 700991.67,
       "top5Average": 667040,
+      "starterAverage": 600297.5,
+      "starterMedian": 602500,
+      "starterCount": 16,
+      "averageSalary": 600297.5,
+      "medianSalary": 602500,
       "topPlayers": [
-        {"id": "8742", "name": "Crosby, Mason", "salary": 775000, "franchiseId": "0010"},
-        {"id": "8074", "name": "Bironas, Rob", "salary": 695750, "franchiseId": "0012"},
-        {"id": "8359", "name": "Gostkowski, Stephen", "salary": 632225, "franchiseId": "0009"},
-        {"id": "9360", "name": "Hartley, Garrett", "salary": 600000, "franchiseId": "0003"}
-          ,{"id": "1383", "name": "Kasay, John", "salary": 425000, "franchiseId": "0009"}
-        ]
+        {
+          "id": "8742",
+          "name": "Crosby, Mason",
+          "salary": 775000,
+          "franchiseId": "0010"
+        },
+        {
+          "salary": 700000
+        },
+        {
+          "id": "8074",
+          "name": "Bironas, Rob",
+          "salary": 695750,
+          "franchiseId": "0012"
+        },
+        {
+          "id": "8359",
+          "name": "Gostkowski, Stephen",
+          "salary": 632225,
+          "franchiseId": "0009"
+        },
+        {
+          "salary": 605000
+        },
+        {
+          "id": "9360",
+          "name": "Hartley, Garrett",
+          "salary": 600000,
+          "franchiseId": "0003"
+        },
+        {
+          "salary": 570000
+        },
+        {
+          "salary": 550000
+        },
+        {
+          "salary": 450000
+        },
+        {
+          "id": "1383",
+          "name": "Kasay, John",
+          "salary": 425000,
+          "franchiseId": "0009"
+        }
+      ]
     }
   }
 }

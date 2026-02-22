@@ -13,14 +13,42 @@
     },
     "fetchedAt": "2025-11-22T08:35:14.699Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2025-11-22T08:35:14.702Z"
+    "generatedAt": "2025-11-22T08:35:14.702Z",
+    "backfilledFrom": "2012_tagged_salary_avg.xls",
+    "backfilledAt": "2026-02-22T19:49:20.917Z"
   },
   "positions": {
     "RB": {
-      "totalPlayers": 75,
+      "totalPlayers": 14,
       "top3Average": 6418333.33,
       "top5Average": 6040000,
+      "starterAverage": 7589505.86,
+      "starterMedian": 6902500,
+      "starterCount": 30,
+      "averageSalary": 7589505.86,
+      "medianSalary": 6902500,
       "topPlayers": [
+        {
+          "salary": 13213502
+        },
+        {
+          "salary": 9680000
+        },
+        {
+          "salary": 9200000
+        },
+        {
+          "salary": 8730580
+        },
+        {
+          "salary": 8680000
+        },
+        {
+          "salary": 8025000
+        },
+        {
+          "salary": 7150000
+        },
         {
           "id": "9101",
           "name": "Stewart, Jonathan",
@@ -40,6 +68,9 @@
           "franchiseId": "0014"
         },
         {
+          "salary": 6050000
+        },
+        {
           "id": "9851",
           "name": "Mathews, Ryan",
           "salary": 5500000,
@@ -50,14 +81,28 @@
           "name": "Wells, Beanie",
           "salary": 5445000,
           "franchiseId": "0010"
+        },
+        {
+          "salary": 5324000
         }
       ]
     },
     "WR": {
-      "totalPlayers": 95,
+      "totalPlayers": 16,
       "top3Average": 8366666.67,
       "top5Average": 7220000,
+      "starterAverage": 6658541.88,
+      "starterMedian": 6789707.5,
+      "starterCount": 48,
+      "averageSalary": 6658541.88,
+      "medianSalary": 6789707.5,
       "topPlayers": [
+        {
+          "salary": 12500000
+        },
+        {
+          "salary": 10300000
+        },
         {
           "id": "8657",
           "name": "Johnson, Calvin",
@@ -77,23 +122,55 @@
           "franchiseId": "0011"
         },
         {
+          "salary": 7869537
+        },
+        {
           "id": "7393",
           "name": "Fitzgerald, Larry",
           "salary": 7700000,
           "franchiseId": "0013"
         },
         {
+          "salary": 6807953
+        },
+        {
+          "salary": 6771462
+        },
+        {
+          "salary": 6200000
+        },
+        {
+          "salary": 5742218
+        },
+        {
+          "salary": 5025000
+        },
+        {
           "id": "9874",
           "name": "Ford, Jacoby",
           "salary": 3300000,
           "franchiseId": "0010"
+        },
+        {
+          "salary": 3135000
+        },
+        {
+          "salary": 3085500
+        },
+        {
+          "salary": 3000000
         }
       ]
     },
     "TE": {
-      "totalPlayers": 40,
+      "totalPlayers": 15,
       "top3Average": 5260000,
       "top5Average": 3753820,
+      "starterAverage": 2872960.8,
+      "starterMedian": 1525000,
+      "starterCount": 18,
+      "averageSalary": 2872960.8,
+      "medianSalary": 1525000,
       "topPlayers": [
         {
           "id": "8247",
@@ -102,10 +179,22 @@
           "franchiseId": "0003"
         },
         {
+          "salary": 9025000
+        },
+        {
+          "salary": 4400000
+        },
+        {
           "id": "6997",
           "name": "Witten, Jason",
           "salary": 3080000,
           "franchiseId": "0008"
+        },
+        {
+          "salary": 2745187
+        },
+        {
+          "salary": 2500000
         },
         {
           "id": "7019",
@@ -124,14 +213,46 @@
           "name": "Clark, Dallas",
           "salary": 1464100,
           "franchiseId": "0008"
+        },
+        {
+          "salary": 1125000
+        },
+        {
+          "salary": 1000000
+        },
+        {
+          "salary": 931700
+        },
+        {
+          "salary": 898425
+        },
+        {
+          "salary": 875000
+        },
+        {
+          "salary": 825000
         }
       ]
     },
     "PK": {
-      "totalPlayers": 12,
+      "totalPlayers": 9,
       "top3Average": 508333.33,
       "top5Average": 488500,
+      "starterAverage": 531966.44,
+      "starterMedian": 500000,
+      "starterCount": 16,
+      "averageSalary": 531966.44,
+      "medianSalary": 500000,
       "topPlayers": [
+        {
+          "salary": 675000
+        },
+        {
+          "salary": 650000
+        },
+        {
+          "salary": 545198
+        },
         {
           "id": "8074",
           "name": "Bironas, Rob",
@@ -151,6 +272,9 @@
           "franchiseId": "0011"
         },
         {
+          "salary": 475000
+        },
+        {
           "id": "1275",
           "name": "Hanson, Jason",
           "salary": 467500,
@@ -165,10 +289,21 @@
       ]
     },
     "Def": {
-      "totalPlayers": 21,
+      "totalPlayers": 13,
       "top3Average": 830603.33,
       "top5Average": 788362,
+      "starterAverage": 735696.31,
+      "starterMedian": 700000,
+      "starterCount": 16,
+      "averageSalary": 735696.31,
+      "medianSalary": 700000,
       "topPlayers": [
+        {
+          "salary": 1075000
+        },
+        {
+          "salary": 1050000
+        },
         {
           "id": "0521",
           "name": "Bears, Chicago",
@@ -198,14 +333,40 @@
           "name": "Eagles, Philadelphia",
           "salary": 700000,
           "franchiseId": "0012"
+        },
+        {
+          "salary": 625000
+        },
+        {
+          "salary": 622242
+        },
+        {
+          "salary": 600000
+        },
+        {
+          "salary": 575000
+        },
+        {
+          "salary": 550000
+        },
+        {
+          "salary": 525000
         }
       ]
     },
     "QB": {
-      "totalPlayers": 45,
+      "totalPlayers": 16,
       "top3Average": 6567653.33,
       "top5Average": 5808501.34,
+      "starterAverage": 4382947.61,
+      "starterMedian": 4669773.35,
+      "starterCount": 16,
+      "averageSalary": 4382947.61,
+      "medianSalary": 4669773.35,
       "topPlayers": [
+        {
+          "salary": 7860000
+        },
         {
           "id": "4925",
           "name": "Brees, Drew",
@@ -225,6 +386,15 @@
           "franchiseId": "0015"
         },
         {
+          "salary": 5550000
+        },
+        {
+          "salary": 5250000
+        },
+        {
+          "salary": 5000000
+        },
+        {
           "id": "7394",
           "name": "Rivers, Philip",
           "salary": 4939198,
@@ -235,6 +405,27 @@
           "name": "Manning, Eli",
           "salary": 4400348.7,
           "franchiseId": "0009"
+        },
+        {
+          "salary": 4400348
+        },
+        {
+          "salary": 3770057
+        },
+        {
+          "salary": 2775000
+        },
+        {
+          "salary": 2329250
+        },
+        {
+          "salary": 1575000
+        },
+        {
+          "salary": 1300000
+        },
+        {
+          "salary": 1275000
         }
       ]
     }
