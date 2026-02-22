@@ -13,14 +13,24 @@
     },
     "fetchedAt": "2025-11-17T07:22:39.407Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2025-11-17T07:22:39.409Z"
+    "generatedAt": "2025-11-17T07:22:39.409Z",
+    "backfilledFrom": "2014_tagged_salary_avg(1).xls",
+    "backfilledAt": "2026-02-22T19:49:20.920Z"
   },
   "positions": {
     "RB": {
-      "totalPlayers": 84,
+      "totalPlayers": 15,
       "top3Average": 10028387.67,
       "top5Average": 9135532.6,
+      "starterAverage": 7999895.87,
+      "starterMedian": 7727500,
+      "starterCount": 30,
+      "averageSalary": 7999895.87,
+      "medianSalary": 7727500,
       "topPlayers": [
+        {
+          "salary": 13775000
+        },
         {
           "id": "9054",
           "name": "Charles, Jamaal",
@@ -32,6 +42,9 @@
           "name": "Johnson, Chris",
           "salary": 9950000,
           "franchiseId": "0005"
+        },
+        {
+          "salary": 9900000
         },
         {
           "id": "9094",
@@ -46,23 +59,55 @@
           "franchiseId": "0015"
         },
         {
+          "salary": 7750000
+        },
+        {
           "id": "7877",
           "name": "Gore, Frank",
           "salary": 7727500,
           "franchiseId": "0004"
+        },
+        {
+          "salary": 7700000
+        },
+        {
+          "salary": 7025000
+        },
+        {
+          "salary": 6655000
+        },
+        {
+          "salary": 6000000
+        },
+        {
+          "salary": 5500000
+        },
+        {
+          "salary": 5357275
+        },
+        {
+          "salary": 4658500
         }
       ]
     },
     "WR": {
-      "totalPlayers": 121,
+      "totalPlayers": 14,
       "top3Average": 9442666.67,
       "top5Average": 8605600,
+      "starterAverage": 6928846.43,
+      "starterMedian": 6951250,
+      "starterCount": 48,
+      "averageSalary": 6928846.43,
+      "medianSalary": 6951250,
       "topPlayers": [
         {
           "id": "8657",
           "name": "Johnson, Calvin",
           "salary": 11011000,
           "franchiseId": "0012"
+        },
+        {
+          "salary": 9680000
         },
         {
           "id": "7393",
@@ -83,17 +128,46 @@
           "franchiseId": "0002"
         },
         {
+          "salary": 7250000
+        },
+        {
           "id": "9118",
           "name": "Nelson, Jordy",
           "salary": 7000000,
           "franchiseId": "0009"
+        },
+        {
+          "salary": 6902500
+        },
+        {
+          "salary": 6600000
+        },
+        {
+          "salary": 6250000
+        },
+        {
+          "salary": 5000000
+        },
+        {
+          "salary": 4500000
+        },
+        {
+          "salary": 4000000
+        },
+        {
+          "salary": 3793350
         }
       ]
     },
     "TE": {
-      "totalPlayers": 60,
+      "totalPlayers": 14,
       "top3Average": 6446866.67,
       "top5Average": 4993120,
+      "starterAverage": 2739251.64,
+      "starterMedian": 1775125,
+      "starterCount": 18,
+      "averageSalary": 2739251.64,
+      "medianSalary": 1775125,
       "topPlayers": [
         {
           "id": "2918",
@@ -120,17 +194,49 @@
           "franchiseId": "0004"
         },
         {
+          "salary": 2213673
+        },
+        {
           "id": "9044",
           "name": "Bennett, Martellus",
           "salary": 2200000,
           "franchiseId": "0007"
+        },
+        {
+          "salary": 1845250
+        },
+        {
+          "salary": 1705000
+        },
+        {
+          "salary": 1525000
+        },
+        {
+          "salary": 1400000
+        },
+        {
+          "salary": 1361250
+        },
+        {
+          "salary": 1300000
+        },
+        {
+          "salary": 1058750
+        },
+        {
+          "salary": 975000
         }
       ]
     },
     "QB": {
-      "totalPlayers": 44,
+      "totalPlayers": 15,
       "top3Average": 11362980.33,
       "top5Average": 9302226.6,
+      "starterAverage": 5410408.87,
+      "starterMedian": 4000000,
+      "starterCount": 16,
+      "averageSalary": 5410408.87,
+      "medianSalary": 4000000,
       "topPlayers": [
         {
           "id": "5848",
@@ -161,14 +267,52 @@
           "name": "Ryan, Matt",
           "salary": 5657192,
           "franchiseId": "0014"
+        },
+        {
+          "salary": 5500000
+        },
+        {
+          "salary": 4275000
+        },
+        {
+          "salary": 4000000
+        },
+        {
+          "salary": 3850000
+        },
+        {
+          "salary": 3630000
+        },
+        {
+          "salary": 3025000
+        },
+        {
+          "salary": 3000000
+        },
+        {
+          "salary": 2860000
+        },
+        {
+          "salary": 2255000
+        },
+        {
+          "salary": 2250000
         }
       ]
     },
     "PK": {
-      "totalPlayers": 20,
+      "totalPlayers": 11,
       "top3Average": 670000,
       "top5Average": 631900,
+      "starterAverage": 572863.64,
+      "starterMedian": 544500,
+      "starterCount": 16,
+      "averageSalary": 572863.64,
+      "medianSalary": 544500,
       "topPlayers": [
+        {
+          "salary": 715000
+        },
         {
           "id": "10976",
           "name": "Tucker, Justin",
@@ -194,18 +338,41 @@
           "franchiseId": "0016"
         },
         {
+          "salary": 544500
+        },
+        {
+          "salary": 540000
+        },
+        {
           "id": "10365",
           "name": "Henery, Alex",
           "salary": 514250,
           "franchiseId": "0008"
+        },
+        {
+          "salary": 467500
+        },
+        {
+          "salary": 450000
+        },
+        {
+          "salary": 425000
         }
       ]
     },
     "Def": {
-      "totalPlayers": 21,
+      "totalPlayers": 13,
       "top3Average": 916666.67,
       "top5Average": 808100,
+      "starterAverage": 789803.85,
+      "starterMedian": 750000,
+      "starterCount": 16,
+      "averageSalary": 789803.85,
+      "medianSalary": 750000,
       "topPlayers": [
+        {
+          "salary": 1296000
+        },
         {
           "id": "0511",
           "name": "Broncos, Denver",
@@ -217,6 +384,15 @@
           "name": "Seahawks, Seattle",
           "salary": 1000000,
           "franchiseId": "0012"
+        },
+        {
+          "salary": 900000
+        },
+        {
+          "salary": 880000
+        },
+        {
+          "salary": 852500
         },
         {
           "id": "0517",
@@ -235,6 +411,18 @@
           "name": "Packers, Green Bay",
           "salary": 625000,
           "franchiseId": "0002"
+        },
+        {
+          "salary": 605000
+        },
+        {
+          "salary": 598950
+        },
+        {
+          "salary": 550000
+        },
+        {
+          "salary": 544500
         }
       ]
     }

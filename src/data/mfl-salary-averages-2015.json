@@ -13,13 +13,20 @@
     },
     "fetchedAt": "2025-11-17T07:21:15.589Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2025-11-17T07:21:15.590Z"
+    "generatedAt": "2025-11-17T07:21:15.590Z",
+    "backfilledFrom": "2016_tagged_salary_avg(1).xls",
+    "backfilledAt": "2026-02-22T19:49:20.922Z"
   },
   "positions": {
     "TE": {
-      "totalPlayers": 42,
+      "totalPlayers": 20,
       "top3Average": 5073611,
       "top5Average": 4320166.6,
+      "starterAverage": 2515885.83,
+      "starterMedian": 2087500,
+      "starterCount": 18,
+      "averageSalary": 2338047.25,
+      "medianSalary": 1922625,
       "topPlayers": [
         {
           "id": "9902",
@@ -32,6 +39,9 @@
           "name": "Graham, Jimmy",
           "salary": 4893333,
           "franchiseId": "0010"
+        },
+        {
+          "salary": 3500000
         },
         {
           "id": "9474",
@@ -50,19 +60,87 @@
           "name": "Walker, Delanie",
           "salary": 3080000,
           "franchiseId": "0004"
+        },
+        {
+          "salary": 2904000
+        },
+        {
+          "salary": 2500000
+        },
+        {
+          "salary": 2175000
+        },
+        {
+          "salary": 2000000
+        },
+        {
+          "salary": 1845250
+        },
+        {
+          "salary": 1647112
+        },
+        {
+          "salary": 1575000
+        },
+        {
+          "salary": 1500000
+        },
+        {
+          "salary": 1179750
+        },
+        {
+          "salary": 1072500
+        },
+        {
+          "salary": 1000000
+        },
+        {
+          "salary": 786500
+        },
+        {
+          "salary": 750000
+        },
+        {
+          "salary": 725000
         }
       ]
     },
     "WR": {
-      "totalPlayers": 107,
+      "totalPlayers": 18,
       "top3Average": 4724228.33,
       "top5Average": 4384737,
+      "starterAverage": 5807618.89,
+      "starterMedian": 4086342.5,
+      "starterCount": 48,
+      "averageSalary": 5807618.89,
+      "medianSalary": 4086342.5,
       "topPlayers": [
+        {
+          "salary": 16500000
+        },
+        {
+          "salary": 10500000
+        },
+        {
+          "salary": 10250000
+        },
+        {
+          "salary": 9100000
+        },
+        {
+          "salary": 8000000
+        },
+        {
+          "salary": 5500000
+        },
         {
           "id": "10080",
           "name": "Cruz, Victor",
           "salary": 5000000,
           "franchiseId": "0015"
+        },
+        {
+          "salary": 4840000
         },
         {
           "id": "10271",
@@ -77,29 +155,70 @@
           "franchiseId": "0002"
         },
         {
+          "salary": 3850000
+        },
+        {
           "id": "11213",
           "name": "Austin, Tavon",
           "salary": 3751000,
           "franchiseId": "0004"
         },
         {
+          "salary": 3733455
+        },
+        {
+          "salary": 3525000
+        },
+        {
+          "salary": 3410000
+        },
+        {
           "id": "7393",
           "name": "Fitzgerald, Larry",
           "salary": 3000000,
           "franchiseId": "0002"
+        },
+        {
+          "salary": 2805000
+        },
+        {
+          "salary": 2600000
         }
       ]
     },
     "PK": {
-      "totalPlayers": 11,
+      "totalPlayers": 13,
       "top3Average": 531391.67,
       "top5Average": 513835,
+      "starterAverage": 551975,
+      "starterMedian": 525000,
+      "starterCount": 16,
+      "averageSalary": 551975,
+      "medianSalary": 525000,
       "topPlayers": [
+        {
+          "salary": 847000
+        },
+        {
+          "salary": 660000
+        },
+        {
+          "salary": 605000
+        },
         {
           "id": "10872",
           "name": "Walsh, Blair",
           "salary": 565675,
           "franchiseId": "0016"
+        },
+        {
+          "salary": 550000
+        },
+        {
+          "salary": 544500
+        },
+        {
+          "salary": 525000
         },
         {
           "id": "8851",
@@ -124,13 +243,24 @@
           "name": "McManus, Brandon",
           "salary": 475000,
           "franchiseId": "0008"
+        },
+        {
+          "salary": 450000
+        },
+        {
+          "salary": 425000
         }
       ]
     },
     "Def": {
-      "totalPlayers": 14,
+      "totalPlayers": 16,
       "top3Average": 1210000,
       "top5Average": 1079577.6,
+      "starterAverage": 821807.06,
+      "starterMedian": 732500,
+      "starterCount": 16,
+      "averageSalary": 821807.06,
+      "medianSalary": 732500,
       "topPlayers": [
         {
           "id": "0511",
@@ -157,17 +287,55 @@
           "franchiseId": "0007"
         },
         {
+          "salary": 1025000
+        },
+        {
+          "salary": 907500
+        },
+        {
+          "salary": 868775
+        },
+        {
+          "salary": 750000
+        },
+        {
+          "salary": 715000
+        },
+        {
           "id": "0519",
           "name": "Cardinals, Arizona",
           "salary": 692888,
           "franchiseId": "0011"
+        },
+        {
+          "salary": 665500
+        },
+        {
+          "salary": 625000
+        },
+        {
+          "salary": 605000
+        },
+        {
+          "salary": 550000
+        },
+        {
+          "salary": 525000
+        },
+        {
+          "salary": 514250
         }
       ]
     },
     "QB": {
-      "totalPlayers": 32,
+      "totalPlayers": 17,
       "top3Average": 8214250,
       "top5Average": 6178550,
+      "starterAverage": 4975550,
+      "starterMedian": 4212500,
+      "starterCount": 16,
+      "averageSalary": 4725932.35,
+      "medianSalary": 4025000,
       "topPlayers": [
         {
           "id": "7836",
@@ -176,16 +344,37 @@
           "franchiseId": "0012"
         },
         {
+          "salary": 9900000
+        },
+        {
+          "salary": 8525000
+        },
+        {
           "id": "5848",
           "name": "Brady, Tom",
           "salary": 6600000,
           "franchiseId": "0001"
         },
         {
+          "salary": 5720000
+        },
+        {
+          "salary": 4840000
+        },
+        {
+          "salary": 4525000
+        },
+        {
           "id": "7260",
           "name": "Romo, Tony",
           "salary": 4400000,
           "franchiseId": "0015"
+        },
+        {
+          "salary": 4025000
+        },
+        {
+          "salary": 3630000
         },
         {
           "id": "7813",
@@ -198,19 +387,57 @@
           "name": "Palmer, Carson",
           "salary": 2750000,
           "franchiseId": "0016"
+        },
+        {
+          "salary": 2728550
+        },
+        {
+          "salary": 2722500
+        },
+        {
+          "salary": 1100000
+        },
+        {
+          "salary": 1000000
+        },
+        {
+          "salary": 732050
         }
       ]
     },
     "RB": {
-      "totalPlayers": 78,
+      "totalPlayers": 20,
       "top3Average": 5736666.67,
       "top5Average": 5257000,
+      "starterAverage": 5723806.25,
+      "starterMedian": 4537500,
+      "starterCount": 30,
+      "averageSalary": 5723806.25,
+      "medianSalary": 4537500,
       "topPlayers": [
+        {
+          "salary": 15025000
+        },
+        {
+          "salary": 10381800
+        },
+        {
+          "salary": 10120000
+        },
+        {
+          "salary": 9250000
+        },
+        {
+          "salary": 6820000
+        },
         {
           "id": "8658",
           "name": "Peterson, Adrian",
           "salary": 6765000,
           "franchiseId": "0012"
+        },
+        {
+          "salary": 6000000
         },
         {
           "id": "11193",
@@ -235,6 +462,33 @@
           "name": "Bell, Le'Veon",
           "salary": 4537500,
           "franchiseId": "0006"
+        },
+        {
+          "salary": 4500000
+        },
+        {
+          "salary": 4425575
+        },
+        {
+          "salary": 3850000
+        },
+        {
+          "salary": 3500000
+        },
+        {
+          "salary": 3425000
+        },
+        {
+          "salary": 3100000
+        },
+        {
+          "salary": 3025000
+        },
+        {
+          "salary": 2500000
+        },
+        {
+          "salary": 2268750
         }
       ]
     }
