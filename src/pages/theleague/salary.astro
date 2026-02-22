@@ -162,6 +162,9 @@ const serializedConfig = JSON.stringify({
             <option value="season">Season Total</option>
           </select>
         </label>
+        <button type="button" id="exportXlsxBtn" class="salary-export-btn">
+          Export to Excel
+        </button>
       </div>
       <p>
         League {currentSummary?.metadata?.leagueId ?? 'Unknown'} &middot; Season{' '}
@@ -311,6 +314,22 @@ const serializedConfig = JSON.stringify({
     border: 1px solid #ccd3df;
     border-radius: 0.5rem;
     font-size: 1rem;
+  }
+
+  .salary-export-btn {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid #ccd3df;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: var(--primary-color, #1c497c);
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .salary-export-btn:hover {
+    opacity: 0.85;
   }
 
   .salary-report__grid {
@@ -669,3 +688,5 @@ const serializedConfig = JSON.stringify({
     });
   }
 </script>
+
+<script src="../../scripts/salary-export-handler.ts"></script>
