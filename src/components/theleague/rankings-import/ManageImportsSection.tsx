@@ -94,6 +94,9 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         </svg>
         Saved Rankings
       </h2>
+      <p className="ri-section__note">
+        Drag to reorder. Your #1 ranking is used as the primary ranking on pages that only show one. All rankings appear as columns on the Free Agents page.
+      </p>
 
       {imports.length === 0 ? (
         <p className="ri-section__empty">No rankings imported yet. Use a bookmarklet above to get started.</p>
@@ -104,6 +107,7 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
               <thead>
                 <tr>
                   <th className="ri-manage__drag-col" aria-label="Reorder"></th>
+                  <th className="ri-manage__order-col">#</th>
                   <th>Source</th>
                   <th>Type</th>
                   <th>Date</th>
@@ -114,13 +118,14 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
               </thead>
               <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
-                  {items.map((item) =>
+                  {items.map((item, idx) =>
                     item.kind === 'average' ? (
-                      <AverageRow key={AVERAGE_IMPORT_ID} imports={imports} />
+                      <AverageRow key={AVERAGE_IMPORT_ID} imports={imports} order={idx + 1} />
                     ) : (
                       <SortableRow
                         key={item.id}
                         imp={item.data}
+                        order={idx + 1}
                         onView={setSelectedImport}
                         onDelete={setDeleteTarget}
                       />
@@ -157,9 +162,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
 
 interface AverageRowProps {
   imports: StoredRankingImport[];
+  order: number;
 }
 
-function AverageRow({ imports }: AverageRowProps) {
+function AverageRow({ imports, order }: AverageRowProps) {
   const {
     attributes,
     listeners,
@@ -198,6 +204,7 @@ function AverageRow({ imports }: AverageRowProps) {
           <circle cx="15" cy="19" r="1.5" />
         </svg>
       </td>
+      <td className="ri-manage__order">{order}</td>
       <td className="ri-manage__source">Average Rank</td>
       <td>
         <span className="ri-manage__type ri-manage__type--overall">computed</span>
@@ -216,11 +223,12 @@ function AverageRow({ imports }: AverageRowProps) {
 
 interface SortableRowProps {
   imp: StoredRankingImport;
+  order: number;
   onView: (imp: StoredRankingImport) => void;
   onDelete: (imp: StoredRankingImport) => void;
 }
 
-function SortableRow({ imp, onView, onDelete }: SortableRowProps) {
+function SortableRow({ imp, order, onView, onDelete }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -248,6 +256,7 @@ function SortableRow({ imp, onView, onDelete }: SortableRowProps) {
           <circle cx="15" cy="19" r="1.5" />
         </svg>
       </td>
+      <td className="ri-manage__order">{order}</td>
       <td className="ri-manage__source">{SOURCE_LABELS[imp.source] || imp.source}</td>
       <td>
         <span className={`ri-manage__type ri-manage__type--${imp.type}`}>

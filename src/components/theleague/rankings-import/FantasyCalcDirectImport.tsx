@@ -1,13 +1,10 @@
 import { useState, useCallback } from 'react';
-import { parseBookmarkletJson } from '../../../utils/bookmarklet-json-parser';
-import { matchPlayerToMFL } from '../../../utils/rankings-importer';
 import { saveImport, findDuplicateImport } from '../../../utils/rankings-storage';
 import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
 import type {
   MFLPlayerForMatching,
   StoredRankingImport,
   StoredRankingEntry,
-  BookmarkletOutput,
 } from '../../../types/rankings-import';
 
 interface Props {
@@ -22,11 +19,10 @@ interface ImportResult {
   unmatchedNames?: string[];
 }
 
-const SLEEPER_API_URL = 'https://api.sleeper.app/v1/players/nfl';
-const VALID_POSITIONS: Record<string, number> = { QB: 1, RB: 1, WR: 1, TE: 1, K: 1, DEF: 1 };
-const TOP_N = 500;
+const FANTASY_CALC_API_URL = 'https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1&numTeams=12&ppr=1';
+const VALID_POSITIONS: Record<string, number> = { QB: 1, RB: 1, WR: 1, TE: 1 };
 
-export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Props) {
+export default function FantasyCalcDirectImport({ mflPlayers, onImportComplete }: Props) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -35,60 +31,34 @@ export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Pr
     setResult(null);
 
     try {
-      const response = await fetch(SLEEPER_API_URL);
+      const response = await fetch(FANTASY_CALC_API_URL);
       if (!response.ok) {
-        throw new Error(`Sleeper API returned ${response.status}`);
+        throw new Error(`FantasyCalc API returned ${response.status}`);
       }
-      const data = await response.json();
+      const data: any[] = await response.json();
 
-      // Filter & sort — mirrors bookmarklet logic
-      const entries = Object.values(data)
-        .filter((p: any) => p.active && VALID_POSITIONS[p.position] && p.search_rank && p.search_rank < 9999)
-        .sort((a: any, b: any) => (a.search_rank || 9999) - (b.search_rank || 9999))
-        .slice(0, TOP_N);
+      // Build MFL player lookup by ID for direct matching
+      const mflById = new Map(mflPlayers.map((p) => [p.id, p]));
 
-      const players = (entries as any[]).map((p, idx) => ({
-        rank: idx + 1,
-        name: `${p.first_name} ${p.last_name}`.trim(),
-        pos: p.position as string,
-        team: (p.team || '') as string,
-      }));
+      // Filter to valid fantasy positions and map to rankings
+      const filtered = data.filter(
+        (entry) => entry.player?.position && VALID_POSITIONS[entry.player.position],
+      );
 
-      const bookmarkletJson = JSON.stringify({
-        source: 'sleeper',
-        type: 'adp',
-        exportedAt: new Date().toISOString(),
-        players,
-        metadata: { pageUrl: SLEEPER_API_URL },
-      });
+      const rankings: StoredRankingEntry[] = filtered.map((entry) => {
+        const player = entry.player;
+        const mflId = player.mflId || null;
+        const mflPlayer = mflId ? mflById.get(mflId) : null;
 
-      // Parse through the same pipeline as bookmarklet imports
-      const parsed = parseBookmarkletJson(bookmarkletJson);
-      if (!parsed.success || !parsed.data) {
-        setResult({ success: false, message: parsed.error || 'Parse failed.' });
-        return;
-      }
-
-      const parsedData: BookmarkletOutput = parsed.data;
-      const type = parsedData.type !== 'overall' && parsedData.type !== undefined
-        ? parsedData.type
-        : 'adp';
-
-      const rankings: StoredRankingEntry[] = parsedData.players.map((p) => {
-        const match = matchPlayerToMFL(
-          p.name,
-          p.pos,
-          mflPlayers.map((m) => ({ id: m.id, name: m.name, position: m.position, team: m.team })),
-        );
         return {
-          rank: p.rank,
-          playerId: match.playerId,
-          playerName: p.name,
-          position: p.pos,
-          team: p.team || '',
-          matched: match.matched,
-          confidence: match.confidence,
-          tier: p.tier,
+          rank: entry.overallRank,
+          playerId: mflPlayer ? mflId : null,
+          playerName: player.name || '',
+          position: player.position || '',
+          team: player.maybeTeam || '',
+          matched: !!mflPlayer,
+          confidence: mflPlayer ? 1 : 0,
+          tier: entry.maybeTier,
         };
       });
 
@@ -97,12 +67,14 @@ export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Pr
       const unmatched = total - matched;
       const matchRate = total > 0 ? Math.round((matched / total) * 1000) / 10 : 0;
 
-      const existing = findDuplicateImport(parsedData.source, type);
+      const source = 'fantasycalc' as const;
+      const type = 'dynasty' as const;
+      const existing = findDuplicateImport(source, type);
       const replaced = !!existing;
 
       const importData: StoredRankingImport = {
         id: replaced ? existing!.id : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        source: parsedData.source,
+        source,
         type,
         importDate: new Date().toISOString(),
         rankings,
@@ -117,7 +89,7 @@ export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Pr
         .slice(0, 10)
         .map((r) => `${r.playerName} (${r.position})`);
 
-      const sourceName = SOURCE_LABELS[parsedData.source] || parsedData.source;
+      const sourceName = SOURCE_LABELS[source];
       const replaceNote = replaced ? ` (replaced previous ${sourceName} ${type} import)` : '';
       setResult({
         success: true,
@@ -135,14 +107,14 @@ export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Pr
   return (
     <div className="bm-card ri-direct-card">
       <div className="bm-card__header">
-        <span className="bm-card__name">Sleeper</span>
+        <span className="bm-card__name">FantasyCalc</span>
         <div className="bm-card__badges">
           <span className="bm-card__badge ri-direct-card__badge">Easiest</span>
-          <span className="bm-card__badge bm-card__badge--adp">ADP</span>
+          <span className="bm-card__badge bm-card__badge--dynasty">Dynasty</span>
         </div>
       </div>
       <p className="bm-card__desc">
-        Top-500 player rankings by ADP from the Sleeper API. One click — no bookmarklet needed.
+        Dynasty trade values from nearly 1 million real fantasy trades. One click — no bookmarklet needed.
       </p>
       <button
         type="button"
@@ -150,7 +122,7 @@ export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Pr
         onClick={handleImport}
         disabled={importing}
       >
-        {importing ? 'Importing...' : 'Import Sleeper ADP'}
+        {importing ? 'Importing...' : 'Import FantasyCalc Dynasty'}
       </button>
 
       {result && (

@@ -14,6 +14,7 @@ export type RankingSourceId =
   | 'fantasypros'
   | 'cbs'
   | 'sleeper'
+  | 'fantasycalc'
   | 'keeptradecut'
   | 'dlf'
   | 'yahoo'
