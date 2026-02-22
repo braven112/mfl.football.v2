@@ -32,42 +32,49 @@
       }
     }
 
-    var rows = document.querySelectorAll('.single-ranking');
-    if (!rows || rows.length === 0) {
-      alert('No KeepTradeCut rankings found.\nMake sure you are on the KTC dynasty rankings page.');
+    // Read from the playersArray JS variable embedded in the page.
+    // This contains ALL dynasty-ranked players — no pagination needed.
+    var arr = typeof playersArray !== 'undefined' ? playersArray : null;
+
+    if (!arr || !Array.isArray(arr) || arr.length === 0) {
+      alert('No KeepTradeCut player data found.\nMake sure you are on the KTC dynasty rankings page.');
       return;
     }
 
+    // Determine format from URL: superflex vs 1QB
+    var isSuperFlex = location.search.indexOf('format=2') > -1 ||
+                      location.search.indexOf('format=superflex') > -1;
+
+    var validPos = { QB: 1, RB: 1, WR: 1, TE: 1 };
     var players = [];
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
-      var rankEl = row.querySelector('.rank-number');
-      var nameEl = row.querySelector('.player-name a');
-      var teamEl = row.querySelector('.player-name .player-team');
-      var posEl = row.querySelector('.position-team .position');
 
-      if (!nameEl) continue;
+    for (var i = 0; i < arr.length; i++) {
+      var p = arr[i];
+      if (!p.playerName || !p.position) continue;
 
-      var rank = rankEl ? parseInt(rankEl.textContent.trim(), 10) : players.length + 1;
-      var name = nameEl.textContent.trim();
-      var team = teamEl ? teamEl.textContent.trim() : '';
+      var pos = p.position.toUpperCase();
+      // Skip draft picks (position "PI" or similar) and non-fantasy positions
+      if (!validPos[pos]) continue;
 
-      // Position comes as "RB1", "WR3" etc — strip the number
-      var posText = posEl ? posEl.textContent.trim() : '';
-      var pos = posText.replace(/\d+/g, '');
+      var vals = isSuperFlex ? p.superflexValues : p.oneQBValues;
+      if (!vals || !vals.rank) continue;
 
-      players.push({ rank: rank, name: name, pos: pos, team: team });
+      players.push({
+        rank: vals.rank,
+        name: p.playerName,
+        pos: pos,
+        team: (p.team || '').toUpperCase(),
+        tier: vals.overallTier || undefined
+      });
     }
+
+    // Sort by rank to ensure correct order
+    players.sort(function (a, b) { return a.rank - b.rank; });
 
     if (players.length === 0) {
-      alert('Could not extract any players from the page.');
+      alert('Could not extract any players from the page data.');
       return;
     }
-
-    // Note: KTC paginates 50 at a time. Let user know.
-    var note = players.length < 100
-      ? '\nNote: KTC shows 50 players per page. Navigate to the next page and run again to get more.'
-      : '';
 
     var output = JSON.stringify({
       source: 'keeptradecut',
@@ -79,7 +86,7 @@
 
     if (!transferToImportPage(output, 'keeptradecut', players.length)) {
       alert(
-        'KTC rankings extracted (' + players.length + ' players), but transfer failed.' + note + '\n' +
+        'KTC rankings extracted (' + players.length + ' players), but transfer failed.\n' +
         'Allow popups for this page and run the bookmarklet again.'
       );
     }
