@@ -33,6 +33,10 @@ export interface WhatsNewEntry {
   pinToHero?: boolean;
   /** Override: never auto-promote to hero (for minor updates) */
   excludeFromHero?: boolean;
+  /** Optional screenshot filename relative to /assets/whats-new/ (e.g., "trade-builder.webp") */
+  image?: string;
+  /** Alt text for the screenshot image (required when image is provided) */
+  imageAlt?: string;
 }
 
 /** Hero content source type */

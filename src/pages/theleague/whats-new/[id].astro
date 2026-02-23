@@ -1,0 +1,341 @@
+---
+/**
+ * What's New Detail Page
+ *
+ * Individual blog-post page for each What's New entry. Statically generated
+ * via getStaticPaths(). Shows full description, optional hero image with
+ * icon fallback, category badge, date, CTA link, and prev/next navigation.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import type { WhatsNewEntry } from '../../../types/whats-new';
+import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
+import entries from '../../../data/whats-new.json';
+import {
+  sortEntriesNewestFirst,
+  formatEntryDate,
+  getAdjacentEntries,
+} from '../../../utils/whats-new-helpers';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
+  return sorted.map((entry) => {
+    const { prev, next } = getAdjacentEntries(sorted, entry.id);
+    return {
+      params: { id: entry.id },
+      props: { entry, prev, next },
+    };
+  });
+}
+
+interface Props {
+  entry: WhatsNewEntry;
+  prev: WhatsNewEntry | null;
+  next: WhatsNewEntry | null;
+}
+
+const { entry, prev, next } = Astro.props;
+const MULTICOLOR_ICONS = ['nfl'];
+const iconId = entry.icon ? `icon-${entry.icon}` : null;
+const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
+const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
+---
+
+<TheLeagueLayout title={`${entry.title} - What's New`}>
+  <main class="wn-detail">
+    <a href="/theleague/whats-new" class="wn-detail__back">
+      <span aria-hidden="true">&larr;</span> Back to What's New
+    </a>
+
+    <article class="wn-detail__article">
+      <div class="wn-detail__meta">
+        <span class={`wn-detail__badge wn-detail__badge--${entry.category}`}>
+          {WHATS_NEW_CATEGORY_LABELS[entry.category]}
+        </span>
+        <time class="wn-detail__date" datetime={entry.date}>
+          {formatEntryDate(entry.date)}
+        </time>
+      </div>
+
+      {imagePath ? (
+        <div class="wn-detail__hero">
+          <img
+            src={imagePath}
+            alt={entry.imageAlt || entry.title}
+            class="wn-detail__hero-img"
+            loading="eager"
+          />
+        </div>
+      ) : iconId ? (
+        <div class={`wn-detail__hero wn-detail__hero--fallback wn-detail__hero--${entry.category}`}>
+          <svg
+            class={`wn-detail__hero-icon${isMulticolor ? ' wn-detail__hero-icon--multicolor' : ''}`}
+            aria-hidden="true"
+          >
+            <use href={`/assets/icons/sprite.svg#${iconId}`} />
+          </svg>
+        </div>
+      ) : null}
+
+      <h1 class="wn-detail__title">{entry.title}</h1>
+
+      <div class="wn-detail__body">
+        {entry.description.map((para) => (
+          <p>{para}</p>
+        ))}
+      </div>
+
+      {entry.link && (
+        <div class="wn-detail__cta">
+          <a href={entry.link} class="wn-detail__cta-link">
+            {entry.linkLabel ?? 'Check it out'}
+            <span class="wn-detail__cta-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      )}
+    </article>
+
+    <nav class="wn-detail__nav" aria-label="Previous and next entries">
+      {prev ? (
+        <a href={`/theleague/whats-new/${prev.id}`} class="wn-detail__nav-link wn-detail__nav-link--prev">
+          <span class="wn-detail__nav-dir">&larr; Newer</span>
+          <span class="wn-detail__nav-title">{prev.title}</span>
+        </a>
+      ) : (
+        <span />
+      )}
+      {next && (
+        <a href={`/theleague/whats-new/${next.id}`} class="wn-detail__nav-link wn-detail__nav-link--next">
+          <span class="wn-detail__nav-dir">Older &rarr;</span>
+          <span class="wn-detail__nav-title">{next.title}</span>
+        </a>
+      )}
+    </nav>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  /* ── Category color tokens ── */
+  :root {
+    --cat-new-page: #6d28d9;
+    --cat-new-feature: #166534;
+    --cat-enhancement: #1d4ed8;
+    --cat-league-event: #1c497c;
+  }
+
+  .wn-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl, 2rem);
+    padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* ── Back link ── */
+  .wn-detail__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .wn-detail__back:hover {
+    color: var(--accent-link-hover-text-color, #3c9950);
+  }
+
+  /* ── Article ── */
+  .wn-detail__article {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg, 1.5rem);
+  }
+
+  /* ── Meta (badge + date) ── */
+  .wn-detail__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+  }
+
+  .wn-detail__badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    color: #fff;
+  }
+
+  .wn-detail__badge--new-page { background: var(--cat-new-page); }
+  .wn-detail__badge--new-feature { background: var(--cat-new-feature); }
+  .wn-detail__badge--enhancement { background: var(--cat-enhancement); }
+  .wn-detail__badge--league-event { background: var(--cat-league-event); }
+
+  .wn-detail__date {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  /* ── Hero image / fallback ── */
+  .wn-detail__hero {
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .wn-detail__hero-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .wn-detail__hero--fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--entry-category-color, #2e8743) 8%, var(--content-bg, #fff)) 0%,
+      color-mix(in srgb, var(--entry-category-color, #2e8743) 15%, var(--content-bg, #fff)) 100%
+    );
+  }
+
+  .wn-detail__hero--new-page { --entry-category-color: var(--cat-new-page); }
+  .wn-detail__hero--new-feature { --entry-category-color: var(--cat-new-feature); }
+  .wn-detail__hero--enhancement { --entry-category-color: var(--cat-enhancement); }
+  .wn-detail__hero--league-event { --entry-category-color: var(--cat-league-event); }
+
+  .wn-detail__hero-icon {
+    width: 4rem;
+    height: 4rem;
+    fill: currentColor;
+    color: var(--entry-category-color, #2e8743);
+    opacity: 0.6;
+  }
+
+  .wn-detail__hero-icon--multicolor {
+    fill: none;
+    color: unset;
+  }
+
+  /* ── Title ── */
+  .wn-detail__title {
+    font-size: var(--font-size-2xl, 2rem);
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    line-height: var(--line-height-tight, 1.25);
+  }
+
+  /* ── Body ── */
+  .wn-detail__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md, 1rem);
+  }
+
+  .wn-detail__body p {
+    font-size: var(--font-size-base, 1rem);
+    color: var(--text-color, #374151);
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  /* ── CTA ── */
+  .wn-detail__cta {
+    margin-top: var(--spacing-sm, 0.5rem);
+  }
+
+  .wn-detail__cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1.25rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--btn-primary-text, #fff);
+    background: var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .wn-detail__cta-link:hover {
+    filter: brightness(0.9);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .wn-detail__cta-arrow {
+    font-size: 1rem;
+    transition: transform 0.15s ease;
+  }
+
+  .wn-detail__cta-link:hover .wn-detail__cta-arrow {
+    transform: translateX(2px);
+  }
+
+  /* ── Prev/Next Nav ── */
+  .wn-detail__nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md, 1rem);
+    padding-top: var(--spacing-xl, 2rem);
+  }
+
+  .wn-detail__nav-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    text-decoration: none;
+    max-width: 45%;
+    transition: color 0.15s ease;
+  }
+
+  .wn-detail__nav-link--next {
+    text-align: right;
+    margin-left: auto;
+  }
+
+  .wn-detail__nav-dir {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .wn-detail__nav-title {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--color-primary, #1c497c);
+    line-height: 1.3;
+  }
+
+  .wn-detail__nav-link:hover .wn-detail__nav-title {
+    color: var(--accent-link-hover-text-color, #3c9950);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .wn-detail__title {
+      font-size: var(--font-size-xl, 1.5rem);
+    }
+
+    .wn-detail__hero-icon {
+      width: 3rem;
+      height: 3rem;
+    }
+  }
+</style>

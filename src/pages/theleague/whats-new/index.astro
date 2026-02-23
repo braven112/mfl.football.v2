@@ -1,0 +1,485 @@
+---
+/**
+ * What's New - Blog-style feature changelog.
+ *
+ * Server-rendered to read the whats_new_last_visit cookie for "NEW" badges.
+ * The interactive listing (filters, card grid, timeline sidebar) is a
+ * React island. The page header stays as Astro HTML for SEO.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import WhatsNewListing from '../../../components/theleague/whats-new/WhatsNewListing';
+import type { WhatsNewEntry } from '../../../types/whats-new';
+import entries from '../../../data/whats-new.json';
+import {
+  sortEntriesNewestFirst,
+  enrichEntries,
+  groupByMonth,
+  getCategoryCounts,
+} from '../../../utils/whats-new-helpers';
+
+export const prerender = false;
+
+const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
+
+// Read the last-visit cookie for "NEW" badge computation
+const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
+const lastVisitDate = lastVisitCookie?.value ?? null;
+
+// Enrich entries with isNew flags and display fields
+const enriched = enrichEntries(sorted, lastVisitDate);
+const months = groupByMonth(enriched);
+const categoryCounts = getCategoryCounts(sorted);
+const newCount = enriched.filter((e) => e.isNew).length;
+
+// Update cookie to today's date
+Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10), {
+  maxAge: 365 * 24 * 60 * 60,
+  path: '/',
+  sameSite: 'lax',
+});
+---
+
+<TheLeagueLayout title="What's New - The League">
+  <main class="whats-new-page">
+    <header class="whats-new-page__header">
+      <h1 class="whats-new-page__title">
+        What's New
+        {newCount > 0 && (
+          <span class="whats-new-page__new-count">{newCount} new</span>
+        )}
+      </h1>
+      <p class="whats-new-page__subtitle">
+        New features, improvements, and updates to The League.
+      </p>
+    </header>
+
+    <WhatsNewListing
+      client:load
+      monthsJson={JSON.stringify(months)}
+      categoryCountsJson={JSON.stringify(categoryCounts)}
+    />
+  </main>
+</TheLeagueLayout>
+
+<style is:global>
+  /* ── Category color tokens ── */
+  :root {
+    --cat-new-page: #6d28d9;
+    --cat-new-feature: #166534;
+    --cat-enhancement: #1d4ed8;
+    --cat-league-event: #1c497c;
+  }
+
+  /* ── Page layout ── */
+  .whats-new-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl, 2rem);
+    padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem);
+  }
+
+  .whats-new-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+
+  .whats-new-page__title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+    font-size: var(--font-size-2xl, 2rem);
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+  }
+
+  .whats-new-page__new-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    color: #fff;
+    background: var(--cat-new-feature, #2e8743);
+  }
+
+  .whats-new-page__subtitle {
+    font-size: var(--font-size-base, 1rem);
+    color: var(--muted-text-color, #6b7280);
+    margin: 0;
+    line-height: var(--line-height-base, 1.5);
+  }
+
+  /* ── Listing container ── */
+  .wn-listing {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg, 1.5rem);
+  }
+
+  .wn-listing__body {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: var(--spacing-xl, 2rem);
+    align-items: start;
+  }
+
+  .wn-listing__main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2xl, 3rem);
+    min-width: 0;
+  }
+
+  .wn-listing__empty {
+    font-size: var(--font-size-base, 1rem);
+    color: var(--muted-text-color, #6b7280);
+    padding: var(--spacing-xl, 2rem);
+    text-align: center;
+  }
+
+  /* ── Filter tabs ── */
+  .wn-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+
+  .wn-filters__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .wn-filters__tab:hover:not(.wn-filters__tab--active) {
+    background: var(--color-gray-200, #e5e7eb);
+    border-color: var(--color-gray-300, #d1d5db);
+    color: var(--text-color, #374151);
+  }
+
+  .wn-filters__tab--active {
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .wn-filters__tab--active:hover {
+    filter: brightness(0.85);
+  }
+
+  .wn-filters__tab--active.wn-filters__tab--all {
+    background: var(--color-primary, #1c497c);
+  }
+
+  .wn-filters__tab--active.wn-filters__tab--new-page {
+    background: var(--cat-new-page);
+  }
+
+  .wn-filters__tab--active.wn-filters__tab--new-feature {
+    background: var(--cat-new-feature);
+  }
+
+  .wn-filters__tab--active.wn-filters__tab--enhancement {
+    background: var(--cat-enhancement);
+  }
+
+  .wn-filters__tab--active.wn-filters__tab--league-event {
+    background: var(--cat-league-event);
+  }
+
+  .wn-filters__count {
+    font-size: 0.7rem;
+    opacity: 0.8;
+  }
+
+  /* ── Month sections ── */
+  .wn-month {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 0.5rem);
+    scroll-margin-top: 80px;
+  }
+
+  .wn-month__label {
+    font-size: var(--font-size-lg, 1.25rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+    margin: 0;
+    padding-bottom: var(--spacing-xs, 0.25rem);
+  }
+
+  .wn-month__entries {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-lg, 1.5rem);
+  }
+
+  /* ── Card ── */
+  .wn-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    border-left: 4px solid var(--entry-category-color, var(--cat-new-feature));
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  a.wn-card,
+  a.wn-card:hover,
+  a.wn-card:visited,
+  a.wn-card:active {
+    text-decoration: none !important;
+  }
+
+  .wn-card:hover {
+    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
+    transform: translateY(-2px);
+  }
+
+  .wn-card--new-page { --entry-category-color: var(--cat-new-page); }
+  .wn-card--new-feature { --entry-category-color: var(--cat-new-feature); }
+  .wn-card--enhancement { --entry-category-color: var(--cat-enhancement); }
+  .wn-card--league-event { --entry-category-color: var(--cat-league-event); }
+
+  .wn-card--featured {
+    grid-column: 1 / -1;
+  }
+
+  /* Card thumbnail */
+  .wn-card__thumbnail {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .wn-card__thumbnail-img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Card content */
+  .wn-card__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
+  }
+
+  /* Card meta row (badge + NEW) */
+  .wn-card__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+  }
+
+  .wn-card__badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    color: #fff;
+  }
+
+  .wn-card__badge--new-page { background: var(--cat-new-page); }
+  .wn-card__badge--new-feature { background: var(--cat-new-feature); }
+  .wn-card__badge--enhancement { background: var(--cat-enhancement); }
+  .wn-card__badge--league-event { background: var(--cat-league-event); }
+
+  .wn-card__new-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cat-new-feature, #2e8743);
+  }
+
+  .wn-card__new-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cat-new-feature, #2e8743);
+    animation: wn-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes wn-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Card header (icon + title) */
+  .wn-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+
+  .wn-card__icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: var(--entry-category-color);
+  }
+
+  .wn-card__icon--multicolor {
+    fill: none;
+    color: unset;
+  }
+
+  .wn-card__title {
+    font-size: 1rem;
+    font-weight: var(--font-weight-bold, 700);
+    margin: 0;
+    color: var(--primary-link-default-text-color, #1c497c);
+    line-height: 1.3;
+  }
+
+  .wn-card__date {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .wn-card__summary {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--muted-text-color, #6b7280);
+    margin: var(--spacing-xs, 0.25rem) 0 0;
+    line-height: var(--line-height-base, 1.5);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .wn-card__read-more {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--color-primary, #1c497c);
+    margin-top: var(--spacing-xs, 0.25rem);
+    transition: color 0.15s ease;
+  }
+
+  .wn-card:hover .wn-card__read-more {
+    color: var(--accent-link-hover-text-color, #3c9950);
+  }
+
+  /* ── Timeline sidebar ── */
+  .wn-timeline {
+    position: sticky;
+    top: 100px;
+    align-self: start;
+  }
+
+  .wn-timeline__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 0.5rem);
+    border-left: 2px solid var(--color-gray-300, #9ca3af);
+    padding-left: var(--spacing-md, 1rem);
+  }
+
+  .wn-timeline__item {
+    margin: 0;
+  }
+
+  .wn-timeline__link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    background: none;
+    border: none;
+    padding: 0.25rem 0;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: color 0.15s ease;
+  }
+
+  .wn-timeline__label {
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--text-secondary-color, #4b5563);
+    transition: color 0.15s ease;
+  }
+
+  .wn-timeline__link--active .wn-timeline__label {
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .wn-timeline__link:hover .wn-timeline__label {
+    color: var(--accent-link-hover-text-color, #3c9950);
+  }
+
+  .wn-timeline__dots {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+
+  .wn-timeline__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-gray-300, #d1d5db);
+  }
+
+  .wn-timeline__dot--new-page { background: var(--cat-new-page); }
+  .wn-timeline__dot--new-feature { background: var(--cat-new-feature); }
+  .wn-timeline__dot--enhancement { background: var(--cat-enhancement); }
+  .wn-timeline__dot--league-event { background: var(--cat-league-event); }
+
+  .wn-timeline__dot--new {
+    box-shadow: 0 0 0 2px var(--content-bg, #fff), 0 0 0 3px var(--cat-new-feature, #2e8743);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .wn-listing__body {
+      grid-template-columns: 1fr;
+    }
+
+    .wn-timeline {
+      display: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .whats-new-page__title {
+      font-size: var(--font-size-xl, 1.5rem);
+    }
+
+    .wn-month__entries {
+      grid-template-columns: 1fr;
+    }
+
+    .wn-card__content {
+      padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem);
+    }
+  }
+</style>
