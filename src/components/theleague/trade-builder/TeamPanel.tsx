@@ -120,6 +120,7 @@ export default function TeamPanel({
           <DraftPickSelector
             draftPicks={selectedTeam.draftPicks}
             selectedPicks={tradeSide.draftPicks}
+            teamFranchiseId={selectedTeam.franchiseId}
             onAdd={(pick) =>
               dispatch({ type: 'ADD_DRAFT_PICK', side, pick })
             }

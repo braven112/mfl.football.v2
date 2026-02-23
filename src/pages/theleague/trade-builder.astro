@@ -50,6 +50,10 @@ const draftPickFeeds = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
   { eager: true }
 );
+const draftResultsFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  { eager: true }
+);
 const tradeBaitFeeds = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/tradeBait.json',
   { eager: true }
@@ -84,6 +88,7 @@ const rostersData = findFeed(rostersFeeds, leagueYearStr, extractFeedSeason);
 const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
 const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
 const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
+const draftResultsData = findFeed(draftResultsFeeds, leagueYearStr, extractFeedSeason);
 const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
 const currentTradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
 // Feb 15–28/29: transition window after the league year rolls over (Feb 14 @ 8:45 PT).
@@ -142,6 +147,78 @@ const rawAdjustments = salaryAdjData?.salaryAdjustments?.salaryAdjustment ?? [];
 
 // Future draft picks
 const rawDraftPicks = draftPickData?.futureDraftPicks?.franchise ?? [];
+
+// Build team name → franchise ID reverse lookup for trade comment parsing
+const teamNameToId = new Map<string, string>();
+for (const team of (leagueConfigData.teams ?? []) as any[]) {
+  const name = (team.name as string).toLowerCase().trim();
+  teamNameToId.set(name, team.franchiseId);
+  if (name.startsWith('the ')) {
+    teamNameToId.set(name.slice(4), team.franchiseId);
+  } else {
+    teamNameToId.set('the ' + name, team.franchiseId);
+  }
+  for (const alias of (team.aliases ?? []) as string[]) {
+    teamNameToId.set(alias.toLowerCase().trim(), team.franchiseId);
+  }
+  for (const hist of (team.history ?? []) as any[]) {
+    if (hist.name) {
+      const hname = (hist.name as string).toLowerCase().trim();
+      teamNameToId.set(hname, team.franchiseId);
+    }
+  }
+}
+
+// Extract current-year draft picks from draftResults (undrafted picks only)
+const draftUnit = draftResultsData?.draftResults?.draftUnit;
+const rawDraftResultPicks: any[] = (() => {
+  const picks = draftUnit?.draftPick;
+  if (!picks) return [];
+  return Array.isArray(picks) ? picks : [picks];
+})();
+
+const currentYearPicksByFranchise = new Map<string, any[]>();
+for (const pick of rawDraftResultPicks) {
+  if (pick.player) continue; // Skip already-drafted picks
+
+  const currentOwner = pick.franchise;
+  const round = String(parseInt(pick.round, 10)); // Normalize "01" → "1"
+
+  // Determine original pick owner from trade comments
+  const comment = pick.comments ?? '';
+  const tradeMatch = comment.match(/\[Pick traded (?:from )?(.+?)\.?\]/);
+  let originalPickFor = currentOwner;
+
+  if (tradeMatch) {
+    const tradedFromName = tradeMatch[1].toLowerCase().trim();
+    const foundId = teamNameToId.get(tradedFromName);
+    if (foundId) {
+      originalPickFor = foundId;
+    }
+  }
+
+  const origTeamConfig = teamConfigMap.get(originalPickFor) as any;
+  const originalTeamName = origTeamConfig
+    ? chooseTeamName({
+        fullName: origTeamConfig.name,
+        nameMedium: origTeamConfig.nameMedium,
+        nameShort: origTeamConfig.nameShort,
+        abbrev: origTeamConfig.abbrev,
+      }, 'short')
+    : `Team ${originalPickFor}`;
+
+  const draftPick = {
+    year: leagueYearStr,
+    round,
+    originalPickFor,
+    originalTeamName,
+  };
+
+  if (!currentYearPicksByFranchise.has(currentOwner)) {
+    currentYearPicksByFranchise.set(currentOwner, []);
+  }
+  currentYearPicksByFranchise.get(currentOwner)!.push(draftPick);
+}
 
 // Position salary averages for rookie extension calc
 const positionAverages: Record<string, { top3Average: number; top5Average: number }> = {};
@@ -225,10 +302,10 @@ const teams = franchises.map((franchise: any) => {
   const currentCapSpace = SALARY_CAP - capCharges[0] - (deadMoney[0] ?? 0);
   const totalSalary = players.reduce((sum: number, p: any) => sum + p.salary, 0);
 
-  // Draft picks
+  // Draft picks: merge current-year (from draftResults) with future (from futureDraftPicks)
   const picksFranchise = rawDraftPicks.find((f: any) => f.id === franchise.id);
   const rawPicks = picksFranchise?.futureDraftPick ?? [];
-  const draftPicks = (Array.isArray(rawPicks) ? rawPicks : [rawPicks]).map((dp: any) => {
+  const futurePicks = (Array.isArray(rawPicks) ? rawPicks : [rawPicks]).map((dp: any) => {
     const origTeamConfig = teamConfigMap.get(dp.originalPickFor) as any;
     return {
       year: dp.year,
@@ -244,6 +321,8 @@ const teams = franchises.map((franchise: any) => {
         : `Team ${dp.originalPickFor}`,
     };
   });
+  const currentYearPicks = currentYearPicksByFranchise.get(franchise.id) ?? [];
+  const draftPicks = [...currentYearPicks, ...futurePicks];
 
   return {
     franchiseId: franchise.id,
