@@ -333,6 +333,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
   }
 
   .hero-banner--has-image .hero-banner__content {
+    flex-direction: row-reverse;
     padding: 0;
     gap: 0;
   }
@@ -344,7 +345,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
     align-items: center;
     justify-content: center;
     padding: var(--spacing-lg, 1.5rem);
-    background: color-mix(in srgb, var(--hero-accent) 10%, var(--content-bg, #fff));
+    background: color-mix(in srgb, var(--hero-accent) 80%, var(--content-bg, #fff));
     overflow: hidden;
     box-sizing: border-box;
   }
