@@ -34,6 +34,7 @@ import {
   calculateCapCharges,
   aggregateDeadMoney,
   calculateContractYearsMeta,
+  getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser } from '../../utils/auth';
 import fs from 'fs';
@@ -1235,6 +1236,9 @@ Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
   }
 });
 
+// Use previous season's frozen (week 14) salary averages until current season reaches week 14
+const extensionSeason = String(getFrozenSalaryAveragesYear(salaryAveragesModules, getModuleData));
+
 const seasonOptions = Object.keys(rostersBySeason).sort(
   (a, b) => Number(b) - Number(a)
 );
@@ -1476,6 +1480,7 @@ const serializedConfig = JSON.stringify({
   initialTeamData,
   adjustmentsBySeason: feedSalaryAdjustmentsBySeason,
   salaryAverages: salaryAveragesBySeason,
+  extensionSeason,
   teams: teamLookup,
   rosterLimit: ROSTER_LIMIT,
   positionOrder,
@@ -2196,11 +2201,11 @@ const serializedConfig = JSON.stringify({
       <div class="extensions-section">
         <h2 class="extensions-section__title">Extensions</h2>
         <div class="chart-grid">
-          <ChartCard title="Franchise Tag Options (2026)" subtitle="Out of contract players likely to be considered for franchise tags">
-            <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+          <ChartCard title={`Franchise Tag Options (${currentLeagueYear})`} subtitle="Out of contract players likely to be considered for franchise tags">
+            <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
           </ChartCard>
           <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
-            <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season="2026" />
+            <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
           </ChartCard>
         </div>
       </div>
@@ -4734,7 +4739,7 @@ const serializedConfig = JSON.stringify({
         const previousPlayerId = franchiseTagsByYear[franchiseYearIndex];
         delete contractActions[previousPlayerId];
       }
-      result = calculateFranchiseTag(salary, position, currentSeason);
+      result = calculateFranchiseTag(salary, position, config.extensionSeason);
       result.ufaYearIndex = franchiseYearIndex;
       franchiseTagsByYear[franchiseYearIndex] = id;
     } else if (actionType === 'extension') {
@@ -4745,7 +4750,7 @@ const serializedConfig = JSON.stringify({
       result = calculateVeteranExtension(
         years,
         position,
-        currentSeason,
+        config.extensionSeason,
         extensionYears,
         salary
       );

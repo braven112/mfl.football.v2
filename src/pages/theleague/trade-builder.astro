@@ -17,6 +17,7 @@ import {
   getCapPercent,
   calculateCapCharges,
   aggregateDeadMoney,
+  getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import {
   getTheLeaguePreference,
@@ -96,8 +97,11 @@ const prevTradeBaitIds = (() => {
   return new Set<string>(Array.isArray(prev) ? prev : []);
 })();
 
-let salaryAvgData = findFeed(salaryAvgModules, leagueYearStr, extractSeason);
-// Fallback to most recent available salary averages if current year not found
+// Use previous season's frozen (week 14) salary averages for extension/franchise tag calculations.
+// Post-rollover data has 10% escalation already applied, which would double-dip with the extension formula.
+const salaryAvgYear = String(getFrozenSalaryAveragesYear(salaryAvgModules, getModuleData));
+let salaryAvgData = findFeed(salaryAvgModules, salaryAvgYear, extractSeason);
+// Fallback to most recent available salary averages if resolved year not found
 if (!salaryAvgData) {
   const years = Object.keys(salaryAvgModules)
     .map(extractSeason)
