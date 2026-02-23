@@ -4,6 +4,7 @@ import type { TradeBuilderDraftPick, DraftPickKey } from '../../../types/trade-b
 interface Props {
   draftPicks: TradeBuilderDraftPick[];
   selectedPicks: DraftPickKey[];
+  teamFranchiseId: string;
   onAdd: (pick: DraftPickKey) => void;
   onRemove: (pick: DraftPickKey) => void;
 }
@@ -19,6 +20,7 @@ function pickMatches(a: DraftPickKey, b: DraftPickKey): boolean {
 export default function DraftPickSelector({
   draftPicks,
   selectedPicks,
+  teamFranchiseId,
   onAdd,
   onRemove,
 }: Props) {
@@ -54,6 +56,20 @@ export default function DraftPickSelector({
     return `${num}th`;
   };
 
+  // Group picks by year for organized display
+  const groupByYear = <T extends { year: string }>(picks: T[]): Map<string, T[]> => {
+    const grouped = new Map<string, T[]>();
+    for (const pick of picks) {
+      const existing = grouped.get(pick.year) ?? [];
+      existing.push(pick);
+      grouped.set(pick.year, existing);
+    }
+    return new Map([...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  };
+
+  const availableByYear = groupByYear(availablePicks);
+  const selectedByYear = groupByYear(selectedPickDetails);
+
   return (
     <div className="draft-picks">
       <div className="draft-picks__header">
@@ -70,46 +86,58 @@ export default function DraftPickSelector({
 
       {selectedPickDetails.length > 0 && (
         <div className="draft-picks__selected">
-          {selectedPickDetails.map((pick) => (
-            <div
-              key={`${pick.year}-${pick.round}-${pick.originalPickFor}`}
-              className="draft-picks__badge"
-            >
-              <span>
-                {pick.year} {formatRound(pick.round)}
-                {pick.originalPickFor !== pick.originalPickFor && (
-                  <span className="draft-picks__via"> via {pick.originalTeamName}</span>
-                )}
-              </span>
-              <button
-                className="draft-picks__remove"
-                onClick={() => onRemove(pick)}
-                aria-label={`Remove ${pick.year} round ${pick.round} pick`}
-              >
-                &times;
-              </button>
-            </div>
+          {[...selectedByYear.entries()].map(([year, picks]) => (
+            <React.Fragment key={year}>
+              {selectedByYear.size > 1 && (
+                <div className="draft-picks__year-label">{year}</div>
+              )}
+              {picks.map((pick) => (
+                <div
+                  key={`${pick.year}-${pick.round}-${pick.originalPickFor}`}
+                  className="draft-picks__badge"
+                >
+                  <span>
+                    {pick.year} {formatRound(pick.round)}
+                    {pick.originalPickFor !== teamFranchiseId && (
+                      <span className="draft-picks__via"> via {pick.originalTeamName}</span>
+                    )}
+                  </span>
+                  <button
+                    className="draft-picks__remove"
+                    onClick={() => onRemove(pick)}
+                    aria-label={`Remove ${pick.year} round ${pick.round} pick`}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </React.Fragment>
           ))}
         </div>
       )}
 
       {expanded && availablePicks.length > 0 && (
         <div className="draft-picks__available">
-          {availablePicks.map((dp) => {
-            const key = { year: dp.year, round: dp.round, originalPickFor: dp.originalPickFor };
-            return (
-              <button
-                key={`${dp.year}-${dp.round}-${dp.originalPickFor}`}
-                className="draft-picks__option"
-                onClick={() => onAdd(key)}
-              >
-                {dp.year} {formatRound(dp.round)}
-                {dp.originalPickFor !== dp.originalPickFor && (
-                  <span className="draft-picks__via"> (via {dp.originalTeamName})</span>
-                )}
-              </button>
-            );
-          })}
+          {[...availableByYear.entries()].map(([year, picks]) => (
+            <React.Fragment key={year}>
+              <div className="draft-picks__year-divider">{year} Draft</div>
+              {picks.map((dp) => {
+                const key = { year: dp.year, round: dp.round, originalPickFor: dp.originalPickFor };
+                return (
+                  <button
+                    key={`${dp.year}-${dp.round}-${dp.originalPickFor}`}
+                    className="draft-picks__option"
+                    onClick={() => onAdd(key)}
+                  >
+                    {formatRound(dp.round)}
+                    {dp.originalPickFor !== teamFranchiseId && (
+                      <span className="draft-picks__via"> (via {dp.originalTeamName})</span>
+                    )}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </div>
       )}
 
@@ -175,6 +203,25 @@ export default function DraftPickSelector({
         }
         .draft-picks__remove:hover {
           color: #dc2626;
+        }
+        .draft-picks__year-label {
+          width: 100%;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--muted-text-color, #6b7280);
+          margin-top: 0.25rem;
+        }
+        .draft-picks__year-divider {
+          width: 100%;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--muted-text-color, #6b7280);
+          padding-bottom: 0.125rem;
+          border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
         }
         .draft-picks__available {
           display: flex;
