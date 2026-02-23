@@ -124,24 +124,6 @@
           "description": "Import player rankings from external sites using bookmarklets"
         },
         {
-          "id": "auction-predictor",
-          "label": "Auction Predictor",
-          "icon": "line-chart",
-          "path": "/auction-predictor",
-          "external": false,
-          "visibility": "admin",
-          "description": "Predict auction values for players"
-        },
-        {
-          "id": "team-preview",
-          "label": "Team Preview",
-          "icon": "eye",
-          "urlTemplate": "https://{host}/{year}/options?L={leagueId}&F={franchiseId}&O=02",
-          "external": true,
-          "visibility": "admin",
-          "description": "Your team's overview on MFL"
-        },
-        {
           "id": "submit-lineup",
           "label": "Submit Lineup",
           "icon": "lineup",
