@@ -199,6 +199,38 @@ export const calculateEffectiveCapSpace = (
 };
 
 /**
+ * Determine which year's salary averages to use for extension/franchise tag calculations.
+ *
+ * Week 14 frozen data is the most stable salary reference. After the league year rolls over
+ * (Feb 14), the new year's data reflects post-rollover rosters with 10% escalation already
+ * applied — using that would double-dip on escalation. Instead, we keep using the previous
+ * season's frozen data until the current season reaches its own week 14 freeze.
+ *
+ * @param modules - Glob result of mfl-salary-averages-*.json files
+ * @param getModuleData - Helper to unwrap Astro module default exports
+ * @returns The year whose salary averages should be used
+ */
+export function getFrozenSalaryAveragesYear(
+  modules: Record<string, unknown>,
+  getModuleData: (mod: unknown) => any
+): number {
+  const leagueYear = getCurrentLeagueYear();
+  const yearStr = String(leagueYear);
+
+  for (const [path, mod] of Object.entries(modules)) {
+    if (path.includes(yearStr)) {
+      const data = getModuleData(mod);
+      const meta = data?.metadata;
+      if (meta && meta.week >= (meta.freezeWeek || 14)) {
+        return leagueYear;
+      }
+    }
+  }
+
+  return leagueYear - 1;
+}
+
+/**
  * Get reference salary for franchise tag or extension calculations
  */
 export function getReferenceSalary(

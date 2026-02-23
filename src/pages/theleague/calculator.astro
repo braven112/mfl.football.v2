@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueAssets from '../../data/theleague.assets.json';
+import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 
 const salarySummaryModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
@@ -132,6 +133,23 @@ seasonOrder.forEach((season) => {
 });
 
 const latestActualSeason = seasonOrder[0] ?? null;
+
+// Use previous season's frozen (week 14) salary averages for extension/franchise tag reference.
+// Post-rollover data has 10% escalation already applied, which would double-dip with the formula.
+const frozenYear = String(getFrozenSalaryAveragesYear(salarySummaryModules, getModuleData));
+const frozenSummary = salarySummaryBySeason[frozenYear];
+if (frozenSummary && latestActualSeason && frozenYear !== latestActualSeason && seasonsPayload[latestActualSeason]) {
+  const frozenExtension = extensionPositions.reduce((acc, { key }) => {
+    acc[key] = frozenSummary.positions?.[key]?.top5Average ?? 0;
+    return acc;
+  }, {});
+  const frozenFranchise = extensionPositions.reduce((acc, { key }) => {
+    acc[key] = frozenSummary.positions?.[key]?.top3Average ?? 0;
+    return acc;
+  }, {});
+  seasonsPayload[latestActualSeason].extensionSalaries = frozenExtension;
+  seasonsPayload[latestActualSeason].franchiseSalaries = frozenFranchise;
+}
 
 const PROJECTION_GROWTH_RATE = 0.1;
 const MAX_PROJECTED_SEASON = 2029;
