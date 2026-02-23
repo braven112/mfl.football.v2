@@ -24,6 +24,7 @@ const mflPlayers = [
   { id: '1010', name: 'Griffin, Robert', position: 'QB', team: 'BAL' },
   { id: '1011', name: 'Andrews, Mark', position: 'TE', team: 'BAL' },
   { id: '1012', name: 'Harris, Gary', position: 'WR', team: 'DEN' },
+  { id: '1013', name: 'Ward, Cam', position: 'QB', team: 'TEN' },
 ];
 
 // =============================================================================
@@ -195,6 +196,44 @@ describe('normalizePlayerName - Complex Combinations', () => {
   it('should handle comma-separated format (Jr in middle not removed)', () => {
     // Jr in middle won't be removed since regex only matches at end of string
     expect(normalizePlayerName('Mahomes Jr., Patrick')).toBe('mahomes jr patrick');
+  });
+});
+
+describe('normalizePlayerName - Nickname Normalization', () => {
+  it('should normalize Cameron to cam', () => {
+    expect(normalizePlayerName('Cameron Ward')).toBe('cam ward');
+  });
+
+  it('should leave short form unchanged', () => {
+    expect(normalizePlayerName('Cam Ward')).toBe('cam ward');
+  });
+
+  it('should normalize William to will', () => {
+    expect(normalizePlayerName('William Smith')).toBe('will smith');
+  });
+
+  it('should normalize Kenneth to ken', () => {
+    expect(normalizePlayerName('Kenneth Walker')).toBe('ken walker');
+  });
+
+  it('should normalize Benjamin to ben', () => {
+    expect(normalizePlayerName('Benjamin Sinnott')).toBe('ben sinnott');
+  });
+
+  it('should normalize Matthew to matt', () => {
+    expect(normalizePlayerName('Matthew Stafford')).toBe('matt stafford');
+  });
+
+  it('should normalize Nicholas to nick', () => {
+    expect(normalizePlayerName('Nicholas Chubb')).toBe('nick chubb');
+  });
+
+  it('should normalize MFL comma format with nickname', () => {
+    expect(normalizePlayerName('Ward, Cameron')).toBe('ward cam');
+  });
+
+  it('should not change names without nickname mappings', () => {
+    expect(normalizePlayerName('Patrick Mahomes')).toBe('patrick mahomes');
   });
 });
 
@@ -557,6 +596,29 @@ describe('matchPlayerToMFL - Multiple Player Name Variations', () => {
     const result = matchPlayerToMFL('Justin Jefferson', 'WR', mflPlayers);
     expect(result.matched).toBe(true);
     expect(result.playerId).toBe('1006');
+  });
+});
+
+describe('matchPlayerToMFL - Nickname Matching', () => {
+  it('should match Cameron Ward to MFL Cam Ward', () => {
+    const result = matchPlayerToMFL('Cameron Ward', 'QB', mflPlayers);
+    expect(result.matched).toBe(true);
+    expect(result.playerId).toBe('1013');
+    expect(result.confidence).toBe(1.0);
+  });
+
+  it('should match Cam Ward directly', () => {
+    const result = matchPlayerToMFL('Cam Ward', 'QB', mflPlayers);
+    expect(result.matched).toBe(true);
+    expect(result.playerId).toBe('1013');
+    expect(result.confidence).toBe(1.0);
+  });
+
+  it('should match reversed Cameron Ward format', () => {
+    const result = matchPlayerToMFL('Ward, Cameron', 'QB', mflPlayers);
+    expect(result.matched).toBe(true);
+    expect(result.playerId).toBe('1013');
+    expect(result.confidence).toBe(1.0);
   });
 });
 

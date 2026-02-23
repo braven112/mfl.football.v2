@@ -20,8 +20,8 @@ export interface ParseResult {
 }
 
 const VALID_SOURCES: RankingSourceId[] = [
-  'fantasypros', 'cbs', 'sleeper', 'fantasycalc', 'keeptradecut',
-  'dlf', 'yahoo', 'footballguys', 'custom',
+  'fantasypros', 'cbs', 'sleeper', 'fantasycalc', 'espn',
+  'keeptradecut', 'dlf', 'yahoo', 'footballguys', 'custom',
 ];
 
 const VALID_TYPES: RankingType[] = ['dynasty', 'redraft', 'adp', 'overall'];

@@ -18,13 +18,52 @@ import { normalizePosition } from './normalize-position';
 // =============================================================================
 
 /**
+ * Map of common first-name variants to a canonical short form.
+ * Both "Cameron" and "Cam" normalize to "cam", ensuring matching
+ * regardless of which variant the ranking source or MFL uses.
+ */
+const NICKNAME_MAP: Record<string, string> = {
+  cameron: 'cam',
+  william: 'will',
+  kenneth: 'ken',
+  benjamin: 'ben',
+  christopher: 'chris',
+  michael: 'mike',
+  gabriel: 'gabe',
+  nicholas: 'nick',
+  alexander: 'alex',
+  matthew: 'matt',
+  daniel: 'dan',
+  jonathan: 'jon',
+  gregory: 'greg',
+  timothy: 'tim',
+  raymond: 'ray',
+  nathaniel: 'nate',
+  theodore: 'ted',
+  vincent: 'vince',
+  zachary: 'zach',
+  anthony: 'tony',
+};
+
+/**
+ * Replace any first-name variant with its canonical short form.
+ * Operates on an already-lowercased, cleaned string.
+ */
+function applyNicknames(normalized: string): string {
+  const parts = normalized.split(' ');
+  const mapped = parts.map(part => NICKNAME_MAP[part] ?? part);
+  return mapped.join(' ');
+}
+
+/**
  * Normalize player name for matching
  * - Remove punctuation, Jr/Sr/III, etc.
  * - Lowercase
  * - Handle common variations
+ * - Resolve nickname variants to canonical short forms
  */
 export function normalizePlayerName(name: string): string {
-  return name
+  const cleaned = name
     .toLowerCase()
     .replace(/\./g, '') // Remove periods
     .replace(/'/g, '') // Remove apostrophes
@@ -37,6 +76,8 @@ export function normalizePlayerName(name: string): string {
     .replace(/[^\w\s]/g, '') // Remove other punctuation
     .replace(/\s+/g, ' ') // Normalize spaces
     .trim();
+
+  return applyNicknames(cleaned);
 }
 
 /**
