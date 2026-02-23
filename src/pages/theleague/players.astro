@@ -1459,9 +1459,12 @@ const faCountsJson = JSON.stringify(faCounts);
   :global(th.col-ranking-composite .th-content) {
     font-weight: 700;
   }
-  :global(th.col-ranking-member-last),
+  :global(th.col-ranking-member-last) {
+    border-right: 1px solid rgb(79, 145, 209);
+  }
   :global(td.col-ranking-member-last) {
-    border-right: 2px solid rgba(28, 73, 124, 0.15);
+    border-right: 1px solid #f1f5f9;
+    padding-right: .5rem;
   }
   :global(.cell-pts) {
     font-weight: 600;
