@@ -104,3 +104,18 @@ export interface MFLPlayerForMatching {
   position: string;
   team: string;
 }
+
+// ---------------------------------------------------------------------------
+// Composite rank configuration (user-curated weighted subset)
+// ---------------------------------------------------------------------------
+
+/** A single import's inclusion in the composite rank with a weight multiplier. */
+export interface CompositeImportConfig {
+  importId: string;        // References StoredRankingImport.id
+  weight: 1 | 2 | 3;      // Multiplier for weighted average
+}
+
+/** Full composite rank configuration persisted in localStorage. */
+export interface CompositeRankConfig {
+  members: CompositeImportConfig[];
+}

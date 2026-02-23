@@ -743,6 +743,89 @@ const siteConfigs = [
     font-style: italic;
   }
 
+  /* ---- Composite (My Rank) ---- */
+
+  .ri-manage__composite-col {
+    width: 60px;
+    text-align: center;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .ri-manage__composite-check {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .ri-manage__composite-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color, #1c497c);
+    cursor: pointer;
+  }
+
+  .ri-manage__weight-col {
+    width: 100px;
+    text-align: center;
+  }
+
+  .ri-manage__weight {
+    text-align: center;
+  }
+
+  .ri-manage__weight-picker {
+    display: inline-flex;
+    gap: 2px;
+    background: var(--primary-content-border-color, #e2e8f0);
+    border-radius: 4px;
+    padding: 2px;
+  }
+
+  .ri-manage__weight-btn {
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary-color, #64748b);
+    cursor: pointer;
+    line-height: 1.2;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .ri-manage__weight-btn:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-primary-color, #1e293b);
+  }
+
+  .ri-manage__weight-btn.active {
+    background: var(--primary-color, #1c497c);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .ri-manage__composite-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: rgba(28, 73, 124, 0.06);
+    border: 1px solid rgba(28, 73, 124, 0.15);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+
+  .ri-manage__composite-bar-label {
+    font-weight: 700;
+    color: var(--primary-color, #1c497c);
+  }
+
+  .ri-manage__composite-bar-detail {
+    color: var(--text-secondary-color, #64748b);
+  }
+
   /* ---- Modal ---- */
 
   .ri-modal {
@@ -999,6 +1082,11 @@ const siteConfigs = [
 
     .ri-manage__drag-handle svg {
       opacity: 0.6;
+    }
+
+    .ri-manage__weight-col,
+    .ri-manage__weight {
+      font-size: 0.72rem;
     }
   }
 </style>

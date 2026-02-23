@@ -7,6 +7,10 @@ import {
   getLatestImportByType,
   findDuplicateImport,
   migrateFromLegacyKeys,
+  getCompositeConfig,
+  saveCompositeConfig,
+  toggleCompositeImport,
+  setCompositeWeight,
   _clearCache,
 } from '../src/utils/rankings-storage';
 import type { StoredRankingImport } from '../src/types/rankings-import';
@@ -362,6 +366,154 @@ describe('rankings-storage', () => {
       localStorageMock.setItem('auctionPredictor.dlfRankings', JSON.stringify([]));
       migrateFromLegacyKeys();
       expect(getAllImports()).toEqual([]);
+    });
+  });
+
+  // ---- Composite config ----
+
+  describe('composite config', () => {
+    it('getCompositeConfig returns null when nothing stored', () => {
+      expect(getCompositeConfig()).toBeNull();
+    });
+
+    it('getCompositeConfig returns null for malformed JSON', () => {
+      localStorageMock.setItem('rankings.compositeConfig', 'not-json');
+      expect(getCompositeConfig()).toBeNull();
+    });
+
+    it('getCompositeConfig returns null when fewer than 2 valid members', () => {
+      const imp = createMockImport({ id: 'imp-1' });
+      saveImport(imp);
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({ members: [{ importId: 'imp-1', weight: 1 }] }),
+      );
+      expect(getCompositeConfig()).toBeNull();
+    });
+
+    it('getCompositeConfig filters out stale import IDs', () => {
+      const imp = createMockImport({ id: 'valid-1', source: 'fantasypros', type: 'dynasty' });
+      const imp2 = createMockImport({ id: 'valid-2', source: 'sleeper', type: 'dynasty' });
+      saveImport(imp);
+      saveImport(imp2);
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'valid-1', weight: 1 },
+            { importId: 'deleted-id', weight: 2 },
+            { importId: 'valid-2', weight: 1 },
+          ],
+        }),
+      );
+      const config = getCompositeConfig();
+      expect(config).not.toBeNull();
+      expect(config!.members).toHaveLength(2);
+      expect(config!.members.map((m) => m.importId)).toEqual(['valid-1', 'valid-2']);
+    });
+
+    it('saveCompositeConfig persists to localStorage and fires event', () => {
+      saveCompositeConfig({
+        members: [
+          { importId: 'a', weight: 1 },
+          { importId: 'b', weight: 2 },
+        ],
+      });
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members).toHaveLength(2);
+      expect(dispatchEventMock).toHaveBeenCalled();
+    });
+
+    it('toggleCompositeImport adds a member with default weight', () => {
+      toggleCompositeImport('imp-1', true);
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members).toHaveLength(1);
+      expect(stored.members[0]).toEqual({ importId: 'imp-1', weight: 1 });
+    });
+
+    it('toggleCompositeImport removes a member', () => {
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'a', weight: 1 },
+            { importId: 'b', weight: 2 },
+          ],
+        }),
+      );
+      toggleCompositeImport('a', false);
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members).toHaveLength(1);
+      expect(stored.members[0].importId).toBe('b');
+    });
+
+    it('toggleCompositeImport does not add duplicates', () => {
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({ members: [{ importId: 'a', weight: 2 }] }),
+      );
+      toggleCompositeImport('a', true);
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members).toHaveLength(1);
+    });
+
+    it('setCompositeWeight updates weight for existing member', () => {
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'a', weight: 1 },
+            { importId: 'b', weight: 1 },
+          ],
+        }),
+      );
+      setCompositeWeight('a', 3);
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members[0]).toEqual({ importId: 'a', weight: 3 });
+      expect(stored.members[1]).toEqual({ importId: 'b', weight: 1 });
+    });
+
+    it('deleteImport removes deleted ID from composite config', () => {
+      const imp1 = createMockImport({ id: 'keep', source: 'fantasypros', type: 'dynasty' });
+      const imp2 = createMockImport({ id: 'remove', source: 'sleeper', type: 'dynasty' });
+      saveImport(imp1);
+      saveImport(imp2);
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'keep', weight: 1 },
+            { importId: 'remove', weight: 2 },
+          ],
+        }),
+      );
+
+      deleteImport('remove');
+
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members).toHaveLength(1);
+      expect(stored.members[0].importId).toBe('keep');
+    });
+
+    it('saveImport swaps old ID for new ID in composite config on replace', () => {
+      const imp1 = createMockImport({ id: 'old-id', source: 'fantasypros', type: 'dynasty' });
+      saveImport(imp1);
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'old-id', weight: 2 },
+            { importId: 'other', weight: 1 },
+          ],
+        }),
+      );
+
+      const imp2 = createMockImport({ id: 'new-id', source: 'fantasypros', type: 'dynasty' });
+      saveImport(imp2);
+
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members[0]).toEqual({ importId: 'new-id', weight: 2 });
+      expect(stored.members[1]).toEqual({ importId: 'other', weight: 1 });
     });
   });
 });
