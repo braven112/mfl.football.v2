@@ -24,7 +24,9 @@
     "category": "new-feature",
     "link": "/theleague/import-rankings",
     "linkLabel": "Set up My Rank",
-    "icon": "star"
+    "icon": "star",
+    "image": "composite-my-rank.webp",
+    "imageAlt": "Import Rankings page showing ranking source selection with weight controls for building a My Rank composite"
   },
   {
     "id": "whats-new-redesign",
@@ -40,7 +42,9 @@
     "link": "/theleague/whats-new",
     "linkLabel": "See What's New",
     "icon": "star",
-    "excludeFromHero": true
+    "excludeFromHero": true,
+    "image": "whats-new-redesign.webp",
+    "imageAlt": "What's New page with category filter tabs, featured entry cards, and timeline sidebar"
   },
   {
     "id": "salary-archive",
@@ -54,7 +58,9 @@
     "category": "new-page",
     "link": "/theleague/salary-archive",
     "linkLabel": "View the archive",
-    "icon": "history"
+    "icon": "history",
+    "image": "salary-archive.webp",
+    "imageAlt": "Salary Archive page listing historical salary spreadsheets from 2009 to 2025"
   },
   {
     "id": "roster-ranking-source-label",
@@ -68,7 +74,9 @@
     "link": "/theleague/rosters",
     "linkLabel": "View rosters",
     "icon": "clipboard",
-    "excludeFromHero": true
+    "excludeFromHero": true,
+    "image": "roster-ranking-source-label.webp",
+    "imageAlt": "Roster page showing ranking source abbreviation in the column header"
   },
   {
     "id": "salary-analytics",
@@ -82,7 +90,9 @@
     "category": "enhancement",
     "link": "/theleague/salary",
     "linkLabel": "View Salary Analytics",
-    "icon": "bar-chart"
+    "icon": "bar-chart",
+    "image": "salary-analytics.webp",
+    "imageAlt": "Salary Analytics page with position benchmarks, starter averages, and player salary breakdowns"
   },
   {
     "id": "import-rankings",
@@ -97,7 +107,9 @@
     "category": "new-page",
     "link": "/theleague/import-rankings",
     "linkLabel": "Import rankings now",
-    "icon": "clipboard"
+    "icon": "clipboard",
+    "image": "import-rankings.webp",
+    "imageAlt": "Import Rankings page with bookmarklet instructions and draggable ranking source list"
   },
   {
     "id": "free-agent-scouting",
@@ -111,7 +123,9 @@
     "category": "new-feature",
     "link": "/theleague/players",
     "linkLabel": "Scout Free Agents",
-    "icon": "users"
+    "icon": "users",
+    "image": "free-agent-scouting.webp",
+    "imageAlt": "Free Agents scouting table with player rankings, snap counts, and position filters"
   },
   {
     "id": "whats-new-page",
@@ -124,7 +138,9 @@
     "category": "new-page",
     "link": "/theleague/whats-new",
     "linkLabel": "See all updates",
-    "icon": "star"
+    "icon": "star",
+    "image": "whats-new-page.webp",
+    "imageAlt": "What's New changelog page showing feature entries with dates and category badges"
   },
   {
     "id": "gm-coach-mode",
@@ -137,7 +153,9 @@
     "category": "new-feature",
     "link": "/theleague/rosters?view=coach",
     "linkLabel": "Try Coach Mode",
-    "icon": "submit"
+    "icon": "submit",
+    "image": "gm-coach-mode.webp",
+    "imageAlt": "Roster page in Coach Mode showing matchup data and start/sit columns"
   },
   {
     "id": "trade-bait-marketplace",
@@ -150,7 +168,9 @@
     "category": "new-feature",
     "link": "/theleague/trade-builder",
     "linkLabel": "Open Trade Builder",
-    "icon": "transactions-2"
+    "icon": "transactions-2",
+    "image": "trade-bait-marketplace.webp",
+    "imageAlt": "Trade Builder page showing the Trade Bait Marketplace with available players"
   },
   {
     "id": "league-summary",
@@ -163,7 +183,9 @@
     "category": "new-page",
     "link": "/theleague/league-summary",
     "linkLabel": "View League Summary",
-    "icon": "standings-2"
+    "icon": "standings-2",
+    "image": "league-summary.webp",
+    "imageAlt": "League Summary dashboard comparing all 16 teams across salary cap and roster metrics"
   },
   {
     "id": "trade-builder",
@@ -176,7 +198,9 @@
     "category": "new-page",
     "link": "/theleague/trade-builder",
     "linkLabel": "Build a Trade",
-    "icon": "transactions-2"
+    "icon": "transactions-2",
+    "image": "trade-builder.webp",
+    "imageAlt": "Trade Builder showing two-team player selection with salary cap impact analysis"
   },
   {
     "id": "whats-next-timeline",
@@ -189,7 +213,9 @@
     "category": "new-feature",
     "link": "/theleague",
     "linkLabel": "View Homepage",
-    "icon": "calendar"
+    "icon": "calendar",
+    "image": "whats-next-timeline.webp",
+    "imageAlt": "Homepage showing the What's Next timeline with three upcoming league event cards"
   },
   {
     "id": "league-calendar",
@@ -202,7 +228,9 @@
     "category": "new-page",
     "link": "/theleague/calendar",
     "linkLabel": "View Calendar",
-    "icon": "calendar"
+    "icon": "calendar",
+    "image": "league-calendar.webp",
+    "imageAlt": "League Calendar page with color-coded events and countdown timers"
   },
   {
     "id": "espn-headshots",
@@ -260,7 +288,9 @@
     "category": "new-page",
     "link": "/theleague/rules",
     "linkLabel": "Read the Rules",
-    "icon": "clipboard"
+    "icon": "clipboard",
+    "image": "rules-constitution.webp",
+    "imageAlt": "League Rules and Constitution page with searchable rule sections"
   },
   {
     "id": "playoffs",
@@ -273,7 +303,9 @@
     "category": "new-page",
     "link": "/theleague/playoffs",
     "linkLabel": "View Playoffs",
-    "icon": "champ"
+    "icon": "champ",
+    "image": "playoffs.webp",
+    "imageAlt": "Playoff bracket page showing tournament matchups and winners bracket"
   },
   {
     "id": "draft-predictor",
@@ -286,7 +318,9 @@
     "category": "new-page",
     "link": "/theleague/draft-predictor",
     "linkLabel": "View Draft Order",
-    "icon": "draft-podium"
+    "icon": "draft-podium",
+    "image": "draft-predictor.webp",
+    "imageAlt": "Draft Order Predictor showing projected pick order based on current standings"
   },
   {
     "id": "standings",
@@ -299,7 +333,9 @@
     "category": "new-page",
     "link": "/theleague/standings",
     "linkLabel": "View Standings",
-    "icon": "shield"
+    "icon": "shield",
+    "image": "standings.webp",
+    "imageAlt": "Standings page showing division standings with win-loss records and points"
   },
   {
     "id": "rosters",
@@ -312,7 +348,9 @@
     "category": "new-page",
     "link": "/theleague/rosters",
     "linkLabel": "View Rosters",
-    "icon": "banknote"
+    "icon": "banknote",
+    "image": "rosters.webp",
+    "imageAlt": "Team Roster page showing player salaries, contract lengths, and position details"
   },
   {
     "id": "salary-history",
@@ -325,7 +363,9 @@
     "category": "new-page",
     "link": "/theleague/salary-history",
     "linkLabel": "View Salary History",
-    "icon": "history"
+    "icon": "history",
+    "image": "salary-history.webp",
+    "imageAlt": "Salary History page with interactive charts showing cap spending trends across seasons"
   },
   {
     "id": "mvp-rankings",
@@ -338,7 +378,9 @@
     "category": "new-page",
     "link": "/theleague/mvp",
     "linkLabel": "View MVPs",
-    "icon": "star"
+    "icon": "star",
+    "image": "mvp-rankings.webp",
+    "imageAlt": "MVP Rankings page showing salary-adjusted value rankings for top performers"
   },
   {
     "id": "salary-benchmarks",
@@ -351,7 +393,9 @@
     "category": "new-page",
     "link": "/theleague/salary",
     "linkLabel": "View Benchmarks",
-    "icon": "bar-chart"
+    "icon": "bar-chart",
+    "image": "salary-benchmarks.webp",
+    "imageAlt": "Salary Benchmarks page comparing team spending against league averages by position"
   },
   {
     "id": "extension-calculator",
@@ -364,7 +408,9 @@
     "category": "new-page",
     "link": "/theleague/calculator",
     "linkLabel": "Open Calculator",
-    "icon": "dollar"
+    "icon": "dollar",
+    "image": "extension-calculator.webp",
+    "imageAlt": "Extension Calculator showing projected contract costs with 10% annual escalation"
   },
   {
     "id": "asset-library",
@@ -377,6 +423,8 @@
     "category": "new-page",
     "link": "/theleague/assets",
     "linkLabel": "Browse Assets",
-    "icon": "eye"
+    "icon": "eye",
+    "image": "asset-library.webp",
+    "imageAlt": "Asset Library gallery showing team logos, banners, and brand graphics"
   }
 ]

@@ -63,6 +63,10 @@ export interface HeroContent {
   isUrgent?: boolean;
   /** Event-only: whether the link is external */
   isExternal?: boolean;
+  /** Optional screenshot image path relative to /assets/whats-new/ */
+  image?: string;
+  /** Alt text for the screenshot image */
+  imageAlt?: string;
 }
 
 /** Human-readable labels for What's New categories */

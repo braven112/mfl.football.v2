@@ -29,6 +29,10 @@ export interface Props {
   isUrgent?: boolean;
   /** Event-only: whether the CTA link is external */
   isExternal?: boolean;
+  /** Optional screenshot image filename relative to /assets/whats-new/ */
+  image?: string;
+  /** Alt text for the screenshot image */
+  imageAlt?: string;
 }
 
 const {
@@ -44,54 +48,117 @@ const {
   isActive = false,
   isUrgent = false,
   isExternal = false,
+  image,
+  imageAlt,
 } = Astro.props;
 
 const iconId = icon ? `icon-${icon}` : null;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = icon ? MULTICOLOR_ICONS.includes(icon) : false;
 const isEvent = variant === 'event';
+const imagePath = image ? `/assets/whats-new/${image}` : null;
 ---
 
 <section
-  class={`hero-banner hero-banner--${variant}`}
+  class={`hero-banner hero-banner--${variant}${imagePath ? ' hero-banner--has-image' : ''}`}
   style={accentColor ? `--hero-accent: ${accentColor};` : undefined}
   aria-label="Featured announcement"
 >
   <div class="hero-banner__content">
-    <div class="hero-banner__text">
-      {isEvent && (
-        <span class={`hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
-          {isActive ? 'Happening Now' : isUrgent ? 'Coming Up' : 'League Event'}
-        </span>
-      )}
-      <div class="hero-banner__header">
-        {iconId && (
-          <svg class={`hero-banner__icon${isMulticolor ? ' hero-banner__icon--multicolor' : ''}`} aria-hidden="true">
-            <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
-          </svg>
+    {imagePath && (
+      <div class="hero-banner__image">
+        <div class="browser-frame">
+          <div class="browser-frame__bar">
+            <span class="browser-frame__dot browser-frame__dot--red"></span>
+            <span class="browser-frame__dot browser-frame__dot--yellow"></span>
+            <span class="browser-frame__dot browser-frame__dot--green"></span>
+            <span class="browser-frame__url">{link ? `theleague.us${link}` : 'theleague.us'}</span>
+          </div>
+          <img
+            src={imagePath}
+            alt={imageAlt || title}
+            class="hero-banner__image-img"
+            loading="eager"
+          />
+        </div>
+      </div>
+    )}
+    {imagePath ? (
+      <div class="hero-banner__body">
+        <div class="hero-banner__text">
+          {isEvent && (
+            <span class={`hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
+              {isActive ? 'Happening Now' : isUrgent ? 'Coming Up' : 'League Event'}
+            </span>
+          )}
+          <div class="hero-banner__header">
+            {iconId && (
+              <svg class={`hero-banner__icon${isMulticolor ? ' hero-banner__icon--multicolor' : ''}`} aria-hidden="true">
+                <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
+              </svg>
+            )}
+            <h2 class="hero-banner__title">{title}</h2>
+          </div>
+          {isEvent && dateDisplay && (
+            <p class="hero-banner__date">{dateDisplay}</p>
+          )}
+          <p class="hero-banner__summary">{summary}</p>
+          {isEvent && statusText && !isActive && (
+            <p class={`hero-banner__countdown${isUrgent ? ' hero-banner__countdown--urgent' : ''}`}>{statusText}</p>
+          )}
+        </div>
+        {link && (
+          <div class="hero-banner__actions">
+            <a
+              href={link}
+              class="hero-banner__cta"
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
+            >
+              {linkLabel}
+              <span class="hero-banner__cta-arrow" aria-hidden="true">{isExternal ? '\u2197' : '\u2192'}</span>
+            </a>
+          </div>
         )}
-        <h2 class="hero-banner__title">{title}</h2>
       </div>
-      {isEvent && dateDisplay && (
-        <p class="hero-banner__date">{dateDisplay}</p>
-      )}
-      <p class="hero-banner__summary">{summary}</p>
-      {isEvent && statusText && !isActive && (
-        <p class={`hero-banner__countdown${isUrgent ? ' hero-banner__countdown--urgent' : ''}`}>{statusText}</p>
-      )}
-    </div>
-    {link && (
-      <div class="hero-banner__actions">
-        <a
-          href={link}
-          class="hero-banner__cta"
-          target={isExternal ? '_blank' : undefined}
-          rel={isExternal ? 'noopener noreferrer' : undefined}
-        >
-          {linkLabel}
-          <span class="hero-banner__cta-arrow" aria-hidden="true">{isExternal ? '\u2197' : '\u2192'}</span>
-        </a>
-      </div>
+    ) : (
+      <Fragment>
+        <div class="hero-banner__text">
+          {isEvent && (
+            <span class={`hero-banner__badge${isActive ? ' hero-banner__badge--active' : ''}${isUrgent ? ' hero-banner__badge--urgent' : ''}`}>
+              {isActive ? 'Happening Now' : isUrgent ? 'Coming Up' : 'League Event'}
+            </span>
+          )}
+          <div class="hero-banner__header">
+            {iconId && (
+              <svg class={`hero-banner__icon${isMulticolor ? ' hero-banner__icon--multicolor' : ''}`} aria-hidden="true">
+                <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
+              </svg>
+            )}
+            <h2 class="hero-banner__title">{title}</h2>
+          </div>
+          {isEvent && dateDisplay && (
+            <p class="hero-banner__date">{dateDisplay}</p>
+          )}
+          <p class="hero-banner__summary">{summary}</p>
+          {isEvent && statusText && !isActive && (
+            <p class={`hero-banner__countdown${isUrgent ? ' hero-banner__countdown--urgent' : ''}`}>{statusText}</p>
+          )}
+        </div>
+        {link && (
+          <div class="hero-banner__actions">
+            <a
+              href={link}
+              class="hero-banner__cta"
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
+            >
+              {linkLabel}
+              <span class="hero-banner__cta-arrow" aria-hidden="true">{isExternal ? '\u2197' : '\u2192'}</span>
+            </a>
+          </div>
+        )}
+      </Fragment>
     )}
   </div>
 </section>
@@ -256,6 +323,97 @@ const isEvent = variant === 'event';
     transform: translateX(2px);
   }
 
+  /* ── Image support ── */
+  .hero-banner--has-image {
+    border-left: none;
+  }
+
+  .hero-banner--has-image::before {
+    display: none;
+  }
+
+  .hero-banner--has-image .hero-banner__content {
+    flex-direction: row-reverse;
+    padding: 0;
+    gap: 0;
+  }
+
+  .hero-banner__image {
+    flex: 0 0 48%;
+    max-width: 48%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg, 1.5rem);
+    background: color-mix(in srgb, var(--hero-accent) 80%, var(--content-bg, #fff));
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .hero-banner__image .browser-frame {
+    width: 100%;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    background: #e5e7eb;
+    transform: rotate(-1.5deg);
+  }
+
+  .hero-banner__image-img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hero-banner__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--spacing-lg, 1.5rem) var(--spacing-xl, 2rem);
+    gap: var(--spacing-md, 1rem);
+  }
+
+  .hero-banner__body .hero-banner__actions {
+    padding: 0;
+  }
+
+  /* ── Browser frame (macOS-style chrome) ── */
+  .browser-frame__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e5e7eb;
+  }
+
+  .browser-frame__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .browser-frame__dot--red { background: #ff5f57; }
+  .browser-frame__dot--yellow { background: #ffbd2e; }
+  .browser-frame__dot--green { background: #28c840; }
+
+  .browser-frame__url {
+    flex: 1;
+    margin-left: 6px;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #6b7280;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* ── Variant overrides ── */
   .hero-banner--feature {
     --hero-accent: var(--color-secondary, #2e8743);
@@ -270,11 +428,30 @@ const isEvent = variant === 'event';
   }
 
   /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .hero-banner--has-image .hero-banner__content {
+      flex-direction: column;
+    }
+
+    .hero-banner__image {
+      flex: none;
+      max-width: 100%;
+    }
+
+    .hero-banner__body {
+      padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
+    }
+  }
+
   @media (max-width: 640px) {
     .hero-banner__content {
       flex-direction: column;
       align-items: flex-start;
       padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+    }
+
+    .hero-banner--has-image .hero-banner__content {
+      padding: 0;
     }
 
     .hero-banner__title {
