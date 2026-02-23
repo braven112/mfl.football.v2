@@ -716,6 +716,23 @@ const faCountsJson = JSON.stringify(faCounts);
       if (el) el.textContent = String(counts[pos] || 0);
     }
 
+    // Hide unranked players when reverse-sorting a ranking column.
+    // Use the average rank map (union of all imports) so a player ranked in
+    // ANY import is kept. Positions with zero ranked players (PK, DEF) are exempt.
+    if (currentSort.startsWith('ranking_') && sortDirection === 'desc' && rankingLookup?.byImport) {
+      const avgMap = rankingLookup.byImport.get('__average__');
+      if (avgMap) {
+        const rankedPositions = new Set();
+        for (const p of players) {
+          if (avgMap.has(p.id)) rankedPositions.add(p.position);
+        }
+        filteredPlayers = filteredPlayers.filter(p => {
+          if (!rankedPositions.has(p.position)) return true;
+          return avgMap.has(p.id);
+        });
+      }
+    }
+
     sortPlayers();
     visibleCount = BATCH_SIZE;
     render();
@@ -947,8 +964,7 @@ const faCountsJson = JSON.stringify(faCounts);
           currentSort = sortKey;
           sortDirection = descDefaults.has(sortKey) ? 'desc' : 'asc';
         }
-        sortPlayers();
-        render();
+        filterPlayers();
       });
     });
 
@@ -1113,7 +1129,7 @@ const faCountsJson = JSON.stringify(faCounts);
           // Ranking columns default to ascending (rank 1 = best at top)
           emit('rankings:set-sort', { key: sortKey, dir: 'asc' });
         }
-        emit('rankings:refresh-table');
+        emit('rankings:refilter');
       });
 
       anchorTh.after(th);
