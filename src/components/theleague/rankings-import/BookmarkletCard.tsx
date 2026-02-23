@@ -6,9 +6,9 @@ interface Props {
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: '#10b981',
-  medium: '#f59e0b',
-  hard: '#ef4444',
+  easy: '#068050',
+  medium: '#b45309',
+  hard: '#dc2626',
 };
 
 export default function BookmarkletCard({ site }: Props) {
@@ -34,7 +34,7 @@ export default function BookmarkletCard({ site }: Props) {
         <div className="bm-card__badges">
           <span
             className="bm-card__badge"
-            style={{ background: DIFFICULTY_COLORS[site.difficulty] }}
+            style={{ background: DIFFICULTY_COLORS[site.difficulty], color: '#fff' }}
           >
             {site.difficulty}
           </span>
