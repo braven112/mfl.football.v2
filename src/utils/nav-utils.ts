@@ -370,7 +370,14 @@ export function isLinkActive(
   const normalizedLink = linkHref.split('?')[0].replace(/\/$/, '') || '/';
   const normalizedCurrent = currentPath.split('?')[0].replace(/\/$/, '') || '/';
 
-  return normalizedLink === normalizedCurrent;
+  if (normalizedLink === normalizedCurrent) return true;
+
+  // Sub-page matching: /whats-new/some-id should highlight /whats-new
+  if (normalizedLink !== '/' && normalizedCurrent.startsWith(normalizedLink + '/')) {
+    return true;
+  }
+
+  return false;
 }
 
 // ============================================================================
