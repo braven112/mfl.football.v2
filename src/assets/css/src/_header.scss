@@ -23,8 +23,8 @@
   }
   
   .league_logo svg {
-    width: 50px;
-    height: 53px;
+    height: 3rem;
+    width: auto;
     max-width: 100%;
     display: block;
   }
@@ -80,7 +80,7 @@
   .leaguename {
     float: left;
     font-size: 32px;
-    padding: 6px 0 6px 6px;
+    padding-left: .75rem;
     text-transform: uppercase;
     font-weight: $headline-font-weight;
     .leaguename--the {
