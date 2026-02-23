@@ -59,13 +59,21 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
       </div>
 
       {imagePath ? (
-        <div class="wn-detail__hero">
-          <img
-            src={imagePath}
-            alt={entry.imageAlt || entry.title}
-            class="wn-detail__hero-img"
-            loading="eager"
-          />
+        <div class={`wn-detail__hero wn-detail__hero--${entry.category}`}>
+          <div class="browser-frame">
+            <div class="browser-frame__bar">
+              <span class="browser-frame__dot browser-frame__dot--red"></span>
+              <span class="browser-frame__dot browser-frame__dot--yellow"></span>
+              <span class="browser-frame__dot browser-frame__dot--green"></span>
+              <span class="browser-frame__url">{entry.link ? `theleague.us${entry.link}` : 'theleague.us'}</span>
+            </div>
+            <img
+              src={imagePath}
+              alt={entry.imageAlt || entry.title}
+              class="wn-detail__hero-img"
+              loading="eager"
+            />
+          </div>
         </div>
       ) : iconId ? (
         <div class={`wn-detail__hero wn-detail__hero--fallback wn-detail__hero--${entry.category}`}>
@@ -189,6 +197,17 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   .wn-detail__hero {
     border-radius: 0.75rem;
     overflow: hidden;
+    padding: var(--spacing-lg, 1.5rem);
+    background: color-mix(in srgb, var(--entry-category-color, #1c497c) 10%, var(--content-bg, #fff));
+    box-sizing: border-box;
+  }
+
+  .wn-detail__hero .browser-frame {
+    background: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transform: rotate(-1.5deg);
   }
 
   .wn-detail__hero-img {
@@ -197,6 +216,39 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     display: block;
     aspect-ratio: 16 / 9;
     object-fit: cover;
+  }
+
+  /* ── Browser frame (macOS-style chrome) ── */
+  .browser-frame__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e5e7eb;
+  }
+
+  .browser-frame__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .browser-frame__dot--red { background: #ff5f57; }
+  .browser-frame__dot--yellow { background: #ffbd2e; }
+  .browser-frame__dot--green { background: #28c840; }
+
+  .browser-frame__url {
+    flex: 1;
+    margin-left: 6px;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #6b7280;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .wn-detail__hero--fallback {

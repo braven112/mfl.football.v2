@@ -255,14 +255,88 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-card--enhancement { --entry-category-color: var(--cat-enhancement); }
   .wn-card--league-event { --entry-category-color: var(--cat-league-event); }
 
+  /* When a card has an image, move the border from left to bottom of thumbnail */
+  .wn-card:has(.wn-card__thumbnail) {
+    border-left: none;
+  }
+
+  .wn-card:has(.wn-card__thumbnail) .wn-card__thumbnail {
+    border-bottom: 4px solid var(--entry-category-color, var(--cat-new-feature));
+  }
+
+  /* Featured card: just span full width by default */
   .wn-card--featured {
     grid-column: 1 / -1;
+  }
+
+  /* Featured card WITH image: side-by-side layout */
+  .wn-card--featured:has(.wn-card__thumbnail) {
+    flex-direction: row-reverse;
+    border-left: none;
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .wn-card--featured:has(.wn-card__thumbnail):hover {
+    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
+    transform: translateY(-2px);
+  }
+
+  .wn-card--featured .wn-card__thumbnail {
+    flex: 0 0 45%;
+    max-width: 45%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-bottom: none;
+    border-radius: 0 0.75rem 0.75rem 0;
+  }
+
+  .wn-card--featured .wn-card__thumbnail .browser-frame {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .wn-card--featured .wn-card__thumbnail-img {
+    flex: 1;
+    aspect-ratio: unset;
+    object-fit: cover;
+  }
+
+  .wn-card.wn-card--featured:has(.wn-card__thumbnail) .wn-card__content {
+    padding: var(--spacing-lg, 1.5rem);
+    gap: var(--spacing-sm, 0.5rem);
+    border-top: none;
+  }
+
+  .wn-card--featured .wn-card__title {
+    font-size: 1.25rem;
+  }
+
+  .wn-card--featured .wn-card__summary {
+    -webkit-line-clamp: 4;
   }
 
   /* Card thumbnail */
   .wn-card__thumbnail {
     width: 100%;
     overflow: hidden;
+    padding: var(--spacing-md, 1rem);
+    background: color-mix(in srgb, var(--entry-category-color, #1c497c) 10%, var(--content-bg, #fff));
+    box-sizing: border-box;
+  }
+
+  .wn-card__thumbnail .browser-frame {
+    background: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: rotate(-13deg);
   }
 
   .wn-card__thumbnail-img {
@@ -271,6 +345,44 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
+  }
+
+  /* ── Browser frame (macOS-style chrome) ── */
+  .browser-frame__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e5e7eb;
+  }
+
+  .browser-frame__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .browser-frame__dot--red { background: #ff5f57; }
+  .browser-frame__dot--yellow { background: #ffbd2e; }
+  .browser-frame__dot--green { background: #28c840; }
+
+  .browser-frame__url {
+    flex: 1;
+    margin-left: 6px;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #6b7280;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Featured card content has no border from thumbnail */
+  .wn-card.wn-card--featured:has(.wn-card__thumbnail) .wn-card__thumbnail {
+    border-bottom: none;
   }
 
   /* Card content */
@@ -466,6 +578,28 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 
     .wn-timeline {
       display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .wn-card--featured:has(.wn-card__thumbnail) {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .wn-card--featured .wn-card__thumbnail {
+      flex: none;
+      max-width: 100%;
+      border-radius: 0;
+      border-bottom: 4px solid var(--entry-category-color, var(--cat-new-feature));
+    }
+
+    .wn-card--featured:has(.wn-card__thumbnail) .wn-card__content {
+      padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
+    }
+
+    .wn-card--featured .wn-card__title {
+      font-size: 1rem;
     }
   }
 

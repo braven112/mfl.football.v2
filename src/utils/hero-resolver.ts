@@ -40,6 +40,8 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     linkLabel: entry.linkLabel ?? 'Check it out',
     icon: entry.icon,
     accentColor: 'var(--color-secondary, #2e8743)',
+    image: entry.image,
+    imageAlt: entry.imageAlt,
   };
 }
 

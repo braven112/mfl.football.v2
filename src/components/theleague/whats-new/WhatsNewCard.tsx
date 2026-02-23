@@ -27,12 +27,20 @@ export default function WhatsNewCard({ entry, featured }: Props) {
     >
       {imagePath && (
         <div className="wn-card__thumbnail">
-          <img
-            src={imagePath}
-            alt={entry.imageAlt || entry.title}
-            className="wn-card__thumbnail-img"
-            loading="lazy"
-          />
+          <div className="browser-frame">
+            <div className="browser-frame__bar">
+              <span className="browser-frame__dot browser-frame__dot--red" />
+              <span className="browser-frame__dot browser-frame__dot--yellow" />
+              <span className="browser-frame__dot browser-frame__dot--green" />
+              <span className="browser-frame__url">{entry.link ? `theleague.us${entry.link}` : 'theleague.us'}</span>
+            </div>
+            <img
+              src={imagePath}
+              alt={entry.imageAlt || entry.title}
+              className="wn-card__thumbnail-img"
+              loading="lazy"
+            />
+          </div>
         </div>
       )}
 
