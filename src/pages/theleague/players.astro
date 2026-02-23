@@ -475,6 +475,7 @@ const faCountsJson = JSON.stringify(faCounts);
 
   // Rankings lookup — populated by the rankings module script
   let rankingLookup = { byImport: new Map(), columns: [] };
+  let hasExplicitSortPref = false;
 
   // Column group visibility — stats and rankings are mutually exclusive
   // 'stats' = show stats columns, 'rankings' = show ranking columns
@@ -778,7 +779,9 @@ const faCountsJson = JSON.stringify(faCounts);
       for (const col of rankingLookup.columns) {
         const rnk = rankingLookup.byImport.get(col.importId)?.get(p.id);
         const avgCls = col.isAverage ? ' col-ranking-avg' : '';
-        html += `<td class="cell-num col-group--rankings${avgCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
+        const compositeCls = col.isComposite ? ' col-ranking-composite' : '';
+        const borderCls = col.isLastCompositeMember ? ' col-ranking-member-last' : '';
+        html += `<td class="cell-num col-group--rankings${avgCls}${compositeCls}${borderCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasSnapCounts) {
@@ -853,10 +856,16 @@ const faCountsJson = JSON.stringify(faCounts);
       // If rankings were removed and user was viewing them, switch back to stats
       activeView = 'stats';
     }
+    // Auto-sort by "My Rank" composite when it exists and user hasn't explicitly sorted
+    if (e.detail.hasComposite && !hasExplicitSortPref) {
+      currentSort = 'ranking___composite__';
+      sortDirection = 'asc';
+    }
     applyGroupVisibility();
   });
 
   document.addEventListener('rankings:set-sort', function (e) {
+    hasExplicitSortPref = true;
     currentSort = e.detail.key;
     sortDirection = e.detail.dir;
   });
@@ -940,6 +949,7 @@ const faCountsJson = JSON.stringify(faCounts);
     // Sorting
     document.querySelectorAll('.players-table th.sortable').forEach(th => {
       th.addEventListener('click', () => {
+        hasExplicitSortPref = true;
         const sortKey = th.getAttribute('data-sort');
         if (sortKey === currentSort) {
           sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -1066,7 +1076,8 @@ const faCountsJson = JSON.stringify(faCounts);
     const limitedLookup = { ...lookup, columns: limitedColumns };
 
     // Tell the inline script about the new lookup and whether ranking columns exist
-    emit('rankings:set-lookup', { lookup: limitedLookup, hasColumns: limitedLookup.columns.length > 0 });
+    const hasComposite = limitedLookup.columns.some((c: any) => c.isComposite);
+    emit('rankings:set-lookup', { lookup: limitedLookup, hasColumns: limitedLookup.columns.length > 0, hasComposite });
 
     // Remove any previously injected ranking <th> elements
     document.querySelectorAll('.players-table th[data-ranking-col]').forEach(th => th.remove());
@@ -1091,11 +1102,19 @@ const faCountsJson = JSON.stringify(faCounts);
       th.dataset.sort = `ranking_${col.importId}`;
       th.dataset.rankingCol = 'true';
 
-      if (col.isAverage) {
+      if (col.isComposite) {
+        th.classList.add('col-ranking-composite');
+        const memberCount = limitedColumns.filter((c: any) => c.isCompositeMember).length;
+        th.title = `My Rank — weighted composite of ${memberCount} ranking sources`;
+      } else if (col.isAverage) {
         th.classList.add('col-ranking-avg');
         th.title = `Average Rank across ${limitedColumns.length - 1} imports`;
       } else {
         th.title = `${col.fullName} (${col.playerCount} players)`;
+      }
+
+      if (col.isLastCompositeMember) {
+        th.classList.add('col-ranking-member-last');
       }
 
       th.innerHTML = `<div class="th-content">${col.header}</div>`;
@@ -1429,12 +1448,18 @@ const faCountsJson = JSON.stringify(faCounts);
     font-variant-numeric: tabular-nums;
     font-size: 0.8125rem;
   }
-  :global(.col-ranking-avg) {
+  :global(.col-ranking-avg),
+  :global(.col-ranking-composite) {
     font-weight: 600;
     background: rgba(28, 73, 124, 0.04);
   }
-  :global(th.col-ranking-avg .th-content) {
+  :global(th.col-ranking-avg .th-content),
+  :global(th.col-ranking-composite .th-content) {
     font-weight: 700;
+  }
+  :global(th.col-ranking-member-last),
+  :global(td.col-ranking-member-last) {
+    border-right: 2px solid rgba(28, 73, 124, 0.15);
   }
   :global(.cell-pts) {
     font-weight: 600;

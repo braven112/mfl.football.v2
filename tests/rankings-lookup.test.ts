@@ -8,23 +8,28 @@ import {
   SOURCE_ABBREVS,
   TYPE_LABELS,
   AVERAGE_IMPORT_ID,
+  COMPOSITE_IMPORT_ID,
 } from '../src/utils/rankings-lookup';
 import type {
   StoredRankingImport,
   StoredRankingEntry,
   RankingSourceId,
   RankingType,
+  CompositeRankConfig,
 } from '../src/types/rankings-import';
 
-// Mock getAveragePosition — defaults to 0 (first position) unless overridden
+// Mock getAveragePosition and getCompositeConfig
 const mockGetAveragePosition = vi.fn(() => 0);
+const mockGetCompositeConfig = vi.fn<[], CompositeRankConfig | null>(() => null);
 vi.mock('../src/utils/rankings-storage', () => ({
   getAllImports: vi.fn(() => []),
   getAveragePosition: () => mockGetAveragePosition(),
+  getCompositeConfig: () => mockGetCompositeConfig(),
 }));
 
 beforeEach(() => {
   mockGetAveragePosition.mockReturnValue(0);
+  mockGetCompositeConfig.mockReturnValue(null);
 });
 
 // ---------------------------------------------------------------------------
@@ -429,9 +434,8 @@ describe('SOURCE_LABELS', () => {
     }
   });
 
-  it('should not have nfl or espn entries', () => {
+  it('should not have nfl entry', () => {
     expect(SOURCE_LABELS['nfl' as any]).toBeUndefined();
-    expect(SOURCE_LABELS['espn' as any]).toBeUndefined();
   });
 
   it('should have correct full names', () => {
@@ -469,9 +473,8 @@ describe('SOURCE_ABBREVS', () => {
     }
   });
 
-  it('should not have nfl or espn entries', () => {
+  it('should not have nfl entry', () => {
     expect(SOURCE_ABBREVS['nfl' as any]).toBeUndefined();
-    expect(SOURCE_ABBREVS['espn' as any]).toBeUndefined();
   });
 
   it('should have abbreviations of 5 characters or less', () => {
@@ -741,5 +744,268 @@ describe('average rank column', () => {
     const lookup = buildRankingLookup([imp1, imp2]);
 
     expect(lookup.columns[0].isAverage).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Composite rank column tests
+// ---------------------------------------------------------------------------
+
+describe('composite rank column', () => {
+  it('should NOT add composite column when config is null', () => {
+    mockGetCompositeConfig.mockReturnValue(null);
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    expect(lookup.columns.find((c) => c.isComposite)).toBeUndefined();
+    expect(lookup.byImport.has(COMPOSITE_IMPORT_ID)).toBe(false);
+  });
+
+  it('should NOT add composite column when fewer than 2 members', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [{ importId: '1', weight: 1 }],
+    });
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    expect(lookup.columns.find((c) => c.isComposite)).toBeUndefined();
+  });
+
+  it('should add composite column as FIRST column when 2+ members', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    expect(lookup.columns[0].isComposite).toBe(true);
+    expect(lookup.columns[0].importId).toBe(COMPOSITE_IMPORT_ID);
+    expect(lookup.columns[0].header).toBe('My Rank');
+  });
+
+  it('should compute correct equal-weight composite (same as average)', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({
+      id: '1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: '2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 20, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+    expect(compositeMap?.get('p1')).toBe(15); // (10*1 + 20*1) / 2
+  });
+
+  it('should compute correct weighted composite', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 2 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({
+      id: '1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: '2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 20, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+    expect(compositeMap?.get('p1')).toBe(13); // Math.round((10*2 + 20*1) / 3) = 13.33 → 13
+  });
+
+  it('should order columns: composite, members, then others', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '3', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const imp3 = createMockRankingImport({ id: '3', source: 'keeptradecut' });
+
+    const lookup = buildRankingLookup([imp1, imp2, imp3]);
+
+    // Composite first, then members (1, 3), then others (2), then average
+    const nonAvg = lookup.columns.filter((c) => !c.isAverage);
+    expect(nonAvg[0].isComposite).toBe(true);
+    expect(nonAvg[1].importId).toBe('1');
+    expect(nonAvg[1].isCompositeMember).toBe(true);
+    expect(nonAvg[2].importId).toBe('3');
+    expect(nonAvg[2].isCompositeMember).toBe(true);
+    expect(nonAvg[3].importId).toBe('2');
+    expect(nonAvg[3].isCompositeMember).toBeUndefined();
+  });
+
+  it('should mark last composite member with isLastCompositeMember', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+    const imp3 = createMockRankingImport({ id: '3', source: 'keeptradecut' });
+
+    const lookup = buildRankingLookup([imp1, imp2, imp3]);
+
+    const members = lookup.columns.filter((c) => c.isCompositeMember);
+    expect(members).toHaveLength(2);
+    expect(members[0].isLastCompositeMember).toBeUndefined();
+    expect(members[1].isLastCompositeMember).toBe(true);
+  });
+
+  it('should handle player only in 1 of 2 composite members', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({
+      id: '1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 7, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: '2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 3, playerId: 'p2' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+    expect(compositeMap?.get('p1')).toBe(7); // only in imp1
+    expect(compositeMap?.get('p2')).toBe(3); // only in imp2
+  });
+
+  it('should coexist with average column', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({ id: '1', source: 'fantasypros' });
+    const imp2 = createMockRankingImport({ id: '2', source: 'sleeper' });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+
+    const compositeCol = lookup.columns.find((c) => c.isComposite);
+    const avgCol = lookup.columns.find((c) => c.isAverage);
+    expect(compositeCol).toBeDefined();
+    expect(avgCol).toBeDefined();
+    expect(compositeCol?.importId).not.toBe(avgCol?.importId);
+  });
+
+  it('should round weighted average to nearest integer', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 2 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({
+      id: '1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 3, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: '2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 8, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+    // (3*1 + 8*2) / 3 = 19/3 = 6.333... → 6
+    expect(compositeMap?.get('p1')).toBe(6);
+  });
+
+  it('should work with getPlayerRank using COMPOSITE_IMPORT_ID', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({
+      id: '1',
+      source: 'fantasypros',
+      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+    });
+    const imp2 = createMockRankingImport({
+      id: '2',
+      source: 'sleeper',
+      rankings: [createMockRankingEntry({ rank: 20, playerId: 'p1' })],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    expect(getPlayerRank(lookup, 'p1', COMPOSITE_IMPORT_ID)).toBe(15);
+    expect(getPlayerRank(lookup, 'p-unknown', COMPOSITE_IMPORT_ID)).toBeNull();
+  });
+
+  it('should report correct playerCount for composite column', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: '1', weight: 1 },
+        { importId: '2', weight: 1 },
+      ],
+    });
+
+    const imp1 = createMockRankingImport({
+      id: '1',
+      source: 'fantasypros',
+      rankings: [
+        createMockRankingEntry({ rank: 1, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 2, playerId: 'p2' }),
+      ],
+    });
+    const imp2 = createMockRankingImport({
+      id: '2',
+      source: 'sleeper',
+      rankings: [
+        createMockRankingEntry({ rank: 1, playerId: 'p2' }),
+        createMockRankingEntry({ rank: 2, playerId: 'p3' }),
+      ],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const compositeCol = lookup.columns.find((c) => c.isComposite);
+    expect(compositeCol?.playerCount).toBe(3); // p1, p2, p3
   });
 });

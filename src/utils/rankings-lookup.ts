@@ -24,10 +24,13 @@ import type {
   RankingType,
   StoredRankingImport,
 } from '../types/rankings-import';
-import { getAllImports, getAveragePosition } from './rankings-storage';
+import { getAllImports, getAveragePosition, getCompositeConfig } from './rankings-storage';
 
 /** Synthetic importId used for the computed average rank column. */
 export const AVERAGE_IMPORT_ID = '__average__';
+
+/** Synthetic importId used for the user-curated composite rank column. */
+export const COMPOSITE_IMPORT_ID = '__composite__';
 
 // ---------------------------------------------------------------------------
 // Labels & display constants
@@ -112,6 +115,12 @@ export interface RankingColumn {
   importDate: string;
   /** True only for the synthetic average rank column */
   isAverage?: boolean;
+  /** True only for the synthetic "My Rank" composite column */
+  isComposite?: boolean;
+  /** True for imports that are members of the active composite */
+  isCompositeMember?: boolean;
+  /** True for the last (rightmost) composite member — used for border styling */
+  isLastCompositeMember?: boolean;
 }
 
 export interface RankingLookup {
@@ -159,13 +168,86 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
   // Column order matches the user-defined array order from localStorage
   // (controlled by drag-and-drop in ManageImportsSection)
 
+  // Build composite rank column when user has selected 2+ members
+  const compositeConfig = getCompositeConfig();
+  if (compositeConfig && compositeConfig.members.length >= 2) {
+    const memberIds = new Set(compositeConfig.members.map((m) => m.importId));
+
+    // Compute weighted composite ranks
+    const compositeMap = new Map<string, number>();
+    const compositePlayerIds = new Set<string>();
+    for (const [impId, playerMap] of byImport) {
+      if (!memberIds.has(impId)) continue;
+      for (const playerId of playerMap.keys()) {
+        compositePlayerIds.add(playerId);
+      }
+    }
+
+    for (const playerId of compositePlayerIds) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+      for (const member of compositeConfig.members) {
+        const rank = byImport.get(member.importId)?.get(playerId);
+        if (rank != null) {
+          weightedSum += rank * member.weight;
+          totalWeight += member.weight;
+        }
+      }
+      if (totalWeight > 0) {
+        compositeMap.set(playerId, Math.round(weightedSum / totalWeight));
+      }
+    }
+
+    byImport.set(COMPOSITE_IMPORT_ID, compositeMap);
+
+    // Partition columns into members and non-members (preserving relative order)
+    const memberColumns: RankingColumn[] = [];
+    const otherColumns: RankingColumn[] = [];
+    for (const col of columns) {
+      if (memberIds.has(col.importId)) {
+        col.isCompositeMember = true;
+        memberColumns.push(col);
+      } else {
+        otherColumns.push(col);
+      }
+    }
+
+    // Mark last composite member for border styling
+    if (memberColumns.length > 0) {
+      memberColumns[memberColumns.length - 1].isLastCompositeMember = true;
+    }
+
+    // Create composite column
+    const compositeColumn: RankingColumn = {
+      importId: COMPOSITE_IMPORT_ID,
+      source: 'custom',
+      type: 'overall',
+      header: 'My Rank',
+      fullName: 'My Rank (Composite)',
+      playerCount: compositeMap.size,
+      importDate: new Date().toISOString(),
+      isComposite: true,
+    };
+
+    // Rebuild columns: composite first, then members, then others
+    columns.length = 0;
+    columns.push(compositeColumn, ...memberColumns, ...otherColumns);
+  }
+
   // Compute average rank column when 2+ imports exist
   if (allImports.length >= 2) {
     const averageMap = new Map<string, number>();
 
-    // Collect all unique player IDs across all imports
+    // Only use real import maps for average (not synthetic composite/average)
+    const realImportMaps: Map<string, number>[] = [];
+    for (const imp of allImports) {
+      const playerMap = byImport.get(imp.id);
+      if (playerMap) realImportMaps.push(playerMap);
+    }
+
+    // Collect all unique player IDs across real imports only
     const allPlayerIds = new Set<string>();
-    for (const [, playerMap] of byImport) {
+    for (const playerMap of realImportMaps) {
       for (const playerId of playerMap.keys()) {
         allPlayerIds.add(playerId);
       }
@@ -175,7 +257,7 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
     for (const playerId of allPlayerIds) {
       let sum = 0;
       let count = 0;
-      for (const [, playerMap] of byImport) {
+      for (const playerMap of realImportMaps) {
         const rank = playerMap.get(playerId);
         if (rank != null) {
           sum += rank;
@@ -202,8 +284,12 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
     };
 
     const storedPosition = getAveragePosition();
-    // Clamp to valid range [0, columns.length]
-    const insertAt = Math.max(0, Math.min(storedPosition, columns.length));
+    // When composite is active, offset average position past the composite group
+    // so the stored position is relative to the non-composite columns.
+    const compositeGroupSize = compositeConfig ? 1 + compositeConfig.members.length : 0;
+    const effectivePosition = storedPosition + compositeGroupSize;
+    // Clamp to valid range [compositeGroupSize, columns.length]
+    const insertAt = Math.max(compositeGroupSize, Math.min(effectivePosition, columns.length));
     columns.splice(insertAt, 0, avgColumn);
   }
 

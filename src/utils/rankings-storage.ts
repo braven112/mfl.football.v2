@@ -7,10 +7,11 @@
  * Also handles migration from the legacy auctionPredictor.* localStorage keys.
  */
 
-import type { StoredRankingImport } from '../types/rankings-import';
+import type { StoredRankingImport, CompositeRankConfig } from '../types/rankings-import';
 
 const STORAGE_KEY = 'rankings.imports';
 const AVG_POSITION_KEY = 'rankings.averagePosition';
+const COMPOSITE_CONFIG_KEY = 'rankings.compositeConfig';
 
 // Legacy keys from the old auction predictor rankings import
 const LEGACY_KEYS = [
@@ -52,6 +53,9 @@ export function _clearCache(): void {
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) _cache = null;
+    if (e.key === COMPOSITE_CONFIG_KEY) {
+      window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+    }
   });
 }
 
@@ -89,6 +93,29 @@ export function saveImport(importData: StoredRankingImport): void {
     (i) => i.source === importData.source && i.type === importData.type,
   );
   if (existingIdx !== -1) {
+    const oldId = imports[existingIdx].id;
+    const newId = importData.id;
+
+    // Update composite config to reference the new import ID
+    if (oldId !== newId) {
+      try {
+        const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+        if (raw) {
+          const config = JSON.parse(raw) as CompositeRankConfig;
+          let changed = false;
+          for (const member of config.members) {
+            if (member.importId === oldId) {
+              member.importId = newId;
+              changed = true;
+            }
+          }
+          if (changed) {
+            localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
+          }
+        }
+      } catch { /* ignore malformed config */ }
+    }
+
     imports[existingIdx] = importData;
   } else {
     imports.push(importData);
@@ -100,6 +127,18 @@ export function saveImport(importData: StoredRankingImport): void {
 export function deleteImport(id: string): void {
   const imports = getAllImports().filter((i) => i.id !== id);
   writeToStorage(imports);
+
+  // Remove from composite config if present
+  try {
+    const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+    if (raw) {
+      const config = JSON.parse(raw) as CompositeRankConfig;
+      const filtered = config.members.filter((m) => m.importId !== id);
+      if (filtered.length !== config.members.length) {
+        localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify({ members: filtered }));
+      }
+    }
+  } catch { /* ignore malformed config */ }
 }
 
 export function getImportById(id: string): StoredRankingImport | null {
@@ -150,6 +189,76 @@ export function getAveragePosition(): number {
     return 0;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Composite rank config
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the composite rank configuration.
+ * Validates member IDs against current imports and returns null if fewer
+ * than 2 valid members remain.
+ */
+export function getCompositeConfig(): CompositeRankConfig | null {
+  try {
+    const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+    if (!raw) return null;
+    const config = JSON.parse(raw) as CompositeRankConfig;
+    if (!config.members || !Array.isArray(config.members)) return null;
+
+    // Filter out members that reference deleted imports
+    const validIds = new Set(getAllImports().map((i) => i.id));
+    const valid = config.members.filter((m) => validIds.has(m.importId));
+    return valid.length >= 2 ? { members: valid } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save composite rank configuration.
+ * Fires 'rankingsUpdated' event so all consumers react.
+ */
+export function saveCompositeConfig(config: CompositeRankConfig): void {
+  localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
+  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+}
+
+/**
+ * Toggle a specific import's inclusion in the composite.
+ * When including, uses default weight of 1.
+ */
+export function toggleCompositeImport(importId: string, included: boolean): void {
+  const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+  const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
+
+  if (included) {
+    if (!current.members.find((m) => m.importId === importId)) {
+      current.members.push({ importId, weight: 1 });
+    }
+  } else {
+    current.members = current.members.filter((m) => m.importId !== importId);
+  }
+
+  saveCompositeConfig(current);
+}
+
+/**
+ * Update the weight for a composite member.
+ */
+export function setCompositeWeight(importId: string, weight: 1 | 2 | 3): void {
+  const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+  const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
+  const member = current.members.find((m) => m.importId === importId);
+  if (member) {
+    member.weight = weight;
+    saveCompositeConfig(current);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Latest import lookup
+// ---------------------------------------------------------------------------
 
 export function getLatestImportByType(
   type: 'dynasty' | 'redraft' | 'adp' | 'overall',

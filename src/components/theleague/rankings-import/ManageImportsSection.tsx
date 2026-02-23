@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -17,8 +17,15 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-import { deleteImport, reorderImports, getAveragePosition } from '../../../utils/rankings-storage';
-import type { StoredRankingImport } from '../../../types/rankings-import';
+import {
+  deleteImport,
+  reorderImports,
+  getAveragePosition,
+  getCompositeConfig,
+  toggleCompositeImport,
+  setCompositeWeight,
+} from '../../../utils/rankings-storage';
+import type { StoredRankingImport, CompositeImportConfig } from '../../../types/rankings-import';
 import { SOURCE_LABELS, AVERAGE_IMPORT_ID } from '../../../utils/rankings-lookup';
 import ImportDetailModal from './ImportDetailModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
@@ -37,6 +44,12 @@ type SortableItem =
 export default function ManageImportsSection({ imports, onDelete, onReorder }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoredRankingImport | null>(null);
+  const [compositeMembers, setCompositeMembers] = useState<Map<string, CompositeImportConfig>>(
+    () => {
+      const config = getCompositeConfig();
+      return new Map(config?.members.map((m) => [m.importId, m]) ?? []);
+    },
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -45,7 +58,14 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }),
   );
 
+  // Refresh composite state when imports change (e.g. deletion may invalidate members)
+  useEffect(() => {
+    const config = getCompositeConfig();
+    setCompositeMembers(new Map(config?.members.map((m) => [m.importId, m]) ?? []));
+  }, [imports]);
+
   const showAverage = imports.length >= 2;
+  const compositeActive = compositeMembers.size >= 2;
 
   // Build the combined sortable list: real imports + average at stored position
   const items: SortableItem[] = useMemo(() => {
@@ -83,6 +103,36 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }
   };
 
+  const handleToggleComposite = (importId: string, included: boolean) => {
+    toggleCompositeImport(importId, included);
+    const config = getCompositeConfig();
+    setCompositeMembers(new Map(config?.members.map((m) => [m.importId, m]) ?? []));
+    // Read raw config to show members even when < 2 (UI shows checkboxes always)
+    try {
+      const raw = localStorage.getItem('rankings.compositeConfig');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.members) {
+          setCompositeMembers(new Map(parsed.members.map((m: CompositeImportConfig) => [m.importId, m])));
+        }
+      } else if (!included) {
+        setCompositeMembers(new Map());
+      }
+    } catch { /* ignore */ }
+    onReorder();
+  };
+
+  const handleSetWeight = (importId: string, weight: 1 | 2 | 3) => {
+    setCompositeWeight(importId, weight);
+    const updated = new Map(compositeMembers);
+    const member = updated.get(importId);
+    if (member) {
+      updated.set(importId, { ...member, weight });
+      setCompositeMembers(updated);
+    }
+    onReorder();
+  };
+
   return (
     <section className="ri-section">
       <h2 className="ri-section__title">
@@ -95,21 +145,24 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         Saved Rankings
       </h2>
       <p className="ri-section__note">
-        Drag to reorder. Your #1 ranking is used as the primary ranking on pages that only show one. All rankings appear as columns on the Free Agents page.
+        Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite. Adjust weight to give a source more influence.
       </p>
 
       {imports.length === 0 ? (
         <p className="ri-section__empty">No rankings imported yet. Use a bookmarklet above to get started.</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleDragEnd}>
+          {compositeActive && <CompositeInfoBar memberCount={compositeMembers.size} />}
           <div className="ri-manage__table-wrap">
             <table className="ri-manage__table">
               <thead>
                 <tr>
                   <th className="ri-manage__drag-col" aria-label="Reorder"></th>
                   <th className="ri-manage__order-col">#</th>
+                  <th className="ri-manage__composite-col">My Rank</th>
                   <th>Source</th>
                   <th>Type</th>
+                  <th className="ri-manage__weight-col">Weight</th>
                   <th>Date</th>
                   <th>Players</th>
                   <th>Match Rate</th>
@@ -128,6 +181,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
                         order={idx + 1}
                         onView={setSelectedImport}
                         onDelete={setDeleteTarget}
+                        isCompositeMember={compositeMembers.has(item.id)}
+                        compositeWeight={compositeMembers.get(item.id)?.weight ?? null}
+                        onToggleComposite={handleToggleComposite}
+                        onSetWeight={handleSetWeight}
                       />
                     ),
                   )}
@@ -153,6 +210,21 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         />
       )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Composite info bar (shown above table when 2+ members selected)
+// ---------------------------------------------------------------------------
+
+function CompositeInfoBar({ memberCount }: { memberCount: number }) {
+  return (
+    <div className="ri-manage__composite-bar">
+      <span className="ri-manage__composite-bar-label">My Rank</span>
+      <span className="ri-manage__composite-bar-detail">
+        Composite of {memberCount} ranking sources
+      </span>
+    </div>
   );
 }
 
@@ -205,10 +277,12 @@ function AverageRow({ imports, order }: AverageRowProps) {
         </svg>
       </td>
       <td className="ri-manage__order">{order}</td>
+      <td className="ri-manage__composite-check"></td>
       <td className="ri-manage__source">Average Rank</td>
       <td>
         <span className="ri-manage__type ri-manage__type--overall">computed</span>
       </td>
+      <td>—</td>
       <td>—</td>
       <td>{playerCount}</td>
       <td>—</td>
@@ -226,9 +300,13 @@ interface SortableRowProps {
   order: number;
   onView: (imp: StoredRankingImport) => void;
   onDelete: (imp: StoredRankingImport) => void;
+  isCompositeMember: boolean;
+  compositeWeight: 1 | 2 | 3 | null;
+  onToggleComposite: (importId: string, included: boolean) => void;
+  onSetWeight: (importId: string, weight: 1 | 2 | 3) => void;
 }
 
-function SortableRow({ imp, order, onView, onDelete }: SortableRowProps) {
+function SortableRow({ imp, order, onView, onDelete, isCompositeMember, compositeWeight, onToggleComposite, onSetWeight }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -257,11 +335,39 @@ function SortableRow({ imp, order, onView, onDelete }: SortableRowProps) {
         </svg>
       </td>
       <td className="ri-manage__order">{order}</td>
+      <td className="ri-manage__composite-check">
+        <input
+          type="checkbox"
+          checked={isCompositeMember}
+          onChange={(e) => onToggleComposite(imp.id, e.target.checked)}
+          aria-label={`Include ${SOURCE_LABELS[imp.source] || imp.source} in My Rank`}
+        />
+      </td>
       <td className="ri-manage__source">{SOURCE_LABELS[imp.source] || imp.source}</td>
       <td>
         <span className={`ri-manage__type ri-manage__type--${imp.type}`}>
           {imp.type}
         </span>
+      </td>
+      <td className="ri-manage__weight">
+        {isCompositeMember ? (
+          <div className="ri-manage__weight-picker">
+            {([1, 2, 3] as const).map((w) => (
+              <button
+                key={w}
+                type="button"
+                className={`ri-manage__weight-btn${compositeWeight === w ? ' active' : ''}`}
+                onClick={() => onSetWeight(imp.id, w)}
+                aria-label={`Set weight to ${w}x`}
+                aria-pressed={compositeWeight === w}
+              >
+                {w}x
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="na">—</span>
+        )}
       </td>
       <td>{new Date(imp.importDate).toLocaleDateString()}</td>
       <td>{imp.stats.total}</td>
