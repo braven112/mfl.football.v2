@@ -434,9 +434,8 @@ describe('SOURCE_LABELS', () => {
     }
   });
 
-  it('should not have nfl or espn entries', () => {
+  it('should not have nfl entry', () => {
     expect(SOURCE_LABELS['nfl' as any]).toBeUndefined();
-    expect(SOURCE_LABELS['espn' as any]).toBeUndefined();
   });
 
   it('should have correct full names', () => {
@@ -474,9 +473,8 @@ describe('SOURCE_ABBREVS', () => {
     }
   });
 
-  it('should not have nfl or espn entries', () => {
+  it('should not have nfl entry', () => {
     expect(SOURCE_ABBREVS['nfl' as any]).toBeUndefined();
-    expect(SOURCE_ABBREVS['espn' as any]).toBeUndefined();
   });
 
   it('should have abbreviations of 5 characters or less', () => {

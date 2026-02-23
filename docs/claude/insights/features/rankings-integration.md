@@ -159,3 +159,40 @@ function MyComponent() {
 - Always call `applyGroupVisibility()` after any operation that rebuilds DOM (innerHTML, React re-render, etc.)
 - For dynamic columns (like rankings), use the null-sentinel pattern to distinguish "user hasn't chosen yet" from "user chose OFF"
 - Ranking `<th>` elements injected by the module script must include `col-group--rankings` in their className
+
+---
+
+## 2026-02-22 - Composite Rank ("My Rank") Feature
+
+**Context:** Users import rankings from multiple sources but wanted a single personalized column that blends their most trusted sources with configurable weights.
+
+**Insight:** The composite rank system introduces two synthetic column types (`__composite__` and `__average__`) that coexist in `buildRankingLookup()`. Key architecture decisions:
+
+1. **Weighted average computation** — `Math.round(sum(rank * weight) / sum(weights))` across member imports where the player appears. Players only in 1 of N members get that single import's rank (no penalty for missing data).
+
+2. **Column ordering with grouping** — When composite is active, columns are partitioned: `[composite, ...members, ...others]`. The existing average column insertion then runs on this reordered array, with its position offset by the composite group size (`1 + members.length`).
+
+3. **Average column offset** — The stored average position is relative to non-composite columns. When composite is active, the effective insertion position is `storedPosition + compositeGroupSize` so the average always lands after the composite group. This prevents the average from pushing the composite out of position 0.
+
+4. **Average computation isolation** — The average column must only use real import maps (not synthetic composite/average maps). A `realImportMaps` array is built by iterating `allImports` rather than `byImport.entries()` to exclude synthetic entries.
+
+5. **Composite config validation** — `getCompositeConfig()` validates member IDs against current imports and returns `null` if fewer than 2 valid members remain. This handles deleted imports gracefully.
+
+6. **Import replacement ID swap** — When `saveImport()` replaces an existing import (same source+type), it updates composite config to swap the old ID for the new ID, preserving the user's composite membership.
+
+7. **Border separator** — `isLastCompositeMember` flag on the rightmost member column drives a CSS `border-right: 2px solid rgba(28, 73, 124, 0.15)` on both `<th>` and `<td>` elements via the `.col-ranking-member-last` class.
+
+8. **Auto-sort** — When composite exists and user hasn't explicitly sorted, the Free Agents page auto-sets `currentSort = 'ranking___composite__'` with ascending direction. A `hasExplicitSortPref` flag (set on manual column header click) prevents overriding user choice.
+
+9. **Roster page gets composite for free** — Since the roster page already consumes `buildRankingLookup()` and displays the first ranking column, the composite column automatically appears there when active (it's always first in the columns array).
+
+**Evidence:**
+- `src/utils/rankings-lookup.ts` — composite computation in `buildRankingLookup()`
+- `src/utils/rankings-storage.ts` — composite config CRUD
+- `src/components/theleague/rankings-import/ManageImportsSection.tsx` — checkbox + weight picker UI
+- `src/pages/theleague/players.astro` — auto-sort and CSS classes
+
+**Recommendation:**
+- Any new page consuming rankings should check `col.isComposite` for special styling
+- The composite column uses `source: 'custom'` and `type: 'overall'` — avoid filtering on these if you want synthetic columns to appear
+- Weight values are constrained to `1 | 2 | 3` — if expanding, update the `CompositeImportConfig` type and the UI picker
