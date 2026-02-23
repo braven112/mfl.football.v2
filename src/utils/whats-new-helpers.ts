@@ -145,6 +145,7 @@ export function getCategoryCounts(
     'new-page': 0,
     'new-feature': 0,
     enhancement: 0,
+    'bug-fix': 0,
     'league-event': 0,
   };
 
