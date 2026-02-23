@@ -58,7 +58,7 @@ describe('MFL Schedule Integration', () => {
       const foundMatchup = validation.foundMatchups[0];
       expect(foundMatchup.bracketInfo).toBeDefined();
       expect(foundMatchup.bracketInfo?.bracketId).toBe('3');
-      expect(foundMatchup.bracketInfo?.bracketName).toBe('The Loser\'s Bracket');
+      expect(foundMatchup.bracketInfo?.bracketName).toBe('5th Place Bracket');
     });
 
     it('should generate appropriate bracket labels', async () => {
