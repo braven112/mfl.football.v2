@@ -1,5 +1,18 @@
 [
   {
+    "id": "frozen-salary-averages-fix",
+    "date": "2026-02-22",
+    "title": "Extension Calculator Fix",
+    "summary": "Veteran extension and franchise tag calculations now correctly use the previous season's frozen salary averages.",
+    "description": [
+      "After the league year rollover, extension and franchise tag calculations were using salary data from the new league's incomplete roster pool. This produced inaccurate position averages since many teams hadn't filled their rosters yet.",
+      "The fix ensures all extension and franchise tag calculations use the previous season's week 14 frozen salary snapshot — the most stable reference point — until the current season reaches its own week 14 freeze. This affects the Trade Builder, Rosters, and Contract Tools pages."
+    ],
+    "category": "bug-fix",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
     "id": "composite-my-rank",
     "date": "2026-02-22",
     "title": "My Rank Composite",

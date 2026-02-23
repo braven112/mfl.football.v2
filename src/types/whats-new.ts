@@ -7,7 +7,7 @@
  */
 
 /** Entry category determines badge color and hero accent */
-export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'league-event';
+export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'bug-fix' | 'league-event';
 
 /** A single feature announcement entry in whats-new.json */
 export interface WhatsNewEntry {
@@ -70,5 +70,6 @@ export const WHATS_NEW_CATEGORY_LABELS: Record<WhatsNewCategory, string> = {
   'new-page': 'New Page',
   'new-feature': 'New Feature',
   'enhancement': 'Enhancement',
+  'bug-fix': 'Bug Fix',
   'league-event': 'League Event',
 };

@@ -67,6 +67,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     --cat-new-page: #6d28d9;
     --cat-new-feature: #166534;
     --cat-enhancement: #1d4ed8;
+    --cat-bug-fix: #b91c1c;
     --cat-league-event: #1c497c;
   }
 
@@ -193,6 +194,10 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     background: var(--cat-enhancement);
   }
 
+  .wn-filters__tab--active.wn-filters__tab--bug-fix {
+    background: var(--cat-bug-fix);
+  }
+
   .wn-filters__tab--active.wn-filters__tab--league-event {
     background: var(--cat-league-event);
   }
@@ -253,6 +258,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-card--new-page { --entry-category-color: var(--cat-new-page); }
   .wn-card--new-feature { --entry-category-color: var(--cat-new-feature); }
   .wn-card--enhancement { --entry-category-color: var(--cat-enhancement); }
+  .wn-card--bug-fix { --entry-category-color: var(--cat-bug-fix); }
   .wn-card--league-event { --entry-category-color: var(--cat-league-event); }
 
   .wn-card--featured {
@@ -302,6 +308,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-card__badge--new-page { background: var(--cat-new-page); }
   .wn-card__badge--new-feature { background: var(--cat-new-feature); }
   .wn-card__badge--enhancement { background: var(--cat-enhancement); }
+  .wn-card__badge--bug-fix { background: var(--cat-bug-fix); }
   .wn-card__badge--league-event { background: var(--cat-league-event); }
 
   .wn-card__new-badge {
@@ -452,6 +459,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-timeline__dot--new-page { background: var(--cat-new-page); }
   .wn-timeline__dot--new-feature { background: var(--cat-new-feature); }
   .wn-timeline__dot--enhancement { background: var(--cat-enhancement); }
+  .wn-timeline__dot--bug-fix { background: var(--cat-bug-fix); }
   .wn-timeline__dot--league-event { background: var(--cat-league-event); }
 
   .wn-timeline__dot--new {

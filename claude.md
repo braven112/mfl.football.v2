@@ -125,7 +125,7 @@ Add the new entry at the **top** of the array (newest first):
   "title": "Short Title",
   "summary": "One sentence shown in hero banner and cards.",
   "description": ["Full paragraph(s) for the What's New page."],
-  "category": "new-page | new-feature | enhancement",
+  "category": "new-page | new-feature | enhancement | bug-fix",
   "link": "/theleague/page-path",
   "linkLabel": "CTA text (e.g., 'Try it now')",
   "icon": "sprite-icon-id"

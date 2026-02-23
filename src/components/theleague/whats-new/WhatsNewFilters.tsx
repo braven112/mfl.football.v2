@@ -20,6 +20,7 @@ const CATEGORY_ORDER: Array<WhatsNewCategory | 'all'> = [
   'new-page',
   'new-feature',
   'enhancement',
+  'bug-fix',
   'league-event',
 ];
 
