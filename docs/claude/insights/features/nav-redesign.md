@@ -833,3 +833,16 @@ await drawer.screenshot({
 - `tests/e2e/nav-drawer.spec.ts`
 
 **All 10 tests passing** after spacing fixes
+
+## 2026-02-24 - Clean URL Rewrites Break on Prerendered TheLeague Drawer Pages
+
+**Context:** Investigated drawer links that stopped working on `theleague.us`, specifically `Trade Builder` and `Import Rankings`.
+
+**Insight:** The host-level clean URL flow (`/trade-builder` -> internal `/theleague/trade-builder`) depends on runtime route resolution in `src/middleware.ts`. When a target page is `prerender = true`, it may exist only as static output under `/theleague/...` and not as a runtime route entry, so the middleware rewrite cannot resolve it.
+
+**Evidence:**
+- Broken links were all drawer targets with `export const prerender = true`: `calendar`, `league-summary`, `trade-builder`, `import-rankings`.
+- Before fix, `.vercel/output/config.json` had no runtime `src` route entries for those `/theleague/*` paths.
+- After setting those pages to `prerender = false`, route entries were present and link integrity checks passed.
+
+**Recommendation:** Any TheLeague page linked from the drawer should remain server-rendered (`prerender = false`) while clean URL rewriting is handled in middleware. If prerendering is required later, add explicit edge rewrites for each clean URL path.

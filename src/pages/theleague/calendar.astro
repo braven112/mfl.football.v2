@@ -12,7 +12,7 @@ import CalendarEventCard from '../../components/theleague/CalendarEventCard.astr
 import { getAllResolvedEvents } from '../../utils/league-event-resolver';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../../types/league-events';
 
-export const prerender = true;
+export const prerender = false;
 
 const calendarYear = new Date().getFullYear();
 const prevCalendarYear = calendarYear - 1;
