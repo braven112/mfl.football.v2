@@ -160,9 +160,10 @@ docs/claude/insights/
 - New page added to the site
 - New user-facing feature (e.g., a new tool, mode, or interactive element)
 - Major enhancement that changes how an existing feature works
+- Any guest-facing change that affects user behavior (e.g., URL changes, navigation changes)
 
 ### When NOT to Add an Entry
-- Bug fixes, style tweaks, data syncs, refactors
+- Style tweaks, data syncs, refactors
 - Internal tooling or build changes
 - Documentation-only changes
 - Admin-only features (visibility: "admin" in nav-config.json)
@@ -190,6 +191,28 @@ Add the new entry at the **top** of the array (newest first):
 - Set `"excludeFromHero": true` for minor enhancements that shouldn't get hero treatment
 - After 7 days, the hero falls back to upcoming league events or the default "What's New" promo
 - Priority rules are defined in `src/utils/hero-resolver.ts`
+
+### Weekly Bug Fix & Style Tweak Changelog
+
+Bug fixes and style tweaks are tracked throughout the week and compiled into a single What's New rollup entry every Monday at 8pm PT via GitHub Actions (`scripts/weekly-changelog-rollup.mjs`).
+
+**After completing any bug fix or style tweak** that does NOT qualify for its own What's New entry, append an entry to `src/data/weekly-changelog-staging.json`:
+
+```json
+{
+  "date": "YYYY-MM-DD",
+  "type": "bug-fix | style-tweak",
+  "summary": "User-facing description of what changed and why it matters",
+  "impact": "user | admin",
+  "area": "free-agents | rosters | navigation | design-system | homepage | rankings | trade-builder | salary | league-summary | calendar | standings | playoffs | mvp | import-rankings | whats-new | other"
+}
+```
+
+**Guidelines:**
+- Write `summary` as a user-facing improvement, not a code change (e.g., "Defense player avatars are now circular with properly centered logos" NOT "use flex centering with container padding")
+- `impact` is `"user"` for anything league members see; `"admin"` for commissioner-only changes
+- Do NOT log: data syncs, refactors with no visible effect, test-only changes, or changes that already got their own What's New entry
+- The staging file resets automatically every Monday after the rollup runs
 
 ---
 

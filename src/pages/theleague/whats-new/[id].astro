@@ -82,7 +82,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 
       <div class="wn-detail__body">
         {entry.description.map((para) => (
-          <p>{para}</p>
+          <p set:html={para} />
         ))}
       </div>
 
