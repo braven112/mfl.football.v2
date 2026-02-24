@@ -173,6 +173,19 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
   if (compositeConfig && compositeConfig.members.length >= 2) {
     const memberIds = new Set(compositeConfig.members.map((m) => m.importId));
 
+    // Compute max rank for each composite member import (for unranked penalty)
+    const compositeMemberMaxRanks = new Map<string, number>();
+    for (const member of compositeConfig.members) {
+      const imp = allImports.find((i) => i.id === member.importId);
+      if (imp) {
+        let maxRank = 0;
+        for (const entry of imp.rankings) {
+          if (entry.rank > maxRank) maxRank = entry.rank;
+        }
+        compositeMemberMaxRanks.set(member.importId, maxRank);
+      }
+    }
+
     // Compute weighted composite ranks
     const compositeMap = new Map<string, number>();
     const compositePlayerIds = new Set<string>();
@@ -190,8 +203,11 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
         const rank = byImport.get(member.importId)?.get(playerId);
         if (rank != null) {
           weightedSum += rank * member.weight;
-          totalWeight += member.weight;
+        } else {
+          const maxRank = compositeMemberMaxRanks.get(member.importId) ?? 0;
+          weightedSum += (maxRank + 1) * member.weight;
         }
+        totalWeight += member.weight;
       }
       if (totalWeight > 0) {
         compositeMap.set(playerId, Math.round(weightedSum / totalWeight));
@@ -238,11 +254,21 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
   if (allImports.length >= 2) {
     const averageMap = new Map<string, number>();
 
-    // Only use real import maps for average (not synthetic composite/average)
+    // Build parallel arrays of player maps and max ranks for each real import.
+    // When a player is unranked in an import, we penalise them with maxRank + 1
+    // (one spot below the worst ranked player in that import).
     const realImportMaps: Map<string, number>[] = [];
+    const realImportMaxRanks: number[] = [];
     for (const imp of allImports) {
       const playerMap = byImport.get(imp.id);
-      if (playerMap) realImportMaps.push(playerMap);
+      if (playerMap) {
+        realImportMaps.push(playerMap);
+        let maxRank = 0;
+        for (const entry of imp.rankings) {
+          if (entry.rank > maxRank) maxRank = entry.rank;
+        }
+        realImportMaxRanks.push(maxRank);
+      }
     }
 
     // Collect all unique player IDs across real imports only
@@ -253,20 +279,19 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
       }
     }
 
-    // For each player, average only the imports where they appear
+    // For each player, average across ALL imports.
+    // If unranked in an import, use that import's max rank + 1.
     for (const playerId of allPlayerIds) {
       let sum = 0;
-      let count = 0;
-      for (const playerMap of realImportMaps) {
-        const rank = playerMap.get(playerId);
+      for (let i = 0; i < realImportMaps.length; i++) {
+        const rank = realImportMaps[i].get(playerId);
         if (rank != null) {
           sum += rank;
-          count++;
+        } else {
+          sum += realImportMaxRanks[i] + 1;
         }
       }
-      if (count > 0) {
-        averageMap.set(playerId, Math.round(sum / count));
-      }
+      averageMap.set(playerId, Math.round(sum / realImportMaps.length));
     }
 
     byImport.set(AVERAGE_IMPORT_ID, averageMap);

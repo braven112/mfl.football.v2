@@ -564,7 +564,7 @@ describe('average rank column', () => {
     expect(avgMap?.get('p1')).toBe(15); // (10 + 20) / 2
   });
 
-  it('should compute average for player ranked in only 1 of 2 imports', () => {
+  it('should penalise unranked player with max rank + 1 when averaging', () => {
     const imp1 = createMockRankingImport({
       id: 'import-1',
       source: 'fantasypros',
@@ -578,8 +578,40 @@ describe('average rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
-    expect(avgMap?.get('p1')).toBe(7);
-    expect(avgMap?.get('p2')).toBe(3);
+    // p1: ranked 7 in imp1, unranked in imp2 (max 3 → penalty 4) → (7+4)/2 = 5.5 → 6
+    expect(avgMap?.get('p1')).toBe(6);
+    // p2: unranked in imp1 (max 7 → penalty 8), ranked 3 in imp2 → (8+3)/2 = 5.5 → 6
+    expect(avgMap?.get('p2')).toBe(6);
+  });
+
+  it('should use max rank from full import (including unmatched) for penalty', () => {
+    const imp1 = createMockRankingImport({
+      id: 'import-1',
+      source: 'fantasypros',
+      rankings: [
+        createMockRankingEntry({ rank: 1, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 2, playerId: 'p2' }),
+        // Unmatched player at rank 109 — still counts toward max rank
+        createMockRankingEntry({ rank: 109, playerId: null, matched: false }),
+      ],
+    });
+    const imp2 = createMockRankingImport({
+      id: 'import-2',
+      source: 'sleeper',
+      rankings: [
+        createMockRankingEntry({ rank: 1, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 5, playerId: 'p3' }),
+      ],
+    });
+
+    const lookup = buildRankingLookup([imp1, imp2]);
+    const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
+    // p1: ranked 1 in both → (1+1)/2 = 1
+    expect(avgMap?.get('p1')).toBe(1);
+    // p2: ranked 2 in imp1, unranked in imp2 (max 5 → penalty 6) → (2+6)/2 = 4
+    expect(avgMap?.get('p2')).toBe(4);
+    // p3: unranked in imp1 (max 109 → penalty 110), ranked 5 in imp2 → (110+5)/2 = 57.5 → 58
+    expect(avgMap?.get('p3')).toBe(58);
   });
 
   it('should round average to nearest integer', () => {
@@ -885,7 +917,7 @@ describe('composite rank column', () => {
     expect(members[1].isLastCompositeMember).toBe(true);
   });
 
-  it('should handle player only in 1 of 2 composite members', () => {
+  it('should penalise unranked player in composite with max rank + 1', () => {
     mockGetCompositeConfig.mockReturnValue({
       members: [
         { importId: '1', weight: 1 },
@@ -906,8 +938,10 @@ describe('composite rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
-    expect(compositeMap?.get('p1')).toBe(7); // only in imp1
-    expect(compositeMap?.get('p2')).toBe(3); // only in imp2
+    // p1: imp1=7, imp2 unranked (max 3 → penalty 4) → (7+4)/2 = 5.5 → 6
+    expect(compositeMap?.get('p1')).toBe(6);
+    // p2: imp1 unranked (max 7 → penalty 8), imp2=3 → (8+3)/2 = 5.5 → 6
+    expect(compositeMap?.get('p2')).toBe(6);
   });
 
   it('should coexist with average column', () => {
