@@ -1,6 +1,10 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import archiveLinks from '../../data/theleague/salary-archive-links.json';
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Salary Archive">
@@ -12,7 +16,7 @@ import archiveLinks from '../../data/theleague/salary-archive-links.json';
         were manually maintained before salary data was generated from the MFL API.
       </p>
       <p class="salary-archive__back">
-        <a href="/theleague/salary">&larr; Back to Salary Analytics</a>
+        <a href={r("/theleague/salary")}>&larr; Back to Salary Analytics</a>
       </p>
     </header>
 

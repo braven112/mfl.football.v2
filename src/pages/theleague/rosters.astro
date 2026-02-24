@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
 import MetricCard from '../../components/theleague/MetricCard.astro';
 import ChartCard from '../../components/theleague/ChartCard.astro';
@@ -1571,7 +1572,11 @@ const serializedConfig = JSON.stringify({
   authUser: authUser ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId } : null,
   trendWeeks,
   espnNews: espnNewsData?.teams || {},
+  hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
 });
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Team Rosters">
@@ -1836,7 +1841,7 @@ const serializedConfig = JSON.stringify({
                         {player.name}
                         {player.tradeBait && (
                           <a
-                            href={`/theleague/trade-builder?b=${player.franchiseId}`}
+                            href={r(`/theleague/trade-builder?b=${player.franchiseId}`)}
                             class="trade-bait-link"
                             title="On Trade Block — Open in Trade Builder"
                             style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"
@@ -2262,7 +2267,7 @@ const serializedConfig = JSON.stringify({
               <div class="draft-card-wrapper">
                 {assetsPredictions.length > 0 ? (
                   <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
-                    <a href="/theleague/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                    <a href={r("/theleague/draft-predictor?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                       </svg>
@@ -2286,7 +2291,7 @@ const serializedConfig = JSON.stringify({
                   </ChartCard>
                 ) : draftPredictions.length > 0 ? (
                   <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Projected draft picks based on current standings">
-                    <a href="/theleague/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                    <a href={r("/theleague/draft-predictor")} class="chart-card-link" title="View full draft predictor" slot="actions">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                       </svg>
@@ -2327,7 +2332,7 @@ const serializedConfig = JSON.stringify({
             <div class="planner-section planner-section--draft-2026">
               {assetsPredictions.length > 0 ? (
                 <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
-                  <a href="/theleague/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                  <a href={r("/theleague/draft-predictor?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>
@@ -2351,7 +2356,7 @@ const serializedConfig = JSON.stringify({
                 </ChartCard>
               ) : draftPredictions.length > 0 ? (
                 <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Projected draft picks based on current standings">
-                  <a href="/theleague/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                  <a href={r("/theleague/draft-predictor")} class="chart-card-link" title="View full draft predictor" slot="actions">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>
@@ -4501,6 +4506,14 @@ const serializedConfig = JSON.stringify({
     document.getElementById('roster-config').textContent
   );
 
+  /** Resolve league path — strips /theleague prefix on theleague.us */
+  function resolveLeaguePath(path) {
+    if (!config.hideLeaguePrefix) return path;
+    if (path === '/theleague') return '/';
+    if (path.startsWith('/theleague/')) return path.slice('/theleague'.length);
+    return path;
+  }
+
   // View switching logic
   let currentView = 'roster';
 
@@ -6217,7 +6230,7 @@ const serializedConfig = JSON.stringify({
                     ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
                     ${
                       player.tradeBait
-                        ? `<a href="/theleague/trade-builder?b=${player.franchiseId}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" onclick="event.stopPropagation();" style="font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"><span class="trade-bait-badge">🏷️</span></a>`
+                        ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" onclick="event.stopPropagation();" style="font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"><span class="trade-bait-badge">🏷️</span></a>`
                         : ''
                     }
                   </div>

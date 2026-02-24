@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
 import archiveUrls from '../../data/theleague/salary-archive-urls.json';
 
@@ -139,6 +140,9 @@ const serializedConfig = JSON.stringify({
   franchiseMeta: franchiseLookup,
   archiveUrls: archiveUrls ?? {},
 });
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Salary Analytics">
@@ -190,7 +194,7 @@ const serializedConfig = JSON.stringify({
         position, while contract extensions use the average of the top five.
       </p>
       <p class="salary-report__archive-link">
-        <a href="/theleague/salary-archive">View Historical Spreadsheets (2009&ndash;2025) &rarr;</a>
+        <a href={r("/theleague/salary-archive")}>View Historical Spreadsheets (2009&ndash;2025) &rarr;</a>
       </p>
     </header>
 
