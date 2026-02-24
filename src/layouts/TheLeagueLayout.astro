@@ -138,6 +138,9 @@ if (league === 'afl') {
 // Get current path for active link detection (include query string for exact matching)
 const currentPath = Astro.url.pathname + Astro.url.search;
 
+// Detect theleague.us domain to strip /theleague prefix from generated links
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds();
 
@@ -169,11 +172,12 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 				leagueId={leagueId}
 				year={year}
 				staticHost={staticHost}
+				hideLeaguePrefix={hideLeaguePrefix}
 			/>
 			<main>
 				<slot />
 			</main>
-			<TheLeagueFooter />
+			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} />
 		</div>
 
 		<!-- Navigation Drawer - outside page-wrapper for overlay behavior -->
@@ -186,6 +190,7 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			year={currentYear}
 			leagueId={leagueContext.leagueId}
 			adminFranchiseIds={adminFranchiseIds}
+			hideLeaguePrefix={hideLeaguePrefix}
 		/>
 	</body>
 </html>

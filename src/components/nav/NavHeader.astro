@@ -20,12 +20,15 @@
 
 import type { LeagueSlug, NavHeaderProps } from '../../types/nav';
 import { hasTeamInBothLeagues } from '../../utils/league-context';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 
 interface Props extends NavHeaderProps {
   /** Current page path for smart routing when switching leagues */
   currentPath: string;
   /** Current franchise ID for cross-league switching */
   franchiseId?: string;
+  /** Strip /theleague prefix from links (true on theleague.us domain) */
+  hideLeaguePrefix?: boolean;
 }
 
 const {
@@ -33,13 +36,14 @@ const {
   logoUrl,
   currentPath,
   franchiseId,
+  hideLeaguePrefix = false,
 } = Astro.props;
 
 // Determine if this team can switch leagues (has teams in both leagues)
 const canSwitchLeagues = hasTeamInBothLeagues(franchiseId, league);
 
 // Determine league home URL
-const leagueHome = league === 'afl' ? '/afl-fantasy' : '/theleague';
+const leagueHome = resolveLeaguePath(league === 'afl' ? '/afl-fantasy' : '/theleague', hideLeaguePrefix);
 
 // Determine league display name for screen readers
 const leagueName = league === 'afl' ? 'AFL Fantasy' : 'TheLeague';
@@ -74,7 +78,7 @@ function getEquivalentRoute(path: string, target: 'theleague' | 'afl'): string {
   return `${targetBase}${pagePath}`;
 }
 
-const switchUrl = getEquivalentRoute(currentPath, targetLeague);
+const switchUrl = resolveLeaguePath(getEquivalentRoute(currentPath, targetLeague), hideLeaguePrefix);
 ---
 
 <header

@@ -3,11 +3,15 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import HeroBanner from '../../components/theleague/HeroBanner.astro';
 import WhatsNext from '../../components/theleague/WhatsNext.astro';
 import { resolveHeroContent } from '../../utils/hero-resolver';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import whatsNewData from '../../data/whats-new.json';
 
 export const prerender = false;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 // Support ?testDate=YYYY-MM-DD for testing different hero/timeline states
 const testDateParam = Astro.url.searchParams.get('testDate');
@@ -20,28 +24,28 @@ const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effec
 
 const pages = {
   'Team Management': [
-    { title: 'Coach Tab', href: '/theleague/rosters?view=coach', description: 'Coach mode with matchups and odds', icon: 'submit' },
-    { title: 'Next Year Summary', href: '/theleague/rosters?view=nextyear', description: "Preview next year's roster and salary commitments", icon: 'chalkboard' },
+    { title: 'Coach Tab', href: r('/theleague/rosters?view=coach'), description: 'Coach mode with matchups and odds', icon: 'submit' },
+    { title: 'Next Year Summary', href: r('/theleague/rosters?view=nextyear'), description: "Preview next year's roster and salary commitments", icon: 'chalkboard' },
   ],
   'League Management': [
-    { title: 'Standings', href: '/theleague/standings', description: 'View current season standings and rankings', icon: 'shield' },
-    { title: 'Playoffs', href: '/theleague/playoffs', description: 'Playoff brackets and tournament results', icon: 'champ' },
-    { title: 'Draft Predictor', href: '/theleague/draft-predictor', description: 'Projected draft order for next season', icon: 'draft-podium' },
-    { title: 'League Calendar', href: '/theleague/calendar', description: 'All important league dates and deadlines', icon: 'calendar' },
+    { title: 'Standings', href: r('/theleague/standings'), description: 'View current season standings and rankings', icon: 'shield' },
+    { title: 'Playoffs', href: r('/theleague/playoffs'), description: 'Playoff brackets and tournament results', icon: 'champ' },
+    { title: 'Draft Predictor', href: r('/theleague/draft-predictor'), description: 'Projected draft order for next season', icon: 'draft-podium' },
+    { title: 'League Calendar', href: r('/theleague/calendar'), description: 'All important league dates and deadlines', icon: 'calendar' },
   ],
   'Salary & Contracts': [
-    { title: 'Roster/Salary', href: '/theleague/rosters', description: 'Team rosters and salary cap details', icon: 'banknote' },
-    { title: 'Salary History', href: '/theleague/salary-history', description: 'Track salary changes over time', icon: 'history' },
-    { title: 'Salary Analytics', href: '/theleague/salary', description: 'Salary benchmarks and spending analysis', icon: 'bar-chart' },
+    { title: 'Roster/Salary', href: r('/theleague/rosters'), description: 'Team rosters and salary cap details', icon: 'banknote' },
+    { title: 'Salary History', href: r('/theleague/salary-history'), description: 'Track salary changes over time', icon: 'history' },
+    { title: 'Salary Analytics', href: r('/theleague/salary'), description: 'Salary benchmarks and spending analysis', icon: 'bar-chart' },
   ],
   'Trading & Analysis': [
-    { title: 'Trade Builder', href: '/theleague/trade-builder', description: 'Simulate trades and see salary cap impact', icon: 'transactions-2' },
-    { title: 'MVP Rankings', href: '/theleague/mvp', description: 'Salary-adjusted most valuable player rankings', icon: 'standings' },
-    { title: 'League Summary', href: '/theleague/league-summary', description: 'Compare all 16 teams across cap, roster, and contract metrics', icon: 'standings-2' },
+    { title: 'Trade Builder', href: r('/theleague/trade-builder'), description: 'Simulate trades and see salary cap impact', icon: 'transactions-2' },
+    { title: 'MVP Rankings', href: r('/theleague/mvp'), description: 'Salary-adjusted most valuable player rankings', icon: 'standings' },
+    { title: 'League Summary', href: r('/theleague/league-summary'), description: 'Compare all 16 teams across cap, roster, and contract metrics', icon: 'standings-2' },
   ],
   'Assets & Resources': [
-    { title: 'Asset Library', href: '/theleague/assets', description: 'Team logos, banners, and graphics', icon: 'eye' },
-    { title: "What's New", href: '/theleague/whats-new', description: 'Latest features and improvements', icon: 'star' },
+    { title: 'Asset Library', href: r('/theleague/assets'), description: 'Team logos, banners, and graphics', icon: 'eye' },
+    { title: "What's New", href: r('/theleague/whats-new'), description: 'Latest features and improvements', icon: 'star' },
   ],
 };
 ---
@@ -51,12 +55,12 @@ const pages = {
     <section class="featured-news">
       <div class="featured-news__header">
         <h2 class="featured-news__heading">Featured News</h2>
-        <a href="/theleague/whats-new" class="featured-news__releases-link">View all releases &rarr;</a>
+        <a href={r("/theleague/whats-new")} class="featured-news__releases-link">View all releases &rarr;</a>
       </div>
       <HeroBanner
         title={hero.title}
         summary={hero.summary}
-        link={hero.link}
+        link={hero.link ? r(hero.link) : undefined}
         linkLabel={hero.linkLabel}
         icon={hero.icon}
         accentColor={hero.accentColor}

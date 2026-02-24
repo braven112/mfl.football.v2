@@ -19,6 +19,9 @@ import {
 
 export const prerender = false;
 
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const basePath = hideLeaguePrefix ? '' : '/theleague';
+
 const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
 
 // Read the last-visit cookie for "NEW" badge computation
@@ -57,6 +60,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       client:load
       monthsJson={JSON.stringify(months)}
       categoryCountsJson={JSON.stringify(categoryCounts)}
+      basePath={basePath}
     />
   </main>
 </TheLeagueLayout>

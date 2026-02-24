@@ -10,6 +10,7 @@
  */
 import WhatsNextCard from './WhatsNextCard.astro';
 import { getWhatsNextTimeline, getWhatsNextTimelineExcluding } from '../../utils/league-event-resolver';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 
 interface Props {
   /** Event ID to exclude from the timeline (already shown in hero) */
@@ -19,6 +20,7 @@ interface Props {
 }
 
 const { excludeEventId, demoDate } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
 const timeline = excludeEventId
   ? getWhatsNextTimelineExcluding(excludeEventId, demoDate)
@@ -30,7 +32,7 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
   <section class="whats-next" aria-label="Upcoming league events">
     <div class="whats-next__header">
       <h2 class="whats-next__heading">What's Next</h2>
-      <a href="/theleague/calendar" class="whats-next__calendar-link">View full calendar &rarr;</a>
+      <a href={resolveLeaguePath("/theleague/calendar", hideLeaguePrefix)} class="whats-next__calendar-link">View full calendar &rarr;</a>
     </div>
     <div class="whats-next__grid">
       {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}

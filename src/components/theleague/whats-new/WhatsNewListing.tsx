@@ -15,9 +15,11 @@ import TimelineSidebar from './TimelineSidebar';
 interface Props {
   monthsJson: string;
   categoryCountsJson: string;
+  /** Base path for detail links (empty string on theleague.us, '/theleague' otherwise) */
+  basePath?: string;
 }
 
-export default function WhatsNewListing({ monthsJson, categoryCountsJson }: Props) {
+export default function WhatsNewListing({ monthsJson, categoryCountsJson, basePath = '/theleague' }: Props) {
   const months: MonthGroup[] = useMemo(() => JSON.parse(monthsJson), [monthsJson]);
   const categoryCounts = useMemo(
     () => JSON.parse(categoryCountsJson) as Record<WhatsNewCategory | 'all', number>,
@@ -59,7 +61,7 @@ export default function WhatsNewListing({ monthsJson, categoryCountsJson }: Prop
                 <h2 className="wn-month__label">{month.label}</h2>
                 <div className="wn-month__entries">
                   {month.entries.map((entry, i) => (
-                    <WhatsNewCard key={entry.id} entry={entry} featured={i === 0} />
+                    <WhatsNewCard key={entry.id} entry={entry} featured={i === 0} basePath={basePath} />
                   ))}
                 </div>
               </section>

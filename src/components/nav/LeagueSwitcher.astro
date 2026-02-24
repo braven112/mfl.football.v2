@@ -22,12 +22,17 @@
  */
 
 import type { LeagueSwitcherProps } from '../../types/nav';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 
-interface Props extends LeagueSwitcherProps {}
+interface Props extends LeagueSwitcherProps {
+  /** Strip /theleague prefix from links (true on theleague.us domain) */
+  hideLeaguePrefix?: boolean;
+}
 
 const {
   currentLeague,
   currentPath,
+  hideLeaguePrefix = false,
 } = Astro.props;
 
 /**
@@ -63,9 +68,12 @@ function getEquivalentRoute(path: string, targetLeague: 'theleague' | 'afl'): st
 }
 
 // Calculate target URLs for both leagues
-const theLeagueUrl = currentLeague === 'theleague'
-  ? currentPath
-  : getEquivalentRoute(currentPath, 'theleague');
+const theLeagueUrl = resolveLeaguePath(
+  currentLeague === 'theleague'
+    ? currentPath
+    : getEquivalentRoute(currentPath, 'theleague'),
+  hideLeaguePrefix,
+);
 
 const aflUrl = currentLeague === 'afl'
   ? currentPath

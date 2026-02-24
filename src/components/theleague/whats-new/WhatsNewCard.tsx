@@ -11,18 +11,20 @@ import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 interface Props {
   entry: EnrichedWhatsNewEntry;
   featured?: boolean;
+  /** Base path for detail links (empty string on theleague.us, '/theleague' otherwise) */
+  basePath?: string;
 }
 
 const MULTICOLOR_ICONS = ['nfl'];
 
-export default function WhatsNewCard({ entry, featured }: Props) {
+export default function WhatsNewCard({ entry, featured, basePath = '/theleague' }: Props) {
   const iconId = entry.icon ? `icon-${entry.icon}` : null;
   const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
   const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 
   return (
     <a
-      href={`/theleague/whats-new/${entry.id}`}
+      href={`${basePath}/whats-new/${entry.id}`}
       className={`wn-card wn-card--${entry.category}${featured ? ' wn-card--featured' : ''}`}
     >
       {imagePath && (

@@ -85,6 +85,24 @@ const LEAGUE_PREFIXES: Record<LeagueSlug, string> = {
 };
 
 /**
+ * Strip the /theleague prefix from a path when serving on theleague.us.
+ *
+ * On theleague.us, Vercel rewrites clean URLs (e.g. /rosters) to internal
+ * /theleague/rosters paths. This function ensures generated links match
+ * the clean URL the user sees in their browser.
+ *
+ * @param path - Internal path (e.g. '/theleague/rosters')
+ * @param hidePrefix - Whether to strip the prefix (true on theleague.us)
+ * @returns Clean path (e.g. '/rosters') or original path if hidePrefix is false
+ */
+export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
+  if (!hidePrefix) return path;
+  if (path === '/theleague') return '/';
+  if (path.startsWith('/theleague/')) return path.slice('/theleague'.length);
+  return path;
+}
+
+/**
  * Get the full href for a navigation link
  *
  * Handles three types of links:

@@ -15,27 +15,19 @@ import {
   formatEntryDate,
   getAdjacentEntries,
 } from '../../../utils/whats-new-helpers';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 
-export const prerender = true;
+export const prerender = false;
 
-export function getStaticPaths() {
-  const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
-  return sorted.map((entry) => {
-    const { prev, next } = getAdjacentEntries(sorted, entry.id);
-    return {
-      params: { id: entry.id },
-      props: { entry, prev, next },
-    };
-  });
-}
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
-interface Props {
-  entry: WhatsNewEntry;
-  prev: WhatsNewEntry | null;
-  next: WhatsNewEntry | null;
-}
+const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
+const id = Astro.params.id;
+const entry = sorted.find((e) => e.id === id);
+if (!entry) return Astro.redirect(r('/theleague/whats-new'));
+const { prev, next } = getAdjacentEntries(sorted, entry.id);
 
-const { entry, prev, next } = Astro.props;
 const MULTICOLOR_ICONS = ['nfl'];
 const iconId = entry.icon ? `icon-${entry.icon}` : null;
 const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
@@ -44,7 +36,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 
 <TheLeagueLayout title={`${entry.title} - What's New`}>
   <main class="wn-detail">
-    <a href="/theleague/whats-new" class="wn-detail__back">
+    <a href={r('/theleague/whats-new')} class="wn-detail__back">
       <span aria-hidden="true">&larr;</span> Back to What's New
     </a>
 
@@ -96,7 +88,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 
       {entry.link && (
         <div class="wn-detail__cta">
-          <a href={entry.link} class="wn-detail__cta-link">
+          <a href={r(entry.link)} class="wn-detail__cta-link">
             {entry.linkLabel ?? 'Check it out'}
             <span class="wn-detail__cta-arrow" aria-hidden="true">&rarr;</span>
           </a>
@@ -106,7 +98,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 
     <nav class="wn-detail__nav" aria-label="Previous and next entries">
       {prev ? (
-        <a href={`/theleague/whats-new/${prev.id}`} class="wn-detail__nav-link wn-detail__nav-link--prev">
+        <a href={`${r('/theleague/whats-new')}/${prev.id}`} class="wn-detail__nav-link wn-detail__nav-link--prev">
           <span class="wn-detail__nav-dir">&larr; Newer</span>
           <span class="wn-detail__nav-title">{prev.title}</span>
         </a>
@@ -114,7 +106,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
         <span />
       )}
       {next && (
-        <a href={`/theleague/whats-new/${next.id}`} class="wn-detail__nav-link wn-detail__nav-link--next">
+        <a href={`${r('/theleague/whats-new')}/${next.id}`} class="wn-detail__nav-link wn-detail__nav-link--next">
           <span class="wn-detail__nav-dir">Older &rarr;</span>
           <span class="wn-detail__nav-title">{next.title}</span>
         </a>

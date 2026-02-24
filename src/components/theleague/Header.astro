@@ -13,6 +13,7 @@
 
 import { getLeagueContext } from '../../utils/league-context';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import NavToggleButton from '../nav/NavToggleButton.astro';
 
 interface Props {
@@ -20,7 +21,10 @@ interface Props {
   leagueId?: string;
   year?: string | number;
   staticHost?: string;
+  hideLeaguePrefix?: boolean;
 }
+
+const hideLeaguePrefix = Astro.props.hideLeaguePrefix ?? false;
 
 const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) ||
@@ -72,7 +76,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   <div class="container">
     <div class="row">
       <div class="col left">
-        <a class="league-link" href={isAFL ? "/afl-fantasy" : "/theleague"}>
+        <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : "/theleague", hideLeaguePrefix)}>
           <div class="league_logo" id="league_logo">
             {isAFL ? (
               <!-- AFL Logo -->
@@ -109,7 +113,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
               <span class="nav-label">Message board</span>
             </a>
           )}
-          <a href={isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters"} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
+          <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
             <svg class="nav-icon" aria-hidden="true">
               <use href={`/assets/icons/sprite.svg#icon-${isAFL ? "helmet" : "banknote"}`}></use>
             </svg>
@@ -127,7 +131,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
             </svg>
             <span class="nav-label">Add/drop</span>
           </a>
-          <a href={isAFL ? "/afl-fantasy/standings" : "/theleague/standings"} class="nav-icon-link" title="Standings">
+          <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/standings" : "/theleague/standings", hideLeaguePrefix)} class="nav-icon-link" title="Standings">
             <svg class="nav-icon" aria-hidden="true">
               <use href="/assets/icons/sprite.svg#icon-shield"></use>
             </svg>
@@ -139,7 +143,7 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
             </svg>
             <span class="nav-label">Live scoring</span>
           </a>
-          <a href={isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs"} class="nav-icon-link" title="Playoffs">
+          <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs", hideLeaguePrefix)} class="nav-icon-link" title="Playoffs">
             <svg class="nav-icon" aria-hidden="true">
               <use href="/assets/icons/sprite.svg#icon-champ"></use>
             </svg>

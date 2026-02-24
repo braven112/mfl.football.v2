@@ -1,16 +1,28 @@
 {
   "redirects": [
     {
-      "source": "/",
-      "destination": "/theleague",
-      "has": [{ "type": "host", "value": "www.theleague.us" }],
-      "statusCode": 302
+      "source": "/theleague/:path*",
+      "destination": "/:path*",
+      "has": [{ "type": "host", "value": "theleague.us" }],
+      "statusCode": 301
     },
     {
-      "source": "/",
-      "destination": "/theleague",
+      "source": "/theleague/:path*",
+      "destination": "/:path*",
+      "has": [{ "type": "host", "value": "www.theleague.us" }],
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague",
+      "destination": "/",
       "has": [{ "type": "host", "value": "theleague.us" }],
-      "statusCode": 302
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague",
+      "destination": "/",
+      "has": [{ "type": "host", "value": "www.theleague.us" }],
+      "statusCode": 301
     }
   ],
   "rewrites": [
@@ -23,6 +35,26 @@
       "source": "/forum/:path*",
       "destination": "https://forum.theleague.us/forum/:path*",
       "has": [{ "type": "host", "value": "theleague.us" }]
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*",
+      "has": [{ "type": "host", "value": "theleague.us" }]
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*",
+      "has": [{ "type": "host", "value": "www.theleague.us" }]
+    },
+    {
+      "source": "/:path*",
+      "destination": "/theleague/:path*",
+      "has": [{ "type": "host", "value": "theleague.us" }]
+    },
+    {
+      "source": "/:path*",
+      "destination": "/theleague/:path*",
+      "has": [{ "type": "host", "value": "www.theleague.us" }]
     }
   ]
 }
