@@ -11,6 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 
 // MFL team code → local SVG filename normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -52,6 +53,18 @@ const lastYearWeeklyModules = import.meta.glob(
 );
 const snapCountModules = import.meta.glob(
   '../../../data/theleague/nfl-cache/snap-counts-*.json',
+  { eager: true }
+);
+const nflScheduleModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/nflSchedule.json',
+  { eager: true }
+);
+const fpaModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/fantasyPointsAllowed.json',
+  { eager: true }
+);
+const leagueModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/league.json',
   { eager: true }
 );
 
@@ -109,6 +122,15 @@ if (Array.isArray(lastYearData)) {
     }
   }
 }
+
+// Build weekly player results for the modal's Season Results table
+const nflScheduleData = findForYear(nflScheduleModules, lastSeasonYear);
+const fpaData = findForYear(fpaModules, lastSeasonYear);
+const leagueData = findForYear(leagueModules, lastSeasonYear);
+const playersDataForSeason = findForYear(playerModules, lastSeasonYear) || playersData;
+const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
+  ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
+  : {};
 
 // Build snap count lookup (keyed by MFL player ID)
 const snapCountMap = new Map<string, { snaps: number, pct: number, games: number }>();
@@ -457,6 +479,12 @@ const faCountsJson = JSON.stringify(faCounts);
     </div>
   </div>
   <PlayerDetailsModal />
+
+  <script
+    type="application/json"
+    id="weekly-player-results"
+    set:html={JSON.stringify(weeklyPlayerResults)}
+  ></script>
 </TheLeagueLayout>
 
 <script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson }}>
