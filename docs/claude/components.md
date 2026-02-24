@@ -292,3 +292,22 @@ const displayName = chooseTeamName({
 ```
 
 See CLAUDE.md for complete team name display standards.
+
+## Player Display (Player Lockup)
+
+All player lists, cards, and tables **must** use the standard Player Lockup pattern.
+See **CLAUDE.md > Player Display** for the full specification.
+
+**Component:** `src/components/theleague/PlayerCell.astro`
+
+**Quick checklist:**
+- [ ] Using `PlayerCell.astro` (or React equivalent for `.tsx` contexts)?
+- [ ] DEF players: avatar = team logo, nflLogo = undefined?
+- [ ] NFL codes normalized via `normalizeTeamCode()`?
+- [ ] Logo path: `/assets/nfl-logos/${normalizeTeamCode(code)}.svg`?
+
+**Existing implementations for reference:**
+- Roster table: `src/pages/theleague/rosters.astro` (lines ~5890-5894, DEF swap logic)
+- Potential Targets: `src/components/theleague/FreeAgentNeedsCard.astro`
+- Trade builder: `src/components/theleague/trade-builder/PlayerCard.tsx`
+- Free agents table: `src/pages/theleague/players.astro` (inline p-row pattern)

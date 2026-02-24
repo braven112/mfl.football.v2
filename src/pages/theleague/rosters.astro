@@ -13,7 +13,11 @@ import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astr
 import PlayerNewsModal from '../../components/theleague/PlayerNewsModal.astro';
 import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
+import FreeAgentNeedsCard from '../../components/theleague/FreeAgentNeedsCard.astro';
 import collegeLogos from '../../data/college-logos.json';
+import { getPlannerPhase } from '../../utils/planner-phase';
+import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
+import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
 import {
@@ -1486,6 +1490,60 @@ if (defaultTeamId && !assetTeamIds.includes(defaultTeamId)) {
   assetTeamIds.unshift(defaultTeamId);
 }
 
+// --- League Planner: Phase + Free Agent Needs ---
+const testDateParam = Astro.url?.searchParams?.get('testDate');
+const plannerRefDate = testDateParam ? new Date(testDateParam) : undefined;
+const plannerPhase = getPlannerPhase(plannerRefDate && !isNaN(plannerRefDate.getTime()) ? plannerRefDate : undefined);
+
+// Compute 2027 draft assets when dual draft cards are shown
+let assets2027Predictions: any[] = [];
+let asset2027TeamIds: string[] = [];
+if (plannerPhase.showDualDraftCards && transactionsData && standingsData?.leagueStandings?.franchise) {
+  const teamConfigMap2027 = new Map(
+    teamsList.map((team) => [
+      team.id,
+      {
+        id: team.id,
+        name: team.name,
+        icon: team.icon,
+        banner: leagueAssets.teams?.find((t: any) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+      },
+    ])
+  );
+  const assets2027Data = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear + 1);
+  if (isValidAssetsData(assets2027Data)) {
+    assets2027Predictions = convertAssetsToPredictions(assets2027Data, teamConfigMap2027);
+  }
+  asset2027TeamIds = Array.from(new Set(assets2027Predictions.map((p: any) => p.franchiseId))).filter(Boolean);
+  if (defaultTeamId && !asset2027TeamIds.includes(defaultTeamId)) {
+    asset2027TeamIds.unshift(defaultTeamId);
+  }
+}
+
+// Free agent needs analysis for each team
+const faNeedsLeagueYear = String(currentLeagueYear);
+const faProjScoresData = projectedScoresBySeason[faNeedsLeagueYear];
+const faProjScores = faProjScoresData?.projectedScores?.playerScore || [];
+const faPlayerFeed = playersFeedBySeason[faNeedsLeagueYear] ?? {};
+const faRosterData = liveRosterDataByPlayerId[faNeedsLeagueYear] ?? {};
+
+const freeAgentNeedsByTeam: Record<string, PositionNeed[]> = {};
+teamsList.forEach((team) => {
+  freeAgentNeedsByTeam[team.id] = analyzeFreeAgentNeeds(
+    team.id, faProjScores, faPlayerFeed, faRosterData
+  );
+});
+
+// Enrich FA players with headshot URLs for PlayerCell rendering
+for (const needs of Object.values(freeAgentNeedsByTeam)) {
+  for (const need of needs) {
+    for (const fa of need.topFreeAgents) {
+      const feedPlayer = faPlayerFeed[fa.id];
+      fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id);
+    }
+  }
+}
+
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
   seasonOptions,
@@ -1549,11 +1607,11 @@ const serializedConfig = JSON.stringify({
               </svg>
               <span class="view-tab__label">Analytics</span>
             </button>
-            <button class="view-tab" data-view="nextyear" data-active="false" aria-label="Next Year View" title="Next Year View">
+            <button class="view-tab" data-view="nextyear" data-active="false" aria-label="League Planner" title="League Planner">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
                 <use href="/assets/icons/sprite.svg#icon-chalkboard"></use>
               </svg>
-              <span class="view-tab__label">Next Year</span>
+              <span class="view-tab__label">Planner</span>
             </button>
           </div>
         </div>
@@ -2125,59 +2183,45 @@ const serializedConfig = JSON.stringify({
     </div>
     <!-- End Analytics View -->
 
-    <!-- Next Year View -->
+    <!-- League Planner View -->
     <div class="view-container" data-view-content="nextyear" style="display: none;">
-      
 
-      <div class="next-year-layout">
-        <!-- Left Column: Draft Order -->
-        <div class="next-year-layout__left">
-          <div class="draft-section">
-            {assetsPredictions.length > 0 ? (
-              <ChartCard title="2026 Draft Assets" subtitle="Picks your team owns after all trades">
-                <a href="/theleague/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                  </svg>
-                </a>
-                <div id="draftAssetsPanels">
-                  {assetTeamIds.map((teamId) => (
-                    <div
-                      class="draft-assets-panel"
-                      data-assets-team-id={teamId}
-                      style={`display: ${teamId === defaultTeamId ? 'block' : 'none'}`}
-                    >
-                      <DraftTeamAssetsView
-                        predictions={assetsPredictions}
-                        teams={teamsList}
-                        hideTeamSelector={true}
-                        franchiseId={teamId}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </ChartCard>
-            ) : draftPredictions.length > 0 ? (
-              <ChartCard title="2026 Draft Picks" subtitle="Projected draft picks based on current standings">
-                <a href="/theleague/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                  </svg>
-                </a>
-                <DraftPicksCard
-                  franchiseId={defaultTeamId}
-                  draftPredictions={draftPredictions}
-                  actualPicks={actualDraftPicks}
-                  season={2026}
-                />
-              </ChartCard>
-            ) : null}
+      <div class="planner-layout" data-planner-phase={plannerPhase.phase}>
+
+        <!-- Section: Extensions (Tags + Vet Extensions) -->
+        <div class="planner-section planner-section--extensions">
+          <h2 class="planner-section__title">Extensions</h2>
+          <div class="chart-grid">
+            <ChartCard title={`Franchise Tag Options (${currentLeagueYear})`} subtitle="Out of contract players likely to be considered for franchise tags">
+              <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
+            </ChartCard>
+            <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
+              <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
+            </ChartCard>
           </div>
         </div>
 
-        <!-- Right Column: Metrics -->
-        <div class="next-year-layout__right">
-          <h3 class="chart-metrics__headline">2026 at a glance</h3>
+        <!-- Section: Free Agent Needs -->
+        <div class="planner-section planner-section--fa-needs">
+          <div id="faNeedsPanels">
+            {teamsList.map((team) => (
+              <div
+                class="fa-needs-panel"
+                data-fa-needs-team-id={team.id}
+                style={`display: ${team.id === defaultTeamId ? 'block' : 'none'}`}
+              >
+                <FreeAgentNeedsCard
+                  needs={freeAgentNeedsByTeam[team.id] ?? []}
+                  franchiseId={team.id}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Section: Metrics (At a Glance) -->
+        <div class="planner-section planner-section--metrics">
+          <h3 class="chart-metrics__headline">{currentLeagueYear} at a glance</h3>
           <div class="chart-metrics">
             <MetricCard
               label="Cap Space"
@@ -2210,19 +2254,120 @@ const serializedConfig = JSON.stringify({
           </div>
           <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
         </div>
-      </div>
 
-      <!-- Extensions Section -->
-      <div class="extensions-section">
-        <h2 class="extensions-section__title">Extensions</h2>
-        <div class="chart-grid">
-          <ChartCard title={`Franchise Tag Options (${currentLeagueYear})`} subtitle="Out of contract players likely to be considered for franchise tags">
-            <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
-          </ChartCard>
-          <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
-            <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
-          </ChartCard>
-        </div>
+        {/* Draft sections: side-by-side when both are shown, single otherwise */}
+        {plannerPhase.showDualDraftCards && assets2027Predictions.length > 0 ? (
+          <div class="planner-section planner-section--drafts-combined">
+            <div class="draft-cards-grid">
+              <div class="draft-card-wrapper">
+                {assetsPredictions.length > 0 ? (
+                  <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
+                    <a href="/theleague/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      </svg>
+                    </a>
+                    <div id="draftAssetsPanels">
+                      {assetTeamIds.map((teamId) => (
+                        <div
+                          class="draft-assets-panel"
+                          data-assets-team-id={teamId}
+                          style={`display: ${teamId === defaultTeamId ? 'block' : 'none'}`}
+                        >
+                          <DraftTeamAssetsView
+                            predictions={assetsPredictions}
+                            teams={teamsList}
+                            hideTeamSelector={true}
+                            franchiseId={teamId}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </ChartCard>
+                ) : draftPredictions.length > 0 ? (
+                  <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Projected draft picks based on current standings">
+                    <a href="/theleague/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      </svg>
+                    </a>
+                    <DraftPicksCard
+                      franchiseId={defaultTeamId}
+                      draftPredictions={draftPredictions}
+                      actualPicks={actualDraftPicks}
+                      season={draftNextYear}
+                    />
+                  </ChartCard>
+                ) : null}
+              </div>
+              <div class="draft-card-wrapper">
+                <ChartCard title={`${draftNextYear + 1} Draft Assets`} subtitle="Future draft picks your team owns after all trades">
+                  <div id="draftAssets2027Panels">
+                    {asset2027TeamIds.map((teamId) => (
+                      <div
+                        class="draft-assets-panel"
+                        data-assets-2027-team-id={teamId}
+                        style={`display: ${teamId === defaultTeamId ? 'block' : 'none'}`}
+                      >
+                        <DraftTeamAssetsView
+                          predictions={assets2027Predictions}
+                          teams={teamsList}
+                          hideTeamSelector={true}
+                          franchiseId={teamId}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Fragment>
+            <div class="planner-section planner-section--draft-2026">
+              {assetsPredictions.length > 0 ? (
+                <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
+                  <a href="/theleague/draft-predictor?view=assets" class="chart-card-link" title="View full draft assets" slot="actions">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </a>
+                  <div id="draftAssetsPanels">
+                    {assetTeamIds.map((teamId) => (
+                      <div
+                        class="draft-assets-panel"
+                        data-assets-team-id={teamId}
+                        style={`display: ${teamId === defaultTeamId ? 'block' : 'none'}`}
+                      >
+                        <DraftTeamAssetsView
+                          predictions={assetsPredictions}
+                          teams={teamsList}
+                          hideTeamSelector={true}
+                          franchiseId={teamId}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              ) : draftPredictions.length > 0 ? (
+                <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Projected draft picks based on current standings">
+                  <a href="/theleague/draft-predictor" class="chart-card-link" title="View full draft predictor" slot="actions">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </a>
+                  <DraftPicksCard
+                    franchiseId={defaultTeamId}
+                    draftPredictions={draftPredictions}
+                    actualPicks={actualDraftPicks}
+                    season={draftNextYear}
+                  />
+                </ChartCard>
+              ) : null}
+            </div>
+          </Fragment>
+        )}
+
       </div>
     </div>
     <!-- End Next Year View -->
@@ -2863,27 +3008,17 @@ const serializedConfig = JSON.stringify({
     background-color: #eff6ff;
   }
 
-  .extensions-section {
+  /* --- League Planner Layout --- */
+  .planner-layout {
     display: grid;
-    gap: 1rem;
+    gap: 1.5rem;
   }
 
-  .extensions-section__title {
+  .planner-section__title {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary-color, #111827);
-  }
-
-  .next-year-layout {
-    display: grid;
-    grid-template-columns: 13fr 7fr;
-    gap: 1.5rem;
-  }
-
-  .next-year-layout__left {
-    display: grid;
-    gap: 2rem;
   }
 
   .draft-section {
@@ -2891,10 +3026,47 @@ const serializedConfig = JSON.stringify({
     gap: 1rem;
   }
 
-  @media (max-width: 1200px) {
-    .next-year-layout {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
+  /* Default section order (extensions at bottom until Week 10) */
+  .planner-section--metrics          { order: 1; }
+  .planner-section--draft-2026       { order: 2; }
+  .planner-section--drafts-combined  { order: 2; }
+  .planner-section--fa-needs         { order: 3; }
+  .planner-section--draft-2027       { order: 4; }
+  .planner-section--extensions       { order: 5; }
+
+  /* Extensions & Tags phase: extensions first */
+  [data-planner-phase="extensions-and-tags"] .planner-section--extensions       { order: 1; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--metrics          { order: 2; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--draft-2026       { order: 3; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--drafts-combined  { order: 3; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--fa-needs         { order: 4; }
+
+  /* Free Agency phase: FA needs + metrics prominent */
+  [data-planner-phase="free-agency"] .planner-section--fa-needs         { order: 1; }
+  [data-planner-phase="free-agency"] .planner-section--metrics          { order: 2; }
+  [data-planner-phase="free-agency"] .planner-section--draft-2026       { order: 3; }
+  [data-planner-phase="free-agency"] .planner-section--drafts-combined  { order: 3; }
+  [data-planner-phase="free-agency"] .planner-section--draft-2027       { order: 4; }
+  [data-planner-phase="free-agency"] .planner-section--extensions       { order: 5; }
+
+  /* Draft phase: draft assets first */
+  [data-planner-phase="draft"] .planner-section--draft-2026       { order: 1; }
+  [data-planner-phase="draft"] .planner-section--drafts-combined  { order: 1; }
+  [data-planner-phase="draft"] .planner-section--draft-2027       { order: 2; }
+  [data-planner-phase="draft"] .planner-section--metrics          { order: 3; }
+  [data-planner-phase="draft"] .planner-section--fa-needs         { order: 4; }
+  [data-planner-phase="draft"] .planner-section--extensions       { order: 5; }
+
+  /* Side-by-side draft cards */
+  .draft-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--padding-md, 1rem);
+  }
+
+  @media (min-width: 1200px) {
+    .draft-cards-grid {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 
@@ -4335,7 +4507,7 @@ const serializedConfig = JSON.stringify({
   const viewLabels = {
     'roster': 'Roster & Salary Cap',
     'analytics': 'Advanced Analytics',
-    'nextyear': 'Next Year (2026)'
+    'nextyear': `League Planner (${config.salaryYears?.[0] ?? 2026})`
   };
 
   // Contract Actions State Management
@@ -6594,6 +6766,40 @@ const serializedConfig = JSON.stringify({
       }
     };
 
+    // Toggle FA needs panels when team switches
+    const updateFaNeedsPanel = (teamId) => {
+      const panels = document.querySelectorAll('[data-fa-needs-team-id]');
+      if (!panels.length) return;
+      let found = false;
+      panels.forEach((panel) => {
+        const isMatch = panel.getAttribute('data-fa-needs-team-id') === teamId;
+        panel.style.display = isMatch ? 'block' : 'none';
+        if (isMatch) found = true;
+      });
+      if (!found && panels.length > 0) {
+        panels.forEach((panel, idx) => {
+          panel.style.display = idx === 0 ? 'block' : 'none';
+        });
+      }
+    };
+
+    // Toggle 2027 draft assets panels when team switches
+    const updateDraftAssets2027Panel = (teamId) => {
+      const panels = document.querySelectorAll('[data-assets-2027-team-id]');
+      if (!panels.length) return;
+      let found = false;
+      panels.forEach((panel) => {
+        const isMatch = panel.getAttribute('data-assets-2027-team-id') === teamId;
+        panel.style.display = isMatch ? 'block' : 'none';
+        if (isMatch) found = true;
+      });
+      if (!found && panels.length > 0) {
+        panels.forEach((panel, idx) => {
+          panel.style.display = idx === 0 ? 'block' : 'none';
+        });
+      }
+    };
+
     const updateView = () => {
       console.log('updateView called, contractActions:', contractActions);
       resetSort();
@@ -6851,6 +7057,8 @@ const serializedConfig = JSON.stringify({
       }
 
       updateDraftAssetsPanel(currentTeam);
+      updateFaNeedsPanel(currentTeam);
+      updateDraftAssets2027Panel(currentTeam);
     };
 
     columnToggles.forEach((toggle) => {
@@ -6940,10 +7148,12 @@ const serializedConfig = JSON.stringify({
 
     applyHiddenColumns();
     const urlViewParam = new URL(window.location.href).searchParams.get('view');
-    const validViews = ['roster', 'analytics', 'nextyear', 'coach'];
+    const validViews = ['roster', 'analytics', 'nextyear', 'planner', 'coach'];
     if (urlViewParam && validViews.includes(urlViewParam)) {
-      // Coach view uses roster view (Coach mode toggle is handled in init above)
-      const viewToShow = urlViewParam === 'coach' ? 'roster' : urlViewParam;
+      // Coach view uses roster view; planner is an alias for nextyear
+      const viewToShow = urlViewParam === 'coach' ? 'roster'
+        : urlViewParam === 'planner' ? 'nextyear'
+        : urlViewParam;
       switchView(viewToShow);
     } else {
       switchView(currentView);
@@ -6960,6 +7170,35 @@ const serializedConfig = JSON.stringify({
 
   // Re-initialize after View Transitions (Astro page navigation)
   document.addEventListener('astro:page-load', initRosterPage);
+</script>
+
+<!-- Free Agent Needs tab switching -->
+<script>
+  function initFaNeedsTabs() {
+    document.querySelectorAll('.fa-needs').forEach((card) => {
+      const tabs = card.querySelectorAll('[data-fa-tab]');
+      const panels = card.querySelectorAll('[data-fa-panel]');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const pos = tab.getAttribute('data-fa-tab');
+          tabs.forEach((t) => {
+            t.classList.toggle('fa-needs__tab--active', t === tab);
+            t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+          });
+          panels.forEach((p) => {
+            p.style.display = p.getAttribute('data-fa-panel') === pos ? '' : 'none';
+          });
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFaNeedsTabs);
+  } else {
+    initFaNeedsTabs();
+  }
+  document.addEventListener('astro:page-load', initFaNeedsTabs);
 </script>
 
 <!-- Rankings integration: populates rank column from top imported ranking in localStorage -->
@@ -7040,4 +7279,99 @@ const serializedConfig = JSON.stringify({
   }
 
   document.addEventListener('astro:page-load', () => setTimeout(initRankings, 50));
+</script>
+
+<!-- Rankings integration for Potential Targets (FA needs) card in planner view -->
+<script>
+  import { buildRankingLookup as buildFaRankingLookup, onRankingsChanged as onFaRankingsChanged } from '../../utils/rankings-lookup';
+
+  let faRankUnsubscribe: (() => void) | null = null;
+
+  function injectFaRankings() {
+    const lookup = buildFaRankingLookup();
+    const columns = lookup.columns;
+
+    if (columns.length === 0) return;
+
+    // Build the grid columns string with ranking columns appended
+    const gridCols = `1.5rem 1fr auto ${columns.map(() => 'minmax(2rem, auto)').join(' ')}`;
+
+    // Process each panel (each position tab)
+    document.querySelectorAll('.fa-needs__panel').forEach(panel => {
+      // Add/update ranking column headers above the player list
+      let headerRow = panel.querySelector('.fa-needs__rank-headers') as HTMLElement;
+      if (!headerRow) {
+        headerRow = document.createElement('div');
+        headerRow.className = 'fa-needs__rank-headers';
+        const list = panel.querySelector('.fa-needs__list');
+        if (list) list.before(headerRow);
+      }
+
+      // Set the same grid template as player rows
+      headerRow.style.gridTemplateColumns = gridCols;
+      headerRow.innerHTML = '';
+
+      // Spacer for rank column
+      const rankSpacer = document.createElement('span');
+      headerRow.appendChild(rankSpacer);
+
+      // Spacer for player cell column
+      const playerSpacer = document.createElement('span');
+      headerRow.appendChild(playerSpacer);
+
+      // Pts header
+      const ptsHeader = document.createElement('span');
+      ptsHeader.className = 'fa-needs__rank-header';
+      ptsHeader.textContent = 'Pts';
+      headerRow.appendChild(ptsHeader);
+
+      // Ranking column headers
+      for (const col of columns) {
+        const th = document.createElement('span');
+        th.className = 'fa-needs__rank-header';
+        th.textContent = col.header;
+        th.title = col.fullName;
+        headerRow.appendChild(th);
+      }
+    });
+
+    // Inject ranking values into each player row
+    document.querySelectorAll('.fa-needs__player[data-fa-player-id]').forEach(row => {
+      const el = row as HTMLElement;
+      const playerId = el.dataset.faPlayerId;
+      if (!playerId) return;
+
+      // Update grid template to accommodate ranking columns
+      el.style.gridTemplateColumns = gridCols;
+
+      // Remove old injected ranking values
+      el.querySelectorAll('.fa-needs__rank-value').forEach(v => v.remove());
+
+      // Add ranking values
+      for (const col of columns) {
+        const rank = lookup.byImport.get(col.importId)?.get(playerId);
+        const span = document.createElement('span');
+        span.className = 'fa-needs__rank-value';
+        span.textContent = rank != null ? String(rank) : '—';
+        el.appendChild(span);
+      }
+    });
+  }
+
+  function initFaRankings() {
+    if (faRankUnsubscribe) {
+      faRankUnsubscribe();
+      faRankUnsubscribe = null;
+    }
+
+    injectFaRankings();
+    faRankUnsubscribe = onFaRankingsChanged(() => injectFaRankings());
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initFaRankings, 100));
+  } else {
+    setTimeout(initFaRankings, 100);
+  }
+  document.addEventListener('astro:page-load', () => setTimeout(initFaRankings, 100));
 </script>

@@ -54,6 +54,58 @@ Config locations:
 
 ---
 
+## Player Display (Player Lockup)
+
+**CRITICAL:** Whenever displaying players in a list, card, or table, use the standard **Player Lockup** pattern for consistency:
+
+### Layout
+| Left | Right (Row 1) | Right (Row 2) |
+|------|---------------|---------------|
+| Circular headshot (spans 2 rows) | **Player name** (bold) | NFL team logo (16px) + Position |
+
+### Component
+Use `PlayerCell.astro` for Astro contexts:
+
+```typescript
+import PlayerCell from '../components/theleague/PlayerCell.astro';
+import { normalizeTeamCode } from '../utils/nfl-logo';
+
+const isDef = player.position?.toUpperCase() === 'DEF';
+const teamLogo = `/assets/nfl-logos/${normalizeTeamCode(player.nflTeam || 'NFL')}.svg`;
+
+<PlayerCell
+  name={player.name}
+  headshot={isDef ? teamLogo : player.headshot}
+  position={player.position}
+  nflTeam={player.nflTeam}
+  nflLogo={isDef ? undefined : teamLogo}
+/>
+```
+
+### DEF Handling
+Team defenses (position=DEF) swap the avatar to the NFL team logo and hide the logo from the meta row. `PlayerCell` handles the CSS (`avatar--def` variant) automatically — the caller just needs to pass the team logo as `headshot` and omit `nflLogo`.
+
+### NFL Team Code Normalization
+**Always** use `normalizeTeamCode()` from `src/utils/nfl-logo.ts` when building logo URLs. MFL uses non-standard codes:
+
+| MFL Code | Standard | Team |
+|----------|----------|------|
+| KCC | KC | Kansas City Chiefs |
+| JAC | JAX | Jacksonville Jaguars |
+| NEP | NE | New England Patriots |
+| NOS | NO | New Orleans Saints |
+
+### Player Click Action (Future)
+Every player lockup should eventually open a `PlayerDetailsModal` on click, showing the standard profile popup used on the roster page. The modal is triggered via `window.openPlayerDetailsModal(playerData)`.
+
+### Key Files
+- Component: `src/components/theleague/PlayerCell.astro`
+- Code normalization: `src/utils/nfl-logo.ts` → `normalizeTeamCode()`
+- Logo assets: `public/assets/nfl-logos/{CODE}.svg`
+- Player modal: `src/components/theleague/PlayerDetailsModal.astro`
+
+---
+
 ## League Context
 
 Two leagues share this codebase:
