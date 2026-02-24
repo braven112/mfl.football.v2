@@ -263,19 +263,6 @@
     "icon": "helmet"
   },
   {
-    "id": "dark-mode-css-migration",
-    "date": "2026-02-13",
-    "title": "Design System & Dark Mode Foundation",
-    "summary": "Migrated all styles to CSS custom properties with dark mode support.",
-    "description": [
-      "Behind the scenes, every SCSS variable in the codebase has been replaced with native CSS custom properties in a unified tokens.css file. This is the kind of infrastructure work that no one notices until it enables everything they've been asking for — starting with dark mode, which now has a complete token file ready to go.",
-      "The migration covers typography, colors, spacing, shadows, and component-specific tokens across every page and component. It's not glamorous work, but it's the difference between a codebase that can evolve and one that fights you every time you try to change a shade of blue. Consider it the offensive line of this release: no highlights, all impact."
-    ],
-    "category": "enhancement",
-    "icon": "wrench",
-    "excludeFromHero": true
-  },
-  {
     "id": "custom-football-icons",
     "date": "2026-02-13",
     "title": "Custom Football Icon Set",
