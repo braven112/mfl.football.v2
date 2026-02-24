@@ -3017,6 +3017,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .planner-layout {
     display: grid;
     gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .planner-layout > * {
+    min-width: 0;
   }
 
   .planner-section__title {

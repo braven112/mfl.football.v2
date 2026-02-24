@@ -87,6 +87,10 @@ const hasNeeds = needs.length > 0;
 </ChartCard>
 
 <style>
+  .fa-needs {
+    min-width: 0;
+  }
+
   .fa-needs__tabs {
     display: flex;
     gap: 0.25rem;
@@ -114,6 +118,10 @@ const hasNeeds = needs.length > 0;
   .fa-needs__tab--active {
     color: var(--primary-color, #1c497c);
     border-bottom-color: var(--primary-color, #1c497c);
+  }
+
+  .fa-needs__panel {
+    overflow-x: auto;
   }
 
   .fa-needs__list {
