@@ -201,6 +201,33 @@ const NFL_TEAM_NAMES: Record<string, string> = {
         </div>
       </div>
 
+      <!-- Weekly Results Section -->
+      <div class="player-details-section" id="section-weekly-results" style="display: none;">
+        <h4 class="player-details-section__title" id="weekly-results-title">Weekly Results</h4>
+        <div class="weekly-results-table-wrapper">
+          <table class="weekly-results-table">
+            <thead>
+              <tr>
+                <th class="wr-wk">Wk</th>
+                <th class="wr-pts">Pts</th>
+                <th class="wr-opp">Opponent</th>
+                <th class="wr-avg" id="wr-avg-header">Opp Avg</th>
+                <th class="wr-rank" id="wr-rank-header">Opp Rank</th>
+                <th class="wr-status">Status</th>
+              </tr>
+            </thead>
+            <tbody id="weekly-results-body"></tbody>
+            <tfoot id="weekly-results-foot" style="display: none;">
+              <tr>
+                <td class="wr-wk"><strong>Total</strong></td>
+                <td class="wr-pts" id="weekly-results-total"><strong>—</strong></td>
+                <td colspan="4"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -508,6 +535,105 @@ const NFL_TEAM_NAMES: Record<string, string> = {
       grid-template-columns: 1fr;
     }
   }
+
+  /* Weekly Results Table */
+  .weekly-results-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+
+  .weekly-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .weekly-results-table thead th {
+    background: #f8f9fa;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+
+  .weekly-results-table td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 300;
+    color: #1a1a1a;
+    white-space: nowrap;
+  }
+
+  .weekly-results-table tbody tr:nth-child(even) {
+    background: #f8fafb;
+  }
+
+  .weekly-results-table tfoot td {
+    padding: 0.5rem;
+    border-top: 2px solid #e2e8f0;
+    border-bottom: none;
+    background: #f8f9fa;
+  }
+
+  .wr-wk {
+    text-align: center;
+    width: 2rem;
+    color: #64748b;
+  }
+
+  .wr-pts {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500 !important;
+  }
+
+  .wr-opp { min-width: 5rem; }
+
+  .wr-avg, .wr-rank {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wr-status {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+  }
+
+  /* .wr-team-icon and .wr-status-badge styles are inline
+     because Astro scoped CSS doesn't apply to innerHTML content */
+
+  .wr-rank-easy { color: #16a34a; font-weight: 600 !important; }
+  .wr-rank-hard { color: #dc2626; font-weight: 600 !important; }
+
+  .wr-bye-row td { opacity: 0.5; font-style: italic; }
+
+  .wr-starter { color: #16a34a; }
+  .wr-nonstarter { color: #94a3b8; }
+
+  @media (max-width: 640px) {
+    .weekly-results-table {
+      font-size: 0.78rem;
+    }
+
+    .weekly-results-table thead th,
+    .weekly-results-table td {
+      padding: 0.3rem 0.35rem;
+    }
+
+    .wr-avg { display: none; }
+    #wr-avg-header { display: none; }
+
+  }
 </style>
 
 <script>
@@ -794,6 +920,106 @@ const NFL_TEAM_NAMES: Record<string, string> = {
           depthChartAheadEl.innerHTML = aheadHtml + currentHtml;
         } else {
           depthChartAheadEl.textContent = 'Starter';
+        }
+      }
+
+      // Populate Weekly Results table
+      const weeklySection = document.getElementById('section-weekly-results');
+      const weeklyBody = document.getElementById('weekly-results-body');
+      const weeklyTitle = document.getElementById('weekly-results-title');
+      const weeklyFoot = document.getElementById('weekly-results-foot');
+      const weeklyTotal = document.getElementById('weekly-results-total');
+      const avgHeader = document.getElementById('wr-avg-header');
+      const rankHeader = document.getElementById('wr-rank-header');
+
+      if (weeklySection && weeklyBody) {
+        // Lazy-parse the embedded JSON (cache after first parse)
+        if (!window._weeklyPlayerData) {
+          const dataEl = document.getElementById('weekly-player-results');
+          if (dataEl) {
+            try {
+              window._weeklyPlayerData = JSON.parse(dataEl.textContent || '{}');
+            } catch (_e) {
+              window._weeklyPlayerData = {};
+            }
+          } else {
+            window._weeklyPlayerData = {};
+          }
+        }
+
+        const playerWeeks = window._weeklyPlayerData[playerData.id];
+
+        if (playerWeeks && playerWeeks.length > 0) {
+          weeklySection.style.display = '';
+
+          // Update column headers with player position
+          const pos = (playerData.position || '').toUpperCase();
+          const displayPos = ['SWR', 'LWR', 'RWR'].includes(pos) ? 'WR' : pos;
+          if (avgHeader) avgHeader.textContent = `Opp Avg vs ${displayPos}`;
+          if (rankHeader) rankHeader.textContent = `Opp Rank vs ${displayPos}`;
+          if (weeklyTitle) weeklyTitle.textContent = 'Weekly Results';
+
+          let html = '';
+          let totalPts = 0;
+          let gamesPlayed = 0;
+
+          for (const w of playerWeeks) {
+            const isBye = w.st === 'BYE';
+            const ptsStr = w.p !== null ? w.p.toFixed(2) : '';
+            const oppStr = w.opp || (isBye ? 'Bye' : '');
+            const avgStr = w.avg !== null ? w.avg.toFixed(1) : '';
+            const rankStr = w.rank !== null ? String(w.rank) : '';
+
+            // Status display: team icon with overlapping badge
+            const badgeBg = w.st === 'S' ? '#2563eb' : '#9333ea';
+            let statusStr = '';
+            if (isBye) {
+              statusStr = '';
+            } else if (w.fi && w.st) {
+              statusStr = `<div style="position:relative;display:inline-block;width:28px;height:28px;"><img src="/assets/theleague/icons/${w.fi}.png" alt="${w.fn}" style="width:24px;height:24px;display:block;" onerror="this.style.display='none'"><span style="position:absolute;bottom:-3px;right:-5px;background:${badgeBg};color:#fff;font-size:0.5rem;font-weight:700;line-height:1;padding:2px 3px;border-radius:50%;border:1.5px solid #fff;min-width:12px;text-align:center;">${w.st}</span></div>`;
+            } else if (w.st) {
+              statusStr = w.st;
+            }
+
+            // Rank color class
+            let rankClass = 'wr-rank';
+            if (w.rank !== null) {
+              if (w.rank <= 8) rankClass += ' wr-rank-easy';
+              else if (w.rank >= 25) rankClass += ' wr-rank-hard';
+            }
+
+            // Status color class
+            const statusClass = w.st === 'S' ? 'wr-starter' : w.st === 'NS' ? 'wr-nonstarter' : '';
+            const rowClass = isBye ? 'wr-bye-row' : '';
+
+            if (w.p !== null) {
+              totalPts += w.p;
+              gamesPlayed++;
+            }
+
+            html += `<tr class="${rowClass}">
+              <td class="wr-wk">${w.w}</td>
+              <td class="wr-pts">${ptsStr}</td>
+              <td class="wr-opp">${oppStr}</td>
+              <td class="wr-avg">${avgStr}</td>
+              <td class="${rankClass}">${rankStr}</td>
+              <td class="wr-status ${statusClass}">${statusStr}</td>
+            </tr>`;
+          }
+
+          weeklyBody.innerHTML = html;
+
+          // Show totals footer
+          if (weeklyFoot && weeklyTotal && gamesPlayed > 0) {
+            weeklyFoot.style.display = '';
+            weeklyTotal.innerHTML = `<strong>${totalPts.toFixed(2)}</strong>`;
+          } else if (weeklyFoot) {
+            weeklyFoot.style.display = 'none';
+          }
+        } else {
+          weeklySection.style.display = 'none';
+          weeklyBody.innerHTML = '';
+          if (weeklyFoot) weeklyFoot.style.display = 'none';
         }
       }
 

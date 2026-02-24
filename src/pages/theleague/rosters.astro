@@ -48,6 +48,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 
 // Weather icon mapping based on condition text
@@ -509,6 +510,20 @@ feedYears.forEach((yr) => {
 // Now compute playerScoresMap from the loaded weekly results
 const weeklyResultsRawData = weeklyResultsRawBySeason[currentSeasonYearStr] ?? {};
 const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum);
+
+// Build weekly player results for the modal's Season Results table
+const nflScheduleData = loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
+const leagueJsonData = loadFeedJson(currentSeasonYearStr, 'league.json');
+const playersJsonData = loadFeedJson(currentSeasonYearStr, 'players.json');
+const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.isArray(weeklyResultsRawData))
+  ? buildWeeklyPlayerResults(
+      weeklyResultsRawData,
+      nflScheduleData,
+      fantasyPointsAllowedBySeason[currentSeasonYearStr] ?? null,
+      playersJsonData,
+      leagueJsonData,
+    )
+  : {};
 
 const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
 
@@ -4296,6 +4311,12 @@ const serializedConfig = JSON.stringify({
   type="application/json"
   id="roster-config"
   set:html={serializedConfig}
+></script>
+
+<script
+  type="application/json"
+  id="weekly-player-results"
+  set:html={JSON.stringify(weeklyPlayerResults)}
 ></script>
 
 <script type="module">
