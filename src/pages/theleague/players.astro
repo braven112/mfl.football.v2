@@ -1,4 +1,5 @@
 ---
+export const prerender = true;
 /**
  * Free Agents Page - Player research tool focused on available players
  *
@@ -12,6 +13,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
+import { loadFeed, loadLeagueSubdirFile } from '../../utils/feed-loader';
 
 // MFL team code → local SVG filename normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -24,65 +26,16 @@ function normalizeMflTeam(code: string): string {
   return MFL_TEAM_CODE_MAP[code] || code;
 }
 
-// Load player data
+// Load player data — direct file reads instead of 10 glob patterns
 const currentYear = getCurrentLeagueYear();
-const playerModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
-  { eager: true }
-);
-const projectedScoresModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
-  { eager: true }
-);
-const rostersModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/rosters.json',
-  { eager: true }
-);
+const lastSeasonYear = getCurrentSeasonYear();
 
-const adpDynastyModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
-  { eager: true }
-);
-const adpRedraftModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-redraft.json',
-  { eager: true }
-);
-const lastYearWeeklyModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/weekly-results-raw.json',
-  { eager: true }
-);
-const snapCountModules = import.meta.glob(
-  '../../../data/theleague/nfl-cache/snap-counts-*.json',
-  { eager: true }
-);
-const nflScheduleModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/nflSchedule.json',
-  { eager: true }
-);
-const fpaModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/fantasyPointsAllowed.json',
-  { eager: true }
-);
-const leagueModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/league.json',
-  { eager: true }
-);
-
-const getModuleData = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-
-const findForYear = (modules: Record<string, any>, yr: number) => {
-  const key = Object.keys(modules).find(k => k.includes(`/${yr}/`));
-  return key ? getModuleData(modules[key]) : null;
-};
-
-const playersData = findForYear(playerModules, currentYear);
-const projectedScoresData = findForYear(projectedScoresModules, currentYear);
-const rostersData = findForYear(rostersModules, currentYear);
+const playersData = loadFeed<any>('theleague', 'players.json', currentYear);
+const projectedScoresData = loadFeed<any>('theleague', 'projectedScores.json', currentYear);
+const rostersData = loadFeed<any>('theleague', 'rosters.json', currentYear);
 
 // ADP data — current year only (blank until MFL has data)
-function buildAdpMap(modules: Record<string, any>): Map<string, number> {
-  const data = findForYear(modules, currentYear);
+function buildAdpMap(data: any): Map<string, number> {
   const map = new Map<string, number>();
   if (data?.adp?.player) {
     const players = Array.isArray(data.adp.player) ? data.adp.player : [data.adp.player];
@@ -95,12 +48,11 @@ function buildAdpMap(modules: Record<string, any>): Map<string, number> {
   }
   return map;
 }
-const adpDynMap = buildAdpMap(adpDynastyModules);
-const adpRdfMap = buildAdpMap(adpRedraftModules);
+const adpDynMap = buildAdpMap(loadFeed<any>('theleague', 'adp-dynasty.json', currentYear));
+const adpRdfMap = buildAdpMap(loadFeed<any>('theleague', 'adp-redraft.json', currentYear));
 
 // Last year total points (from weekly results)
-const lastSeasonYear = getCurrentSeasonYear();
-const lastYearData = findForYear(lastYearWeeklyModules, lastSeasonYear);
+const lastYearData = loadFeed<any>('theleague', 'weekly-results-raw.json', lastSeasonYear);
 const lastYrPtsMap = new Map<string, number>();
 if (Array.isArray(lastYearData)) {
   for (const weekPayload of lastYearData) {
@@ -124,30 +76,28 @@ if (Array.isArray(lastYearData)) {
 }
 
 // Build weekly player results for the modal's Season Results table
-const nflScheduleData = findForYear(nflScheduleModules, lastSeasonYear);
-const fpaData = findForYear(fpaModules, lastSeasonYear);
-const leagueData = findForYear(leagueModules, lastSeasonYear);
-const playersDataForSeason = findForYear(playerModules, lastSeasonYear) || playersData;
+const nflScheduleData = loadFeed<any>('theleague', 'nflSchedule.json', lastSeasonYear);
+const fpaData = loadFeed<any>('theleague', 'fantasyPointsAllowed.json', lastSeasonYear);
+const leagueData = loadFeed<any>('theleague', 'league.json', lastSeasonYear);
+const playersDataForSeason = loadFeed<any>('theleague', 'players.json', lastSeasonYear) || playersData;
 const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
   ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
   : {};
 
 // Build snap count lookup (keyed by MFL player ID)
+// Try current season year first, then fall back to previous year
 const snapCountMap = new Map<string, { snaps: number, pct: number, games: number }>();
 {
-  // Find the most recent snap count file
-  const snapKeys = Object.keys(snapCountModules).sort().reverse();
-  for (const key of snapKeys) {
-    const data = getModuleData(snapCountModules[key]);
-    if (data?.players) {
-      for (const [mflId, stats] of Object.entries(data.players) as [string, any][]) {
-        snapCountMap.set(mflId, {
-          snaps: stats.offenseSnaps ?? 0,
-          pct: stats.offensePct ?? 0,
-          games: stats.gamesPlayed ?? 0,
-        });
-      }
-      break; // Use only the most recent file
+  const snapData =
+    loadLeagueSubdirFile<any>('theleague', 'nfl-cache', `snap-counts-${lastSeasonYear}.json`) ||
+    loadLeagueSubdirFile<any>('theleague', 'nfl-cache', `snap-counts-${lastSeasonYear - 1}.json`);
+  if (snapData?.players) {
+    for (const [mflId, stats] of Object.entries(snapData.players) as [string, any][]) {
+      snapCountMap.set(mflId, {
+        snaps: stats.offenseSnaps ?? 0,
+        pct: stats.offensePct ?? 0,
+        games: stats.gamesPlayed ?? 0,
+      });
     }
   }
 }

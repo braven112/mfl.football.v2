@@ -22,6 +22,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { loadFeed } from '../../utils/feed-loader';
 
 export const prerender = false;
 
@@ -29,13 +30,8 @@ const envHost =
   (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://www49.myfantasyleague.com';
 const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '13522';
 
+// Keep standings glob for the year list dropdown
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const bracketFallbackFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/playoff-brackets.json', {
-  eager: true,
-});
-const weeklyResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
 
@@ -78,21 +74,12 @@ const leagueConfig = resolveConfigForYear(leagueConfigRaw, selectedYear);
 
 const leagueStandings = getLeagueStandings(franchises, leagueConfig);
 
-const getModuleData = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-
-const extractFeedSeason = (filepath: string) => {
-  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
-  return match ? match[1] : null;
-};
-
-const bracketKey = Object.keys(bracketFallbackFeeds).find(
-  path => extractFeedSeason(path) === selectedYear.toString()
-);
-
-const fallbackBracketFeed = bracketKey ? getModuleData(bracketFallbackFeeds[bracketKey]) : undefined;
+const fallbackBracketFeed = loadFeed<any>('theleague', 'playoff-brackets.json', selectedYear) ?? undefined;
 const fallbackBracketMetas = fallbackBracketFeed?.playoffBrackets?.playoffBracket || [];
 const fallbackBracketDetails = fallbackBracketFeed?.brackets || {};
+
+// Load weekly results for selected year (replaces glob)
+const weeklyResultsCached = loadFeed<{ weeks?: Array<{ week: number; scores: Record<string, number> }> }>('theleague', 'weekly-results.json', selectedYear);
 
 const assetMap = new Map(
   (leagueConfig?.teams ?? []).map(team => [
@@ -209,10 +196,7 @@ const weeksNeeded = Array.from(
 const weeklyResultsEntries = await Promise.all(
   weeksNeeded.map(async week => {
     // Prefer cached weekly results if available for this year
-    const cachedKey = `../../../data/theleague/mfl-feeds/${selectedYear}/weekly-results.json`;
-    const cachedFeed = weeklyResultsFeeds[cachedKey] as
-      | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
-      | undefined;
+    const cachedFeed = weeklyResultsCached;
     const cachedWeek = cachedFeed?.weeks?.find(entry => entry.week === week);
     if (cachedWeek?.scores) {
       const scoresMap = new Map<string, number>(
@@ -508,10 +492,7 @@ const weeklyHighs = await Promise.all(
   Array.from({ length: REGULAR_SEASON_WEEKS }, async (_, idx) => {
     const week = idx + 1;
     // Use cached weekly results if available; otherwise mark as missing
-    const cachedKey = `../../../data/theleague/mfl-feeds/${selectedYear}/weekly-results.json`;
-    const cachedFeed = weeklyResultsFeeds[cachedKey] as
-      | { weeks?: Array<{ week: number; scores: Record<string, number> }> }
-      | undefined;
+    const cachedFeed = weeklyResultsCached;
     const cachedWeek = cachedFeed?.weeks?.find(entry => entry.week === week);
     const scoresRaw = cachedWeek?.scores;
     const entries =
