@@ -1,5 +1,27 @@
 [
   {
+    "id": "weekly-rollup-2026-02-24",
+    "date": "2026-02-24",
+    "title": "Weekly Fixes & Polish (Feb 17-23)",
+    "summary": "20 bug fixes and style improvements across navigation & routing, rosters, rankings, design system & theming, and more.",
+    "description": [
+      "This week's 20 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Navigation & Routing</strong> — URL rewriting now uses Astro middleware instead of Vercel rewrites for more reliable page routing. The /theleague path prefix is now hidden on theleague.us so URLs are cleaner (e.g., theleague.us/rosters instead of theleague.us/theleague/rosters). Mobile and tablet header now stacks nav icons below the logo for a tidier layout.",
+      "<strong>Rosters</strong> — Roster page now shows a random team for new visitors instead of always defaulting to the same team.",
+      "<strong>Rankings</strong> — Removed extra right padding from composite ranking columns for tighter alignment. Ranking column border styles refined for better visual separation between sources. Player matching for imported rankings now handles nicknames (e.g., Mike/Michael) for more accurate matches.",
+      "<strong>Design System & Theming</strong> — Ranking type badge colors softened while maintaining WCAG AA contrast. New --table-header-gradient design token unifies all table header styles across the site. Hardcoded fonts and icon sizes replaced with design tokens for consistency. Accent link hover color now uses brand green instead of a non-brand amber.",
+      "<strong>Import Rankings</strong> — Ranking type badges on import page now use solid colors for better readability. Import rankings cards now have white backgrounds instead of gray.",
+      "<strong>League Summary</strong> — League summary subtitle spacing tightened from 5rem to 2rem.",
+      "<strong>Free Agents</strong> — Free agent average rank column colors updated for better contrast. Average ranking column border made symmetrical on the Free Agents page. Defense player avatars now properly centered using flex alignment. Defense avatars are now circular with smaller, better-proportioned logos. Fixed empty free agents list caused by missing projection data by switching to projectedScores.",
+      "<strong>Homepage</strong> — Homepage card hover color corrected to use the green design token."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
     "id": "frozen-salary-averages-fix",
     "date": "2026-02-22",
     "title": "Extension Calculator Fix",
@@ -173,6 +195,28 @@
     "imageAlt": "Trade Builder page showing the Trade Bait Marketplace with available players"
   },
   {
+    "id": "weekly-rollup-2026-02-17",
+    "date": "2026-02-16",
+    "title": "Weekly Fixes & Polish (Feb 10-16)",
+    "summary": "17 bug fixes and style improvements across navigation & routing, calendar, league summary, rosters, and more.",
+    "description": [
+      "This week's 17 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Navigation & Routing</strong> — The site is now accessible at theleague.us with proper domain routing, forum proxy, and root redirect. GM Central link updated to use the correct www.theleague.us domain.",
+      "<strong>Calendar</strong> — Calendar now uses the correct calendar year with a previous-year option and swapped category colors. NFL Draft and Season Start events now use the NFL logo icon with multi-color SVG support. Rookie draft date corrected to Saturday after NFL Draft week. Auction results link fixed to the correct MFL module. Single-day event deadlines now default to 8:45 PM PT.",
+      "<strong>League Summary</strong> — Year range now correctly shows 5 years starting from the current league year (2026-2030). Quartile indicators switched from background colors to text colors for better readability.",
+      "<strong>Rosters</strong> — Veteran extension table columns consolidated to prevent overflow on smaller screens. Draft picks card no longer goes missing on the Next Year view after league year rollover. Demo mode opponent averages and ranks now vary per player for realistic sorting.",
+      "<strong>Trade Builder</strong> — React integration added for Trade Builder components to resolve rendering issues.",
+      "<strong>Playoffs</strong> — Playoffs description corrected from 6 to 7 teams to match actual league rules.",
+      "<strong>Homepage</strong> — Hero banner CTA button alignment fixed on mobile. Mobile alignment and padding improved across homepage and What's New page.",
+      "<strong>Other</strong> — Build failure when MFL API is unavailable during offseason now handled gracefully. CSS class scoping fixed in icon sprite. Icon gallery names display single-line with hidden scrollbar."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
     "id": "league-summary",
     "date": "2026-02-15",
     "title": "League Summary Page",
@@ -276,6 +320,153 @@
     ],
     "category": "new-feature",
     "icon": "home"
+  },
+  {
+    "id": "weekly-rollup-2026-01-27",
+    "date": "2026-01-27",
+    "title": "Weekly Fixes & Polish (Jan 17-Feb 8)",
+    "summary": "14 bug fixes and style improvements across navigation, rosters, design system, and more.",
+    "description": [
+      "Three weeks of bug fixes and polish from mid-January through early February:",
+      "<strong>Navigation</strong> — Navigation drawer UI polished with updated shadows, link ordering, and removing extra shadows. Switch Leagues option now only visible when you have teams in both leagues. Mobile toggle and spacing fixes.",
+      "<strong>Rosters & Coach Mode</strong> — Coach mode live scoring fixed. Add/drop page colors corrected. Opponent average column aligned properly. Coach mode missing data issue resolved. Roster data now updates on each build.",
+      "<strong>Design System</strong> — New box shadows applied site-wide for depth consistency. Bold college names and alternating row backgrounds added to tables. Page animations refined. Scoreboard colors corrected. Footer now uses flexbox to always sit at the bottom of the page.",
+      "<strong>Infrastructure</strong> — Bundle size checks added to prevent Vercel deploy failures. Roster sync push race condition prevented. Roster sync schedule changed from every 5 minutes to every 20 minutes."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2026-01-13",
+    "date": "2026-01-13",
+    "title": "Weekly Fixes & Polish (Jan 1-12)",
+    "summary": "12 bug fixes and style improvements across playoffs, rosters, auction predictor, and more.",
+    "description": [
+      "Two weeks of bug fixes and polish from the new year:",
+      "<strong>Playoffs & Draft</strong> — Champion draft picks can now be traded via the futureDraftPicks API. Champion picks no longer re-added after merge. Playoff bracket data loading made more robust with better fallbacks.",
+      "<strong>Rosters</strong> — Season year now uses the PUBLIC_MFL_YEAR env var consistently across all pages. Chatmaster banner fixed. Draft history corrected. Compensatory picks added to draft view. Draft pick color corrected.",
+      "<strong>Auction Predictor</strong> — Fixed 500 error on Vercel caused by file path issue. Projected view now uses sortedPredictions correctly.",
+      "<strong>Design System</strong> — Box shadow inconsistencies cleaned up across homepage and borders. Team icon no longer cut off in navigation."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2025-12-29",
+    "date": "2025-12-29",
+    "title": "Weekly Fixes & Polish (Dec 22-28)",
+    "summary": "15 bug fixes and style improvements across playoffs, navigation, mobile, and more.",
+    "description": [
+      "Holiday week polish covering playoffs, navigation, and mobile experience:",
+      "<strong>Playoffs</strong> — Champion logic updated for accurate bracket progression. AFL bracket fixes applied. Conference and division names corrected. NIT seeding and seed font size adjusted. Playoff icons fixed.",
+      "<strong>Navigation</strong> — Header/footer logic refined for consistent layout. Mobile view cleaned up across prize page and playoff brackets. Remove unnecessary links for AFL.",
+      "<strong>Mobile</strong> — Mobile styles fixed for TheLeague pages. Off-white background color adjusted to be Mac-friendly. Apple-safe background colors applied. Franchise icon resizing improved. Mobile padding fixed on AFL playoff page.",
+      "<strong>Other</strong> — Team nav fixes applied. Draft predictor updated for AFL support. Live data endpoints added for real-time playoff scoring."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2025-12-22",
+    "date": "2025-12-22",
+    "title": "Weekly Fixes & Polish (Dec 8-21)",
+    "summary": "18 bug fixes and style improvements across playoffs, MVP, mobile, and more.",
+    "description": [
+      "Two weeks of polish covering live scoring, playoffs, and mobile improvements:",
+      "<strong>Playoffs & Scoring</strong> — Live scoring links added from playoff page. Live scoring indicator and progress bar implemented. Bracket data kept fresh with frequent updates. Playoff data now uses predictive fallback when live data is unavailable.",
+      "<strong>MVP & Analytics</strong> — All-time MVP tracking added. Team of the Year support introduced. San Diego Chargers historical data now included.",
+      "<strong>Mobile</strong> — Mobile menu fix for header. Rosters layout fixed on mobile. Footer links corrected. Draft predictor now shows on roster page. Icons enlarged for better tap targets.",
+      "<strong>Other</strong> — Standings data freshness improved. Roster rotation implemented. Playoff links back to MFL added. Sunday ticket updates now show both broadcast windows. Timezone and calendar icon updates. URL shareability improved."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2025-12-08",
+    "date": "2025-12-08",
+    "title": "Weekly Fixes & Polish (Dec 1-7)",
+    "summary": "10 bug fixes and style improvements across AFL setup, infrastructure, and builds.",
+    "description": [
+      "First week of December focused on AFL Fantasy support and infrastructure:",
+      "<strong>AFL Fantasy</strong> — AFL theme styles and build script added. Division standings rules implemented. Both leagues now update independently. Salary processing correctly skipped for AFL. Icons enabled across AFL pages.",
+      "<strong>Infrastructure</strong> — Vercel config simplified to run Astro build directly. Asset domain updated to use correct Vercel deployment URL. Incorrect monorepo Vercel config removed. Syncing workflow split by league for reliability.",
+      "<strong>Other</strong> — pnpm lockfile refreshed. JS build system for MFL site established."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2025-12-01",
+    "date": "2025-12-01",
+    "title": "Weekly Fixes & Polish (Nov 24-30)",
+    "summary": "16 bug fixes and style improvements across standings, navigation, draft predictor, and more.",
+    "description": [
+      "Thanksgiving week polish across navigation, standings, and draft tools:",
+      "<strong>Standings</strong> — Standings UI updates with tiebreaker improvements. Tab icons fixed. Mobile height adjusted on standings page. Larger table fonts for readability.",
+      "<strong>Navigation</strong> — Navigation updates across the site. Breadcrumbs refined. Slim breadcrumb and logo layout. Mobile header size updated. Footer updates applied. Next year summary links added.",
+      "<strong>Draft</strong> — Draft predictor UI cleaned up with better team name display. Year selector updated. Draft history fixed on mobile. Header link corrected.",
+      "<strong>Trade</strong> — Trade bait API endpoint corrected. Player ID type mismatch fixed when checking trade bait set. Trade bait display renamed to 'Trade Block' per league terminology. Trade block indicator repositioned.",
+      "<strong>Other</strong> — Ninja banner updated. Fix icon size on mobile. Fix draft history on mobile."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2025-11-24",
+    "date": "2025-11-24",
+    "title": "Weekly Fixes & Polish (Nov 17-23)",
+    "summary": "20 bug fixes and style improvements across rosters, salary, charts, login, and more.",
+    "description": [
+      "A busy week of polish as core pages launched:",
+      "<strong>Rosters</strong> — Roster layout changes for better readability. Defense display fixed. NFL logo corrected. Player count display added. Hamburger menu and roster cleanup. Next year 2-column layout aligned. Player duplicates resolved.",
+      "<strong>Salary & Contracts</strong> — Extension calculations fixed. Franchise tag updates applied. Franchise eligibility logic corrected. Cap space color fixed. Salary formula corrected.",
+      "<strong>Charts</strong> — Donut charts now include legends. New bar chart added with proper scale. Position pie chart introduced. Better visual charts across the site.",
+      "<strong>Login & Auth</strong> — Session cookie now sent correctly in development with SameSite=Lax. Auto-select logged-in user's team on roster page. User menu with login modal added to header.",
+      "<strong>Other</strong> — Header and team nav fixed. NFL images updated. Player modal with injury details improved. College analysis max-width on NFL logo fixed."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
+    "id": "weekly-rollup-2025-11-17",
+    "date": "2025-11-17",
+    "title": "Weekly Fixes & Polish (Nov 9-16)",
+    "summary": "18 bug fixes and style improvements across live scoring, submit lineup, standings, and more.",
+    "description": [
+      "First full week of polish as the site took shape:",
+      "<strong>Live Scoring</strong> — Live scoring fixes across multiple pages. Better live scoring display. Fix live scoring page exclusion for custom scripts. Live scoring bug fixes.",
+      "<strong>Submit Lineup</strong> — Submit lineup page styling improved. Scroll bar and lineup updates. Fix bottom of submit lineup page. Submit caption margin issue fixed.",
+      "<strong>Standings</strong> — Standings updates and alignment. New button style applied. Better icon support added. Standings tweaks for readability.",
+      "<strong>Message Board</strong> — Custom message board CSS added. Ad blocker support improved. Ads removed from message board. Message board post alignment fixed.",
+      "<strong>Mobile</strong> — Mobile view fixes across pages. Power rank page updated. Add/drop page icon preserved. Fix mobile responsiveness throughout.",
+      "<strong>Other</strong> — Updated to latest Sass. Footer fix. Center cards on asset pages. Icon sizes standardized."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
   },
   {
     "id": "rules-constitution",

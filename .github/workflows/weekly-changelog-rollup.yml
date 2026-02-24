@@ -1,0 +1,47 @@
+name: Weekly Changelog Rollup
+
+on:
+  schedule:
+    # Run every Monday at 8 PM PT (Tuesday 4 AM UTC)
+    - cron: "0 4 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rollup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run weekly changelog rollup
+        run: node ./scripts/weekly-changelog-rollup.mjs
+
+      - name: Commit and push updates
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changelog changes to commit."
+            exit 0
+          fi
+
+          git config user.name "Changelog Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/whats-new.json src/data/weekly-changelog-staging.json
+          git commit -m "chore: weekly changelog rollup"
+          git push
