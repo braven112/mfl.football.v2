@@ -10,16 +10,35 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import RankingsImportPage from '../../components/theleague/rankings-import/RankingsImportPage';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import bookmarkletManifest from '../../data/bookmarklet-manifest.json';
-import { loadFeed } from '../../utils/feed-loader';
 
 export const prerender = false;
 
 const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
 
 // ---------------------------------------------------------------------------
 // Load MFL players for fuzzy matching
 // ---------------------------------------------------------------------------
-const playersData = loadFeed<any>('theleague', 'players.json', leagueYear);
+const playersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true },
+);
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+let playersData: any = null;
+for (const [filepath, mod] of Object.entries(playersFeeds)) {
+  if (extractFeedSeason(filepath) === leagueYearStr) {
+    playersData = getModuleData(mod);
+    break;
+  }
+}
 
 // Build simplified player array for client-side matching
 const rawPlayers = playersData?.players?.player ?? [];

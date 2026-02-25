@@ -19,10 +19,12 @@ import {
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { resolveConfigForYear } from '../../utils/team-names';
-import { loadFeed } from '../../utils/feed-loader';
 
-// Import standings data (glob needed for year list dropdown)
+// Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
   eager: true,
 });
 
@@ -58,7 +60,9 @@ if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
   return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
 }
 
-const fetchMeta = loadFeed<{ lastFetched?: string }>('theleague', 'fetch.meta.json', selectedYear);
+const fetchMeta = fetchMetaFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/fetch.meta.json`] as
+  | { lastFetched?: string }
+  | undefined;
 const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 
 const franchises = selectedFeed.leagueStandings.franchise;

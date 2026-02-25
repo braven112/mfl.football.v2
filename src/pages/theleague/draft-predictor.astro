@@ -17,13 +17,23 @@ import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
-import { loadFeed } from '../../utils/feed-loader';
 
-// Keep globs for multi-year iterations (draftResults history, players fallback)
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+const playoffBracketFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/playoff-brackets.json',
+  {
+    eager: true,
+  }
+);
 const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', {
   eager: true,
 });
 const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
+  eager: true,
+});
+const futureDraftPicksFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/futureDraftPicks.json', {
   eager: true,
 });
 
@@ -39,17 +49,39 @@ const extractFeedSeason = (filepath: string) => {
 const currentYear = getCurrentSeasonYear();
 const nextYear = getNextDraftYear();
 
-// Single-year lookups — direct file reads instead of glob
-const standingsData = loadFeed<any>('theleague', 'standings.json', currentYear);
-const bracketData = loadFeed<any>('theleague', 'playoff-brackets.json', currentYear);
-const draftResultsData = loadFeed<any>('theleague', 'draftResults.json', nextYear);
-const futureDraftPicksData = loadFeed<any>('theleague', 'futureDraftPicks.json', currentYear);
+// Load standings for current year
+const standingsKey = Object.keys(standingsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
 
-// All available years for history view (from glob)
+// Load playoff bracket for current year to determine toilet bowl winners
+const bracketKey = Object.keys(playoffBracketFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+
+// Load draft results for next year (to show actual picks with trades)
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(nextYear)
+);
+const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+// All available years for history view
 const draftResultYears = Object.keys(draftResultsFeeds)
   .map((path) => extractFeedSeason(path))
   .filter((y) => !!y)
   .sort((a, b) => Number(b) - Number(a));
+
+// Load futureDraftPicks for current year (to show team ownership of draft picks)
+let futureDraftPicksData = null;
+const futureDraftPicksKey = Object.keys(futureDraftPicksFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+
+if (futureDraftPicksKey) {
+  futureDraftPicksData = getModuleData(futureDraftPicksFeeds[futureDraftPicksKey]);
+}
 
 // Build team config map
 const teamsList = (leagueAssets.teams ?? []).map((team) => ({

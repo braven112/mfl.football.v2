@@ -27,20 +27,69 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import { chooseTeamName } from '../../utils/team-names';
 import { calculatePlayerCapHitByYear } from '../../utils/trade-calculations';
 import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
-import { loadFeed, loadSrcData } from '../../utils/feed-loader';
 
 export const prerender = false;
 
 const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);
 
-// Load data feeds for the current league year — direct reads instead of glob
-const rostersData = loadFeed<any>('theleague', 'rosters.json', leagueYear);
-const playersData = loadFeed<any>('theleague', 'players.json', leagueYear);
-const salaryAdjData = loadFeed<any>('theleague', 'salaryAdjustments.json', leagueYear);
-const draftPickData = loadFeed<any>('theleague', 'futureDraftPicks.json', leagueYear);
-const draftResultsData = loadFeed<any>('theleague', 'draftResults.json', leagueYear);
-const tradeBaitRaw = loadFeed<any>('theleague', 'tradeBait.json', leagueYear);
+// Load data feeds for the current league year
+const rostersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/rosters.json',
+  { eager: true }
+);
+const playersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true }
+);
+const salaryAdjFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  { eager: true }
+);
+const draftPickFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
+  { eager: true }
+);
+const draftResultsFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  { eager: true }
+);
+const tradeBaitFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/tradeBait.json',
+  { eager: true }
+);
+const salaryAvgModules = import.meta.glob(
+  '../../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+const extractSeason = (filepath: string) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+// Resolve feeds for current league year
+const findFeed = (feeds: Record<string, unknown>, year: string, extractFn: (fp: string) => string | null) => {
+  for (const [path, mod] of Object.entries(feeds)) {
+    if (extractFn(path) === year) return getModuleData(mod) as any;
+  }
+  return null;
+};
+
+const rostersData = findFeed(rostersFeeds, leagueYearStr, extractFeedSeason);
+const playersData = findFeed(playersFeeds, leagueYearStr, extractFeedSeason);
+const salaryAdjData = findFeed(salaryAdjFeeds, leagueYearStr, extractFeedSeason);
+const draftPickData = findFeed(draftPickFeeds, leagueYearStr, extractFeedSeason);
+const draftResultsData = findFeed(draftResultsFeeds, leagueYearStr, extractFeedSeason);
+const tradeBaitRaw = findFeed(tradeBaitFeeds, leagueYearStr, extractFeedSeason);
 const currentTradeBaitIds = new Set<string>(Array.isArray(tradeBaitRaw) ? tradeBaitRaw : []);
 // Feb 15–28/29: transition window after the league year rolls over (Feb 14 @ 8:45 PT).
 // A team uses its current year trade bait if any of its rostered players appear there;
@@ -49,26 +98,24 @@ const now = new Date();
 const isTransitionWindow = now.getMonth() === 1 && now.getDate() >= 15; // Feb 15–end of Feb
 const prevTradeBaitIds = (() => {
   if (!isTransitionWindow) return new Set<string>();
-  const prev = loadFeed<any>('theleague', 'tradeBait.json', leagueYear - 1);
+  const prev = findFeed(tradeBaitFeeds, String(leagueYear - 1), extractFeedSeason);
   return new Set<string>(Array.isArray(prev) ? prev : []);
 })();
 
 // Use previous season's frozen (week 14) salary averages for extension/franchise tag calculations.
 // Post-rollover data has 10% escalation already applied, which would double-dip with the extension formula.
-// Check current year first; if it hasn't reached freeze week, fall back to previous year.
-const currentSalaryAvg = loadSrcData<any>(`mfl-salary-averages-${leagueYear}.json`);
-const prevSalaryAvg = loadSrcData<any>(`mfl-salary-averages-${leagueYear - 1}.json`);
-const salaryAvgYear = (() => {
-  if (currentSalaryAvg?.metadata) {
-    const meta = currentSalaryAvg.metadata;
-    if (meta.week >= (meta.freezeWeek || 14)) return leagueYear;
-  }
-  return leagueYear - 1;
-})();
-let salaryAvgData = salaryAvgYear === leagueYear ? currentSalaryAvg : prevSalaryAvg;
-// Fallback: use whichever is available
+const salaryAvgYear = String(getFrozenSalaryAveragesYear(salaryAvgModules, getModuleData));
+let salaryAvgData = findFeed(salaryAvgModules, salaryAvgYear, extractSeason);
+// Fallback to most recent available salary averages if resolved year not found
 if (!salaryAvgData) {
-  salaryAvgData = currentSalaryAvg || prevSalaryAvg;
+  const years = Object.keys(salaryAvgModules)
+    .map(extractSeason)
+    .filter((y): y is string => y !== null)
+    .sort()
+    .reverse();
+  if (years.length > 0) {
+    salaryAvgData = findFeed(salaryAvgModules, years[0], extractSeason);
+  }
 }
 
 // Build player lookup from players.json
