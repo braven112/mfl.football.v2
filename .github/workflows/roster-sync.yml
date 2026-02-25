@@ -40,9 +40,6 @@ jobs:
         env:
           MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
           MFL_LEAGUE_SLUG: theleague
-          MFL_YEAR: ${{ vars.MFL_YEAR }}
-          MFL_SEASON: ${{ vars.MFL_SEASON }}
-          MFL_WEEK: ${{ vars.MFL_WEEK }}
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
@@ -53,7 +50,6 @@ jobs:
         env:
           MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
           MFL_LEAGUE_SLUG: theleague
-          MFL_YEAR: ${{ vars.MFL_YEAR }}
         run: node ./scripts/update-salary-averages.mjs
 
       - name: Fetch live NFL odds
@@ -63,9 +59,6 @@ jobs:
         env:
           MFL_LEAGUE_ID: '19621'
           MFL_LEAGUE_SLUG: afl
-          MFL_YEAR: ${{ vars.MFL_YEAR }}
-          MFL_SEASON: ${{ vars.MFL_SEASON }}
-          MFL_WEEK: ${{ vars.MFL_WEEK }}
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
