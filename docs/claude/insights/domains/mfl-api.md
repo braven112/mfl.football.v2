@@ -179,3 +179,41 @@ https://api.myfantasyleague.com/2025/export?TYPE=freeAgents&L=13522&JSON=1
 ```
 
 **Recommendation:** The `status: "locked"` field on free agents indicates roster moves are frozen. Display these players differently in the UI (e.g., grayed out or with a lock icon).
+
+---
+
+## 2026-02-24 - pointsAllowed API: Defense vs Position (DVP) Data
+
+**Context:** Researching whether MFL has a defense-vs-position endpoint for matchup analysis
+
+**Insight:** MFL does have a `pointsAllowed` export endpoint that returns fantasy points allowed by each NFL team broken out by position (QB, RB, WR, TE, PK, Def). This is the DVP data.
+
+**Key findings:**
+1. **Full-season totals only** — the `W` parameter is accepted but completely ignored. All requests return identical full-season cumulative data.
+2. **League-specific** — requires `L` (league ID) because it calculates using your league's scoring rules (PPR, passing TD values, etc.)
+3. **No authentication required** — this is a public endpoint
+4. **MFL non-standard team codes** — returns codes like KCC, JAC, NEP, NOS, GBP, TBB, SFO, LVR instead of standard NFL codes. Use `normalizeTeamCode()`.
+5. **Empty position quirk** — some teams have a position entry with `"name": ""` and `"points": "0"`. Filter these out.
+6. **No per-week breakdown** — to compute weekly DVP, you must use `playerScores` per week cross-referenced with `nflSchedule` to determine opponents.
+7. **Point values are strings** — always `parseFloat()` before math.
+
+**Evidence:**
+```
+GET https://api.myfantasyleague.com/2025/export?TYPE=pointsAllowed&L=13522&JSON=1
+# Redirects to www49, returns 32 NFL teams with 6 positions each
+# W=1, W=5, W=10, W=YTD all return IDENTICAL numbers
+```
+
+**Recommendation:** For a DVP feature:
+- Use `pointsAllowed` for season-long totals (easy, one API call)
+- Divide by games played (17) for per-game averages
+- For weekly matchup context, combine with `nflSchedule` to show "this week's opponent allows X pts to WR"
+- For granular weekly DVP trends, you'd need to build it yourself from `playerScores` + `nflSchedule`
+
+---
+
+## 2026-02-24 - MFL "Coach" Tab / Who Should I Start
+
+**Context:** Investigating what backs the MFL "Coach" feature on their website
+
+**Insight:** MFL has a `whoShouldIStart` API endpoint, but it requires authentication (returns auth error without MFL_USER_ID cookie or APIKEY). The MFL website's lineup advice features likely combine `pointsAllowed`, `projectedScores`, `schedule`, and `injuries` data to generate recommendations. There is no dedicated "coach" export endpoint — the Coach tab on MFL's website appears to be a UI feature that aggregates multiple API data sources.

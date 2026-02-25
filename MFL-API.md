@@ -269,6 +269,78 @@ https://api.myfantasyleague.com/2025/export?TYPE=projectedScores&L=13522&W=15&JS
 
 ---
 
+#### `pointsAllowed` (Defense vs Position / DVP)
+**Purpose:** Fantasy points allowed by each NFL team's defense, broken out by position. This is the "Defense vs Position" (DVP) data — shows how many fantasy points each NFL defense allowed to QB, RB, WR, TE, PK, and Def over the full season.
+
+**Parameters:**
+- Required: `L` (league ID) — scoring is league-specific (uses your league's scoring rules)
+- Optional: `W` (week) — **WARNING: `W` parameter is accepted but IGNORED. The endpoint always returns full-season totals regardless of week parameter.**
+- Auth: Public (no authentication required)
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=pointsAllowed&L=13522&JSON=1
+```
+
+**Response Structure:**
+```json
+{
+  "pointsAllowed": {
+    "team": [
+      {
+        "id": "DET",
+        "position": [
+          { "name": "QB", "points": "347.02" },
+          { "name": "RB", "points": "283.25" },
+          { "name": "WR", "points": "526.55" },
+          { "name": "TE", "points": "201.7" },
+          { "name": "PK", "points": "143.7" },
+          { "name": "Def", "points": "61.22" }
+        ]
+      }
+    ]
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
+}
+```
+
+**Key Insights (updated 2026-02-24):**
+- Returns **full-season cumulative totals**, NOT averages or per-week data
+- To get per-game averages, divide by games played (typically 17 for full season)
+- All 32 NFL teams are included in the response
+- Each team has 6 position entries: QB, RB, WR, TE, PK, Def
+- **Quirk:** Some teams have a 7th entry with `"name": ""` and `"points": "0"` — filter these out
+- Points are string values, not numbers — parse to float for calculations
+- Team codes use MFL non-standard abbreviations (KCC, JAC, NEP, NOS, GBP, TBB, SFO, LVR) — use `normalizeTeamCode()` when matching to standard NFL codes
+- Position order varies by team in the response (not guaranteed to be QB, RB, WR, TE, PK, Def)
+- League ID is required because scoring is calculated using your league's specific scoring rules (PPR settings, passing TD values, etc.)
+- The `W` parameter has zero effect on the response — tested with W=1, W=5, W=10, W=YTD, all return identical season totals
+- No per-week breakdown is available from this endpoint; to compute weekly DVP, you would need to use `playerScores` per week and cross-reference with `nflSchedule` to determine opponents
+- This corresponds to the "Points Allowed - By Position" report page in the MFL web interface
+- The MFL "Coach" tab on the website likely uses this data combined with `projectedScores` and `schedule` data to generate start/sit recommendations
+
+**Use Cases:**
+- Defense vs Position rankings (DVP charts)
+- Start/sit recommendations based on matchup difficulty
+- Identifying favorable/unfavorable matchups for each position
+- Weekly lineup optimization when combined with schedule data
+
+**Computed Per-Game Average Example:**
+```typescript
+// To get per-game averages:
+const gamesPlayed = 17; // full regular season
+const avgPointsAllowed = parseFloat(position.points) / gamesPlayed;
+```
+
+**Related APIs:**
+- `nflSchedule` — Get upcoming NFL matchups to pair with DVP data
+- `playerScores` — For computing weekly DVP breakdowns manually
+- `projectedScores` — MFL's own projections (may already factor in matchups)
+- `whoShouldIStart` — MFL's start/sit advisor (requires auth)
+
+---
+
 ### D. Standings & Playoffs
 
 #### `leagueStandings` ✅ Currently Used

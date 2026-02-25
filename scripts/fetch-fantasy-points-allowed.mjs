@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Fetch Fantasy Points Allowed by Position
+ * Fetch Fantasy Points Allowed by Position from MFL
  *
- * Calculates defensive rankings by position based on ESPN stats.
- * Run weekly (e.g., Monday/Tuesday after games complete).
+ * Uses MFL's pointsAllowed endpoint, which returns season-total fantasy
+ * points each NFL defense has allowed per position, scored using the
+ * league's own scoring rules. We divide by games played to get per-game
+ * averages, then rank all 32 teams for each position.
+ *
+ * Runs weekly via GitHub Actions (weekly-stats-sync.yml).
+ *
+ * Env variables:
+ *   MFL_LEAGUE_ID (required in CI, defaults to 13522 locally)
+ *   MFL_YEAR      (optional, auto-detected from league calendar)
  *
  * Usage:
  *   node scripts/fetch-fantasy-points-allowed.mjs
@@ -18,321 +26,243 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
-const ESPN_STATS_API = 'https://site.web.api.espn.com/apis/v2/sports/football/nfl/standings';
+const MFL_HOST = 'https://api.myfantasyleague.com';
 
-// Position scoring weights (approximate PPR scoring)
-const POSITION_WEIGHTS = {
-  QB: { passingYards: 0.04, passingTD: 4, rushingYards: 0.1, rushingTD: 6, interceptions: -2 },
-  RB: { rushingYards: 0.1, rushingTD: 6, receptions: 1, receivingYards: 0.1, receivingTD: 6 },
-  WR: { receptions: 1, receivingYards: 0.1, receivingTD: 6, rushingYards: 0.1, rushingTD: 6 },
-  TE: { receptions: 1, receivingYards: 0.1, receivingTD: 6 },
-  PK: { fg: 3, xp: 1 }
+// Default to TheLeague; AFL could be added later
+const DEFAULT_LEAGUE_ID = '13522';
+
+const getNonEmpty = (value) => {
+  if (value === undefined || value === null) return undefined;
+  const trimmed = String(value).trim();
+  return trimmed.length ? trimmed : undefined;
 };
 
-// NFL team mapping
-const NFL_TEAMS = [
-  'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE',
-  'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC',
-  'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG',
-  'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WAS'
-];
+/**
+ * MFL → standard team code mapping.
+ * The pointsAllowed endpoint returns MFL-style codes; the consumer
+ * (weekly-player-results.ts) expects standard abbreviations.
+ */
+const MFL_TO_STANDARD = {
+  KCC: 'KC',
+  GBP: 'GB',
+  NEP: 'NE',
+  NOS: 'NO',
+  SFO: 'SF',
+  TBB: 'TB',
+  LVR: 'LV',
+  HST: 'HOU',
+  BLT: 'BAL',
+  CLV: 'CLE',
+  ARZ: 'ARI',
+};
+
+function normalizeTeamCode(mflCode) {
+  if (!mflCode) return '';
+  const upper = mflCode.toUpperCase();
+  return MFL_TO_STANDARD[upper] ?? upper;
+}
 
 /**
- * Fetch team defensive stats from ESPN
+ * Calculate current season year (same logic as league-year.ts).
+ * Before Labor Day → previous calendar year; after → current.
  */
-async function fetchDefensiveStats() {
-  console.log('📊 Fetching defensive stats from ESPN...\n');
+function getCurrentSeasonYear() {
+  const now = new Date();
+  const year = now.getFullYear();
+  // Labor Day = first Monday of September
+  const sept1 = new Date(year, 8, 1);
+  const dayOfWeek = sept1.getDay();
+  const laborDayDate = dayOfWeek === 1 ? 1 : dayOfWeek === 0 ? 2 : 1 + (8 - dayOfWeek);
+  const laborDay = new Date(year, 8, laborDayDate);
+  return now >= laborDay ? year : year - 1;
+}
 
-  // ESPN's defense vs position API
-  const positions = ['qb', 'rb', 'wr', 'te', 'k'];
-  const results = {};
+/**
+ * Determine how many regular-season weeks are complete by looking at
+ * the weekly results data on disk. Each file that has matchup data
+ * with player scores counts as a completed week.
+ */
+function getCompletedWeeks(year, leagueName) {
+  const weeklyResultsPath = path.join(
+    root,
+    `data/${leagueName}/mfl-feeds/${year}/weekly-results-raw.json`
+  );
 
-  for (const pos of positions) {
-    const url = `https://fantasy.espn.com/apis/v3/games/ffl/seasons/2025/segments/0/leaguedefaults/3?view=kona_player_info`;
+  try {
+    const raw = JSON.parse(fs.readFileSync(weeklyResultsPath, 'utf-8'));
+    const weeks = Array.isArray(raw) ? raw : [];
+    let completed = 0;
 
-    try {
-      // Use ESPN's fantasy points allowed endpoint
-      const statsUrl = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/statistics/byathlete?region=us&lang=en&contentorigin=espn&sort=general.teamDefFantasyPointsAllowed:desc&limit=32`;
+    for (const weekPayload of weeks) {
+      const wr = weekPayload?.weeklyResults;
+      if (!wr) continue;
+      const weekNum = parseInt(wr.week, 10);
+      if (isNaN(weekNum) || weekNum < 1 || weekNum > 18) continue;
 
-      const response = await fetch(statsUrl);
-      if (!response.ok) {
-        console.log(`⚠️  Could not fetch ${pos.toUpperCase()} stats from primary source`);
-        continue;
+      // Check if this week has actual scores (not all zeros / no players)
+      const matchups = Array.isArray(wr.matchup)
+        ? wr.matchup
+        : wr.matchup ? [wr.matchup] : [];
+
+      const hasScores = matchups.some((m) => {
+        const franchises = Array.isArray(m.franchise)
+          ? m.franchise
+          : m.franchise ? [m.franchise] : [];
+        return franchises.some((f) => {
+          const players = Array.isArray(f.player)
+            ? f.player
+            : f.player ? [f.player] : [];
+          return players.some((p) => parseFloat(p.score) > 0);
+        });
+      });
+
+      if (hasScores && weekNum > completed) {
+        completed = weekNum;
       }
+    }
 
-      const data = await response.json();
-      results[pos] = data;
+    return completed;
+  } catch {
+    // If no weekly results file, fall back to 17 (full season)
+    return 17;
+  }
+}
 
-    } catch (error) {
-      console.log(`⚠️  Error fetching ${pos.toUpperCase()} stats:`, error.message);
+/**
+ * Fetch pointsAllowed from MFL API.
+ * Returns the raw JSON response.
+ */
+async function fetchPointsAllowed(year, leagueId) {
+  const url = `${MFL_HOST}/${year}/export?TYPE=pointsAllowed&L=${leagueId}&JSON=1`;
+  console.log(`   URL: ${url}\n`);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`MFL API returned ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Transform MFL pointsAllowed response into our FPA format.
+ *
+ * MFL returns season totals per team per position. We divide by
+ * completed weeks to get per-game averages, then rank 1-32.
+ *
+ * Rank 1 = fewest points allowed (best defense vs that position).
+ */
+function transformPointsAllowed(mflData, completedWeeks) {
+  const teams = mflData?.pointsAllowed?.team;
+  if (!Array.isArray(teams) || teams.length === 0) {
+    throw new Error('No team data in pointsAllowed response');
+  }
+
+  const gamesPlayed = Math.max(completedWeeks, 1);
+  const positionsWeTrack = new Set(['QB', 'RB', 'WR', 'TE', 'PK']);
+
+  // Step 1: Parse season totals into per-game averages
+  const teamAverages = {};
+
+  for (const team of teams) {
+    const code = normalizeTeamCode(team.id);
+    if (!code) continue;
+
+    const positions = Array.isArray(team.position)
+      ? team.position
+      : team.position ? [team.position] : [];
+
+    const posData = {};
+    for (const pos of positions) {
+      const posName = (pos.name || '').toUpperCase();
+      if (!positionsWeTrack.has(posName)) continue;
+
+      const totalPoints = parseFloat(pos.points);
+      if (isNaN(totalPoints)) continue;
+
+      posData[posName] = {
+        avg: +(totalPoints / gamesPlayed).toFixed(1),
+      };
+    }
+
+    if (Object.keys(posData).length > 0) {
+      teamAverages[code] = posData;
     }
   }
 
-  return results;
-}
-
-/**
- * Alternative: Fetch from FantasySharks or similar free source
- */
-async function fetchFromFantasySource() {
-  console.log('📊 Fetching fantasy points allowed data...\n');
-
-  // We'll use a combination of ESPN scoreboard data to calculate this
-  const url = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams?limit=32';
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`ESPN API error: ${response.status}`);
-
-    const data = await response.json();
-    const teams = data.sports[0].leagues[0].teams;
-
-    console.log(`✅ Found ${teams.length} NFL teams\n`);
-
-    // For each team, we need their defensive stats
-    const fantasyPointsAllowed = {};
-
-    for (const teamData of teams) {
-      const team = teamData.team;
-      const abbrev = normalizeTeamAbbrev(team.abbreviation);
-
-      // Fetch team's season stats
-      const statsUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${team.id}/statistics`;
-
-      try {
-        const statsResponse = await fetch(statsUrl);
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-
-          // Extract defensive stats and convert to fantasy points allowed
-          const defStats = extractDefensiveFantasyPoints(statsData, team.abbreviation);
-          if (defStats) {
-            fantasyPointsAllowed[abbrev] = defStats;
-            console.log(`   ${abbrev}: QB #${defStats.QB?.rank || '?'}, RB #${defStats.RB?.rank || '?'}, WR #${defStats.WR?.rank || '?'}`);
-          }
-        }
-      } catch (e) {
-        console.log(`   ⚠️  Could not fetch stats for ${abbrev}`);
-      }
-
-      // Small delay to avoid rate limiting
-      await new Promise(r => setTimeout(r, 100));
-    }
-
-    return fantasyPointsAllowed;
-
-  } catch (error) {
-    console.error('❌ Error fetching team data:', error.message);
-    return null;
-  }
-}
-
-/**
- * Normalize team abbreviations to match our format
- */
-function normalizeTeamAbbrev(abbrev) {
-  const map = {
-    'WSH': 'WAS',
-    'JAX': 'JAC',
-    'LAV': 'LV',
-  };
-  return map[abbrev] || abbrev;
-}
-
-/**
- * Extract defensive fantasy points from ESPN stats
- */
-function extractDefensiveFantasyPoints(statsData, teamAbbrev) {
-  try {
-    // ESPN stats structure varies - this extracts what's available
-    const stats = statsData?.results?.stats || statsData?.statistics || [];
-
-    // Default structure with placeholder values
-    // In production, you'd calculate these from actual defensive stats
-    return {
-      QB: { avg: 18.5, rank: Math.floor(Math.random() * 32) + 1 },
-      RB: { avg: 22.3, rank: Math.floor(Math.random() * 32) + 1 },
-      WR: { avg: 28.1, rank: Math.floor(Math.random() * 32) + 1 },
-      TE: { avg: 9.2, rank: Math.floor(Math.random() * 32) + 1 },
-      PK: { avg: 8.5, rank: Math.floor(Math.random() * 32) + 1 }
-    };
-
-  } catch (error) {
-    return null;
-  }
-}
-
-/**
- * Calculate rankings from raw stats
- */
-function calculateRankings(teamStats) {
-  const positions = ['QB', 'RB', 'WR', 'TE', 'PK'];
-  const ranked = {};
-
-  // Sort teams by points allowed for each position
-  for (const pos of positions) {
-    const sorted = Object.entries(teamStats)
-      .map(([team, stats]) => ({ team, avg: stats[pos]?.avg || 0 }))
-      .sort((a, b) => a.avg - b.avg); // Lower = better defense
+  // Step 2: Rank teams per position (1 = fewest pts allowed = best D)
+  for (const pos of positionsWeTrack) {
+    const sorted = Object.entries(teamAverages)
+      .filter(([, data]) => data[pos] != null)
+      .map(([teamCode, data]) => ({ teamCode, avg: data[pos].avg }))
+      .sort((a, b) => a.avg - b.avg);
 
     sorted.forEach((item, index) => {
-      if (!ranked[item.team]) ranked[item.team] = {};
-      ranked[item.team][pos] = {
-        avg: item.avg,
-        rank: index + 1
-      };
+      teamAverages[item.teamCode][pos].rank = index + 1;
     });
   }
 
-  return ranked;
+  return teamAverages;
 }
 
-/**
- * Fetch from FantasyPros (free tier - limited but works)
- */
-async function fetchFromFantasyPros() {
-  console.log('📊 Fetching from FantasyPros...\n');
-
-  const positions = ['qb', 'rb', 'wr', 'te', 'k'];
-  const fantasyPointsAllowed = {};
-
-  // Initialize all teams
-  NFL_TEAMS.forEach(team => {
-    fantasyPointsAllowed[team] = {};
-  });
-
-  for (const pos of positions) {
-    const url = `https://www.fantasypros.com/nfl/points-allowed.php?position=${pos.toUpperCase()}`;
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-        }
-      });
-
-      if (!response.ok) {
-        console.log(`   ⚠️  Could not fetch ${pos.toUpperCase()} data`);
-        continue;
-      }
-
-      const html = await response.text();
-
-      // Parse the HTML table (simple regex extraction)
-      const teamPattern = /<td[^>]*class="[^"]*team-cell[^"]*"[^>]*>([^<]+)<\/td>/g;
-      const avgPattern = /<td[^>]*>(\d+\.?\d*)<\/td>/g;
-
-      // This is a simplified parser - in production use cheerio or similar
-      console.log(`   ✅ Fetched ${pos.toUpperCase()} points allowed data`);
-
-    } catch (error) {
-      console.log(`   ⚠️  Error fetching ${pos.toUpperCase()}:`, error.message);
-    }
-
-    await new Promise(r => setTimeout(r, 500)); // Rate limit
-  }
-
-  return fantasyPointsAllowed;
-}
-
-/**
- * Generate data from existing patterns (fallback)
- */
-function generateFromExisting() {
-  console.log('📊 Generating updated rankings based on statistical models...\n');
-
-  // Read existing file to maintain team structure
-  const existingPath = path.join(root, 'data/theleague/mfl-feeds/2025/fantasyPointsAllowed.json');
-
-  try {
-    const existing = JSON.parse(fs.readFileSync(existingPath, 'utf-8'));
-
-    // Shuffle rankings slightly to simulate weekly changes
-    // In production, this would come from actual game data
-    const shuffled = { fantasyPointsAllowed: {} };
-
-    Object.entries(existing.fantasyPointsAllowed).forEach(([team, positions]) => {
-      shuffled.fantasyPointsAllowed[team] = {};
-      Object.entries(positions).forEach(([pos, stats]) => {
-        // Add some variance to simulate week-over-week changes
-        const variance = (Math.random() - 0.5) * 2; // +/- 1 point
-        shuffled.fantasyPointsAllowed[team][pos] = {
-          avg: Math.round((stats.avg + variance) * 10) / 10,
-          rank: stats.rank // Keep rank for now, recalculate below
-        };
-      });
-    });
-
-    // Recalculate ranks based on new averages
-    const positions = ['QB', 'RB', 'WR', 'TE', 'PK'];
-    for (const pos of positions) {
-      const sorted = Object.entries(shuffled.fantasyPointsAllowed)
-        .map(([team, stats]) => ({ team, avg: stats[pos]?.avg || 99 }))
-        .sort((a, b) => a.avg - b.avg);
-
-      sorted.forEach((item, index) => {
-        if (shuffled.fantasyPointsAllowed[item.team]?.[pos]) {
-          shuffled.fantasyPointsAllowed[item.team][pos].rank = index + 1;
-        }
-      });
-    }
-
-    console.log('✅ Generated updated rankings\n');
-    return shuffled;
-
-  } catch (error) {
-    console.log('⚠️  Could not read existing data:', error.message);
-    return null;
-  }
-}
-
-/**
- * Save data to file
- */
-function saveData(data) {
-  const outputFile = path.join(root, 'data/theleague/mfl-feeds/2025/fantasyPointsAllowed.json');
-
-  const output = {
-    fantasyPointsAllowed: data.fantasyPointsAllowed || data,
-    updatedAt: new Date().toISOString()
-  };
-
-  fs.writeFileSync(outputFile, JSON.stringify(output, null, 2));
-  console.log(`✅ Saved to ${outputFile}\n`);
-}
-
-/**
- * Main
- */
 async function main() {
   console.log('═'.repeat(50));
-  console.log('  Fantasy Points Allowed Updater');
+  console.log('  Fantasy Points Allowed (MFL)');
   console.log('═'.repeat(50));
   console.log('');
 
+  const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID) || DEFAULT_LEAGUE_ID;
+  const year = getNonEmpty(process.env.MFL_YEAR) || String(getCurrentSeasonYear());
+  const leagueName = leagueId === '19621' ? 'afl-fantasy' : 'theleague';
+
+  console.log(`   League: ${leagueName} (${leagueId})`);
+  console.log(`   Year:   ${year}`);
+
+  const completedWeeks = getCompletedWeeks(year, leagueName);
+  console.log(`   Weeks:  ${completedWeeks} completed\n`);
+
   try {
-    // Try multiple sources in order of preference
-    let data = null;
+    console.log('Fetching pointsAllowed from MFL...');
+    const mflData = await fetchPointsAllowed(year, leagueId);
 
-    // 1. Try ESPN team stats
-    data = await fetchFromFantasySource();
+    const fantasyPointsAllowed = transformPointsAllowed(mflData, completedWeeks);
+    const teamCount = Object.keys(fantasyPointsAllowed).length;
 
-    // 2. If that fails, use existing data with slight variance
-    if (!data || Object.keys(data).length === 0) {
-      console.log('\n⚠️  Primary source unavailable, using fallback...\n');
-      data = generateFromExisting();
-    }
-
-    if (data) {
-      saveData(data);
-      console.log('✅ Fantasy points allowed data updated!\n');
-    } else {
-      console.log('❌ Could not update fantasy points allowed data\n');
+    if (teamCount < 30) {
+      console.error(`Only got ${teamCount} teams — expected 32. Aborting.`);
       process.exit(1);
     }
 
+    // Print a sample
+    console.log(`\n   Parsed ${teamCount} teams. Sample:\n`);
+    const sample = Object.entries(fantasyPointsAllowed).slice(0, 5);
+    for (const [team, positions] of sample) {
+      const qb = positions.QB ? `QB #${positions.QB.rank} (${positions.QB.avg})` : 'QB n/a';
+      const rb = positions.RB ? `RB #${positions.RB.rank} (${positions.RB.avg})` : 'RB n/a';
+      const wr = positions.WR ? `WR #${positions.WR.rank} (${positions.WR.avg})` : 'WR n/a';
+      console.log(`   ${team.padEnd(4)} ${qb.padEnd(18)} ${rb.padEnd(18)} ${wr}`);
+    }
+    console.log('   ...\n');
+
+    // Write output
+    const outputDir = path.join(root, `data/${leagueName}/mfl-feeds/${year}`);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const outputFile = path.join(outputDir, 'fantasyPointsAllowed.json');
+    const output = {
+      fantasyPointsAllowed,
+      completedWeeks,
+      updatedAt: new Date().toISOString(),
+    };
+
+    fs.writeFileSync(outputFile, JSON.stringify(output, null, 2));
+    console.log(`Saved to ${outputFile}`);
+    console.log('Fantasy points allowed data updated!\n');
+
   } catch (error) {
-    console.error('❌ Fatal error:', error.message);
+    console.error('Fatal error:', error.message);
     process.exit(1);
   }
 }
