@@ -155,6 +155,13 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
+		<!-- PWA -->
+		<link rel="manifest" href="/manifest.json" />
+		<meta name="theme-color" content="#1c497c" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="The League" />
+		<link rel="apple-touch-icon" href="/assets/icons/pwa/apple-touch-icon.png" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -179,6 +186,13 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			</main>
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} />
 		</div>
+
+		<!-- Service Worker Registration -->
+		<script is:inline>
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.register('/sw.js');
+			}
+		</script>
 
 		<!-- Navigation Drawer - outside page-wrapper for overlay behavior -->
 		<NavDrawer
