@@ -416,12 +416,16 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     margin-bottom: 0.25rem;
   }
 
+  .wn-card:not(.wn-card--featured):has(.wn-card__thumbnail) .wn-card__content {
+    position: relative;
+    padding-top: var(--spacing-lg, 1.5rem);
+  }
+
   .wn-card:not(.wn-card--featured):has(.wn-card__thumbnail) .wn-card__meta {
-    align-items: center;
-    display: flex;
-    gap: var(--spacing-sm, 0.5rem);
-    transform: translateY(-1.8rem);
-    margin-bottom: -1rem;
+    position: absolute;
+    top: 0;
+    left: var(--spacing-lg, 1.5rem);
+    transform: translateY(-60%);
   }
 
   .wn-card__badge {
@@ -640,6 +644,14 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 
     .wn-card__content {
       padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem);
+    }
+
+    .wn-card:not(.wn-card--featured):has(.wn-card__thumbnail) .wn-card__content {
+      padding-top: var(--spacing-md, 1rem);
+    }
+
+    .wn-card:not(.wn-card--featured):has(.wn-card__thumbnail) .wn-card__meta {
+      left: var(--spacing-md, 1rem);
     }
   }
 </style>
