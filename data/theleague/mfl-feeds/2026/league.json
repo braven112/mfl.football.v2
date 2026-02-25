@@ -1,18 +1,17 @@
 {
   "league": {
-    "includeIRWithSalary": "100",
-    "rosterSize": "22",
+    "auction_kind": "email",
+    "nflPoolStartWeek": "1",
     "id": "13522",
+    "usesContractYear": "1",
     "partialLineupAllowed": "NO",
     "keeperType": "dynasty",
-    "usesContractYear": "1",
+    "rosterSize": "22",
+    "includeIRWithSalary": "100",
     "survivorPoolStartWeek": "1",
-    "nflPoolStartWeek": "1",
-    "auction_kind": "email",
-    "lastRegularSeasonWeek": "14",
-    "bbidConditional": "Yes",
     "startWeek": "1",
     "draftTimer": "ONS",
+    "currentWaiverType": "BBID_FCFS",
     "history": {
       "league": [
         {
@@ -24,8 +23,8 @@
           "url": "https://www42.myfantasyleague.com/2007/home/76273"
         },
         {
-          "year": "2008",
-          "url": "https://www43.myfantasyleague.com/2008/home/28463"
+          "url": "https://www43.myfantasyleague.com/2008/home/28463",
+          "year": "2008"
         },
         {
           "url": "https://www47.myfantasyleague.com/2009/home/42989",
@@ -40,36 +39,36 @@
           "url": "https://www49.myfantasyleague.com/2011/home/33798"
         },
         {
-          "url": "https://www45.myfantasyleague.com/2012/home/48815",
-          "year": "2012"
+          "year": "2012",
+          "url": "https://www45.myfantasyleague.com/2012/home/48815"
         },
         {
-          "url": "https://www46.myfantasyleague.com/2013/home/34526",
-          "year": "2013"
+          "year": "2013",
+          "url": "https://www46.myfantasyleague.com/2013/home/34526"
         },
         {
           "year": "2014",
           "url": "https://www47.myfantasyleague.com/2014/home/35233"
         },
         {
-          "url": "https://www49.myfantasyleague.com/2015/home/28077",
-          "year": "2015"
+          "year": "2015",
+          "url": "https://www49.myfantasyleague.com/2015/home/28077"
         },
         {
           "url": "https://www49.myfantasyleague.com/2016/home/13522",
           "year": "2016"
         },
         {
-          "url": "http://www49.myfantasyleague.com/2017/home/13522",
-          "year": "2017"
+          "year": "2017",
+          "url": "http://www49.myfantasyleague.com/2017/home/13522"
         },
         {
           "url": "http://www49.myfantasyleague.com/2018/home/13522",
           "year": "2018"
         },
         {
-          "year": "2019",
-          "url": "http://www49.myfantasyleague.com/2019/home/13522"
+          "url": "http://www49.myfantasyleague.com/2019/home/13522",
+          "year": "2019"
         },
         {
           "year": "2020",
@@ -80,8 +79,8 @@
           "year": "2021"
         },
         {
-          "url": "https://www49.myfantasyleague.com/2022/home/13522",
-          "year": "2022"
+          "year": "2022",
+          "url": "https://www49.myfantasyleague.com/2022/home/13522"
         },
         {
           "year": "2023",
@@ -92,12 +91,16 @@
           "year": "2024"
         },
         {
-          "url": "https://www49.myfantasyleague.com/2025/home/13522",
-          "year": "2025"
+          "year": "2025",
+          "url": "https://www49.myfantasyleague.com/2025/home/13522"
         }
       ]
     },
-    "currentWaiverType": "BBID_FCFS",
+    "bbidConditional": "Yes",
+    "lastRegularSeasonWeek": "14",
+    "endWeek": "17",
+    "taxiSquad": "3",
+    "survivorPoolEndWeek": "17",
     "franchises": {
       "franchise": [
         {
@@ -112,37 +115,37 @@
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/pigskins.png"
         },
         {
-          "name": "Da Dangsters",
-          "id": "0002",
-          "salaryCapAmount": "",
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/da_dangsters.png",
-          "division": "00",
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/da_dangsters.png",
-          "abbrev": "DANG",
           "bbidAvailableBalance": "20509935.00",
-          "waiverSortOrder": "15"
+          "waiverSortOrder": "15",
+          "abbrev": "DANG",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/da_dangsters.png",
+          "division": "00",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/da_dangsters.png",
+          "id": "0002",
+          "name": "Da Dangsters",
+          "salaryCapAmount": ""
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/maverick.png",
-          "abbrev": "MAVS",
-          "bbidAvailableBalance": "27129345.00",
-          "waiverSortOrder": "14",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/maverick.png",
+          "division": "02",
+          "salaryCapAmount": "",
           "name": "Maverick",
           "id": "0003",
-          "salaryCapAmount": "",
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/maverick.png",
-          "division": "02"
+          "waiverSortOrder": "14",
+          "bbidAvailableBalance": "27129345.00",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/maverick.png",
+          "abbrev": "MAVS"
         },
         {
-          "salaryCapAmount": "",
-          "name": "Dead Cap Walking ",
-          "id": "0004",
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/dead_cap_walking.png",
-          "division": "01",
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/dead_cap_walking.png",
           "abbrev": "Dead",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/dead_cap_walking.png",
           "waiverSortOrder": "13",
-          "bbidAvailableBalance": "22825320.00"
+          "bbidAvailableBalance": "22825320.00",
+          "salaryCapAmount": "",
+          "id": "0004",
+          "name": "Dead Cap Walking ",
+          "division": "01",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/dead_cap_walking.png"
         },
         {
           "waiverSortOrder": "12",
@@ -153,108 +156,108 @@
           "division": "02",
           "salaryCapAmount": "",
           "name": "The Mariachi Ninjas",
-          "id": "0005",
-          "stadium": "Shinobi Stadium"
+          "stadium": "Shinobi Stadium",
+          "id": "0005"
         },
         {
+          "waiverSortOrder": "11",
+          "bbidAvailableBalance": "28726224.00",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/music_city.png",
+          "abbrev": "MUSIC",
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/music_city.png",
           "division": "01",
-          "name": "The Music City Mafia",
-          "id": "0006",
           "salaryCapAmount": "",
-          "bbidAvailableBalance": "28726224.00",
-          "waiverSortOrder": "11",
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/music_city.png",
-          "abbrev": "MUSIC"
+          "name": "The Music City Mafia",
+          "id": "0006"
         },
         {
+          "waiverSortOrder": "10",
+          "bbidAvailableBalance": "21755908.80",
           "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/fire_ready_aim.png",
           "abbrev": "FIRE",
-          "bbidAvailableBalance": "21755908.80",
-          "waiverSortOrder": "10",
-          "name": "Fire Ready Aim",
-          "id": "0007",
-          "salaryCapAmount": "",
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/fire_ready_aim.png",
-          "division": "03"
-        },
-        {
+          "division": "03",
           "salaryCapAmount": "",
-          "name": "Bring the Pain",
-          "id": "0008",
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/bring_the_pain.png",
-          "division": "02",
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/bring_the_pain.png",
-          "abbrev": "PAIN",
-          "waiverSortOrder": "9",
-          "bbidAvailableBalance": "13867489.00"
+          "name": "Fire Ready Aim",
+          "id": "0007"
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/wabbits.png",
-          "abbrev": "WABS",
+          "waiverSortOrder": "9",
+          "bbidAvailableBalance": "13867489.00",
+          "abbrev": "PAIN",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/bring_the_pain.png",
+          "division": "02",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/bring_the_pain.png",
+          "salaryCapAmount": "",
+          "id": "0008",
+          "name": "Bring the Pain"
+        },
+        {
+          "division": "03",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/wabbits.png",
+          "id": "0009",
+          "name": "Wascawy Wabbits",
+          "salaryCapAmount": "",
           "bbidAvailableBalance": "21498159.00",
           "waiverSortOrder": "8",
-          "name": "Wascawy Wabbits",
-          "id": "0009",
-          "salaryCapAmount": "",
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/wabbits.png",
-          "division": "03"
+          "abbrev": "WABS",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/wabbits.png"
         },
         {
+          "bbidAvailableBalance": "10981524.00",
+          "waiverSortOrder": "7",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/computer_jocks.png",
+          "abbrev": "JOCKS",
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/computer_jocks.png",
           "division": "00",
-          "salaryCapAmount": "",
           "name": "Computer Jocks",
           "id": "0010",
-          "waiverSortOrder": "7",
-          "bbidAvailableBalance": "10981524.00",
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/computer_jocks.png",
-          "abbrev": "JOCKS"
+          "salaryCapAmount": ""
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/midwestside.png",
-          "abbrev": "MWS",
-          "bbidAvailableBalance": "28413897.00",
-          "waiverSortOrder": "6",
+          "salaryCapAmount": "",
           "name": "Midwestside Connection",
           "id": "0011",
-          "salaryCapAmount": "",
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/midwestside.png",
-          "division": "01"
+          "division": "01",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/midwestside.png",
+          "abbrev": "MWS",
+          "waiverSortOrder": "6",
+          "bbidAvailableBalance": "28413897.00"
         },
         {
-          "waiverSortOrder": "5",
           "bbidAvailableBalance": "30214364.00",
+          "waiverSortOrder": "5",
           "abbrev": "VIT",
           "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/vitside_mafia.png",
           "division": "00",
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/vitside_mafia.png",
-          "salaryCapAmount": "",
           "id": "0012",
-          "name": "Vitside Mafia"
+          "name": "Vitside Mafia",
+          "salaryCapAmount": ""
         },
         {
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/geeks.png",
-          "division": "01",
-          "salaryCapAmount": "",
-          "name": "Gridiron Geeks",
-          "stadium": "The Geek Dome",
           "id": "0013",
-          "waiverSortOrder": "4",
-          "bbidAvailableBalance": "26968527.50",
+          "stadium": "The Geek Dome",
+          "name": "Gridiron Geeks",
+          "salaryCapAmount": "",
+          "division": "01",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/geeks.png",
+          "abbrev": "GEEKS",
           "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/geeks.png",
-          "abbrev": "GEEKS"
+          "bbidAvailableBalance": "26968527.50",
+          "waiverSortOrder": "4"
         },
         {
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/cowboy_up.png",
-          "abbrev": "CBOY",
           "bbidAvailableBalance": "22520412.50",
           "waiverSortOrder": "3",
-          "name": "Cowboy Up",
-          "id": "0014",
-          "salaryCapAmount": "",
+          "abbrev": "CBOY",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/cowboy_up.png",
+          "division": "02",
           "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/cowboy_up.png",
-          "division": "02"
+          "id": "0014",
+          "name": "Cowboy Up",
+          "salaryCapAmount": ""
         },
         {
           "waiverSortOrder": "2",
@@ -268,21 +271,20 @@
           "id": "0015"
         },
         {
-          "abbrev": "DREAM",
-          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/the_dream.png",
-          "waiverSortOrder": "1",
-          "bbidAvailableBalance": "13919747.50",
-          "salaryCapAmount": "",
-          "id": "0016",
-          "name": " Running Down The Dream",
+          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/the_dream.png",
           "division": "03",
-          "icon": "https://mflfootballv2.vercel.app/assets/theleague/icons/the_dream.png"
+          "name": " Running Down The Dream",
+          "id": "0016",
+          "salaryCapAmount": "",
+          "bbidAvailableBalance": "13919747.50",
+          "waiverSortOrder": "1",
+          "logo": "https://mflfootballv2.vercel.app/assets/theleague/banners/the_dream.png",
+          "abbrev": "DREAM"
         }
       ],
       "count": "16"
     },
     "divisions": {
-      "count": "4",
       "division": [
         {
           "id": "00",
@@ -297,22 +299,54 @@
           "id": "02"
         },
         {
-          "id": "03",
-          "name": "Eastern"
+          "name": "Eastern",
+          "id": "03"
         }
-      ]
+      ],
+      "count": "4"
     },
-    "taxiSquad": "3",
-    "endWeek": "17",
-    "survivorPoolEndWeek": "17",
-    "nflPoolEndWeek": "17",
+    "maxWaiverRounds": "4",
+    "auctionStartAmount": "45000000",
+    "draftPlayerPool": "Rookie",
+    "h2h": "YES",
     "bidIncrement": "25000",
+    "nflPoolEndWeek": "17",
     "salaryCapAmount": "45000000",
     "playerLimitUnit": "LEAGUE",
-    "maxWaiverRounds": "4",
-    "draftPlayerPool": "Rookie",
-    "auctionStartAmount": "45000000",
-    "h2h": "YES",
+    "precision": "2",
+    "injuredReserve": "50",
+    "starters": {
+      "position": [
+        {
+          "limit": "1",
+          "name": "QB"
+        },
+        {
+          "name": "RB",
+          "limit": "1-4"
+        },
+        {
+          "name": "WR",
+          "limit": "1-4"
+        },
+        {
+          "limit": "1-4",
+          "name": "TE"
+        },
+        {
+          "limit": "1",
+          "name": "PK"
+        },
+        {
+          "limit": "1",
+          "name": "Def"
+        }
+      ],
+      "count": "9"
+    },
+    "bbidMinimum": "425000",
+    "baseURL": "https://www49.myfantasyleague.com",
+    "nflPoolType": "Confidence",
     "rosterLimits": {
       "position": [
         {
@@ -324,16 +358,16 @@
           "limit": "0-0"
         },
         {
+          "name": "WR",
+          "limit": "0-0"
+        },
+        {
           "limit": "0-0",
-          "name": "WR"
+          "name": "TE"
         },
         {
-          "name": "TE",
-          "limit": "0-0"
-        },
-        {
-          "name": "PK",
-          "limit": "0-0"
+          "limit": "0-0",
+          "name": "PK"
         },
         {
           "name": "Def",
@@ -342,57 +376,23 @@
       ]
     },
     "mobileAlerts": "",
-    "precision": "2",
-    "injuredReserve": "50",
-    "bbidMinimum": "425000",
-    "starters": {
-      "position": [
-        {
-          "limit": "1",
-          "name": "QB"
-        },
-        {
-          "limit": "1-4",
-          "name": "RB"
-        },
-        {
-          "name": "WR",
-          "limit": "1-4"
-        },
-        {
-          "name": "TE",
-          "limit": "1-4"
-        },
-        {
-          "name": "PK",
-          "limit": "1"
-        },
-        {
-          "limit": "1",
-          "name": "Def"
-        }
-      ],
-      "count": "9"
-    },
-    "nflPoolType": "Confidence",
-    "baseURL": "https://www49.myfantasyleague.com",
-    "survivorPool": "Yes",
-    "minBid": "425000",
-    "usesSalaries": "1",
     "bbidIncrement": "25000",
+    "usesSalaries": "1",
     "bestLineup": "No",
+    "minBid": "425000",
+    "survivorPool": "Yes",
+    "draftTimerSusp": "03 07",
+    "bbidTiebreaker": "SORT",
+    "standingsSort": "PCT,H2H,DIVPCT,ALL_PLAY_PCT,PTS,PWR,VICTORY_POINTS,OPP_PTS,",
     "name": "The League",
     "defaultTradeExpirationDays": "7",
     "lockout": "No",
     "includeTaxiWithSalary": "50",
-    "bbidTiebreaker": "SORT",
-    "draftTimerSusp": "03 07",
-    "standingsSort": "PCT,H2H,DIVPCT,ALL_PLAY_PCT,PTS,PWR,VICTORY_POINTS,OPP_PTS,",
+    "draft_kind": "email",
     "rostersPerPlayer": "1",
-    "draftLimitHours": "12:00",
     "loadRosters": "email_draft_email_auction",
-    "draft_kind": "email"
+    "draftLimitHours": "12:00"
   },
-  "version": "1.0",
-  "encoding": "utf-8"
+  "encoding": "utf-8",
+  "version": "1.0"
 }
