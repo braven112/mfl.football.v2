@@ -5,6 +5,7 @@
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 // If user is already authenticated, redirect to theleague
 const authUser = Astro.request.headers.get('cookie')?.includes('session_token');
@@ -14,7 +15,7 @@ if (authUser) {
 
 const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://api.myfantasyleague.com';
 const envLeagueId = (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || '';
-const envYear = (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) || new Date().getFullYear().toString();
+const envYear = getCurrentLeagueYear().toString();
 const envStaticHost = (import.meta.env.PUBLIC_STATIC_HOST as string | undefined) || envHost;
 ---
 

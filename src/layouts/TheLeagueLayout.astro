@@ -47,9 +47,8 @@ const leagueContext = getLeagueContext(Astro.url);
 const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'www49.myfantasyleague.com';
 const mflHost = (host || envHost).replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
-// Determine the year
-const envYear = (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) || getCurrentLeagueYear().toString();
-const currentYear = (year || envYear).toString();
+// Determine the year — always use the smart year function (handles Feb 14 rollover automatically)
+const currentYear = (year || getCurrentLeagueYear()).toString();
 
 // Determine league slug for nav (needed early for team lookup)
 const league: LeagueSlug = leagueContext.slug === 'afl-fantasy' ? 'afl' : 'theleague';

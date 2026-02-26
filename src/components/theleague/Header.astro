@@ -31,9 +31,8 @@ const envHost =
   "www49.myfantasyleague.com/";
 const envLeagueId =
   (import.meta.env.PUBLIC_MFL_LEAGUE_ID as string | undefined) || "";
-const envYear =
-  (import.meta.env.PUBLIC_MFL_YEAR as string | undefined) ||
-  getCurrentLeagueYear().toString();
+// Always use the smart year function (handles Feb 14 rollover automatically)
+const envYear = getCurrentLeagueYear().toString();
 const envStaticHost =
   (import.meta.env.PUBLIC_STATIC_HOST as string | undefined) || envHost;
 
