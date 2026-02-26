@@ -7336,42 +7336,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     if (columns.length === 0) return;
 
-    // Build the grid columns string with ranking columns appended
-    const gridCols = `1.5rem 1fr auto ${columns.map(() => 'minmax(2rem, auto)').join(' ')}`;
-
     // Process each panel (each position tab)
     document.querySelectorAll('.fa-needs__panel').forEach(panel => {
-      // Add/update ranking column headers above the player list
-      let headerRow = panel.querySelector('.fa-needs__rank-headers') as HTMLElement;
-      if (!headerRow) {
-        headerRow = document.createElement('div');
-        headerRow.className = 'fa-needs__rank-headers';
-        const list = panel.querySelector('.fa-needs__list');
-        if (list) list.before(headerRow);
-      }
+      // Add ranking column headers to the existing thead row
+      const headerRow = panel.querySelector('.fa-needs__thead tr');
+      if (!headerRow) return;
 
-      // Set the same grid template as player rows
-      headerRow.style.gridTemplateColumns = gridCols;
-      headerRow.innerHTML = '';
+      // Remove previously injected ranking headers (keep static ones)
+      headerRow.querySelectorAll('.fa-needs__th--rank-col').forEach(th => th.remove());
 
-      // Spacer for rank column
-      const rankSpacer = document.createElement('span');
-      headerRow.appendChild(rankSpacer);
-
-      // Spacer for player cell column
-      const playerSpacer = document.createElement('span');
-      headerRow.appendChild(playerSpacer);
-
-      // Pts header
-      const ptsHeader = document.createElement('span');
-      ptsHeader.className = 'fa-needs__rank-header';
-      ptsHeader.textContent = 'PTS';
-      headerRow.appendChild(ptsHeader);
-
-      // Ranking column headers
+      // Add ranking column headers after the PTS column
       for (const col of columns) {
-        const th = document.createElement('span');
-        th.className = 'fa-needs__rank-header';
+        const th = document.createElement('th');
+        th.className = 'fa-needs__th fa-needs__th--rank-col';
         th.textContent = col.header;
         th.title = col.fullName;
         headerRow.appendChild(th);
@@ -7384,19 +7361,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const playerId = el.dataset.faPlayerId;
       if (!playerId) return;
 
-      // Update grid template to accommodate ranking columns
-      el.style.gridTemplateColumns = gridCols;
-
       // Remove old injected ranking values
       el.querySelectorAll('.fa-needs__rank-value').forEach(v => v.remove());
 
-      // Add ranking values
+      // Add ranking values as table cells
       for (const col of columns) {
         const rank = lookup.byImport.get(col.importId)?.get(playerId);
-        const span = document.createElement('span');
-        span.className = 'fa-needs__rank-value';
-        span.textContent = rank != null ? String(rank) : '—';
-        el.appendChild(span);
+        const td = document.createElement('td');
+        td.className = 'fa-needs__rank-value';
+        td.textContent = rank != null ? String(rank) : '—';
+        el.appendChild(td);
       }
     });
   }
