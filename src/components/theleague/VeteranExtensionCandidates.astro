@@ -1,11 +1,16 @@
 ---
 /**
  * VeteranExtensionCandidates - Displays potential veteran extension candidates
- * Shows players who could be extended based on performance and contract status
- * Players must be:
- * - Top 10 in points at their position OR top 7 in PPG
+ * Shows players who could be extended based on performance and contract status.
+ *
+ * Eligibility (rank OR points, whichever qualifies):
+ * - Top 16 at their position by ranking or points, OR
+ * - Top 48 combined RB/WR/TE by ranking or points (flex-eligible)
  * - Have 2-3 years remaining on their contract
  * - Have current salary under $2.5M
+ *
+ * Server-side uses points only (no localStorage access).
+ * Client-side script enhances with imported rankings when available.
  */
 
 import { currencyFormatter } from '../../utils/formatters';
@@ -49,16 +54,13 @@ const seasonAverages = salaryAverages[season] ?? {};
 
 const SALARY_THRESHOLD = 2_500_000; // $2.5 million
 
-// Helper function to calculate PPG
-const calculatePPG = (points: number, gamesPlayed: number | undefined): number => {
-  if (!gamesPlayed || gamesPlayed === 0) return 0;
-  return points / gamesPlayed;
-};
+const STARTER_THRESHOLD = 16; // Top 16 at each position
+const FLEX_THRESHOLD = 48;   // Top 48 combined RB/WR/TE
+const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
 
-// Filter to players meeting extension criteria
 const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
-// First, rank ALL players by position and PPG
+// Rank ALL players by position by points (server-side only — no rankings access)
 const playersByPosition = new Map<string, (typeof players)[number][]>();
 players.forEach((player) => {
   const pos = player.position?.toUpperCase() || 'UNK';
@@ -68,9 +70,8 @@ players.forEach((player) => {
   playersByPosition.get(pos)!.push(player);
 });
 
-// Sort each position by points and get rankings
-const pointsRankings = new Map<string, number>(); // player id -> rank at position by points
-playersByPosition.forEach((posPlayers, pos) => {
+const pointsRankings = new Map<string, number>();
+playersByPosition.forEach((posPlayers) => {
   posPlayers
     .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
     .forEach((player, idx) => {
@@ -78,76 +79,44 @@ playersByPosition.forEach((posPlayers, pos) => {
     });
 });
 
-// Calculate PPG rankings
-const ppgRankings = new Map<string, number>(); // player id -> rank at position by PPG
-playersByPosition.forEach((posPlayers, pos) => {
-  const playersWithPPG = posPlayers
-    .map(p => ({ ...p, ppg: calculatePPG(p.points ?? 0, p.gamesPlayed) }))
-    .sort((a, b) => b.ppg - a.ppg);
-
-  playersWithPPG.forEach((player, idx) => {
-    ppgRankings.set(player.id, idx + 1);
-  });
+// Combined RB/WR/TE flex ranking by points
+const flexPointsRank = new Map<string, number>();
+const flexPlayers = players
+  .filter(p => FLEX_POSITIONS.has(p.position?.toUpperCase() || ''))
+  .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+flexPlayers.forEach((player, idx) => {
+  flexPointsRank.set(player.id, idx + 1);
 });
 
-// Position-specific PPG thresholds
-const ppgThresholds: Record<string, number> = {
-  QB: 15,
-  RB: 30,
-  WR: 30,
-  TE: 20,
-  PK: 20,
-  DEF: 15,
-};
-
-const getPpgThreshold = (position: string): number => {
-  const pos = position?.toUpperCase() || 'UNK';
-  return ppgThresholds[pos] ?? 20;
-};
-
-// Filter eligible players
-const extensionCandidates: (typeof players[number] & { pointsRank: number; ppgRank: number; ppg: number })[] = [];
+// Filter eligible players (server-side: points only)
+const extensionCandidates: (typeof players[number] & { pointsPosRank: number })[] = [];
 players.forEach((player) => {
-  // Must have 2-3 years on contract
   if (player.contractYears !== 2 && player.contractYears !== 3) return;
-
-  // Must be under salary threshold
   if ((player.salary ?? 0) >= SALARY_THRESHOLD) return;
-
-  // Must have positive points
   if ((player.points ?? 0) <= 0) return;
 
-  const ppg = calculatePPG(player.points ?? 0, player.gamesPlayed);
-  const pointsRank = pointsRankings.get(player.id) || Infinity;
-  const ppgRank = ppgRankings.get(player.id) || Infinity;
-  const posThreshold = getPpgThreshold(player.position);
+  const pos = player.position?.toUpperCase() || 'UNK';
+  const pointsPosRank = pointsRankings.get(player.id) ?? Infinity;
+  const flexRank = flexPointsRank.get(player.id) ?? Infinity;
 
-  // Must be top 20 by points OR position-specific threshold by PPG
-  if (pointsRank <= 20 || ppgRank <= posThreshold) {
+  // Top 16 at position OR top 48 combined RB/WR/TE
+  if (pointsPosRank <= STARTER_THRESHOLD || flexRank <= FLEX_THRESHOLD) {
     extensionCandidates.push({
       ...player,
-      pointsRank,
-      ppgRank,
-      ppg,
-      position: player.position?.toUpperCase() || 'UNK'
+      pointsPosRank,
+      position: pos,
     });
   }
 });
 
-// Sort by position order for display
+// Sort by position order, then by points rank within position
 extensionCandidates.sort((a, b) => {
-  const posA = a.position?.toUpperCase() || 'UNK';
-  const posB = b.position?.toUpperCase() || 'UNK';
-  const posDiff = positionOrder.indexOf(posA) - positionOrder.indexOf(posB);
+  const posDiff = positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position);
   if (posDiff !== 0) return posDiff;
-  return (a.pointsRank ?? 0) - (b.pointsRank ?? 0);
+  return a.pointsPosRank - b.pointsPosRank;
 });
 
 const DEFAULT_HEADSHOT_URL = 'https://s.yimg.com/cv/apiv2/default/nfl/nophoto.png';
-
-const getTeamName = (franchiseId: string) => {
-  return leagueAssets.teams?.find?.((f) => f.id === franchiseId)?.name || franchiseId;
-};
 
 const getPlayerDisplayName = (player: typeof players[0]): string => {
   if (player.position?.toUpperCase() === 'DEF') {
@@ -168,7 +137,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 <div class="veteran-extension-candidates" data-all-players={JSON.stringify(players)} data-season={season}>
   {extensionCandidates.length === 0 ? (
     <div class="no-results">
-      <p>No players currently meet the extension criteria (top performer by points or PPG, 2-3 years on contract, under $2.5M salary).</p>
+      <p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-3 years on contract, under $2.5M salary).</p>
     </div>
   ) : (
     <div class="table-wrapper">
@@ -229,6 +198,8 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 </div>
 
 <script>
+  import { buildRankingLookup, COMPOSITE_IMPORT_ID, AVERAGE_IMPORT_ID, onRankingsChanged } from '../../utils/rankings-lookup';
+
   // NFL team code to full name mapping
   const NFL_TEAM_NAMES = {
     ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo',
@@ -243,20 +214,41 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
   const SALARY_THRESHOLD = 2_500_000; // $2.5 million
 
-  // Position-specific PPG thresholds
-  const PPG_THRESHOLDS = {
-    QB: 15,
-    RB: 30,
-    WR: 30,
-    TE: 20,
-    PK: 20,
-    DEF: 15,
-  };
+  const STARTER_THRESHOLD = 16; // Top 16 at each position
+  const FLEX_THRESHOLD = 48;    // Top 48 combined RB/WR/TE
+  const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
 
-  const getPpgThreshold = (position) => {
-    const pos = (position ?? 'UNK').toUpperCase();
-    return PPG_THRESHOLDS[pos] ?? 20;
-  };
+  // Choose best ranking import: composite > average > first dynasty > first any
+  function chooseBestImport(lookup) {
+    if (lookup.byImport.has(COMPOSITE_IMPORT_ID)) return COMPOSITE_IMPORT_ID;
+    if (lookup.byImport.has(AVERAGE_IMPORT_ID)) return AVERAGE_IMPORT_ID;
+    const dynasty = lookup.columns.find(c => c.type === 'dynasty' && !c.isAverage && !c.isComposite);
+    if (dynasty) return dynasty.importId;
+    const first = lookup.columns.find(c => !c.isAverage && !c.isComposite);
+    return first?.importId ?? null;
+  }
+
+  // Derive position ranks from overall ranking map
+  function derivePositionRanks(allPlayers, rankMap) {
+    const posRanks = new Map(); // playerId → position rank
+    if (!rankMap) return posRanks;
+
+    const byPos = new Map();
+    for (const player of allPlayers) {
+      const rank = rankMap.get(player.id);
+      if (rank == null) continue;
+      const pos = (player.position ?? '').toUpperCase();
+      if (!byPos.has(pos)) byPos.set(pos, []);
+      byPos.get(pos).push({ id: player.id, rank });
+    }
+
+    for (const [, players] of byPos) {
+      players.sort((a, b) => a.rank - b.rank);
+      players.forEach((p, i) => posRanks.set(p.id, i + 1));
+    }
+
+    return posRanks;
+  }
 
   // Helper function to calculate extension salary using the unbreakable formula
   const calculateExtensionSalary = (currentSalary, currentYears, top5Average) => {
@@ -274,27 +266,24 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
     try {
       const allPlayers = JSON.parse(allPlayersJson);
-
-      const calculatePPG = (points, gamesPlayed) => {
-        if (!gamesPlayed || gamesPlayed === 0) return 0;
-        return points / gamesPlayed;
-      };
-
       const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
-      // Rank ALL league players by position
+      // --- Rankings-based position ranks (from localStorage imports) ---
+      const lookup = buildRankingLookup();
+      const bestImportId = chooseBestImport(lookup);
+      const rankMap = bestImportId ? lookup.byImport.get(bestImportId) : null;
+      const posRankByRanking = derivePositionRanks(allPlayers, rankMap);
+
+      // --- Points-based position ranks ---
       const allPlayersByPosition = new Map();
       allPlayers.forEach((player) => {
         const pos = (player.position ?? 'UNK').toUpperCase();
-        if (!allPlayersByPosition.has(pos)) {
-          allPlayersByPosition.set(pos, []);
-        }
+        if (!allPlayersByPosition.has(pos)) allPlayersByPosition.set(pos, []);
         allPlayersByPosition.get(pos).push(player);
       });
 
-      // Sort each position by points and get rankings
       const pointsRankings = new Map();
-      allPlayersByPosition.forEach((posPlayers, pos) => {
+      allPlayersByPosition.forEach((posPlayers) => {
         posPlayers
           .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
           .forEach((player, idx) => {
@@ -302,61 +291,62 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
           });
       });
 
-      // Calculate PPG rankings
-      const ppgRankings = new Map();
-      allPlayersByPosition.forEach((posPlayers, pos) => {
-        const playersWithPPG = posPlayers
-          .map(p => ({ ...p, ppg: calculatePPG(p.points ?? 0, p.gamesPlayed) }))
-          .sort((a, b) => b.ppg - a.ppg);
+      // --- Combined RB/WR/TE flex rankings (by points and by ranking) ---
+      const flexPointsRank = new Map();
+      allPlayers
+        .filter(p => FLEX_POSITIONS.has((p.position ?? '').toUpperCase()))
+        .sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
+        .forEach((p, i) => flexPointsRank.set(p.id, i + 1));
 
-        playersWithPPG.forEach((player, idx) => {
-          ppgRankings.set(player.id, idx + 1);
-        });
-      });
+      const flexRankingRank = new Map();
+      if (rankMap) {
+        allPlayers
+          .filter(p => FLEX_POSITIONS.has((p.position ?? '').toUpperCase()) && rankMap.has(p.id))
+          .sort((a, b) => (rankMap.get(a.id) ?? Infinity) - (rankMap.get(b.id) ?? Infinity))
+          .forEach((p, i) => flexRankingRank.set(p.id, i + 1));
+      }
 
       // Filter to only the current team's players for display
       const teamPlayers = currentTeam ? allPlayers.filter(p => p.franchiseId === currentTeam) : allPlayers;
 
-      // Filter eligible players
+      // Filter eligible players: top 16 at position OR top 48 flex, cheap contract
       const eligible = [];
       teamPlayers.forEach((player) => {
-        // Must have 2-3 years on contract
         if (player.contractYears !== 2 && player.contractYears !== 3) return;
-
-        // Must be under salary threshold
         if ((player.salary ?? 0) >= SALARY_THRESHOLD) return;
 
-        // Must have positive points
-        if ((player.points ?? 0) <= 0) return;
+        const pos = (player.position ?? 'UNK').toUpperCase();
 
-        const ppg = calculatePPG(player.points ?? 0, player.gamesPlayed);
-        const pointsRank = pointsRankings.get(player.id) || Infinity;
-        const ppgRank = ppgRankings.get(player.id) || Infinity;
-        const posThreshold = getPpgThreshold(player.position);
+        const rankingPosRank = posRankByRanking.get(player.id) ?? Infinity;
+        const pointsPosRank = pointsRankings.get(player.id) ?? Infinity;
+        const flexPtsRank = flexPointsRank.get(player.id) ?? Infinity;
+        const flexRnkRank = flexRankingRank.get(player.id) ?? Infinity;
 
-        // Must be top 20 by points OR position-specific threshold by PPG
-        if (pointsRank <= 20 || ppgRank <= posThreshold) {
+        // Top 16 at position (by rank or points) OR top 48 combined flex (by rank or points)
+        const isStarter = rankingPosRank <= STARTER_THRESHOLD || pointsPosRank <= STARTER_THRESHOLD;
+        const isFlex = flexPtsRank <= FLEX_THRESHOLD || flexRnkRank <= FLEX_THRESHOLD;
+
+        if (isStarter || isFlex) {
           eligible.push({
             ...player,
-            ppg,
-            pointsRank,
-            ppgRank,
-            position: (player.position ?? 'UNK').toUpperCase()
+            rankingPosRank,
+            pointsPosRank,
+            position: pos,
           });
         }
       });
 
-      // Sort by position order for display
-      const withRanks = eligible.sort((a, b) => {
-        const posA = a.position?.toUpperCase() || 'UNK';
-        const posB = b.position?.toUpperCase() || 'UNK';
-        const posDiff = positionOrder.indexOf(posA) - positionOrder.indexOf(posB);
+      // Sort by position order, then by best rank within position
+      eligible.sort((a, b) => {
+        const posDiff = positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position);
         if (posDiff !== 0) return posDiff;
-        return (a.pointsRank ?? 0) - (b.pointsRank ?? 0);
+        const bestA = Math.min(a.rankingPosRank, a.pointsPosRank);
+        const bestB = Math.min(b.rankingPosRank, b.pointsPosRank);
+        return bestA - bestB;
       });
 
-      if (withRanks.length === 0) {
-        containerEl.innerHTML = '<div class="no-results"><p>No players currently meet the extension criteria (top performer by points or PPG, 2-3 years on contract, under $2.5M salary).</p></div>';
+      if (eligible.length === 0) {
+        containerEl.innerHTML = '<div class="no-results"><p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-3 years on contract, under $2.5M salary).</p></div>';
         return;
       }
 
@@ -392,7 +382,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         }
       }
 
-      withRanks.forEach((player) => {
+      eligible.forEach((player) => {
         const isDefense = (player.position ?? '').toUpperCase() === 'DEF';
         const displayName = isDefense
           ? `${NFL_TEAM_NAMES[player.nflTeam] || player.nflTeam} Defense`
@@ -444,7 +434,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     renderVeteranExtensionTable(el);
   });
 
-  // Watch for data updates
+  // Watch for data updates (team switching, roster changes)
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.type === 'attributes' && (mutation.attributeName === 'data-all-players' || mutation.attributeName === 'data-current-team' || mutation.attributeName === 'data-salary-averages')) {
@@ -455,6 +445,13 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
   document.querySelectorAll('.veteran-extension-candidates').forEach((el) => {
     observer.observe(el, { attributes: true });
+  });
+
+  // Re-render when rankings are imported/updated
+  onRankingsChanged(() => {
+    document.querySelectorAll('.veteran-extension-candidates').forEach((el) => {
+      renderVeteranExtensionTable(el);
+    });
   });
 </script>
 
