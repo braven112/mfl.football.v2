@@ -1,0 +1,322 @@
+/**
+ * Dark Mode Variables
+ *
+ * Same SCSS var() wrappers as _variables.scss.
+ * The :root block below overrides ALL color values for the dark theme.
+ */
+
+//////////////////////Dark :root overrides//////////////////////////
+:root {
+  --primary-color: #cccccc;
+  --secondary-color: #eeeeee;
+  --accent-color: #c9a94e;
+  --dark-accent-color: #a8893a;
+  --primary-text-color: #e0e0e0;
+  --secondary-text-color: #c0c0c0;
+
+  --link-color: #bbbbbb;
+  --link-color-hover: #c9a94e;
+
+  --add-color: #4ade80;
+  --drop-color: #f87171;
+
+  //////////////////////Alerts//////////////////////////
+  --alert-danger-text: #fca5a5;
+  --alert-danger-bg: rgba(220, 38, 38, 0.15);
+  --alert-danger-border: rgba(220, 38, 38, 0.25);
+
+  --alert-warning-text: #fcd34d;
+  --alert-warning-bg: rgb(57, 36, 1);
+  --alert-warning-border: rgb(216, 155, 49);
+
+  --alert-success-text: #6ee7b7;
+  --alert-success-bg: rgba(16, 185, 129, 0.12);
+  --alert-success-border: rgba(16, 185, 129, 0.25);
+
+  --alert-info-text: #93bbfd;
+  --alert-info-bg: rgba(59, 130, 246, 0.12);
+  --alert-info-border: rgba(59, 130, 246, 0.25);
+
+  //////////////////////Neutrals//////////////////////////
+  --gray1: #d8d8d8;
+  --gray2: #8a8a8a;
+  --gray3: #6b6b6b;
+
+  --offwhite: #2e2e2e;
+  --offwhite2: #121212;
+
+  --lightgray: #2e2e2e;
+  --lightgray2: #3a3a3a;
+  --lightgray3: #5a5a5a;
+
+  --white: #2e2e2e;
+
+  --codebg-color: #151515;
+
+  //////////////////////Tables//////////////////////////
+  --oddtablerow: #2e2e2e;
+  --eventablerow: #444444;
+  --newposition-border-color: #3a3a3a;
+  --table-header-color: #8a8a8a;
+
+  //////////////////////Page Backgrounds//////////////////////////
+  --primary-bg-color: #2e2e2e;
+  --pagebody-bg: #121212;
+  --report-bg: #2e2e2e;
+  --header-bg: #101010;
+
+  //////////////////////Footer//////////////////////////
+  --footer-bg-color: #101010;
+  --footer-text-color: #e0e0e0;
+  --footer-header-text-color: #e0e0e0;
+
+  //////////////////////Borders//////////////////////////
+  --border-color: #2e2e2e;
+
+  //////////////////////MFL Menu//////////////////////////
+  --menu-bg-color: #101010;
+  --menu-bg-hover-color: #1d1d1d;
+  --menu-border-color: #1a1a1a;
+  --menu-text-color: #e0e0e0;
+
+  //////////////////////Report Navigation//////////////////////////
+  --secondary-menu-border-color: #c9a94e;
+  --secondary-menu-bg-color: #8a7230;
+  --secondary-menu-text-color: #e0e0e0;
+  --secondary-menu-link-color: #e0e0e0;
+  --secondary-menu-icon-color: #e0e0e0;
+  --secondary-menu-icon-hover-color: #ededed;
+  --secondary-menu-font-weight: normal;
+
+  //////////////////////Buttons//////////////////////////
+  --button-bg-color: #c9a94e;
+  --button-bg-color-hover: #d4b85e;
+  --button-link-color: #121212;
+
+  //////////////////////Tabs//////////////////////////
+  --tab-hover-color: #fff;
+
+  //////////////////////Scrollbar//////////////////////////
+  --scrollbar-bg-color: #3a3a3a;
+  --scrollbar-bg-hover-color: #4a4a4a;
+
+  //////////////////////Captions and Headlines//////////////////////////
+  --caption-color: #c9a94e;
+  --headline-font-color: #c9a94e;
+  --h1-color: #c9a94e;
+  --h2-color: #c9a94e;
+  --h3-color: #c9a94e;
+  --h4-color: #c9a94e;
+  --h5-color: #c9a94e;
+  --h6-color: #c9a94e;
+
+  //////////////////////Icons//////////////////////////
+  --icon-color: #c9a94e;
+  --icon-color-hover: #d4b85e;
+  --icon-text-color: #c9a94e;
+
+  //////////////////////Calendar//////////////////////////
+  --calendar-bg-color: #282828;
+  --calendar-eventablerow:#2e2e2e;
+  --calendar-border-color: #444033;
+  --calendar-text-color: #e0e0e0;
+  --today-bg-color: #c9a94e;
+  --today-border-color: #b89a42;
+  --today-text-color: #121212;
+
+  //////////////////////Logo//////////////////////////
+  --logo-main-color: #c9a94e;
+  --logo-secondary-color: #1d1d1d;
+  --logo-3rd-color: #3a3a3a;
+  --logo-4th-color: #c9a94e;
+  --logo-text-color: #c9a94e;
+  --logo-secondary-text-color: #1d1d1d;
+
+  //////////////////////Roster Page//////////////////////////
+  --color-bg-base: #323232;
+  --color-bg-subtle: #272727;
+  --color-bg-practice: rgba(59, 130, 246, 0.1);
+  --color-bg-practice-alt: rgba(59, 130, 246, 0.15);
+  --color-bg-injured: rgba(220, 38, 38, 0.1);
+  --color-bg-injured-alt: rgba(220, 38, 38, 0.15);
+  --color-border-practice: rgba(59, 130, 246, 0.3);
+  --color-border-injured: rgba(220, 38, 38, 0.3);
+
+  //////////////////////Header Icon Buttons//////////////////////////
+  --header-icon-color: #666666;
+  --header-icon-text-color: #eeeeee;
+  --header-icon-hover-color: #dddddd;
+
+  //////////////////////Logo Name//////////////////////////
+  --logo-name-primary-color: #c9a94e;
+  --logo-name-secondary-color: #e0e0e0;
+
+  //////////////////////Division Headings//////////////////////////
+  --division-heading-color: #e0e0e0;
+  --division-subheading-color: #c9a94e;
+  --division-border-color: #666666;
+
+  //////////////////////Typography//////////////////////////
+  --headline-font: "din-2014", sans-serif;
+  --headline-font-weight: 800;
+  --body-font: "din-2014", sans-serif;
+  --body-font-weight: 300;
+  --svg-text-font-size: 12px;
+
+  //////////////////////Border Radius//////////////////////////
+  --border-radius-sm: .25rem;
+  --border-radius-default: .5rem;
+  --border-radius-lg: 1rem;
+  --border-radius-xl: 8rem;
+}
+
+//////////////////////Colors//////////////////////////
+$primary-color: var(--primary-color);
+$secondary-color: var(--secondary-color);
+$accent-color: var(--accent-color);
+$dark-accent-color: var(--dark-accent-color);
+$today-bg-color: var(--today-bg-color);
+$today-border-color: var(--today-border-color);
+$button-bg-color: var(--button-bg-color);
+$secondary-menu-border-color: var(--secondary-menu-border-color);
+$secondary-menu-bg-color: var(--secondary-menu-bg-color);
+$logo-secondary-color: var(--logo-secondary-color);
+$logo-secondary-text-color: var(--logo-secondary-text-color);
+$primary-text-color: var(--primary-text-color);
+$secondary-text-color: var(--secondary-text-color);
+
+$link-color: var(--link-color);
+$link-color-hover: var(--link-color-hover);
+
+$add-color: var(--add-color);
+$drop-color: var(--drop-color);
+
+//////////////////////Alerts//////////////////////////
+$alert-danger-text: var(--alert-danger-text);
+$alert-danger-bg: var(--alert-danger-bg);
+$alert-danger-border: var(--alert-danger-border);
+
+$alert-warning-text: var(--alert-warning-text);
+$alert-warning-bg: var(--alert-warning-bg);
+$alert-warning-border: var(--alert-warning-border);
+
+$alert-success-text: var(--alert-success-text);
+$alert-success-bg: var(--alert-success-bg);
+$alert-success-border: var(--alert-success-border);
+
+$alert-info-text: var(--alert-info-text);
+$alert-info-bg: var(--alert-info-bg);
+$alert-info-border: var(--alert-info-border);
+
+//////////////////////Neutrals//////////////////////////
+$codebg-color: var(--codebg-color);
+
+$gray1: var(--gray1);
+$gray2: var(--gray2);
+$gray3: var(--gray3);
+
+$oddtablerow: var(--oddtablerow);
+$eventablerow: var(--eventablerow);
+
+$offwhite: var(--offwhite);
+$offwhite2: var(--offwhite2);
+
+$lightgray: var(--lightgray);
+$lightgray2: var(--lightgray2);
+$lightgray3: var(--lightgray3);
+
+$white: var(--white);
+
+//////////////////////Page Backgrounds//////////////////////////
+$primary-bg-color: var(--primary-bg-color);
+$pagebody-bg: var(--pagebody-bg);
+$report-bg: var(--report-bg);
+$header-bg: var(--header-bg);
+
+//////////////////////Footer//////////////////////////
+$footer-bg-color: var(--footer-bg-color);
+$footer-text-color: var(--footer-text-color);
+$footer-header-text-color: var(--footer-header-text-color);
+
+//////////////////////Borders//////////////////////////
+$border-color: var(--border-color);
+
+//////////////////////MFL Menu//////////////////////////
+$menu-bg-color: var(--menu-bg-color);
+$menu-bg-hover-color: var(--menu-bg-hover-color);
+$menu-border-color: var(--menu-border-color);
+$menu-text-color: var(--menu-text-color);
+
+//////////////////////Report Navigation//////////////////////////
+$secondary-menu-text-color: var(--secondary-menu-text-color);
+$secondary-menu-link-color: var(--secondary-menu-link-color);
+$secondary-menu-icon-color: var(--secondary-menu-icon-color);
+$secondary-menu-icon-hover-color: var(--secondary-menu-icon-hover-color);
+$secondary-menu-font-weight: var(--secondary-menu-font-weight);
+
+//////////////////////Buttons//////////////////////////
+$button-bg-color-hover: var(--button-bg-color-hover);
+$button-link-color: var(--button-link-color);
+
+//////////////////////Scrollbar//////////////////////////
+$scrollbar-bg-color: var(--scrollbar-bg-color);
+$scrollbar-bg-hover-color: var(--scrollbar-bg-hover-color);
+
+//////////////////////Captions and Headlines//////////////////////////
+$caption-color: var(--caption-color);
+$headline-font-color: var(--headline-font-color);
+$h1-color: var(--h1-color);
+$h2-color: var(--h2-color);
+$h3-color: var(--h3-color);
+$h4-color: var(--h4-color);
+$h5-color: var(--h5-color);
+$h6-color: var(--h6-color);
+
+//////////////////////Icons//////////////////////////
+$icon-color: var(--icon-color);
+$icon-color-hover: var(--icon-color-hover);
+$icon-text-color: var(--icon-text-color);
+
+//////////////////////Calendar//////////////////////////
+$calendar-bg-color: var(--calendar-bg-color);
+$calendar-eventablerow: var(--calendar-eventablerow);
+$calendar-border-color: var(--calendar-border-color);
+$calendar-text-color: var(--calendar-text-color);
+$today-text-color: var(--today-text-color);
+
+//////////////////////Tables//////////////////////////
+$newposition-border-color: var(--newposition-border-color);
+$table-header-color: var(--table-header-color);
+
+//////////////////////Logo//////////////////////////
+$logo-main-color: var(--logo-main-color);
+$logo-3rd-color: var(--logo-3rd-color);
+$logo-4th-color: var(--logo-4th-color);
+$logo-text-color: var(--logo-text-color);
+
+//////////////////////Typography//////////////////////////
+$headline-font: var(--headline-font);
+$headline-font-weight: var(--headline-font-weight);
+$body-font: var(--body-font);
+$body-font-weight: var(--body-font-weight);
+$svg-text-font-size: var(--svg-text-font-size);
+
+//////////////////////Header Icon Buttons//////////////////////////
+$header-icon-color: var(--header-icon-color);
+$header-icon-text-color: var(--header-icon-text-color);
+$header-icon-hover-color: var(--header-icon-hover-color);
+
+//////////////////////Logo Name//////////////////////////
+$logo-name-primary-color: var(--logo-name-primary-color);
+$logo-name-secondary-color: var(--logo-name-secondary-color);
+
+//////////////////////Division Headings//////////////////////////
+$division-heading-color: var(--division-heading-color);
+$division-subheading-color: var(--division-subheading-color);
+$division-border-color: var(--division-border-color);
+
+//////////////////////Border Radius//////////////////////////
+$border-radius-sm: var(--border-radius-sm);
+$border-radius-default: var(--border-radius-default);
+$border-radius-lg: var(--border-radius-lg);
+$border-radius-xl: var(--border-radius-xl);

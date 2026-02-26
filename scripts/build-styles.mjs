@@ -32,6 +32,12 @@ const leagues = [
     variablesFile: 'src/assets/css/src/_variables-dark.scss',
     outputFile: 'public/assets/css/dist/dark_main.css',
   },
+  {
+    name: 'dark-din',
+    sassFile: 'src/assets/css/src/dark_din_main.scss',
+    variablesFile: 'src/assets/css/src/_variables-dark-din.scss',
+    outputFile: 'public/assets/css/dist/dark_din_main.css',
+  },
 ];
 
 // Ensure output directory exists
