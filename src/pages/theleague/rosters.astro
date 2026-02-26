@@ -4965,6 +4965,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const franchiseYearIndex = years; // The year after their current contract
     console.log('Franchise Year Index:', franchiseYearIndex);
 
+    // If this player previously had an extension and we're applying a different action, clear the extension tracker
+    if (currentVeteranExtension === id && actionType !== 'extension') {
+      currentVeteranExtension = null;
+    }
+
     let result = null;
 
     // Check for conflicts with existing tags
@@ -4979,9 +4984,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       result.ufaYearIndex = franchiseYearIndex;
       franchiseTagsByYear[franchiseYearIndex] = id;
     } else if (actionType === 'extension') {
-      if (currentVeteranExtension && currentVeteranExtension !== id) {
-        // Remove previous veteran extension
+      // Clear any existing extension (same or different player) before applying
+      if (currentVeteranExtension) {
         delete contractActions[currentVeteranExtension];
+        currentVeteranExtension = null;
       }
       result = calculateVeteranExtension(
         years,
@@ -6004,8 +6010,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 data-player-nfl-team="${player.nflTeam || ''}"
                 data-player-nfl-logo="${player.nflLogo || ''}"
                 data-player-headshot="${player.headshot || ''}"
-                data-player-salary="${player.salary || 0}"
-                data-player-years="${player.contractYears || 1}"
+                data-player-salary="${action?.originalSalary ?? player.salary ?? 0}"
+                data-player-years="${action?.originalYears ?? player.contractYears ?? 1}"
                 data-player-injury-status="${player.injuryStatus || ''}"
                 title="Manage Contract"
               >
