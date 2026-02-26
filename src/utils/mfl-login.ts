@@ -173,22 +173,22 @@ export async function authenticateWithMFL(
     }
 
     // ── Step 2: Call export?TYPE=myleagues to get franchise_id ────
-    // The standalone /myleagues endpoint returns HTML from server-side fetch.
-    // The export endpoint (export?TYPE=myleagues) returns proper JSON and
-    // accepts USERNAME/PASSWORD as query params.
-    const mlParams = new URLSearchParams({
-      TYPE: 'myleagues',
-      USERNAME: username,
-      PASSWORD: password,
-      JSON: '1',
-    });
-    const mlUrl = `https://api.myfantasyleague.com/${year}/export?${mlParams.toString()}`;
+    // Use the export endpoint (not standalone /myleagues which returns HTML).
+    // Authenticate with the MFL_USER_ID cookie from Step 1.
+    // The export endpoint returns proper JSON: empty {"leagues":{}} if unauth'd,
+    // or {"leagues":{"league":[...]}} with franchise_id when authenticated.
+    const mlUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues&JSON=1`;
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Step 2: calling export?TYPE=myleagues');
+      console.log('[mfl-login] Step 2: calling export?TYPE=myleagues with cookie');
     }
 
-    const mlResponse = await fetch(mlUrl, { method: 'GET' });
+    const mlResponse = await fetch(mlUrl, {
+      method: 'GET',
+      headers: {
+        Cookie: `MFL_USER_ID=${mflCookie}`,
+      },
+    });
     const mlText = await mlResponse.text();
     let mlData: any;
 
