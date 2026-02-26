@@ -93,7 +93,6 @@ const extensionCandidates: (typeof players[number] & { pointsPosRank: number })[
 players.forEach((player) => {
   if (player.contractYears !== 2 && player.contractYears !== 3) return;
   if ((player.salary ?? 0) >= SALARY_THRESHOLD) return;
-  if ((player.points ?? 0) <= 0) return;
 
   const pos = player.position?.toUpperCase() || 'UNK';
   const pointsPosRank = pointsRankings.get(player.id) ?? Infinity;
