@@ -5,7 +5,8 @@
  * Strategy (two-step):
  * 1. Call /login with XML=1 to get the MFL_USER_ID cookie
  *    (MFL's login endpoint does NOT support JSON=1 — it returns empty body)
- * 2. Call /myleagues with the cookie to resolve franchise_id
+ * 2. Call export?TYPE=myleagues with the cookie to resolve franchise_id
+ *    (The standalone /myleagues endpoint returns HTML from server-side fetch)
  */
 
 export interface MFLLoginResponse {
@@ -32,14 +33,11 @@ const normalizeFranchise = (value: string | null | undefined) => {
  * Invalid: <error>Invalid Password</error>
  */
 function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
-  // Check for error response
   const errorMatch = xml.match(/<error[^>]*>(.*?)<\/error>/s);
   if (errorMatch) {
     return { error: errorMatch[1].trim() };
   }
 
-  // Extract cookie from status element attributes
-  // Format: <status MFL_USER_ID="cookievalue" .../>
   const cookieMatch = xml.match(/MFL_USER_ID="([^"]+)"/);
   if (cookieMatch) {
     return { cookie: cookieMatch[1] };
@@ -49,47 +47,10 @@ function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
 }
 
 /**
- * Parse MFL myleagues XML response into a JSON-like structure.
- * Extracts league entries with id and franchise_id.
- *
- * Format: <leagues><league id="13522" name="TheLeague" franchise_id="0003" .../></leagues>
- */
-function parseMFLMyLeaguesXML(xml: string): any | null {
-  // Check if it's actually HTML (invalid credentials return the full page)
-  if (xml.includes('<!DOCTYPE') && !xml.includes('<leagues')) {
-    return null;
-  }
-
-  const leagues: any[] = [];
-  const leagueRegex = /<league\s+([^>]+)\/?>/g;
-  let match;
-
-  while ((match = leagueRegex.exec(xml)) !== null) {
-    const attrStr = match[1];
-    const entry: Record<string, string> = {};
-
-    // Parse attributes: key="value"
-    const attrRegex = /(\w+)="([^"]*)"/g;
-    let attrMatch;
-    while ((attrMatch = attrRegex.exec(attrStr)) !== null) {
-      entry[attrMatch[1]] = attrMatch[2];
-    }
-
-    if (Object.keys(entry).length > 0) {
-      leagues.push(entry);
-    }
-  }
-
-  if (leagues.length === 0) return null;
-
-  return { myleagues: { league: leagues } };
-}
-
-/**
  * Authenticate user against MFL API.
  *
- * Step 1: POST /login with XML=1 to get the MFL_USER_ID cookie.
- * Step 2: GET /myleagues with the cookie to resolve franchise_id.
+ * Step 1: Login with XML=1 to get the MFL_USER_ID cookie.
+ * Step 2: Call export?TYPE=myleagues with the cookie to resolve franchise_id.
  *
  * @param username - MFL username
  * @param password - MFL password
@@ -104,8 +65,8 @@ export async function authenticateWithMFL(
     const year = new Date().getFullYear();
 
     // ── Step 1: Login to get MFL_USER_ID cookie ─────────────────────
-    // MFL recommends POST for security. We try POST first, then fall
-    // back to GET if POST returns empty (some MFL hosts redirect POST→GET).
+    // Try POST first (MFL-recommended), fall back to GET if POST returns
+    // empty body (MFL redirects POST→GET on some hosts, losing the body).
     const loginUrl = `https://api.myfantasyleague.com/${year}/login`;
     const loginParams = new URLSearchParams({
       USERNAME: username,
@@ -117,7 +78,6 @@ export async function authenticateWithMFL(
       console.log('[mfl-login] Step 1: calling /login (year:', year, ')');
     }
 
-    // Try POST first (MFL-recommended method)
     let loginResponse = await fetch(loginUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -126,7 +86,7 @@ export async function authenticateWithMFL(
 
     let loginText = await loginResponse.text();
 
-    // If POST returned empty body (redirect converted POST→GET), fall back to GET
+    // POST returned empty body → fall back to GET with params in URL
     if (!loginText.trim()) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('[mfl-login] POST returned empty, falling back to GET');
@@ -175,8 +135,8 @@ export async function authenticateWithMFL(
     // ── Step 2: Call export?TYPE=myleagues to get franchise_id ────
     // Use the export endpoint (not standalone /myleagues which returns HTML).
     // Authenticate with the MFL_USER_ID cookie from Step 1.
-    // The export endpoint returns proper JSON: empty {"leagues":{}} if unauth'd,
-    // or {"leagues":{"league":[...]}} with franchise_id when authenticated.
+    // Returns {"leagues":{}} when unauth'd, or {"leagues":{"league":[...]}}
+    // with franchise_id when authenticated.
     const mlUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues&JSON=1`;
 
     if (process.env.NODE_ENV !== 'production') {
@@ -202,8 +162,7 @@ export async function authenticateWithMFL(
         franchiseId: '',
         leagueId: leagueId || '',
         role: 'owner',
-        error: `myleagues export returned non-JSON. URL: ${mlResponse.url}`,
-        rawResponse: mlText.substring(0, 300),
+        error: 'Could not parse league data from MFL.',
       };
     }
 
@@ -229,8 +188,7 @@ export async function authenticateWithMFL(
         franchiseId: '',
         leagueId: leagueId || '',
         role: 'owner',
-        error: 'myleagues returned JSON but no leagues in array',
-        rawResponse: JSON.stringify(mlData).substring(0, 500),
+        error: 'No leagues found for this account.',
       };
     }
 
@@ -284,7 +242,6 @@ export async function authenticateWithMFL(
       franchiseId,
       leagueId: resolvedLeagueId,
       role: 'owner',
-      rawResponse: mlData,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -320,7 +277,6 @@ export async function validateMFLSession(
       }).toString(),
     });
 
-    // If we get a response without auth error, session is valid
     return response.ok || response.status !== 401;
   } catch {
     return false;
