@@ -21,7 +21,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (!mflResponse.success) {
       return new Response(
-        JSON.stringify({ success: false, message: mflResponse.error || 'Authentication failed' }),
+        JSON.stringify({
+          success: false,
+          message: mflResponse.error || 'Authentication failed',
+          debug: mflResponse.rawResponse ? String(mflResponse.rawResponse).substring(0, 300) : undefined,
+        }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
