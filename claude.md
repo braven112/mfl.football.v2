@@ -246,6 +246,12 @@ For detailed documentation, see `docs/claude/`:
 
 ---
 
+## Communication Rules
+
+- **Always make links clickable** — when providing URLs, GitHub links, PR links, or any other references, format them as markdown hyperlinks (e.g., `[link text](url)`) so they are clickable in the terminal.
+
+---
+
 ## Quick Reference
 
 ### Critical Constants
