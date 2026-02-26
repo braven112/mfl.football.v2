@@ -174,16 +174,29 @@ export async function authenticateWithMFL(
 
     // ── Step 2: Call myleagues to get franchise_id ────────────────
     // Pass credentials directly (Cookie header gets dropped by some runtimes).
-    // Try JSON=1 first, fall back to XML=1 if we get HTML back.
+    // Use URLSearchParams for encoding (spaces as +, not %20) to match MFL expectations.
+    // Also capture Set-Cookie from login response as a fallback auth method.
     const mlBaseUrl = `https://api.myfantasyleague.com/${year}/myleagues`;
-    const mlCredsParams = `USERNAME=${encodeURIComponent(username)}&PASSWORD=${encodeURIComponent(password)}`;
+    const mlParams = new URLSearchParams({
+      USERNAME: username,
+      PASSWORD: password,
+    });
+
+    // Capture any Set-Cookie from login for fallback use
+    const loginSetCookie = loginResponse.headers.getSetCookie?.()?.join('; ') || '';
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('[mfl-login] Step 2: calling /myleagues with credentials');
+      console.log('[mfl-login] Login Set-Cookie present:', !!loginSetCookie);
     }
 
-    let mlResponse = await fetch(`${mlBaseUrl}?${mlCredsParams}&JSON=1`, {
+    // Build cookie header: prefer Set-Cookie from login, fall back to parsed cookie
+    const cookieHeader = loginSetCookie || `MFL_USER_ID=${mflCookie}`;
+
+    // Try JSON=1 with credentials in URL params
+    let mlResponse = await fetch(`${mlBaseUrl}?${mlParams.toString()}&JSON=1`, {
       method: 'GET',
+      headers: { Cookie: cookieHeader },
     });
 
     let mlText = await mlResponse.text();
@@ -193,13 +206,14 @@ export async function authenticateWithMFL(
     try {
       mlData = JSON.parse(mlText);
     } catch {
-      // JSON=1 returned HTML — try XML=1 and parse that instead
+      // JSON=1 returned HTML — try XML=1
       if (process.env.NODE_ENV !== 'production') {
         console.log('[mfl-login] JSON=1 returned non-JSON, trying XML=1');
       }
 
-      mlResponse = await fetch(`${mlBaseUrl}?${mlCredsParams}&XML=1`, {
+      mlResponse = await fetch(`${mlBaseUrl}?${mlParams.toString()}&XML=1`, {
         method: 'GET',
+        headers: { Cookie: cookieHeader },
       });
       mlText = await mlResponse.text();
 
