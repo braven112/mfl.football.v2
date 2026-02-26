@@ -30,6 +30,7 @@ const SKIP_REWRITE_PREFIXES = [
   '/404',
   '/favicon.ico',
   '/assets/',
+  '/manifest.json',
 ];
 
 export const onRequest = defineMiddleware(async (context, next) => {
