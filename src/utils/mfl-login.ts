@@ -150,7 +150,6 @@ export async function authenticateWithMFL(
     });
 
     if (!mlResponse.ok) {
-      // Login worked but myleagues failed — still a partial success
       return {
         success: true,
         userId: mflCookie,
@@ -158,6 +157,7 @@ export async function authenticateWithMFL(
         franchiseId: '',
         leagueId: leagueId || '',
         role: 'owner',
+        error: `myleagues returned HTTP ${mlResponse.status}`,
       };
     }
 
@@ -171,7 +171,7 @@ export async function authenticateWithMFL(
       try {
         mlData = JSON.parse(mlText);
       } catch {
-        // myleagues returned HTML — login worked but can't resolve franchise
+        // myleagues returned HTML — cookie may not have been accepted
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[mfl-login] myleagues returned non-JSON:', mlText.substring(0, 200));
         }
@@ -182,6 +182,8 @@ export async function authenticateWithMFL(
           franchiseId: '',
           leagueId: leagueId || '',
           role: 'owner',
+          error: `myleagues returned HTML (cookie not accepted). URL: ${mlResponse.url}`,
+          rawResponse: mlText.substring(0, 300),
         };
       }
     }
@@ -201,7 +203,6 @@ export async function authenticateWithMFL(
     const leagueList = Array.isArray(leagues) ? leagues : leagues ? [leagues] : [];
 
     if (leagueList.length === 0) {
-      // Login worked but no leagues found
       return {
         success: true,
         userId: mflCookie,
@@ -209,6 +210,8 @@ export async function authenticateWithMFL(
         franchiseId: '',
         leagueId: leagueId || '',
         role: 'owner',
+        error: 'myleagues returned JSON but no leagues in array',
+        rawResponse: JSON.stringify(mlData).substring(0, 500),
       };
     }
 
