@@ -172,66 +172,39 @@ export async function authenticateWithMFL(
       console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ')');
     }
 
-    // ── Step 2: Call myleagues to get franchise_id ────────────────
-    // Pass credentials directly (Cookie header gets dropped by some runtimes).
-    // Use URLSearchParams for encoding (spaces as +, not %20) to match MFL expectations.
-    // Also capture Set-Cookie from login response as a fallback auth method.
-    const mlBaseUrl = `https://api.myfantasyleague.com/${year}/myleagues`;
+    // ── Step 2: Call export?TYPE=myleagues to get franchise_id ────
+    // The standalone /myleagues endpoint returns HTML from server-side fetch.
+    // The export endpoint (export?TYPE=myleagues) returns proper JSON and
+    // accepts USERNAME/PASSWORD as query params.
     const mlParams = new URLSearchParams({
+      TYPE: 'myleagues',
       USERNAME: username,
       PASSWORD: password,
+      JSON: '1',
     });
-
-    // Capture any Set-Cookie from login for fallback use
-    const loginSetCookie = loginResponse.headers.getSetCookie?.()?.join('; ') || '';
+    const mlUrl = `https://api.myfantasyleague.com/${year}/export?${mlParams.toString()}`;
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Step 2: calling /myleagues with credentials');
-      console.log('[mfl-login] Login Set-Cookie present:', !!loginSetCookie);
+      console.log('[mfl-login] Step 2: calling export?TYPE=myleagues');
     }
 
-    // Build cookie header: prefer Set-Cookie from login, fall back to parsed cookie
-    const cookieHeader = loginSetCookie || `MFL_USER_ID=${mflCookie}`;
-
-    // Try JSON=1 with credentials in URL params
-    let mlResponse = await fetch(`${mlBaseUrl}?${mlParams.toString()}&JSON=1`, {
-      method: 'GET',
-      headers: { Cookie: cookieHeader },
-    });
-
-    let mlText = await mlResponse.text();
+    const mlResponse = await fetch(mlUrl, { method: 'GET' });
+    const mlText = await mlResponse.text();
     let mlData: any;
 
-    // Try parsing JSON response
     try {
       mlData = JSON.parse(mlText);
     } catch {
-      // JSON=1 returned HTML — try XML=1
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[mfl-login] JSON=1 returned non-JSON, trying XML=1');
-      }
-
-      mlResponse = await fetch(`${mlBaseUrl}?${mlParams.toString()}&XML=1`, {
-        method: 'GET',
-        headers: { Cookie: cookieHeader },
-      });
-      mlText = await mlResponse.text();
-
-      // Parse XML response for league data
-      mlData = parseMFLMyLeaguesXML(mlText);
-
-      if (!mlData) {
-        return {
-          success: true,
-          userId: mflCookie,
-          username,
-          franchiseId: '',
-          leagueId: leagueId || '',
-          role: 'owner',
-          error: `myleagues returned unparseable response. URL: ${mlResponse.url}`,
-          rawResponse: mlText.substring(0, 300),
-        };
-      }
+      return {
+        success: true,
+        userId: mflCookie,
+        username,
+        franchiseId: '',
+        leagueId: leagueId || '',
+        role: 'owner',
+        error: `myleagues export returned non-JSON. URL: ${mlResponse.url}`,
+        rawResponse: mlText.substring(0, 300),
+      };
     }
 
     if (process.env.NODE_ENV !== 'production') {
