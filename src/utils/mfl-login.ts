@@ -49,6 +49,43 @@ function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
 }
 
 /**
+ * Parse MFL myleagues XML response into a JSON-like structure.
+ * Extracts league entries with id and franchise_id.
+ *
+ * Format: <leagues><league id="13522" name="TheLeague" franchise_id="0003" .../></leagues>
+ */
+function parseMFLMyLeaguesXML(xml: string): any | null {
+  // Check if it's actually HTML (invalid credentials return the full page)
+  if (xml.includes('<!DOCTYPE') && !xml.includes('<leagues')) {
+    return null;
+  }
+
+  const leagues: any[] = [];
+  const leagueRegex = /<league\s+([^>]+)\/?>/g;
+  let match;
+
+  while ((match = leagueRegex.exec(xml)) !== null) {
+    const attrStr = match[1];
+    const entry: Record<string, string> = {};
+
+    // Parse attributes: key="value"
+    const attrRegex = /(\w+)="([^"]*)"/g;
+    let attrMatch;
+    while ((attrMatch = attrRegex.exec(attrStr)) !== null) {
+      entry[attrMatch[1]] = attrMatch[2];
+    }
+
+    if (Object.keys(entry).length > 0) {
+      leagues.push(entry);
+    }
+  }
+
+  if (leagues.length === 0) return null;
+
+  return { myleagues: { league: leagues } };
+}
+
+/**
  * Authenticate user against MFL API.
  *
  * Step 1: POST /login with XML=1 to get the MFL_USER_ID cookie.
@@ -135,46 +172,41 @@ export async function authenticateWithMFL(
       console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ')');
     }
 
-    // ── Step 2: Call myleagues with cookie to get franchise_id ──────
-    const myLeaguesUrl = `https://api.myfantasyleague.com/${year}/myleagues?JSON=1`;
+    // ── Step 2: Call myleagues to get franchise_id ────────────────
+    // Pass credentials directly (Cookie header gets dropped by some runtimes).
+    // Try JSON=1 first, fall back to XML=1 if we get HTML back.
+    const mlBaseUrl = `https://api.myfantasyleague.com/${year}/myleagues`;
+    const mlCredsParams = `USERNAME=${encodeURIComponent(username)}&PASSWORD=${encodeURIComponent(password)}`;
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Step 2: calling /myleagues with cookie');
+      console.log('[mfl-login] Step 2: calling /myleagues with credentials');
     }
 
-    const mlResponse = await fetch(myLeaguesUrl, {
+    let mlResponse = await fetch(`${mlBaseUrl}?${mlCredsParams}&JSON=1`, {
       method: 'GET',
-      headers: {
-        Cookie: `MFL_USER_ID=${mflCookie}`,
-      },
     });
 
-    if (!mlResponse.ok) {
-      return {
-        success: true,
-        userId: mflCookie,
-        username,
-        franchiseId: '',
-        leagueId: leagueId || '',
-        role: 'owner',
-        error: `myleagues returned HTTP ${mlResponse.status}`,
-      };
-    }
-
-    const mlContentType = mlResponse.headers.get('content-type');
+    let mlText = await mlResponse.text();
     let mlData: any;
 
-    if (mlContentType?.includes('application/json')) {
-      mlData = await mlResponse.json();
-    } else {
-      const mlText = await mlResponse.text();
-      try {
-        mlData = JSON.parse(mlText);
-      } catch {
-        // myleagues returned HTML — cookie may not have been accepted
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[mfl-login] myleagues returned non-JSON:', mlText.substring(0, 200));
-        }
+    // Try parsing JSON response
+    try {
+      mlData = JSON.parse(mlText);
+    } catch {
+      // JSON=1 returned HTML — try XML=1 and parse that instead
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[mfl-login] JSON=1 returned non-JSON, trying XML=1');
+      }
+
+      mlResponse = await fetch(`${mlBaseUrl}?${mlCredsParams}&XML=1`, {
+        method: 'GET',
+      });
+      mlText = await mlResponse.text();
+
+      // Parse XML response for league data
+      mlData = parseMFLMyLeaguesXML(mlText);
+
+      if (!mlData) {
         return {
           success: true,
           userId: mflCookie,
@@ -182,7 +214,7 @@ export async function authenticateWithMFL(
           franchiseId: '',
           leagueId: leagueId || '',
           role: 'owner',
-          error: `myleagues returned HTML (cookie not accepted). URL: ${mlResponse.url}`,
+          error: `myleagues returned unparseable response. URL: ${mlResponse.url}`,
           rawResponse: mlText.substring(0, 300),
         };
       }
