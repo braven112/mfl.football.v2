@@ -1,0 +1,71 @@
+/**
+ * Font Size Scaling
+ *
+ * Compensates for the custom font defined in _fonts-dark.scss.
+ * If you change the font, adjust these values to match.
+ *
+ * Current font: UFC Sans Condensed
+ * Scale factor: ~0.91 (renders ~9% larger than din-2014)
+ */
+
+////////////////////// League Name //////////////////////
+.leaguename {
+  font-size: 29px; // base: 32px
+  .leaguename--dotus {
+    font-size: 16px; // base: 18px
+  }
+}
+
+@media (min-width: 767px) {
+  .leaguename {
+    font-size: 55px; // base: 60px
+  }
+}
+
+@media (min-width: 992px) {
+  .leaguename {
+    font-size: 42px; // base: 46px
+  }
+}
+
+////////////////////// League Name 2-line //////////////////////
+.leaguename-2line {
+  .leaguename-2line--primaryname {
+    font-size: 29px; // base: 32px
+  }
+  .leaguename-2line--secondaryname {
+    font-size: 12px; // base: 13px
+  }
+}
+
+@media (min-width: 767px) {
+  .leaguename-2line .leaguename-2line--primaryname {
+    font-size: 55px; // base: 60px
+  }
+  .leaguename-2line .leaguename-2line--secondaryname {
+    font-size: 13px; // base: 14px
+  }
+}
+
+@media (min-width: 992px) {
+  .leaguename-2line .leaguename-2line--primaryname {
+    font-size: 42px; // base: 46px
+  }
+  .leaguename-2line .leaguename-2line--secondaryname {
+    font-size: 13px; // base: 14px
+  }
+}
+
+////////////////////// MFL Menu //////////////////////
+.myfantasyleague_menu {
+  font-size: 11px; // base: 12px
+}
+
+@media only screen and (max-width: 920px) {
+  .myfantasyleague_menu > span {
+    font-size: 15px; // base: 16px
+  }
+  .myfantasyleague_menu ul li a {
+    font-size: 13px; // base: 14px
+  }
+}
