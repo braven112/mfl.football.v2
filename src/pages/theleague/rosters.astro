@@ -45,8 +45,8 @@ import { getAuthUser } from '../../utils/auth';
 import fs from 'fs';
 import path from 'path';
 import espnNewsData from '../../../data/theleague/nfl-news-week15.json';
-import { calculateDraftOrder, buildActualDraftPicks } from '../../utils/draft-utils';
-import { extractToiletBowlWinners } from '../../utils/toilet-bowl-utils';
+import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
+import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
 import {
   getTheLeaguePreference,
@@ -1461,10 +1461,10 @@ if (standingsData?.leagueStandings?.franchise) {
     toiletBowlWinners = extractToiletBowlWinners(bracketData);
   }
 
-  // TODO: Determine league winner (needs to be fetched from playoff results)
-  const leagueWinnerId = '';
+  // Extract league champion from playoff bracket (same as draft-predictor)
+  const leagueWinnerId = bracketData ? extractLeagueChampion(bracketData) : '';
 
-  // Calculate draft order
+  // Calculate draft order (with champion at pick 16)
   draftPredictions = calculateDraftOrder(
     standingsData.leagueStandings.franchise,
     teamConfigMap,
@@ -1477,9 +1477,13 @@ if (standingsData?.leagueStandings?.franchise) {
     actualDraftPicks = buildActualDraftPicks(draftResultsData, teamConfigMap);
   }
 
-  // Extract draft assets from transactions (trades)
-  if (transactionsData) {
-    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear);
+  // Current-year draft assets: prefer actual MFL draft data (authoritative pick numbers)
+  // over transaction-based computation which can miscalculate positions
+  if (actualDraftPicks.length > 0) {
+    assetsPredictions = convertActualPicksToPredictions(actualDraftPicks, teamConfigMap);
+  } else if (transactionsData) {
+    // Fallback: compute from transactions when draft results aren't available yet
+    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear, draftPredictions);
     if (isValidAssetsData(assetsData)) {
       assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
     }
@@ -1511,7 +1515,7 @@ if (plannerPhase.showDualDraftCards && transactionsData && standingsData?.league
       },
     ])
   );
-  const assets2027Data = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear + 1);
+  const assets2027Data = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear + 1, draftPredictions);
   if (isValidAssetsData(assets2027Data)) {
     assets2027Predictions = convertAssetsToPredictions(assets2027Data, teamConfigMap2027);
   }

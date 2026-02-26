@@ -131,11 +131,16 @@ export function isValidAssetsData(data: AssetsData): boolean {
 /**
  * Extract draft assets from transactions by parsing trade data
  * Builds a map of which team currently owns which draft picks
+ *
+ * @param draftPredictions - Optional pre-calculated draft predictions from calculateDraftOrder.
+ *   When provided, the draft order map is built from these predictions (which correctly
+ *   account for league champion at pick 16, toilet bowl, etc.) instead of a naive standings sort.
  */
 export function extractAssetsFromTransactions(
   transactionsData: TransactionData,
   standingsData: StandingsData,
-  draftYear: number
+  draftYear: number,
+  draftPredictions?: DraftPrediction[]
 ): AssetsData {
   if (!transactionsData?.transactions?.transaction || !standingsData?.leagueStandings?.franchise) {
     return { error: 'Missing transaction or standings data' };
@@ -144,47 +149,39 @@ export function extractAssetsFromTransactions(
   const franchises = standingsData.leagueStandings.franchise;
   const transactions = transactionsData.transactions.transaction;
 
-  // Sort standings worst-to-best using the same rules as calculateDraftOrder (reverse W-L, tiebreakers)
-  const sortByRecordReverse = (list: typeof franchises) => {
-    return [...list].sort((a, b) => {
+  // Build draft order map (franchise id -> draft position in round 1)
+  // Prefer pre-calculated predictions which handle champion/toilet bowl rules correctly
+  const draftOrderMap = new Map<string, number>();
+  if (draftPredictions && draftPredictions.length > 0) {
+    // Use round 1 predictions to build the map (picks 1-16)
+    draftPredictions
+      .filter((p) => p.round === 1 && !p.isToiletBowlPick)
+      .forEach((p) => {
+        draftOrderMap.set(p.franchiseId, p.pickInRound);
+      });
+  } else {
+    // Fallback: naive standings sort (no champion logic)
+    const sorted = [...franchises].sort((a, b) => {
       const aWins = (parseInt(a.divw || '0') + parseInt(a.nondivw || '0'));
       const aLosses = (parseInt(a.divl || '0') + parseInt(a.nondivl || '0'));
       const bWins = (parseInt(b.divw || '0') + parseInt(b.nondivw || '0'));
       const bLosses = (parseInt(b.divl || '0') + parseInt(b.nondivl || '0'));
-
       const aGames = aWins + aLosses;
       const bGames = bWins + bLosses;
       const aWinPct = aGames > 0 ? aWins / aGames : 0;
       const bWinPct = bGames > 0 ? bWins / bGames : 0;
       if (aWinPct !== bWinPct) return aWinPct - bWinPct;
-
       const aAllPlay = parseFloat(a.all_play_pct || '0');
       const bAllPlay = parseFloat(b.all_play_pct || '0');
       if (aAllPlay !== bAllPlay) return aAllPlay - bAllPlay;
-
-      const aPointsFor = parseFloat(a.pf || '0');
-      const bPointsFor = parseFloat(b.pf || '0');
-      if (aPointsFor !== bPointsFor) return aPointsFor - bPointsFor;
-
-      const aPowerRating = parseFloat(a.ppr || '0');
-      const bPowerRating = parseFloat(b.ppr || '0');
-      if (aPowerRating !== bPowerRating) return aPowerRating - bPowerRating;
-
-      const aVictoryPoints = parseFloat(a.vp || '0');
-      const bVictoryPoints = parseFloat(b.vp || '0');
-      if (aVictoryPoints !== bVictoryPoints) return aVictoryPoints - bVictoryPoints;
-
-      const aPointsAgainst = parseFloat(a.pa || '0');
-      const bPointsAgainst = parseFloat(b.pa || '0');
-      return aPointsAgainst - bPointsAgainst;
+      const aPF = parseFloat(a.pf || '0');
+      const bPF = parseFloat(b.pf || '0');
+      return aPF - bPF;
     });
-  };
-
-  // Build draft order map (franchise id -> draft position 1-16) using sorted standings
-  const draftOrderMap = new Map<string, number>();
-  sortByRecordReverse(franchises).forEach((franchise, index) => {
-    draftOrderMap.set(franchise.id, index + 1);
-  });
+    sorted.forEach((franchise, index) => {
+      draftOrderMap.set(franchise.id, index + 1);
+    });
+  }
 
   // Initialize ownership: each franchise owns its own picks
   const ownershipMap = new Map<string, string>(); // key: "FP_franchiseId_year_round" -> value: current owner franchiseId
