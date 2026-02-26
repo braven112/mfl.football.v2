@@ -1403,6 +1403,27 @@ const initialAllPlayers: any[] = initialSeasonData
     ])
   : [];
 
+// Between Feb 15 and Labor Day (season start), current season points are 0.
+// Fall back to last season's points so extension/franchise tag filtering works.
+const prevSeasonKey = String(Number(defaultSeason) - 1);
+const prevSeasonData = rostersBySeason[prevSeasonKey];
+if (prevSeasonData) {
+  const allCurrentPointsZero = initialAllPlayers.every(p => (p.points ?? 0) === 0);
+  if (allCurrentPointsZero) {
+    const prevPointsMap = new Map<string, number>();
+    Object.values(prevSeasonData.teams ?? {}).forEach((team: any) => {
+      [...(team.players ?? []), ...(team.practiceSquad ?? []), ...(team.injuredReserve ?? [])].forEach((p: any) => {
+        if (p.points && p.points > 0) prevPointsMap.set(p.id, p.points);
+      });
+    });
+    initialAllPlayers.forEach(p => {
+      if ((p.points ?? 0) === 0 && prevPointsMap.has(p.id)) {
+        p.points = prevPointsMap.get(p.id);
+      }
+    });
+  }
+}
+
 // Draft predictions use season year (standings come from the season played, not the new league year)
 const draftSeasonYear = getCurrentSeasonYear();
 const draftNextYear = draftSeasonYear + 1;
