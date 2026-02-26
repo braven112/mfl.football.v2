@@ -2,10 +2,10 @@
  * MFL Login Utilities
  * Handles authentication with MyFantasyLeague API
  *
- * Strategy: Use the `myleagues` endpoint as the primary auth method.
- * It accepts USERNAME/PASSWORD, validates credentials, and returns
- * the user's franchise_id in each league — all in one GET request.
- * This avoids the POST→GET redirect issue with the /login endpoint.
+ * Strategy (two-step):
+ * 1. Call /login with XML=1 to get the MFL_USER_ID cookie
+ *    (MFL's login endpoint does NOT support JSON=1 — it returns empty body)
+ * 2. Call /myleagues with the cookie to resolve franchise_id
  */
 
 export interface MFLLoginResponse {
@@ -27,11 +27,32 @@ const normalizeFranchise = (value: string | null | undefined) => {
 };
 
 /**
- * Authenticate user against MFL API using the myleagues endpoint.
- * This is more reliable than the /login endpoint because:
- * 1. Uses GET (no POST→GET redirect issues)
- * 2. Validates credentials AND returns franchise_id in one call
- * 3. The /login endpoint only returns a cookie, not franchise_id
+ * Parse MFL login XML response to extract cookie or error.
+ * Valid: <status MFL_USER_ID="base64cookie"/>
+ * Invalid: <error>Invalid Password</error>
+ */
+function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
+  // Check for error response
+  const errorMatch = xml.match(/<error[^>]*>(.*?)<\/error>/s);
+  if (errorMatch) {
+    return { error: errorMatch[1].trim() };
+  }
+
+  // Extract cookie from status element attributes
+  // Format: <status MFL_USER_ID="cookievalue" .../>
+  const cookieMatch = xml.match(/MFL_USER_ID="([^"]+)"/);
+  if (cookieMatch) {
+    return { cookie: cookieMatch[1] };
+  }
+
+  return { error: 'Unexpected response from MFL login.' };
+}
+
+/**
+ * Authenticate user against MFL API.
+ *
+ * Step 1: POST /login with XML=1 to get the MFL_USER_ID cookie.
+ * Step 2: GET /myleagues with the cookie to resolve franchise_id.
  *
  * @param username - MFL username
  * @param password - MFL password
@@ -45,76 +66,149 @@ export async function authenticateWithMFL(
   try {
     const year = new Date().getFullYear();
 
-    // Use myleagues endpoint: validates credentials AND returns franchise_id
-    const myLeaguesUrl = `https://api.myfantasyleague.com/${year}/myleagues?USERNAME=${encodeURIComponent(
-      username
-    )}&PASSWORD=${encodeURIComponent(password)}&JSON=1`;
+    // ── Step 1: Login to get MFL_USER_ID cookie ─────────────────────
+    // MFL recommends POST for security. We try POST first, then fall
+    // back to GET if POST returns empty (some MFL hosts redirect POST→GET).
+    const loginUrl = `https://api.myfantasyleague.com/${year}/login`;
+    const loginParams = new URLSearchParams({
+      USERNAME: username,
+      PASSWORD: password,
+      XML: '1',
+    });
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Calling myleagues for auth (year:', year, ')');
+      console.log('[mfl-login] Step 1: calling /login (year:', year, ')');
     }
 
-    const response = await fetch(myLeaguesUrl, { method: 'GET' });
+    // Try POST first (MFL-recommended method)
+    let loginResponse = await fetch(loginUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: loginParams.toString(),
+    });
 
-    if (!response.ok) {
+    let loginText = await loginResponse.text();
+
+    // If POST returned empty body (redirect converted POST→GET), fall back to GET
+    if (!loginText.trim()) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[mfl-login] POST returned empty, falling back to GET');
+      }
+      loginResponse = await fetch(`${loginUrl}?${loginParams.toString()}`, {
+        method: 'GET',
+      });
+      loginText = await loginResponse.text();
+    }
+
+    if (!loginResponse.ok && !loginText.trim()) {
       return {
         success: false,
-        error: `MFL API error: ${response.status} ${response.statusText}`,
+        error: `MFL API error: ${loginResponse.status} ${loginResponse.statusText}`,
       };
     }
 
-    const contentType = response.headers.get('content-type');
-    let data: any;
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[mfl-login] login response:', loginText.substring(0, 300));
+    }
 
-    if (contentType?.includes('application/json')) {
-      data = await response.json();
+    const parsed = parseMFLLoginXML(loginText);
+
+    if (parsed.error) {
+      return {
+        success: false,
+        error: parsed.error === 'Invalid Password'
+          ? 'Invalid username or password.'
+          : parsed.error,
+      };
+    }
+
+    if (!parsed.cookie) {
+      return {
+        success: false,
+        error: 'MFL login succeeded but no cookie was returned.',
+      };
+    }
+
+    const mflCookie = parsed.cookie;
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ')');
+    }
+
+    // ── Step 2: Call myleagues with cookie to get franchise_id ──────
+    const myLeaguesUrl = `https://api.myfantasyleague.com/${year}/myleagues?JSON=1`;
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[mfl-login] Step 2: calling /myleagues with cookie');
+    }
+
+    const mlResponse = await fetch(myLeaguesUrl, {
+      method: 'GET',
+      headers: {
+        Cookie: `MFL_USER_ID=${mflCookie}`,
+      },
+    });
+
+    if (!mlResponse.ok) {
+      // Login worked but myleagues failed — still a partial success
+      return {
+        success: true,
+        userId: mflCookie,
+        username,
+        franchiseId: '',
+        leagueId: leagueId || '',
+        role: 'owner',
+      };
+    }
+
+    const mlContentType = mlResponse.headers.get('content-type');
+    let mlData: any;
+
+    if (mlContentType?.includes('application/json')) {
+      mlData = await mlResponse.json();
     } else {
-      const text = await response.text();
+      const mlText = await mlResponse.text();
       try {
-        data = JSON.parse(text);
+        mlData = JSON.parse(mlText);
       } catch {
-        // MFL returns HTML (the login page) when credentials are invalid
-        if (text.includes('<title>') || text.includes('<!DOCTYPE')) {
-          return {
-            success: false,
-            error: 'Invalid username or password.',
-          };
+        // myleagues returned HTML — login worked but can't resolve franchise
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[mfl-login] myleagues returned non-JSON:', mlText.substring(0, 200));
         }
-        console.warn('[mfl-login] Non-JSON from myleagues. Content-Type:', contentType, 'Body:', text.substring(0, 200));
         return {
-          success: false,
-          error: 'MFL returned an unexpected response. The service may be temporarily unavailable.',
-          rawResponse: text.substring(0, 500),
+          success: true,
+          userId: mflCookie,
+          username,
+          franchiseId: '',
+          leagueId: leagueId || '',
+          role: 'owner',
         };
       }
     }
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] myleagues response:', JSON.stringify(data, null, 2).substring(0, 1000));
+      console.log('[mfl-login] myleagues response:', JSON.stringify(mlData, null, 2).substring(0, 1000));
     }
 
-    // Check for explicit errors (bad credentials return an error field)
-    if (data.error) {
-      return {
-        success: false,
-        error: data.error,
-      };
-    }
-
-    // Extract leagues array from response
+    // Extract leagues array
     const leagues = (
-      data?.myleagues?.league ??
-      data?.leagues?.league ??
+      mlData?.myleagues?.league ??
+      mlData?.leagues?.league ??
       []
     ) as any[];
 
-    // Normalize: MFL returns a single object instead of array when there's only one league
+    // MFL returns a single object instead of array when there's only one league
     const leagueList = Array.isArray(leagues) ? leagues : leagues ? [leagues] : [];
 
     if (leagueList.length === 0) {
+      // Login worked but no leagues found
       return {
-        success: false,
-        error: 'Invalid credentials or no leagues found for this account.',
+        success: true,
+        userId: mflCookie,
+        username,
+        franchiseId: '',
+        leagueId: leagueId || '',
+        role: 'owner',
       };
     }
 
@@ -133,31 +227,29 @@ export async function authenticateWithMFL(
 
     if (!targetLeague && leagueId) {
       return {
-        success: false,
+        success: true,
+        userId: mflCookie,
+        username,
+        franchiseId: '',
+        leagueId: leagueId,
+        role: 'owner',
         error: `Your account is not a member of league ${leagueId}.`,
-      };
-    }
-
-    if (!targetLeague) {
-      return {
-        success: false,
-        error: 'Could not determine your league membership.',
       };
     }
 
     // Extract franchise_id from the target league
     const franchiseId = normalizeFranchise(
-      targetLeague.franchise_id ??
-      targetLeague.franchiseId ??
-      targetLeague.FranchiseId ??
-      targetLeague.team_id ??
-      targetLeague.teamId ??
-      targetLeague.team ??
+      targetLeague?.franchise_id ??
+      targetLeague?.franchiseId ??
+      targetLeague?.FranchiseId ??
+      targetLeague?.team_id ??
+      targetLeague?.teamId ??
+      targetLeague?.team ??
       ''
     );
 
     const resolvedLeagueId =
-      `${targetLeague.id ?? targetLeague.league_id ?? targetLeague.leagueId ?? targetLeague.league ?? leagueId ?? ''}`;
+      `${targetLeague?.id ?? targetLeague?.league_id ?? targetLeague?.leagueId ?? targetLeague?.league ?? leagueId ?? ''}`;
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('[mfl-login] Resolved franchiseId:', franchiseId, 'leagueId:', resolvedLeagueId);
@@ -165,12 +257,12 @@ export async function authenticateWithMFL(
 
     return {
       success: true,
-      userId: username,
+      userId: mflCookie,
       username,
       franchiseId,
       leagueId: resolvedLeagueId,
       role: 'owner',
-      rawResponse: data,
+      rawResponse: mlData,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
