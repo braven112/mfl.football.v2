@@ -46,13 +46,27 @@ export async function authenticateWithMFL(
       JSON: '1',
     });
 
-    const response = await fetch(loginUrl, {
+    // MFL redirects from api.myfantasyleague.com to a numbered host (e.g. www49).
+    // HTTP 302 redirects convert POST→GET, which breaks login. Handle manually.
+    const bodyString = params.toString();
+    let response = await fetch(loginUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: bodyString,
+      redirect: 'manual',
     });
+
+    // Follow redirect manually, preserving POST method
+    if (response.status >= 300 && response.status < 400) {
+      const redirectUrl = response.headers.get('location');
+      if (redirectUrl) {
+        response = await fetch(redirectUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: bodyString,
+        });
+      }
+    }
 
     if (!response.ok) {
       return {
@@ -74,10 +88,11 @@ export async function authenticateWithMFL(
         data = JSON.parse(text);
       } catch {
         // MFL returned non-JSON (XML or HTML error page) - treat as failure
-        console.warn('[mfl-login] Non-JSON response from MFL:', text.substring(0, 200));
+        console.warn('[mfl-login] Non-JSON response from MFL. Content-Type:', contentType, 'Status:', response.status, 'URL:', response.url);
+        console.warn('[mfl-login] Response body preview:', text.substring(0, 500));
         return {
           success: false,
-          error: 'MFL returned an unexpected response format. The service may be temporarily unavailable.',
+          error: `MFL returned non-JSON (content-type: ${contentType}, status: ${response.status}, url: ${response.url}). Preview: ${text.substring(0, 200)}`,
           rawResponse: text.substring(0, 500),
         };
       }
