@@ -33,13 +33,10 @@ export function getAuthUser(request: Request): AuthUser | null {
 
   // Priority 1: Check for session JWT in cookies
   const cookieHeader = request.headers.get('cookie');
-  console.log('[auth.ts] cookieHeader present?', !!cookieHeader);
   const sessionToken = getSessionTokenFromCookie(cookieHeader);
-  console.log('[auth.ts] sessionToken found?', !!sessionToken);
 
   if (sessionToken) {
     const sessionData = validateSessionToken(sessionToken);
-    console.log('[auth.ts] sessionData valid?', !!sessionData);
     if (sessionData) {
       return {
         id: sessionData.userId,

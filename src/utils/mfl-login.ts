@@ -73,15 +73,12 @@ export async function authenticateWithMFL(
       try {
         data = JSON.parse(text);
       } catch {
-        // MFL might return XML or error message - just check if it's valid
-        // If we got here without an error, assume login was successful
+        // MFL returned non-JSON (XML or HTML error page) - treat as failure
+        console.warn('[mfl-login] Non-JSON response from MFL:', text.substring(0, 200));
         return {
-          success: true,
-          userId: username,
-          username: username,
-          franchiseId: '',
-          leagueId: leagueId || '',
-          role: 'owner',
+          success: false,
+          error: 'MFL returned an unexpected response format. The service may be temporarily unavailable.',
+          rawResponse: text.substring(0, 500),
         };
       }
     }
@@ -94,8 +91,11 @@ export async function authenticateWithMFL(
       };
     }
 
-    // Debug log for dev to see actual shape
-    console.log('[mfl-login] raw login response', data);
+    // Debug log for dev to see actual MFL response shape
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[mfl-login] raw login response keys:', Object.keys(data));
+      console.log('[mfl-login] raw login response:', JSON.stringify(data, null, 2).substring(0, 1000));
+    }
 
     // Extract user information from MFL response
     // The response shape varies across MFL deployments, so normalize generously
@@ -137,19 +137,7 @@ export async function authenticateWithMFL(
     );
     normalizedFranchiseId = normalizeFranchise(normalizedFranchiseId);
 
-    if (!normalizedFranchiseId) {
-      const normalizeKey = (v: string | undefined) =>
-        typeof v === 'string' ? v.trim().toLowerCase() : v?.toLowerCase?.();
-      const keys = [normalizeKey(username), normalizeKey(normalizedUserId)].filter(Boolean) as string[];
-      for (const key of keys) {
-        if (key && USER_FRANCHISE_OVERRIDES[key]) {
-          normalizedFranchiseId = normalizeFranchise(USER_FRANCHISE_OVERRIDES[key]);
-          break;
-        }
-      }
-    }
-
-    const normalizedLeagueId = pickFrom(
+    let normalizedLeagueId = pickFrom(
       ['LEAGUE_ID', 'league_id', 'leagueId', 'LeagueId', 'league'],
       [{ LEAGUE_ID: leagueId }, ...sourceCandidates]
     );
