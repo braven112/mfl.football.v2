@@ -24,7 +24,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         JSON.stringify({
           success: false,
           message: mflResponse.error || 'Authentication failed',
-          debug: mflResponse.rawResponse ? String(mflResponse.rawResponse).substring(0, 300) : undefined,
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
@@ -35,8 +34,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         JSON.stringify({
           success: false,
           message: 'Login succeeded but your franchise could not be determined. Contact the commissioner.',
-          debug: mflResponse.error || 'no error detail',
-          rawResponse: mflResponse.rawResponse ? String(mflResponse.rawResponse).substring(0, 300) : undefined,
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );

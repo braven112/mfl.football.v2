@@ -115,7 +115,6 @@ const envStaticHost = (import.meta.env.PUBLIC_STATIC_HOST as string | undefined)
           });
 
           const data = await response.json();
-          console.log('[login] API response:', JSON.stringify(data, null, 2));
 
           if (!response.ok) {
             throw new Error(data.message || 'Login failed');

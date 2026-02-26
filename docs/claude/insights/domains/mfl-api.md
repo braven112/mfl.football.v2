@@ -212,6 +212,36 @@ GET https://api.myfantasyleague.com/2025/export?TYPE=pointsAllowed&L=13522&JSON=
 
 ---
 
+## 2026-02-26 - MFL Login Authentication: Critical Implementation Details
+
+**Context:** Implementing user login flow (POST credentials → get cookie → resolve franchise_id)
+
+**Insight:** Three critical findings for MFL authentication from server-side code:
+
+1. **Login endpoint does NOT support `JSON=1`** — it returns an empty body with null content-type. You MUST use `XML=1`. The response is XML: `<status MFL_USER_ID="base64cookie"/>` for success, `<error>Invalid Password</error>` for failure.
+
+2. **The standalone `/myleagues` endpoint returns HTML from server-side `fetch()`** — regardless of auth method (Cookie header, USERNAME/PASSWORD params, JSON=1, XML=1). It always returns the full HTML page. Do NOT use this endpoint from Node.js/serverless functions.
+
+3. **Use `export?TYPE=myleagues&JSON=1` instead** — this follows the standard MFL export pattern, returns proper JSON, and accepts the `MFL_USER_ID` cookie via the `Cookie` header. Returns `{"leagues":{}}` when unauthenticated, and `{"leagues":{"league":[...]}}` with `franchise_id` when authenticated.
+
+**Working auth flow:**
+```
+Step 1: POST /login with XML=1 → parse XML for MFL_USER_ID cookie
+        (fall back to GET if POST returns empty — redirect converts POST→GET)
+Step 2: GET /export?TYPE=myleagues&JSON=1 with Cookie: MFL_USER_ID=<cookie>
+        → extract franchise_id from leagues array
+```
+
+**Additional notes:**
+- MFL's `api.myfantasyleague.com` host does NOT redirect for `/login` or `/export` — it serves directly
+- The `Cookie` header works with the export endpoint from Vercel serverless functions
+- `URLSearchParams` encodes spaces as `+` (form-style); `encodeURIComponent` uses `%20` — MFL may prefer `+`
+- MFL returns a single object (not array) when user has only one league — always normalize
+
+**Key files:** `src/utils/mfl-login.ts`, `src/pages/api/auth/login.ts`
+
+---
+
 ## 2026-02-24 - MFL "Coach" Tab / Who Should I Start
 
 **Context:** Investigating what backs the MFL "Coach" feature on their website
