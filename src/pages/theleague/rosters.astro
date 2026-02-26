@@ -2197,10 +2197,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <div class="planner-section planner-section--extensions">
           <h2 class="planner-section__title">Extensions</h2>
           <div class="chart-grid">
-            <ChartCard title={`Franchise Tag Options (${currentLeagueYear})`} subtitle="Out of contract players likely to be considered for franchise tags">
+            <ChartCard title={`Franchise Tag Options (${currentLeagueYear + 1})`} subtitle="Out of contract players likely to be considered for franchise tags">
               <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
             </ChartCard>
-            <ChartCard title="Veteran Extension Candidates" subtitle="Top performers with 2-3 years on contract and under $2.5M salary">
+            <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
               <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
             </ChartCard>
           </div>
