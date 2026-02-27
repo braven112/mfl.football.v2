@@ -169,6 +169,36 @@ docs/claude/insights/
 - Admin-only features (visibility: "admin" in nav-config.json)
 - Unreleased or in-progress features not yet available to all users
 
+### Writing Style (MANDATORY)
+
+Every What's New entry MUST be written in the league's established editorial voice. This is not optional — it applies to every new-page, new-feature, and enhancement entry.
+
+**Voice:** Conversational, witty, self-aware humor. Slightly sarcastic but never mean-spirited. Written like a sports columnist who actually understands the product.
+
+**Structure (2-3 paragraphs in `description`):**
+1. **Opening hook** — A humorous problem statement or analogy about the old way / the pain point. Draw from real-world comparisons or fantasy football culture. Examples: "used to require twelve browser tabs, three spreadsheets, and the quiet resignation that you'd never have all the data in one place", "had all the navigability of a phone book".
+2. **Feature details** — What it does, explained with specific capabilities in user terms. Technical details wrapped in accessible language. Be concrete about what the user can do.
+3. **Closing** — A callback to the opening joke, a wry practical observation, or a nudge to try it. Examples: "Use it before the auction, or don't — and then use it after the auction to figure out where things went wrong", "Trust, but verify."
+
+**Hallmarks to include:**
+- Real-world comparisons ("the difference between a folding map and a GPS")
+- Fantasy football / sports metaphors ("all the reliability of a rookie quarterback in a snow game")
+- League member shoutouts when a feature was built for or inspired by someone ("This one's for Wabbit", "This one started with a simple request from The Dream")
+- Light ribbing of league culture and habits
+- Personality in the `summary` field too — not just a dry feature description
+
+**Tone calibration:**
+- Bug fixes can be shorter and drier, with one good joke
+- New pages and features get the full 2-3 paragraph treatment
+- Enhancements land somewhere in between
+- `excludeFromHero` entries (minor polish) can be more concise
+
+**Anti-patterns (DO NOT):**
+- Write dry, corporate-sounding release notes
+- Use generic language like "We're excited to announce..."
+- Skip the humor — every entry needs personality
+- Write the `summary` as a plain feature description without voice
+
 ### Entry Format
 Add the new entry at the **top** of the array (newest first):
 ```json
