@@ -99,11 +99,9 @@ const isAuthenticated = !!team;
   ) : (
     <!-- Unauthenticated State: Verify Prompt -->
     <a
-      href={verifyUrl}
+      href={`${leagueBase}/login`}
       class="nav-footer__verify"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Verify your team ownership on MFL"
+      aria-label="Log in to verify your team"
     >
       <div class="nav-footer__verify-icon">
         <svg class="nav-footer__icon" aria-hidden="true">
