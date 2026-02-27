@@ -168,6 +168,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
                   headshot={player.headshot}
                   position={player.position}
                   nflTeam={player.nflTeam}
+                  playerData={{ id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId }}
                 />
               </td>
               <td data-label="Points" class="align-right">{(player.points ?? 0).toFixed(2)}</td>
@@ -185,6 +186,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 <script>
   import { buildRankingLookup, COMPOSITE_IMPORT_ID, AVERAGE_IMPORT_ID, onRankingsChanged } from '../../utils/rankings-lookup';
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
   // NFL team code to full name mapping
   const NFL_TEAM_NAMES = {
@@ -368,7 +370,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
         tableHtml += `
           <tr>
             <td data-label="Player">
-              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam })}
+              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam, playerData: { id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId } })}
             </td>
             <td data-label="Points" class="align-right">${(player.points ?? 0).toFixed(2)}</td>
             <td data-label="${salaryYear} Salary" class="align-right salary-value-cell">${currencyFormatter.format(player.salary)}</td>
@@ -391,6 +393,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 
   // Find and render all franchise tag eligibility containers
   document.querySelectorAll('.franchise-tag-eligibility').forEach((el) => {
+    initPlayerModalTrigger(el as HTMLElement);
     renderFranchiseTagTable(el);
   });
 

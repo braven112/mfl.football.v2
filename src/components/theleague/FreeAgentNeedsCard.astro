@@ -71,6 +71,7 @@ const hasNeeds = needs.length > 0;
                       nflTeam={fa.nflTeam}
                       size="compact"
                       class="fa-needs__player-cell"
+                      playerData={{ id: fa.id, name: fa.name, position: fa.position, nflTeam: fa.nflTeam }}
                     />
                   </td>
                   <td class="fa-needs__proj">{fa.projectedScore.toFixed(1)}</td>
@@ -91,6 +92,14 @@ const hasNeeds = needs.length > 0;
     </div>
   )}
 </ChartCard>
+
+<script>
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+
+  document.querySelectorAll('.fa-needs').forEach((el) => {
+    initPlayerModalTrigger(el as HTMLElement);
+  });
+</script>
 
 <style>
   .fa-needs {
