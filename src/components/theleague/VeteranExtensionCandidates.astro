@@ -16,6 +16,7 @@
 import { currencyFormatter } from '../../utils/formatters';
 import { calculateExtensionSalary } from '../../utils/extension-salary-calculator';
 import leagueAssets from '../../data/theleague.assets.json';
+import PlayerCell from './PlayerCell.astro';
 
 export interface Props {
   players: Array<{
@@ -125,12 +126,6 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   return player.name;
 };
 
-const getPlayerAvatarSrc = (player: typeof players[0]): string => {
-  if (player.position?.toUpperCase() === 'DEF') {
-    return player.nflLogo || DEFAULT_HEADSHOT_URL;
-  }
-  return player.headshot || DEFAULT_HEADSHOT_URL;
-};
 ---
 
 <div class="veteran-extension-candidates" data-all-players={JSON.stringify(players)} data-season={season}>
@@ -150,40 +145,19 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         </thead>
         <tbody>
           {extensionCandidates.map((player) => {
-            const isDefense = player.position?.toUpperCase() === 'DEF';
             const displayName = getPlayerDisplayName(player);
-            const avatarSrc = getPlayerAvatarSrc(player);
             const top5Average = seasonAverages.extensionSalaries?.[player.position?.toUpperCase()] ?? 0;
             const extensionCalc = calculateExtensionSalary(player.salary, player.contractYears, top5Average);
             return (
             <tr>
               <td data-label="Player">
-                <div class="player-cell">
-                  <div class={`player-cell__avatar${isDefense ? ' player-cell__avatar--def' : ''}`}>
-                    <img
-                      src={avatarSrc}
-                      alt={`${displayName} logo`}
-                      loading="lazy"
-                      decoding="async"
-                      onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
-                    />
-                  </div>
-                  <div>
-                    <strong>{displayName}</strong>
-                    <div class="player-meta">
-                      {!isDefense && player.nflTeam && player.nflTeam !== 'FA' && (
-                        <img
-                          src={player.nflLogo}
-                          alt={`${player.nflTeam} logo`}
-                          class="player-meta__logo"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
-                      {player.position && <span class="player-meta__pos">{player.position}</span>}
-                    </div>
-                  </div>
-                </div>
+                <PlayerCell
+                  name={displayName}
+                  headshot={player.headshot}
+                  position={player.position}
+                  nflTeam={player.nflTeam}
+                  playerData={{ id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId }}
+                />
               </td>
               <td data-label="Current" class="align-right contract-cell">{currencyFormatter.format(player.salary)} <span class="contract-cell__x">x</span> {player.contractYears}</td>
               <td data-label="Extended" class="align-right contract-cell">{currencyFormatter.format(extensionCalc.newContractSalary)} <span class="contract-cell__x">x</span> {player.contractYears + 2}</td>
@@ -198,6 +172,8 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
 <script>
   import { buildRankingLookup, COMPOSITE_IMPORT_ID, AVERAGE_IMPORT_ID, onRankingsChanged } from '../../utils/rankings-lookup';
+  import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
   // NFL team code to full name mapping
   const NFL_TEAM_NAMES = {
@@ -369,8 +345,6 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         maximumFractionDigits: 0,
       });
 
-      const DEFAULT_HEADSHOT = 'https://s.yimg.com/cv/apiv2/default/nfl/nophoto.png';
-
       // Parse salary averages for extension calculations
       let salaryAverages = {};
       if (salaryAveragesJson) {
@@ -386,8 +360,6 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         const displayName = isDefense
           ? `${NFL_TEAM_NAMES[player.nflTeam] || player.nflTeam} Defense`
           : player.name;
-        const avatarSrc = isDefense ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
-        const nflTeam = player.nflTeam || 'FA';
 
         // Calculate extension salary using the unbreakable formula
         const top5Average = salaryAverages[player.position?.toUpperCase()] ?? 0;
@@ -396,19 +368,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         tableHtml += `
           <tr>
             <td data-label="Player">
-              <div class="player-cell">
-                <div class="player-cell__avatar${isDefense ? ' player-cell__avatar--def' : ''}">
-                  <img src="${avatarSrc}" alt="${displayName} logo" loading="lazy"
-                       onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT}';" />
-                </div>
-                <div>
-                  <strong>${displayName}</strong>
-                  <div class="player-meta">
-                    ${!isDefense && player.nflLogo ? `<img src="${player.nflLogo}" alt="${nflTeam} logo" class="player-meta__logo" loading="lazy" />` : ''}
-                    ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
-                  </div>
-                </div>
-              </div>
+              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam, playerData: { id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId } })}
             </td>
             <td data-label="Current" class="align-right contract-cell">${currencyFormatter.format(player.salary)} <span class="contract-cell__x">x</span> ${player.contractYears}</td>
             <td data-label="Extended" class="align-right contract-cell">${currencyFormatter.format(extensionSalary)} <span class="contract-cell__x">x</span> ${player.contractYears + 2}</td>
@@ -430,6 +390,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
   // Find and render all veteran extension candidates containers
   document.querySelectorAll('.veteran-extension-candidates').forEach((el) => {
+    initPlayerModalTrigger(el as HTMLElement);
     renderVeteranExtensionTable(el);
   });
 
@@ -536,72 +497,6 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     margin: 0 0.15em;
   }
 
-  .veteran-extension-candidates .player-cell {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-  }
-
-  .veteran-extension-candidates .player-cell__avatar {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #f3f4f6;
-  }
-
-  .veteran-extension-candidates .player-cell__avatar img {
-    width: 150%;
-    height: 100%;
-    object-fit: cover;
-    object-position: top;
-  }
-
-  .veteran-extension-candidates .player-cell__avatar--def {
-    border-radius: 50%;
-    background: #f0f0f0;
-    padding: 0.25rem;
-    box-sizing: border-box;
-  }
-
-  .veteran-extension-candidates .player-cell__avatar--def img {
-    width: 100%;
-    object-fit: contain;
-    object-position: center;
-  }
-
-  .veteran-extension-candidates .player-cell strong {
-    display: block;
-    margin-bottom: 0.15rem;
-    color: #1a1a1a;
-    font-size: 0.95rem;
-  }
-
-  .veteran-extension-candidates .player-meta {
-    display: flex;
-    gap: 0.4rem;
-    align-items: center;
-    font-size: 0.8rem;
-    color: #666;
-  }
-
-  .veteran-extension-candidates .player-meta__logo {
-    width: 16px;
-    height: 16px;
-    object-fit: contain;
-  }
-
-  .veteran-extension-candidates .player-meta__pos {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #475569;
-  }
-
   @media (max-width: 767px) {
     .veteran-extension-candidates .eligibility-table {
       font-size: 0.8rem;
@@ -610,11 +505,6 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     .veteran-extension-candidates .eligibility-table th,
     .veteran-extension-candidates .eligibility-table td {
       padding: 0.5rem;
-    }
-
-    .veteran-extension-candidates .player-cell__avatar {
-      width: 32px;
-      height: 32px;
     }
   }
 </style>

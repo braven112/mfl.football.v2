@@ -4,6 +4,7 @@ import RosterHeader from '../../components/theleague/RosterHeader.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
 import PlayerNewsModal from '../../components/theleague/PlayerNewsModal.astro';
 import collegeLogos from '../../data/college-logos.json';
@@ -1533,97 +1534,81 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 class={`roster-row roster-row--${player.displayTag ?? 'active'}${player.positionDivider ? ' roster-row--position-divider' : ''}${player.positionDividerEnd ? ' roster-row--position-divider-end' : ''}${player.tierDivider ? ' roster-row--tier-divider' : ''}${player.activeStripe ? ' roster-row--active-alt' : ''}`}
               >
                 <td data-label="Player" data-column="player">
-                  <div class="player-cell">
-                    <div class="player-cell__avatar">
-                      <img
-                        src={player.headshot ?? DEFAULT_HEADSHOT_URL}
-                        alt={`${player.name} headshot`}
-                        loading="lazy"
-                        decoding="async"
-                        onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
-                      />
-                    </div>
-                    <div>
-                      <strong
-                        class="roster-player-name"
-                        data-player-id={player.id}
-                        data-player-name={player.name}
-                        data-player-position={player.position}
-                        data-player-nfl-team={player.nflTeam}
-                        data-player-status={player.status}
-                        data-player-salary={player.salary}
-                        data-player-contract-years={player.contractYears}
-                        data-player-total-remaining={player.totalRemaining}
-                        data-player-contract-type={player.contractType}
-                        data-player-points={player.points}
-                        data-player-bye-week={player.byeWeek}
-                        data-player-draft-year={player.draftYear}
-                        data-player-birthdate={player.birthdate}
-                        data-player-franchise-id={player.franchiseId}
-                        data-player-roster-slot={player.rosterSlot}
-                        data-player-college={player.college}
-                        data-player-college-logo={player.collegeLogo}
-                        data-player-height={player.height}
-                        data-player-weight={player.weight}
-                        data-player-number={player.number}
-                        data-player-experience={player.experience}
-                        data-player-depth-position={player.depthChartPosition}
-                        data-player-depth-order={player.depthChartOrder}
-                        data-player-injury-status={player.injuryStatus}
-                        data-player-injury-body-part={player.injuryBodyPart}
-                        data-player-sleeper-id={player.sleeperId}
-                        data-player-sleeper-full-name={player.sleeperFullName}
-                        data-player-sleeper-position={player.sleeperPosition}
-                        data-player-fantasy-positions={player.fantasyPositions}
-                        data-player-gsis-id={player.gsisId}
-                        data-player-sleeper-age={player.sleeperAge}
-                        data-player-sleeper-status={player.sleeperStatus}
-                        data-player-sleeper-active={player.sleeperActive}
-                        data-player-depth-chart-ahead={player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}
-                        data-player-espn-id={player.espnId || ''}
-                        style="cursor: pointer;"
-                        title="Click to view full player details"
-                      >
-                        {player.name}
-                        {player.tradeBait && (
-                          <a
-                            href={r(`/theleague/trade-builder?b=${player.franchiseId}`)}
-                            class="trade-bait-link"
-                            title="On Trade Block — Open in Trade Builder"
-                            style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"
-                            onclick="event.stopPropagation();"
-                          >
-                            🏷️
-                          </a>
-                        )}
-                        {player.injuryStatus && (
-                          <button
-                            class="injury-indicator"
-                            data-player-id={player.id}
-                            data-player-name={player.name}
-                            data-injury-status={player.injuryStatus}
-                            data-injury-body-part={player.injuryBodyPart}
-                            title={`${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}`}
-                            style="cursor: pointer; background: none; color: #ef4444; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
-                          >
-                            ({player.injuryStatus.substring(0, 1)})
-                          </button>
-                        )}
-                      </strong>
-                      <div class="player-meta">
-                        {player.position?.toUpperCase() !== 'DEF' && player.nflLogo && (
-                          <img
-                            src={player.nflLogo}
-                            alt={`${player.nflTeam ?? 'FA'} logo`}
-                            class="player-meta__logo"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        )}
-                        {player.position && <span class="player-meta__pos">{player.position}</span>}
-                      </div>
-                    </div>
-                  </div>
+                  <PlayerCell
+                    name={player.name}
+                    headshot={player.headshot}
+                    position={player.position}
+                    nflTeam={player.nflTeam}
+                    playerData={{
+                      id: player.id,
+                      espnId: player.espnId,
+                      name: player.name,
+                      position: player.position,
+                      nflTeam: player.nflTeam,
+                      status: player.status,
+                      salary: player.salary,
+                      contractYears: player.contractYears,
+                      totalRemaining: player.totalRemaining,
+                      contractType: player.contractType,
+                      points: player.points,
+                      byeWeek: player.byeWeek,
+                      draftYear: player.draftYear,
+                      draftTeam: player.draftTeam,
+                      draftRound: player.draftRound,
+                      draftPick: player.draftPick,
+                      birthdate: player.birthdate,
+                      franchiseId: player.franchiseId,
+                      rosterSlot: player.rosterSlot,
+                      college: player.college,
+                      collegeLogo: player.collegeLogo,
+                      height: player.height,
+                      weight: player.weight,
+                      number: player.number,
+                      experience: player.experience,
+                      depthChartPosition: player.depthChartPosition,
+                      depthChartOrder: player.depthChartOrder,
+                      depthChartAhead: player.depthChartAhead,
+                      injuryStatus: player.injuryStatus,
+                      injuryBodyPart: player.injuryBodyPart,
+                      sleeperId: player.sleeperId,
+                      sleeperFullName: player.sleeperFullName,
+                      sleeperPosition: player.sleeperPosition,
+                      fantasyPositions: player.fantasyPositions,
+                      gsisId: player.gsisId,
+                      sleeperAge: player.sleeperAge,
+                      sleeperStatus: player.sleeperStatus,
+                      sleeperActive: player.sleeperActive,
+                      offenseSnaps: player.offenseSnaps,
+                      defenseSnaps: player.defenseSnaps,
+                      stSnaps: player.stSnaps,
+                    }}
+                  >
+                    <Fragment slot="after-name">
+                      {player.tradeBait && (
+                        <a
+                          href={r(`/theleague/trade-builder?b=${player.franchiseId}`)}
+                          class="trade-bait-link"
+                          title="On Trade Block — Open in Trade Builder"
+                          style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"
+                        >
+                          🏷️
+                        </a>
+                      )}
+                      {player.injuryStatus && (
+                        <button
+                          class="injury-indicator"
+                          data-player-id={player.id}
+                          data-player-name={player.name}
+                          data-injury-status={player.injuryStatus}
+                          data-injury-body-part={player.injuryBodyPart}
+                          title={`${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}`}
+                          style="cursor: pointer; background: none; color: #ef4444; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
+                        >
+                          ({player.injuryStatus.substring(0, 1)})
+                        </button>
+                      )}
+                    </Fragment>
+                  </PlayerCell>
                 </td>
 
                 {/* Coach Mode Cells */}
@@ -2775,62 +2760,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     background: var(--color-bg-subtle, #f7f8fb);
   }
 
-  :global(.player-cell) {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  :global(.player-cell__avatar) {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  :global(.player-cell__avatar img) {
-    width: 150%;
-    height: 100%;
-    object-fit: cover;
-    object-position: top;
-  }
-
-  :global(.player-cell__avatar--def img) {
-    width: 100%;
-    object-fit: contain;
-    object-position: center;
-    border: 0;
-    background: transparent;
-  }
-  :global(.player-cell__avatar--def) {
-    border: 0;
-    background: transparent;
-  }
-  :global(.player-cell__avatar--dm) {
-    background: #fff7ed;
-    border-color: #fed7aa;
-    color: #c2410c;
-    font-weight: 700;
-    font-size: 0.75rem;
-  }
-
-  :global(.player-cell__nfl-icon) {
-    width: 1rem;
-    height: 1rem;
-    margin-left: 0.4rem;
-    vertical-align: middle;
-    object-fit: contain;
-  }
-
-  :global(.player-cell__meta) {
-    display: block;
-    font-size: 0.8rem;
-    color: #94a3b8;
+  /* Roster table uses 32px avatars (smaller than the 40px default) */
+  :global(.roster-table .player-cell) {
+    --player-avatar-size: 2rem;
   }
 
   :global(.pill) {
@@ -3770,6 +3702,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   set:html={JSON.stringify(weeklyPlayerResults)}
 ></script>
 
+<script>
+  import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  (window as any).__buildPlayerCellHTML = buildPlayerCellHTML;
+
+  // Attach delegated modal trigger (module scripts run after DOM parsing)
+  const rosterTbody = document.getElementById('rosterTableBody');
+  if (rosterTbody) initPlayerModalTrigger(rosterTbody);
+</script>
+
 <script type="module">
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
@@ -4689,6 +4631,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const countPractice = document.getElementById('countPractice');
     const countInjured = document.getElementById('countInjured');
 
+    // Delegated click handler for player detail modals (works across re-renders)
+    // Modal trigger is attached in the Astro-processed <script> above
+
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
     const hiddenColumns = new Set();
@@ -5206,89 +5151,47 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </span>
           ` : '';
 
+          const injuryBadge = player.injuryStatus
+            ? `<button class="injury-indicator" data-player-id="${player.id}" data-player-name="${player.name}" data-injury-status="${player.injuryStatus}" data-injury-body-part="${player.injuryBodyPart || ''}" title="${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}" style="cursor: pointer; background: none; color: #e56263; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;">(${player.injuryStatus.substring(0, 1)})</button>`
+            : '';
+
+          const tradeBaitBadge = player.tradeBait
+            ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;">🏷️</a>`
+            : '';
+
+          const playerCellHtml = window.__buildPlayerCellHTML({
+            name: player.name,
+            headshot: player.headshot,
+            position: player.position,
+            nflTeam: player.nflTeam,
+            playerData: {
+              id: player.id, espnId: player.espnId, name: player.name,
+              position: player.position, nflTeam: player.nflTeam, status: player.status,
+              salary: player.salary, contractYears: player.contractYears,
+              totalRemaining: player.totalRemaining, contractType: player.contractType,
+              points: player.points, byeWeek: player.byeWeek,
+              draftYear: player.draftYear, draftTeam: player.draftTeam,
+              draftRound: player.draftRound, draftPick: player.draftPick,
+              birthdate: player.birthdate, franchiseId: player.franchiseId,
+              rosterSlot: player.rosterSlot, college: player.college,
+              collegeLogo: player.collegeLogo, height: player.height,
+              weight: player.weight, number: player.number,
+              experience: player.experience, depthChartPosition: player.depthChartPosition,
+              depthChartOrder: player.depthChartOrder, depthChartAhead: player.depthChartAhead,
+              injuryStatus: player.injuryStatus, injuryBodyPart: player.injuryBodyPart,
+              sleeperId: player.sleeperId, sleeperFullName: player.sleeperFullName,
+              sleeperPosition: player.sleeperPosition, fantasyPositions: player.fantasyPositions,
+              gsisId: player.gsisId, sleeperAge: player.sleeperAge,
+              sleeperStatus: player.sleeperStatus, sleeperActive: player.sleeperActive,
+              offenseSnaps: player.offenseSnaps, defenseSnaps: player.defenseSnaps,
+              stSnaps: player.stSnaps,
+            },
+            afterName: injuryBadge + tradeBaitBadge,
+          });
+
           return `<tr data-player-id="${player.id}" class="${rowClasses.join(' ')}">
             <td data-label="Player" data-column="player">
-              <div class="player-cell">
-                <div class="player-cell__avatar${useDefenseLogo ? ' player-cell__avatar--def' : ''}">
-                  <img src="${avatarSrc}" alt="${player.name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
-                </div>
-                <div>
-                  <strong
-                    class="roster-player-name"
-                    data-player-id="${player.id}"
-                    data-player-name="${player.name}"
-                    data-player-position="${player.position}"
-                    data-player-nfl-team="${player.nflTeam}"
-                    data-player-status="${player.status}"
-                    data-player-salary="${player.salary || 0}"
-                    data-player-contract-years="${player.contractYears || 1}"
-                    data-player-total-remaining="${player.totalRemaining || 0}"
-                    data-player-contract-type="${player.contractType}"
-                    data-player-points="${player.points || 0}"
-                    data-player-bye-week="${player.byeWeek || ''}"
-                    data-player-draft-year="${player.draftYear || ''}"
-                    data-player-draft-team="${player.draftTeam || ''}"
-                    data-player-draft-round="${player.draftRound || ''}"
-                    data-player-draft-pick="${player.draftPick || ''}"
-                    data-player-birthdate="${player.birthdate || ''}"
-                    data-player-franchise-id="${player.franchiseId || ''}"
-                    data-player-roster-slot="${player.rosterSlot || ''}"
-                    data-player-college="${player.college || ''}"
-                    data-player-college-logo="${player.collegeLogo || ''}"
-                    data-player-height="${player.height || ''}"
-                    data-player-weight="${player.weight || ''}"
-                    data-player-number="${player.number || ''}"
-                    data-player-experience="${player.experience || ''}"
-                    data-player-depth-position="${player.depthChartPosition || ''}"
-                    data-player-depth-order="${player.depthChartOrder || ''}"
-                    data-player-injury-status="${player.injuryStatus || ''}"
-                    data-player-injury-body-part="${player.injuryBodyPart || ''}"
-                    data-player-sleeper-id="${player.sleeperId || ''}"
-                    data-player-sleeper-full-name="${player.sleeperFullName || ''}"
-                    data-player-sleeper-position="${player.sleeperPosition || ''}"
-                    data-player-fantasy-positions="${player.fantasyPositions || ''}"
-                    data-player-gsis-id="${player.gsisId || ''}"
-                    data-player-sleeper-age="${player.sleeperAge || ''}"
-                    data-player-sleeper-status="${player.sleeperStatus || ''}"
-                    data-player-sleeper-active="${player.sleeperActive || ''}"
-                    data-player-offense-snaps="${player.offenseSnaps ?? ''}"
-                    data-player-defense-snaps="${player.defenseSnaps ?? ''}"
-                    data-player-st-snaps="${player.stSnaps ?? ''}"
-                    data-player-depth-chart-ahead="${player.depthChartAhead ? btoa(JSON.stringify(player.depthChartAhead)) : ''}"
-                    data-player-espn-id="${player.espnId || ''}"
-                    data-player-trade-bait="${player.tradeBait ? 'true' : 'false'}"
-                    style="cursor: pointer;"
-                    title="Click to view full player details"
-                  >${player.name}
-                  ${
-                    player.injuryStatus
-                      ? `<button
-                          class="injury-indicator"
-                          data-player-id="${player.id}"
-                          data-player-name="${player.name}"
-                          data-injury-status="${player.injuryStatus}"
-                          data-injury-body-part="${player.injuryBodyPart || ''}"
-                          title="${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}"
-                          style="cursor: pointer; background: none; color: #e56263; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
-                        >(${player.injuryStatus.substring(0, 1)})</button>`
-                      : ''
-                  }
-                  </strong>${actionBadge}
-                  <div class="player-meta">
-                    ${
-                      !useDefenseLogo && player.nflLogo
-                        ? `<img src="${player.nflLogo}" alt="${player.nflTeam || 'FA'} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
-                        : ''
-                    }
-                    ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
-                    ${
-                      player.tradeBait
-                        ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" onclick="event.stopPropagation();" style="font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"><span class="trade-bait-badge">🏷️</span></a>`
-                        : ''
-                    }
-                  </div>
-                </div>
-              </div>
+              ${playerCellHtml}${actionBadge}
             </td>
             ${/* Coach Mode Cells */ ''}
             ${oppRankCell}
@@ -5336,70 +5239,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           });
         });
 
-        // Player name clicks for details modal
-        document.querySelectorAll('.roster-player-name').forEach(nameEl => {
-          nameEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const parseSnap = (value) => {
-              if (value === undefined || value === null || value === '') return null;
-              const num = parseInt(value, 10);
-              return Number.isFinite(num) ? num : null;
-            };
-            const parseDraft = (value) => {
-              if (value === undefined || value === null || value === '') return null;
-              const num = parseInt(value, 10);
-              return Number.isFinite(num) ? num : null;
-            };
-            const playerData = {
-              id: nameEl.dataset.playerId,
-              espnId: nameEl.dataset.playerEspnId || null,
-              name: nameEl.dataset.playerName,
-              position: nameEl.dataset.playerPosition,
-              nflTeam: nameEl.dataset.playerNflTeam,
-              status: nameEl.dataset.playerStatus,
-              salary: nameEl.dataset.playerSalary ? parseFloat(nameEl.dataset.playerSalary) : undefined,
-              contractYears: nameEl.dataset.playerContractYears ? parseInt(nameEl.dataset.playerContractYears, 10) : undefined,
-              totalRemaining: nameEl.dataset.playerTotalRemaining ? parseFloat(nameEl.dataset.playerTotalRemaining) : undefined,
-              contractType: nameEl.dataset.playerContractType,
-              points: nameEl.dataset.playerPoints ? parseFloat(nameEl.dataset.playerPoints) : undefined,
-              byeWeek: nameEl.dataset.playerByeWeek ? parseInt(nameEl.dataset.playerByeWeek, 10) : null,
-              draftYear: nameEl.dataset.playerDraftYear ? parseInt(nameEl.dataset.playerDraftYear, 10) : null,
-              draftTeam: nameEl.dataset.playerDraftTeam ? nameEl.dataset.playerDraftTeam.toUpperCase() : null,
-              draftRound: parseDraft(nameEl.dataset.playerDraftRound),
-              draftPick: parseDraft(nameEl.dataset.playerDraftPick),
-              birthdate: nameEl.dataset.playerBirthdate ? parseInt(nameEl.dataset.playerBirthdate, 10) : null,
-              franchiseId: nameEl.dataset.playerFranchiseId,
-              rosterSlot: nameEl.dataset.playerRosterSlot,
-              college: nameEl.dataset.playerCollege,
-              collegeLogo: nameEl.dataset.playerCollegeLogo,
-              height: nameEl.dataset.playerHeight,
-              weight: nameEl.dataset.playerWeight ? parseInt(nameEl.dataset.playerWeight, 10) : undefined,
-              number: nameEl.dataset.playerNumber ? parseInt(nameEl.dataset.playerNumber, 10) : undefined,
-              experience: nameEl.dataset.playerExperience ? parseInt(nameEl.dataset.playerExperience, 10) : undefined,
-              depthChartPosition: nameEl.dataset.playerDepthPosition,
-              depthChartOrder: nameEl.dataset.playerDepthOrder ? parseInt(nameEl.dataset.playerDepthOrder, 10) : undefined,
-              injuryStatus: nameEl.dataset.playerInjuryStatus,
-              injuryBodyPart: nameEl.dataset.playerInjuryBodyPart,
-              sleeperId: nameEl.dataset.playerSleeperId,
-              sleeperFullName: nameEl.dataset.playerSleeperFullName,
-              sleeperPosition: nameEl.dataset.playerSleeperPosition,
-              fantasyPositions: nameEl.dataset.playerFantasyPositions ? nameEl.dataset.playerFantasyPositions.split(',') : undefined,
-              gsisId: nameEl.dataset.playerGsisId,
-              sleeperAge: nameEl.dataset.playerSleeperAge ? parseInt(nameEl.dataset.playerSleeperAge, 10) : undefined,
-              sleeperStatus: nameEl.dataset.playerSleeperStatus,
-              sleeperActive: nameEl.dataset.playerSleeperActive,
-              offenseSnaps: parseSnap(nameEl.dataset.playerOffenseSnaps),
-              defenseSnaps: parseSnap(nameEl.dataset.playerDefenseSnaps),
-              stSnaps: parseSnap(nameEl.dataset.playerStSnaps),
-              depthChartAhead: nameEl.dataset.playerDepthChartAhead ? JSON.parse(atob(nameEl.dataset.playerDepthChartAhead)) : null,
-            };
-            if (window.openPlayerDetailsModal) {
-              window.openPlayerDetailsModal(playerData);
-            } else {
-              console.warn('openPlayerDetailsModal function not found');
-            }
-          });
-        });
 
         // Injury indicator buttons
         document.querySelectorAll('.injury-indicator').forEach(btn => {

@@ -8,7 +8,6 @@
  */
 import ChartCard from './ChartCard.astro';
 import PlayerCell from './PlayerCell.astro';
-import { normalizeTeamCode } from '../../utils/nfl-logo';
 import type { PositionNeed } from '../../utils/free-agent-needs';
 
 export interface Props {
@@ -61,26 +60,23 @@ const hasNeeds = needs.length > 0;
               </tr>
             </thead>
             <tbody class="fa-needs__list">
-              {need.topFreeAgents.map((fa, idx) => {
-                const isDef = fa.position?.toUpperCase() === 'DEF';
-                const teamLogo = `/assets/nfl-logos/${normalizeTeamCode(fa.nflTeam || 'NFL')}.svg`;
-                return (
+              {need.topFreeAgents.map((fa, idx) => (
                 <tr class="fa-needs__player" data-fa-player-id={fa.id}>
                   <td class="fa-needs__rank">{idx + 1}</td>
                   <td class="fa-needs__player-cell-td">
                     <PlayerCell
                       name={fa.name}
-                      headshot={isDef ? teamLogo : fa.headshot}
+                      headshot={fa.headshot}
                       position={fa.position}
                       nflTeam={fa.nflTeam}
-                      nflLogo={isDef ? undefined : teamLogo}
+                      size="compact"
                       class="fa-needs__player-cell"
+                      playerData={{ id: fa.id, name: fa.name, position: fa.position, nflTeam: fa.nflTeam }}
                     />
                   </td>
                   <td class="fa-needs__proj">{fa.projectedScore.toFixed(1)}</td>
                 </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
           <a href="/theleague/players" class="fa-needs__browse">
@@ -96,6 +92,14 @@ const hasNeeds = needs.length > 0;
     </div>
   )}
 </ChartCard>
+
+<script>
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+
+  document.querySelectorAll('.fa-needs').forEach((el) => {
+    initPlayerModalTrigger(el as HTMLElement);
+  });
+</script>
 
 <style>
   .fa-needs {
@@ -184,29 +188,6 @@ const hasNeeds = needs.length > 0;
     width: 1.5rem;
   }
 
-  /* Compact PlayerCell within FA needs card */
-  .fa-needs__player-cell :global(.player-cell) {
-    gap: 0.5rem;
-  }
-
-  .fa-needs__player-cell :global(.player-cell__avatar) {
-    width: 32px;
-    height: 32px;
-  }
-
-  .fa-needs__player-cell :global(.player-cell__name) {
-    font-size: 0.8125rem;
-  }
-
-  .fa-needs__player-cell :global(.player-meta) {
-    font-size: 0.75rem;
-  }
-
-  .fa-needs__player-cell :global(.player-meta__logo) {
-    width: 14px;
-    height: 14px;
-  }
-
   .fa-needs__player-cell-td {
     width: 100%;
   }
@@ -261,13 +242,5 @@ const hasNeeds = needs.length > 0;
       font-size: 0.8125rem;
     }
 
-    .fa-needs__player-cell :global(.player-cell__avatar) {
-      width: 28px;
-      height: 28px;
-    }
-
-    .fa-needs__player-cell :global(.player-cell__name) {
-      font-size: 0.75rem;
-    }
   }
 </style>

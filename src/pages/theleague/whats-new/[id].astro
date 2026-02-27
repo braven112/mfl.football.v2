@@ -48,6 +48,20 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
         <time class="wn-detail__date" datetime={entry.date}>
           {formatEntryDate(entry.date)}
         </time>
+        <button
+          class="wn-detail__share"
+          type="button"
+          aria-label="Share this article"
+          data-title={entry.title}
+          data-summary={entry.summary}
+        >
+          <svg class="wn-detail__share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+          <span class="wn-detail__share-label">Share</span>
+        </button>
       </div>
 
       {imagePath ? (
@@ -185,6 +199,40 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     font-size: var(--font-size-sm, 0.875rem);
     font-weight: var(--font-weight-semibold, 600);
     color: var(--muted-text-color, #6b7280);
+  }
+
+  /* ── Share button ── */
+  .wn-detail__share {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+    background: none;
+    border: 1px solid var(--primary-content-border-color, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .wn-detail__share:hover {
+    color: var(--color-primary, #1c497c);
+    border-color: var(--color-primary, #1c497c);
+    background: var(--primary-light-bg, #f0f4f8);
+  }
+
+  .wn-detail__share-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .wn-detail__share--copied {
+    color: var(--cat-new-feature, #166534);
+    border-color: var(--cat-new-feature, #166534);
   }
 
   /* ── Hero image / fallback ── */
@@ -386,3 +434,39 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     }
   }
 </style>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('.wn-detail__share');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      const url = window.location.href;
+      const title = btn.dataset.title || document.title;
+      const text = btn.dataset.summary || '';
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text, url });
+          return;
+        } catch (err) {
+          if ((err as DOMException).name === 'AbortError') return;
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(url);
+        const label = btn.querySelector('.wn-detail__share-label');
+        if (label) {
+          const original = label.textContent;
+          label.textContent = 'Copied!';
+          btn.classList.add('wn-detail__share--copied');
+          setTimeout(() => {
+            label.textContent = original;
+            btn.classList.remove('wn-detail__share--copied');
+          }, 2000);
+        }
+      } catch {
+        window.prompt('Copy this link:', url);
+      }
+    });
+  }
+</script>
