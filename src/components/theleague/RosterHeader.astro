@@ -1,0 +1,257 @@
+---
+/**
+ * Shared header for roster pages (roster, analytics, planner).
+ * Contains team card, view tabs (as navigation links), and team nav accordion.
+ * Uses View Transitions to persist across page switches for SPA-like feel.
+ */
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { TeamInfo } from '../../utils/roster-data-loader';
+
+export interface Props {
+  activeView: 'roster' | 'analytics' | 'planner';
+  teamLookup: Record<string, TeamInfo>;
+  teamsList: TeamInfo[];
+  defaultTeamId: string;
+  divisionOrder: string[];
+  hideLeaguePrefix: boolean;
+  /** 'client' = roster page (instant JS switching), 'navigate' = analytics/planner (page navigation) */
+  teamSwitchMode: 'client' | 'navigate';
+  /** Current page path for building team switch URLs in navigate mode */
+  currentPath: string;
+  /** Label override shown above the team name */
+  viewLabel?: string;
+}
+
+const {
+  activeView,
+  teamLookup,
+  teamsList,
+  defaultTeamId,
+  divisionOrder,
+  hideLeaguePrefix,
+  teamSwitchMode,
+  currentPath,
+  viewLabel,
+} = Astro.props;
+
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+const viewConfig = {
+  roster: {
+    label: viewLabel || 'Roster & Salary Cap',
+    href: r('/theleague/rosters'),
+    icon: 'icon-banknote',
+    title: 'Roster View',
+    tabLabel: 'Roster',
+  },
+  analytics: {
+    label: viewLabel || 'Advanced Analytics',
+    href: r('/theleague/rosters/analytics'),
+    icon: 'icon-bar-chart',
+    title: 'Analytics View',
+    tabLabel: 'Analytics',
+  },
+  planner: {
+    label: viewLabel || 'League Planner',
+    href: r('/theleague/rosters/planner'),
+    icon: 'icon-chalkboard',
+    title: 'League Planner',
+    tabLabel: 'Planner',
+  },
+};
+
+const currentViewConfig = viewConfig[activeView];
+---
+
+<div class="team-card" data-team-identity transition:name="roster-header" transition:animate="none">
+  {teamLookup[defaultTeamId]?.icon && (
+    <img
+      src={teamLookup[defaultTeamId]?.icon}
+      alt={`${teamLookup[defaultTeamId]?.name ?? 'Team'} icon`}
+      data-team-icon
+    />
+  )}
+  <div>
+    <p class="team-card__label" data-view-label>{currentViewConfig.label}</p>
+    <h2 data-team-name>
+      {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
+    </h2>
+    <p data-team-meta>
+      {teamLookup[defaultTeamId]?.division ?? 'Independent'}
+    </p>
+  </div>
+  <div class="team-card__actions">
+    <div class="view-tabs">
+      {Object.entries(viewConfig).map(([key, config]) => (
+        <a
+          class="view-tab"
+          href={config.href}
+          data-view={key}
+          data-active={key === activeView ? 'true' : 'false'}
+          aria-label={config.title}
+          title={config.title}
+          data-astro-prefetch="hover"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+            <use href={`/assets/icons/sprite.svg#${config.icon}`}></use>
+          </svg>
+          <span class="view-tab__label">{config.tabLabel}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+  <div class="team-card__navigation">
+    <button
+      class="team-nav-toggle"
+      data-accordion-toggle="team-nav"
+      aria-expanded="false"
+      aria-controls="team-nav-content"
+      aria-label="Toggle team navigation"
+    >
+      <div class="team-nav-toggle__chevron">
+        <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </div>
+    </button>
+
+    <div
+      id="team-nav-content"
+      class="team-nav-accordion__content collapsed"
+      aria-hidden="true"
+    >
+      <div class="team-icon-nav">
+        {divisionOrder.map((division) => {
+          const divisionTeams = teamsList.filter(team => team.division === division);
+          return divisionTeams.length > 0 ? (
+            <div class="division-group">
+              <div class="division-label">{division}</div>
+              <div class="division-teams">
+                {divisionTeams.map((team) => (
+                  <button
+                    class="team-icon-btn"
+                    data-team-id={team.id}
+                    data-active={team.id === defaultTeamId}
+                    title={team.name}
+                    aria-label={`View ${team.name} roster`}
+                    data-switch-mode={teamSwitchMode}
+                    data-current-path={currentPath}
+                  >
+                    {team.icon && (
+                      <img
+                        src={team.icon}
+                        alt={`${team.name} icon`}
+                        class="team-icon-img"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script
+  type="application/json"
+  id="roster-header-config"
+  set:html={JSON.stringify({
+    teamSwitchMode,
+    currentPath,
+    hideLeaguePrefix,
+    teams: Object.fromEntries(teamsList.map(t => [t.id, { name: t.name, division: t.division, icon: t.icon }])),
+  })}
+></script>
+
+<script>
+  function setupRosterHeader() {
+    const configEl = document.getElementById('roster-header-config');
+    if (!configEl) return;
+    const config = JSON.parse(configEl.textContent || '{}');
+
+    // --- Accordion ---
+    const toggle = document.querySelector('[data-accordion-toggle="team-nav"]');
+    const content = document.getElementById('team-nav-content');
+    if (toggle && content) {
+      // Restore state from localStorage
+      const savedState = localStorage.getItem('roster-team-nav-collapsed');
+      if (savedState === 'expanded') {
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+        toggle.setAttribute('aria-expanded', 'true');
+        content.setAttribute('aria-hidden', 'false');
+      }
+
+      toggle.addEventListener('click', () => {
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        if (isExpanded) {
+          content.classList.remove('expanded');
+          content.classList.add('collapsed');
+          toggle.setAttribute('aria-expanded', 'false');
+          content.setAttribute('aria-hidden', 'true');
+          localStorage.setItem('roster-team-nav-collapsed', 'collapsed');
+        } else {
+          content.classList.remove('collapsed');
+          content.classList.add('expanded');
+          toggle.setAttribute('aria-expanded', 'true');
+          content.setAttribute('aria-hidden', 'false');
+          localStorage.setItem('roster-team-nav-collapsed', 'expanded');
+        }
+      });
+    }
+
+    // --- Team Icon Buttons ---
+    document.querySelectorAll('.team-icon-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const teamId = btn.dataset.teamId;
+        if (!teamId) return;
+
+        const mode = btn.dataset.switchMode || config.teamSwitchMode;
+
+        if (mode === 'navigate') {
+          // Set cookie for persistence
+          document.cookie = `theleague_team_pref=${encodeURIComponent(JSON.stringify({ franchiseId: teamId, lastUpdated: new Date().toISOString() }))};path=/;max-age=31536000;samesite=lax`;
+
+          // Navigate to current page with franchise param
+          const url = new URL(window.location.href);
+          url.searchParams.set('franchise', teamId);
+          // Use Astro View Transitions for smooth navigation
+          window.location.href = url.toString();
+        } else {
+          // Client mode: dispatch custom event for roster page to handle
+          const event = new CustomEvent('roster:team-change', { detail: { teamId } });
+          document.dispatchEvent(event);
+
+          // Update active state visually
+          document.querySelectorAll('.team-icon-btn').forEach(b => {
+            b.dataset.active = (b.dataset.teamId === teamId) ? 'true' : 'false';
+          });
+
+          // Update team card info
+          const teamInfo = config.teams[teamId];
+          if (teamInfo) {
+            const nameEl = document.querySelector('[data-team-name]');
+            const metaEl = document.querySelector('[data-team-meta]');
+            const iconEl = document.querySelector('[data-team-icon]');
+            if (nameEl) nameEl.textContent = teamInfo.name;
+            if (metaEl) metaEl.textContent = teamInfo.division;
+            if (iconEl && teamInfo.icon) iconEl.src = teamInfo.icon;
+          }
+        }
+      });
+    });
+  }
+
+  // Initialize
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupRosterHeader);
+  } else {
+    setupRosterHeader();
+  }
+
+  // Re-init after View Transitions
+  document.addEventListener('astro:after-swap', setupRosterHeader);
+</script>

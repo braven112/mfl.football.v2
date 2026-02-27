@@ -1,0 +1,433 @@
+/**
+ * Shared styles for roster pages (roster, analytics, planner).
+ * Contains team card, view tabs, team nav accordion, and common layout.
+ * Import in page frontmatter: import '../../styles/roster-shared.css';
+ */
+
+/* Page Layout */
+.roster-page {
+  display: grid;
+  gap: var(--padding-lg);
+}
+
+/* Team Card */
+.team-card {
+  display: grid;
+  padding-top: 1rem;
+  padding-bottom: var(--padding-xxl);
+  justify-items: center;
+  gap: var(--padding-md);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: var(--box-shadow-lg);
+  position: relative;
+}
+
+@media (min-width: 480px) {
+  .team-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-inline: var(--padding-lg);
+    justify-content: center;
+    padding-block: var(--padding-lg) var(--padding-md);
+  }
+}
+
+.team-card img {
+  width: var(--team-icon-2xl);
+  height: var(--team-icon-2xl);
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.team-card__label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.team-card h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.team-card p {
+  margin: 0;
+  color: #64748b;
+}
+
+/* View Tabs */
+.team-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.view-tabs {
+  position: absolute;
+  right: var(--padding-lg);
+  top: var(--padding-lg);
+  transform: none;
+  display: flex;
+  gap: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .view-tabs {
+    position: static;
+    transform: none;
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--padding-md);
+    order: 3;
+  }
+}
+
+.view-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.7rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-width: 69px;
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (min-width: 640px) {
+  .view-tab {
+    padding: 0.75rem;
+  }
+}
+
+.view-tab:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.view-tab[data-active="true"] {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.view-tab__icon {
+  width: var(--icon-btn-default-size, 30px);
+  height: var(--icon-btn-default-size, 30px);
+  fill: var(--icon-btn-default-text-color);
+  color: var(--icon-btn-default-text-color);
+}
+
+.view-tab__icon:has(use[href*="icon-banknote"]) {
+  transform: rotate(25deg);
+}
+
+.view-tab[data-active="true"] .view-tab__icon {
+  fill: var(--icon-btn-default-focus-color);
+  color: var(--icon-btn-default-focus-color);
+}
+
+.view-tab__label {
+  position: absolute;
+  bottom: -1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.view-tab:hover .view-tab__label,
+.view-tab:focus .view-tab__label {
+  opacity: 1;
+}
+
+.view-tab[data-active="true"] .view-tab__label {
+  color: #3b82f6;
+}
+
+@media (max-width: 960px) {
+  .team-card__actions {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .team-card__actions {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .view-tabs {
+    width: 100%;
+  }
+}
+
+/* Team Nav Accordion */
+.team-card__navigation {
+  flex-basis: 100%;
+  width: 100%;
+  position: relative;
+  order: 10;
+  container-type: inline-size;
+  margin-top: var(--padding-xl);
+}
+
+.team-nav-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--padding-sm);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  position: absolute;
+  top: -1.5rem;
+}
+
+@media (min-width: 480px) {
+  .team-nav-toggle {
+    top: -2rem;
+  }
+}
+
+.team-nav-toggle:hover {
+  opacity: 0.6;
+}
+
+.team-nav-toggle:focus {
+  border-radius: 4px;
+}
+
+.team-nav-toggle__chevron {
+  transition: transform 0.3s ease;
+  color: var(--muted-text-color, #9ca3af);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.team-nav-toggle:hover .team-nav-toggle__chevron {
+  opacity: 1;
+}
+
+.team-nav-toggle[aria-expanded="true"] .team-nav-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+.team-nav-accordion__content {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+.team-nav-accordion__content.expanded {
+  max-height: 600px;
+  opacity: 1;
+  margin-top: var(--padding-md);
+}
+
+.team-nav-accordion__content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* Team Icon Nav */
+.team-icon-nav {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--padding-lg);
+  justify-content: center;
+  align-items: center;
+  border-radius: 1rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.team-card__navigation .team-icon-nav {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--padding-lg);
+  justify-content: center;
+  align-items: center;
+  background-color: var(--card-bg-color);
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@container (min-width: 600px) {
+  .team-card__navigation .team-icon-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container (min-width: 1024px) {
+  .team-card__navigation .team-icon-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@container (min-width: 400px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(4, auto);
+  }
+
+  .team-nav-accordion__content.expanded {
+    max-height: 400px;
+  }
+}
+
+@container (max-width: 399px) and (min-width: 280px) {
+  .team-icon-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.division-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  padding-block: 0.45rem;
+}
+
+.division-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+
+.division-teams {
+  display: flex;
+  gap: var(--padding-md);
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: 3px;
+}
+
+@media (min-width: 1024px) {
+  .division-teams {
+    gap: var(--padding-sm);
+    padding: 3px;
+  }
+}
+
+.team-icon-btn {
+  max-width: var(--team-icon-xl);
+  max-height: var(--team-icon-xl);
+  width: 100%;
+  height: 100%;
+  padding: 0.25rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-icon-btn:hover {
+  border-color: #eeeeee;
+  transform: scale(1.1);
+}
+
+.team-icon-btn[data-active="true"] {
+  background: #f0f9ff;
+  box-shadow: var(--box-shadow-focus-ring);
+}
+
+.team-icon-img {
+  width: 100%;
+  height: 100%;
+  max-width: var(--team-icon-md);
+  max-height: var(--team-icon-md);
+  object-fit: contain;
+}
+
+/* View Container */
+.view-container {
+  display: grid;
+  gap: var(--padding-lg);
+}
+
+/* Data Disclaimer */
+.data-disclaimer {
+  margin: 1rem 0 0;
+  color: var(--text-secondary-color, #64748b);
+  font-size: 0.95rem;
+}
+
+/* Chart Grid (shared by analytics and planner) */
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--padding-md);
+  row-gap: var(--padding-lg);
+}
+
+@media (min-width: 1200px) {
+  .chart-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.chart-grid:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
+/* Chart Card Link */
+.chart-card-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.chart-card-link:hover {
+  color: #2563eb;
+  background-color: #eff6ff;
+}

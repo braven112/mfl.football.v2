@@ -201,7 +201,7 @@ function isActive(link: NavLink, currentPath: string, league: LeagueSlug): boole
   const currentHasQueryParams = normalizedCurrentPath.includes('?');
 
   // If current page has query params, don't match against a link without query params
-  // This prevents /rosters from being active when on /rosters?view=nextyear
+  // This prevents /rosters from being active when on /rosters?view=coach
   if (currentHasQueryParams) {
     return false;
   }

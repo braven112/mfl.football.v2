@@ -1,0 +1,615 @@
+---
+/**
+ * Roster Analytics Page
+ * Displays cap analysis, age analysis, NFL team groupings, and college groupings.
+ * Split from monolithic rosters.astro for performance — loads only chart data.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import RosterHeader from '../../../components/theleague/RosterHeader.astro';
+import ChartCard from '../../../components/theleague/ChartCard.astro';
+import DonutChart from '../../../components/theleague/DonutChart.astro';
+import BarChart from '../../../components/theleague/BarChart.astro';
+import AgeDistributionChart from '../../../components/theleague/AgeDistributionChart.astro';
+import PlayerCell from '../../../components/theleague/PlayerCell.astro';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { loadBaseRosterContext } from '../../../utils/roster-data-loader';
+import { parseNumber, currencyFormatter } from '../../../utils/formatters';
+import {
+  SALARY_CAP,
+  ROSTER_LIMIT,
+  TARGET_ACTIVE_COUNT,
+  normalizeStatus,
+  getCapPercent,
+  aggregateDeadMoney,
+} from '../../../utils/salary-calculations';
+import collegeLogos from '../../../data/college-logos.json';
+import type { ChartSlice } from '../../scripts/chart-utils';
+
+import '../../../styles/roster-shared.css';
+
+// --- Base Context ---
+const ctx = loadBaseRosterContext(Astro);
+const {
+  teamsList, teamLookup, divisionOrder, defaultTeamId,
+  defaultSeason, currentLeagueYear, lastFetched,
+  hideLeaguePrefix, r,
+} = ctx;
+
+// --- Load roster data for current season only ---
+const rosterModules = import.meta.glob('../../../data/mfl-player-salaries-*.json', { eager: true });
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+const extractSeason = (filepath: string) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+// Find current season roster data
+let currentSeasonRaw: any = null;
+Object.entries(rosterModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (season === defaultSeason) {
+    currentSeasonRaw = getModuleData(mod);
+  }
+});
+
+// Load players feed for headshots/espn IDs
+const playersFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/players.json', { eager: true });
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+const playersFeedBySeason: Record<string, Record<string, any>> = {};
+Object.entries(playersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const list = data?.players?.player ?? data?.players ?? [];
+  if (!season || (!Array.isArray(list) && typeof list !== 'object')) return;
+  const arr = Array.isArray(list) ? list : Object.values(list);
+  playersFeedBySeason[season] = {};
+  arr.forEach((player: any) => {
+    const id = player.id ?? player.player_id ?? player.playerId ?? player.playerid;
+    if (!id) return;
+    playersFeedBySeason[season][id] = player;
+  });
+});
+
+// Load live roster data for franchise assignments
+const rostersFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/rosters.json', { eager: true });
+const liveRosterDataByPlayerId: Record<string, Record<string, any>> = {};
+Object.entries(rostersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const franchises = data?.rosters?.franchise ?? [];
+  if (!season || !Array.isArray(franchises)) return;
+  if (!liveRosterDataByPlayerId[season]) liveRosterDataByPlayerId[season] = {};
+  franchises.forEach((franchise: any) => {
+    const franchiseId = franchise.id;
+    if (!franchiseId) return;
+    const players = Array.isArray(franchise.player) ? franchise.player : [franchise.player].filter(Boolean);
+    players.forEach((player: any) => {
+      if (player?.id) {
+        liveRosterDataByPlayerId[season][player.id] = {
+          franchiseId,
+          salary: player.salary,
+          contractYear: player.contractYear,
+          status: player.status,
+        };
+      }
+    });
+  });
+});
+
+// Load salary adjustments for dead money
+const salaryAdjustmentFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/salaryAdjustments.json', { eager: true });
+const feedSalaryAdjustmentsBySeason: Record<string, any[]> = {};
+Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.salaryAdjustments?.salaryAdjustment) return;
+  feedSalaryAdjustmentsBySeason[season] = data.salaryAdjustments.salaryAdjustment
+    .map((adj: any) => ({
+      franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
+      amount: parseNumber(adj.amount),
+      description: adj.description ?? '',
+      yearOffset: 0,
+      timestamp: adj.timestamp ?? null,
+    }))
+    .filter((adj: any) => Number.isFinite(adj.amount));
+});
+
+// Load league meta for cap limit
+const leagueFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/league.json', { eager: true });
+const leagueMetaBySeason: Record<string, any> = {};
+Object.entries(leagueFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.league) return;
+  leagueMetaBySeason[season] = {
+    capLimit: parseNumber(data.league.salaryCapAmount) || SALARY_CAP,
+  };
+});
+
+// --- Build team data for selected team ---
+const feedPlayers = playersFeedBySeason[defaultSeason] ?? {};
+const liveRosterData = liveRosterDataByPlayerId[defaultSeason] ?? {};
+
+const getPlayerHeadshot = (mflId: string, espnId?: string) => {
+  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+  return mflId
+    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${mflId}_thumb.jpg`
+    : 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+};
+
+const POSITION_COLORS: Record<string, string> = {
+  QB: '#6366f1', RB: '#f97316', WR: '#22c55e', TE: '#14b8a6', PK: '#0ea5e9', K: '#0ea5e9', DEF: '#475569',
+};
+
+// Build all players for the default team
+const rawPlayers = currentSeasonRaw?.players ?? [];
+const teamPlayers = rawPlayers
+  .filter((p: any) => liveRosterData[p.id]?.franchiseId === defaultTeamId)
+  .map((player: any) => {
+    const liveData = liveRosterData[player.id];
+    const salary = liveData?.salary ? parseNumber(liveData.salary) : parseNumber(player.salary);
+    const contractYears = Number.parseInt(liveData?.contractYear ?? player.contractYear ?? '0', 10) || 0;
+    const status = liveData?.status ?? player.status ?? 'ROSTER';
+    const nflTeam = normalizeTeamCode(player.team ?? '');
+    const feedPlayer = feedPlayers[player.id] ?? null;
+    const headshot = getPlayerHeadshot(player.id, feedPlayer?.espn_id);
+    const collegeName = player.sleeper?.college ?? player.college ?? null;
+
+    const tag = status === 'TAXI_SQUAD' ? 'practice' : status === 'INJURED_RESERVE' ? 'injured' : 'active';
+
+    return {
+      id: player.id,
+      name: player.name,
+      position: player.position ?? 'N/A',
+      salary,
+      contractYears,
+      nflTeam,
+      status,
+      displayTag: tag,
+      headshot,
+      birthdate: player.birthdate ?? null,
+      college: collegeName,
+      points: parseNumber(player.points),
+      nflLogo: `/assets/nfl-logos/${normalizeTeamCode(nflTeam || 'NFL')}.svg`,
+    };
+  });
+
+// --- Compute chart slices server-side ---
+const capLimit = leagueMetaBySeason[defaultSeason]?.capLimit ?? SALARY_CAP;
+
+// Cap Allocation (donut)
+const bucketCaps = teamPlayers.reduce(
+  (acc: any, player: any) => {
+    const tag = (player.displayTag ?? 'active').toUpperCase();
+    const percent = getCapPercent(tag, true);
+    const salary = Number(player.salary ?? 0) || 0;
+    if (tag === 'PRACTICE') {
+      acc.practice += salary * percent;
+    } else if (tag === 'INJURED') {
+      acc.injured += salary * percent;
+    } else {
+      acc.active += salary * percent;
+    }
+    return acc;
+  },
+  { active: 0, practice: 0, injured: 0 }
+);
+
+const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
+const adjustments = DEAD_MONEY_SOURCES.flatMap((key: string) =>
+  Array.isArray(feedSalaryAdjustmentsBySeason[defaultSeason]) ? feedSalaryAdjustmentsBySeason[defaultSeason] : []
+);
+const deadMoneyArr = aggregateDeadMoney(adjustments, defaultTeamId);
+const deadMoneyCurrent = deadMoneyArr[0] ?? 0;
+const capCharge = bucketCaps.active + bucketCaps.practice + bucketCaps.injured + deadMoneyCurrent;
+const capSpace = Math.max(capLimit - capCharge, 0);
+
+const capSlices: ChartSlice[] = [
+  { label: 'Active', value: bucketCaps.active, color: '#57b881' },
+  { label: 'Practice', value: bucketCaps.practice, color: '#487ae7' },
+  { label: 'Injured', value: bucketCaps.injured, color: '#e56263' },
+  { label: 'Dead Money', value: deadMoneyCurrent, color: '#4b5563' },
+  { label: 'Cap Space', value: capSpace, color: '#e2e8f0' },
+].filter(s => s.value > 0);
+
+// Roster Composition (donut)
+const activeCount = teamPlayers.filter((p: any) => p.displayTag === 'active').length;
+const practiceCount = teamPlayers.filter((p: any) => p.displayTag === 'practice').length;
+const injuredCount = teamPlayers.filter((p: any) => p.displayTag === 'injured').length;
+const openActive = Math.max(TARGET_ACTIVE_COUNT - activeCount, 0);
+
+const rosterSlices: ChartSlice[] = [
+  { label: 'Active', value: activeCount, color: '#57b881' },
+  { label: 'Practice', value: practiceCount, color: '#487ae7' },
+  { label: 'Injured', value: injuredCount, color: '#e56263' },
+  { label: 'Open Spots', value: openActive, color: '#e2e8f0' },
+].filter(s => s.value > 0);
+
+// Position Allocation (bar)
+const positionCaps: Record<string, number> = {};
+teamPlayers.forEach((player: any) => {
+  if ((player.contractYears ?? 0) <= 0) return;
+  const tag = (player.displayTag ?? 'active').toUpperCase();
+  const percent = getCapPercent(tag, true);
+  const pos = (player.position ?? 'UNK').toUpperCase();
+  const salary = (Number(player.salary ?? 0) || 0) * percent;
+  positionCaps[pos] = (positionCaps[pos] ?? 0) + salary;
+});
+
+const positionSlices: ChartSlice[] = Object.entries(positionCaps).map(([label, value]) => ({
+  label,
+  value,
+  color: POSITION_COLORS[label.toUpperCase()] ?? '#999',
+}));
+
+// Cap Efficiency (bar)
+const efficiency: Record<string, { totalCost: number; totalPoints: number }> = {};
+teamPlayers.forEach((player: any) => {
+  if ((player.contractYears ?? 0) <= 0 || (player.points ?? 0) <= 0) return;
+  const pos = (player.position ?? 'UNK').toUpperCase();
+  if (!efficiency[pos]) efficiency[pos] = { totalCost: 0, totalPoints: 0 };
+  efficiency[pos].totalCost += Number(player.salary ?? 0) || 0;
+  efficiency[pos].totalPoints += Number(player.points ?? 0) || 0;
+});
+
+const capEfficiencySlices: ChartSlice[] = Object.entries(efficiency).map(([pos, data]) => ({
+  label: pos,
+  value: data.totalCost / data.totalPoints,
+  color: POSITION_COLORS[pos.toUpperCase()] ?? '#999',
+}));
+
+// Age Distribution
+const calculateAge = (birthdate: number | null) => {
+  if (!birthdate) return null;
+  const birthDate = new Date(birthdate * 1000);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+};
+
+const bucketSize = 5;
+const ages = teamPlayers.map((p: any) => calculateAge(p.birthdate)).filter((a: any) => a !== null) as number[];
+const ageBuckets = new Map<number, number>();
+ages.forEach(age => {
+  const bucketStart = Math.floor(age / bucketSize) * bucketSize;
+  ageBuckets.set(bucketStart, (ageBuckets.get(bucketStart) ?? 0) + 1);
+});
+const ageDistribution = Array.from(ageBuckets.entries())
+  .sort((a, b) => a[0] - b[0])
+  .map(([bucketStart, count]) => ({
+    range: `${bucketStart}-${bucketStart + bucketSize - 1}`,
+    count,
+  }));
+const ageColors = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444'];
+const ageDistributionSlices: ChartSlice[] = ageDistribution.map((item, idx) => ({
+  label: item.range,
+  value: item.count,
+  color: ageColors[idx % ageColors.length],
+}));
+
+// Average Age by Position
+const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+const ageByPos = new Map<string, number[]>();
+teamPlayers.forEach((player: any) => {
+  const pos = (player.position ?? 'UNK').toUpperCase();
+  const age = calculateAge(player.birthdate);
+  if (age !== null) {
+    if (!ageByPos.has(pos)) ageByPos.set(pos, []);
+    ageByPos.get(pos)!.push(age);
+  }
+});
+const positionalAgeSlices: ChartSlice[] = positionOrder
+  .map(pos => {
+    const posAges = ageByPos.get(pos);
+    if (!posAges || posAges.length === 0) return null;
+    const avgAge = Math.round((posAges.reduce((s, a) => s + a, 0) / posAges.length) * 10) / 10;
+    return { label: pos, value: avgAge, color: POSITION_COLORS[pos] ?? '#999' };
+  })
+  .filter((s): s is ChartSlice => s !== null);
+
+// --- Players by NFL Team ---
+const NFL_TEAM_NAMES: Record<string, string> = {
+  ARI: 'Arizona Cardinals', ATL: 'Atlanta Falcons', BAL: 'Baltimore Ravens', BUF: 'Buffalo Bills',
+  CAR: 'Carolina Panthers', CHI: 'Chicago Bears', CIN: 'Cincinnati Bengals', CLE: 'Cleveland Browns',
+  DAL: 'Dallas Cowboys', DEN: 'Denver Broncos', DET: 'Detroit Lions', GB: 'Green Bay Packers',
+  HOU: 'Houston Texans', IND: 'Indianapolis Colts', JAX: 'Jacksonville Jaguars', KC: 'Kansas City Chiefs',
+  LAC: 'Los Angeles Chargers', LAR: 'Los Angeles Rams', LV: 'Las Vegas Raiders', MIA: 'Miami Dolphins',
+  MIN: 'Minnesota Vikings', NE: 'New England Patriots', NO: 'New Orleans Saints', NYG: 'New York Giants',
+  NYJ: 'New York Jets', PHI: 'Philadelphia Eagles', PIT: 'Pittsburgh Steelers', SF: 'San Francisco 49ers',
+  SEA: 'Seattle Seahawks', TB: 'Tampa Bay Buccaneers', TEN: 'Tennessee Titans', WAS: 'Washington Commanders',
+};
+
+const playersByNflTeam: Record<string, typeof teamPlayers> = {};
+teamPlayers.forEach((player: any) => {
+  const team = player.nflTeam || 'FA';
+  if (!playersByNflTeam[team]) playersByNflTeam[team] = [];
+  playersByNflTeam[team].push(player);
+});
+const nflTeamsWithMultiple = Object.keys(playersByNflTeam)
+  .filter(team => playersByNflTeam[team].length > 1)
+  .sort();
+
+// --- Players by College ---
+const collegeLogosNormalized = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
+);
+
+const playersByCollege: Record<string, typeof teamPlayers> = {};
+teamPlayers.forEach((player: any) => {
+  const pos = (player.position || '').toUpperCase();
+  const college = (player.college || '').trim();
+  if (!college || college.toLowerCase() === 'unknown' || pos === 'DEF') return;
+  if (!playersByCollege[college]) playersByCollege[college] = [];
+  playersByCollege[college].push(player);
+});
+const collegesWithMultiple = Object.keys(playersByCollege)
+  .filter(college => playersByCollege[college].length > 1)
+  .sort();
+
+const formatCurrency = (value: number) => currencyFormatter.format(value ?? 0);
+---
+
+<TheLeagueLayout title="Roster Analytics">
+  <section class="roster-page">
+    <RosterHeader
+      activeView="analytics"
+      teamLookup={teamLookup}
+      teamsList={teamsList}
+      defaultTeamId={defaultTeamId}
+      divisionOrder={divisionOrder}
+      hideLeaguePrefix={hideLeaguePrefix}
+      teamSwitchMode="navigate"
+      currentPath={r('/theleague/rosters/analytics')}
+    />
+
+    <div class="view-container" transition:name="roster-content">
+      <!-- Cap Charts Section -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">Cap Analysis</h3>
+        <div class="chart-grid">
+          <ChartCard title="Cap Allocation" subtitle="Current season cap usage by bucket">
+            <DonutChart chartId="capDonut" slices={capSlices} showLegend={true} />
+          </ChartCard>
+          <ChartCard title="Roster Composition" subtitle="Active vs IR vs Practice vs Open slots">
+            <DonutChart chartId="rosterDonut" slices={rosterSlices} showLegend={true} />
+          </ChartCard>
+          <ChartCard title="Position Allocation" subtitle="Current season cap by position">
+            <BarChart chartId="posBar" slices={positionSlices} positionOrder={positionOrder} />
+          </ChartCard>
+          <ChartCard title="Cap Efficiency" subtitle="Cost per point by position">
+            <BarChart chartId="efficiencyBar" slices={capEfficiencySlices} positionOrder={positionOrder} />
+          </ChartCard>
+        </div>
+      </div>
+
+      <!-- Age Charts Section -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">Age Analysis</h3>
+        <div class="chart-grid">
+          <ChartCard title="Age Distribution" subtitle="Roster composition by age bracket">
+            <AgeDistributionChart chartId="ageChart" slices={ageDistributionSlices} />
+          </ChartCard>
+          <ChartCard title="Average Age by Position" subtitle="Years old by position group">
+            <BarChart chartId="posAgeBar" slices={positionalAgeSlices} positionOrder={positionOrder} />
+          </ChartCard>
+        </div>
+      </div>
+
+      <!-- Players by NFL Team -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">NFL Analysis</h3>
+        <p class="analytics-section__sub">Players on the same NFL team</p>
+      </div>
+      <div class="nfl-teams-grid">
+        {nflTeamsWithMultiple.map(team => (
+          <div class="chart-card">
+            <div class="chart-card__header">
+              <img src={`/assets/nfl-logos/${normalizeTeamCode(team)}.svg`} alt={team} class="team-group__logo" />
+              <span class="team-group__name">{NFL_TEAM_NAMES[team] ?? team}</span>
+            </div>
+            <div class="team-group__players">
+              {playersByNflTeam[team].map(player => {
+                const isDef = player.position?.toUpperCase() === 'DEF';
+                const teamLogo = `/assets/nfl-logos/${normalizeTeamCode(player.nflTeam || 'NFL')}.svg`;
+                return (
+                  <div class="players-team__player">
+                    <PlayerCell
+                      name={player.name}
+                      headshot={isDef ? teamLogo : player.headshot}
+                      position={player.position}
+                      nflTeam={player.nflTeam}
+                      nflLogo={isDef ? undefined : teamLogo}
+                    />
+                    <div class="players-team__salary">{formatCurrency(player.salary)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Players by College -->
+      <div class="analytics-section">
+        <h3 class="analytics-section__title">College Analysis</h3>
+        <p class="analytics-section__sub">Players who played for the same college</p>
+      </div>
+      <div class="nfl-teams-grid">
+        {collegesWithMultiple.map(college => {
+          const collegeLower = college.toLowerCase();
+          const collegeData = collegeLogosNormalized[collegeLower] as any;
+          const collegeLogo = collegeData?.logo ?? null;
+          return (
+            <div class="chart-card">
+              <div class="chart-card__header">
+                {collegeLogo ? (
+                  <img src={collegeLogo} alt={college} class="team-group__logo" />
+                ) : (
+                  <span class="team-group__logo--fallback">{college.charAt(0)}</span>
+                )}
+                <span class="team-group__name">{college}</span>
+              </div>
+              <div class="team-group__players">
+                {playersByCollege[college].map(player => {
+                  const isDef = player.position?.toUpperCase() === 'DEF';
+                  const teamLogo = `/assets/nfl-logos/${normalizeTeamCode(player.nflTeam || 'NFL')}.svg`;
+                  return (
+                    <div class="players-team__player">
+                      <PlayerCell
+                        name={player.name}
+                        headshot={isDef ? teamLogo : player.headshot}
+                        position={player.position}
+                        nflTeam={player.nflTeam}
+                        nflLogo={isDef ? undefined : teamLogo}
+                      />
+                      <div class="players-team__salary">{formatCurrency(player.salary)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {lastFetched && (
+      <p class="data-disclaimer">
+        Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+      </p>
+    )}
+  </section>
+</TheLeagueLayout>
+
+<style>
+  :global(.chart-card) {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: var(--padding-md);
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+    grid-template-rows: min-content;
+  }
+
+  :global(.chart-card__header) {
+    display: flex;
+    gap: 1rem;
+    align-self: start;
+    font-weight: bold;
+  }
+
+  :global(.chart-card__header h3) {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  :global(.chart-card__sub) {
+    margin: 0;
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
+  }
+
+  .analytics-section__title + .analytics-section__sub {
+    margin-top: -1rem;
+    margin-bottom: 0;
+  }
+
+  .analytics-section__sub {
+    color: var(--text-secondary-color, #64748b);
+    font-size: 0.9rem;
+  }
+
+  :global(.nfl-teams-grid) {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--padding-md);
+  }
+
+  @media (max-width: 767px) {
+    :global(.nfl-teams-grid) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  :global(.team-group__logo) {
+    height: 2rem;
+    max-width: 3rem;
+    object-fit: contain;
+    align-self: flex-start;
+  }
+
+  :global(.chart-card__header .team-group__logo) {
+    margin-left: .75rem;
+  }
+
+  :global(.team-group__name) {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary, #64748b);
+    margin-top: 0.25rem;
+    font-weight: 500;
+  }
+
+  :global(.team-group__logo--fallback) {
+    height: 2rem;
+    width: 2rem;
+    border-radius: 0.5rem;
+    background: #e2e8f0;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  :global(.team-group__players) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :global(.players-team__player) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 4px;
+    gap: 1rem;
+  }
+
+  :global(.players-team__player .player-cell) {
+    flex: 1;
+  }
+
+  :global(.players-team__salary) {
+    font-weight: 600;
+    color: #111;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    text-align: right;
+  }
+
+  @media (max-width: 640px) {
+    :global(.players-team__player) {
+      padding: 0.5rem;
+      gap: 0.75rem;
+    }
+    :global(.players-team__salary) {
+      font-size: 0.75rem;
+    }
+  }
+</style>

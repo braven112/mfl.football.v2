@@ -1,0 +1,897 @@
+---
+/**
+ * League Planner Page
+ * Phase-aware offseason planner with extensions, free agent needs, metrics, and draft assets.
+ * Split from monolithic rosters.astro for performance — loads only planner data.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import RosterHeader from '../../../components/theleague/RosterHeader.astro';
+import ChartCard from '../../../components/theleague/ChartCard.astro';
+import MetricCard from '../../../components/theleague/MetricCard.astro';
+import FranchiseOptions from '../../../components/theleague/FranchiseOptions.astro';
+import VeteranExtensionCandidates from '../../../components/theleague/VeteranExtensionCandidates.astro';
+import FreeAgentNeedsCard from '../../../components/theleague/FreeAgentNeedsCard.astro';
+import DraftPicksCard from '../../../components/theleague/DraftPicksCard.astro';
+import DraftTeamAssetsView from '../../../components/theleague/DraftTeamAssetsView.astro';
+import { loadBaseRosterContext } from '../../../utils/roster-data-loader';
+import { getPlannerPhase } from '../../../utils/planner-phase';
+import { analyzeFreeAgentNeeds } from '../../../utils/free-agent-needs';
+import type { PositionNeed } from '../../../utils/free-agent-needs';
+import { parseNumber, currencyFormatter, formatCapSpaceDisplay } from '../../../utils/formatters';
+import {
+  SALARY_CAP,
+  ROSTER_LIMIT,
+  TARGET_ACTIVE_COUNT,
+  RESERVE_FOR_ROOKIES,
+  SALARY_YEARS,
+  CAP_INCLUSION,
+  normalizeStatus,
+  getCapPercent,
+  calculateCapCharges,
+  aggregateDeadMoney,
+  calculateContractYearsMeta,
+  getFrozenSalaryAveragesYear,
+} from '../../../utils/salary-calculations';
+import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../../utils/draft-utils';
+import { extractToiletBowlWinners, extractLeagueChampion } from '../../../utils/toilet-bowl-utils';
+import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../../utils/assets-utils';
+import leagueAssets from '../../../data/theleague.assets.json';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../../utils/league-year';
+import fs from 'fs';
+import path from 'path';
+
+import '../../../styles/roster-shared.css';
+
+// --- Base Context ---
+const ctx = loadBaseRosterContext(Astro);
+const {
+  teamsList, teamLookup, divisionOrder, defaultTeamId,
+  defaultSeason, currentLeagueYear, currentSeasonYear,
+  lastFetched, hideLeaguePrefix, r,
+} = ctx;
+
+// --- Utility helpers ---
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+const extractSeason = (filepath: string) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+const loadFeedJson = (year: string | number, filename: string) => {
+  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
+  try {
+    if (fs.existsSync(feedPath)) {
+      return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
+    }
+  } catch (e) {
+    console.warn(`⚠️ Failed to load feed ${feedPath}:`, e);
+  }
+  return null;
+};
+
+const formatCurrency = (value: number) => currencyFormatter.format(value ?? 0);
+
+// --- Load roster data ---
+const rosterModules = import.meta.glob('../../../data/mfl-player-salaries-*.json', { eager: true });
+const salaryAveragesModules = import.meta.glob('../../../data/mfl-salary-averages-*.json', { eager: true });
+
+// Load players feed for headshots/espn IDs
+const playersFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/players.json', { eager: true });
+const playersFeedBySeason: Record<string, Record<string, any>> = {};
+Object.entries(playersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const list = data?.players?.player ?? data?.players ?? [];
+  if (!season || (!Array.isArray(list) && typeof list !== 'object')) return;
+  const arr = Array.isArray(list) ? list : Object.values(list);
+  playersFeedBySeason[season] = {};
+  arr.forEach((player: any) => {
+    const id = player.id ?? player.player_id ?? player.playerId ?? player.playerid;
+    if (!id) return;
+    playersFeedBySeason[season][id] = player;
+  });
+});
+
+// Load live roster data for franchise assignments
+const rostersFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/rosters.json', { eager: true });
+const liveRosterDataByPlayerId: Record<string, Record<string, any>> = {};
+Object.entries(rostersFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  const franchises = data?.rosters?.franchise ?? [];
+  if (!season || !Array.isArray(franchises)) return;
+  if (!liveRosterDataByPlayerId[season]) liveRosterDataByPlayerId[season] = {};
+  franchises.forEach((franchise: any) => {
+    const franchiseId = franchise.id;
+    if (!franchiseId) return;
+    const players = Array.isArray(franchise.player) ? franchise.player : [franchise.player].filter(Boolean);
+    players.forEach((player: any) => {
+      if (player?.id) {
+        liveRosterDataByPlayerId[season][player.id] = {
+          franchiseId,
+          salary: player.salary,
+          contractYear: player.contractYear,
+          contractInfo: player.contractInfo,
+          status: player.status,
+        };
+      }
+    });
+  });
+});
+
+// Load salary adjustments for dead money
+const salaryAdjustmentFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/salaryAdjustments.json', { eager: true });
+const feedSalaryAdjustmentsBySeason: Record<string, any[]> = {};
+Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.salaryAdjustments?.salaryAdjustment) return;
+  feedSalaryAdjustmentsBySeason[season] = data.salaryAdjustments.salaryAdjustment
+    .map((adj: any) => ({
+      franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
+      amount: parseNumber(adj.amount),
+      description: adj.description ?? '',
+      yearOffset: 0,
+      timestamp: adj.timestamp ?? null,
+    }))
+    .filter((adj: any) => Number.isFinite(adj.amount));
+});
+
+// Load league meta for cap limit
+const leagueFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/league.json', { eager: true });
+const leagueMetaBySeason: Record<string, any> = {};
+Object.entries(leagueFeeds).forEach(([path, mod]) => {
+  const season = extractFeedSeason(path);
+  const data = getModuleData(mod);
+  if (!season || !data?.league) return;
+  leagueMetaBySeason[season] = {
+    capLimit: parseNumber(data.league.salaryCapAmount) || SALARY_CAP,
+    rosterLimit: parseInt(data.league.rosterSize, 10) || ROSTER_LIMIT,
+  };
+});
+
+// --- Build player data for current season ---
+const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
+
+const normalizeTeamCode = (team: string) => {
+  const map: Record<string, string> = {
+    KCC: 'KC', JAC: 'JAX', NEP: 'NE', NOS: 'NO', GBP: 'GB',
+    SFO: 'SF', TBB: 'TB', NOR: 'NO', CLV: 'CLE', ARZ: 'ARI',
+    WSH: 'WAS', LVR: 'LV', SD: 'LAC', OAK: 'LV', STL: 'LAR',
+    LA: 'LAR',
+  };
+  if (!team) return '';
+  const upper = team.toString().toUpperCase();
+  return map[upper] ?? upper;
+};
+
+const getPlayerHeadshot = (mflId: string, espnId?: string) => {
+  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+  return mflId
+    ? `https://www49.myfantasyleague.com/player_photos_big_2014/${mflId}_thumb.jpg`
+    : 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+};
+
+const getNflLogoUrl = (teamCode: string) => {
+  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+  return `/assets/nfl-logos/${teamCode}.svg`;
+};
+
+// Sort by position
+const getPositionRank = (pos: string) => {
+  if (!pos) return positionOrder.length;
+  const rank = positionOrder.indexOf(pos.toUpperCase());
+  return rank === -1 ? positionOrder.length : rank;
+};
+const sortByPosition = (list: any[]) =>
+  list.slice().sort((a, b) => {
+    const diff = getPositionRank(a.position) - getPositionRank(b.position);
+    if (diff !== 0) return diff;
+    return parseNumber(b.salary) - parseNumber(a.salary);
+  });
+
+// Build season payload — needed for salary data, cap charges, etc.
+const buildSeasonPayload = (season: string, rawData: any) => {
+  const feedPlayers = playersFeedBySeason[season] ?? {};
+  const liveRosterData = liveRosterDataByPlayerId[season] ?? {};
+
+  const players = (rawData?.players ?? [])
+    .filter((player: any) => !!liveRosterData[player.id])
+    .map((player: any) => {
+      const liveData = liveRosterData[player.id];
+      const salary = liveData?.salary ? parseNumber(liveData.salary) : parseNumber(player.salary);
+      const contractYears = Number.parseInt(liveData?.contractYear ?? player.contractYear ?? '0', 10) || 0;
+      const franchiseId = liveData?.franchiseId ?? 'FA';
+      const status = liveData?.status ?? player.status ?? 'ROSTER';
+      const nflTeam = normalizeTeamCode(player.team ?? '');
+      const feedPlayer = feedPlayers[player.id] ?? null;
+      const headshot = getPlayerHeadshot(player.id, feedPlayer?.espn_id);
+
+      return {
+        id: player.id,
+        name: player.name,
+        position: player.position ?? 'N/A',
+        salary,
+        contractYears,
+        franchiseId,
+        status,
+        points: parseNumber(player.points),
+        nflTeam,
+        headshot,
+        nflLogo: getNflLogoUrl(nflTeam),
+        rosterSlot: normalizeStatus(player.status),
+        birthdate: player.birthdate ?? null,
+        gamesPlayed: player.gamesPlayed ?? null,
+        displayTag: status === 'TAXI_SQUAD' ? 'practice' : status === 'INJURED_RESERVE' ? 'injured' : 'active',
+      };
+    });
+
+  // Group by franchise
+  const grouped: Record<string, any[]> = {};
+  players.forEach((player: any) => {
+    const key = player.franchiseId || 'FA';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(player);
+  });
+
+  const teams: Record<string, any> = {};
+  Object.entries(grouped).forEach(([teamId, teamPlayers]) => {
+    const buckets = { ACTIVE: [] as any[], PRACTICE: [] as any[], INJURED: [] as any[] };
+    teamPlayers.forEach((player: any) => {
+      if (player.status === 'TAXI_SQUAD') buckets.PRACTICE.push(player);
+      else if (player.status === 'INJURED_RESERVE') buckets.INJURED.push(player);
+      else buckets.ACTIVE.push(player);
+    });
+
+    const activeSorted = sortByPosition(buckets.ACTIVE);
+    const practiceSorted = sortByPosition(buckets.PRACTICE);
+    const injuredSorted = sortByPosition(buckets.INJURED);
+
+    const activeSalary = activeSorted.reduce((sum, p) => sum + parseNumber(p.salary), 0);
+    const injuredSalary = injuredSorted.reduce((sum, p) => sum + parseNumber(p.salary), 0);
+    const practiceSalary = practiceSorted.reduce((sum, p) => sum + parseNumber(p.salary) * 0.5, 0);
+
+    teams[teamId] = {
+      players: activeSorted,
+      practiceSquad: practiceSorted,
+      injuredReserve: injuredSorted,
+      totals: {
+        totalSalary: activeSalary + injuredSalary + practiceSalary,
+        rosterCount: activeSorted.length,
+        openSpots: Math.max(ROSTER_LIMIT - activeSorted.length, 0),
+        practiceCount: practiceSorted.length,
+        injuredCount: injuredSorted.length,
+      },
+    };
+  });
+
+  return {
+    metadata: {
+      capLimit: leagueMetaBySeason[season]?.capLimit ?? SALARY_CAP,
+      rosterLimit: leagueMetaBySeason[season]?.rosterLimit ?? ROSTER_LIMIT,
+      season,
+    },
+    teams,
+    salaryAdjustments: feedSalaryAdjustmentsBySeason[season] ?? [],
+  };
+};
+
+// Build season data
+let currentSeasonData: any = null;
+Object.entries(rosterModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (season === defaultSeason) {
+    currentSeasonData = buildSeasonPayload(season, getModuleData(mod));
+  }
+});
+
+if (!currentSeasonData) {
+  currentSeasonData = { metadata: { capLimit: SALARY_CAP, rosterLimit: ROSTER_LIMIT, season: defaultSeason }, teams: {}, salaryAdjustments: [] };
+}
+
+// --- Salary averages for extension/franchise tag calculator ---
+const salaryAveragesBySeason: Record<string, any> = {};
+Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (!season) return;
+  const data = getModuleData(mod);
+  if (data?.positions) {
+    salaryAveragesBySeason[season] = {
+      extensionSalaries: {
+        QB: data.positions.QB?.top5Average ?? 0,
+        RB: data.positions.RB?.top5Average ?? 0,
+        WR: data.positions.WR?.top5Average ?? 0,
+        TE: data.positions.TE?.top5Average ?? 0,
+        PK: data.positions.PK?.top5Average ?? 0,
+        DEF: data.positions.Def?.top5Average ?? 0,
+      },
+      franchiseSalaries: {
+        QB: data.positions.QB?.top3Average ?? 0,
+        RB: data.positions.RB?.top3Average ?? 0,
+        WR: data.positions.WR?.top3Average ?? 0,
+        TE: data.positions.TE?.top3Average ?? 0,
+        PK: data.positions.PK?.top3Average ?? 0,
+        DEF: data.positions.Def?.top3Average ?? 0,
+      },
+    };
+  }
+});
+
+const extensionSeason = String(getFrozenSalaryAveragesYear(salaryAveragesModules, getModuleData));
+
+// --- Get all players for extensions/franchise tag analysis ---
+const initialTeamData = currentSeasonData.teams?.[defaultTeamId] ?? {
+  players: [], practiceSquad: [], injuredReserve: [],
+  totals: { totalSalary: 0, rosterCount: 0, openSpots: ROSTER_LIMIT, practiceCount: 0, injuredCount: 0 },
+};
+
+const initialAllPlayers: any[] = Object.values(currentSeasonData.teams ?? {}).flatMap((team: any) => [
+  ...(team.players ?? []),
+  ...(team.practiceSquad ?? []),
+  ...(team.injuredReserve ?? []),
+]);
+
+// Between Feb 15 and Labor Day, current season points are 0.
+// Fall back to last season's points so extension/franchise tag filtering works.
+const prevSeasonKey = String(Number(defaultSeason) - 1);
+let prevSeasonData: any = null;
+Object.entries(rosterModules).forEach(([path, mod]) => {
+  const season = extractSeason(path);
+  if (season === prevSeasonKey) {
+    prevSeasonData = buildSeasonPayload(season, getModuleData(mod));
+  }
+});
+
+if (prevSeasonData) {
+  const allCurrentPointsZero = initialAllPlayers.every(p => (p.points ?? 0) === 0);
+  if (allCurrentPointsZero) {
+    const prevPointsMap = new Map<string, number>();
+    Object.values(prevSeasonData.teams ?? {}).forEach((team: any) => {
+      [...(team.players ?? []), ...(team.practiceSquad ?? []), ...(team.injuredReserve ?? [])].forEach((p: any) => {
+        if (p.points && p.points > 0) prevPointsMap.set(p.id, p.points);
+      });
+    });
+    initialAllPlayers.forEach(p => {
+      if ((p.points ?? 0) === 0 && prevPointsMap.has(p.id)) {
+        p.points = prevPointsMap.get(p.id);
+      }
+    });
+  }
+}
+
+// --- Build display rows and compute cap charges ---
+const buildDisplayRows = (teamData: any) => {
+  const mapPlayers = (players: any[] = [], displayTag = 'active') =>
+    sortByPosition(players).map((player) => ({
+      ...player,
+      displayTag,
+    }));
+
+  return [
+    ...mapPlayers(teamData.players ?? [], 'active'),
+    ...mapPlayers(teamData.practiceSquad ?? [], 'practice'),
+    ...mapPlayers(teamData.injuredReserve ?? [], 'injured'),
+  ];
+};
+
+const initialRosterRows = buildDisplayRows(initialTeamData);
+const initialCapCharges = calculateCapCharges(initialRosterRows);
+
+const DEAD_MONEY_ADJUSTMENTS = DEAD_MONEY_SOURCES.flatMap((key: string) =>
+  Array.isArray(feedSalaryAdjustmentsBySeason[defaultSeason]) ? feedSalaryAdjustmentsBySeason[defaultSeason] : []
+);
+const initialDeadMoney = aggregateDeadMoney(DEAD_MONEY_ADJUSTMENTS, defaultTeamId);
+const initialCapChargesWithDead = initialCapCharges.map(
+  (val, idx) => val + (initialDeadMoney[idx] ?? 0)
+);
+const initialCapLimit = currentSeasonData?.metadata?.capLimit ?? SALARY_CAP;
+const initialNextYearCapCharge = initialCapChargesWithDead[1] ?? 0;
+const initialPlayersNextYear = initialRosterRows.filter((p: any) => (p.contractYears ?? 0) > 1).length;
+const initialRemainingSlots2026 = Math.max(TARGET_ACTIVE_COUNT - initialPlayersNextYear, 1);
+const initialPlayersToCut2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT, 0);
+const initialDeadMoney2026 = initialDeadMoney[1] ?? 0;
+const initialCapSpace2026 = initialCapLimit - (initialCapChargesWithDead[1] ?? 0) - RESERVE_FOR_ROOKIES;
+const initialAvgPerPlayer2026 = Math.max(initialCapSpace2026, 0) / initialRemainingSlots2026;
+
+// Average Age
+const calculateAge = (birthdate: number | null) => {
+  if (!birthdate) return null;
+  const birthDate = new Date(birthdate * 1000);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+};
+
+const teamRosterPlayers = [
+  ...(initialTeamData.players ?? []),
+  ...(initialTeamData.practiceSquad ?? []),
+  ...(initialTeamData.injuredReserve ?? []),
+];
+const ages = teamRosterPlayers.map((p: any) => calculateAge(p.birthdate)).filter((a): a is number => a !== null);
+const initialAverageAge = ages.length > 0
+  ? Math.round((ages.reduce((s, a) => s + a, 0) / ages.length) * 10) / 10
+  : null;
+
+// --- Planner Phase ---
+const testDateParam = Astro.url?.searchParams?.get('testDate');
+const plannerRefDate = testDateParam ? new Date(testDateParam) : undefined;
+const plannerPhase = getPlannerPhase(plannerRefDate && !isNaN(plannerRefDate.getTime()) ? plannerRefDate : undefined);
+
+// --- Free Agent Needs (selected team only) ---
+const faNeedsLeagueYear = String(currentLeagueYear);
+const projectedScoresData = loadFeedJson(faNeedsLeagueYear, 'projectedScores.json');
+const faProjScores = projectedScoresData?.projectedScores?.playerScore || [];
+const faPlayerFeed = playersFeedBySeason[faNeedsLeagueYear] ?? {};
+const faRosterData = liveRosterDataByPlayerId[faNeedsLeagueYear] ?? {};
+
+const freeAgentNeeds: PositionNeed[] = analyzeFreeAgentNeeds(
+  defaultTeamId, faProjScores, faPlayerFeed, faRosterData
+);
+
+// Enrich FA players with headshot URLs for PlayerCell rendering
+for (const need of freeAgentNeeds) {
+  for (const fa of need.topFreeAgents) {
+    const feedPlayer = faPlayerFeed[fa.id];
+    fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id);
+  }
+}
+
+// --- Draft Predictions ---
+const draftSeasonYear = getCurrentSeasonYear();
+const draftNextYear = draftSeasonYear + 1;
+
+const standingsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/standings.json', { eager: true });
+const playoffBracketFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/playoff-brackets.json', { eager: true });
+const draftResultsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json', { eager: true });
+const transactionsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/transactions.json', { eager: true });
+
+const standingsKey = Object.keys(standingsFeeds).find(
+  (path) => extractFeedSeason(path) === String(draftSeasonYear)
+);
+const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+
+const bracketKey = Object.keys(playoffBracketFeeds).find(
+  (path) => extractFeedSeason(path) === String(draftSeasonYear)
+);
+const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(draftNextYear)
+);
+const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+const transactionsKey = Object.keys(transactionsFeeds).find(
+  (path) => extractFeedSeason(path) === String(draftSeasonYear)
+);
+const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
+
+let draftPredictions: any[] = [];
+let actualDraftPicks: any[] = [];
+let assetsPredictions: any[] = [];
+let assetTeamIds: string[] = [];
+
+if (standingsData?.leagueStandings?.franchise) {
+  const teamConfigMap = new Map(
+    teamsList.map((team) => [
+      team.id,
+      {
+        id: team.id,
+        name: team.name,
+        icon: team.icon,
+        banner: leagueAssets.teams?.find((t: any) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+      },
+    ])
+  );
+
+  let toiletBowlWinners: string[] = [];
+  if (bracketData) {
+    toiletBowlWinners = extractToiletBowlWinners(bracketData);
+  }
+
+  const leagueWinnerId = bracketData ? extractLeagueChampion(bracketData) : '';
+
+  draftPredictions = calculateDraftOrder(
+    standingsData.leagueStandings.franchise,
+    teamConfigMap,
+    leagueWinnerId,
+    toiletBowlWinners
+  );
+
+  if (draftResultsData) {
+    actualDraftPicks = buildActualDraftPicks(draftResultsData, teamConfigMap);
+  }
+
+  // Current-year draft assets
+  if (actualDraftPicks.length > 0) {
+    assetsPredictions = convertActualPicksToPredictions(actualDraftPicks, teamConfigMap);
+  } else if (transactionsData) {
+    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear, draftPredictions);
+    if (isValidAssetsData(assetsData)) {
+      assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
+    }
+  }
+
+  assetTeamIds = Array.from(new Set(assetsPredictions.map((p: any) => p.franchiseId))).filter(Boolean);
+  if (defaultTeamId && !assetTeamIds.includes(defaultTeamId)) {
+    assetTeamIds.unshift(defaultTeamId);
+  }
+}
+
+// --- 2027 Draft Assets (dual draft cards) ---
+let assets2027Predictions: any[] = [];
+let asset2027TeamIds: string[] = [];
+if (plannerPhase.showDualDraftCards && transactionsData && standingsData?.leagueStandings?.franchise) {
+  const teamConfigMap2027 = new Map(
+    teamsList.map((team) => [
+      team.id,
+      {
+        id: team.id,
+        name: team.name,
+        icon: team.icon,
+        banner: leagueAssets.teams?.find((t: any) => t.id === team.id)?.assets?.banners?.[0]?.relativePath ?? '',
+      },
+    ])
+  );
+  const assets2027Data = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear + 1, draftPredictions);
+  if (isValidAssetsData(assets2027Data)) {
+    assets2027Predictions = convertAssetsToPredictions(assets2027Data, teamConfigMap2027);
+  }
+  asset2027TeamIds = Array.from(new Set(assets2027Predictions.map((p: any) => p.franchiseId))).filter(Boolean);
+  if (defaultTeamId && !asset2027TeamIds.includes(defaultTeamId)) {
+    asset2027TeamIds.unshift(defaultTeamId);
+  }
+}
+---
+
+<TheLeagueLayout title="League Planner">
+  <section class="roster-page">
+    <RosterHeader
+      activeView="planner"
+      teamLookup={teamLookup}
+      teamsList={teamsList}
+      defaultTeamId={defaultTeamId}
+      divisionOrder={divisionOrder}
+      hideLeaguePrefix={hideLeaguePrefix}
+      teamSwitchMode="navigate"
+      currentPath={r('/theleague/rosters/planner')}
+    />
+
+    <div class="view-container" transition:name="roster-content">
+      <div class="planner-layout" data-planner-phase={plannerPhase.phase}>
+
+        <!-- Section: Extensions (Tags + Vet Extensions) -->
+        <div class="planner-section planner-section--extensions">
+          <h2 class="planner-section__title">Extensions</h2>
+          <div class="chart-grid">
+            <ChartCard title={`Franchise Tag Options (${currentLeagueYear + 1})`} subtitle="Potential franchise tag candidates">
+              <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
+            </ChartCard>
+            <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
+              <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
+            </ChartCard>
+          </div>
+        </div>
+
+        <!-- Section: Free Agent Needs (selected team only) -->
+        <div class="planner-section planner-section--fa-needs">
+          <FreeAgentNeedsCard
+            needs={freeAgentNeeds}
+            franchiseId={defaultTeamId}
+          />
+        </div>
+
+        <!-- Section: Metrics (At a Glance) -->
+        <div class="planner-section planner-section--metrics">
+          <h3 class="chart-metrics__headline">{currentLeagueYear} at a glance</h3>
+          <div class="chart-metrics">
+            <MetricCard
+              label="Cap Space"
+              value={formatCapSpaceDisplay(Math.max(initialCapLimit - initialNextYearCapCharge, 0))}
+            />
+            <MetricCard
+              label="Avg per Player*"
+              value={`${formatCurrency(initialAvgPerPlayer2026)} × ${initialRemainingSlots2026}`}
+            />
+            <MetricCard
+              label="Players Signed"
+              value={String(initialPlayersNextYear)}
+              hint={initialPlayersToCut2026 > 0 ? `Must cut ${initialPlayersToCut2026} ${initialPlayersToCut2026 === 1 ? 'player' : 'players'} by cutdown` : undefined}
+              hintVariant="error"
+            />
+            <MetricCard
+              label="Dead Money"
+              value={formatCurrency(initialDeadMoney2026)}
+            />
+            <MetricCard
+              label="Average Age"
+              value={initialAverageAge !== null ? `${initialAverageAge} years` : 'N/A'}
+            />
+          </div>
+          <small class="chart-metrics__hint">*Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves {formatCurrency(RESERVE_FOR_ROOKIES)} for practice squad rookies and free agents.</small>
+        </div>
+
+        {/* Draft sections: side-by-side when both are shown, single otherwise */}
+        {plannerPhase.showDualDraftCards && assets2027Predictions.length > 0 ? (
+          <div class="planner-section planner-section--drafts-combined">
+            <div class="draft-cards-grid">
+              <div class="draft-card-wrapper">
+                {assetsPredictions.length > 0 ? (
+                  <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
+                    <a href={r("/theleague/draft-predictor?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      </svg>
+                    </a>
+                    <DraftTeamAssetsView
+                      predictions={assetsPredictions}
+                      teams={teamsList}
+                      hideTeamSelector={true}
+                      franchiseId={defaultTeamId}
+                    />
+                  </ChartCard>
+                ) : draftPredictions.length > 0 ? (
+                  <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Projected draft picks based on current standings">
+                    <a href={r("/theleague/draft-predictor")} class="chart-card-link" title="View full draft predictor" slot="actions">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      </svg>
+                    </a>
+                    <DraftPicksCard
+                      franchiseId={defaultTeamId}
+                      draftPredictions={draftPredictions}
+                      actualPicks={actualDraftPicks}
+                      season={draftNextYear}
+                    />
+                  </ChartCard>
+                ) : null}
+              </div>
+              <div class="draft-card-wrapper">
+                <ChartCard title={`${draftNextYear + 1} Draft Assets`} subtitle="Future draft picks your team owns after all trades">
+                  <DraftTeamAssetsView
+                    predictions={assets2027Predictions}
+                    teams={teamsList}
+                    hideTeamSelector={true}
+                    franchiseId={defaultTeamId}
+                  />
+                </ChartCard>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Fragment>
+            <div class="planner-section planner-section--draft-2026">
+              {assetsPredictions.length > 0 ? (
+                <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
+                  <a href={r("/theleague/draft-predictor?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </a>
+                  <DraftTeamAssetsView
+                    predictions={assetsPredictions}
+                    teams={teamsList}
+                    hideTeamSelector={true}
+                    franchiseId={defaultTeamId}
+                  />
+                </ChartCard>
+              ) : draftPredictions.length > 0 ? (
+                <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Projected draft picks based on current standings">
+                  <a href={r("/theleague/draft-predictor")} class="chart-card-link" title="View full draft predictor" slot="actions">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </a>
+                  <DraftPicksCard
+                    franchiseId={defaultTeamId}
+                    draftPredictions={draftPredictions}
+                    actualPicks={actualDraftPicks}
+                    season={draftNextYear}
+                  />
+                </ChartCard>
+              ) : null}
+            </div>
+          </Fragment>
+        )}
+
+      </div>
+    </div>
+
+    {lastFetched && (
+      <p class="data-disclaimer">
+        Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+      </p>
+    )}
+  </section>
+</TheLeagueLayout>
+
+<style>
+  /* Planner Layout */
+  .planner-layout {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .planner-layout > * {
+    min-width: 0;
+  }
+
+  .planner-section__title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary-color, #111827);
+  }
+
+  .draft-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  /* Default section order (extensions at bottom until Week 10) */
+  .planner-section--metrics          { order: 1; }
+  .planner-section--draft-2026       { order: 2; }
+  .planner-section--drafts-combined  { order: 2; }
+  .planner-section--fa-needs         { order: 3; }
+  .planner-section--draft-2027       { order: 4; }
+  .planner-section--extensions       { order: 5; }
+
+  /* Extensions & Tags phase: extensions first */
+  [data-planner-phase="extensions-and-tags"] .planner-section--extensions       { order: 1; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--metrics          { order: 2; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--draft-2026       { order: 3; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--drafts-combined  { order: 3; }
+  [data-planner-phase="extensions-and-tags"] .planner-section--fa-needs         { order: 4; }
+
+  /* Free Agency phase: FA needs + metrics prominent */
+  [data-planner-phase="free-agency"] .planner-section--fa-needs         { order: 1; }
+  [data-planner-phase="free-agency"] .planner-section--metrics          { order: 2; }
+  [data-planner-phase="free-agency"] .planner-section--draft-2026       { order: 3; }
+  [data-planner-phase="free-agency"] .planner-section--drafts-combined  { order: 3; }
+  [data-planner-phase="free-agency"] .planner-section--draft-2027       { order: 4; }
+  [data-planner-phase="free-agency"] .planner-section--extensions       { order: 5; }
+
+  /* Draft phase: draft assets first */
+  [data-planner-phase="draft"] .planner-section--draft-2026       { order: 1; }
+  [data-planner-phase="draft"] .planner-section--drafts-combined  { order: 1; }
+  [data-planner-phase="draft"] .planner-section--draft-2027       { order: 2; }
+  [data-planner-phase="draft"] .planner-section--metrics          { order: 3; }
+  [data-planner-phase="draft"] .planner-section--fa-needs         { order: 4; }
+  [data-planner-phase="draft"] .planner-section--extensions       { order: 5; }
+
+  /* Side-by-side draft cards */
+  .draft-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--padding-md, 1rem);
+  }
+
+  @media (min-width: 1200px) {
+    .draft-cards-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Metric cards grid */
+  .chart-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .chart-metrics__hint {
+    color: #6b7280;
+    font-size: 0.8rem;
+    padding-block: 1rem;
+    display: block;
+  }
+
+  .chart-metrics__headline {
+    font-size: 1.25rem;
+    margin-left: .75rem;
+  }
+
+  @media (min-width: 1200px) {
+    .chart-metrics__headline {
+      margin-left: inherit;
+    }
+  }
+</style>
+
+<!-- Free Agent Needs tab switching -->
+<script>
+  function initFaNeedsTabs() {
+    document.querySelectorAll('.fa-needs').forEach((card) => {
+      const tabs = card.querySelectorAll('[data-fa-tab]');
+      const panels = card.querySelectorAll('[data-fa-panel]');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const pos = tab.getAttribute('data-fa-tab');
+          tabs.forEach((t) => {
+            t.classList.toggle('fa-needs__tab--active', t === tab);
+            t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+          });
+          panels.forEach((p) => {
+            p.style.display = p.getAttribute('data-fa-panel') === pos ? '' : 'none';
+          });
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFaNeedsTabs);
+  } else {
+    initFaNeedsTabs();
+  }
+  document.addEventListener('astro:page-load', initFaNeedsTabs);
+</script>
+
+<!-- Rankings integration for Potential Targets (FA needs) card -->
+<script>
+  import { buildRankingLookup, onRankingsChanged } from '../../../utils/rankings-lookup';
+
+  let faRankUnsubscribe: (() => void) | null = null;
+
+  function injectFaRankings() {
+    const lookup = buildRankingLookup();
+    const columns = lookup.columns;
+
+    if (columns.length === 0) return;
+
+    document.querySelectorAll('.fa-needs__panel').forEach(panel => {
+      const headerRow = panel.querySelector('.fa-needs__thead tr');
+      if (!headerRow) return;
+
+      headerRow.querySelectorAll('.fa-needs__th--rank-col').forEach(th => th.remove());
+
+      for (const col of columns) {
+        const th = document.createElement('th');
+        th.className = 'fa-needs__th fa-needs__th--rank-col';
+        th.textContent = col.header;
+        th.title = col.fullName;
+        headerRow.appendChild(th);
+      }
+    });
+
+    document.querySelectorAll('.fa-needs__player[data-fa-player-id]').forEach(row => {
+      const el = row as HTMLElement;
+      const playerId = el.dataset.faPlayerId;
+      if (!playerId) return;
+
+      el.querySelectorAll('.fa-needs__rank-value').forEach(v => v.remove());
+
+      for (const col of columns) {
+        const rank = lookup.byImport.get(col.importId)?.get(playerId);
+        const td = document.createElement('td');
+        td.className = 'fa-needs__rank-value';
+        td.textContent = rank != null ? String(rank) : '—';
+        el.appendChild(td);
+      }
+    });
+  }
+
+  function initFaRankings() {
+    if (faRankUnsubscribe) {
+      faRankUnsubscribe();
+      faRankUnsubscribe = null;
+    }
+
+    injectFaRankings();
+    faRankUnsubscribe = onRankingsChanged(() => injectFaRankings());
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initFaRankings, 100));
+  } else {
+    setTimeout(initFaRankings, 100);
+  }
+  document.addEventListener('astro:page-load', () => setTimeout(initFaRankings, 100));
+</script>

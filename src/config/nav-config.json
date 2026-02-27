@@ -36,7 +36,7 @@
           "id": "next-year",
           "label": "League Planner",
           "icon": "chalkboard",
-          "path": "/rosters?view=planner",
+          "path": "/rosters/planner",
           "external": false,
           "leagueOnly": "theleague",
           "description": "Phase-aware offseason planner with free agent needs analysis"
@@ -231,7 +231,8 @@
   ],
   "routeEquivalence": {
     "/rosters": "/rosters",
-    "/rosters?view=nextyear": "/rosters?view=nextyear",
+    "/rosters/analytics": "/rosters/analytics",
+    "/rosters/planner": "/rosters/planner",
     "/standings": "/standings",
     "/playoffs": "/playoffs",
     "/salary": "/salary",
