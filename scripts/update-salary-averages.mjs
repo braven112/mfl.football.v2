@@ -908,26 +908,46 @@ const run = async () => {
   // When frozen, don't overwrite the Season Total summary — MFL may no longer
   // return accurate historical rosters after the season ends. The frozen summary
   // from the original freeze run is the source of truth.
-  if (lockedWeek) {
-    let existingSummary = null;
+  //
+  // We check BOTH the in-memory lockedWeek (from the season state file) AND the
+  // existing files' metadata.frozenWeek. This protects against the case where the
+  // season state file has already been overwritten for a new season but the old
+  // season's frozen data should still be preserved.
+  const isFileFrozen = async (filePath) => {
     try {
-      existingSummary = JSON.parse(await fs.readFile(outputSummaryRoot, 'utf8'));
+      const data = JSON.parse(await fs.readFile(filePath, 'utf8'));
+      return !!(data?.metadata?.frozenWeek && data?.positions);
     } catch {
-      // No existing summary
+      return false;
     }
-    if (existingSummary?.positions) {
-      console.log(
-        `[salary-averages] Season is frozen — preserving existing Season Total summary.`
-      );
+  };
+
+  const rootAlreadyFrozen = await isFileFrozen(outputSummaryRoot);
+  const leagueAlreadyFrozen = await isFileFrozen(outputSummary);
+
+  if (lockedWeek || rootAlreadyFrozen || leagueAlreadyFrozen) {
+    const preserved = [];
+    const written = [];
+
+    if (rootAlreadyFrozen) {
+      preserved.push(path.relative(projectRoot, outputSummaryRoot));
+    } else {
+      await writeJson(outputSummaryRoot, summary);
+      written.push(path.relative(projectRoot, outputSummaryRoot));
+    }
+
+    if (leagueAlreadyFrozen) {
+      preserved.push(path.relative(projectRoot, outputSummary));
     } else {
       await writeJson(outputSummary, summary);
-      await writeJson(outputSummaryRoot, summary);
-      console.log(
-        `[salary-averages] Saved per-position averages -> ${path.relative(
-          projectRoot,
-          outputSummary
-        )} + ${path.relative(projectRoot, outputSummaryRoot)}`
-      );
+      written.push(path.relative(projectRoot, outputSummary));
+    }
+
+    if (preserved.length) {
+      console.log(`[salary-averages] Season is frozen — preserved: ${preserved.join(', ')}`);
+    }
+    if (written.length) {
+      console.log(`[salary-averages] First-time freeze write: ${written.join(', ')}`);
     }
   } else {
     await writeJson(outputSummary, summary);
