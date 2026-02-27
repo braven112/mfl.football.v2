@@ -192,25 +192,21 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 				var mqStandalone = window.matchMedia('(display-mode: standalone)').matches;
 				var navStandalone = !!navigator.standalone;
 				var isStandalone = mqStandalone || navStandalone;
-				console.log('[PWA Auth] standalone detection:', { mqStandalone: mqStandalone, navStandalone: navStandalone, isStandalone: isStandalone });
 				if (!isStandalone) return;
 
 				var path = window.location.pathname;
 				if (path === '/login' || path === '/theleague/login') return;
 
-				console.log('[PWA Auth] checking auth for path:', path);
 				fetch('/api/auth/me', { credentials: 'include' })
 					.then(function(r) { return r.json(); })
 					.then(function(data) {
-						console.log('[PWA Auth] auth response:', data);
 						if (!data.authenticated) {
 							var loginPath = path.startsWith('/theleague') ? '/theleague/login' : '/login';
 							var redirect = encodeURIComponent(path + window.location.search);
-							console.log('[PWA Auth] redirecting to:', loginPath);
 							window.location.href = loginPath + '?redirect=' + redirect;
 						}
 					})
-					.catch(function(err) { console.error('[PWA Auth] error:', err); });
+					.catch(function() {});
 			})();
 		</script>
 

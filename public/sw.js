@@ -7,7 +7,7 @@
  * - Offline page cached on install
  */
 
-const CACHE_NAME = 'theleague-v1';
+const CACHE_NAME = 'theleague-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to pre-cache on install
@@ -92,7 +92,7 @@ async function cacheFirst(request) {
  */
 async function networkFirstWithOfflineFallback(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-cache' });
     return response;
   } catch {
     const cached = await caches.match(OFFLINE_URL);
