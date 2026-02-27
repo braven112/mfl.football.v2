@@ -63,43 +63,49 @@ Config locations:
 |------|---------------|---------------|
 | Circular headshot (spans 2 rows) | **Player name** (bold) | NFL team logo (16px) + Position |
 
-### Component
-Use `PlayerCell.astro` for Astro contexts:
+### Astro Component
+Use `PlayerCell.astro` — it handles DEF position, team code normalization, and optional modal support automatically:
+
+```astro
+import PlayerCell from '../components/theleague/PlayerCell.astro';
+
+<!-- Basic usage (DEF handling is automatic) -->
+<PlayerCell name={player.name} headshot={player.headshot} position={player.position} nflTeam={player.nflTeam} />
+
+<!-- Compact size -->
+<PlayerCell name={player.name} headshot={player.headshot} position={player.position} nflTeam={player.nflTeam} size="compact" />
+
+<!-- With modal support + badges -->
+<PlayerCell name={player.name} headshot={player.headshot} position={player.position} nflTeam={player.nflTeam} playerData={playerObj}>
+  <span slot="after-name" class="injury-badge">Q</span>
+</PlayerCell>
+```
+
+### JS Utility (for client-side rendering)
+Use `buildPlayerCellHTML()` when building HTML strings in `<script>` tags:
 
 ```typescript
-import PlayerCell from '../components/theleague/PlayerCell.astro';
-import { normalizeTeamCode } from '../utils/nfl-logo';
+import { buildPlayerCellHTML } from '../utils/player-cell-html';
+import { initPlayerModalTrigger } from '../utils/player-modal-trigger';
 
-const isDef = player.position?.toUpperCase() === 'DEF';
-const teamLogo = `/assets/nfl-logos/${normalizeTeamCode(player.nflTeam || 'NFL')}.svg`;
-
-<PlayerCell
-  name={player.name}
-  headshot={isDef ? teamLogo : player.headshot}
-  position={player.position}
-  nflTeam={player.nflTeam}
-  nflLogo={isDef ? undefined : teamLogo}
-/>
+const html = buildPlayerCellHTML({ name, headshot, position, nflTeam, playerData });
+// Attach delegated click handler once on the parent container:
+initPlayerModalTrigger(tableBody);
 ```
 
 ### DEF Handling
-Team defenses (position=DEF) swap the avatar to the NFL team logo and hide the logo from the meta row. `PlayerCell` handles the CSS (`avatar--def` variant) automatically — the caller just needs to pass the team logo as `headshot` and omit `nflLogo`.
+Team defenses (position=DEF) are handled automatically by `PlayerCell` and `buildPlayerCellHTML` — the avatar swaps to the NFL team logo and the meta row hides the duplicate logo. Callers just pass the raw `position` and `nflTeam`.
 
-### NFL Team Code Normalization
-**Always** use `normalizeTeamCode()` from `src/utils/nfl-logo.ts` when building logo URLs. MFL uses non-standard codes:
-
-| MFL Code | Standard | Team |
-|----------|----------|------|
-| KCC | KC | Kansas City Chiefs |
-| JAC | JAX | Jacksonville Jaguars |
-| NEP | NE | New England Patriots |
-| NOS | NO | New Orleans Saints |
-
-### Player Click Action (Future)
-Every player lockup should eventually open a `PlayerDetailsModal` on click, showing the standard profile popup used on the roster page. The modal is triggered via `window.openPlayerDetailsModal(playerData)`.
+### Size Variants
+- `default`: 40px avatar (36px mobile)
+- `compact`: 32px avatar (28px mobile)
+- Parents can also override via CSS: `.my-table .player-cell { --player-avatar-size: 2rem; }`
 
 ### Key Files
 - Component: `src/components/theleague/PlayerCell.astro`
+- Shared CSS: `src/styles/player-cell.css`
+- JS utility: `src/utils/player-cell-html.ts`
+- Modal trigger: `src/utils/player-modal-trigger.ts`
 - Code normalization: `src/utils/nfl-logo.ts` → `normalizeTeamCode()`
 - Logo assets: `public/assets/nfl-logos/{CODE}.svg`
 - Player modal: `src/components/theleague/PlayerDetailsModal.astro`

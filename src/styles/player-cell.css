@@ -1,0 +1,139 @@
+/**
+ * Player Cell — shared CSS for the player lockup pattern.
+ *
+ * Used by both the Astro `PlayerCell.astro` component (imported in
+ * frontmatter for global scope) and client-side `buildPlayerCellHTML()`.
+ *
+ * Size is controlled via CSS custom properties set on .player-cell:
+ *   --player-avatar-size   (default 40px)
+ *   --player-name-size     (default 0.9375rem)
+ *   --player-meta-size     (default 0.8125rem)
+ *   --player-logo-size     (default 16px)
+ *   --player-gap           (default 0.75rem)
+ *
+ * Parent components can override:
+ *   .my-table .player-cell { --player-avatar-size: 28px; }
+ */
+
+/* ── Root ── */
+.player-cell {
+  --player-avatar-size: 40px;
+  --player-name-size: 0.9375rem;
+  --player-meta-size: 0.8125rem;
+  --player-logo-size: 16px;
+  --player-gap: 0.75rem;
+
+  display: flex;
+  align-items: center;
+  gap: var(--player-gap);
+}
+
+/* ── Compact variant ── */
+.player-cell--compact {
+  --player-avatar-size: 32px;
+  --player-name-size: 0.8125rem;
+  --player-meta-size: 0.75rem;
+  --player-logo-size: 14px;
+  --player-gap: 0.5rem;
+}
+
+/* ── Avatar ── */
+.player-cell__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--player-avatar-size);
+  height: var(--player-avatar-size);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--avatar-bg-color, #f3f4f6);
+  border: 1px solid #e2e8f0;
+}
+
+.player-cell__avatar img {
+  width: 150%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.player-cell__avatar--def {
+  border: 0;
+  background: transparent;
+}
+
+.player-cell__avatar--def img {
+  width: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Dead-money variant */
+.player-cell__avatar--dm {
+  opacity: 0.6;
+}
+
+/* ── Info ── */
+.player-cell__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.player-cell__name {
+  font-weight: 600;
+  color: #111;
+  font-size: var(--player-name-size);
+  line-height: 1.3;
+}
+
+.player-cell__name--clickable {
+  cursor: pointer;
+}
+
+.player-cell__name--clickable:hover {
+  color: var(--color-primary, #2563eb);
+}
+
+/* ── Meta row ── */
+.player-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--player-meta-size);
+  color: var(--text-secondary-color, #64748b);
+}
+
+.player-meta__logo {
+  width: var(--player-logo-size);
+  height: var(--player-logo-size);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.player-meta__pos {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* ── Mobile ── */
+@media (max-width: 767px) {
+  .player-cell {
+    --player-avatar-size: 36px;
+    --player-name-size: 0.875rem;
+    --player-meta-size: 0.75rem;
+    --player-logo-size: 14px;
+    --player-gap: 0.625rem;
+  }
+
+  .player-cell--compact {
+    --player-avatar-size: 28px;
+    --player-name-size: 0.8125rem;
+    --player-meta-size: 0.6875rem;
+    --player-logo-size: 12px;
+    --player-gap: 0.375rem;
+  }
+}

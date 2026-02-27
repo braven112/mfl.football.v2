@@ -12,6 +12,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
+import '../../styles/player-cell.css';
 
 // MFL team code → local SVG filename normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -617,6 +618,10 @@ const faCountsJson = JSON.stringify(faCounts);
 
   const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
+  function escapeAttr(s) {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   function sortPlayers() {
     filteredPlayers.sort((a, b) => {
       let aVal, bVal;
@@ -777,19 +782,32 @@ const faCountsJson = JSON.stringify(faCounts);
       const posLabel = p.position === 'PK' ? 'K' : p.position;
       const rosteredClass = p.rostered ? ' row--rostered' : '';
 
+      const modalJson = escapeAttr(JSON.stringify({
+        id: p.id, espnId: p.espnId || null, name: p.name,
+        position: p.position, nflTeam: p.team,
+        college: p.college || null, height: p.height || null,
+        weight: p.weight || null, number: p.jersey || null,
+        birthdate: p.birthdate || null, experience: p.exp != null ? p.exp : null,
+        draftYear: p.draftYear || null, draftTeam: p.draftTeam || null,
+        draftRound: p.draftRd || null, draftPick: p.draftPick || null,
+        points: p.projected != null ? p.projected : null,
+        offenseSnaps: p.snaps != null ? p.snaps : null,
+      }));
+      const rosteredDot = p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : '';
+
       html += `<tr class="${rosteredClass}">
         <td class="cell-rank">${rank}</td>
         <td class="cell-player">
-          <div class="p-row">
-            <div class="p-row__avatar${isDef ? ' p-row__avatar--def' : ''}">
+          <div class="player-cell">
+            <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}">
               <img src="${headshot}" alt="" loading="lazy" decoding="async"
                 onerror="this.onerror=null;this.src='${defaultHeadshot}';" />
             </div>
-            <div class="p-row__info">
-              <span class="p-row__name" data-pid="${p.id}" data-espn="${p.espnId||''}" data-pname="${p.name}" data-pos="${p.position}" data-team="${p.team}" data-college="${p.college||''}" data-ht="${p.height||''}" data-wt="${p.weight||''}" data-jersey="${p.jersey||''}" data-bday="${p.birthdate||''}" data-exp="${p.exp!=null?p.exp:''}" data-dyr="${p.draftYear||''}" data-dtm="${p.draftTeam||''}" data-drd="${p.draftRd||''}" data-dpk="${p.draftPick||''}" data-proj="${p.projected!=null?p.projected:''}" data-snaps="${p.snaps!=null?p.snaps:''}" data-snappct="${p.snapPct!=null?p.snapPct:''}" data-lastyr="${p.lastYrPts!=null?p.lastYrPts:''}" data-adprdf="${p.adpRdf!=null?p.adpRdf:''}" data-adpdyn="${p.adpDyn!=null?p.adpDyn:''}">${p.name}${p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : ''}</span>
-              <span class="p-row__meta">
-                <img src="${logo}" alt="${p.team}" class="p-row__logo" /><span class="p-row__pos">${posLabel}</span>
-              </span>
+            <div class="player-cell__info">
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>
+              <div class="player-meta">
+                <img src="${logo}" alt="${p.team}" class="player-meta__logo" /><span class="player-meta__pos">${posLabel}</span>
+              </div>
             </div>
           </div>
         </td>
@@ -1011,54 +1029,7 @@ const faCountsJson = JSON.stringify(faCounts);
       });
     }
 
-    // Player name click → open detail modal
-    const tbody = document.getElementById('player-table-body');
-    if (tbody) {
-      tbody.addEventListener('click', (e) => {
-        const nameEl = e.target.closest('.p-row__name');
-        if (!nameEl || !window.openPlayerDetailsModal) return;
-
-        const d = nameEl.dataset;
-        const parseNum = (v) => v ? parseFloat(v) : null;
-        const parseStr = (v) => v || null;
-
-        window.openPlayerDetailsModal({
-          id: d.pid,
-          espnId: parseStr(d.espn),
-          name: d.pname,
-          position: d.pos,
-          nflTeam: d.team,
-          college: parseStr(d.college),
-          height: parseNum(d.ht),
-          weight: parseNum(d.wt),
-          number: parseNum(d.jersey),
-          birthdate: parseNum(d.bday),
-          experience: parseNum(d.exp),
-          draftYear: parseNum(d.dyr),
-          draftTeam: parseStr(d.dtm),
-          draftRound: parseNum(d.drd),
-          draftPick: parseNum(d.dpk),
-          points: parseNum(d.proj),
-          salary: null,
-          contractYears: null,
-          totalRemaining: null,
-          contractType: null,
-          status: null,
-          byeWeek: null,
-          depthChartPosition: null,
-          depthChartOrder: null,
-          depthChartAhead: null,
-          injuryStatus: null,
-          injuryBodyPart: null,
-          collegeLogo: null,
-          franchiseId: null,
-          rosterSlot: null,
-          offenseSnaps: parseNum(d.snaps),
-          defenseSnaps: null,
-          stSnaps: null,
-        });
-      });
-    }
+    // Player name click → open detail modal (delegated via shared utility in module script below)
 
     filterPlayers();
   }
@@ -1207,6 +1178,22 @@ const faCountsJson = JSON.stringify(faCounts);
       }
     });
   });
+</script>
+
+<!-- Player modal trigger (delegated, works across re-renders) -->
+<script>
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+
+  function initModalTrigger() {
+    const tbody = document.getElementById('player-table-body');
+    if (tbody) initPlayerModalTrigger(tbody);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModalTrigger);
+  } else {
+    initModalTrigger();
+  }
 </script>
 
 <style>
@@ -1522,60 +1509,7 @@ const faCountsJson = JSON.stringify(faCounts);
     opacity: 0.8;
   }
 
-  /* Player row cell */
-  :global(.p-row) {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-  }
-  :global(.p-row__avatar) {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    background: #e8ecf1;
-    border: 2px solid #e2e8f0;
-  }
-  :global(.p-row__avatar img) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center top;
-  }
-  :global(.p-row__avatar--def) {
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  :global(.p-row__avatar--def img) {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    object-position: center;
-  }
-  :global(.p-row__info) {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    min-width: 0;
-  }
-  :global(.p-row__name) {
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #111827;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    cursor: pointer;
-  }
-  :global(.p-row__name:hover) {
-    color: var(--color-primary, #1c497c);
-  }
+  /* Rostered indicator dot */
   :global(.rostered-dot) {
     display: inline-block;
     width: 6px;
@@ -1583,32 +1517,6 @@ const faCountsJson = JSON.stringify(faCounts);
     border-radius: 50%;
     background: #3b82f6;
     flex-shrink: 0;
-  }
-  :global(.p-row__meta) {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.75rem;
-    color: #94a3b8;
-  }
-  :global(.p-row__pos) {
-    font-weight: 700;
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  :global(.p-row__sep) {
-    color: #d1d5db;
-  }
-  :global(.p-row__logo) {
-    width: 1rem;
-    height: 1rem;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-  :global(.p-row__team) {
-    font-weight: 500;
-    color: #64748b;
   }
 
   /* No data */
@@ -1638,10 +1546,6 @@ const faCountsJson = JSON.stringify(faCounts);
       flex-direction: column;
       gap: 0.5rem;
       align-items: flex-start;
-    }
-    :global(.p-row__avatar) {
-      width: 34px;
-      height: 34px;
     }
     .category-tabs {
       gap: 0.25rem;

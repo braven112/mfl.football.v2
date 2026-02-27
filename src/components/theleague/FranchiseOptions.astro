@@ -13,6 +13,7 @@
  */
 
 import { currencyFormatter } from '../../utils/formatters';
+import PlayerCell from './PlayerCell.astro';
 
 export interface Props {
   players: Array<{
@@ -138,12 +139,6 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
   return player.name;
 };
 
-const getPlayerAvatarSrc = (player: typeof players[0]): string => {
-  if (player.position?.toUpperCase() === 'DEF') {
-    return player.nflLogo || DEFAULT_HEADSHOT_URL;
-  }
-  return player.headshot || DEFAULT_HEADSHOT_URL;
-};
 ---
 
 <div class="franchise-tag-eligibility" data-all-players={JSON.stringify(players)} data-salary-averages={JSON.stringify(salaryAverages)} data-season={season}>
@@ -164,38 +159,16 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         </thead>
         <tbody>
           {withRanks.map((player) => {
-            const isDefense = player.position?.toUpperCase() === 'DEF';
             const displayName = getPlayerDisplayName(player);
-            const avatarSrc = getPlayerAvatarSrc(player);
             return (
             <tr>
               <td data-label="Player">
-                <div class="player-cell">
-                  <div class={`player-cell__avatar${isDefense ? ' player-cell__avatar--def' : ''}`}>
-                    <img
-                      src={avatarSrc}
-                      alt={`${displayName} logo`}
-                      loading="lazy"
-                      decoding="async"
-                      onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
-                    />
-                  </div>
-                  <div>
-                    <strong>{displayName}</strong>
-                    <div class="player-meta">
-                      {!isDefense && player.nflTeam && player.nflTeam !== 'FA' && (
-                        <img
-                          src={player.nflLogo}
-                          alt={`${player.nflTeam} logo`}
-                          class="player-meta__logo"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
-                      {player.position && <span class="player-meta__pos">{player.position}</span>}
-                    </div>
-                  </div>
-                </div>
+                <PlayerCell
+                  name={displayName}
+                  headshot={player.headshot}
+                  position={player.position}
+                  nflTeam={player.nflTeam}
+                />
               </td>
               <td data-label="Points" class="align-right">{(player.points ?? 0).toFixed(2)}</td>
               <td data-label={`${salaryYear} Salary`} class="align-right salary-value-cell">{currencyFormatter.format(player.salary)}</td>
@@ -211,6 +184,7 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
 
 <script>
   import { buildRankingLookup, COMPOSITE_IMPORT_ID, AVERAGE_IMPORT_ID, onRankingsChanged } from '../../utils/rankings-lookup';
+  import { buildPlayerCellHTML } from '../../utils/player-cell-html';
 
   // NFL team code to full name mapping
   const NFL_TEAM_NAMES = {
@@ -385,32 +359,16 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
         maximumFractionDigits: 0,
       });
 
-      const DEFAULT_HEADSHOT = 'https://s.yimg.com/cv/apiv2/default/nfl/nophoto.png';
-
       eligible.forEach((player) => {
         const isDefense = (player.position ?? '').toUpperCase() === 'DEF';
         const displayName = isDefense
           ? `${NFL_TEAM_NAMES[player.nflTeam] || player.nflTeam} Defense`
           : player.name;
-        const avatarSrc = isDefense ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
-        const nflTeam = player.nflTeam || 'FA';
 
         tableHtml += `
           <tr>
             <td data-label="Player">
-              <div class="player-cell">
-                <div class="player-cell__avatar${isDefense ? ' player-cell__avatar--def' : ''}">
-                  <img src="${avatarSrc}" alt="${displayName} logo" loading="lazy"
-                       onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT}';" />
-                </div>
-                <div>
-                  <strong>${displayName}</strong>
-                  <div class="player-meta">
-                    ${!isDefense && player.nflLogo ? `<img src="${player.nflLogo}" alt="${nflTeam} logo" class="player-meta__logo" loading="lazy" />` : ''}
-                    ${player.position ? `<span class="player-meta__pos">${player.position}</span>` : ''}
-                  </div>
-                </div>
-              </div>
+              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam })}
             </td>
             <td data-label="Points" class="align-right">${(player.points ?? 0).toFixed(2)}</td>
             <td data-label="${salaryYear} Salary" class="align-right salary-value-cell">${currencyFormatter.format(player.salary)}</td>
@@ -529,74 +487,6 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     text-align: center;
   }
 
-  .player-cell {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-  }
-
-  .player-cell__avatar {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #f3f4f6;
-  }
-
-  .player-cell__avatar img {
-    width: 150%;
-    height: 100%;
-    object-fit: cover;
-    object-position: top;
-  }
-
-  .player-cell__avatar--def {
-    border-radius: 4px;
-    background: #f0f0f0;
-  }
-
-  .player-cell__avatar--def img {
-    width: 100%;
-    object-fit: contain;
-    object-position: center;
-  }
-
-  .player-cell strong {
-    display: block;
-    margin-bottom: 0.15rem;
-    color: #1a1a1a;
-    font-size: 0.95rem;
-  }
-
-  .player-meta {
-    display: flex;
-    gap: 0.4rem;
-    align-items: center;
-    font-size: 0.8rem;
-    color: #666;
-  }
-
-  .player-meta__logo {
-    width: 16px;
-    height: 16px;
-    object-fit: contain;
-  }
-
-  .player-meta__team {
-    font-weight: 500;
-  }
-
-  .player-meta__pos {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #475569;
-  }
-
   .franchise-cell {
     display: flex;
     gap: 0.5rem;
@@ -618,11 +508,6 @@ const getPlayerAvatarSrc = (player: typeof players[0]): string => {
     .eligibility-table th,
     .eligibility-table td {
       padding: 0.5rem;
-    }
-
-    .player-cell__avatar {
-      width: 32px;
-      height: 32px;
     }
 
     .franchise-logo {
