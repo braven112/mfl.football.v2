@@ -41,7 +41,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (isTheLeagueHost) {
     const path = context.url.pathname;
-
     // Already has /theleague prefix — no rewrite needed
     if (path.startsWith('/theleague')) {
       return next();

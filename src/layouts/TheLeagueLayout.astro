@@ -186,6 +186,28 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} />
 		</div>
 
+		<!-- PWA Auth Gate: require login when running as installed app -->
+		<script is:inline>
+			(function() {
+				var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+				if (!isStandalone) return;
+
+				var path = window.location.pathname;
+				if (path === '/login' || path === '/theleague/login') return;
+
+				fetch('/api/auth/me', { credentials: 'include' })
+					.then(function(r) { return r.json(); })
+					.then(function(data) {
+						if (!data.authenticated) {
+							var loginPath = path.startsWith('/theleague') ? '/theleague/login' : '/login';
+							var redirect = encodeURIComponent(path + window.location.search);
+							window.location.href = loginPath + '?redirect=' + redirect;
+						}
+					})
+					.catch(function() {});
+			})();
+		</script>
+
 		<!-- Service Worker Registration -->
 		<script is:inline>
 			if ('serviceWorker' in navigator) {
