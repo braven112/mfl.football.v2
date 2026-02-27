@@ -193,6 +193,15 @@
           "path": "/mvp",
           "external": false,
           "description": "Top performers relative to salary"
+        },
+        {
+          "id": "dead-money",
+          "label": "Dead Money Awards",
+          "icon": "standings",
+          "path": "/dead-money",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Worst contracts and roster efficiency by season"
         }
       ]
     },
@@ -238,6 +247,7 @@
     "/salary-history": "/salary-history",
     "/salary-archive": "/salary-archive",
     "/mvp": "/mvp",
+    "/dead-money": "/dead-money",
     "/draft-predictor": "/draft-predictor",
     "/icons": "/icons",
     "/assets": "/assets",

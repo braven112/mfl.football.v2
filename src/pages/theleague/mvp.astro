@@ -256,8 +256,11 @@ const getNflLogo = (team) => {
       <h1>GM MVP Awards</h1>
       <p>
         Most efficient contracts by season, calculated as points scored divided
-        by salary. 
+        by salary.
       </p>
+      <a href="/theleague/dead-money" class="cross-link">
+        Looking for the other end of the spectrum? &rarr; The Dead Money Awards
+      </a>
     </header>
 
     <div class="filters">
@@ -858,6 +861,19 @@ const getNflLogo = (team) => {
   .empty-state {
     margin: 0;
     color: #6b7280;
+  }
+
+  .cross-link {
+    display: inline-block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc2626;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .cross-link:hover {
+    text-decoration: underline;
   }
 </style>
 

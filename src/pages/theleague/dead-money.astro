@@ -1,0 +1,1192 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+
+// Minimum salary to qualify for individual Brock Osweiler / Position Worst awards.
+// Filters out minimum-contract players — we want big-money busts, not dart throws.
+const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
+
+const playerModules = import.meta.glob(
+  '../../data/mfl-player-salaries-*.json',
+  { eager: true }
+);
+
+const getModuleData = (mod) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath) => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const positionLabels = [
+  { key: 'QB', label: 'Quarterback' },
+  { key: 'RB', label: 'Running Back' },
+  { key: 'WR', label: 'Wide Receiver' },
+  { key: 'TE', label: 'Tight End' },
+  { key: 'PK', label: 'Kicker' },
+  { key: 'Def', label: 'Defense/ST' },
+];
+const positionLabelMap = new Map(
+  positionLabels.map(({ key, label }) => [key, label])
+);
+
+// Year-aware franchise lookup — resolves historical names/icons per season
+function getFranchiseForYear(franchiseId: string, season: string) {
+  const team = leagueConfig.teams.find(t => t.franchiseId === franchiseId);
+  if (!team) return null;
+  const identity = getTeamIdentityForYear(team as any, Number(season));
+  return {
+    name: chooseTeamName({ fullName: identity.name, nameMedium: identity.nameMedium }),
+    icon: identity.icon,
+  };
+}
+
+// --- Brock Osweiler Award: worst individual player per season ---
+const overallWorst = [];
+const positionBuckets = new Map();
+for (const { key } of positionLabels) {
+  positionBuckets.set(key, []);
+}
+
+// --- Jerry Jones Award: worst team efficiency per season ---
+const jerryJonesStartersBySeason = new Map();
+const jerryJonesRosterBySeason = new Map();
+
+// --- Zero-Point Hall of Shame ---
+const zeroPointPlayersBySeason = new Map();
+
+for (const [path, mod] of Object.entries(playerModules)) {
+  const season = extractSeason(path);
+  if (!season) continue;
+
+  const data = getModuleData(mod);
+  const players = data?.players ?? [];
+
+  // All rostered players with salary
+  const allRostered = players
+    .filter(p => (Number(p.salary) || 0) > 0 && p.status === 'ROSTER')
+    .map(p => ({
+      season,
+      id: p.id,
+      name: p.name,
+      position: p.position,
+      salary: Number(p.salary) || 0,
+      points: Number(p.points) || 0,
+      efficiency: (Number(p.points) || 0) / (Number(p.salary) || 1),
+      franchiseId: p.franchiseId,
+      team: p.team ?? '',
+      headshot: p.headshot ?? getPlayerImageUrl(p.id),
+      contractYears: Number.parseInt(p.contractYear ?? p.contractYearRemaining ?? '0', 10) || 0,
+      positionLabel: positionLabelMap.get(p.position) ?? p.position,
+    }));
+
+  // Zero-point players (salary > 0, points === 0)
+  const zeroPts = allRostered.filter(p => p.points === 0);
+  if (zeroPts.length) {
+    zeroPts.sort((a, b) => b.salary - a.salary);
+    zeroPointPlayersBySeason.set(season, zeroPts);
+  }
+
+  // Scored players with meaningful contracts for individual awards
+  const scorers = allRostered.filter(p => p.points > 0 && p.salary >= INDIVIDUAL_AWARD_MIN_SALARY);
+  if (!scorers.length) continue;
+
+  // Sort ascending by efficiency (worst first)
+  scorers.sort((a, b) => a.efficiency - b.efficiency);
+  const worst = scorers[0];
+  if (worst) {
+    overallWorst.push({ ...worst });
+  }
+
+  // Worst per position
+  const positionWorst = new Map();
+  scorers.forEach((candidate) => {
+    const existing = positionWorst.get(candidate.position);
+    if (!existing || candidate.efficiency < existing.efficiency) {
+      positionWorst.set(candidate.position, candidate);
+    }
+  });
+  positionWorst.forEach((value, posKey) => {
+    const bucket = positionBuckets.get(posKey);
+    if (bucket) bucket.push({ ...value });
+  });
+
+  // --- Jerry Jones: build team lineups ---
+  const byFranchise = new Map();
+  allRostered.forEach(p => {
+    if (!byFranchise.has(p.franchiseId)) byFranchise.set(p.franchiseId, []);
+    byFranchise.get(p.franchiseId).push(p);
+  });
+
+  const starterRankings = [];
+  const rosterRankings = [];
+
+  for (const [franchiseId, roster] of byFranchise) {
+    const franchise = getFranchiseForYear(franchiseId, season);
+    const scoringRoster = roster.filter(p => p.points > 0);
+
+    // Full roster stats
+    const rosterSalary = scoringRoster.reduce((s, p) => s + p.salary, 0);
+    const rosterPoints = scoringRoster.reduce((s, p) => s + p.points, 0);
+    const zeroPlayers = roster.filter(p => p.points === 0);
+    const deadMoney = zeroPlayers.reduce((s, p) => s + p.salary, 0);
+
+    if (rosterPoints > 0) {
+      rosterRankings.push({
+        season,
+        franchiseId,
+        name: franchise?.name ?? franchiseId,
+        icon: franchise?.icon,
+        totalSalary: roster.reduce((s, p) => s + p.salary, 0),
+        totalPoints: rosterPoints,
+        costPerPoint: roster.reduce((s, p) => s + p.salary, 0) / rosterPoints,
+        rosterSize: roster.length,
+        zeroCount: zeroPlayers.length,
+        deadMoney,
+      });
+    }
+
+    // Build optimal starting lineup (best possible points)
+    const qbs = roster.filter(p => p.position === 'QB').sort((a, b) => b.points - a.points);
+    const pks = roster.filter(p => p.position === 'PK').sort((a, b) => b.points - a.points);
+    const defs = roster.filter(p => ['Def', 'DEF'].includes(p.position)).sort((a, b) => b.points - a.points);
+    const rbs = roster.filter(p => p.position === 'RB').sort((a, b) => b.points - a.points);
+    const wrs = roster.filter(p => p.position === 'WR').sort((a, b) => b.points - a.points);
+    const tes = roster.filter(p => p.position === 'TE').sort((a, b) => b.points - a.points);
+
+    const lineup = [];
+    if (qbs[0]) lineup.push({ ...qbs[0], slot: 'QB' });
+    if (pks[0]) lineup.push({ ...pks[0], slot: 'PK' });
+    if (defs[0]) lineup.push({ ...defs[0], slot: 'DEF' });
+
+    const mandatoryRB = rbs[0];
+    const mandatoryWR = wrs[0];
+    const mandatoryTE = tes[0];
+    if (mandatoryRB) lineup.push({ ...mandatoryRB, slot: 'RB' });
+    if (mandatoryWR) lineup.push({ ...mandatoryWR, slot: 'WR' });
+    if (mandatoryTE) lineup.push({ ...mandatoryTE, slot: 'TE' });
+
+    const starterNames = new Set([mandatoryRB?.id, mandatoryWR?.id, mandatoryTE?.id].filter(Boolean));
+    const flexPool = [...rbs.slice(1), ...wrs.slice(1), ...tes.slice(1)]
+      .filter(p => !starterNames.has(p.id))
+      .sort((a, b) => b.points - a.points);
+    flexPool.slice(0, 3).forEach(p => lineup.push({ ...p, slot: 'FLEX' }));
+
+    const lineupSalary = lineup.reduce((s, p) => s + p.salary, 0);
+    const lineupPoints = lineup.reduce((s, p) => s + p.points, 0);
+
+    if (lineupPoints > 0) {
+      starterRankings.push({
+        season,
+        franchiseId,
+        name: franchise?.name ?? franchiseId,
+        icon: franchise?.icon,
+        totalSalary: lineupSalary,
+        totalPoints: lineupPoints,
+        costPerPoint: lineupSalary / lineupPoints,
+        lineup,
+        zeroCount: zeroPlayers.length,
+        deadMoney,
+      });
+    }
+  }
+
+  // Sort worst first (highest cost per point)
+  starterRankings.sort((a, b) => b.costPerPoint - a.costPerPoint);
+  rosterRankings.sort((a, b) => b.costPerPoint - a.costPerPoint);
+
+  jerryJonesStartersBySeason.set(season, starterRankings);
+  jerryJonesRosterBySeason.set(season, rosterRankings);
+}
+
+// Sort overall worst by season (newest first)
+overallWorst.sort((a, b) => Number(b.season) - Number(a.season));
+
+// Sort position buckets by season (newest first)
+positionBuckets.forEach((bucket) => {
+  bucket.sort((a, b) => Number(b.season) - Number(a.season));
+});
+
+// Create set of overall worst player IDs for badge display
+const overallWorstIds = new Set(overallWorst.map(p => `${p.id}-${p.season}`));
+
+// Available years
+const availableYears = Array.from(jerryJonesStartersBySeason.keys())
+  .map(Number)
+  .sort((a, b) => b - a);
+const mostRecentYear = availableYears[0]?.toString() ?? getCurrentSeasonYear().toString();
+
+// Formatting helpers
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+const formatCurrency = (value: number) => {
+  if (!Number.isFinite(value)) return '$0';
+  return currencyFormatter.format(Math.round(value));
+};
+const formatContract = (salary: number, years: number) => {
+  const base = formatCurrency(salary);
+  const normalizedYears = Number.isFinite(years) ? Number(years) : 0;
+  return normalizedYears > 1 ? `${base} x ${normalizedYears}` : base;
+};
+const formatPoints = (value: number) =>
+  Number.isFinite(value) ? value.toFixed(1) : '0.0';
+const getNflLogo = (team: string) => {
+  // Strip non-alpha chars (e.g., "FA*" → "FA") then normalize
+  const cleaned = (team ?? '').replace(/[^A-Za-z]/g, '');
+  const code = normalizeTeamCode(cleaned);
+  if (!code || code === 'FA') return null;
+  return `/assets/nfl-logos/${code}.svg`;
+};
+const formatCostPerPoint = (costPerPoint: number) => {
+  if (!Number.isFinite(costPerPoint)) return '$∞';
+  if (costPerPoint >= 1_000_000) return formatCurrency(costPerPoint / 1_000_000) + 'M / pt';
+  if (costPerPoint >= 1_000) return formatCurrency(costPerPoint / 1_000) + 'K / pt';
+  return formatCurrency(costPerPoint) + ' / pt';
+};
+---
+
+<TheLeagueLayout title="Dead Money Awards">
+  <section class="dead-money">
+    <header class="page-header">
+      <h1>The Dead Money Awards</h1>
+      <p class="page-subtitle">
+        Celebrating the league's finest examples of financial mismanagement.
+      </p>
+      <div class="award-descriptions">
+        <div class="award-desc">
+          <strong>The Jerry Jones Award</strong> — Honors the GM who spent the most for the least.
+        </div>
+        <div class="award-desc">
+          <strong>The Brock Osweiler Award</strong> — Goes to the player (min $1.5M salary) who burned the most salary per point scored.
+        </div>
+      </div>
+      <a href="/theleague/mvp" class="cross-link">
+        Looking for the winners? &rarr; GM MVP Awards
+      </a>
+    </header>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label for="view-filter" class="filter-label">View</label>
+        <select id="view-filter" class="filter-select">
+          <option value="jerry_jones_starters">Jerry Jones Award (Starting Lineup)</option>
+          <option value="jerry_jones_roster">Jerry Jones Award (Full Roster)</option>
+          <option value="brock_osweiler">All-Time Brock Osweiler Awards</option>
+          {positionLabels.map(({ key, label }) => (
+            <option value={key}>{label}</option>
+          ))}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="year-filter" class="filter-label">Year</label>
+        <select id="year-filter" class="filter-select">
+          {availableYears.map(year => (
+            <option value={year} selected={year.toString() === mostRecentYear}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <!-- Jerry Jones Award: Starting Lineup View -->
+    <div id="jerry-jones-starters-view">
+      {availableYears.map(year => {
+        const rankings = jerryJonesStartersBySeason.get(year.toString()) ?? [];
+        return (
+          <div class="season-rankings" data-year={year} style={year.toString() === mostRecentYear ? '' : 'display: none;'}>
+            <h2 class="section-title">{year} Jerry Jones Award <span class="title-sub">Starting Lineup</span></h2>
+            <div class="team-rankings">
+              {rankings.map((team, idx) => {
+                const isWinner = idx === 0;
+                return (
+                  <article class={`team-rank-card ${isWinner ? 'team-rank-winner' : ''}`}>
+                    <div class="rank-number">{idx + 1}</div>
+                    <div class="team-rank-header">
+                      <div class="team-rank-identity">
+                        {team.icon && <img src={team.icon} alt={team.name} class="franchise-icon" loading="lazy" />}
+                        <div>
+                          <h3 class="team-rank-name">
+                            {team.name}
+                            {isWinner && <span class="dead-money-badge">Jerry Jones Award</span>}
+                          </h3>
+                          <div class="team-rank-stats">
+                            <span class="stat">Salary: <strong>{formatCurrency(team.totalSalary)}</strong></span>
+                            <span class="stat">Points: <strong>{formatPoints(team.totalPoints)}</strong></span>
+                            <span class="stat cost-stat">Cost/Pt: <strong>{formatCostPerPoint(team.costPerPoint)}</strong></span>
+                            {team.deadMoney > 0 && (
+                              <span class="stat dead-stat">Dead Money: <strong>{formatCurrency(team.deadMoney)}</strong> ({team.zeroCount} player{team.zeroCount !== 1 ? 's' : ''})</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {team.lineup && (() => {
+                      const col1 = team.lineup.filter(p => ['QB', 'RB', 'WR'].includes(p.slot));
+                      const col2 = team.lineup.filter(p => ['TE', 'PK', 'DEF'].includes(p.slot));
+                      const col3 = team.lineup.filter(p => p.slot === 'FLEX');
+                      const renderPlayer = (player) => {
+                        const nflLogo = player.team ? getNflLogo(player.team) : null;
+                        return (
+                          <div class="lineup-player">
+                            <span class="lineup-slot">{player.slot}</span>
+                            <img
+                              src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                              alt={player.name}
+                              class="lineup-headshot"
+                              loading="lazy"
+                              onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                            />
+                            <div class="lineup-info">
+                              <span class="lineup-name">{player.name}</span>
+                              <span class="lineup-meta">
+                                {nflLogo && <img src={nflLogo} alt={player.team} class="lineup-nfl-icon" loading="lazy" />}
+                                {formatCurrency(player.salary)} &middot; {formatPoints(player.points)} pts
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      };
+                      return (
+                        <div class="lineup-columns">
+                          <div class="lineup-col">{col1.map(renderPlayer)}</div>
+                          <div class="lineup-col">{col2.map(renderPlayer)}</div>
+                          <div class="lineup-col">{col3.map(renderPlayer)}</div>
+                        </div>
+                      );
+                    })()}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- Jerry Jones Award: Full Roster View -->
+    <div id="jerry-jones-roster-view" style="display: none;">
+      {availableYears.map(year => {
+        const rankings = jerryJonesRosterBySeason.get(year.toString()) ?? [];
+        return (
+          <div class="season-rankings" data-year={year} style={year.toString() === mostRecentYear ? '' : 'display: none;'}>
+            <h2 class="section-title">{year} Jerry Jones Award <span class="title-sub">Full Roster</span></h2>
+            <div class="team-rankings">
+              {rankings.map((team, idx) => {
+                const isWinner = idx === 0;
+                return (
+                  <article class={`team-rank-card ${isWinner ? 'team-rank-winner' : ''}`}>
+                    <div class="rank-number">{idx + 1}</div>
+                    <div class="team-rank-header">
+                      <div class="team-rank-identity">
+                        {team.icon && <img src={team.icon} alt={team.name} class="franchise-icon" loading="lazy" />}
+                        <div>
+                          <h3 class="team-rank-name">
+                            {team.name}
+                            {isWinner && <span class="dead-money-badge">Jerry Jones Award</span>}
+                          </h3>
+                          <div class="team-rank-stats">
+                            <span class="stat">Roster: <strong>{team.rosterSize} players</strong></span>
+                            <span class="stat">Salary: <strong>{formatCurrency(team.totalSalary)}</strong></span>
+                            <span class="stat">Points: <strong>{formatPoints(team.totalPoints)}</strong></span>
+                            <span class="stat cost-stat">Cost/Pt: <strong>{formatCostPerPoint(team.costPerPoint)}</strong></span>
+                            {team.deadMoney > 0 && (
+                              <span class="stat dead-stat">Dead Money: <strong>{formatCurrency(team.deadMoney)}</strong> ({team.zeroCount} player{team.zeroCount !== 1 ? 's' : ''})</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- All-Time Brock Osweiler Awards -->
+    <div class="mvp-grid" id="brock-osweiler-grid" style="display: none;">
+      {overallWorst.length ? (
+        overallWorst.map((player) => {
+          const franchise = player.franchiseId
+            ? getFranchiseForYear(player.franchiseId, player.season)
+            : null;
+          const nflLogo = player.team ? getNflLogo(player.team) : null;
+          return (
+            <article class="dm-card" data-year={player.season} data-position={player.position}>
+              <header>
+                <div class="card-header-top">
+                  <div class="season-badge-row">
+                    <p class="dm-season">{player.season}</p>
+                    <span class="dead-money-badge">Brock Osweiler Award</span>
+                  </div>
+                  {franchise?.icon && (
+                    <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
+                  )}
+                </div>
+                <div class="player-info">
+                  <img
+                    src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                    alt={`${player.name} headshot`}
+                    class="player-headshot"
+                    loading="lazy"
+                    onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                  />
+                  <div>
+                    <h2>{player.name}</h2>
+                    <p class="dm-meta">
+                      {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+                      <span>{player.position}</span>
+                    </p>
+                  </div>
+                </div>
+              </header>
+              <dl>
+                <div><dt>Points</dt><dd>{formatPoints(player.points)}</dd></div>
+                <div><dt>Contract</dt><dd>{formatContract(player.salary, player.contractYears)}</dd></div>
+                <div><dt>Cost / Point</dt><dd class="cost-highlight">{formatCostPerPoint(1 / player.efficiency)}</dd></div>
+              </dl>
+            </article>
+          );
+        })
+      ) : (
+        <p>No data available yet.</p>
+      )}
+    </div>
+
+    <!-- Position Worst -->
+    <section class="position-worst" style="display: none;">
+      <h2>Position Worst</h2>
+      {positionLabels.map(({ key, label }) => {
+        const list = positionBuckets.get(key) ?? [];
+        return (
+          <div class="position-group">
+            <h3>{label}</h3>
+            <div class="mvp-grid">
+              {list.length ? (
+                list.map((player) => {
+                  const franchise = player.franchiseId
+                    ? getFranchiseForYear(player.franchiseId, player.season)
+                    : null;
+                  const nflLogo = player.team ? getNflLogo(player.team) : null;
+                  const isOverallWorst = overallWorstIds.has(`${player.id}-${player.season}`);
+                  return (
+                    <article class="dm-card" data-year={player.season} data-position={player.position}>
+                      <header>
+                        <div class="card-header-top">
+                          <div class="season-badge-row">
+                            <p class="dm-season">{player.season}</p>
+                            {isOverallWorst && <span class="dead-money-badge">Brock Osweiler Award</span>}
+                          </div>
+                          {franchise?.icon && (
+                            <img src={franchise.icon} alt={franchise?.name ?? 'Franchise'} class="franchise-icon" loading="lazy" />
+                          )}
+                        </div>
+                        <div class="player-info">
+                          <img
+                            src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                            alt={`${player.name} headshot`}
+                            class="player-headshot"
+                            loading="lazy"
+                            onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                          />
+                          <div>
+                            <h2>{player.name}</h2>
+                            <p class="dm-meta">
+                              {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+                              <span>{player.position}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </header>
+                      <dl>
+                        <div><dt>Points</dt><dd>{formatPoints(player.points)}</dd></div>
+                        <div><dt>Contract</dt><dd>{formatContract(player.salary, player.contractYears)}</dd></div>
+                        <div><dt>Cost / Point</dt><dd class="cost-highlight">{formatCostPerPoint(1 / player.efficiency)}</dd></div>
+                      </dl>
+                    </article>
+                  );
+                })
+              ) : (
+                <p class="empty-state">No data yet.</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+
+    <!-- Zero-Point Hall of Shame -->
+    <section class="hall-of-shame">
+      <h2 class="section-title shame-title">Zero-Point Hall of Shame</h2>
+      <p class="shame-subtitle">Rostered players who collected a paycheck and scored exactly zero points. Money well spent.</p>
+      {availableYears.map(year => {
+        const zeroes = zeroPointPlayersBySeason.get(year.toString());
+        if (!zeroes?.length) return null;
+        const totalWasted = zeroes.reduce((s, p) => s + p.salary, 0);
+        return (
+          <div class="shame-season">
+            <h3 class="shame-season-title">
+              {year}
+              <span class="shame-season-summary">{zeroes.length} player{zeroes.length !== 1 ? 's' : ''} &middot; {formatCurrency(totalWasted)} wasted</span>
+            </h3>
+            <div class="shame-grid">
+              {zeroes.map(player => {
+                const franchise = getFranchiseForYear(player.franchiseId, player.season);
+                const nflLogo = player.team ? getNflLogo(player.team) : null;
+                return (
+                  <div class="shame-card">
+                    <div class="shame-player-info">
+                      <img
+                        src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                        alt={player.name}
+                        class="shame-headshot"
+                        loading="lazy"
+                        onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                      />
+                      <div>
+                        <span class="shame-name">{player.name}</span>
+                        <span class="shame-meta">
+                          {nflLogo && <img src={nflLogo} alt={player.team} class="shame-nfl-icon" loading="lazy" />}
+                          {player.position}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="shame-details">
+                      <span class="shame-salary">{formatCurrency(player.salary)}</span>
+                      <span class="shame-team">{franchise?.name ?? 'Unknown'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .dead-money {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  /* Header */
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .page-subtitle {
+    color: #475569;
+    font-size: 1.05rem;
+    margin: 0;
+  }
+
+  .award-descriptions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+  }
+
+  .award-desc {
+    font-size: 0.9rem;
+    color: #64748b;
+  }
+
+  .cross-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .cross-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.25rem;
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    margin: 0;
+  }
+
+  .filter-select {
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    color: #1e293b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: fit-content;
+  }
+
+  .filter-select:hover {
+    border-color: #94a3b8;
+  }
+
+  .filter-select:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  }
+
+  /* Section titles */
+  .section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid #dc2626;
+  }
+
+  .title-sub {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  /* Dead Money Badge */
+  .dead-money-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  }
+
+  /* Team Rankings (Jerry Jones) */
+  .team-rankings {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .team-rank-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease;
+  }
+
+  .team-rank-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .team-rank-winner {
+    border: 2px solid #dc2626;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+    box-shadow: var(--shadow-md);
+  }
+
+  .rank-number {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #94a3b8;
+    min-width: 2rem;
+    text-align: center;
+    padding-top: 0.25rem;
+  }
+
+  .team-rank-winner .rank-number {
+    color: #dc2626;
+  }
+
+  .team-rank-header {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .team-rank-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .team-rank-name {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .team-rank-stats {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.35rem;
+  }
+
+  .stat {
+    font-size: 0.825rem;
+    color: #64748b;
+  }
+
+  .cost-stat strong {
+    color: #dc2626;
+  }
+
+  .dead-stat strong {
+    color: #b91c1c;
+  }
+
+  .franchise-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.375rem;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  /* Lineup Columns (3-col: QB/RB/WR | TE/PK/DEF | FLEX x3) */
+  .lineup-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .lineup-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .lineup-player {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0;
+  }
+
+  .lineup-slot {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #fff;
+    background: #94a3b8;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+    min-width: 2.5rem;
+    text-align: center;
+  }
+
+  .team-rank-winner .lineup-slot {
+    background: #dc2626;
+  }
+
+  .lineup-headshot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f3f4f6;
+    flex-shrink: 0;
+  }
+
+  .lineup-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .lineup-name {
+    font-size: 0.825rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lineup-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .lineup-nfl-icon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+
+  /* Player Cards (Brock Osweiler & Position Worst) */
+  .mvp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .dm-card {
+    background: #fff;
+    border: 1px solid #d7dce3;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .dm-card header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .card-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .season-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .player-headshot {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f3f4f6;
+    flex-shrink: 0;
+  }
+
+  .dm-season {
+    margin: 0;
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .dm-meta {
+    margin: 0;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .nfl-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  dt {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .cost-highlight {
+    color: #dc2626;
+  }
+
+  /* Position Groups */
+  .position-worst h2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .position-group {
+    margin-bottom: 2rem;
+  }
+
+  .position-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .empty-state {
+    margin: 0;
+    color: #6b7280;
+  }
+
+  /* Hall of Shame */
+  .hall-of-shame {
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e2e8f0;
+  }
+
+  .shame-title {
+    border-bottom-color: #b91c1c;
+  }
+
+  .shame-subtitle {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: -0.5rem 0 1rem 0;
+  }
+
+  .shame-season {
+    margin-bottom: 1.5rem;
+  }
+
+  .shame-season-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .shame-season-summary {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #94a3b8;
+  }
+
+  .shame-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .shame-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .shame-player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .shame-headshot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #f3f4f6;
+    flex-shrink: 0;
+  }
+
+  .shame-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #1e293b;
+    display: block;
+  }
+
+  .shame-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .shame-nfl-icon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+
+  .shame-details {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .shame-salary {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #dc2626;
+    display: block;
+  }
+
+  .shame-team {
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  @media (max-width: 767px) {
+    .lineup-columns {
+      grid-template-columns: 1fr;
+    }
+
+    .team-rank-card {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .rank-number {
+      font-size: 1.25rem;
+    }
+
+    .shame-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  function setupDeadMoneyFilters() {
+    const viewFilter = document.getElementById('view-filter') as HTMLSelectElement;
+    const yearFilter = document.getElementById('year-filter') as HTMLSelectElement;
+    const startersView = document.getElementById('jerry-jones-starters-view');
+    const rosterView = document.getElementById('jerry-jones-roster-view');
+    const osweilerGrid = document.getElementById('brock-osweiler-grid');
+    const positionSection = document.querySelector('.position-worst');
+    const positionGroups = document.querySelectorAll('.position-group');
+
+    const positionMap: Record<string, string> = {
+      'QB': 'Quarterback',
+      'RB': 'Running Back',
+      'WR': 'Wide Receiver',
+      'TE': 'Tight End',
+      'PK': 'Kicker',
+      'Def': 'Defense/ST'
+    };
+
+    function applyFilters() {
+      if (!viewFilter || !yearFilter) return;
+
+      const selectedView = viewFilter.value;
+      const selectedYear = yearFilter.value;
+
+      // Hide all views first
+      if (startersView) startersView.style.display = 'none';
+      if (rosterView) rosterView.style.display = 'none';
+      if (osweilerGrid) osweilerGrid.style.display = 'none';
+      if (positionSection) (positionSection as HTMLElement).style.display = 'none';
+
+      if (selectedView === 'jerry_jones_starters') {
+        if (startersView) startersView.style.display = '';
+        yearFilter.disabled = false;
+        // Show only selected year
+        startersView?.querySelectorAll('.season-rankings').forEach(el => {
+          (el as HTMLElement).style.display = (el as HTMLElement).dataset.year === selectedYear ? '' : 'none';
+        });
+
+      } else if (selectedView === 'jerry_jones_roster') {
+        if (rosterView) rosterView.style.display = '';
+        yearFilter.disabled = false;
+        rosterView?.querySelectorAll('.season-rankings').forEach(el => {
+          (el as HTMLElement).style.display = (el as HTMLElement).dataset.year === selectedYear ? '' : 'none';
+        });
+
+      } else if (selectedView === 'brock_osweiler') {
+        if (osweilerGrid) osweilerGrid.style.display = '';
+        yearFilter.disabled = true;
+
+      } else {
+        // Position-specific view
+        if (positionSection) (positionSection as HTMLElement).style.display = '';
+        yearFilter.disabled = true;
+
+        const selectedLabel = positionMap[selectedView];
+        positionGroups.forEach(group => {
+          const heading = group.querySelector('h3');
+          const label = heading?.textContent?.trim();
+          (group as HTMLElement).style.display = label === selectedLabel ? '' : 'none';
+        });
+      }
+    }
+
+    viewFilter?.addEventListener('change', applyFilters);
+    yearFilter?.addEventListener('change', applyFilters);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupDeadMoneyFilters);
+  } else {
+    setupDeadMoneyFilters();
+  }
+
+  document.addEventListener('astro:after-swap', setupDeadMoneyFilters);
+</script>

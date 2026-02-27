@@ -74,7 +74,12 @@ const TEAM_CODE_MAP: Record<string, string> = {
   'HST': 'HOU', // Houston
   'BLT': 'BAL', // Baltimore
   'CLV': 'CLE', // Cleveland
-  'ARZ': 'ARI'  // Arizona
+  'ARZ': 'ARI', // Arizona
+  'OAK': 'LV',  // Oakland Raiders → Las Vegas
+  'SDC': 'LAC', // San Diego Chargers → LA Chargers
+  'SD':  'LAC', // San Diego Chargers (alt code)
+  'RAM': 'LAR', // Rams (historical MFL code)
+  'STL': 'LAR', // St. Louis Rams → LA Rams
 };
 
 /**
