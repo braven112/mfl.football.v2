@@ -240,11 +240,26 @@ When you're working with Claude to customize your CSS, paste the following promp
 > }
 > ```
 >
+> The source code for these CSS files and the full project is on GitHub:
+> https://github.com/braven112/mfl.football.v2
+>
+> Key files in the repo:
+> - `src/assets/css/src/_variables-dark.scss` — all CSS variable definitions with defaults
+> - `src/assets/css/src/dark_main.scss` — main dark theme SCSS (UFC Sans Condensed font)
+> - `src/assets/css/src/dark_din_main.scss` — dark theme variant (DIN font via Typekit)
+> - `public/assets/css/dist/dark_main.css` — compiled CSS file (what MFL loads)
+> - `public/assets/css/dist/dark_din_main.css` — compiled DIN variant
+> - `public/assets/icons/sprite.svg` — SVG icon sprite with 100+ symbols
+> - `src/pages/theleague/icons.astro` — icon gallery page with search/categories
+> - `src/pages/theleague/css-customization.astro` — this customization guide page
+>
+> If you need to look up how a specific component is styled, check the SCSS partials in `src/assets/css/src/` (e.g., `_tables.scss`, `_buttons.scss`, `_mflmenu.scss`). Each file uses the CSS variables defined above.
+>
 > When I ask you to change something, generate ONLY a `<style>` block containing the overridden variables. Do not regenerate the entire stylesheet. Only include variables that are changing.
 
 ---
 
-That prompt gives Claude everything it needs. From there you can say things like:
+That prompt gives Claude everything it needs — including the GitHub repo URL so it can look up component styles if needed. From there you can say things like:
 
 - "Change my accent color to red `#dc2626`"
 - "Make the page background pure black"

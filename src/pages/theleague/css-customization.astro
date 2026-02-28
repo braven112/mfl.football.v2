@@ -285,6 +285,21 @@ for (const group of groups) {
             any variable by adding a <code>&lt;style&gt;</code> block in an MFL <strong>Homepage Message</strong>.
             The Homepage Message loads <em>after</em> the stylesheet, so your overrides win.
           </p>
+          <div class="repo-callout">
+            <strong>Source Repository</strong>
+            <p>
+              The full source code is on GitHub at
+              <a href="https://github.com/braven112/mfl.football.v2" target="_blank">braven112/mfl.football.v2</a>.
+              If you're using Claude to help customize, point it at this repo so it can reference
+              the SCSS partials, variable definitions, and component styles directly.
+            </p>
+            <p class="repo-files">
+              Key files:
+              <code>src/assets/css/src/_variables-dark.scss</code> (all variable defaults) &middot;
+              <code>public/assets/icons/sprite.svg</code> (icon sprite) &middot;
+              <code>src/assets/css/src/</code> (component SCSS files)
+            </p>
+          </div>
         </section>
 
         <!-- GETTING STARTED -->
@@ -334,6 +349,21 @@ Here is the complete list of CSS variables I can override, with their current de
 :root {
 ${claudePromptVars}
 }
+
+The source code for these CSS files and the full project is on GitHub:
+https://github.com/braven112/mfl.football.v2
+
+Key files in the repo:
+- src/assets/css/src/_variables-dark.scss — all CSS variable definitions with defaults
+- src/assets/css/src/dark_main.scss — main dark theme SCSS (UFC Sans Condensed font)
+- src/assets/css/src/dark_din_main.scss — dark theme variant (DIN font via Typekit)
+- public/assets/css/dist/dark_main.css — compiled CSS file (what MFL loads)
+- public/assets/css/dist/dark_din_main.css — compiled DIN variant
+- public/assets/icons/sprite.svg — SVG icon sprite with 100+ symbols
+- src/pages/theleague/icons.astro — icon gallery page with search/categories
+- src/pages/theleague/css-customization.astro — this customization guide page
+
+If you need to look up how a specific component is styled, check the SCSS partials in src/assets/css/src/ (e.g., _tables.scss, _buttons.scss, _mflmenu.scss). Each file uses the CSS variables defined above.
 
 When I ask you to change something, generate ONLY a <style> block containing the overridden variables. Do not regenerate the entire stylesheet. Only include variables that are changing.`}</pre>
           </div>
@@ -791,6 +821,38 @@ git push -u origin add-icon-my-icon-name</code></pre>
   }
 
   .card a { color: rgba(37, 99, 235, 0.95); }
+
+  /* ── Repo callout ── */
+  .repo-callout {
+    margin-top: 1.25rem;
+    padding: 1rem 1.25rem;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-left: 4px solid rgba(37, 99, 235, 0.65);
+    border-radius: 0.5rem;
+  }
+
+  .repo-callout strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: #0f172a;
+  }
+
+  .repo-callout p {
+    margin: 0 0 0.5rem;
+    font-size: 0.88rem;
+  }
+
+  .repo-callout p:last-child { margin-bottom: 0; }
+
+  .repo-files {
+    font-size: 0.82rem !important;
+    color: #64748b !important;
+  }
+
+  .repo-files code {
+    font-size: 0.78rem;
+  }
 
   .hint {
     font-size: 0.85rem;
