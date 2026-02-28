@@ -219,22 +219,39 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
     [tiers, rankings, overrides, scheduleSave, buildState],
   );
 
-  const handleAddTier = useCallback(() => {
-    // Add a tier break after the last visible player
-    const filtered = getFilteredPlayers(rankings, positionFilter, playerById);
-    if (filtered.length < 2) return;
+  const handleMoveTier = useCallback(
+    (afterPlayerId: string, direction: 'up' | 'down') => {
+      const filtered = getFilteredPlayers(rankings, positionFilter, playerById);
+      const currentIdx = filtered.findIndex((p) => p.id === afterPlayerId);
+      if (currentIdx === -1) return;
 
-    const midpoint = Math.floor(filtered.length / 2);
-    const afterId = filtered[midpoint - 1]?.id;
-    if (!afterId) return;
+      const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+      if (targetIdx < 0 || targetIdx >= filtered.length - 1) return;
 
-    // Don't add duplicate
-    if (tiers.some((t) => t.afterPlayerId === afterId)) return;
+      const newAfterId = filtered[targetIdx].id;
+      // Don't move if a tier already exists at the target
+      if (tiers.some((t) => t.afterPlayerId === newAfterId)) return;
 
-    const newTiers = [...tiers, { afterPlayerId: afterId, source: 'manual' as const }];
-    setTiers(newTiers);
-    scheduleSave(buildState(rankings, overrides, newTiers));
-  }, [tiers, rankings, overrides, positionFilter, playerById, scheduleSave, buildState]);
+      const newTiers = tiers.map((t) =>
+        t.afterPlayerId === afterPlayerId ? { ...t, afterPlayerId: newAfterId } : t,
+      );
+      setTiers(newTiers);
+      scheduleSave(buildState(rankings, overrides, newTiers));
+    },
+    [tiers, rankings, overrides, positionFilter, playerById, scheduleSave, buildState],
+  );
+
+  const handleAddTierAfter = useCallback(
+    (afterPlayerId: string) => {
+      // Don't add if a tier already exists after this player
+      if (tiers.some((t) => t.afterPlayerId === afterPlayerId)) return;
+
+      const newTiers = [...tiers, { afterPlayerId, source: 'manual' as const }];
+      setTiers(newTiers);
+      scheduleSave(buildState(rankings, overrides, newTiers));
+    },
+    [tiers, rankings, overrides, scheduleSave, buildState],
+  );
 
   const handleReset = useCallback(() => {
     if (!confirm('Reset all rankings to composite order? This cannot be undone.')) return;
@@ -334,22 +351,13 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
               {isEditing ? 'Done' : 'Edit'}
             </button>
             {isEditing && (
-              <>
-                <button
-                  className="cr-btn cr-btn--sm"
-                  onClick={handleAddTier}
-                  type="button"
-                >
-                  + Add Tier
-                </button>
-                <button
-                  className="cr-btn cr-btn--sm cr-btn--danger"
-                  onClick={handleReset}
-                  type="button"
-                >
-                  Reset
-                </button>
-              </>
+              <button
+                className="cr-btn cr-btn--sm cr-btn--danger"
+                onClick={handleReset}
+                type="button"
+              >
+                Reset
+              </button>
             )}
           </div>
         </div>
@@ -372,6 +380,8 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
         onReorder={handleReorder}
         onRemoveTier={handleRemoveTier}
         onRenameTier={handleRenameTier}
+        onMoveTier={handleMoveTier}
+        onAddTierAfter={handleAddTierAfter}
       />
     </div>
   );
