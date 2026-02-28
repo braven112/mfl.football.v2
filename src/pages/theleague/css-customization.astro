@@ -353,7 +353,7 @@ https://github.com/braven112/mfl.football.v2
 
 Key files in the repo:
 - src/assets/css/src/_variables-dark.scss — all CSS variable definitions with defaults
-- src/assets/css/src/dark_main.scss — main dark theme SCSS (UFC Sans Condensed font)
+- src/assets/css/src/dark_main.scss — main dark theme SCSS (UFC Sans font)
 - src/assets/css/src/dark_din_main.scss — dark theme variant (DIN font via Typekit)
 - public/assets/css/dist/dark_main.css — compiled CSS file (what MFL loads)
 - public/assets/css/dist/dark_din_main.css — compiled DIN variant
@@ -437,6 +437,17 @@ When I ask you to change something, generate ONLY a <style> block containing the
   --today-bg-color: #dc2626;
   --logo-main-color: #dc2626;
   --logo-name-primary-color: #dc2626;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Switch to condensed font</h3>
+          <p>The base CSS bundles both UFC Sans and UFC Sans Condensed. No extra font loading needed:</p>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --headline-font: "UFC Sans Condensed", sans-serif;
+  --headline-font-weight: 700;
+  --body-font: "UFC Sans Condensed", sans-serif;
+  --body-font-weight: 400;
 {'}'}
 &lt;/style&gt;</code></pre>
 
@@ -593,7 +604,7 @@ git push -u origin add-icon-my-icon-name</code></pre>
             <tbody>
               <tr>
                 <td><code>dark_main.css</code></td>
-                <td>UFC Sans Condensed</td>
+                <td>UFC Sans</td>
                 <td><code>@font-face</code> with local WOFF2 files</td>
               </tr>
               <tr>
@@ -608,6 +619,57 @@ git push -u origin add-icon-my-icon-name</code></pre>
             If you override <code>--headline-font</code> and <code>--body-font</code>, you can use any
             font regardless of which base file you chose.
           </p>
+
+          <h3>Available UFC font families</h3>
+          <p>
+            The <code>dark_main.css</code> file bundles two UFC font families. The default is
+            <strong>UFC Sans</strong> (non-condensed), but you can switch to the condensed variant
+            using CSS variables.
+          </p>
+          <table class="var-table">
+            <thead>
+              <tr><th>Family</th><th>Weights</th><th>Style</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>"UFC Sans"</code></td>
+                <td>400 (Regular), 500 (Medium)</td>
+                <td>Standard width &mdash; current default</td>
+              </tr>
+              <tr>
+                <td><code>"UFC Sans Condensed"</code></td>
+                <td>400 (Medium), 700 (Bold)</td>
+                <td>Narrow / condensed &mdash; tighter, more compact</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Switch to UFC Sans Condensed</h3>
+          <p>
+            To switch your league to the condensed font, add this to your Homepage Message:
+          </p>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --headline-font: "UFC Sans Condensed", sans-serif;
+  --headline-font-weight: 700;
+  --body-font: "UFC Sans Condensed", sans-serif;
+  --body-font-weight: 400;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Mix and match</h3>
+          <p>
+            You can use different families for headings and body text. For example, condensed bold
+            headings with standard-width body text:
+          </p>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --headline-font: "UFC Sans Condensed", sans-serif;
+  --headline-font-weight: 700;
+  --body-font: "UFC Sans", sans-serif;
+  --body-font-weight: 400;
+{'}'}
+&lt;/style&gt;</code></pre>
         </section>
 
         <!-- TIPS -->
