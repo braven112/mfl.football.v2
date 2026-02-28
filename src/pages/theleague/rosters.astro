@@ -873,14 +873,6 @@ try {
   const injuryDataModule = await import(`../../../data/theleague/live-injury-data-week-${currentWeek}.json`);
   if (injuryDataModule.default?.injuries) {
     mflInjuryData = injuryDataModule.default.injuries;
-    console.log(`✅ Loaded ${Object.keys(mflInjuryData).length} player injuries from MFL API (week ${currentWeek})`);
-
-    // Debug: Check if Geno Smith (ID: 11150) is in the injury data
-    if (mflInjuryData['11150']) {
-      console.log('🔍 Geno Smith (11150) injury data loaded:', mflInjuryData['11150']);
-    } else {
-      console.log('⚠️  Geno Smith (11150) NOT found in MFL injury data');
-    }
   }
 } catch (error) {
   console.warn(`Live injury data not available for week ${currentWeek}:`, error.message);
@@ -1131,17 +1123,6 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       tradeBait: tradeBaitPlayerIds.has(String(player.id)),
     };
 
-    // Debug: Log Geno Smith specifically
-    if (player.id === '11150') {
-      console.log('🔍 Geno Smith player object after processing:', {
-        id: playerObj.id,
-        name: playerObj.name,
-        injuryStatus: playerObj.injuryStatus,
-        injuryBodyPart: playerObj.injuryBodyPart,
-        mflInjury: mflInjuryData[player.id],
-        sleeperInjury: player.sleeper?.injuryStatus
-      });
-    }
 
     return playerObj;
   });
@@ -4886,19 +4867,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   // Apply contract action
   const applyContractAction = (actionType, extensionYears = 1) => {
-    console.log('applyContractAction called', { actionType, extensionYears, selectedPlayer });
-    if (!selectedPlayer) {
-      console.error('No selected player');
-      return;
-    }
+    if (!selectedPlayer) return;
 
     const { id, name, position, salary, years } = selectedPlayer;
-    console.log('Player data:', { id, name, position, salary, years });
 
     // Calculate which year the franchise tag applies (0-indexed)
     // If player has 3 years, they're signed through index 2 (2027), so franchise tag is at index 3 (2028)
     const franchiseYearIndex = years; // The year after their current contract
-    console.log('Franchise Year Index:', franchiseYearIndex);
 
     // If this player previously had an extension and we're applying a different action, clear the extension tracker
     if (currentVeteranExtension === id && actionType !== 'extension') {
@@ -4947,8 +4922,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       };
     }
 
-    console.log('Result calculated:', result);
-
     if (result) {
       contractActions[id] = {
         type: actionType,
@@ -4960,12 +4933,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         ...result
       };
 
-      console.log('Contract action stored:', contractActions[id]);
-      console.log('All contract actions:', contractActions);
-
       // Close modal and recalculate
       closeModal();
-      console.log('Calling recalculateRoster');
       recalculateRoster();
       updateClearAllButton();
     } else {
@@ -4975,7 +4944,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   // Recalculate roster with contract actions
   const recalculateRoster = () => {
-    console.log('recalculateRoster called');
     // Trigger a view update by simulating a team change
     // This will call updateView which is defined later
     const select = document.getElementById('rosterTeamSelect');
@@ -5030,7 +4998,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   });
 
   const initRosterPage = () => {
-    console.log('=== INIT ROSTER PAGE ===');
     const {
       seasons = {},
       defaultSeason,
@@ -5054,9 +5021,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       reserveForRookies = 5_000_000,
       trendWeeks = [],
     } = config;
-
-    console.log('defaultTeamId:', defaultTeamId);
-    console.log('defaultSeason:', defaultSeason);
 
     // Initialize view tabs
     document.querySelectorAll('.view-tab').forEach(tab => {
@@ -6682,18 +6646,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     };
 
     const updateView = () => {
-      console.log('updateView called, contractActions:', contractActions);
       resetSort();
       const { seasonData, teamData } = getTeamData();
       let rows = buildDisplayRows(teamData);
-      console.log('Initial rows count:', rows.length);
-
       // Apply contract actions to rows
       rows = rows.map(player => {
         const action = contractActions[player.id];
         if (!action) return player;
-        console.log('Applying action to player:', player.id, action);
-
         // Keep cut/traded players in the list (they'll be shown at 50% opacity)
         // but don't modify their data
         if (action.type === 'cut' || action.type === 'trade') {
@@ -6994,16 +6953,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     };
 
     const hydrateTeamFromSession = async () => {
-      console.log('[rosters] hydrateTeamFromSession: start');
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
-        console.log('[rosters] hydrateTeamFromSession: response', res.status);
-        if (!res.ok) {
-          return;
-        }
+        if (!res.ok) return;
         const data = await res.json();
         let franchiseId = normalizeFranchiseId(data?.user?.franchiseId);
-        console.log('[rosters] hydrateTeamFromSession: data', data);
         const isAuthed = !!data?.authenticated && !!franchiseId;
         const teamExists =
           isAuthed &&
@@ -7012,15 +6966,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             seasons[defaultSeason]?.teams?.[franchiseId] ||
             teams[franchiseId]
           );
-        if (!teamExists) {
-          console.log('[rosters] hydrateTeamFromSession: team not found', franchiseId);
-          return;
-        }
-        if (franchiseId === currentTeam) {
-          console.log('[rosters] hydrateTeamFromSession: already on team', franchiseId);
-          return;
-        }
-        console.log('[rosters] hydrateTeamFromSession: switching to', franchiseId);
+        if (!teamExists || franchiseId === currentTeam) return;
         applyTeamSelection(franchiseId);
       } catch (err) {
         console.error('Failed to set team from session', err);
