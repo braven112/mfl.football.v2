@@ -31,6 +31,7 @@ import type { RankedPlayer, TierBreak } from '../../../types/custom-rankings';
 interface RankingListProps {
   players: RankedPlayer[];
   tiers: TierBreak[];
+  isEditing: boolean;
   onReorder: (oldIndex: number, newIndex: number) => void;
   onRemoveTier: (afterPlayerId: string) => void;
   onRenameTier: (afterPlayerId: string, newLabel: string) => void;
@@ -39,16 +40,18 @@ interface RankingListProps {
 export default function RankingList({
   players,
   tiers,
+  isEditing,
   onReorder,
   onRemoveTier,
   onRenameTier,
 }: RankingListProps) {
-  const sensors = useSensors(
+  const editSensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  const noSensors = useSensors();
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -81,7 +84,7 @@ export default function RankingList({
 
   return (
     <DndContext
-      sensors={sensors}
+      sensors={isEditing ? editSensors : noSensors}
       collisionDetection={closestCenter}
       modifiers={[restrictToVerticalAxis, restrictToParentElement]}
       onDragEnd={handleDragEnd}
@@ -95,7 +98,7 @@ export default function RankingList({
             const tier = tierMap.get(player.id);
             return (
               <div key={player.id}>
-                <PlayerRow player={player} rank={index + 1} />
+                <PlayerRow player={player} rank={index + 1} isEditing={isEditing} />
                 {tier && (
                   <TierDivider
                     tier={tier}

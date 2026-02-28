@@ -89,6 +89,17 @@
   font-size: 0.75rem;
 }
 
+.cr-btn--active {
+  background: var(--primary-color, #2c5f2d);
+  color: #fff;
+  border-color: var(--primary-color, #2c5f2d);
+}
+
+.cr-btn--active:hover {
+  opacity: 0.9;
+  background: var(--primary-color, #2c5f2d);
+}
+
 .cr-btn--danger {
   color: #dc2626;
   border-color: #fca5a5;
