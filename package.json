@@ -48,6 +48,7 @@
     "clean": "pnpm --parallel --filter './packages/*' clean"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@astrojs/check": "^0.9.5",
     "@astrojs/vercel": "^8.0.4",
     "@playwright/test": "^1.57.0",
@@ -55,6 +56,7 @@
     "@types/react-dom": "^19.2.3",
     "astro": "^5.1.1",
     "autoprefixer": "^10.4.14",
+    "baseline-browser-mapping": "^2.10.0",
     "chokidar": "^3.6.0",
     "cssnano": "^6.0.1",
     "fast-check": "^4.4.0",
@@ -66,9 +68,7 @@
     "terser": "^5.44.1",
     "typescript": "^5.9.3",
     "vite": "^5.0.0",
-    "vitest": "^1.0.0",
-    "@anthropic-ai/sdk": "^0.71.2",
-    "baseline-browser-mapping": "^2.10.0"
+    "vitest": "^1.0.0"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",
@@ -76,6 +76,7 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@upstash/redis": "^1.36.3",
     "@vercel/blob": "^2.2.0",
     "node-fetch": "^3.3.2",
     "react-dom": "^19.2.4",
