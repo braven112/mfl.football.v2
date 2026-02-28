@@ -2,6 +2,7 @@ import { fixFranchiseIcons, shouldSkipFranchiseIcons } from './features/franchis
 import { fixPlayoffTableLabels } from './features/projected-playoff.js';
 import { updateFranchiseLinks } from './features/franchiseLinks.js';
 import { initializeTeamPreferences } from './shared/teamPreferences.js';
+import { initMflPageEnhancements } from './shared/mflPageEnhancements.js';
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
@@ -86,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
   updateFranchiseLinks();
 
   //
-  // Future features:
-  // if (document.querySelector('#standings')) highlightStandings();
+  // --------------------------
+  // MFL Page Enhancements (migrated from global.js)
+  // --------------------------
+  //
+  initMflPageEnhancements();
 });
