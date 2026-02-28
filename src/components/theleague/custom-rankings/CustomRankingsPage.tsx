@@ -77,6 +77,7 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
   const [lastSaved, setLastSaved] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStateRef = useRef<CustomRankingsState | null>(null);
@@ -326,19 +327,30 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
           <div className="cr-page__actions">
             <SaveIndicator status={saveStatus} lastSaved={lastSaved} />
             <button
-              className="cr-btn cr-btn--sm"
-              onClick={handleAddTier}
+              className={`cr-btn cr-btn--sm${isEditing ? ' cr-btn--active' : ''}`}
+              onClick={() => setIsEditing((v) => !v)}
               type="button"
             >
-              + Add Tier
+              {isEditing ? 'Done' : 'Edit'}
             </button>
-            <button
-              className="cr-btn cr-btn--sm cr-btn--danger"
-              onClick={handleReset}
-              type="button"
-            >
-              Reset
-            </button>
+            {isEditing && (
+              <>
+                <button
+                  className="cr-btn cr-btn--sm"
+                  onClick={handleAddTier}
+                  type="button"
+                >
+                  + Add Tier
+                </button>
+                <button
+                  className="cr-btn cr-btn--sm cr-btn--danger"
+                  onClick={handleReset}
+                  type="button"
+                >
+                  Reset
+                </button>
+              </>
+            )}
           </div>
         </div>
         <p className="cr-page__subtitle">
@@ -356,6 +368,7 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
       <RankingList
         players={enrichedPlayers}
         tiers={visibleTiers}
+        isEditing={isEditing}
         onReorder={handleReorder}
         onRemoveTier={handleRemoveTier}
         onRenameTier={handleRenameTier}

@@ -17,9 +17,10 @@ const DEFAULT_HEADSHOT =
 interface PlayerRowProps {
   player: RankedPlayer;
   rank: number;
+  isEditing?: boolean;
 }
 
-export default function PlayerRow({ player, rank }: PlayerRowProps) {
+export default function PlayerRow({ player, rank, isEditing = false }: PlayerRowProps) {
   const {
     attributes,
     listeners,
@@ -52,17 +53,19 @@ export default function PlayerRow({ player, rank }: PlayerRowProps) {
       style={style}
       className={`cr-row${isDragging ? ' cr-row--dragging' : ''}`}
     >
-      {/* Drag handle */}
-      <div className="cr-row__handle" {...attributes} {...listeners}>
-        <svg width="12" height="20" viewBox="0 0 12 20" fill="currentColor">
-          <circle cx="3" cy="3" r="1.5" />
-          <circle cx="9" cy="3" r="1.5" />
-          <circle cx="3" cy="10" r="1.5" />
-          <circle cx="9" cy="10" r="1.5" />
-          <circle cx="3" cy="17" r="1.5" />
-          <circle cx="9" cy="17" r="1.5" />
-        </svg>
-      </div>
+      {/* Drag handle — only visible in edit mode */}
+      {isEditing && (
+        <div className="cr-row__handle" {...attributes} {...listeners}>
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="currentColor">
+            <circle cx="3" cy="3" r="1.5" />
+            <circle cx="9" cy="3" r="1.5" />
+            <circle cx="3" cy="10" r="1.5" />
+            <circle cx="9" cy="10" r="1.5" />
+            <circle cx="3" cy="17" r="1.5" />
+            <circle cx="9" cy="17" r="1.5" />
+          </svg>
+        </div>
+      )}
 
       {/* Rank number */}
       <div className="cr-row__rank">{rank}</div>
