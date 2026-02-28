@@ -11,7 +11,9 @@
  *
  * Usage:
  *   node scripts/capture-whats-new-screenshots.mjs              # capture all missing
+ *   node scripts/capture-whats-new-screenshots.mjs --force       # re-capture all, even if files exist
  *   node scripts/capture-whats-new-screenshots.mjs dead-money-awards  # capture specific entry
+ *   node scripts/capture-whats-new-screenshots.mjs --force dead-money-awards  # force re-capture specific entry
  */
 import { chromium } from 'playwright';
 import { readFileSync, existsSync } from 'fs';
@@ -29,13 +31,16 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
 
 async function main() {
   const entries = JSON.parse(readFileSync(DATA_PATH, 'utf-8'));
-  const targetId = process.argv[2];
+  const args = process.argv.slice(2);
+  const force = args.includes('--force');
+  const targetId = args.find((a) => a !== '--force');
 
   // Filter to entries that need screenshots
   const targets = entries.filter((e) => {
     if (!SCREENSHOT_CATEGORIES.includes(e.category)) return false;
     if (!e.image) return false; // must have image field set in JSON
     if (targetId && e.id !== targetId) return false;
+    if (force) return true;
     const imagePath = resolve(ASSETS_DIR, e.image);
     // Only capture if the file doesn't already exist
     return !existsSync(imagePath);
@@ -43,6 +48,7 @@ async function main() {
 
   if (targets.length === 0) {
     console.log('No screenshots to capture. All entries either have images or no image field set.');
+    if (!force) console.log('Tip: use --force to re-capture existing screenshots.');
     process.exit(0);
   }
 
