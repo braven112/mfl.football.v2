@@ -4463,17 +4463,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   set:html={JSON.stringify(weeklyPlayerResults)}
 ></script>
 
-<script>
+<script type="module">
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
-  (window as any).__buildPlayerCellHTML = buildPlayerCellHTML;
 
-  // Attach delegated modal trigger (module scripts run after DOM parsing)
-  const rosterTbody = document.getElementById('rosterTableBody');
-  if (rosterTbody) initPlayerModalTrigger(rosterTbody);
-</script>
-
-<script type="module">
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
   );
@@ -6142,7 +6135,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;">🏷️</a>`
             : '';
 
-          const playerCellHtml = window.__buildPlayerCellHTML({
+          const playerCellHtml = buildPlayerCellHTML({
             name: player.name,
             headshot: player.headshot,
             position: player.position,
@@ -7048,6 +7041,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
     updateView();
     hydrateTeamFromSession();
+
+    // Attach delegated modal trigger after table is rendered
+    const rosterTbody = document.getElementById('rosterTableBody');
+    if (rosterTbody) initPlayerModalTrigger(rosterTbody);
   };
 
   if (document.readyState === 'loading') {
