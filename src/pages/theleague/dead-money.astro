@@ -266,7 +266,7 @@ const formatCostPerPoint = (costPerPoint: number) => {
           <span><strong>The Jerry Jones Award</strong> — Honors the GM who spent the most for the least.</span>
         </div>
         <div class="award-desc">
-          <img src="/assets/theleague/awards/brock-osweiler.png" alt="Brock Osweiler" class="award-avatar" />
+          <img src="/assets/theleague/awards/brock-osweiler.jpg" alt="Brock Osweiler" class="award-avatar" />
           <span><strong>The Brock Osweiler Award</strong> — Goes to the player (min $1.5M salary) who burned the most salary per point scored.</span>
         </div>
       </div>
@@ -305,7 +305,7 @@ const formatCostPerPoint = (costPerPoint: number) => {
         const rankings = jerryJonesStartersBySeason.get(year.toString()) ?? [];
         return (
           <div class="season-rankings" data-year={year} style={year.toString() === mostRecentYear ? '' : 'display: none;'}>
-            <h2 class="section-title">{year} Jerry Jones Award <span class="title-sub">Starting Lineup</span></h2>
+            <h2 class="section-title"><img src="/assets/theleague/awards/jerry-jones.jpg" alt="" class="section-avatar" /> {year} Jerry Jones Award <span class="title-sub">Starting Lineup</span></h2>
             <div class="team-rankings">
               {rankings.map((team, idx) => {
                 const isWinner = idx === 0;
@@ -380,7 +380,7 @@ const formatCostPerPoint = (costPerPoint: number) => {
         const rankings = jerryJonesRosterBySeason.get(year.toString()) ?? [];
         return (
           <div class="season-rankings" data-year={year} style={year.toString() === mostRecentYear ? '' : 'display: none;'}>
-            <h2 class="section-title">{year} Jerry Jones Award <span class="title-sub">Full Roster</span></h2>
+            <h2 class="section-title"><img src="/assets/theleague/awards/jerry-jones.jpg" alt="" class="section-avatar" /> {year} Jerry Jones Award <span class="title-sub">Full Roster</span></h2>
             <div class="team-rankings">
               {rankings.map((team, idx) => {
                 const isWinner = idx === 0;
@@ -690,6 +690,17 @@ const formatCostPerPoint = (costPerPoint: number) => {
     margin: 0 0 1rem 0;
     padding-bottom: 0.5rem;
     border-bottom: 3px solid #dc2626;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-avatar {
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
   }
 
   .title-sub {
