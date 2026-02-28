@@ -6,7 +6,7 @@
  * Eligibility (rank OR points, whichever qualifies):
  * - Top 16 at their position by ranking or points, OR
  * - Top 48 combined RB/WR/TE by ranking or points (flex-eligible)
- * - Have 2-3 years remaining on their contract
+ * - Have 2-4 years remaining on their contract
  * - Have current salary under $2.5M
  *
  * Server-side uses points only (no localStorage access).
@@ -95,7 +95,8 @@ flexPlayers.forEach((player, idx) => {
 const teamPlayers = franchiseId ? players.filter(p => p.franchiseId === franchiseId) : players;
 const extensionCandidates: (typeof players[number] & { pointsPosRank: number })[] = [];
 teamPlayers.forEach((player) => {
-  if (player.contractYears !== 2 && player.contractYears !== 3) return;
+  const years = player.contractYears;
+  if (years < 2 || years > 4) return;
   if ((player.salary ?? 0) >= SALARY_THRESHOLD) return;
 
   const pos = player.position?.toUpperCase() || 'UNK';
@@ -134,7 +135,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 <div class="veteran-extension-candidates" data-all-players={JSON.stringify(players)} data-season={season} data-current-team={franchiseId ?? ''} data-salary-averages={JSON.stringify(seasonAverages.extensionSalaries ?? {})}>
   {extensionCandidates.length === 0 ? (
     <div class="no-results">
-      <p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-3 years on contract, under $2.5M salary).</p>
+      <p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-4 years on contract, under $2.5M salary).</p>
     </div>
   ) : (
     <div class="table-wrapper">
@@ -290,7 +291,8 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
       // Filter eligible players: top 16 at position OR top 48 flex, cheap contract
       const eligible = [];
       teamPlayers.forEach((player) => {
-        if (player.contractYears !== 2 && player.contractYears !== 3) return;
+        const years = player.contractYears;
+        if (years < 2 || years > 4) return;
         if ((player.salary ?? 0) >= SALARY_THRESHOLD) return;
 
         const pos = (player.position ?? 'UNK').toUpperCase();
@@ -324,7 +326,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
       });
 
       if (eligible.length === 0) {
-        containerEl.innerHTML = '<div class="no-results"><p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-3 years on contract, under $2.5M salary).</p></div>';
+        containerEl.innerHTML = '<div class="no-results"><p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-4 years on contract, under $2.5M salary).</p></div>';
         return;
       }
 
