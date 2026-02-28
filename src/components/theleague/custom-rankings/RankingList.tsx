@@ -15,15 +15,12 @@ import {
 } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import {
-  restrictToVerticalAxis,
-  restrictToParentElement,
-} from '@dnd-kit/modifiers';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import React from 'react';
 import PlayerRow from './PlayerRow';
 import TierDivider from './TierDivider';
 import type { RankedPlayer, TierBreak } from '../../../types/custom-rankings';
@@ -86,7 +83,7 @@ export default function RankingList({
     <DndContext
       sensors={isEditing ? editSensors : noSensors}
       collisionDetection={closestCenter}
-      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      modifiers={[restrictToVerticalAxis]}
       onDragEnd={handleDragEnd}
     >
       <SortableContext
@@ -97,7 +94,7 @@ export default function RankingList({
           {players.map((player, index) => {
             const tier = tierMap.get(player.id);
             return (
-              <div key={player.id}>
+              <React.Fragment key={player.id}>
                 <PlayerRow player={player} rank={index + 1} isEditing={isEditing} />
                 {tier && (
                   <TierDivider
@@ -107,7 +104,7 @@ export default function RankingList({
                     onRename={onRenameTier}
                   />
                 )}
-              </div>
+              </React.Fragment>
             );
           })}
         </div>
