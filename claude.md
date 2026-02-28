@@ -272,13 +272,15 @@ For detailed documentation, see `docs/claude/`:
 
 ### Feature Documentation
 
+Feature docs live in `docs/features/`:
+
 | Document | Contents |
 |----------|----------|
-| [AUCTION_PREDICTOR_REQUIREMENTS.md](AUCTION_PREDICTOR_REQUIREMENTS.md) | User stories, functional requirements |
-| [AUCTION_PREDICTOR_DESIGN.md](AUCTION_PREDICTOR_DESIGN.md) | System architecture, algorithms |
-| [AUCTION_PREDICTOR_TASKS.md](AUCTION_PREDICTOR_TASKS.md) | Implementation tasks |
-| [MFL-API.md](MFL-API.md) | MFL API reference |
-| [PERSONALIZATION.md](PERSONALIZATION.md) | Team preference cookie system |
+| [auction-predictor-design.md](docs/features/auction-predictor-design.md) | System architecture, algorithms |
+| [auction-predictor-tasks.md](docs/features/auction-predictor-tasks.md) | Implementation tasks |
+| [custom-rankings.md](docs/features/custom-rankings.md) | Custom rankings & tier system |
+| [mfl-api.md](docs/features/mfl-api.md) | MFL API reference |
+| [personalization.md](docs/features/personalization.md) | Team preference cookie system |
 
 ---
 
