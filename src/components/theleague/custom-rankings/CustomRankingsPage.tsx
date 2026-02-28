@@ -42,9 +42,6 @@ interface Props {
   franchiseId: string;
 }
 
-const DEFAULT_HEADSHOT =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
-
 function getHeadshotUrl(playerId: string, espnId: string | null): string {
   if (espnId) {
     return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70&cb=1`;
@@ -155,6 +152,15 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
     },
     [],
   );
+
+  // Cleanup pending save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Build the state object for saving
   const buildState = useCallback(
