@@ -1,0 +1,976 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = true;
+
+// Read the variables file at build time so the copy-to-clipboard prompt stays in sync
+import fs from 'fs';
+import path from 'path';
+
+const varsPath = path.join(process.cwd(), 'src/assets/css/src/_variables-dark.scss');
+const varsContent = fs.readFileSync(varsPath, 'utf-8');
+
+// Extract the :root block (lines between `:root {` and the closing `}`)
+const rootMatch = varsContent.match(/:root\s*\{([\s\S]*?)\n\}/);
+const rootBlock = rootMatch ? rootMatch[1] : '';
+
+// Parse variable declarations into an array of { name, value, comment }
+const varLines = rootBlock
+  .split('\n')
+  .map(l => l.trim())
+  .filter(l => l.startsWith('--'));
+
+const variables = varLines.map(line => {
+  const match = line.match(/^(--[\w-]+)\s*:\s*(.+?)\s*;/);
+  if (!match) return null;
+  return { name: match[1], value: match[2] };
+}).filter(Boolean) as { name: string; value: string }[];
+
+// Build the Claude prompt with all current variable values
+const claudePromptVars = variables.map(v => `  ${v.name}: ${v.value};`).join('\n');
+
+// Group variables by category for the reference table
+type VarGroup = { label: string; id: string; vars: { name: string; value: string; desc: string }[] };
+
+const groups: VarGroup[] = [
+  {
+    label: 'Brand / Accent Colors', id: 'brand',
+    vars: [
+      { name: '--primary-color', value: '', desc: 'Primary UI color (light gray in dark mode)' },
+      { name: '--secondary-color', value: '', desc: 'Secondary UI color' },
+      { name: '--accent-color', value: '', desc: 'Main accent / brand highlight (gold)' },
+      { name: '--dark-accent-color', value: '', desc: 'Darker accent for hover/active states' },
+    ]
+  },
+  {
+    label: 'Text Colors', id: 'text',
+    vars: [
+      { name: '--primary-text-color', value: '', desc: 'Main body text' },
+      { name: '--secondary-text-color', value: '', desc: 'Muted / secondary text' },
+      { name: '--link-color', value: '', desc: 'Link text color' },
+      { name: '--link-color-hover', value: '', desc: 'Link hover color' },
+    ]
+  },
+  {
+    label: 'Page Backgrounds', id: 'backgrounds',
+    vars: [
+      { name: '--pagebody-bg', value: '', desc: 'Full page background' },
+      { name: '--primary-bg-color', value: '', desc: 'Content area / card backgrounds' },
+      { name: '--report-bg', value: '', desc: 'Report page backgrounds' },
+      { name: '--header-bg', value: '', desc: 'Site header background' },
+      { name: '--codebg-color', value: '', desc: 'Code block backgrounds' },
+    ]
+  },
+  {
+    label: 'Headings', id: 'headings',
+    vars: [
+      { name: '--headline-font-color', value: '', desc: 'General headline color' },
+      { name: '--caption-color', value: '', desc: 'Caption text' },
+      { name: '--h1-color', value: '', desc: 'H1 heading color' },
+      { name: '--h2-color', value: '', desc: 'H2 heading color' },
+      { name: '--h3-color', value: '', desc: 'H3 heading color' },
+      { name: '--h4-color', value: '', desc: 'H4 heading color' },
+      { name: '--h5-color', value: '', desc: 'H5 heading color' },
+      { name: '--h6-color', value: '', desc: 'H6 heading color' },
+    ]
+  },
+  {
+    label: 'Typography / Fonts', id: 'fonts',
+    vars: [
+      { name: '--headline-font', value: '', desc: 'Heading font family' },
+      { name: '--headline-font-weight', value: '', desc: 'Heading font weight' },
+      { name: '--body-font', value: '', desc: 'Body text font family' },
+      { name: '--body-font-weight', value: '', desc: 'Body text font weight' },
+      { name: '--svg-text-font-size', value: '', desc: 'Font size inside SVG elements' },
+    ]
+  },
+  {
+    label: 'MFL Top Menu', id: 'menu',
+    vars: [
+      { name: '--menu-bg-color', value: '', desc: 'Menu background' },
+      { name: '--menu-bg-hover-color', value: '', desc: 'Menu item hover background' },
+      { name: '--menu-border-color', value: '', desc: 'Menu border' },
+      { name: '--menu-text-color', value: '', desc: 'Menu text' },
+    ]
+  },
+  {
+    label: 'Report Sub-Navigation', id: 'subnav',
+    vars: [
+      { name: '--secondary-menu-bg-color', value: '', desc: 'Sub-nav background' },
+      { name: '--secondary-menu-border-color', value: '', desc: 'Sub-nav border' },
+      { name: '--secondary-menu-text-color', value: '', desc: 'Sub-nav text' },
+      { name: '--secondary-menu-link-color', value: '', desc: 'Sub-nav links' },
+      { name: '--secondary-menu-icon-color', value: '', desc: 'Sub-nav icon fill' },
+      { name: '--secondary-menu-icon-hover-color', value: '', desc: 'Sub-nav icon hover fill' },
+      { name: '--secondary-menu-font-weight', value: '', desc: 'Sub-nav font weight' },
+    ]
+  },
+  {
+    label: 'Buttons', id: 'buttons',
+    vars: [
+      { name: '--button-bg-color', value: '', desc: 'Button background' },
+      { name: '--button-bg-color-hover', value: '', desc: 'Button hover background' },
+      { name: '--button-link-color', value: '', desc: 'Button text color' },
+    ]
+  },
+  {
+    label: 'Tables', id: 'tables',
+    vars: [
+      { name: '--oddtablerow', value: '', desc: 'Odd row background' },
+      { name: '--eventablerow', value: '', desc: 'Even row background' },
+      { name: '--table-header-color', value: '', desc: 'Table header text' },
+      { name: '--newposition-border-color', value: '', desc: 'Position change border' },
+    ]
+  },
+  {
+    label: 'Alerts', id: 'alerts',
+    vars: [
+      { name: '--alert-danger-text', value: '', desc: 'Danger alert text' },
+      { name: '--alert-danger-bg', value: '', desc: 'Danger alert background' },
+      { name: '--alert-danger-border', value: '', desc: 'Danger alert border' },
+      { name: '--alert-warning-text', value: '', desc: 'Warning alert text' },
+      { name: '--alert-warning-bg', value: '', desc: 'Warning alert background' },
+      { name: '--alert-warning-border', value: '', desc: 'Warning alert border' },
+      { name: '--alert-success-text', value: '', desc: 'Success alert text' },
+      { name: '--alert-success-bg', value: '', desc: 'Success alert background' },
+      { name: '--alert-success-border', value: '', desc: 'Success alert border' },
+      { name: '--alert-info-text', value: '', desc: 'Info alert text' },
+      { name: '--alert-info-bg', value: '', desc: 'Info alert background' },
+      { name: '--alert-info-border', value: '', desc: 'Info alert border' },
+    ]
+  },
+  {
+    label: 'Icons', id: 'icons',
+    vars: [
+      { name: '--icon-color', value: '', desc: 'Default SVG icon fill' },
+      { name: '--icon-color-hover', value: '', desc: 'Icon hover fill' },
+      { name: '--icon-text-color', value: '', desc: 'Text labels next to icons' },
+    ]
+  },
+  {
+    label: 'Calendar', id: 'calendar',
+    vars: [
+      { name: '--calendar-bg-color', value: '', desc: 'Calendar background' },
+      { name: '--calendar-eventablerow', value: '', desc: 'Calendar alternating rows' },
+      { name: '--calendar-border-color', value: '', desc: 'Calendar cell borders' },
+      { name: '--calendar-text-color', value: '', desc: 'Calendar text' },
+      { name: '--today-bg-color', value: '', desc: 'Today highlight background' },
+      { name: '--today-border-color', value: '', desc: 'Today highlight border' },
+      { name: '--today-text-color', value: '', desc: 'Today highlight text' },
+    ]
+  },
+  {
+    label: 'Logo / SVG Crest', id: 'logo',
+    vars: [
+      { name: '--logo-main-color', value: '', desc: 'Primary logo fill' },
+      { name: '--logo-secondary-color', value: '', desc: 'Secondary logo fill' },
+      { name: '--logo-3rd-color', value: '', desc: 'Third logo color' },
+      { name: '--logo-4th-color', value: '', desc: 'Fourth logo color' },
+      { name: '--logo-text-color', value: '', desc: 'Logo text fill' },
+      { name: '--logo-secondary-text-color', value: '', desc: 'Logo secondary text fill' },
+      { name: '--logo-name-primary-color', value: '', desc: 'League name primary color' },
+      { name: '--logo-name-secondary-color', value: '', desc: 'League name secondary color' },
+    ]
+  },
+  {
+    label: 'Footer', id: 'footer',
+    vars: [
+      { name: '--footer-bg-color', value: '', desc: 'Footer background' },
+      { name: '--footer-text-color', value: '', desc: 'Footer text' },
+      { name: '--footer-header-text-color', value: '', desc: 'Footer section headers' },
+    ]
+  },
+  {
+    label: 'Neutrals / Grays', id: 'neutrals',
+    vars: [
+      { name: '--gray1', value: '', desc: 'Lightest gray' },
+      { name: '--gray2', value: '', desc: 'Medium gray' },
+      { name: '--gray3', value: '', desc: 'Darkest gray' },
+      { name: '--offwhite', value: '', desc: 'Off-white (dark gray in dark mode)' },
+      { name: '--offwhite2', value: '', desc: 'Deeper off-white' },
+      { name: '--lightgray', value: '', desc: 'Light gray' },
+      { name: '--lightgray2', value: '', desc: 'Medium light gray' },
+      { name: '--lightgray3', value: '', desc: 'Darker light gray' },
+      { name: '--white', value: '', desc: '"White" (inverted for dark mode)' },
+    ]
+  },
+  {
+    label: 'Scrollbar', id: 'scrollbar',
+    vars: [
+      { name: '--scrollbar-bg-color', value: '', desc: 'Scrollbar track' },
+      { name: '--scrollbar-bg-hover-color', value: '', desc: 'Scrollbar hover' },
+    ]
+  },
+  {
+    label: 'Roster Page', id: 'roster',
+    vars: [
+      { name: '--color-bg-base', value: '', desc: 'Roster card base background' },
+      { name: '--color-bg-subtle', value: '', desc: 'Subtle background areas' },
+      { name: '--color-bg-practice', value: '', desc: 'Practice squad row' },
+      { name: '--color-bg-injured', value: '', desc: 'Injured Reserve row' },
+    ]
+  },
+  {
+    label: 'Division Headings', id: 'divisions',
+    vars: [
+      { name: '--division-heading-color', value: '', desc: 'Division heading text' },
+      { name: '--division-subheading-color', value: '', desc: 'Division subheading text' },
+      { name: '--division-border-color', value: '', desc: 'Division separator line' },
+    ]
+  },
+  {
+    label: 'Header Icon Buttons', id: 'header-icons',
+    vars: [
+      { name: '--header-icon-color', value: '', desc: 'Header icon fill' },
+      { name: '--header-icon-text-color', value: '', desc: 'Header icon label text' },
+      { name: '--header-icon-hover-color', value: '', desc: 'Header icon hover fill' },
+    ]
+  },
+  {
+    label: 'Miscellaneous', id: 'misc',
+    vars: [
+      { name: '--add-color', value: '', desc: 'Waiver add / pickup indicator (green)' },
+      { name: '--drop-color', value: '', desc: 'Waiver drop indicator (red)' },
+      { name: '--border-color', value: '', desc: 'General border color' },
+      { name: '--tab-hover-color', value: '', desc: 'Tab hover text' },
+      { name: '--border-radius-sm', value: '', desc: 'Small border radius' },
+      { name: '--border-radius-default', value: '', desc: 'Default border radius' },
+      { name: '--border-radius-lg', value: '', desc: 'Large border radius' },
+      { name: '--border-radius-xl', value: '', desc: 'Extra-large / pill border radius' },
+    ]
+  },
+];
+
+// Resolve actual default values from the parsed variables
+const varMap = new Map(variables.map(v => [v.name, v.value]));
+for (const group of groups) {
+  for (const v of group.vars) {
+    v.value = varMap.get(v.name) ?? '';
+  }
+}
+---
+
+<Layout title="MFL.football - CSS Customization Guide">
+  <main class="guide-page">
+    <section class="intro">
+      <h1>CSS Customization Guide</h1>
+      <p>
+        Customize the dark theme CSS files without editing the source.
+        Override any variable using a <code>&lt;style&gt;</code> block in an MFL Homepage Message.
+      </p>
+      <div class="cta-row">
+        <a class="cta-link" href="/theleague/icons">Browse Icons</a>
+        <a class="cta-link secondary" href="/theleague/instructions">Installation Guide</a>
+      </div>
+    </section>
+
+    <div class="guide-layout">
+      <div class="guide-content">
+
+        <!-- HOW IT WORKS -->
+        <section id="how-it-works" class="card">
+          <h2>How It Works</h2>
+          <p>
+            The CSS files (<code>dark_main.css</code> or <code>dark_din_main.css</code>) are loaded
+            via the <strong>Custom CSS URL</strong> field in MFL:
+          </p>
+          <ol>
+            <li>Go to <strong>Setup &gt; Franchise Setup &gt; Images and Other URLs</strong></li>
+            <li>Paste the stylesheet URL into the <strong>Custom CSS</strong> field</li>
+            <li>Save &mdash; MFL loads it across your league site</li>
+          </ol>
+          <p>
+            Every visual property in the stylesheet is driven by <strong>CSS custom properties</strong>
+            (variables) defined in a <code>:root</code> block. Because CSS cascades, you can override
+            any variable by adding a <code>&lt;style&gt;</code> block in an MFL <strong>Homepage Message</strong>.
+            The Homepage Message loads <em>after</em> the stylesheet, so your overrides win.
+          </p>
+        </section>
+
+        <!-- GETTING STARTED -->
+        <section id="getting-started" class="card">
+          <h2>Getting Started</h2>
+          <p>Create (or edit) an MFL <strong>Homepage Message</strong> and add a <code>&lt;style&gt;</code> block. Only include the variables you want to change:</p>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  /* Brand Colors */
+  --accent-color: #ff4500;
+  --dark-accent-color: #cc3700;
+
+  /* Headings */
+  --h1-color: #ff4500;
+  --h2-color: #ff4500;
+  --h3-color: #ff4500;
+
+  /* Buttons */
+  --button-bg-color: #ff4500;
+  --button-bg-color-hover: #ff6030;
+  --button-link-color: #ffffff;
+{'}'}
+&lt;/style&gt;</code></pre>
+          <p class="hint">Everything you don't override keeps its default value from the base CSS file.</p>
+        </section>
+
+        <!-- CLAUDE PROMPT -->
+        <section id="claude-prompt" class="card">
+          <h2>Using Claude to Help Customize</h2>
+          <p>
+            Copy the prompt below and paste it at the start of a Claude conversation. It gives Claude
+            all the context it needs &mdash; from there you can say things like <em>"Change my accent
+            color to red"</em> or <em>"Make the table headers white"</em> and Claude will respond
+            with the correct <code>&lt;style&gt;</code> block.
+          </p>
+          <div class="prompt-box">
+            <div class="prompt-header">
+              <strong>Claude Prompt</strong>
+              <button class="copy-btn" id="copy-prompt-btn" type="button">Copy</button>
+            </div>
+            <pre class="prompt-content" id="claude-prompt-text">{`I'm customizing an MFL (MyFantasyLeague) league website. My league uses a dark theme CSS file loaded via MFL's Custom CSS URL field. I override specific CSS variables using a <style> block inside an MFL Homepage Message.
+
+The base CSS file defines all styles using CSS custom properties (variables) in a :root block. I can override any variable by redefining it in my Homepage Message's <style> block — the override wins because it appears later on the page.
+
+Here is the complete list of CSS variables I can override, with their current default values:
+
+:root {
+${claudePromptVars}
+}
+
+When I ask you to change something, generate ONLY a <style> block containing the overridden variables. Do not regenerate the entire stylesheet. Only include variables that are changing.`}</pre>
+          </div>
+        </section>
+
+        <!-- VARIABLE REFERENCE -->
+        <section id="variable-reference" class="card">
+          <h2>CSS Variable Reference</h2>
+          <p>
+            Every variable available for override, grouped by what it controls.
+            Defaults shown are from <code>dark_main.css</code> (UFC font).
+            The <code>dark_din_main.css</code> file uses identical values except for the font variables.
+          </p>
+
+          {groups.map(group => (
+            <div class="var-group" id={`vars-${group.id}`}>
+              <h3>{group.label}</h3>
+              <div class="var-table-wrap">
+                <table class="var-table">
+                  <thead>
+                    <tr>
+                      <th>Variable</th>
+                      <th>Default</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.vars.map(v => (
+                      <tr>
+                        <td><code>{v.name}</code></td>
+                        <td>
+                          <span class="value-cell">
+                            {v.value.match(/^#[0-9a-fA-F]{3,8}$/) && (
+                              <span class="color-swatch" style={`background:${v.value}`}></span>
+                            )}
+                            <code>{v.value}</code>
+                          </span>
+                        </td>
+                        <td>{v.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <!-- EXAMPLES -->
+        <section id="examples" class="card">
+          <h2>Common Examples</h2>
+
+          <h3>Rebrand accent from gold to red</h3>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --accent-color: #dc2626;
+  --dark-accent-color: #b91c1c;
+  --link-color-hover: #dc2626;
+  --button-bg-color: #dc2626;
+  --button-bg-color-hover: #ef4444;
+  --h1-color: #dc2626;
+  --h2-color: #dc2626;
+  --h3-color: #dc2626;
+  --h4-color: #dc2626;
+  --h5-color: #dc2626;
+  --h6-color: #dc2626;
+  --caption-color: #dc2626;
+  --headline-font-color: #dc2626;
+  --icon-color: #dc2626;
+  --icon-color-hover: #ef4444;
+  --secondary-menu-border-color: #dc2626;
+  --secondary-menu-bg-color: #7f1d1d;
+  --today-bg-color: #dc2626;
+  --logo-main-color: #dc2626;
+  --logo-name-primary-color: #dc2626;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Custom Google Font for headings</h3>
+          <pre><code>&lt;!-- Load the font first --&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&amp;display=swap" rel="stylesheet"&gt;
+
+&lt;style&gt;
+:root {'{'}
+  --headline-font: "Oswald", sans-serif;
+  --body-font: "Oswald", sans-serif;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Higher contrast tables</h3>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --oddtablerow: #1a1a1a;
+  --eventablerow: #2a2a2a;
+  --table-header-color: #e0e0e0;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Softer / more rounded corners</h3>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --border-radius-sm: .5rem;
+  --border-radius-default: 1rem;
+  --border-radius-lg: 1.5rem;
+{'}'}
+&lt;/style&gt;</code></pre>
+        </section>
+
+        <!-- ICON SPRITE -->
+        <section id="icon-sprite" class="card">
+          <h2>Using the SVG Icon Sprite</h2>
+          <p>
+            All icons are served from a single SVG sprite file containing 100+ symbols.
+            Browse, search, and test colors in the
+            <a href="/theleague/icons"><strong>Icon Gallery</strong></a>.
+          </p>
+
+          <h3>Display an icon</h3>
+          <pre><code>&lt;svg width="38" height="38" viewBox="0 0 512 512"&gt;
+  &lt;use href="/assets/icons/sprite.svg#icon-trophy"&gt;&lt;/use&gt;
+&lt;/svg&gt;</code></pre>
+          <p>
+            Replace <code>icon-trophy</code> with any icon ID from the sprite. Check the
+            <a href="/theleague/icons">gallery</a> for available icons and their exact <code>viewBox</code> values.
+          </p>
+
+          <h3>Controlling icon colors</h3>
+          <p>Icons inherit fill from CSS variables:</p>
+          <table class="var-table compact">
+            <thead><tr><th>Variable</th><th>Controls</th></tr></thead>
+            <tbody>
+              <tr><td><code>--icon-color</code></td><td>Default icon fill</td></tr>
+              <tr><td><code>--icon-color-hover</code></td><td>Icon fill on hover</td></tr>
+              <tr><td><code>--icon-text-color</code></td><td>Text labels next to icons</td></tr>
+            </tbody>
+          </table>
+          <p>Override a single icon inline:</p>
+          <pre><code>&lt;svg width="38" height="38" viewBox="0 0 512 512" style="fill: #dc2626;"&gt;
+  &lt;use href="/assets/icons/sprite.svg#icon-trophy"&gt;&lt;/use&gt;
+&lt;/svg&gt;</code></pre>
+        </section>
+
+        <!-- ADDING ICONS -->
+        <section id="adding-icons" class="card">
+          <h2>Adding New Icons</h2>
+
+          <h3>1. Get a clean SVG</h3>
+          <p>
+            Sources: <a href="https://heroicons.com" target="_blank">Heroicons</a>,
+            <a href="https://lucide.dev" target="_blank">Lucide</a>,
+            <a href="https://feathericons.com" target="_blank">Feather Icons</a>,
+            <a href="https://www.svgrepo.com" target="_blank">SVG Repo</a>,
+            or ask Claude to generate one.
+          </p>
+
+          <h3>2. Convert to a <code>&lt;symbol&gt;</code></h3>
+          <p>Strip the outer <code>&lt;svg&gt;</code> wrapper and any <code>fill</code> attributes so the icon inherits the theme color:</p>
+          <pre><code>&lt;symbol id="icon-my-custom-icon" viewBox="0 0 24 24"&gt;
+  &lt;path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/&gt;
+&lt;/symbol&gt;</code></pre>
+
+          <h3>3. Add to the sprite file</h3>
+          <p>
+            Open <code>public/assets/icons/sprite.svg</code> and paste your <code>&lt;symbol&gt;</code>
+            inside the root <code>&lt;svg&gt;</code> tag, before the closing <code>&lt;/svg&gt;</code>.
+          </p>
+
+          <h3>Ask Claude to help</h3>
+          <div class="prompt-box small">
+            <pre class="prompt-content">I need to add a new icon to my SVG sprite file. Here's the SVG:
+
+[paste your SVG here]
+
+Convert this into a &lt;symbol&gt; element with the id "icon-my-name".
+Remove any fill attributes so it inherits the theme color.
+Give me the &lt;symbol&gt; block to paste into sprite.svg.</pre>
+          </div>
+        </section>
+
+        <!-- SUBMITTING A PR -->
+        <section id="submit-pr" class="card">
+          <h2>Submitting New Icons via Pull Request</h2>
+          <p>To add icons to the shared sprite for everyone, submit a PR to the repository.</p>
+
+          <h3>Steps</h3>
+          <ol class="step-list">
+            <li>
+              <strong>Clone the repo:</strong>
+              <pre><code>git clone https://github.com/braven112/mfl.football.v2.git
+cd mfl.football.v2</code></pre>
+            </li>
+            <li>
+              <strong>Create a branch:</strong>
+              <pre><code>git checkout -b add-icon-my-icon-name</code></pre>
+            </li>
+            <li>
+              <strong>Edit the sprite:</strong> Add your <code>&lt;symbol&gt;</code> to
+              <code>public/assets/icons/sprite.svg</code>
+            </li>
+            <li>
+              <strong>(Optional) Update the gallery:</strong> In
+              <code>src/pages/theleague/icons.astro</code>, add search synonyms and category tags
+              so your icon shows up when people search.
+            </li>
+            <li>
+              <strong>Commit and push:</strong>
+              <pre><code>git add public/assets/icons/sprite.svg
+git commit -m "Add icon-my-custom-icon to SVG sprite"
+git push -u origin add-icon-my-icon-name</code></pre>
+            </li>
+            <li>
+              <strong>Open the PR:</strong>
+              <pre><code>gh pr create --title "Add icon-my-custom-icon" \
+  --body "Adds a new icon for [description]."</code></pre>
+              Or use the GitHub web interface.
+            </li>
+          </ol>
+        </section>
+
+        <!-- FONT DIFFERENCES -->
+        <section id="font-differences" class="card">
+          <h2>Font Differences</h2>
+          <table class="var-table">
+            <thead>
+              <tr><th>CSS File</th><th>Font</th><th>How it loads</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>dark_main.css</code></td>
+                <td>UFC Sans Condensed</td>
+                <td><code>@font-face</code> with local WOFF2 files</td>
+              </tr>
+              <tr>
+                <td><code>dark_din_main.css</code></td>
+                <td>DIN (via Typekit)</td>
+                <td><code>@import</code> from Adobe Fonts</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            Both files share identical CSS variables and component styles. The only difference is the font.
+            If you override <code>--headline-font</code> and <code>--body-font</code>, you can use any
+            font regardless of which base file you chose.
+          </p>
+        </section>
+
+        <!-- TIPS -->
+        <section id="tips" class="card">
+          <h2>Tips &amp; Gotchas</h2>
+          <ul>
+            <li>
+              <strong>Only override what you need.</strong> Don't copy all 80+ variables.
+              The base stylesheet handles everything else.
+            </li>
+            <li>
+              <strong>The accent color is everywhere.</strong> <code>--accent-color</code> drives
+              headings, icons, buttons, sub-nav, calendar, and the logo. Changing it is the fastest
+              way to rebrand. See the <a href="#examples">red rebrand example</a> for all the related
+              variables you should update together.
+            </li>
+            <li>
+              <strong>Dark mode contrast.</strong> Your background is <code>#121212</code>. Use
+              lighter colors for text and check contrast with a tool like
+              <a href="https://webaim.org/resources/contrastchecker/" target="_blank">WebAIM Contrast Checker</a>.
+            </li>
+            <li>
+              <strong>Test multiple MFL pages.</strong> MFL has rosters, standings, live scoring,
+              draft pages, etc. Spot-check a few different pages after making changes.
+            </li>
+            <li>
+              <strong>Specificity.</strong> Target <code>:root</code> in your style block &mdash;
+              not a class or element selector. That's how the base CSS defines them and your override
+              needs to match.
+            </li>
+            <li>
+              <strong>Per-league overrides.</strong> Your Homepage Message applies only to the league
+              where you added it. Different leagues can share the same base CSS file but have different
+              overrides.
+            </li>
+          </ul>
+        </section>
+
+      </div>
+
+      <!-- SIDEBAR TOC -->
+      <aside class="toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="#getting-started">Getting Started</a></li>
+          <li><a href="#claude-prompt">Claude Prompt</a></li>
+          <li><a href="#variable-reference">Variable Reference</a></li>
+          <li><a href="#examples">Examples</a></li>
+          <li><a href="#icon-sprite">Icon Sprite</a></li>
+          <li><a href="#adding-icons">Adding Icons</a></li>
+          <li><a href="#submit-pr">Submitting a PR</a></li>
+          <li><a href="#font-differences">Font Differences</a></li>
+          <li><a href="#tips">Tips &amp; Gotchas</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  :root {
+    --card-bg: rgba(255, 255, 255, 0.92);
+    --card-border: rgba(37, 99, 235, 0.2);
+    --card-shadow: 0 15px 45px -25px rgba(15, 23, 42, 0.45);
+  }
+
+  .guide-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  /* ── Intro hero ── */
+  .intro {
+    text-align: center;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(5, 150, 105, 0.95));
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: 1.5rem;
+    box-shadow: var(--card-shadow);
+  }
+
+  .intro h1 { margin-bottom: 0.5rem; }
+  .intro p { margin: 0 auto; max-width: 640px; opacity: 0.92; }
+  .intro code {
+    background: rgba(255,255,255,0.18);
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+  }
+
+  .cta-row {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    padding: 0.65rem 1.25rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .cta-link.secondary { background: rgba(15, 23, 42, 0.55); }
+  .cta-link:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+
+  /* ── Two-column layout ── */
+  .guide-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 2.5rem;
+    align-items: start;
+  }
+
+  .guide-content {
+    display: grid;
+    gap: 2.5rem;
+    min-width: 0;
+  }
+
+  /* ── Sidebar TOC ── */
+  .toc {
+    background: rgba(15, 23, 42, 0.04);
+    border-left: 4px solid rgba(37, 99, 235, 0.65);
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+  }
+
+  .toc::-webkit-scrollbar { width: 8px; }
+  .toc::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.35); border-radius: 999px; }
+
+  .toc ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0.6rem 0 0;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .toc a {
+    color: rgba(37, 99, 235, 0.95);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 1.4rem;
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(3px);
+    scroll-margin-top: 2rem;
+  }
+
+  .card h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: rgba(15, 23, 42, 0.92);
+  }
+
+  .card h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: rgba(37, 99, 235, 0.9);
+    font-size: 1rem;
+  }
+
+  .card h3:first-child { margin-top: 0; }
+
+  .card p {
+    line-height: 1.7;
+    margin: 0 0 0.75rem;
+    color: #334155;
+  }
+
+  .card ul, .card ol {
+    margin: 0 0 0.75rem;
+    padding-left: 1.4rem;
+    line-height: 1.75;
+    color: #334155;
+  }
+
+  .card code {
+    background: rgba(15, 23, 42, 0.06);
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+    font-size: 0.85em;
+  }
+
+  .card a { color: rgba(37, 99, 235, 0.95); }
+
+  .hint {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin: 0.75rem 0;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  /* ── Claude prompt box ── */
+  .prompt-box {
+    border: 2px solid rgba(37, 99, 235, 0.3);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin: 0.75rem 0;
+  }
+
+  .prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(37, 99, 235, 0.08);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+  }
+
+  .prompt-content {
+    margin: 0;
+    border-radius: 0;
+    font-size: 0.78rem;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+
+  .prompt-box.small .prompt-content {
+    max-height: 180px;
+    font-size: 0.8rem;
+  }
+
+  .copy-btn {
+    padding: 0.3rem 0.85rem;
+    background: #0f172a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .copy-btn:hover { background: #1e293b; }
+
+  /* ── Variable reference tables ── */
+  .var-group { margin-top: 1.5rem; }
+  .var-group:first-child { margin-top: 0.5rem; }
+
+  .var-table-wrap { overflow-x: auto; }
+
+  .var-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 0.5rem 0;
+  }
+
+  .var-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    background: rgba(15, 23, 42, 0.06);
+    border-bottom: 2px solid rgba(15, 23, 42, 0.1);
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
+  .var-table td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    vertical-align: middle;
+  }
+
+  .var-table.compact { max-width: 480px; }
+
+  .var-table tbody tr:hover { background: rgba(37, 99, 235, 0.04); }
+
+  .value-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .color-swatch {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+
+  /* ── Step list ── */
+  .step-list li {
+    margin-bottom: 1rem;
+  }
+
+  .step-list pre {
+    margin-top: 0.5rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .guide-layout { grid-template-columns: minmax(0, 1fr) 220px; }
+  }
+
+  @media (max-width: 767px) {
+    .guide-page { padding: 1rem 1rem 3rem; }
+
+    .guide-layout { grid-template-columns: 1fr; }
+
+    .toc {
+      position: static;
+      max-height: none;
+      box-shadow: none;
+    }
+
+    .card { padding: 1.5rem 1.25rem; }
+    .cta-row { flex-direction: column; }
+    .intro { padding: 2rem 1.25rem; }
+
+    .var-table { font-size: 0.78rem; }
+    .var-table th, .var-table td { padding: 0.35rem 0.5rem; }
+  }
+</style>
+
+<script>
+  // Copy Claude prompt button
+  const copyBtn = document.getElementById('copy-prompt-btn') as HTMLButtonElement;
+  const promptEl = document.getElementById('claude-prompt-text') as HTMLPreElement;
+
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(promptEl.textContent || '');
+      const original = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = original; }, 2000);
+    } catch {
+      copyBtn.textContent = 'Failed';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+    }
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.toc a[href^="#"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      const href = (link as HTMLAnchorElement).getAttribute('href');
+      if (!href) return;
+      const target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.pushState(null, '', href);
+      }
+    });
+  });
+</script>
