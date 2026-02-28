@@ -363,7 +363,10 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
         </div>
         <p className="cr-page__subtitle">
           {overrides.size} override{overrides.size !== 1 ? 's' : ''} ·{' '}
-          {rankings.length} players
+          {rankings.length} players ·{' '}
+          <a href="/theleague/import-rankings" className="cr-page__link">
+            Import Rankings
+          </a>
         </p>
       </div>
 

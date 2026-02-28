@@ -15,9 +15,10 @@ import EspnDirectImport from './EspnDirectImport';
 interface Props {
   mflPlayersJson: string;
   siteConfigsJson: string;
+  isAdmin?: boolean;
 }
 
-export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: Props) {
+export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson, isAdmin = false }: Props) {
   const mflPlayers: MFLPlayerForMatching[] = useMemo(() => {
     try { return JSON.parse(mflPlayersJson); } catch { return []; }
   }, [mflPlayersJson]);
@@ -54,6 +55,9 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson }: 
         <p className="ri-page__subtitle">
           Import player rankings from your favorite fantasy football sites.
           All data is stored privately in your browser — never shared with other league members.
+          {isAdmin && (
+            <> · <a href="/theleague/cr" className="ri-page__link">Custom Rankings</a></>
+          )}
         </p>
       </div>
 

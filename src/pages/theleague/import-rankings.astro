@@ -10,8 +10,13 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import RankingsImportPage from '../../components/theleague/rankings-import/RankingsImportPage';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import bookmarkletManifest from '../../data/bookmarklet-manifest.json';
+import { getAuthUser } from '../../utils/auth';
+import { isAdminFranchise } from '../../config/nav-config';
 
 export const prerender = false;
+
+const user = getAuthUser(Astro.request);
+const isAdmin = !!user && isAdminFranchise(user.franchiseId);
 
 const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);
@@ -153,6 +158,7 @@ const siteConfigs = [
     client:load
     mflPlayersJson={JSON.stringify(mflPlayers)}
     siteConfigsJson={JSON.stringify(siteConfigs)}
+    isAdmin={isAdmin}
   />
 </TheLeagueLayout>
 
@@ -182,6 +188,16 @@ const siteConfigs = [
     font-size: 0.95rem;
     margin: 0;
     line-height: 1.5;
+  }
+
+  .ri-page__link {
+    color: var(--primary-color, #1c497c);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .ri-page__link:hover {
+    text-decoration: underline;
   }
 
   /* ---- Sections ---- */
