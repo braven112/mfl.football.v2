@@ -163,9 +163,9 @@ docs/claude/insights/
 **IMPORTANT:** When completing a feature that adds a new page, new user-facing feature, or significant enhancement, you MUST update `src/data/whats-new.json`.
 
 ### When to Add a New Entry
-- New page added to the site
-- New user-facing feature (e.g., a new tool, mode, or interactive element)
-- Major enhancement that changes how an existing feature works
+- New page added to the site (screenshot required)
+- New user-facing feature (e.g., a new tool, mode, or interactive element) (screenshot required)
+- Major enhancement that changes how an existing feature works (screenshot required)
 - Any guest-facing change that affects user behavior (e.g., URL changes, navigation changes)
 
 ### When NOT to Add an Entry
@@ -217,9 +217,32 @@ Add the new entry at the **top** of the array (newest first):
   "category": "new-page | new-feature | enhancement | bug-fix",
   "link": "/theleague/page-path",
   "linkLabel": "CTA text (e.g., 'Try it now')",
-  "icon": "sprite-icon-id"
+  "icon": "sprite-icon-id",
+  "image": "feature-name.webp",
+  "imageAlt": "Descriptive alt text for the screenshot"
 }
 ```
+
+### Screenshot Requirement (MANDATORY)
+
+**Every `new-page`, `new-feature`, and `enhancement` entry MUST include a screenshot.** This is enforced by `tests/whats-new-data.test.ts` and the build will fail without it.
+
+**Required fields:**
+- `"image"`: Filename relative to `public/assets/whats-new/` (e.g., `"trade-builder.webp"`)
+- `"imageAlt"`: Descriptive alt text explaining what the screenshot shows
+
+**How to add a screenshot:**
+1. Take a screenshot of the feature at a standard desktop viewport (1280px+ wide)
+2. Save as `.webp` format to `public/assets/whats-new/{feature-id}.webp`
+3. Use a 16:9 aspect ratio crop when possible
+4. Add `"image"` and `"imageAlt"` fields to the JSON entry
+
+**Where screenshots appear:**
+- What's New listing page (card thumbnails with browser-frame chrome)
+- What's New detail page (hero image)
+- Homepage hero banner (when featured)
+
+**Exempt:** `bug-fix` and `league-event` categories do not require screenshots.
 
 ### Hero Banner Behavior
 - New entries automatically appear in the homepage hero for **7 days**
