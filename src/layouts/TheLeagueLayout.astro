@@ -168,6 +168,9 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 		<ViewTransitions />
 	</head>
 	<body>
+		<!-- Navigation progress bar — shows instantly on internal link clicks -->
+		<div id="nav-progress" aria-hidden="true"></div>
+
 		<!-- Page wrapper for push behavior when drawer is open on desktop -->
 		<div
 			class:list={['page-wrapper', { 'nav-open': shouldOpenOnDesktop }]}
@@ -229,11 +232,56 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			adminFranchiseIds={adminFranchiseIds}
 			hideLeaguePrefix={hideLeaguePrefix}
 		/>
+
+		<!-- Navigation progress bar trigger -->
+		<script is:inline>
+			(function() {
+				var bar = document.getElementById('nav-progress');
+				if (!bar) return;
+				document.addEventListener('click', function(e) {
+					var link = e.target.closest('a[href]');
+					if (!link) return;
+					// Skip external links, new-tab links, hash-only, and modified clicks
+					if (link.target === '_blank') return;
+					if (link.origin !== location.origin) return;
+					if (link.pathname === location.pathname && link.search === location.search) return;
+					if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+					bar.classList.remove('active');
+					// Force reflow so re-adding the class restarts the animation
+					void bar.offsetWidth;
+					bar.classList.add('active');
+				});
+			})();
+		</script>
 	</body>
 </html>
 <style>
 	/* Design tokens are imported from /src/styles/tokens.css */
 	@import '../styles/tokens.css';
+
+	/* Navigation progress bar */
+	#nav-progress {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 3px;
+		width: 0;
+		background: var(--color-primary-light);
+		z-index: 9999;
+		pointer-events: none;
+		opacity: 0;
+	}
+	#nav-progress.active {
+		opacity: 1;
+		animation: nav-progress-grow 8s cubic-bezier(0.1, 0.4, 0.2, 1) forwards;
+	}
+	@keyframes nav-progress-grow {
+		0%   { width: 0; }
+		10%  { width: 30%; }
+		50%  { width: 60%; }
+		80%  { width: 80%; }
+		100% { width: 95%; }
+	}
 
 	html {
 		font-family: var(--font-family-base);
