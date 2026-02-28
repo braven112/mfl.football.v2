@@ -356,6 +356,8 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 	.page-wrapper {
 		transition: margin-right var(--nav-transition, 0.3s cubic-bezier(0.4, 0, 0.2, 1));
 		min-height: 100vh;
+		position: relative;
+		z-index: 1;
 	}
 
 	/* Desktop push behavior when drawer is open */

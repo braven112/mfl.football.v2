@@ -254,16 +254,18 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     .theleague-header .row {
       flex-wrap: nowrap;
       justify-content: space-between;
+      gap: 2rem;
     }
 
     .theleague-header .col.left {
-      flex: 1 1 auto;
+      flex: 0 0 auto;
       justify-content: flex-start;
     }
 
     .theleague-header .col.right {
-      flex: 0 0 auto;
+      flex: 1 1 auto;
       justify-content: flex-end;
+      overflow: hidden;
     }
   }
 
@@ -486,13 +488,14 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   .desktop-nav {
     display: flex;
     align-items: flex-start;
-    justify-content: flex-start;
-    gap: 0.75rem;
+    justify-content: space-around;
+    gap: 0.5rem;
     width: 100%;
-    padding: 0 0 1rem;
+    padding: 0 0 0.5rem;
     margin-bottom: 0.5rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
 
   @media (min-width: 992px) {
