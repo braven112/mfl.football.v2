@@ -32,6 +32,8 @@ interface RankingListProps {
   onReorder: (oldIndex: number, newIndex: number) => void;
   onRemoveTier: (afterPlayerId: string) => void;
   onRenameTier: (afterPlayerId: string, newLabel: string) => void;
+  onMoveTier: (afterPlayerId: string, direction: 'up' | 'down') => void;
+  onAddTierAfter: (afterPlayerId: string) => void;
 }
 
 export default function RankingList({
@@ -41,6 +43,8 @@ export default function RankingList({
   onReorder,
   onRemoveTier,
   onRenameTier,
+  onMoveTier,
+  onAddTierAfter,
 }: RankingListProps) {
   const editSensors = useSensors(
     useSensor(PointerSensor),
@@ -93,16 +97,34 @@ export default function RankingList({
         <div className="cr-list">
           {players.map((player, index) => {
             const tier = tierMap.get(player.id);
+            const isLast = index === players.length - 1;
             return (
               <React.Fragment key={player.id}>
                 <PlayerRow player={player} rank={index + 1} isEditing={isEditing} />
-                {tier && (
+                {tier ? (
                   <TierDivider
                     tier={tier}
                     tierNumber={tierNumbers.get(player.id) ?? tierCounter}
+                    isEditing={isEditing}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < players.length - 2}
                     onRemove={onRemoveTier}
                     onRename={onRenameTier}
+                    onMove={onMoveTier}
                   />
+                ) : (
+                  isEditing && !isLast && (
+                    <button
+                      className="cr-tier-insert"
+                      onClick={() => onAddTierAfter(player.id)}
+                      type="button"
+                      title="Add tier break here"
+                    >
+                      <span className="cr-tier-insert__line" />
+                      <span className="cr-tier-insert__icon">+</span>
+                      <span className="cr-tier-insert__line" />
+                    </button>
+                  )
                 )}
               </React.Fragment>
             );
