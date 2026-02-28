@@ -68,8 +68,8 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 			<div class="footer-column">
 				<h4>Rules</h4>
 				<ul>
-					<li><a href="#">Constitution</a></li>
-					<li><a href="#">League Scoring</a></li>
+					<li><a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rules" : "/theleague/rules", hideLeaguePrefix)}>Constitution</a></li>
+					<li><a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rules" : "/theleague/rules", hideLeaguePrefix)}>League Scoring</a></li>
 				</ul>
 			</div>
 			<div class="footer-column">

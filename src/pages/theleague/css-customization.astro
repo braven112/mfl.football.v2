@@ -1,8 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 
-export const prerender = true;
-
 // Read the variables file at build time so the copy-to-clipboard prompt stays in sync
 import fs from 'fs';
 import path from 'path';
@@ -482,12 +480,12 @@ When I ask you to change something, generate ONLY a <style> block containing the
           </p>
 
           <h3>Display an icon</h3>
-          <pre><code>&lt;svg width="38" height="38" viewBox="0 0 512 512"&gt;
-  &lt;use href="/assets/icons/sprite.svg#icon-trophy"&gt;&lt;/use&gt;
+          <pre><code>&lt;svg class="icon-trophy"&gt;
+  &lt;use xlink:href="#icon-trophy"&gt;&lt;/use&gt;
 &lt;/svg&gt;</code></pre>
           <p>
             Replace <code>icon-trophy</code> with any icon ID from the sprite. Check the
-            <a href="/theleague/icons">gallery</a> for available icons and their exact <code>viewBox</code> values.
+            <a href="/theleague/icons">gallery</a> for available icons.
           </p>
 
           <h3>Controlling icon colors</h3>
@@ -501,8 +499,8 @@ When I ask you to change something, generate ONLY a <style> block containing the
             </tbody>
           </table>
           <p>Override a single icon inline:</p>
-          <pre><code>&lt;svg width="38" height="38" viewBox="0 0 512 512" style="fill: #dc2626;"&gt;
-  &lt;use href="/assets/icons/sprite.svg#icon-trophy"&gt;&lt;/use&gt;
+          <pre><code>&lt;svg class="icon-trophy" style="fill: #dc2626;"&gt;
+  &lt;use xlink:href="#icon-trophy"&gt;&lt;/use&gt;
 &lt;/svg&gt;</code></pre>
         </section>
 
@@ -539,7 +537,9 @@ When I ask you to change something, generate ONLY a <style> block containing the
 
 Convert this into a &lt;symbol&gt; element with the id "icon-my-name".
 Remove any fill attributes so it inherits the theme color.
-Give me the &lt;symbol&gt; block to paste into sprite.svg.</pre>
+Give me the &lt;symbol&gt; block to paste into sprite.svg.
+
+After generating the symbol, automatically create a pull request on the GitHub repo (braven112/mfl.football.v2) that adds the new symbol to public/assets/icons/sprite.svg.</pre>
           </div>
         </section>
 
@@ -739,6 +739,7 @@ git push -u origin add-icon-my-icon-name</code></pre>
     display: grid;
     gap: 2.5rem;
     min-width: 0;
+    overflow: hidden;
   }
 
   /* ── Sidebar TOC ── */
@@ -783,6 +784,7 @@ git push -u origin add-icon-my-icon-name</code></pre>
     box-shadow: var(--card-shadow);
     backdrop-filter: blur(3px);
     scroll-margin-top: 2rem;
+    overflow-x: auto;
   }
 
   .card h2 {
