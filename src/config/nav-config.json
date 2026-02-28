@@ -124,6 +124,15 @@
           "description": "Import player rankings from external sites using bookmarklets"
         },
         {
+          "id": "custom-rankings",
+          "label": "Custom Rankings",
+          "icon": "standings",
+          "path": "/cr",
+          "external": false,
+          "visibility": "admin",
+          "description": "Personalized player rankings with drag-and-drop reordering"
+        },
+        {
           "id": "submit-lineup",
           "label": "Submit Lineup",
           "icon": "lineup",
@@ -255,7 +264,8 @@
     "/players": "/players",
     "/calendar": "/calendar",
     "/whats-new": "/whats-new",
-    "/import-rankings": "/import-rankings"
+    "/import-rankings": "/import-rankings",
+    "/cr": "/cr"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
