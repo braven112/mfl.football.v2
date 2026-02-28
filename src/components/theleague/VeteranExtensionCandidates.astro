@@ -35,6 +35,7 @@ export interface Props {
   salaryAverages?: Record<string, { [key: string]: number }>;
   season?: string;
   showTeamLogo?: boolean;
+  franchiseId?: string;
 }
 
 // NFL team code to full name mapping
@@ -50,7 +51,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 };
 
 import { getCurrentLeagueYear } from '../../utils/league-year';
-const { players = [], salaryAverages = {}, season = String(getCurrentLeagueYear()), showTeamLogo = true } = Astro.props;
+const { players = [], salaryAverages = {}, season = String(getCurrentLeagueYear()), showTeamLogo = true, franchiseId } = Astro.props;
 const seasonAverages = salaryAverages[season] ?? {};
 
 const SALARY_THRESHOLD = 2_500_000; // $2.5 million
@@ -90,8 +91,10 @@ flexPlayers.forEach((player, idx) => {
 });
 
 // Filter eligible players (server-side: points only)
+// When franchiseId is provided, only show candidates from that team
+const teamPlayers = franchiseId ? players.filter(p => p.franchiseId === franchiseId) : players;
 const extensionCandidates: (typeof players[number] & { pointsPosRank: number })[] = [];
-players.forEach((player) => {
+teamPlayers.forEach((player) => {
   if (player.contractYears !== 2 && player.contractYears !== 3) return;
   if ((player.salary ?? 0) >= SALARY_THRESHOLD) return;
 
@@ -128,7 +131,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 
 ---
 
-<div class="veteran-extension-candidates" data-all-players={JSON.stringify(players)} data-season={season}>
+<div class="veteran-extension-candidates" data-all-players={JSON.stringify(players)} data-season={season} data-current-team={franchiseId ?? ''} data-salary-averages={JSON.stringify(seasonAverages.extensionSalaries ?? {})}>
   {extensionCandidates.length === 0 ? (
     <div class="no-results">
       <p>No players currently meet the extension criteria (top 16 at position or top 48 flex by rank or points, 2-3 years on contract, under $2.5M salary).</p>
