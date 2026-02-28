@@ -1,0 +1,71 @@
+---
+/**
+ * Custom Rankings
+ *
+ * Hidden, admin-only page for creating personalized player rankings.
+ * Seeds from composite "My Rank" average, supports drag-and-drop reordering,
+ * tier breaks, and position filtering. State persists via Vercel KV.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import CustomRankingsPage from '../../components/theleague/custom-rankings/CustomRankingsPage';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import '../../styles/player-cell.css';
+import '../../styles/custom-rankings.css';
+import { getAuthUser } from '../../utils/auth';
+import { isAdminFranchise } from '../../config/nav-config';
+
+export const prerender = false;
+
+// Auth gate: admin only
+const user = getAuthUser(Astro.request);
+if (!user || !isAdminFranchise(user.franchiseId)) {
+  return Astro.redirect('/theleague');
+}
+
+const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
+
+// ---------------------------------------------------------------------------
+// Load MFL players for enrichment (headshot URLs, positions)
+// ---------------------------------------------------------------------------
+const playersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true },
+);
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+let playersData: any = null;
+for (const [filepath, mod] of Object.entries(playersFeeds)) {
+  if (extractFeedSeason(filepath) === leagueYearStr) {
+    playersData = getModuleData(mod);
+    break;
+  }
+}
+
+// Build player array with headshot info for client-side enrichment
+const rawPlayers = playersData?.players?.player ?? [];
+const mflPlayers = rawPlayers
+  .filter((p: any) => p.name && p.position)
+  .map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    position: p.position === 'Def' ? 'DEF' : p.position,
+    team: p.team || '',
+    espnId: p.espn_id || null,
+  }));
+---
+
+<TheLeagueLayout title="Custom Rankings | The League">
+  <CustomRankingsPage
+    client:load
+    mflPlayersJson={JSON.stringify(mflPlayers)}
+    franchiseId={user.franchiseId}
+  />
+</TheLeagueLayout>

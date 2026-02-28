@@ -23,6 +23,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
+      '@upstash/redis':
+        specifier: ^1.36.3
+        version: 1.36.3
       '@vercel/blob':
         specifier: ^2.2.0
         version: 2.2.0
@@ -44,7 +47,7 @@ importers:
         version: 0.9.5(prettier@3.6.2)(typescript@5.9.3)
       '@astrojs/vercel':
         specifier: ^8.0.4
-        version: 8.2.11(astro@5.15.3(@types/node@24.10.0)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1))(react@19.2.4)(rollup@4.52.5)
+        version: 8.2.11(astro@5.15.3(@types/node@24.10.0)(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1))(react@19.2.4)(rollup@4.52.5)
       '@playwright/test':
         specifier: ^1.57.0
         version: 1.57.0
@@ -56,7 +59,7 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       astro:
         specifier: ^5.1.1
-        version: 5.15.3(@types/node@24.10.0)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1)
+        version: 5.15.3(@types/node@24.10.0)(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1)
       autoprefixer:
         specifier: ^10.4.14
         version: 10.4.21(postcss@8.5.6)
@@ -1127,6 +1130,9 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+
+  '@upstash/redis@1.36.3':
+    resolution: {integrity: sha512-wxo1ei4OHDHm4UGMgrNVz9QUEela9N/Iwi4p1JlHNSowQiPi+eljlGnfbZVkV0V4PIrjGtGFJt5GjWM5k28enA==}
 
   '@vercel/analytics@1.5.0':
     resolution: {integrity: sha512-MYsBzfPki4gthY5HnYN7jgInhAZ7Ac1cYDoRWFomwGHWEX7odTEzbtg9kf/QSo7XEsEAqlQugA6gJ2WS2DEa3g==}
@@ -3546,14 +3552,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@astrojs/vercel@8.2.11(astro@5.15.3(@types/node@24.10.0)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1))(react@19.2.4)(rollup@4.52.5)':
+  '@astrojs/vercel@8.2.11(astro@5.15.3(@types/node@24.10.0)(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1))(react@19.2.4)(rollup@4.52.5)':
     dependencies:
       '@astrojs/internal-helpers': 0.7.4
       '@vercel/analytics': 1.5.0(react@19.2.4)
       '@vercel/functions': 2.2.13
       '@vercel/nft': 0.30.3(rollup@4.52.5)
       '@vercel/routing-utils': 5.2.1
-      astro: 5.15.3(@types/node@24.10.0)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1)
+      astro: 5.15.3(@types/node@24.10.0)(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1)
       esbuild: 0.25.12
       tinyglobby: 0.2.15
     transitivePeerDependencies:
@@ -4315,6 +4321,10 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
+  '@upstash/redis@1.36.3':
+    dependencies:
+      uncrypto: 0.1.3
+
   '@vercel/analytics@1.5.0(react@19.2.4)':
     optionalDependencies:
       react: 19.2.4
@@ -4517,7 +4527,7 @@ snapshots:
 
   assertion-error@1.1.0: {}
 
-  astro@5.15.3(@types/node@24.10.0)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1):
+  astro@5.15.3(@types/node@24.10.0)(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)(rollup@4.52.5)(sass@1.93.3)(terser@5.44.1)(typescript@5.9.3)(yaml@2.8.1):
     dependencies:
       '@astrojs/compiler': 2.13.0
       '@astrojs/internal-helpers': 0.7.4
@@ -4571,7 +4581,7 @@ snapshots:
       ultrahtml: 1.6.0
       unifont: 0.6.0
       unist-util-visit: 5.0.0
-      unstorage: 1.17.2(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)
+      unstorage: 1.17.2(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13)
       vfile: 6.0.3
       vite: 6.4.1(@types/node@24.10.0)(sass@1.93.3)(terser@5.44.1)(yaml@2.8.1)
       vitefu: 1.1.1(vite@6.4.1(@types/node@24.10.0)(sass@1.93.3)(terser@5.44.1)(yaml@2.8.1))
@@ -6614,7 +6624,7 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  unstorage@1.17.2(@vercel/blob@2.2.0)(@vercel/functions@2.2.13):
+  unstorage@1.17.2(@upstash/redis@1.36.3)(@vercel/blob@2.2.0)(@vercel/functions@2.2.13):
     dependencies:
       anymatch: 3.1.3
       chokidar: 4.0.3
@@ -6625,6 +6635,7 @@ snapshots:
       ofetch: 1.5.1
       ufo: 1.6.1
     optionalDependencies:
+      '@upstash/redis': 1.36.3
       '@vercel/blob': 2.2.0
       '@vercel/functions': 2.2.13
 
