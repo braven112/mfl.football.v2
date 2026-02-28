@@ -7,15 +7,15 @@
 
 //////////////////////Dark :root overrides//////////////////////////
 :root {
-  --primary-color: #cccccc;
-  --secondary-color: #eeeeee;
-  --accent-color: #c9a94e;
-  --dark-accent-color: #a8893a;
-  --primary-text-color: #e0e0e0;
-  --secondary-text-color: #c0c0c0;
+  --primary-color: #f7f7f7;
+  --secondary-color: #f7f7f7;
+  --accent-color: #d4000f;
+  --dark-accent-color: #b0000c;
+  --primary-text-color: #f7f7f7;
+  --secondary-text-color: #d0d0d0;
 
-  --link-color: #bbbbbb;
-  --link-color-hover: #c9a94e;
+  --link-color: #d0d0d0;
+  --link-color-hover: #d4000f;
 
   --add-color: #4ade80;
   --drop-color: #f87171;
@@ -42,99 +42,99 @@
   --gray2: #8a8a8a;
   --gray3: #6b6b6b;
 
-  --offwhite: #2e2e2e;
-  --offwhite2: #121212;
+  --offwhite: #48494A;
+  --offwhite2: #1d1e1f;
 
-  --lightgray: #2e2e2e;
-  --lightgray2: #3a3a3a;
-  --lightgray3: #5a5a5a;
+  --lightgray: #48494A;
+  --lightgray2: #555657;
+  --lightgray3: #6a6b6c;
 
-  --white: #2e2e2e;
+  --white: #48494A;
 
-  --codebg-color: #151515;
+  --codebg-color: #1d1e1f;
 
   //////////////////////Tables//////////////////////////
-  --oddtablerow: #2e2e2e;
-  --eventablerow: #444444;
-  --newposition-border-color: #3a3a3a;
-  --table-header-color: #8a8a8a;
+  --oddtablerow: #48494A;
+  --eventablerow: #555657;
+  --newposition-border-color: #555657;
+  --table-header-color: #9a9a9a;
 
   //////////////////////Page Backgrounds//////////////////////////
-  --primary-bg-color: #2e2e2e;
-  --pagebody-bg: #121212;
-  --report-bg: #2e2e2e;
-  --header-bg: #101010;
+  --primary-bg-color: #48494A;
+  --pagebody-bg: #1d1e1f;
+  --report-bg: #48494A;
+  --header-bg: #141516;
 
   //////////////////////Footer//////////////////////////
-  --footer-bg-color: #101010;
-  --footer-text-color: #e0e0e0;
-  --footer-header-text-color: #e0e0e0;
+  --footer-bg-color: #141516;
+  --footer-text-color: #f7f7f7;
+  --footer-header-text-color: #f7f7f7;
 
   //////////////////////Borders//////////////////////////
-  --border-color: #2e2e2e;
+  --border-color: #3a3b3c;
 
   //////////////////////MFL Menu//////////////////////////
-  --menu-bg-color: #101010;
-  --menu-bg-hover-color: #1d1d1d;
-  --menu-border-color: #1a1a1a;
-  --menu-text-color: #e0e0e0;
+  --menu-bg-color: #141516;
+  --menu-bg-hover-color: #2a2b2c;
+  --menu-border-color: #2a2b2c;
+  --menu-text-color: #f7f7f7;
 
   //////////////////////Report Navigation//////////////////////////
-  --secondary-menu-border-color: #c9a94e;
-  --secondary-menu-bg-color: #8a7230;
-  --secondary-menu-text-color: #e0e0e0;
-  --secondary-menu-link-color: #e0e0e0;
-  --secondary-menu-icon-color: #e0e0e0;
-  --secondary-menu-icon-hover-color: #ededed;
+  --secondary-menu-border-color: #d4000f;
+  --secondary-menu-bg-color: #6b0008;
+  --secondary-menu-text-color: #f7f7f7;
+  --secondary-menu-link-color: #f7f7f7;
+  --secondary-menu-icon-color: #f7f7f7;
+  --secondary-menu-icon-hover-color: #ffffff;
   --secondary-menu-font-weight: normal;
 
   //////////////////////Buttons//////////////////////////
-  --button-bg-color: #c9a94e;
-  --button-bg-color-hover: #d4b85e;
-  --button-link-color: #121212;
+  --button-bg-color: #d4000f;
+  --button-bg-color-hover: #e8102a;
+  --button-link-color: #ffffff;
 
   //////////////////////Tabs//////////////////////////
   --tab-hover-color: #fff;
 
   //////////////////////Scrollbar//////////////////////////
-  --scrollbar-bg-color: #3a3a3a;
-  --scrollbar-bg-hover-color: #4a4a4a;
+  --scrollbar-bg-color: #555657;
+  --scrollbar-bg-hover-color: #6a6b6c;
 
   //////////////////////Captions and Headlines//////////////////////////
-  --caption-color: #c9a94e;
-  --headline-font-color: #c9a94e;
-  --h1-color: #c9a94e;
-  --h2-color: #c9a94e;
-  --h3-color: #c9a94e;
-  --h4-color: #c9a94e;
-  --h5-color: #c9a94e;
-  --h6-color: #c9a94e;
+  --caption-color: #d4000f;
+  --headline-font-color: #d4000f;
+  --h1-color: #d4000f;
+  --h2-color: #d4000f;
+  --h3-color: #d4000f;
+  --h4-color: #d4000f;
+  --h5-color: #d4000f;
+  --h6-color: #d4000f;
 
   //////////////////////Icons//////////////////////////
-  --icon-color: #c9a94e;
-  --icon-color-hover: #d4b85e;
-  --icon-text-color: #c9a94e;
+  --icon-color: #d4000f;
+  --icon-color-hover: #e8102a;
+  --icon-text-color: #d4000f;
 
   //////////////////////Calendar//////////////////////////
-  --calendar-bg-color: #282828;
-  --calendar-eventablerow:#2e2e2e;
-  --calendar-border-color: #444033;
-  --calendar-text-color: #e0e0e0;
-  --today-bg-color: #c9a94e;
-  --today-border-color: #b89a42;
-  --today-text-color: #121212;
+  --calendar-bg-color: #3a3b3c;
+  --calendar-eventablerow:#48494A;
+  --calendar-border-color: #555657;
+  --calendar-text-color: #f7f7f7;
+  --today-bg-color: #d4000f;
+  --today-border-color: #b0000c;
+  --today-text-color: #ffffff;
 
   //////////////////////Logo//////////////////////////
-  --logo-main-color: #c9a94e;
-  --logo-secondary-color: #1d1d1d;
-  --logo-3rd-color: #3a3a3a;
-  --logo-4th-color: #c9a94e;
-  --logo-text-color: #c9a94e;
-  --logo-secondary-text-color: #1d1d1d;
+  --logo-main-color: #d4000f;
+  --logo-secondary-color: #1d1e1f;
+  --logo-3rd-color: #48494A;
+  --logo-4th-color: #d4000f;
+  --logo-text-color: #d4000f;
+  --logo-secondary-text-color: #1d1e1f;
 
   //////////////////////Roster Page//////////////////////////
-  --color-bg-base: #323232;
-  --color-bg-subtle: #272727;
+  --color-bg-base: #505152;
+  --color-bg-subtle: #3a3b3c;
   --color-bg-practice: rgba(59, 130, 246, 0.1);
   --color-bg-practice-alt: rgba(59, 130, 246, 0.15);
   --color-bg-injured: rgba(220, 38, 38, 0.1);
@@ -148,12 +148,12 @@
   --header-icon-hover-color: #dddddd;
 
   //////////////////////Logo Name//////////////////////////
-  --logo-name-primary-color: #c9a94e;
-  --logo-name-secondary-color: #e0e0e0;
+  --logo-name-primary-color: #d4000f;
+  --logo-name-secondary-color: #f7f7f7;
 
   //////////////////////Division Headings//////////////////////////
-  --division-heading-color: #e0e0e0;
-  --division-subheading-color: #c9a94e;
+  --division-heading-color: #f7f7f7;
+  --division-subheading-color: #d4000f;
   --division-border-color: #666666;
 
   //////////////////////Typography//////////////////////////
