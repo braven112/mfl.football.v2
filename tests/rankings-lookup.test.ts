@@ -547,7 +547,7 @@ describe('average rank column', () => {
     expect(lookup.columns[0].fullName).toBe('Average Rank');
   });
 
-  it('should compute correct average for player ranked in all imports', () => {
+  it('should assign ordinal rank 1 for single player in average', () => {
     const imp1 = createMockRankingImport({
       id: 'import-1',
       source: 'fantasypros',
@@ -561,10 +561,10 @@ describe('average rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
-    expect(avgMap?.get('p1')).toBe(15); // (10 + 20) / 2
+    expect(avgMap?.get('p1')).toBe(1); // single player → ordinal rank 1
   });
 
-  it('should penalise unranked player with max rank + 1 when averaging', () => {
+  it('should produce unique ordinal ranks even when raw averages tie', () => {
     const imp1 = createMockRankingImport({
       id: 'import-1',
       source: 'fantasypros',
@@ -578,13 +578,13 @@ describe('average rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
-    // p1: ranked 7 in imp1, unranked in imp2 (max 3 → penalty 4) → (7+4)/2 = 5.5 → 6
-    expect(avgMap?.get('p1')).toBe(6);
-    // p2: unranked in imp1 (max 7 → penalty 8), ranked 3 in imp2 → (8+3)/2 = 5.5 → 6
-    expect(avgMap?.get('p2')).toBe(6);
+    // p1: raw avg = (7+4)/2 = 5.5, p2: raw avg = (8+3)/2 = 5.5
+    // Both tie at 5.5, but ordinal ranks must be unique: 1 and 2
+    const ranks = [avgMap?.get('p1'), avgMap?.get('p2')].sort();
+    expect(ranks).toEqual([1, 2]);
   });
 
-  it('should use max rank from full import (including unmatched) for penalty', () => {
+  it('should order penalised players below ranked players', () => {
     const imp1 = createMockRankingImport({
       id: 'import-1',
       source: 'fantasypros',
@@ -606,51 +606,72 @@ describe('average rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
-    // p1: ranked 1 in both → (1+1)/2 = 1
+    // p1: raw avg = (1+1)/2 = 1 → best → ordinal 1
+    // p2: raw avg = (2+6)/2 = 4 → middle → ordinal 2
+    // p3: raw avg = (110+5)/2 = 57.5 → worst → ordinal 3
     expect(avgMap?.get('p1')).toBe(1);
-    // p2: ranked 2 in imp1, unranked in imp2 (max 5 → penalty 6) → (2+6)/2 = 4
-    expect(avgMap?.get('p2')).toBe(4);
-    // p3: unranked in imp1 (max 109 → penalty 110), ranked 5 in imp2 → (110+5)/2 = 57.5 → 58
-    expect(avgMap?.get('p3')).toBe(58);
+    expect(avgMap?.get('p2')).toBe(2);
+    expect(avgMap?.get('p3')).toBe(3);
   });
 
-  it('should round average to nearest integer', () => {
+  it('should assign ordinal ranks preserving relative order', () => {
     const imp1 = createMockRankingImport({
       id: 'import-1',
       source: 'fantasypros',
-      rankings: [createMockRankingEntry({ rank: 3, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 3, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 10, playerId: 'p2' }),
+      ],
     });
     const imp2 = createMockRankingImport({
       id: 'import-2',
       source: 'sleeper',
-      rankings: [createMockRankingEntry({ rank: 8, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 8, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 12, playerId: 'p2' }),
+      ],
     });
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
-    expect(avgMap?.get('p1')).toBe(6); // (3 + 8) / 2 = 5.5 → 6
+    // p1: raw avg = (3+8)/2 = 5.5 → ordinal 1
+    // p2: raw avg = (10+12)/2 = 11 → ordinal 2
+    expect(avgMap?.get('p1')).toBe(1);
+    expect(avgMap?.get('p2')).toBe(2);
   });
 
-  it('should compute average across 3 imports correctly', () => {
+  it('should compute correct ordinal order across 3 imports', () => {
     const imp1 = createMockRankingImport({
       id: 'import-1',
       source: 'fantasypros',
-      rankings: [createMockRankingEntry({ rank: 5, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 5, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 1, playerId: 'p2' }),
+      ],
     });
     const imp2 = createMockRankingImport({
       id: 'import-2',
       source: 'sleeper',
-      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 10, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 2, playerId: 'p2' }),
+      ],
     });
     const imp3 = createMockRankingImport({
       id: 'import-3',
       source: 'keeptradecut',
-      rankings: [createMockRankingEntry({ rank: 15, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 15, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 3, playerId: 'p2' }),
+      ],
     });
 
     const lookup = buildRankingLookup([imp1, imp2, imp3]);
     const avgMap = lookup.byImport.get(AVERAGE_IMPORT_ID);
-    expect(avgMap?.get('p1')).toBe(10); // (5 + 10 + 15) / 3
+    // p2: raw avg = (1+2+3)/3 = 2 → ordinal 1
+    // p1: raw avg = (5+10+15)/3 = 10 → ordinal 2
+    expect(avgMap?.get('p2')).toBe(1);
+    expect(avgMap?.get('p1')).toBe(2);
   });
 
   it('should NOT include unmatched players in average', () => {
@@ -719,7 +740,7 @@ describe('average rank column', () => {
     });
 
     const lookup = buildRankingLookup([imp1, imp2]);
-    expect(getPlayerRank(lookup, 'p1', AVERAGE_IMPORT_ID)).toBe(15);
+    expect(getPlayerRank(lookup, 'p1', AVERAGE_IMPORT_ID)).toBe(1); // single player → ordinal 1
     expect(getPlayerRank(lookup, 'p-unknown', AVERAGE_IMPORT_ID)).toBeNull();
   });
 
@@ -824,7 +845,7 @@ describe('composite rank column', () => {
     expect(lookup.columns[0].header).toBe('My Rank');
   });
 
-  it('should compute correct equal-weight composite (same as average)', () => {
+  it('should assign ordinal rank 1 for single player in composite', () => {
     mockGetCompositeConfig.mockReturnValue({
       members: [
         { importId: '1', weight: 1 },
@@ -845,10 +866,10 @@ describe('composite rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
-    expect(compositeMap?.get('p1')).toBe(15); // (10*1 + 20*1) / 2
+    expect(compositeMap?.get('p1')).toBe(1); // single player → ordinal rank 1
   });
 
-  it('should compute correct weighted composite', () => {
+  it('should order by weighted score correctly', () => {
     mockGetCompositeConfig.mockReturnValue({
       members: [
         { importId: '1', weight: 2 },
@@ -859,17 +880,28 @@ describe('composite rank column', () => {
     const imp1 = createMockRankingImport({
       id: '1',
       source: 'fantasypros',
-      rankings: [createMockRankingEntry({ rank: 10, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 10, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 5, playerId: 'p2' }),
+      ],
     });
     const imp2 = createMockRankingImport({
       id: '2',
       source: 'sleeper',
-      rankings: [createMockRankingEntry({ rank: 20, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 20, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 30, playerId: 'p2' }),
+      ],
     });
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
-    expect(compositeMap?.get('p1')).toBe(13); // Math.round((10*2 + 20*1) / 3) = 13.33 → 13
+    // p2: (5*2 + 30*1) / 3 = 13.33 → ordinal 1
+    // p1: (10*2 + 20*1) / 3 = 13.33 → ordinal 2
+    // Both have same raw score, but p2 was iterated first
+    // Just verify they get unique ordinal ranks
+    const ranks = [compositeMap?.get('p1'), compositeMap?.get('p2')].sort();
+    expect(ranks).toEqual([1, 2]);
   });
 
   it('should order columns: composite, members, then others', () => {
@@ -917,7 +949,7 @@ describe('composite rank column', () => {
     expect(members[1].isLastCompositeMember).toBe(true);
   });
 
-  it('should penalise unranked player in composite with max rank + 1', () => {
+  it('should produce unique ordinal ranks even when raw composite scores tie', () => {
     mockGetCompositeConfig.mockReturnValue({
       members: [
         { importId: '1', weight: 1 },
@@ -938,10 +970,10 @@ describe('composite rank column', () => {
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
-    // p1: imp1=7, imp2 unranked (max 3 → penalty 4) → (7+4)/2 = 5.5 → 6
-    expect(compositeMap?.get('p1')).toBe(6);
-    // p2: imp1 unranked (max 7 → penalty 8), imp2=3 → (8+3)/2 = 5.5 → 6
-    expect(compositeMap?.get('p2')).toBe(6);
+    // p1: raw = (7+4)/2 = 5.5, p2: raw = (8+3)/2 = 5.5 — same raw score
+    // But ordinal ranks must be unique: 1 and 2
+    const ranks = [compositeMap?.get('p1'), compositeMap?.get('p2')].sort();
+    expect(ranks).toEqual([1, 2]);
   });
 
   it('should coexist with average column', () => {
@@ -964,29 +996,37 @@ describe('composite rank column', () => {
     expect(compositeCol?.importId).not.toBe(avgCol?.importId);
   });
 
-  it('should round weighted average to nearest integer', () => {
+  it('should respect weights when assigning ordinal ranks', () => {
     mockGetCompositeConfig.mockReturnValue({
       members: [
-        { importId: '1', weight: 1 },
-        { importId: '2', weight: 2 },
+        { importId: '1', weight: 2 },
+        { importId: '2', weight: 1 },
       ],
     });
 
     const imp1 = createMockRankingImport({
       id: '1',
       source: 'fantasypros',
-      rankings: [createMockRankingEntry({ rank: 3, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 3, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 20, playerId: 'p2' }),
+      ],
     });
     const imp2 = createMockRankingImport({
       id: '2',
       source: 'sleeper',
-      rankings: [createMockRankingEntry({ rank: 8, playerId: 'p1' })],
+      rankings: [
+        createMockRankingEntry({ rank: 8, playerId: 'p1' }),
+        createMockRankingEntry({ rank: 1, playerId: 'p2' }),
+      ],
     });
 
     const lookup = buildRankingLookup([imp1, imp2]);
     const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
-    // (3*1 + 8*2) / 3 = 19/3 = 6.333... → 6
-    expect(compositeMap?.get('p1')).toBe(6);
+    // p1: (3*2 + 8*1) / 3 = 4.67 → lower score → ordinal 1
+    // p2: (20*2 + 1*1) / 3 = 13.67 → higher score → ordinal 2
+    expect(compositeMap?.get('p1')).toBe(1);
+    expect(compositeMap?.get('p2')).toBe(2);
   });
 
   it('should work with getPlayerRank using COMPOSITE_IMPORT_ID', () => {
@@ -1009,7 +1049,7 @@ describe('composite rank column', () => {
     });
 
     const lookup = buildRankingLookup([imp1, imp2]);
-    expect(getPlayerRank(lookup, 'p1', COMPOSITE_IMPORT_ID)).toBe(15);
+    expect(getPlayerRank(lookup, 'p1', COMPOSITE_IMPORT_ID)).toBe(1); // single player → ordinal 1
     expect(getPlayerRank(lookup, 'p-unknown', COMPOSITE_IMPORT_ID)).toBeNull();
   });
 

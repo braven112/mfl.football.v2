@@ -196,6 +196,9 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
       }
     }
 
+    // Compute raw weighted-average scores first, then convert to ordinal ranks
+    // so that no two players share the same rank number.
+    const rawCompositeScores: [string, number][] = [];
     for (const playerId of compositePlayerIds) {
       let weightedSum = 0;
       let totalWeight = 0;
@@ -210,8 +213,14 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
         totalWeight += member.weight;
       }
       if (totalWeight > 0) {
-        compositeMap.set(playerId, Math.round(weightedSum / totalWeight));
+        rawCompositeScores.push([playerId, weightedSum / totalWeight]);
       }
+    }
+
+    // Sort by raw score ascending, assign unique ordinal ranks (1, 2, 3, ...)
+    rawCompositeScores.sort((a, b) => a[1] - b[1]);
+    for (let i = 0; i < rawCompositeScores.length; i++) {
+      compositeMap.set(rawCompositeScores[i][0], i + 1);
     }
 
     byImport.set(COMPOSITE_IMPORT_ID, compositeMap);
@@ -279,8 +288,9 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
       }
     }
 
-    // For each player, average across ALL imports.
-    // If unranked in an import, use that import's max rank + 1.
+    // Compute raw average scores first, then convert to ordinal ranks
+    // so that no two players share the same rank number.
+    const rawAverageScores: [string, number][] = [];
     for (const playerId of allPlayerIds) {
       let sum = 0;
       for (let i = 0; i < realImportMaps.length; i++) {
@@ -291,7 +301,13 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
           sum += realImportMaxRanks[i] + 1;
         }
       }
-      averageMap.set(playerId, Math.round(sum / realImportMaps.length));
+      rawAverageScores.push([playerId, sum / realImportMaps.length]);
+    }
+
+    // Sort by raw score ascending, assign unique ordinal ranks (1, 2, 3, ...)
+    rawAverageScores.sort((a, b) => a[1] - b[1]);
+    for (let i = 0; i < rawAverageScores.length; i++) {
+      averageMap.set(rawAverageScores[i][0], i + 1);
     }
 
     byImport.set(AVERAGE_IMPORT_ID, averageMap);
