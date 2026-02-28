@@ -43,11 +43,11 @@ svg.icon-trophy {
   }
 
 [class^="icon"] {
-  fill: $primary-color;
+  fill: $icon-color;
 }
 
 a:hover [class^="icon"] {
-  fill: $link-color-hover;
+  fill: $icon-color-hover;
 }
 
 
