@@ -94,9 +94,11 @@ export function loadBaseRosterContext(astro: {
     astro.url?.searchParams?.get('team') ??
     astro.url?.searchParams?.get('franchiseId');
 
-  // Set cookie if myteam param exists
+  // Set cookie if team param exists (so it persists across tab navigation)
   if (myTeamParam) {
     setTheLeaguePreference(astro.cookies, myTeamParam);
+  } else if (franchiseParam) {
+    setTheLeaguePreference(astro.cookies, franchiseParam);
   }
 
   // Get cookie preference

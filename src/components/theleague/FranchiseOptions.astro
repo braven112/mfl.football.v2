@@ -31,6 +31,7 @@ export interface Props {
   salaryAverages?: Record<string, { positions?: Record<string, { top5Average?: number; top3Average?: number }> }>;
   season?: string;
   showTeamLogo?: boolean;
+  franchiseId?: string;
 }
 
 // NFL team code to full name mapping
@@ -46,7 +47,7 @@ const NFL_TEAM_NAMES: Record<string, string> = {
 };
 
 import { getCurrentLeagueYear } from '../../utils/league-year';
-const { players = [], salaryAverages = {}, season = String(getCurrentLeagueYear()), showTeamLogo = true } = Astro.props;
+const { players = [], salaryAverages = {}, season = String(getCurrentLeagueYear()), showTeamLogo = true, franchiseId } = Astro.props;
 
 // Franchise tag thresholds by position
 const TAG_THRESHOLDS: Record<string, number> = {
@@ -100,8 +101,10 @@ playersByPosition.forEach((posPlayers) => {
 });
 
 // Filter eligible players (server-side: points + salary only)
+// When franchiseId is provided, only show candidates from that team
+const teamPlayers = franchiseId ? players.filter(p => p.franchiseId === franchiseId) : players;
 const franchiseTagEligible: (typeof players[number] & { pointsPosRank: number; salaryPosRank: number })[] = [];
-players.forEach((player) => {
+teamPlayers.forEach((player) => {
   if (player.contractYears !== 1) return;
 
   const pos = player.position?.toUpperCase() || 'UNK';
@@ -141,7 +144,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 
 ---
 
-<div class="franchise-tag-eligibility" data-all-players={JSON.stringify(players)} data-salary-averages={JSON.stringify(salaryAverages)} data-season={season}>
+<div class="franchise-tag-eligibility" data-all-players={JSON.stringify(players)} data-salary-averages={JSON.stringify(salaryAverages)} data-season={season} data-current-team={franchiseId ?? ''}>
   {withRanks.length === 0 ? (
     <div class="no-results">
       <p>No players on their last year currently meet franchise tag criteria (top at position by rank, points, or salary).</p>
@@ -168,7 +171,6 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
                   headshot={player.headshot}
                   position={player.position}
                   nflTeam={player.nflTeam}
-                  playerData={{ id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId }}
                 />
               </td>
               <td data-label="Points" class="align-right">{(player.points ?? 0).toFixed(2)}</td>
@@ -186,7 +188,6 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 <script>
   import { buildRankingLookup, COMPOSITE_IMPORT_ID, AVERAGE_IMPORT_ID, onRankingsChanged } from '../../utils/rankings-lookup';
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
-  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
   // NFL team code to full name mapping
   const NFL_TEAM_NAMES = {
@@ -370,7 +371,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
         tableHtml += `
           <tr>
             <td data-label="Player">
-              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam, playerData: { id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId } })}
+              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam })}
             </td>
             <td data-label="Points" class="align-right">${(player.points ?? 0).toFixed(2)}</td>
             <td data-label="${salaryYear} Salary" class="align-right salary-value-cell">${currencyFormatter.format(player.salary)}</td>
@@ -393,7 +394,6 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 
   // Find and render all franchise tag eligibility containers
   document.querySelectorAll('.franchise-tag-eligibility').forEach((el) => {
-    initPlayerModalTrigger(el as HTMLElement);
     renderFranchiseTagTable(el);
   });
 

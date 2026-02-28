@@ -378,7 +378,7 @@ const formatCurrency = (value: number) => currencyFormatter.format(value ?? 0);
             <DonutChart chartId="capDonut" slices={capSlices} showLegend={true} />
           </ChartCard>
           <ChartCard title="Roster Composition" subtitle="Active vs IR vs Practice vs Open slots">
-            <DonutChart chartId="rosterDonut" slices={rosterSlices} showLegend={true} />
+            <DonutChart chartId="rosterDonut" slices={rosterSlices} showLegend={true} valueFormat="number" />
           </ChartCard>
           <ChartCard title="Position Allocation" subtitle="Current season cap by position">
             <BarChart chartId="posBar" slices={positionSlices} positionOrder={positionOrder} />

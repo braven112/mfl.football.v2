@@ -1276,9 +1276,11 @@ const franchiseParam = Astro.url?.searchParams?.get('franchise') ??
   Astro.url?.searchParams?.get('team') ??
   Astro.url?.searchParams?.get('franchiseId');
 
-// If myteam param exists, set the cookie preference
+// If team param exists, set the cookie preference (persists across tab navigation)
 if (myTeamParam) {
   setTheLeaguePreference(Astro.cookies, myTeamParam);
+} else if (franchiseParam) {
+  setTheLeaguePreference(Astro.cookies, franchiseParam);
 }
 
 // Get cookie preference
@@ -3705,14 +3707,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
-  (window as any).__buildPlayerCellHTML = buildPlayerCellHTML;
 
-  // Attach delegated modal trigger (module scripts run after DOM parsing)
-  const rosterTbody = document.getElementById('rosterTableBody');
-  if (rosterTbody) initPlayerModalTrigger(rosterTbody);
-</script>
-
-<script type="module">
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
   );
@@ -4602,6 +4597,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const summaryOpen = document.getElementById('summaryOpen');
     const summaryPractice = document.getElementById('practiceCount');
     const summaryInjured = document.getElementById('injuredCount');
+    const summaryLastContract = document.getElementById('summaryLastContract');
+    const summaryAvg2026 = document.getElementById('summaryAvg2026');
     const teamNames = document.querySelectorAll('[data-team-name]');
     const teamMetas = document.querySelectorAll('[data-team-meta]');
     const teamIdentityEls = document.querySelectorAll('[data-team-identity]');
@@ -4777,8 +4774,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
       const summaryPlayersNext = document.getElementById('summaryPlayersNext');
       if (summaryPlayersNext) summaryPlayersNext.textContent = playersNextYear;
-    const summaryLastContract = document.getElementById('summaryLastContract');
-    const summaryAvg2026 = document.getElementById('summaryAvg2026');
       if (summaryLastContract) summaryLastContract.textContent = lastContractYear;
 
       // legacy summary labels (if present)
@@ -5159,7 +5154,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;">🏷️</a>`
             : '';
 
-          const playerCellHtml = window.__buildPlayerCellHTML({
+          const playerCellHtml = buildPlayerCellHTML({
             name: player.name,
             headshot: player.headshot,
             position: player.position,
@@ -5640,6 +5635,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     applyHiddenColumns();
     updateView();
     hydrateTeamFromSession();
+
+    // Attach player modal click handler to roster table
+    const rosterTbody = document.getElementById('rosterTableBody');
+    if (rosterTbody) initPlayerModalTrigger(rosterTbody);
   };
 
   if (document.readyState === 'loading') {

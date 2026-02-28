@@ -571,10 +571,10 @@ if (plannerPhase.showDualDraftCards && transactionsData && standingsData?.league
           <h2 class="planner-section__title">Extensions</h2>
           <div class="chart-grid">
             <ChartCard title={`Franchise Tag Options (${currentLeagueYear + 1})`} subtitle="Potential franchise tag candidates">
-              <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
+              <FranchiseOptions players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} franchiseId={defaultTeamId} />
             </ChartCard>
             <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
-              <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} />
+              <VeteranExtensionCandidates players={initialAllPlayers} salaryAverages={salaryAveragesBySeason} season={extensionSeason} franchiseId={defaultTeamId} />
             </ChartCard>
           </div>
         </div>
