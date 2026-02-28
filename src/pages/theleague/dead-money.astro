@@ -262,10 +262,12 @@ const formatCostPerPoint = (costPerPoint: number) => {
       </p>
       <div class="award-descriptions">
         <div class="award-desc">
-          <strong>The Jerry Jones Award</strong> — Honors the GM who spent the most for the least.
+          <img src="/assets/theleague/awards/jerry-jones.jpg" alt="Jerry Jones" class="award-avatar" />
+          <span><strong>The Jerry Jones Award</strong> — Honors the GM who spent the most for the least.</span>
         </div>
         <div class="award-desc">
-          <strong>The Brock Osweiler Award</strong> — Goes to the player (min $1.5M salary) who burned the most salary per point scored.
+          <img src="/assets/theleague/awards/brock-osweiler.png" alt="Brock Osweiler" class="award-avatar" />
+          <span><strong>The Brock Osweiler Award</strong> — Goes to the player (min $1.5M salary) who burned the most salary per point scored.</span>
         </div>
       </div>
       <a href="/theleague/mvp" class="cross-link">
@@ -328,7 +330,6 @@ const formatCostPerPoint = (costPerPoint: number) => {
                           </div>
                         </div>
                       </div>
-                    </div>
                     {team.lineup && (() => {
                       const col1 = team.lineup.filter(p => ['QB', 'RB', 'WR'].includes(p.slot));
                       const col2 = team.lineup.filter(p => ['TE', 'PK', 'DEF'].includes(p.slot));
@@ -363,6 +364,7 @@ const formatCostPerPoint = (costPerPoint: number) => {
                         </div>
                       );
                     })()}
+                  </div>
                   </article>
                 );
               })}
@@ -600,13 +602,24 @@ const formatCostPerPoint = (costPerPoint: number) => {
   .award-descriptions {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
     margin-top: 0.25rem;
   }
 
   .award-desc {
     font-size: 0.9rem;
     color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .award-avatar {
+    width: 1.6em;
+    height: 1.6em;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
   }
 
   .cross-link {
