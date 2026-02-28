@@ -3,6 +3,7 @@ import { fixPlayoffTableLabels } from './features/projected-playoff.js';
 import { updateFranchiseLinks } from './features/franchiseLinks.js';
 import { initializeTeamPreferences } from './shared/teamPreferences.js';
 import { initMflPageEnhancements } from './shared/mflPageEnhancements.js';
+import { initNavProgress } from './shared/navProgress.js';
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
@@ -92,4 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------
   //
   initMflPageEnhancements();
+
+  //
+  // --------------------------
+  // Navigation Progress Bar
+  // --------------------------
+  //
+  initNavProgress();
 });

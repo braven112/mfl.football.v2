@@ -2,6 +2,7 @@ import { fixFranchiseIcons, shouldSkipFranchiseIcons } from './features/franchis
 import { updateAFLFranchiseLinks } from './features/aflFranchiseLinks.js';
 import { initializeTeamPreferences } from './shared/teamPreferences.js';
 import { initMflPageEnhancements } from './shared/mflPageEnhancements.js';
+import { initNavProgress } from './shared/navProgress.js';
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;
@@ -84,4 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------
   //
   initMflPageEnhancements();
+
+  //
+  // --------------------------
+  // Navigation Progress Bar
+  // --------------------------
+  //
+  initNavProgress();
 });
