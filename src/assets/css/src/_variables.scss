@@ -167,6 +167,21 @@
   --color-bg-injured-alt: #ffe8e8;
   --color-border-practice: #bfdbfe;
   --color-border-injured: #fecaca;
+
+  //////////////////////Homepage Messages//////////////////////////
+  --hpm-header-bg: var(--alert-warning-bg);
+  --hpm-header-border: var(--alert-warning-border);
+  --hpm-header-color: var(--alert-warning-text);
+  --hpm-body-bg: var(--alert-warning-bg);
+  --hpm-body-border: var(--alert-warning-border);
+  --hpm-body-color: var(--alert-warning-text);
+
+  //////////////////////Live Scoring//////////////////////////
+  --live-scoring-highlight: var(--accent-color);
+  --live-scoring-border: var(--dark-accent-color);
+
+  //////////////////////Container Header//////////////////////////
+  --container-header-bg: var(--header-bg);
 }
 
 //////////////////////Colors//////////////////////////
@@ -319,3 +334,18 @@ $border-radius-sm: var(--border-radius-sm);
 $border-radius-default: var(--border-radius-default);
 $border-radius-lg: var(--border-radius-lg);
 $border-radius-xl: var(--border-radius-xl);
+
+//////////////////////Homepage Messages//////////////////////////
+$hpm-header-bg: var(--hpm-header-bg);
+$hpm-header-border: var(--hpm-header-border);
+$hpm-header-color: var(--hpm-header-color);
+$hpm-body-bg: var(--hpm-body-bg);
+$hpm-body-border: var(--hpm-body-border);
+$hpm-body-color: var(--hpm-body-color);
+
+//////////////////////Live Scoring//////////////////////////
+$live-scoring-highlight: var(--live-scoring-highlight);
+$live-scoring-border: var(--live-scoring-border);
+
+//////////////////////Container Header//////////////////////////
+$container-header-bg: var(--container-header-bg);

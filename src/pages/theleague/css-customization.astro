@@ -56,6 +56,7 @@ const groups: VarGroup[] = [
       { name: '--primary-bg-color', value: '', desc: 'Content area / card backgrounds' },
       { name: '--report-bg', value: '', desc: 'Report page backgrounds' },
       { name: '--header-bg', value: '', desc: 'Site header background' },
+      { name: '--container-header-bg', value: '', desc: 'Container header background (defaults to --header-bg)' },
       { name: '--codebg-color', value: '', desc: 'Code block backgrounds' },
     ]
   },
@@ -222,6 +223,24 @@ const groups: VarGroup[] = [
       { name: '--header-icon-color', value: '', desc: 'Header icon fill' },
       { name: '--header-icon-text-color', value: '', desc: 'Header icon label text' },
       { name: '--header-icon-hover-color', value: '', desc: 'Header icon hover fill' },
+    ]
+  },
+  {
+    label: 'Homepage Messages', id: 'hpm',
+    vars: [
+      { name: '--hpm-header-bg', value: '', desc: 'Message box header background (defaults to --alert-warning-bg)' },
+      { name: '--hpm-header-border', value: '', desc: 'Message box header border (defaults to --alert-warning-border)' },
+      { name: '--hpm-header-color', value: '', desc: 'Message box header text (defaults to --alert-warning-text)' },
+      { name: '--hpm-body-bg', value: '', desc: 'Message box body background (defaults to --alert-warning-bg)' },
+      { name: '--hpm-body-border', value: '', desc: 'Message box body border (defaults to --alert-warning-border)' },
+      { name: '--hpm-body-color', value: '', desc: 'Message box body text (defaults to --alert-warning-text)' },
+    ]
+  },
+  {
+    label: 'Live Scoring', id: 'live-scoring',
+    vars: [
+      { name: '--live-scoring-highlight', value: '', desc: 'Currently-playing row highlight (defaults to --accent-color)' },
+      { name: '--live-scoring-border', value: '', desc: 'Currently-playing row border (defaults to --dark-accent-color)' },
     ]
   },
   {
@@ -477,6 +496,28 @@ When I ask you to change something, generate ONLY a <style> block containing the
   --border-radius-sm: .5rem;
   --border-radius-default: 1rem;
   --border-radius-lg: 1.5rem;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Accent-colored homepage messages</h3>
+          <p>By default, homepage message boxes use the warning alert colors (amber). Override these to match your accent:</p>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --hpm-header-bg: rgba(212, 0, 15, 0.10);
+  --hpm-header-border: rgba(212, 0, 15, 0.25);
+  --hpm-header-color: #f7f7f7;
+  --hpm-body-bg: rgba(212, 0, 15, 0.05);
+  --hpm-body-border: rgba(212, 0, 15, 0.15);
+  --hpm-body-color: #f7f7f7;
+{'}'}
+&lt;/style&gt;</code></pre>
+
+          <h3>Custom live scoring highlight</h3>
+          <p>The "currently playing" row in live scoring uses the accent color by default. Override it independently:</p>
+          <pre><code>&lt;style&gt;
+:root {'{'}
+  --live-scoring-highlight: #2563eb;
+  --live-scoring-border: #1d4ed8;
 {'}'}
 &lt;/style&gt;</code></pre>
         </section>

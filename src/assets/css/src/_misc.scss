@@ -405,15 +405,15 @@ h2 {
 }
 
 .homepagemessage th {
-  color: $alert-warning-text;
-  background-color: $alert-warning-bg;
-  border: 1px solid $alert-warning-border;
+  color: $hpm-header-color;
+  background-color: $hpm-header-bg;
+  border: 1px solid $hpm-header-border;
 }
 
 table.homepagemessage td {
-  background-color: $alert-warning-bg;
-  color: $alert-warning-text;
-  border-color: $alert-warning-border;
+  background-color: $hpm-body-bg;
+  color: $hpm-body-color;
+  border-color: $hpm-body-border;
 }
 
 caption,

@@ -143,9 +143,9 @@ table#roster_home {
   .oddtablerow.ls_nonstarters:has(b) td {
     font-weight: 700;
     font-size: 1.1rem;
-    background-color: $primary-color;
+    background-color: $live-scoring-highlight;
     border-top: 1px solid #ccc;
-    border-bottom: 4px solid $accent-color;
+    border-bottom: 4px solid $live-scoring-border;
     color: $white;
     border-left: 0 !important;
     height: 2rem;
