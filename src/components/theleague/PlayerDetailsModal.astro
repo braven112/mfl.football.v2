@@ -745,6 +745,8 @@ const { class: className } = Astro.props;
         const DEFAULT_IMG = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
         if (isDefense && teamCode) {
           headshot.src = '/assets/nfl-logos/' + teamCode + '.svg';
+        } else if (playerData.headshot) {
+          headshot.src = playerData.headshot;
         } else if (playerData.espnId) {
           headshot.src = 'https://a.espncdn.com/i/headshots/nfl/players/full/' + playerData.espnId + '.png';
         } else {

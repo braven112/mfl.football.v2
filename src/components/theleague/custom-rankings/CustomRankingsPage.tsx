@@ -50,7 +50,7 @@ interface Props {
 
 function getHeadshotUrl(playerId: string, espnId: string | null): string {
   if (espnId) {
-    return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70&cb=1`;
+    return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
   return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
 }
