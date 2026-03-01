@@ -5003,6 +5003,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   });
 
   const initRosterPage = () => {
+    // Guard: only run on the rosters page (skip after ViewTransitions navigates away)
+    if (!document.getElementById('roster-config')) return;
+
     const {
       seasons = {},
       defaultSeason,
@@ -6760,7 +6763,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         (capChargesWithDead?.[1] ?? 0) -
         reserveForRookies;
       const avgPerPlayer2026 = Math.max(capSpace2026, 0) / remainingSlots2026;
-      if (summaryAvg2026) summaryAvg2026.textContent = `${formatCurrency.format(avgPerPlayer2026)} × ${remainingSlots2026}`;
+      const summaryAvg2026El = document.getElementById('summaryAvg2026');
+      if (summaryAvg2026El) summaryAvg2026El.textContent = `${formatCurrency.format(avgPerPlayer2026)} × ${remainingSlots2026}`;
 
       const summaryDeadMoney2026 = document.getElementById('summaryDeadMoney2026');
       if (summaryDeadMoney2026) summaryDeadMoney2026.textContent = formatCurrency.format(deadMoney2026);

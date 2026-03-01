@@ -12,6 +12,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
+import collegeLogos from '../../data/college-logos.json';
 import '../../styles/player-cell.css';
 
 // MFL team code → local SVG filename normalization
@@ -23,6 +24,15 @@ const MFL_TEAM_CODE_MAP: Record<string, string> = {
 function normalizeMflTeam(code: string): string {
   if (!code) return 'FA';
   return MFL_TEAM_CODE_MAP[code] || code;
+}
+
+// College logo lookup (case-insensitive)
+const collegeLogosNormalized = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
+);
+function getCollegeLogo(collegeName: string | null): string | null {
+  if (!collegeName) return null;
+  return collegeLogosNormalized[collegeName.toLowerCase()]?.logo ?? null;
 }
 
 // Load player data
@@ -206,6 +216,7 @@ interface PlayerRow {
   exp: number | null;
   draftRd: number | null;
   college: string | null;
+  collegeLogo: string | null;
   htWt: string | null;
   height: number | null;
   weight: number | null;
@@ -293,6 +304,7 @@ if (Array.isArray(allPlayers)) {
       exp: pos === 'DEF' ? 5 : exp,
       draftRd: (draftRd && draftRd > 0) ? draftRd : null,
       college: p.college || null,
+      collegeLogo: getCollegeLogo(p.college),
       htWt,
       height: heightInches,
       weight: weightLbs,
@@ -785,7 +797,8 @@ const faCountsJson = JSON.stringify(faCounts);
       const modalJson = escapeAttr(JSON.stringify({
         id: p.id, espnId: p.espnId || null, name: p.name,
         position: p.position, nflTeam: p.team,
-        college: p.college || null, height: p.height || null,
+        college: p.college || null, collegeLogo: p.collegeLogo || null,
+        height: p.height || null,
         weight: p.weight || null, number: p.jersey || null,
         birthdate: p.birthdate || null, experience: p.exp != null ? p.exp : null,
         draftYear: p.draftYear || null, draftTeam: p.draftTeam || null,
@@ -1194,6 +1207,9 @@ const faCountsJson = JSON.stringify(faCounts);
   } else {
     initModalTrigger();
   }
+
+  // Re-initialize after View Transitions (Astro page navigation)
+  document.addEventListener('astro:page-load', initModalTrigger);
 </script>
 
 <style>
