@@ -1,0 +1,180 @@
+/**
+ * Free Agent Targets — styles for the admin-only surplus value section
+ * on the Free Agents page.
+ *
+ * Color coding:
+ *   --undervalued: #059669 (green) — positive surplus (bargain)
+ *   --overvalued:  #dc2626 (red)   — negative surplus (overpay)
+ */
+
+/* ── Section ── */
+.targets-section {
+  margin-top: 0.5rem;
+}
+
+.targets-header {
+  margin-bottom: 1rem;
+}
+
+.targets-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.targets-subtitle {
+  color: var(--text-secondary-color, #64748b);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+.targets-controls {
+  margin-bottom: 0.5rem;
+}
+
+/* ── Surplus color coding ── */
+.surplus-positive {
+  color: #059669;
+  font-weight: 600;
+}
+
+.surplus-negative {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.surplus-zero {
+  color: var(--text-secondary-color, #64748b);
+}
+
+/* ── Surplus bar indicator ── */
+.surplus-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.surplus-amount {
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.surplus-pct {
+  font-size: 0.7rem;
+  color: var(--text-secondary-color, #64748b);
+}
+
+.surplus-bar-wrapper {
+  width: 100%;
+  height: 3px;
+  background: var(--border-color, #e2e8f0);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.surplus-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.surplus-bar--positive {
+  background: #059669;
+}
+
+.surplus-bar--negative {
+  background: #dc2626;
+}
+
+/* ── Value/cost cells ── */
+.cell-currency {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+/* ── Targets table specifics ── */
+.targets-table .cell-player {
+  min-width: 160px;
+}
+
+.targets-table td {
+  vertical-align: middle;
+}
+
+/* ── Empty state ── */
+.targets-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-secondary-color, #64748b);
+}
+
+/* ── Mobile card layout ── */
+@media (max-width: 640px) {
+  .targets-table thead {
+    display: none;
+  }
+
+  .targets-table tbody tr {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+  }
+
+  .targets-table .cell-rank {
+    grid-row: 1 / 4;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--text-secondary-color, #64748b);
+    padding-right: 0.5rem;
+  }
+
+  .targets-table .cell-player {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .targets-table .cell-age {
+    display: none;
+  }
+
+  .targets-table .targets-stats-row {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .targets-table .targets-surplus-row {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  /* Hide individual stat cells on mobile — they become the stats-row */
+  .targets-table .cell-proj,
+  .targets-table .cell-value,
+  .targets-table .cell-cost,
+  .targets-table .cell-surplus {
+    display: none;
+  }
+
+  .targets-table .mobile-stats,
+  .targets-table .mobile-surplus {
+    display: flex;
+  }
+}
+
+@media (min-width: 641px) {
+  .targets-table .mobile-stats,
+  .targets-table .mobile-surplus {
+    display: none;
+  }
+}

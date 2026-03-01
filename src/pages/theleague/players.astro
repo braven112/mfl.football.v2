@@ -12,7 +12,10 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
+import { calculateAllSurplusValues } from '../../utils/surplus-value';
+import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import '../../styles/player-cell.css';
+import '../../styles/free-agent-targets.css';
 
 // MFL team code → local SVG filename normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -66,6 +69,10 @@ const fpaModules = import.meta.glob(
 );
 const leagueModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/league.json',
+  { eager: true }
+);
+const salaryAvgModules = import.meta.glob(
+  '../../data/mfl-salary-averages-*.json',
   { eager: true }
 );
 
@@ -338,6 +345,37 @@ for (const p of freeAgents) {
 
 const playerDataJson = JSON.stringify(playerList);
 const faCountsJson = JSON.stringify(faCounts);
+
+// ── Surplus Value / Free Agent Targets (admin-only) ────────────────────
+// Compute surplus values at build time. The Targets UI is hidden by default
+// and revealed via client-side JS when the cookie confirms admin franchise.
+const salaryAvgYear = getFrozenSalaryAveragesYear(salaryAvgModules, getModuleData);
+const salaryAvgKey = Object.keys(salaryAvgModules).find(k => k.includes(String(salaryAvgYear)));
+const salaryAveragesData = salaryAvgKey ? getModuleData(salaryAvgModules[salaryAvgKey]) : null;
+
+let surplusDataJson = '[]';
+if (projectedScoresData && playersData && salaryAveragesData) {
+  const projScores = projectedScoresData?.projectedScores?.playerScore;
+  const allPlayerRaw = playersData?.players?.player;
+  const rosterFranchises = rostersData?.rosters?.franchise;
+
+  if (projScores && allPlayerRaw && rosterFranchises) {
+    const surplusResults = calculateAllSurplusValues({
+      projectedScores: Array.isArray(projScores) ? projScores : [projScores],
+      players: Array.isArray(allPlayerRaw) ? allPlayerRaw : [allPlayerRaw],
+      rosters: Array.isArray(rosterFranchises) ? rosterFranchises : [rosterFranchises],
+      salaryAverages: salaryAveragesData,
+      adpDynasty: adpDynMap.size > 0 ? adpDynMap : undefined,
+    });
+
+    // Filter to free agents with projections > 0, sorted by surplus desc
+    const freeAgentTargets = surplusResults
+      .filter(r => !r.isRostered && r.projectedPoints > 0)
+      .sort((a, b) => b.surplusValue - a.surplusValue);
+
+    surplusDataJson = JSON.stringify(freeAgentTargets);
+  }
+}
 ---
 
 <TheLeagueLayout title="Free Agents | TheLeague">
@@ -379,6 +417,7 @@ const faCountsJson = JSON.stringify(faCounts);
         <span class="col-group-toggles__label">View:</span>
         <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
         <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+        <button class="col-group-btn" data-group="targets" id="col-group-btn-targets" type="button" aria-pressed="false" style="display: none;">Targets</button>
       </div>
       <label class="roster-toggle">
         <input type="checkbox" id="show-rostered" />
@@ -473,6 +512,41 @@ const faCountsJson = JSON.stringify(faCounts);
       <button class="show-more-btn" id="show-more-btn">Show More</button>
     </div>
 
+    <!-- Targets Section (admin only, hidden by default) -->
+    <div class="targets-section" id="targets-section" style="display: none;">
+      <div class="targets-header">
+        <h2 class="targets-title">Value Targets</h2>
+        <p class="targets-subtitle">Sorted by surplus value — the gap between production worth and auction cost</p>
+      </div>
+      <div class="targets-controls">
+        <div class="showing-count">
+          Showing <span id="targets-showing-count">50</span> of <span id="targets-total">0</span>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="players-table targets-table" id="targets-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-player">Player</th>
+              <th class="col-age sortable" data-sort="age"><div class="th-content">Age</div></th>
+              <th class="col-num sortable" data-sort="projectedPoints"><div class="th-content">Proj</div></th>
+              <th class="col-num sortable" data-sort="dollarValue"><div class="th-content">Value</div></th>
+              <th class="col-num sortable" data-sort="estimatedCost"><div class="th-content">Est. Cost</div></th>
+              <th class="col-num sortable" data-sort="surplusValue"><div class="th-content">Surplus</div></th>
+            </tr>
+          </thead>
+          <tbody id="targets-table-body"></tbody>
+        </table>
+      </div>
+      <div class="show-more-wrapper" id="targets-show-more-wrapper">
+        <button class="show-more-btn" id="targets-show-more-btn">Show More</button>
+      </div>
+      <div class="targets-empty" id="targets-empty" style="display: none;">
+        <p>No projected data available for free agents.</p>
+      </div>
+    </div>
+
     <!-- No data -->
     <div class="no-data" id="no-data" style="display: none;">
       <p>No player data available yet.</p>
@@ -485,6 +559,11 @@ const faCountsJson = JSON.stringify(faCounts);
     type="application/json"
     id="weekly-player-results"
     set:html={JSON.stringify(weeklyPlayerResults)}
+  ></script>
+  <script
+    type="application/json"
+    id="surplus-value-data"
+    set:html={surplusDataJson}
   ></script>
 </TheLeagueLayout>
 
@@ -506,10 +585,11 @@ const faCountsJson = JSON.stringify(faCounts);
   let rankingLookup = { byImport: new Map(), columns: [] };
   let hasExplicitSortPref = false;
 
-  // Column group visibility — stats and rankings are mutually exclusive
-  // 'stats' = show stats columns, 'rankings' = show ranking columns
+  // Column group visibility — stats, rankings, and targets are mutually exclusive
+  // 'stats' = show stats columns, 'rankings' = show ranking columns, 'targets' = show targets section
   let activeView = 'stats';
   let hasRankingColumns = false;
+  let hasTargetsAvailable = false;
   let hasExplicitViewPref = false;
 
   function loadViewPref() {
@@ -531,6 +611,7 @@ const faCountsJson = JSON.stringify(faCounts);
   function applyGroupVisibility() {
     const showStats = activeView === 'stats';
     const showRankings = activeView === 'rankings' && hasRankingColumns;
+    const showTargets = activeView === 'targets' && hasTargetsAvailable;
 
     document.querySelectorAll('.col-group--stats').forEach(el => {
       el.style.display = showStats ? '' : 'none';
@@ -540,7 +621,7 @@ const faCountsJson = JSON.stringify(faCounts);
     });
 
     // Update button active states
-    for (const group of ['stats', 'rankings']) {
+    for (const group of ['stats', 'rankings', 'targets']) {
       const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
       if (btn) {
         const isActive = group === activeView;
@@ -549,10 +630,33 @@ const faCountsJson = JSON.stringify(faCounts);
       }
     }
 
-    // Show/hide the toggle bar — only visible when rankings are available
+    // Show/hide the toggle bar — visible when rankings OR targets are available
     const toggleBar = document.getElementById('col-group-toggles');
     if (toggleBar) {
-      toggleBar.style.display = hasRankingColumns ? '' : 'none';
+      toggleBar.style.display = (hasRankingColumns || hasTargetsAvailable) ? '' : 'none';
+    }
+
+    // Show/hide the targets button
+    const targetsBtn = document.getElementById('col-group-btn-targets');
+    if (targetsBtn) {
+      targetsBtn.style.display = hasTargetsAvailable ? '' : 'none';
+    }
+
+    // Toggle main table vs targets section visibility
+    const mainTable = document.querySelector('.players-page > .table-wrapper');
+    const mainShowMore = document.getElementById('show-more-wrapper');
+    const mainControls = document.querySelector('.table-controls');
+    const targetsSection = document.getElementById('targets-section');
+
+    if (showTargets) {
+      if (mainTable) mainTable.style.display = 'none';
+      if (mainShowMore) mainShowMore.style.display = 'none';
+      if (mainControls) mainControls.style.display = 'none';
+      if (targetsSection) targetsSection.style.display = '';
+    } else {
+      if (mainTable) mainTable.style.display = '';
+      if (mainControls) mainControls.style.display = '';
+      if (targetsSection) targetsSection.style.display = 'none';
     }
 
     updateLastVisibleCol();
@@ -937,6 +1041,29 @@ const faCountsJson = JSON.stringify(faCounts);
     e.detail.showRostered = showRostered;
   });
 
+  // Targets integration — the targets module script signals availability
+  document.addEventListener('targets:set-available', function (e) {
+    hasTargetsAvailable = e.detail.available;
+    applyGroupVisibility();
+  });
+
+  document.addEventListener('targets:activate', function () {
+    activeView = 'targets';
+    applyGroupVisibility();
+  });
+
+  document.addEventListener('targets:deactivate', function () {
+    if (activeView === 'targets') {
+      activeView = 'stats';
+      applyGroupVisibility();
+    }
+  });
+
+  // Synchronous request for active position — used by targets module
+  document.addEventListener('targets:get-position', function (e) {
+    e.detail.position = activePosition;
+  });
+
   // Signal that the inline script is ready for the module script
   document.dispatchEvent(new CustomEvent('rankings:page-ready'));
 
@@ -1194,6 +1321,291 @@ const faCountsJson = JSON.stringify(faCounts);
   } else {
     initModalTrigger();
   }
+</script>
+
+<!-- Targets view: admin-only surplus value table -->
+<script>
+  import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { formatCompactNumber } from '../../utils/formatters';
+
+  /**
+   * Check admin status from the theleague_team_pref cookie.
+   * All data used here (player names, positions, team codes) comes from
+   * build-time MFL feed data — not user input — so the HTML construction
+   * in renderTargets() is safe from injection.
+   */
+  function isAdminFromCookie(): boolean {
+    try {
+      const cookie = document.cookie.split(';')
+        .find(c => c.trim().startsWith('theleague_team_pref='));
+      if (!cookie) return false;
+      const pref = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+      return pref.franchiseId === '0001';
+    } catch { return false; }
+  }
+
+  interface TargetRow {
+    playerId: string;
+    name: string;
+    position: string;
+    nflTeam: string;
+    age: number | null;
+    projectedPoints: number;
+    dollarValue: number;
+    estimatedCost: number;
+    surplusValue: number;
+    surplusPercent: number;
+    rank: number | null;
+  }
+
+  let allTargets: TargetRow[] = [];
+  let filteredTargets: TargetRow[] = [];
+  let targetsVisibleCount = 50;
+  let targetsSortKey = 'surplusValue';
+  let targetsSortDir = 'desc';
+  const TARGETS_BATCH = 50;
+
+  function loadTargetsData(): TargetRow[] {
+    try {
+      const el = document.getElementById('surplus-value-data');
+      if (!el) return [];
+      return JSON.parse(el.textContent || '[]');
+    } catch { return []; }
+  }
+
+  function fmtCurrencySigned(value: number): string {
+    const abs = Math.abs(value);
+    const prefix = value < 0 ? '-' : value > 0 ? '+' : '';
+    return prefix + '$' + formatCompactNumber(abs);
+  }
+
+  function fmtCurrency(value: number): string {
+    return '$' + formatCompactNumber(value);
+  }
+
+  function sortTargets() {
+    filteredTargets.sort((a, b) => {
+      let aVal: number, bVal: number;
+      switch (targetsSortKey) {
+        case 'age':
+          aVal = a.age ?? 999;
+          bVal = b.age ?? 999;
+          break;
+        case 'projectedPoints':
+          aVal = a.projectedPoints;
+          bVal = b.projectedPoints;
+          break;
+        case 'dollarValue':
+          aVal = a.dollarValue;
+          bVal = b.dollarValue;
+          break;
+        case 'estimatedCost':
+          aVal = a.estimatedCost;
+          bVal = b.estimatedCost;
+          break;
+        case 'surplusValue':
+        default:
+          aVal = a.surplusValue;
+          bVal = b.surplusValue;
+          break;
+      }
+      const diff = aVal - bVal;
+      return targetsSortDir === 'desc' ? -diff : diff;
+    });
+  }
+
+  function filterTargets(position: string) {
+    filteredTargets = position === 'ALL'
+      ? [...allTargets]
+      : allTargets.filter(t => t.position === position);
+    sortTargets();
+    targetsVisibleCount = TARGETS_BATCH;
+    renderTargets();
+  }
+
+  /**
+   * Render the targets table body.
+   * All data originates from build-time JSON (MFL feeds) serialized in
+   * the page — player names and team codes are pre-sanitized by
+   * buildPlayerCellHTML which escapes all attributes.
+   */
+  function renderTargets() {
+    const tbody = document.getElementById('targets-table-body');
+    if (!tbody) return;
+
+    const total = filteredTargets.length;
+    const end = Math.min(targetsVisibleCount, total);
+    const page = filteredTargets.slice(0, end);
+
+    const showingEl = document.getElementById('targets-showing-count');
+    const totalEl = document.getElementById('targets-total');
+    const moreWrapper = document.getElementById('targets-show-more-wrapper');
+    const emptyEl = document.getElementById('targets-empty');
+
+    if (showingEl) showingEl.textContent = String(end);
+    if (totalEl) totalEl.textContent = String(total);
+    if (moreWrapper) moreWrapper.style.display = end < total ? '' : 'none';
+    if (emptyEl) emptyEl.style.display = total === 0 ? '' : 'none';
+
+    // Find max surplus for bar scaling
+    const maxSurplus = page.length > 0
+      ? Math.max(...page.map(t => Math.abs(t.surplusValue)), 1)
+      : 1;
+
+    const rows: string[] = [];
+    for (let i = 0; i < page.length; i++) {
+      const t = page[i];
+      const rank = i + 1;
+      const surplusClass = t.surplusValue > 0 ? 'surplus-positive'
+        : t.surplusValue < 0 ? 'surplus-negative'
+        : 'surplus-zero';
+      const barClass = t.surplusValue >= 0 ? 'surplus-bar--positive' : 'surplus-bar--negative';
+      const barWidth = Math.round((Math.abs(t.surplusValue) / maxSurplus) * 100);
+      const pctDisplay = t.surplusPercent !== 0
+        ? (t.surplusPercent > 0 ? '+' : '') + (t.surplusPercent * 100).toFixed(0) + '%'
+        : '0%';
+
+      const playerCell = buildPlayerCellHTML({
+        name: t.name,
+        position: t.position,
+        nflTeam: t.nflTeam,
+        size: 'compact',
+        playerData: {
+          id: t.playerId,
+          name: t.name,
+          position: t.position,
+          nflTeam: t.nflTeam,
+        },
+      });
+
+      rows.push(`<tr>
+        <td class="cell-rank">${rank}</td>
+        <td class="cell-player">${playerCell}</td>
+        <td class="cell-age">${t.age ?? '-'}</td>
+        <td class="cell-num cell-proj">${t.projectedPoints.toFixed(1)}</td>
+        <td class="cell-num cell-currency cell-value">${fmtCurrency(t.dollarValue)}</td>
+        <td class="cell-num cell-currency cell-cost">${fmtCurrency(t.estimatedCost)}</td>
+        <td class="cell-num cell-surplus">
+          <div class="surplus-cell">
+            <span class="surplus-amount ${surplusClass}">${fmtCurrencySigned(t.surplusValue)}</span>
+            <div class="surplus-bar-wrapper">
+              <div class="surplus-bar ${barClass}" style="width: ${barWidth}%"></div>
+            </div>
+            <span class="surplus-pct ${surplusClass}">${pctDisplay}</span>
+          </div>
+        </td>
+      </tr>`);
+    }
+
+    tbody.innerHTML = rows.join('');
+
+    // Update sort indicators
+    document.querySelectorAll('#targets-table th.sortable').forEach(th => {
+      const content = th.querySelector('.th-content');
+      const existingArrow = th.querySelector('.sort-arrow');
+      const key = th.getAttribute('data-sort');
+      if (key === targetsSortKey) {
+        th.classList.add('sorted');
+        if (!existingArrow && content) {
+          const arrow = document.createElement('span');
+          arrow.className = 'sort-arrow';
+          arrow.textContent = targetsSortDir === 'asc' ? '\u25B2' : '\u25BC';
+          content.appendChild(arrow);
+        } else if (existingArrow) {
+          existingArrow.textContent = targetsSortDir === 'asc' ? '\u25B2' : '\u25BC';
+        }
+      } else {
+        th.classList.remove('sorted');
+        if (existingArrow) existingArrow.remove();
+      }
+    });
+  }
+
+  function emit(name: string, detail?: Record<string, unknown>) {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail ?? {} }));
+  }
+
+  function initTargets() {
+    if (!isAdminFromCookie()) return;
+
+    allTargets = loadTargetsData();
+    if (allTargets.length === 0) return;
+
+    filteredTargets = [...allTargets];
+    sortTargets();
+
+    // Tell the inline script that targets are available — it manages toggle bar visibility
+    emit('targets:set-available', { available: true });
+
+    // Handle Targets button click → tell inline script to activate targets view
+    const targetsBtn = document.getElementById('col-group-btn-targets');
+    if (targetsBtn) {
+      targetsBtn.addEventListener('click', () => {
+        if (targetsBtn.getAttribute('aria-pressed') === 'true') return;
+        emit('targets:activate');
+        // Re-filter with current position
+        const posDetail: Record<string, unknown> = {};
+        document.dispatchEvent(new CustomEvent('targets:get-position', { detail: posDetail }));
+        filterTargets((posDetail.position as string) || 'ALL');
+      });
+    }
+
+    // When other view buttons are clicked, deactivate targets
+    document.querySelectorAll('.col-group-btn:not(#col-group-btn-targets)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        emit('targets:deactivate');
+      });
+    });
+
+    // Position filtering — listen to category tab clicks
+    document.getElementById('category-tabs')?.addEventListener('click', (e) => {
+      const tab = (e.target as HTMLElement).closest('.cat-tab');
+      if (!tab) return;
+      const pos = tab.getAttribute('data-pos') || 'ALL';
+      const targetsSectionEl = document.getElementById('targets-section');
+      if (targetsSectionEl && targetsSectionEl.style.display !== 'none') {
+        filterTargets(pos);
+      }
+    });
+
+    // Sort headers in targets table
+    document.querySelectorAll('#targets-table th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.getAttribute('data-sort');
+        if (!key) return;
+        if (key === targetsSortKey) {
+          targetsSortDir = targetsSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          targetsSortKey = key;
+          targetsSortDir = 'desc';
+        }
+        sortTargets();
+        renderTargets();
+      });
+    });
+
+    // Show More for targets
+    document.getElementById('targets-show-more-btn')?.addEventListener('click', () => {
+      targetsVisibleCount += TARGETS_BATCH;
+      renderTargets();
+    });
+
+    // Player modal trigger for targets table
+    const targetsTbody = document.getElementById('targets-table-body');
+    if (targetsTbody) initPlayerModalTrigger(targetsTbody);
+  }
+
+  function setup() {
+    initTargets();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setup();
+  }
+  document.addEventListener('astro:page-load', setup);
 </script>
 
 <style>
