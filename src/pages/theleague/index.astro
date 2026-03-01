@@ -7,6 +7,7 @@ import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import whatsNewData from '../../data/whats-new.json';
+import { spriteUrl } from '../../utils/sprite-url';
 
 export const prerender = false;
 
@@ -85,7 +86,7 @@ const pages = {
             <a href={page.href} class="page-card">
               <div class="page-card__header">
                 <svg class="page-card__icon" aria-hidden="true">
-                  <use href={`/assets/icons/sprite.svg#icon-${page.icon}`}></use>
+                  <use href={`${spriteUrl}#icon-${page.icon}`}></use>
                 </svg>
                 <h3>{page.title}</h3>
               </div>

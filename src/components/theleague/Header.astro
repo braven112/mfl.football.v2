@@ -14,6 +14,7 @@
 import { getLeagueContext } from '../../utils/league-context';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { resolveLeaguePath } from '../../utils/nav-utils';
+import { spriteUrl } from '../../utils/sprite-url';
 import NavToggleButton from '../nav/NavToggleButton.astro';
 
 interface Props {
@@ -107,44 +108,44 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
           {!isAFL && (
             <a href="https://theleague.us/forum/index.php" class="nav-icon-link" title="Message board">
               <svg class="nav-icon" aria-hidden="true">
-                <use href="/assets/icons/sprite.svg#icon-comments"></use>
+                <use href={`${spriteUrl}#icon-comments`}></use>
               </svg>
               <span class="nav-label">Message board</span>
             </a>
           )}
           <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`/assets/icons/sprite.svg#icon-${isAFL ? "helmet" : "banknote"}`}></use>
+              <use href={`${spriteUrl}#icon-${isAFL ? "helmet" : "banknote"}`}></use>
             </svg>
             <span class="nav-label">{isAFL ? "Rosters" : "Roster/Salary"}</span>
           </a>
           <a href={submitLineupUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Submit lineup">
             <svg class="nav-icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-lineup"></use>
+              <use href={`${spriteUrl}#icon-lineup`}></use>
             </svg>
             <span class="nav-label">Submit lineup</span>
           </a>
           <a href={addDropUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Add/drop">
             <svg class="nav-icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-plus"></use>
+              <use href={`${spriteUrl}#icon-plus`}></use>
             </svg>
             <span class="nav-label">Add/drop</span>
           </a>
           <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/standings" : "/theleague/standings", hideLeaguePrefix)} class="nav-icon-link" title="Standings">
             <svg class="nav-icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-shield"></use>
+              <use href={`${spriteUrl}#icon-shield`}></use>
             </svg>
             <span class="nav-label">Standings</span>
           </a>
           <a href={liveScoringUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Live scoring">
             <svg class="nav-icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-goals"></use>
+              <use href={`${spriteUrl}#icon-goals`}></use>
             </svg>
             <span class="nav-label">Live scoring</span>
           </a>
           <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs", hideLeaguePrefix)} class="nav-icon-link" title="Playoffs">
             <svg class="nav-icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-champ"></use>
+              <use href={`${spriteUrl}#icon-champ`}></use>
             </svg>
             <span class="nav-label">Playoffs</span>
           </a>

@@ -27,6 +27,7 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import { chooseTeamName } from '../../utils/team-names';
 import { calculatePlayerCapHitByYear } from '../../utils/trade-calculations';
 import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getAuthUser } from '../../utils/auth';
 import { isAdminFranchise } from '../../config/nav-config';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
@@ -284,7 +285,7 @@ const teams = franchises.map((franchise: any) => {
       status,
       normalizedStatus: norm,
       nflTeam,
-      headshot: getPlayerHeadshot(rp.id, pData?.espn_id),
+      headshot: getPlayerHeadshot(rp.id, pData?.espn_id || (espnCollegeIds as any).players?.[rp.id]?.espnCollegeId),
       nflLogo: getNflLogoUrl(nflTeam),
       isRookie: contractInfo.startsWith('R'),
       isFranchiseTagged: contractInfo === 'F',

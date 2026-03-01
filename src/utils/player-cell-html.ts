@@ -19,9 +19,7 @@
  */
 
 import type { PlayerModalData } from './player-modal-trigger';
-
-const DEFAULT_HEADSHOT_URL =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror } from '../constants/roster-constants';
 
 /** Map MFL team codes to standard codes (must match nfl-logo.ts) */
 const TEAM_CODE_MAP: Record<string, string> = {
@@ -44,6 +42,10 @@ export interface PlayerCellOptions {
   size?: 'default' | 'compact';
   /** When provided, makes the name clickable for PlayerDetailsModal */
   playerData?: PlayerModalData;
+  /** MFL player ID (for headshot fallback). Falls back to playerData.id if omitted. */
+  mflId?: string;
+  /** ESPN player ID (for college headshot fallback). Falls back to playerData.espnId if omitted. */
+  espnId?: string;
   /** Extra HTML to inject after the name (e.g., badges) */
   afterName?: string;
   /** Additional CSS class on the root element */
@@ -66,9 +68,15 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     nflTeam,
     size = 'default',
     playerData,
+    mflId: explicitMflId,
+    espnId: explicitEspnId,
     afterName = '',
     className = '',
   } = opts;
+
+  // Resolve IDs for headshot fallback chain (explicit props take priority over playerData)
+  const resolvedMflId = explicitMflId ?? playerData?.id;
+  const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 
   const isDef = position?.toUpperCase() === 'DEF';
   const normalized = nflTeam ? normalizeTeam(nflTeam) : '';
@@ -103,7 +111,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
 
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}">
-    <img src="${esc(avatarSrc)}" alt="${isDef ? esc(`${nflTeam || 'DEF'} logo`) : esc(`${name} headshot`)}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
+    <img src="${esc(avatarSrc)}" alt="${isDef ? esc(`${nflTeam || 'DEF'} logo`) : esc(`${name} headshot`)}" loading="lazy" decoding="async" onerror="${esc(buildHeadshotOnerror(resolvedMflId, resolvedEspnId))}" />
   </div>
   <div class="player-cell__info">
     ${nameHtml}

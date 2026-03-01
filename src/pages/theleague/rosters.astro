@@ -18,6 +18,7 @@ import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
 import FreeAgentNeedsCard from '../../components/theleague/FreeAgentNeedsCard.astro';
 import collegeLogos from '../../data/college-logos.json';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
 import { getTeamEligibility } from '../../utils/contract-eligibility';
@@ -61,6 +62,7 @@ import {
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
+import { spriteUrl } from '../../utils/sprite-url';
 
 // Weather icon mapping based on condition text
 const getWeatherIcon = (displayValue: string | undefined): string => {
@@ -1050,7 +1052,8 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       : '-';
 
     const feedPlayer = feedPlayers[player.id] ?? null;
-    const headshot = getPlayerHeadshot(player.id, feedPlayer?.espn_id);
+    const resolvedEspnId = feedPlayer?.espn_id || (espnCollegeIds as any).players?.[player.id]?.espnCollegeId || null;
+    const headshot = getPlayerHeadshot(player.id, resolvedEspnId);
     const collegeName = player.sleeper?.college ?? player.college ?? null;
     const collegeAssets = getCollegeAssets(collegeName);
     const parseDraft = (val) => {
@@ -1065,7 +1068,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
 
     const playerObj = {
       id: player.id,
-      espnId: feedPlayer?.espn_id || null,
+      espnId: resolvedEspnId,
       name: player.name,
       position: player.position ?? 'N/A',
       salary,
@@ -1551,7 +1554,7 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
   for (const need of needs) {
     for (const fa of need.topFreeAgents) {
       const feedPlayer = faPlayerFeed[fa.id];
-      fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id);
+      fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id || (espnCollegeIds as any).players?.[fa.id]?.espnCollegeId);
     }
   }
 }
@@ -1850,19 +1853,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <div class="view-tabs">
             <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href="/assets/icons/sprite.svg#icon-banknote"></use>
+                <use href={`${spriteUrl}#icon-banknote`}></use>
               </svg>
               <span class="view-tab__label">Roster</span>
             </button>
             <button class="view-tab" data-view="analytics" data-active="false" aria-label="Analytics View" title="Analytics View">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href="/assets/icons/sprite.svg#icon-bar-chart"></use>
+                <use href={`${spriteUrl}#icon-bar-chart`}></use>
               </svg>
               <span class="view-tab__label">Analytics</span>
             </button>
             <button class="view-tab" data-view="nextyear" data-active="false" aria-label="League Planner" title="League Planner">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href="/assets/icons/sprite.svg#icon-chalkboard"></use>
+                <use href={`${spriteUrl}#icon-chalkboard`}></use>
               </svg>
               <span class="view-tab__label">Planner</span>
             </button>
@@ -1936,10 +1939,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
-              <svg class="mode-icon"><use href="/assets/icons/sprite.svg#icon-banknote"></use></svg> GM
+              <svg class="mode-icon"><use href={`${spriteUrl}#icon-banknote`}></use></svg> GM
             </button>
             <button class="mode-btn" data-mode="coach" title="Coach Mode: Matchups & Odds">
-              <svg class="mode-icon"><use href="/assets/icons/sprite.svg#icon-submit"></use></svg> Coach
+              <svg class="mode-icon"><use href={`${spriteUrl}#icon-submit`}></use></svg> Coach
             </button>
           </div>
         </div>

@@ -273,6 +273,33 @@ Bug fixes and style tweaks are tracked throughout the week and compiled into a s
 - Do NOT log: data syncs, refactors with no visible effect, test-only changes, or changes that already got their own What's New entry
 - The staging file resets automatically every Monday after the rollup runs
 
+### Weekly Rollup Screenshot (MANDATORY)
+
+Each weekly rollup MUST include **one screenshot** of the most noteworthy fix or enhancement from that week.
+
+**How to choose:** Pick the most visually interesting or impactful change from the staging entries. Take a screenshot of the affected page showing the improvement in action. For example, if the best change fixed player headshots, screenshot the player modal showing a working headshot.
+
+**How to add:**
+1. Take a screenshot of the affected page at a standard desktop viewport (1280px+ wide) using Playwright CLI:
+   ```bash
+   # Use Playwright to capture with any needed interactions (click modals, filters, etc.)
+   node -e "const {chromium}=require('playwright'); ..."
+   # Convert to webp
+   cwebp -q 85 /tmp/screenshot.png -o public/assets/whats-new/weekly-rollup-YYYY-MM-DD.webp
+   ```
+2. Save as `.webp` to `public/assets/whats-new/weekly-rollup-YYYY-MM-DD.webp` (use the Monday date)
+3. Set the `featuredImage` field in `src/data/weekly-changelog-staging.json`:
+   ```json
+   {
+     "weekOf": "2026-03-03",
+     "featuredImage": "weekly-rollup-2026-03-03.webp",
+     "featuredImageAlt": "Descriptive alt text for the screenshot",
+     "changes": [...]
+   }
+   ```
+
+The rollup script will automatically include the `image` and `imageAlt` fields in the generated What's New entry.
+
 ---
 
 ## Documentation Index

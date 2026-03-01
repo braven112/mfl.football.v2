@@ -22,6 +22,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { spriteUrl } from '../../utils/sprite-url';
 
 export const prerender = false;
 
@@ -589,17 +590,17 @@ const grandTotal =
       <div class="view-selector">
         <button class={`view-tab ${tabView === 'winners' ? 'active' : ''}`} data-view="winners" title="Winners">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-            <use href="/assets/icons/sprite.svg#icon-trophy"></use>
+            <use href={`${spriteUrl}#icon-trophy`}></use>
           </svg>
         </button>
         <button class={`view-tab ${tabView === 'toilet' ? 'active' : ''}`} data-view="toilet" title="Toilet Bowl">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-            <use href="/assets/icons/sprite.svg#icon-toilet"></use>
+            <use href={`${spriteUrl}#icon-toilet`}></use>
           </svg>
         </button>
         <button class={`view-tab ${tabView === 'prizes' ? 'active' : ''}`} data-view="prizes" title="Prizes">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-            <use href="/assets/icons/sprite.svg#icon-money-bag"></use>
+            <use href={`${spriteUrl}#icon-money-bag`}></use>
           </svg>
         </button>
       </div>

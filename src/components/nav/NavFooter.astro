@@ -13,6 +13,7 @@
  */
 
 import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav';
+import { spriteUrl } from '../../utils/sprite-url';
 
 interface Props extends NavFooterProps {
   /** Current league for constructing roster link */
@@ -84,7 +85,7 @@ const isAuthenticated = !!team;
           <!-- Fallback icon if no team logo -->
           <div class="nav-footer__team-placeholder">
             <svg class="nav-footer__icon" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-shield-2"></use>
+              <use href={`${spriteUrl}#icon-shield-2`}></use>
             </svg>
           </div>
         )}
@@ -105,7 +106,7 @@ const isAuthenticated = !!team;
     >
       <div class="nav-footer__verify-icon">
         <svg class="nav-footer__icon" aria-hidden="true">
-          <use href="/assets/icons/sprite.svg#icon-user"></use>
+          <use href={`${spriteUrl}#icon-user`}></use>
         </svg>
       </div>
       <div class="nav-footer__verify-info">
@@ -129,7 +130,7 @@ const isAuthenticated = !!team;
           rel={link.external ? 'noopener noreferrer' : undefined}
         >
           <svg class="nav-footer__link-icon" aria-hidden="true">
-            <use href={`/assets/icons/sprite.svg#icon-${link.icon}`}></use>
+            <use href={`${spriteUrl}#icon-${link.icon}`}></use>
           </svg>
           <span>{link.label}</span>
         </a>

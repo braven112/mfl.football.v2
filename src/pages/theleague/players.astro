@@ -18,6 +18,7 @@ import { getAuthUser } from '../../utils/auth';
 import { isAdminFranchise } from '../../config/nav-config';
 import '../../styles/player-cell.css';
 import collegeLogos from '../../data/college-logos.json';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
 // College logo lookup (case-insensitive)
 const collegeLogosNormalized = Object.fromEntries(
@@ -427,7 +428,7 @@ if (Array.isArray(allPlayers)) {
       position: pos,
       team: normalizeMflTeam(p.team || ''),
       age: pos === 'DEF' ? 25 : age,
-      espnId: p.espn_id || null,
+      espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
       projected,
       rostered: isRostered,
       exp: pos === 'DEF' ? 5 : exp,
@@ -504,16 +505,16 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     <!-- Dark Gradient Hero -->
     <div class="players-hero">
       <div class="hero-players-bg" aria-hidden="true">
-        <img data-hero-pool data-pos="50% 67%" alt="" class="hero-player-img" data-src="/assets/hero-players/hawks.jpeg" />
+        <img data-hero-pool data-pos="50% 67%" alt="" class="hero-player-img" data-src="/assets/hero-players/hawks.webp" />
         <img data-hero-pool data-pos="50% 30%" alt="" class="hero-player-img" data-src="/assets/hero-players/puka.webp" />
         <img data-hero-pool data-pos="50% 0%" alt="" class="hero-player-img" data-src="/assets/hero-players/maye.webp" />
-        <img data-hero-pool data-pos="70% 10%" alt="" class="hero-player-img" data-src="/assets/hero-players/jefferson.jpg" />
+        <img data-hero-pool data-pos="70% 10%" alt="" class="hero-player-img" data-src="/assets/hero-players/jefferson.webp" />
         <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/bijan.webp" />
-        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/breece.jpeg" />
-        <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/sam.jpeg" />
-        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/lamar.jpg" />
-        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/josh.jpg" />
-        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/pat.jpg" />
+        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/breece.webp" />
+        <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/sam.webp" />
+        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/lamar.webp" />
+        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/josh.webp" />
+        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/pat.webp" />
       </div>
       <script is:inline>
         (function() {
@@ -987,7 +988,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
   function getHeadshotUrl(playerId, espnId) {
     if (espnId) {
-      return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70&cb=1`;
+      return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
     }
     return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
   }
@@ -998,6 +999,18 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
 
   const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+
+  function buildOnerror(mflId, espnId) {
+    const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
+    const mfl = mflId ? `https://www49.myfantasyleague.com/player_photos_big_2014/${mflId}_thumb.jpg` : null;
+    if (college && mfl) {
+      return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${mfl}'};this.src='${college}'`;
+    }
+    if (college) {
+      return `this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${college}'`;
+    }
+    return `this.onerror=null;this.src='${defaultHeadshot}'`;
+  }
 
   function escapeAttr(s) {
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1279,7 +1292,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           <div class="player-cell">
             <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}">
               <img src="${headshot}" alt="" loading="lazy" decoding="async"
-                onerror="this.onerror=null;this.src='${defaultHeadshot}';" />
+                onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>

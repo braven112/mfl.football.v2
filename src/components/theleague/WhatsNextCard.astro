@@ -5,6 +5,7 @@
  */
 import type { ResolvedLeagueEvent } from '../../types/league-events';
 import { formatEventDate, formatEventDateRange, getStatusText } from '../../utils/event-date-formatter';
+import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
   event: ResolvedLeagueEvent | null;
@@ -47,7 +48,7 @@ const cardClasses = [
   <div class="whats-next-card__header">
     {iconId && (
       <svg class={`whats-next-card__icon${isMulticolor ? ' whats-next-card__icon--multicolor' : ''}`} aria-hidden="true">
-        <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
+        <use href={`${spriteUrl}#${iconId}`}></use>
       </svg>
     )}
     <h3 class="whats-next-card__title">{event.definition.name}</h3>

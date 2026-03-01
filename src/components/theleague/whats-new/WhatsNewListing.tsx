@@ -17,9 +17,11 @@ interface Props {
   categoryCountsJson: string;
   /** Base path for detail links (empty string on theleague.us, '/theleague' otherwise) */
   basePath?: string;
+  /** Cache-busted sprite URL from the server */
+  spriteUrl?: string;
 }
 
-export default function WhatsNewListing({ monthsJson, categoryCountsJson, basePath = '/theleague' }: Props) {
+export default function WhatsNewListing({ monthsJson, categoryCountsJson, basePath = '/theleague', spriteUrl }: Props) {
   const months: MonthGroup[] = useMemo(() => JSON.parse(monthsJson), [monthsJson]);
   const categoryCounts = useMemo(
     () => JSON.parse(categoryCountsJson) as Record<WhatsNewCategory | 'all', number>,
@@ -61,7 +63,7 @@ export default function WhatsNewListing({ monthsJson, categoryCountsJson, basePa
                 <h2 className="wn-month__label">{month.label}</h2>
                 <div className="wn-month__entries">
                   {month.entries.map((entry, i) => (
-                    <WhatsNewCard key={entry.id} entry={entry} featured={i === 0} basePath={basePath} />
+                    <WhatsNewCard key={entry.id} entry={entry} featured={i === 0} basePath={basePath} spriteUrl={spriteUrl} />
                   ))}
                 </div>
               </section>

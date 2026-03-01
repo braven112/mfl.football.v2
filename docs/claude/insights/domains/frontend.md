@@ -4,6 +4,35 @@ Domain knowledge about UI/UX patterns, component architecture, and frontend deve
 
 ---
 
+## 2026-03-01 - ESPN Headshot URL Patterns and College Fallback
+
+**Context:** Adding college headshots as a fallback for rookies without NFL photos.
+
+**Insight:** ESPN uses consistent URL patterns for headshots across NFL and college:
+- NFL: `https://a.espncdn.com/i/headshots/nfl/players/full/{espnId}.png`
+- College: `https://a.espncdn.com/i/headshots/college-football/players/full/{espnId}.png`
+- The `espnId` for college and NFL are different IDs — a player's college athlete ID is NOT the same as their NFL player ID.
+
+**Key findings:**
+- ESPN draft prospects API: `sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{year}/draft/athletes`
+- Each prospect's `athlete.$ref` link contains the college athlete ID
+- College roster API returns position groups (`{ position: "offense", items: [...] }`), NOT a flat player array
+- MFL stores ESPN NFL IDs as `espn_id` on player records, but 2026 draft prospects have none
+- Supplementary mapping lives in `data/theleague/espn-college-ids.json`
+
+**Headshot fallback chain (implemented in `buildHeadshotOnerror()`):**
+```
+ESPN NFL headshot → ESPN College headshot → MFL headshot → default placeholder
+```
+
+**Name matching gotchas:**
+- MFL uses "Last, First" format; ESPN uses "First Last"
+- Strip suffixes (Jr., III, Sr.) before comparing
+- College names differ between MFL and ESPN (e.g., "Colordado State" typo in MFL, "UCONN" vs "Connecticut")
+- `src/data/college-logos.json` maps college names → ESPN team IDs for roster lookups
+
+---
+
 ## 2026-01-18 - Team Icons Are Stored in Config Files
 
 **Context:** Need to display team logos in nav footer

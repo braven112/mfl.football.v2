@@ -11,6 +11,7 @@ import { getCalendarIcon } from '../../utils/timezone-utils';
 import { MFLMatchupApiClient } from '../../utils/mfl-matchup-api';
 import { buildMatchupLineups } from '../../utils/lineup-data-builder';
 import { getPlayerHeadshot as getHeadshot } from '../../constants/roster-constants';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import type { Matchup, FantasyTeam, NFLGame } from '../../types/matchup-previews';
 
 export const prerender = false; // Enable server-side rendering for URL parameter handling
@@ -123,7 +124,7 @@ function buildNFLGamesFromRosters(homeTeamId: string, awayTeamId: string, livePr
       nflTeam,
       projectedPoints: projection,
       fantasyTeamId,
-      espnId: player.espn_id || ''
+      espnId: player.espn_id || (espnCollegeIds as any).players?.[playerId]?.espnCollegeId || ''
     });
   }
 
