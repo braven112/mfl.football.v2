@@ -62,6 +62,13 @@ export interface PositionSalaryAverages {
   };
 }
 
+/** Surplus value data per player (admin-only, from surplus-value calculator) */
+export interface PlayerSurplusData {
+  dollarValue: number;
+  estimatedCost: number;
+  surplusValue: number;
+}
+
 /** All data the Astro page passes to React */
 export interface TradeBuilderPageData {
   teams: TradeBuilderTeam[];
@@ -70,6 +77,7 @@ export interface TradeBuilderPageData {
   rosterLimit: number;
   leagueYear: number;
   positionAverages: PositionSalaryAverages;
+  surplusMap?: Record<string, PlayerSurplusData>;
 }
 
 /** Key to uniquely identify a draft pick */

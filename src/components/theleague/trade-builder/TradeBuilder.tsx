@@ -15,6 +15,7 @@ import TeamPanel from './TeamPanel';
 import TradeBaitMarketplace from './TradeBaitMarketplace';
 import MultiYearCapTable from './MultiYearCapTable';
 import TradeAnalysisSummary from './TradeAnalysisSummary';
+import TradeValueAnalysis from './TradeValueAnalysis';
 import RookieExtensionModal from './RookieExtensionModal';
 
 const EMPTY_SIDE: TradeSide = {
@@ -397,6 +398,19 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
             impactB={tradeImpactB}
             salaryCap={data.salaryCap}
           />
+          {data.surplusMap && Object.keys(data.surplusMap).length > 0 && (
+            <TradeValueAnalysis
+              teamAName={teamA.nameMedium}
+              teamBName={teamB.nameMedium}
+              teamAIcon={teamA.icon}
+              teamBIcon={teamB.icon}
+              teamAPlayers={teamAPlayers}
+              teamBPlayers={teamBPlayers}
+              teamADraftPicks={state.teamA.draftPicks}
+              teamBDraftPicks={state.teamB.draftPicks}
+              surplusMap={data.surplusMap}
+            />
+          )}
         </>
       )}
 

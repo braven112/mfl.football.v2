@@ -37,9 +37,15 @@ interface MFLPlayerWithEspn extends MFLPlayerBasic {
   espnId: string | null;
 }
 
+interface VORPData {
+  vorpPoints: number;
+  vorpDollar: number;
+}
+
 interface Props {
   mflPlayersJson: string;
   franchiseId: string;
+  vorpMapJson?: string;
 }
 
 function getHeadshotUrl(playerId: string, espnId: string | null): string {
@@ -49,10 +55,15 @@ function getHeadshotUrl(playerId: string, espnId: string | null): string {
   return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
 }
 
-export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Props) {
+export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMapJson }: Props) {
   const mflPlayers: MFLPlayerWithEspn[] = useMemo(
     () => JSON.parse(mflPlayersJson),
     [mflPlayersJson],
+  );
+
+  const vorpMap: Record<string, VORPData> = useMemo(
+    () => (vorpMapJson ? JSON.parse(vorpMapJson) : {}),
+    [vorpMapJson],
   );
 
   // Build lookup maps once
@@ -75,6 +86,8 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
   const [loading, setLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showVorp, setShowVorp] = useState(false);
+  const hasVorp = Object.keys(vorpMap).length > 0;
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStateRef = useRef<CustomRankingsState | null>(null);
@@ -290,8 +303,9 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
         compositeRank: compositeMap.get(p.id) ?? null,
         customRank: index + 1,
         isOverride: overrides.has(p.id),
+        vorpPoints: showVorp ? (vorpMap[p.id]?.vorpPoints ?? null) : null,
       })),
-    [filteredPlayers, compositeMap, overrides],
+    [filteredPlayers, compositeMap, overrides, showVorp, vorpMap],
   );
 
   // Filter tiers to only show those visible in current position filter
@@ -356,6 +370,15 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId }: Prop
             >
               {isEditing ? 'Done' : 'Edit'}
             </button>
+            {hasVorp && (
+              <button
+                className={`cr-btn cr-btn--sm${showVorp ? ' cr-btn--active' : ''}`}
+                onClick={() => setShowVorp((v) => !v)}
+                type="button"
+              >
+                VORP
+              </button>
+            )}
             {isEditing && (
               <button
                 className="cr-btn cr-btn--sm cr-btn--danger"
