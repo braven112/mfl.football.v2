@@ -13,6 +13,9 @@ import '../../styles/player-cell.css';
 import '../../styles/custom-rankings.css';
 import { getAuthUser } from '../../utils/auth';
 import { isAdminFranchise } from '../../config/nav-config';
+import { parseNumber } from '../../utils/formatters';
+import { calculatePointsPerDollar } from '../../utils/surplus-value';
+import { calculateAllVORP } from '../../utils/vorp';
 
 export const prerender = false;
 
@@ -60,6 +63,59 @@ const mflPlayers = rawPlayers
     team: p.team || '',
     espnId: p.espn_id || null,
   }));
+
+// ---------------------------------------------------------------------------
+// Load projected scores + rosters for VORP calculation
+// ---------------------------------------------------------------------------
+const projScoreFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
+  { eager: true },
+);
+const rostersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/rosters.json',
+  { eager: true },
+);
+
+let projScoreData: any = null;
+let rostersData: any = null;
+for (const [fp, mod] of Object.entries(projScoreFeeds)) {
+  if (extractFeedSeason(fp) === leagueYearStr) { projScoreData = getModuleData(mod); break; }
+}
+for (const [fp, mod] of Object.entries(rostersFeeds)) {
+  if (extractFeedSeason(fp) === leagueYearStr) { rostersData = getModuleData(mod); break; }
+}
+
+// Build maps for VORP
+const projectedScores = new Map<string, number>();
+for (const ps of (projScoreData?.projectedScores?.playerScore ?? [])) {
+  const score = parseNumber(ps.score);
+  if (score > 0) projectedScores.set(ps.id, score);
+}
+
+const playerPositionMap = new Map<string, { position: string }>();
+for (const p of mflPlayers) {
+  playerPositionMap.set(p.id, { position: p.position });
+}
+
+// Calculate points-per-dollar ratio from rostered players
+const rosteredPlayers = new Map<string, { salary: number; position: string }>();
+for (const franchise of (rostersData?.rosters?.franchise ?? [])) {
+  for (const rp of (Array.isArray(franchise.player) ? franchise.player : [])) {
+    const salary = parseNumber(rp.salary);
+    const meta = playerPositionMap.get(rp.id);
+    if (meta) {
+      rosteredPlayers.set(rp.id, { salary, position: meta.position });
+    }
+  }
+}
+const pointsPerDollar = calculatePointsPerDollar(projectedScores, rosteredPlayers);
+
+// Calculate VORP for all players
+const vorpResults = calculateAllVORP(projectedScores, playerPositionMap, pointsPerDollar);
+const vorpMap: Record<string, { vorpPoints: number; vorpDollar: number }> = {};
+for (const [id, result] of vorpResults) {
+  vorpMap[id] = result;
+}
 ---
 
 <TheLeagueLayout title="Custom Rankings | The League">
@@ -67,5 +123,6 @@ const mflPlayers = rawPlayers
     client:load
     mflPlayersJson={JSON.stringify(mflPlayers)}
     franchiseId={user.franchiseId}
+    vorpMapJson={JSON.stringify(vorpMap)}
   />
 </TheLeagueLayout>

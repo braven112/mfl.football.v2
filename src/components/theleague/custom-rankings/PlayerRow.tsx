@@ -101,6 +101,22 @@ export default function PlayerRow({ player, rank, isEditing = false }: PlayerRow
         </div>
       </div>
 
+      {/* VORP chip (when enabled) */}
+      {player.vorpPoints != null && (
+        <div
+          className={`cr-vorp-chip${
+            player.vorpPoints > 5
+              ? ' cr-vorp-chip--positive'
+              : player.vorpPoints < -5
+                ? ' cr-vorp-chip--negative'
+                : ' cr-vorp-chip--neutral'
+          }`}
+        >
+          {player.vorpPoints > 0 ? '+' : ''}
+          {player.vorpPoints.toFixed(1)}
+        </div>
+      )}
+
       {/* Delta indicator */}
       <div className="cr-row__delta">
         {delta != null && delta !== 0 && (

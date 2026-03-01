@@ -27,6 +27,10 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import { chooseTeamName } from '../../utils/team-names';
 import { calculatePlayerCapHitByYear } from '../../utils/trade-calculations';
 import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { getAuthUser } from '../../utils/auth';
+import { isAdminFranchise } from '../../config/nav-config';
+import { calculateAllSurplusValues } from '../../utils/surplus-value';
+import type { PlayerSurplusData } from '../../types/trade-builder';
 
 export const prerender = false;
 
@@ -60,6 +64,14 @@ const tradeBaitFeeds = import.meta.glob(
 );
 const salaryAvgModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
+const projScoreFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
+  { eager: true }
+);
+const adpDynastyFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
   { eager: true }
 );
 
@@ -355,6 +367,64 @@ const defaultTeam = hasPreference
     })
   : '';
 
+// ---------------------------------------------------------------------------
+// Surplus Value (admin-only) — value analysis for trade evaluation
+// ---------------------------------------------------------------------------
+const user = getAuthUser(Astro.request);
+const showSurplusValue = user && isAdminFranchise(user.franchiseId);
+let surplusMap: Record<string, PlayerSurplusData> = {};
+
+if (showSurplusValue) {
+  const projScoreData = findFeed(projScoreFeeds, leagueYearStr, extractFeedSeason);
+  const adpDynastyData = findFeed(adpDynastyFeeds, leagueYearStr, extractFeedSeason);
+
+  const projectedScores = projScoreData?.projectedScores?.playerScore ?? [];
+  const playersArray = rawPlayers.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    position: p.position === 'Def' ? 'DEF' : p.position,
+    team: p.team || '',
+    birthdate: p.birthdate,
+  }));
+
+  const rostersArray = franchises.map((f: any) => ({
+    id: f.id,
+    player: Array.isArray(f.player)
+      ? f.player.map((rp: any) => ({
+          id: rp.id,
+          salary: rp.salary ?? '0',
+          contractYear: rp.contractYear ?? '0',
+          status: rp.status ?? 'ROSTER',
+        }))
+      : [],
+  }));
+
+  // Build ADP dynasty map
+  const adpMap = new Map<string, number>();
+  const adpPlayers = adpDynastyData?.adp?.player ?? [];
+  for (const ap of (Array.isArray(adpPlayers) ? adpPlayers : [adpPlayers])) {
+    if (ap?.id && ap?.averagePick) {
+      adpMap.set(ap.id, parseNumber(ap.averagePick));
+    }
+  }
+
+  const surplusResults = calculateAllSurplusValues({
+    projectedScores,
+    players: playersArray,
+    rosters: rostersArray,
+    salaryAverages: salaryAvgData ?? { positions: {} },
+    adpDynasty: adpMap,
+  });
+
+  for (const r of surplusResults) {
+    surplusMap[r.playerId] = {
+      dollarValue: r.dollarValue,
+      estimatedCost: r.estimatedCost,
+      surplusValue: r.surplusValue,
+    };
+  }
+}
+
 const pageData = {
   teams,
   salaryYears: SALARY_YEARS,
@@ -362,6 +432,7 @@ const pageData = {
   rosterLimit: ROSTER_LIMIT,
   leagueYear,
   positionAverages,
+  ...(Object.keys(surplusMap).length > 0 ? { surplusMap } : {}),
 };
 ---
 

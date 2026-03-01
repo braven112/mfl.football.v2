@@ -437,6 +437,37 @@
 }
 
 /* ================================================================
+   VORP Chip
+   ================================================================ */
+
+.cr-vorp-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: right;
+  min-width: 3.5rem;
+}
+
+.cr-vorp-chip--positive {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+}
+
+.cr-vorp-chip--negative {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+}
+
+.cr-vorp-chip--neutral {
+  background: rgba(100, 116, 139, 0.08);
+  color: var(--text-secondary-color, #64748b);
+}
+
+/* ================================================================
    Responsive
    ================================================================ */
 
@@ -514,6 +545,12 @@
 
   .cr-tier-insert:active {
     opacity: 1;
+  }
+
+  .cr-vorp-chip {
+    font-size: 0.65rem;
+    min-width: 3rem;
+    padding: 0.1rem 0.3rem;
   }
 
   /* Truncate long player names on small screens */

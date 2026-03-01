@@ -47,6 +47,8 @@ export interface RankedPlayer {
   customRank: number;
   /** Whether this player was manually repositioned */
   isOverride: boolean;
+  /** VORP points (projected points above replacement), null if unavailable */
+  vorpPoints?: number | null;
 }
 
 /** Simplified MFL player data passed from Astro page to React */
