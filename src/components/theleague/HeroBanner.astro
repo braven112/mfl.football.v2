@@ -52,6 +52,7 @@ const {
   imageAlt,
 } = Astro.props;
 
+import { spriteUrl } from '../../utils/sprite-url';
 const iconId = icon ? `icon-${icon}` : null;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = icon ? MULTICOLOR_ICONS.includes(icon) : false;
@@ -94,7 +95,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
           <div class="hero-banner__header">
             {iconId && (
               <svg class={`hero-banner__icon${isMulticolor ? ' hero-banner__icon--multicolor' : ''}`} aria-hidden="true">
-                <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
+                <use href={`${spriteUrl}#${iconId}`}></use>
               </svg>
             )}
             <h2 class="hero-banner__title">{title}</h2>
@@ -132,7 +133,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
           <div class="hero-banner__header">
             {iconId && (
               <svg class={`hero-banner__icon${isMulticolor ? ' hero-banner__icon--multicolor' : ''}`} aria-hidden="true">
-                <use href={`/assets/icons/sprite.svg#${iconId}`}></use>
+                <use href={`${spriteUrl}#${iconId}`}></use>
               </svg>
             )}
             <h2 class="hero-banner__title">{title}</h2>

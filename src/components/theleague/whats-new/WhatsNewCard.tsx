@@ -13,11 +13,13 @@ interface Props {
   featured?: boolean;
   /** Base path for detail links (empty string on theleague.us, '/theleague' otherwise) */
   basePath?: string;
+  /** Cache-busted sprite URL from the server */
+  spriteUrl?: string;
 }
 
 const MULTICOLOR_ICONS = ['nfl'];
 
-export default function WhatsNewCard({ entry, featured, basePath = '/theleague' }: Props) {
+export default function WhatsNewCard({ entry, featured, basePath = '/theleague', spriteUrl: sprite = '/assets/icons/sprite.svg' }: Props) {
   const iconId = entry.icon ? `icon-${entry.icon}` : null;
   const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
   const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
@@ -65,7 +67,7 @@ export default function WhatsNewCard({ entry, featured, basePath = '/theleague' 
               className={`wn-card__icon${isMulticolor ? ' wn-card__icon--multicolor' : ''}`}
               aria-hidden="true"
             >
-              <use href={`/assets/icons/sprite.svg#${iconId}`} />
+              <use href={`${sprite}#${iconId}`} />
             </svg>
           )}
           <h3 className="wn-card__title">{entry.title}</h3>

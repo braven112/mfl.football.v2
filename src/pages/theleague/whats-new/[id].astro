@@ -7,6 +7,7 @@
  * icon fallback, category badge, date, CTA link, and prev/next navigation.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { spriteUrl } from '../../../utils/sprite-url';
 import type { WhatsNewEntry } from '../../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import entries from '../../../data/whats-new.json';
@@ -87,7 +88,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
             class={`wn-detail__hero-icon${isMulticolor ? ' wn-detail__hero-icon--multicolor' : ''}`}
             aria-hidden="true"
           >
-            <use href={`/assets/icons/sprite.svg#${iconId}`} />
+            <use href={`${spriteUrl}#${iconId}`} />
           </svg>
         </div>
       ) : null}

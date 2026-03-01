@@ -28,6 +28,7 @@
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug } from '../../types/nav';
 import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
 import { resolveLeaguePath } from '../../utils/nav-utils';
+import { spriteUrl } from '../../utils/sprite-url';
 
 interface Props extends NavLinksProps {
   /** Admin franchise IDs for visibility checks */
@@ -278,7 +279,7 @@ const visibleSections = getVisibleSections();
                       <img src={iconUrl} alt="" loading="lazy" />
                     ) : (
                       <svg width="24" height="24" viewBox="0 0 24 24">
-                        <use href={`/assets/icons/sprite.svg#icon-${icon}`} />
+                        <use href={`${spriteUrl}#icon-${icon}`} />
                       </svg>
                     )}
                   </span>

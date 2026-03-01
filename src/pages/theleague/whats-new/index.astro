@@ -8,6 +8,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import WhatsNewListing from '../../../components/theleague/whats-new/WhatsNewListing';
+import { spriteUrl } from '../../../utils/sprite-url';
 import type { WhatsNewEntry } from '../../../types/whats-new';
 import entries from '../../../data/whats-new.json';
 import {
@@ -61,6 +62,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       monthsJson={JSON.stringify(months)}
       categoryCountsJson={JSON.stringify(categoryCounts)}
       basePath={basePath}
+      spriteUrl={spriteUrl}
     />
   </main>
 </TheLeagueLayout>

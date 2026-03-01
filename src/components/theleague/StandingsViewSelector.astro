@@ -1,4 +1,6 @@
 ---
+import { spriteUrl } from '../../utils/sprite-url';
+
 export interface Props {
   activeView: 'division' | 'league' | 'all_play';
 }
@@ -15,7 +17,7 @@ const { activeView } = Astro.props;
     title="Division Standings"
   >
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href="/assets/icons/sprite.svg#icon-numberone"></use>
+      <use href={`${spriteUrl}#icon-numberone`}></use>
     </svg>
     <span class="view-tab__label">Division</span>
   </button>
@@ -27,7 +29,7 @@ const { activeView } = Astro.props;
     title="Playoff Standings"
   >
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href="/assets/icons/sprite.svg#icon-trophy"></use>
+      <use href={`${spriteUrl}#icon-trophy`}></use>
     </svg>
     <span class="view-tab__label">Playoff</span>
   </button>
@@ -39,7 +41,7 @@ const { activeView } = Astro.props;
     title="All-Play Standings"
   >
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-      <use href="/assets/icons/sprite.svg#icon-line-chart"></use>
+      <use href={`${spriteUrl}#icon-line-chart`}></use>
     </svg>
     <span class="view-tab__label">All-Play</span>
   </button>
