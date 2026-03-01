@@ -1,0 +1,1096 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
+
+// Load declaration data at build/request time
+const pending = getPendingDeclarations();
+const allDeclarations = getDeclarations();
+const recentDecisions = allDeclarations
+  .filter(d => d.status === 'approved' || d.status === 'rejected' || d.status === 'applied')
+  .slice(0, 20);
+
+const declarationTypeLabels: Record<string, string> = {
+  'new-acquisition': 'Contract Years',
+  'rookie-override': 'Rookie Override',
+  'franchise-tag': 'Franchise Tag',
+  'veteran-extension': 'Veteran Extension',
+  'rookie-extension': 'Rookie Extension',
+};
+
+const approvedCount = allDeclarations.filter(d => d.status === 'approved').length;
+const rejectedCount = allDeclarations.filter(d => d.status === 'rejected').length;
+const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
+
+function formatSalary(cents: number): string {
+  return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+---
+
+<TheLeagueLayout title="Manage Declarations">
+  <main class="manage-page">
+    <!-- Page header -->
+    <header class="page-header">
+      <h1 class="page-title">Contract Declarations</h1>
+      <p class="page-subtitle">Commissioner review and approval workflow</p>
+    </header>
+
+    <div class="page-grid">
+      <!-- Main content (left) -->
+      <div class="manage-content">
+
+      <!-- Pending declarations -->
+      <section class="section">
+        <h2 class="section__title">
+          Pending Review
+          <span class="section__count">{pending.length}</span>
+        </h2>
+
+        {pending.length === 0 ? (
+          <div class="empty-state">
+            <div class="empty-state__icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+            </div>
+            <p class="empty-state__text">No pending declarations to review</p>
+            <p class="empty-state__hint">Declarations will appear here when owners submit contract changes</p>
+          </div>
+        ) : (
+          <div class="card-list" id="pendingList">
+            {pending.map(d => (
+              <article class="decl-card" data-id={d.id}>
+                <div class="decl-card__top">
+                  <div class="decl-card__identity">
+                    <h3 class="decl-card__player">{d.playerName}</h3>
+                    <span class="decl-card__team">{d.franchiseName}</span>
+                  </div>
+                  <span class="decl-card__type">{declarationTypeLabels[d.type] || d.type}</span>
+                </div>
+
+                <div class="decl-card__grid">
+                  <div class="decl-card__field">
+                    <span class="field__label">Current</span>
+                    <span class="field__value">{d.currentYears}yr / {formatSalary(d.currentSalary)}</span>
+                  </div>
+                  <div class="decl-card__field">
+                    <span class="field__label">Requested</span>
+                    <span class="field__value field__value--accent">
+                      {d.requestedYears}yr{d.requestedSalary ? ` / ${formatSalary(d.requestedSalary)}` : ''}
+                    </span>
+                  </div>
+                  {d.currentContractInfo && (
+                    <div class="decl-card__field">
+                      <span class="field__label">Designation</span>
+                      <span class="field__value">{d.currentContractInfo}</span>
+                    </div>
+                  )}
+                  <div class="decl-card__field">
+                    <span class="field__label">Submitted</span>
+                    <span class="field__value">{new Date(d.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  {d.deadlineAt && (
+                    <div class="decl-card__field">
+                      <span class="field__label">Deadline</span>
+                      <span class="field__value deadline-value" data-deadline={d.deadlineAt}>
+                        {new Date(d.deadlineAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div class="decl-card__actions">
+                  <button
+                    class="action-btn action-btn--approve"
+                    data-action="approve"
+                    data-id={d.id}
+                    data-player={d.playerName}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    class="action-btn action-btn--reject"
+                    data-action="reject"
+                    data-id={d.id}
+                    data-player={d.playerName}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <!-- Recent decisions -->
+      <section class="section">
+        <h2 class="section__title">Recent Decisions</h2>
+
+        {recentDecisions.length === 0 ? (
+          <div class="empty-state">
+            <p class="empty-state__text">No decisions yet</p>
+          </div>
+        ) : (
+          <div class="card-list">
+            {recentDecisions.map(d => (
+              <article class={`decl-card decl-card--decided decl-card--${d.status}`}>
+                <div class="decl-card__top">
+                  <div class="decl-card__identity">
+                    <h3 class="decl-card__player">{d.playerName}</h3>
+                    <span class="decl-card__team">{d.franchiseName}</span>
+                  </div>
+                  <div class="decl-card__top-right">
+                    <span class={`status-indicator status-indicator--${d.status}`}>
+                      {d.status === 'applied' ? 'Applied' : d.status === 'approved' ? 'Approved' : 'Rejected'}
+                    </span>
+                    <span class="decl-card__type decl-card__type--muted">
+                      {declarationTypeLabels[d.type] || d.type}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="decl-card__grid">
+                  <div class="decl-card__field">
+                    <span class="field__label">Change</span>
+                    <span class="field__value">
+                      <span class="contract-arrow">{d.currentYears}yr &rarr; {d.requestedYears}yr</span>
+                    </span>
+                  </div>
+                  {d.reviewedBy && (
+                    <div class="decl-card__field">
+                      <span class="field__label">Reviewed by</span>
+                      <span class="field__value">{d.reviewedBy}</span>
+                    </div>
+                  )}
+                  {d.reviewedAt && (
+                    <div class="decl-card__field">
+                      <span class="field__label">Reviewed</span>
+                      <span class="field__value">{new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  )}
+                  {d.rejectionReason && (
+                    <div class="decl-card__field decl-card__field--full">
+                      <span class="field__label">Reason</span>
+                      <span class="field__value field__value--italic">{d.rejectionReason}</span>
+                    </div>
+                  )}
+                  <div class="decl-card__field">
+                    <span class="field__label">MFL Sync</span>
+                    <span class={`field__value ${d.mflSynced ? 'field__value--success' : ''}`}>
+                      {d.mflSynced ? 'Synced' : d.status === 'approved' ? 'Pending sync' : d.status === 'applied' ? 'Synced' : '\u2014'}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      </div>
+
+      <!-- Status sidebar (right) -->
+      <aside class="status-sidebar">
+        <nav class="status-sidebar__container">
+          <h3 class="status-sidebar__title">Status</h3>
+          <div class="status-sidebar__metrics">
+            <article class="metric" data-variant="pending">
+              <span class="metric__value" id="pendingCount">{pending.length}</span>
+              <span class="metric__label">Pending</span>
+            </article>
+            <article class="metric" data-variant="approved">
+              <span class="metric__value">{approvedCount}</span>
+              <span class="metric__label">Approved</span>
+            </article>
+            <article class="metric" data-variant="rejected">
+              <span class="metric__value">{rejectedCount}</span>
+              <span class="metric__label">Rejected</span>
+            </article>
+            <article class="metric" data-variant="applied">
+              <span class="metric__value">{appliedCount}</span>
+              <span class="metric__label">Applied</span>
+            </article>
+          </div>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Rejection reason modal -->
+  <dialog id="rejectModal" class="reject-dialog">
+    <form method="dialog" class="reject-dialog__form">
+      <h3 class="reject-dialog__title">Reject Declaration</h3>
+      <p id="rejectModalPlayer" class="reject-dialog__player"></p>
+      <label for="rejectReason" class="reject-dialog__label">Reason (optional)</label>
+      <textarea id="rejectReason" class="reject-dialog__textarea" rows="3" placeholder="Enter reason for rejection..."></textarea>
+      <input type="hidden" id="rejectDeclarationId" />
+      <div class="reject-dialog__actions">
+        <button type="button" class="action-btn action-btn--cancel" id="rejectModalCancel">Cancel</button>
+        <button type="button" class="action-btn action-btn--reject" id="rejectModalConfirm">Reject</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module">
+    const pendingList = document.getElementById('pendingList');
+    const rejectModal = /** @type {HTMLDialogElement} */ (document.getElementById('rejectModal'));
+    const rejectReason = /** @type {HTMLTextAreaElement} */ (document.getElementById('rejectReason'));
+    const rejectDeclarationId = /** @type {HTMLInputElement} */ (document.getElementById('rejectDeclarationId'));
+    const rejectModalPlayer = document.getElementById('rejectModalPlayer');
+    const rejectModalCancel = document.getElementById('rejectModalCancel');
+    const rejectModalConfirm = document.getElementById('rejectModalConfirm');
+    const pendingCount = document.getElementById('pendingCount');
+
+    function showEmptyState() {
+      if (!pendingList) return;
+      while (pendingList.firstChild) {
+        pendingList.removeChild(pendingList.firstChild);
+      }
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'empty-state';
+      const p = document.createElement('p');
+      p.className = 'empty-state__text';
+      p.textContent = 'No pending declarations to review.';
+      emptyDiv.appendChild(p);
+      pendingList.appendChild(emptyDiv);
+    }
+
+    function updatePendingCount() {
+      if (!pendingCount) return;
+      const current = parseInt(pendingCount.textContent || '0', 10);
+      pendingCount.textContent = String(Math.max(0, current - 1));
+    }
+
+    function removeCard(card) {
+      card.classList.add('decl-card--fade');
+      setTimeout(() => {
+        card.remove();
+        if (pendingList && pendingList.querySelectorAll('.decl-card').length === 0) {
+          showEmptyState();
+        }
+      }, 500);
+    }
+
+    // Event delegation for approve/reject buttons
+    pendingList?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const declarationId = btn.dataset.id;
+      const playerName = btn.dataset.player;
+
+      if (action === 'approve') {
+        handleApprove(declarationId, playerName, btn);
+      } else if (action === 'reject') {
+        openRejectModal(declarationId, playerName);
+      }
+    });
+
+    async function handleApprove(declarationId, playerName, btn) {
+      if (!confirm(`Approve contract declaration for ${playerName}?`)) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Approving\u2026';
+
+      try {
+        const res = await fetch('/api/contracts/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ declarationId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(`Failed to approve: ${data.error}`);
+          btn.disabled = false;
+          btn.textContent = 'Approve';
+          return;
+        }
+
+        const card = btn.closest('.decl-card');
+        updatePendingCount();
+        removeCard(card);
+      } catch (err) {
+        console.error('Approve error:', err);
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Approve';
+      }
+    }
+
+    function openRejectModal(declarationId, playerName) {
+      rejectDeclarationId.value = declarationId;
+      rejectModalPlayer.textContent = playerName;
+      rejectReason.value = '';
+      rejectModal.showModal();
+    }
+
+    rejectModalCancel?.addEventListener('click', () => {
+      rejectModal.close();
+    });
+
+    rejectModalConfirm?.addEventListener('click', async () => {
+      const declarationId = rejectDeclarationId.value;
+      const reason = rejectReason.value.trim();
+
+      rejectModalConfirm.disabled = true;
+      rejectModalConfirm.textContent = 'Rejecting\u2026';
+
+      try {
+        const res = await fetch('/api/contracts/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ declarationId, reason }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(`Failed to reject: ${data.error}`);
+          rejectModalConfirm.disabled = false;
+          rejectModalConfirm.textContent = 'Reject';
+          return;
+        }
+
+        rejectModal.close();
+
+        const card = document.querySelector(`[data-id="${CSS.escape(declarationId)}"]`);
+        if (card) {
+          updatePendingCount();
+          removeCard(card);
+        }
+      } catch (err) {
+        console.error('Reject error:', err);
+        alert('Network error. Please try again.');
+      } finally {
+        rejectModalConfirm.disabled = false;
+        rejectModalConfirm.textContent = 'Reject';
+      }
+    });
+
+    // Deadline countdown coloring
+    document.querySelectorAll('[data-deadline]').forEach(el => {
+      const deadline = new Date(el.dataset.deadline);
+      const now = new Date();
+      const hoursLeft = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursLeft < 0) {
+        el.classList.add('deadline--expired');
+      } else if (hoursLeft < 4) {
+        el.classList.add('deadline--critical');
+      } else if (hoursLeft < 12) {
+        el.classList.add('deadline--warning');
+      }
+    });
+  </script>
+
+  <style>
+    /* ================================================
+       Page Layout
+       ================================================ */
+    .manage-page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .page-grid {
+      display: grid;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (min-width: 1024px) {
+      .page-grid {
+        grid-template-columns: 1fr 220px;
+      }
+    }
+
+    .manage-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xl);
+    }
+
+    /* ================================================
+       Page Header
+       ================================================ */
+    .page-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .page-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-gray-900);
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      font-size: var(--font-size-sm);
+      font-weight: 300;
+      color: #64748b;
+      margin: 0;
+      letter-spacing: 0.01em;
+    }
+
+    /* ================================================
+       Status Sidebar
+       ================================================ */
+    .status-sidebar {
+      position: sticky;
+      top: 2rem;
+      align-self: flex-start;
+    }
+
+    .status-sidebar__container {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .status-sidebar__container:hover {
+      box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+
+    .status-sidebar__title {
+      margin: 0 0 1rem 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+    }
+
+    .status-sidebar__metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    /* ================================================
+       Metric Cards (sidebar style)
+       ================================================ */
+    .metric {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0.875rem;
+      background: var(--color-white);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .metric:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .metric::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 3px;
+    }
+
+    .metric[data-variant="pending"]::before { background: var(--color-warning); }
+    .metric[data-variant="approved"]::before { background: var(--color-success); }
+    .metric[data-variant="rejected"]::before { background: var(--color-error); }
+    .metric[data-variant="applied"]::before { background: var(--color-info); }
+
+    .metric__value {
+      font-size: 1.375rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--color-gray-900);
+      font-variant-numeric: tabular-nums;
+      min-width: 1.75rem;
+    }
+
+    .metric[data-variant="pending"] .metric__value { color: var(--color-warning-dark); }
+    .metric[data-variant="approved"] .metric__value { color: var(--color-success-dark); }
+    .metric[data-variant="rejected"] .metric__value { color: var(--color-error-dark); }
+    .metric[data-variant="applied"] .metric__value { color: var(--color-info-dark); }
+
+    .metric__label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+
+    /* ================================================
+       Section
+       ================================================ */
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+    }
+
+    .section__title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #475569;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .section__count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding: 0 0.375rem;
+      background: var(--color-warning-light);
+      color: var(--color-warning-dark);
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: var(--radius-full);
+    }
+
+    /* ================================================
+       Card List
+       ================================================ */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    /* ================================================
+       Declaration Card
+       ================================================ */
+    .decl-card {
+      background: var(--color-white);
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      transition: opacity 0.4s ease, transform 0.4s ease, box-shadow var(--transition-base);
+      border: 1px solid var(--content-border);
+    }
+
+    .decl-card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .decl-card--fade {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+
+    /* Top bar of card */
+    .decl-card__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .decl-card__identity {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .decl-card__player {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+      color: #1a1a1a;
+      line-height: 1.3;
+    }
+
+    .decl-card__team {
+      font-size: 0.78rem;
+      font-weight: 300;
+      color: #64748b;
+    }
+
+    .decl-card__top-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.375rem;
+    }
+
+    .decl-card__type {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-white);
+      background: var(--color-primary);
+      padding: 0.25rem 0.625rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .decl-card__type--muted {
+      background: transparent;
+      color: #94a3b8;
+      padding: 0;
+    }
+
+    /* Data grid inside card */
+    .decl-card__grid {
+      padding: 1.125rem 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+
+    .decl-card__field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .decl-card__field--full {
+      grid-column: 1 / -1;
+    }
+
+    .field__label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+
+    .field__value {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: #1a1a1a;
+    }
+
+    .field__value--accent {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .field__value--italic {
+      font-style: italic;
+      color: #64748b;
+    }
+
+    .field__value--success {
+      color: var(--color-success-dark);
+      font-weight: 500;
+    }
+
+    .contract-arrow {
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+      color: #1a1a1a;
+    }
+
+    /* Deadline colors */
+    .deadline--expired {
+      color: var(--color-error-dark) !important;
+      font-weight: 600 !important;
+      text-decoration: line-through;
+    }
+
+    .deadline--critical {
+      color: var(--color-error) !important;
+      font-weight: 700 !important;
+    }
+
+    .deadline--warning {
+      color: var(--color-warning-dark) !important;
+      font-weight: 600 !important;
+    }
+
+    /* Actions footer */
+    .decl-card__actions {
+      display: flex;
+      gap: 0.625rem;
+      padding: 0 1.25rem 1.125rem;
+    }
+
+    /* ================================================
+       Status Indicator (replaces ugly badges)
+       ================================================ */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-indicator::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-indicator--approved {
+      color: var(--color-success-dark);
+    }
+    .status-indicator--approved::before {
+      background: var(--color-success);
+    }
+
+    .status-indicator--applied {
+      color: var(--color-info-dark);
+    }
+    .status-indicator--applied::before {
+      background: var(--color-info);
+    }
+
+    .status-indicator--rejected {
+      color: var(--color-error-dark);
+    }
+    .status-indicator--rejected::before {
+      background: var(--color-error);
+    }
+
+    /* Decided card left accent */
+    .decl-card--decided {
+      border-left: 3px solid transparent;
+    }
+    .decl-card--approved { border-left-color: var(--color-success); }
+    .decl-card--applied { border-left-color: var(--color-info); }
+    .decl-card--rejected { border-left-color: var(--color-error); }
+
+    /* ================================================
+       Buttons
+       ================================================ */
+    .action-btn {
+      padding: 0.5rem 1.125rem;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: background-color var(--transition-fast), transform 0.1s ease, box-shadow var(--transition-fast);
+    }
+
+    .action-btn:active {
+      transform: scale(0.97);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .action-btn--approve {
+      background: var(--color-success);
+      color: var(--color-white);
+    }
+    .action-btn--approve:hover:not(:disabled) {
+      background: var(--color-success-dark);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .action-btn--reject {
+      background: var(--color-error);
+      color: var(--color-white);
+    }
+    .action-btn--reject:hover:not(:disabled) {
+      background: var(--color-error-dark);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+
+    .action-btn--cancel {
+      background: var(--color-gray-100);
+      color: var(--color-gray-700);
+    }
+    .action-btn--cancel:hover {
+      background: var(--color-gray-200);
+    }
+
+    /* ================================================
+       Empty State
+       ================================================ */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 3rem 2rem;
+      background: var(--color-white);
+      border: 1px dashed var(--content-border);
+      border-radius: 12px;
+    }
+
+    .empty-state__icon {
+      opacity: 0.5;
+    }
+
+    .empty-state__text {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 400;
+      color: #475569;
+    }
+
+    .empty-state__hint {
+      margin: 0;
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: #94a3b8;
+    }
+
+    /* ================================================
+       Reject Dialog
+       ================================================ */
+    .reject-dialog {
+      border: none;
+      border-radius: 12px;
+      padding: 0;
+      max-width: 440px;
+      width: 90%;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.15),
+        0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .reject-dialog::backdrop {
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    .reject-dialog__form {
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .reject-dialog__title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-gray-900);
+    }
+
+    .reject-dialog__player {
+      margin: 0;
+      font-weight: 500;
+      color: #475569;
+      font-size: 0.95rem;
+    }
+
+    .reject-dialog__label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+    }
+
+    .reject-dialog__textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--content-border);
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      font-weight: 300;
+      font-family: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+      color: #1a1a1a;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .reject-dialog__textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus-ring);
+    }
+
+    .reject-dialog__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.625rem;
+      padding-top: 0.5rem;
+    }
+
+    /* ================================================
+       Responsive
+       ================================================ */
+
+    /* Below 1024px: sidebar moves above content as horizontal row */
+    @media (max-width: 1023px) {
+      .status-sidebar {
+        position: static;
+        order: -1;
+      }
+
+      .status-sidebar__metrics {
+        flex-direction: row;
+        gap: 0.625rem;
+      }
+
+      .metric {
+        flex: 1;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.25rem;
+        padding: 0.875rem 0.5rem;
+      }
+
+      .metric::before {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: auto;
+        width: auto;
+        height: 3px;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .manage-page {
+        padding: var(--spacing-md) var(--spacing-sm);
+      }
+
+      .manage-content {
+        gap: var(--spacing-xl);
+      }
+
+      .page-header {
+        margin-bottom: var(--spacing-md);
+      }
+
+      .page-title {
+        font-size: var(--font-size-lg);
+      }
+
+      .status-sidebar__container {
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        border: none;
+      }
+
+      .status-sidebar__metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+
+      .status-sidebar__metrics .metric {
+        flex: none;
+      }
+
+      .status-sidebar__title {
+        display: none;
+      }
+
+      .decl-card__top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.625rem;
+      }
+
+      .decl-card__top-right {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .decl-card__grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .decl-card__actions {
+        flex-direction: column;
+        padding: 0 1rem 1rem;
+      }
+
+      .action-btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+    /* ================================================
+       Entrance Animation
+       ================================================ */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .status-sidebar {
+      opacity: 0;
+      transform: translateX(20px);
+      animation: slideInRight 0.4s ease-out 0.15s forwards;
+    }
+
+    @keyframes slideInRight {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .status-sidebar {
+        transform: translateY(12px);
+        animation: fadeInUp 0.4s ease-out 0.05s forwards;
+      }
+    }
+
+    .metric {
+      animation: fadeInUp 0.3s ease both;
+    }
+    .metric:nth-child(1) { animation-delay: 0.2s; }
+    .metric:nth-child(2) { animation-delay: 0.25s; }
+    .metric:nth-child(3) { animation-delay: 0.3s; }
+    .metric:nth-child(4) { animation-delay: 0.35s; }
+
+    .decl-card {
+      animation: fadeInUp 0.35s ease both;
+    }
+    .card-list .decl-card:nth-child(1) { animation-delay: 0.1s; }
+    .card-list .decl-card:nth-child(2) { animation-delay: 0.15s; }
+    .card-list .decl-card:nth-child(3) { animation-delay: 0.2s; }
+    .card-list .decl-card:nth-child(4) { animation-delay: 0.25s; }
+    .card-list .decl-card:nth-child(5) { animation-delay: 0.3s; }
+  </style>
+</TheLeagueLayout>

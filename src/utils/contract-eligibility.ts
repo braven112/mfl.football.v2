@@ -1,0 +1,341 @@
+/**
+ * Contract Eligibility Engine
+ *
+ * Derives contract declaration eligibility from MFL transaction data.
+ * Determines which players can have their contracts modified, what types
+ * of modifications are available, and when deadlines expire.
+ */
+
+import { getContractWindow } from './contract-validation';
+import type {
+  DeclarationType,
+  EligibilityResult,
+  TransactionRecord,
+  MFLRawTransaction,
+  RosterPlayer,
+  MFLPlayerInfo,
+  DraftPick,
+  TeamEligibilityResult,
+} from '../types/contract-eligibility';
+
+// Deadline durations in milliseconds
+const IN_SEASON_DEADLINE_MS = 24 * 60 * 60 * 1000;  // 24 hours
+const OFFSEASON_DEADLINE_MS = 48 * 60 * 60 * 1000;   // 48 hours
+
+// Transaction types that represent new player acquisitions (not trades)
+const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT'];
+
+/**
+ * Parse the MFL transaction string format into added/dropped player IDs.
+ *
+ * MFL formats:
+ *   "|playerId,"          -> drop only
+ *   "addId|dropId,"       -> add/drop swap
+ *   "addId|,"             -> add only (no drop)
+ *   "addId,|bbid|dropId," -> BBID add/drop with bid amount
+ *   ""                    -> empty (batch marker like BBID_AUTO_PROCESS_WAIVERS)
+ */
+export function parseTransactionString(txnString: string): {
+  addedPlayerIds: string[];
+  droppedPlayerIds: string[];
+  bbidAmount?: number;
+} {
+  const addedPlayerIds: string[] = [];
+  const droppedPlayerIds: string[] = [];
+  let bbidAmount: number | undefined;
+
+  if (!txnString || txnString.trim() === '') {
+    return { addedPlayerIds, droppedPlayerIds };
+  }
+
+  // BBID format: "addId,|bbidAmount|dropId,"
+  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(\d+),$/);
+  if (bbidMatch) {
+    addedPlayerIds.push(bbidMatch[1]);
+    bbidAmount = parseInt(bbidMatch[2], 10);
+    droppedPlayerIds.push(bbidMatch[3]);
+    return { addedPlayerIds, droppedPlayerIds, bbidAmount };
+  }
+
+  // BBID add-only: "addId,|bbidAmount|,"
+  const bbidAddOnlyMatch = txnString.match(/^(\d+),\|(\d+)\|,$/);
+  if (bbidAddOnlyMatch) {
+    addedPlayerIds.push(bbidAddOnlyMatch[1]);
+    bbidAmount = parseInt(bbidAddOnlyMatch[2], 10);
+    return { addedPlayerIds, droppedPlayerIds, bbidAmount };
+  }
+
+  // Drop-only: "|playerId,"
+  if (txnString.startsWith('|')) {
+    const dropIds = txnString.split('|').filter(s => s.replace(',', '').trim());
+    for (const id of dropIds) {
+      const cleanId = id.replace(',', '').trim();
+      if (cleanId && /^\d+$/.test(cleanId)) {
+        droppedPlayerIds.push(cleanId);
+      }
+    }
+    return { addedPlayerIds, droppedPlayerIds };
+  }
+
+  // Add/drop swap: "addId|dropId," or "addId|,"
+  const parts = txnString.split('|');
+  if (parts.length === 2) {
+    const addId = parts[0].replace(',', '').trim();
+    const dropId = parts[1].replace(',', '').trim();
+    if (addId && /^\d+$/.test(addId)) addedPlayerIds.push(addId);
+    if (dropId && /^\d+$/.test(dropId)) droppedPlayerIds.push(dropId);
+  }
+
+  return { addedPlayerIds, droppedPlayerIds, bbidAmount };
+}
+
+/**
+ * Parse raw MFL transaction data into normalized TransactionRecord array.
+ * Filters to only include acquisition types (BBID, FREE_AGENT) that have adds.
+ * Excludes trades and empty batch markers.
+ */
+export function parseTransactions(
+  rawTransactions: MFLRawTransaction[],
+): TransactionRecord[] {
+  const records: TransactionRecord[] = [];
+
+  for (const raw of rawTransactions) {
+    // Skip trades -- they don't trigger contract declarations
+    if (raw.type === 'TRADE') continue;
+
+    // Skip empty batch markers (BBID_AUTO_PROCESS_WAIVERS with empty transaction)
+    if (!raw.transaction || raw.transaction.trim() === '') continue;
+
+    // Skip non-acquisition types
+    if (!ACQUISITION_TYPES.includes(raw.type)) continue;
+
+    const { addedPlayerIds, droppedPlayerIds, bbidAmount } = parseTransactionString(raw.transaction);
+
+    // Only include transactions that actually add a player
+    if (addedPlayerIds.length === 0) continue;
+
+    records.push({
+      type: raw.type,
+      franchise: raw.franchise,
+      timestamp: parseInt(raw.timestamp, 10),
+      addedPlayerIds,
+      droppedPlayerIds,
+      bbidAmount,
+    });
+  }
+
+  return records;
+}
+
+/**
+ * Find the most recent acquisition transaction for a player on a specific franchise.
+ * Returns null if the player wasn't acquired via BBID/auction (e.g., via trade or draft).
+ */
+export function findAcquisitionTransaction(
+  playerId: string,
+  franchiseId: string,
+  transactions: TransactionRecord[],
+): TransactionRecord | null {
+  // Search newest first (transactions are typically sorted newest-first)
+  for (const txn of transactions) {
+    if (txn.franchise === franchiseId && txn.addedPlayerIds.includes(playerId)) {
+      return txn;
+    }
+  }
+  return null;
+}
+
+/**
+ * Calculate the declaration deadline timestamp for a player acquisition.
+ */
+export function calculateDeadline(
+  acquisitionTimestamp: number,
+  now: Date = new Date(),
+): number {
+  const window = getContractWindow(now);
+  const durationMs = window.windowType === 'in-season'
+    ? IN_SEASON_DEADLINE_MS
+    : OFFSEASON_DEADLINE_MS;
+
+  // Deadline = acquisition time + duration
+  return (acquisitionTimestamp * 1000) + durationMs;
+}
+
+/**
+ * Check if a player has RC (Rookie Contract) status.
+ * RC is the only rookie designation going forward (R1 is retired).
+ */
+export function isRookieContractStatus(contractInfo: string): boolean {
+  return contractInfo === 'RC';
+}
+
+/**
+ * Check if a player is a rookie according to MFL data.
+ * Requires BOTH our RC designation AND MFL's rookie status.
+ */
+export function isMFLRookie(
+  player: MFLPlayerInfo | undefined,
+  currentYear: number,
+): boolean {
+  if (!player) return false;
+  return player.status === 'R' || player.draft_year === String(currentYear);
+}
+
+/**
+ * Calculate the 3rd Sunday in August for a given year at 8:45 PM PT.
+ * Used as the rookie contract override deadline (cutdown date).
+ */
+function getAugustCutdownDate(year: number): Date {
+  const august1 = new Date(year, 7, 1); // August is month 7
+  const dayOfWeek = august1.getDay();
+  const daysToFirstSunday = (7 - dayOfWeek) % 7 || 7;
+  const thirdSunday = new Date(year, 7, 1 + daysToFirstSunday + 14);
+  thirdSunday.setHours(20, 45, 0, 0); // 8:45 PM PT
+  return thirdSunday;
+}
+
+/**
+ * Get the eligibility result for a single player.
+ *
+ * Checks all possible declaration types in priority order:
+ * 1. New acquisition (BBID/auction within deadline)
+ * 2. Rookie override (RC player before August cutdown)
+ * 3. Franchise tag (1 year remaining, offseason)
+ * 4. Veteran extension (2+ years, not RC)
+ * 5. Rookie extension (RC player, offseason)
+ */
+export function getPlayerEligibility(
+  playerId: string,
+  franchiseId: string,
+  rosterPlayer: RosterPlayer,
+  transactions: TransactionRecord[],
+  playerInfo: MFLPlayerInfo | undefined,
+  currentYear: number,
+  now: Date = new Date(),
+): EligibilityResult {
+  const currentYears = parseInt(rosterPlayer.contractYear, 10) || 1;
+  const currentSalary = parseFloat(rosterPlayer.salary) || 0;
+  const contractInfo = rosterPlayer.contractInfo || '';
+  const isRC = isRookieContractStatus(contractInfo);
+
+  const base: EligibilityResult = {
+    playerId,
+    franchiseId,
+    eligible: false,
+    declarationType: null,
+    currentYears,
+    currentSalary,
+    contractInfo,
+    isRookieContract: isRC,
+  };
+
+  const window = getContractWindow(now);
+
+  // 1. Check for new acquisition within deadline
+  const acquisition = findAcquisitionTransaction(playerId, franchiseId, transactions);
+  if (acquisition) {
+    const deadlineMs = calculateDeadline(acquisition.timestamp, now);
+    const nowMs = now.getTime();
+    const isExpired = nowMs > deadlineMs;
+
+    // If still within deadline and contract is at default 1 year, player can declare
+    if (!isExpired && currentYears === 1 && !isRC) {
+      return {
+        ...base,
+        eligible: true,
+        declarationType: 'new-acquisition',
+        acquisitionTimestamp: acquisition.timestamp,
+        deadlineTimestamp: Math.floor(deadlineMs / 1000),
+        isExpired: false,
+        yearOptions: [2, 3, 4, 5],
+      };
+    }
+  }
+
+  // 2. Check for rookie override (RC player before August cutdown)
+  if (isRC && isMFLRookie(playerInfo, currentYear)) {
+    const cutdownDate = getAugustCutdownDate(now.getFullYear());
+    if (now < cutdownDate && window.windowType === 'offseason') {
+      return {
+        ...base,
+        eligible: true,
+        declarationType: 'rookie-override',
+        deadlineTimestamp: Math.floor(cutdownDate.getTime() / 1000),
+        isExpired: false,
+        yearOptions: [1, 2, 3],
+      };
+    }
+  }
+
+  // The remaining types require an active contract window
+  if (!window.inWindow) return base;
+
+  // 3. Check for franchise tag eligibility (1 year remaining, offseason only)
+  if (currentYears === 1 && window.windowType === 'offseason' && contractInfo !== 'F') {
+    return {
+      ...base,
+      eligible: true,
+      declarationType: 'franchise-tag',
+    };
+  }
+
+  // 4. Check for veteran extension (2+ years, NOT RC)
+  if (currentYears >= 2 && !isRC && window.windowType === 'offseason') {
+    return {
+      ...base,
+      eligible: true,
+      declarationType: 'veteran-extension',
+    };
+  }
+
+  // 5. Check for rookie extension (RC player, offseason)
+  if (isRC && window.windowType === 'offseason') {
+    return {
+      ...base,
+      eligible: true,
+      declarationType: 'rookie-extension',
+    };
+  }
+
+  return base;
+}
+
+/**
+ * Get eligibility results for all players on a team's roster.
+ */
+export function getTeamEligibility(
+  franchiseId: string,
+  rosterPlayers: RosterPlayer[],
+  rawTransactions: MFLRawTransaction[],
+  playersMap: Map<string, MFLPlayerInfo>,
+  currentYear: number,
+  now: Date = new Date(),
+): TeamEligibilityResult {
+  const transactions = parseTransactions(rawTransactions);
+
+  const players = rosterPlayers.map(rp =>
+    getPlayerEligibility(
+      rp.id,
+      franchiseId,
+      rp,
+      transactions,
+      playersMap.get(rp.id),
+      currentYear,
+      now,
+    ),
+  );
+
+  const eligible = players.filter(p => p.eligible);
+  const fourHoursMs = 4 * 60 * 60 * 1000;
+  const nowMs = now.getTime();
+  const urgent = eligible.filter(
+    p => p.deadlineTimestamp && (p.deadlineTimestamp * 1000 - nowMs) < fourHoursMs,
+  );
+
+  return {
+    franchiseId,
+    players,
+    eligibleCount: eligible.length,
+    urgentCount: urgent.length,
+  };
+}
