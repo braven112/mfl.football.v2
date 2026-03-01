@@ -80,36 +80,32 @@ describe('estimateAuctionCost', () => {
     totalFreeAgents: 100,
   };
 
-  it('gives highest multiplier to rank 1', () => {
+  it('anchors rank 1 near franchise benchmark levels', () => {
     const cost = estimateAuctionCost(
       { id: 'p1', position: 'QB' },
       { ...baseSignals, customRank: 1 },
     );
-    // avgPricePerPlayer = 100M / 100 = 1M; multiplier = 10
-    // estimated = 10M, capped at top3Average * 1.2 = 9.6M
-    expect(cost).toBe(9_600_000);
+    expect(cost).toBeGreaterThanOrEqual(6_800_000);
+    expect(cost).toBeLessThanOrEqual(10_400_000);
   });
 
-  it('applies mid-range multiplier for rank 50', () => {
+  it('decays meaningfully for mid-range rank 50', () => {
     const cost = estimateAuctionCost(
       { id: 'p1', position: 'RB' },
       { ...baseSignals, customRank: 50 },
     );
-    // multiplier = 2.0 - ((50-30)/70) * 1.0 = 2.0 - 0.286 ≈ 1.714
-    // estimated = 1M * 1.714 ≈ 1,714,285 → rounded to nearest 50K
-    expect(cost).toBeGreaterThan(1_500_000);
-    expect(cost).toBeLessThan(2_000_000);
+    expect(cost).toBeGreaterThanOrEqual(600_000);
+    expect(cost).toBeLessThan(3_000_000);
     expect(cost % 50_000).toBe(0);
   });
 
-  it('gives floor multiplier to rank 300', () => {
+  it('approaches the floor for deep rank 300', () => {
     const cost = estimateAuctionCost(
       { id: 'p1', position: 'WR' },
       { ...baseSignals, customRank: 300 },
     );
-    // multiplier = max(0.5, 1.0 - ((300-100)/200)*0.5) = max(0.5, 1.0 - 0.5) = 0.5
-    // estimated = 1M * 0.5 = 500K
-    expect(cost).toBe(500_000);
+    expect(cost).toBeGreaterThanOrEqual(425_000);
+    expect(cost).toBeLessThanOrEqual(1_000_000);
   });
 
   it('never goes below league minimum ($425K)', () => {
@@ -125,7 +121,7 @@ describe('estimateAuctionCost', () => {
     expect(cost).toBeGreaterThanOrEqual(425_000);
   });
 
-  it('never exceeds position top3Average * 1.2', () => {
+  it('never exceeds dynamic top-tier ceiling', () => {
     const cost = estimateAuctionCost(
       { id: 'p1', position: 'QB' },
       {
@@ -134,7 +130,7 @@ describe('estimateAuctionCost', () => {
         positionSalaryAvg: { top3Average: 5_000_000, top5Average: 4_000_000 },
       },
     );
-    expect(cost).toBeLessThanOrEqual(5_000_000 * 1.2);
+    expect(cost).toBeLessThanOrEqual(5_000_000 * 1.3);
   });
 
   it('uses ADP as fallback when no custom rank', () => {
@@ -149,13 +145,54 @@ describe('estimateAuctionCost', () => {
     expect(withCustom).toBe(withAdp);
   });
 
-  it('defaults to rank 999 with no signals', () => {
+  it('defaults to low-tier pricing when no rank signals exist', () => {
     const cost = estimateAuctionCost(
       { id: 'p1', position: 'QB' },
       { ...baseSignals },
     );
-    // rank 999 → multiplier = max(0.5, 1.0 - ((999-100)/200)*0.5) = 0.5
-    expect(cost).toBe(500_000);
+    expect(cost).toBeGreaterThanOrEqual(425_000);
+    expect(cost).toBeLessThanOrEqual(650_000);
+  });
+
+  it('uses position-rank tiers to keep top players higher', () => {
+    const elite = estimateAuctionCost(
+      { id: 'p1', position: 'WR' },
+      { ...baseSignals, customRank: 40, positionRank: 1 },
+    );
+    const depth = estimateAuctionCost(
+      { id: 'p1', position: 'WR' },
+      { ...baseSignals, customRank: 40, positionRank: 20 },
+    );
+    expect(elite).toBeGreaterThan(depth);
+  });
+
+  it('pulls median-ranked players toward median salary benchmarks', () => {
+    const withoutMedianAnchor = estimateAuctionCost(
+      { id: 'p1', position: 'WR' },
+      {
+        ...baseSignals,
+        customRank: 70,
+        positionRank: 50,
+        positionPlayerCount: 100,
+      },
+    );
+    const withMedianAnchor = estimateAuctionCost(
+      { id: 'p1', position: 'WR' },
+      {
+        ...baseSignals,
+        customRank: 70,
+        positionRank: 50,
+        positionPlayerCount: 100,
+        positionSalaryAvg: {
+          ...baseSignals.positionSalaryAvg,
+          medianSalary: 700_000,
+        },
+      },
+    );
+
+    expect(withMedianAnchor).toBeLessThan(withoutMedianAnchor);
+    expect(withMedianAnchor).toBeGreaterThanOrEqual(500_000);
+    expect(withMedianAnchor).toBeLessThanOrEqual(1_200_000);
   });
 
   it('rounds to nearest $50K', () => {
@@ -183,6 +220,7 @@ describe('calculateSurplusValue', () => {
 
 describe('calculateAllSurplusValues', () => {
   const mockInput: SurplusValueInput = {
+    leagueYear: 2026,
     projectedScores: [
       { id: 'qb1', score: '300' },
       { id: 'rb1', score: '200' },
@@ -190,17 +228,17 @@ describe('calculateAllSurplusValues', () => {
       { id: 'te1', score: '150' },
     ],
     players: [
-      { id: 'qb1', name: 'Star QB', position: 'QB', team: 'BUF' },
-      { id: 'rb1', name: 'Good RB', position: 'RB', team: 'NYG' },
-      { id: 'wr1', name: 'Solid WR', position: 'WR', team: 'CIN' },
-      { id: 'te1', name: 'Decent TE', position: 'TE', team: 'KC' },
+      { id: 'qb1', name: 'Star QB', position: 'QB', team: 'BUF', draftYear: 2021 },
+      { id: 'rb1', name: 'Good RB', position: 'RB', team: 'NYG', draftYear: 2025 },
+      { id: 'wr1', name: 'Solid WR', position: 'WR', team: 'CIN', draftYear: 2020 },
+      { id: 'te1', name: 'Decent TE', position: 'TE', team: 'KC', draftYear: 2024 },
     ],
     rosters: [
       {
         id: '0001',
         player: [
           { id: 'qb1', salary: '5000000', contractYear: '3', status: 'ROSTER' },
-          { id: 'rb1', salary: '3000000', contractYear: '2', status: 'ROSTER' },
+          { id: 'rb1', salary: '850000', contractYear: '2', status: 'ROSTER' },
         ],
       },
       {
@@ -241,6 +279,16 @@ describe('calculateAllSurplusValues', () => {
     expect(te.currentSalary).toBe(null);
   });
 
+  it('uses market comparable est cost except for rookie deals', () => {
+    const results = calculateAllSurplusValues(mockInput);
+    const qb = results.find((r) => r.playerId === 'qb1')!;
+    const rb = results.find((r) => r.playerId === 'rb1')!;
+    const te = results.find((r) => r.playerId === 'te1')!;
+    expect(qb.estimatedCost).not.toBe(5_000_000);
+    expect(rb.estimatedCost).toBe(850_000);
+    expect(te.estimatedCost).toBeGreaterThanOrEqual(425_000);
+  });
+
   it('calculates dollar value based on points-per-dollar ratio', () => {
     const results = calculateAllSurplusValues(mockInput);
     const qb = results.find((r) => r.playerId === 'qb1')!;
@@ -265,10 +313,10 @@ describe('calculateAllSurplusValues', () => {
     expect(qb.rank).toBe(5);
   });
 
-  it('handles player with no rank signals', () => {
+  it('uses projected-rank fallback when no custom/ADP rank signals exist', () => {
     const results = calculateAllSurplusValues(mockInput);
     const te = results.find((r) => r.playerId === 'te1')!;
-    expect(te.rank).toBe(null);
+    expect(te.rank).toBe(4);
   });
 
   it('handles player with 0 projected points', () => {
@@ -299,5 +347,107 @@ describe('calculateAllSurplusValues', () => {
         expect(r.surplusPercent).toBeCloseTo(r.surplusValue / r.estimatedCost, 5);
       }
     }
+  });
+
+  it('falls back to projected-points rank when custom/ADP ranks are missing', () => {
+    const projectedScores = Array.from({ length: 200 }, (_, i) => ({
+      id: `p${i + 1}`,
+      score: String(400 - i),
+    }));
+    const players = Array.from({ length: 200 }, (_, i) => ({
+      id: `p${i + 1}`,
+      name: `Player ${i + 1}`,
+      position: 'WR',
+      team: 'BUF',
+      draftYear: 2020,
+    }));
+    const input: SurplusValueInput = {
+      leagueYear: 2026,
+      projectedScores,
+      players,
+      rosters: [],
+      salaryAverages: {
+        positions: {
+          WR: { top3Average: 100_000_000, top5Average: 80_000_000 },
+        },
+      },
+    };
+
+    const results = calculateAllSurplusValues(input);
+    const top = results.find((r) => r.playerId === 'p1')!;
+    const bottom = results.find((r) => r.playerId === 'p200')!;
+
+    expect(top.rank).toBe(1);
+    expect(bottom.rank).toBe(200);
+    expect(top.estimatedCost).toBeGreaterThan(bottom.estimatedCost);
+  });
+
+  it('keeps top 3-5 positional values near benchmark bands', () => {
+    const players = Array.from({ length: 8 }, (_, i) => ({
+      id: `wr${i + 1}`,
+      name: `WR ${i + 1}`,
+      position: 'WR',
+      team: 'BUF',
+      draftYear: 2020,
+    }));
+    const projectedScores = Array.from({ length: 8 }, (_, i) => ({
+      id: `wr${i + 1}`,
+      score: String(220 - i * 5),
+    }));
+    const input: SurplusValueInput = {
+      leagueYear: 2026,
+      players,
+      projectedScores,
+      rosters: [],
+      salaryAverages: {
+        positions: {
+          WR: { top3Average: 9_000_000, top5Average: 7_000_000 },
+        },
+      },
+    };
+
+    const results = calculateAllSurplusValues(input)
+      .sort((a, b) => (b.projectedPoints - a.projectedPoints));
+
+    expect(results[0].estimatedCost).toBeGreaterThanOrEqual(7_500_000);
+    expect(results[4].estimatedCost).toBeGreaterThanOrEqual(5_900_000);
+  });
+
+  it('anchors median rank near median salary when benchmark is present', () => {
+    const players = Array.from({ length: 101 }, (_, i) => ({
+      id: `wr${i + 1}`,
+      name: `WR ${i + 1}`,
+      position: 'WR',
+      team: 'BUF',
+      draftYear: 2020,
+    }));
+    const projectedScores = Array.from({ length: 101 }, (_, i) => ({
+      id: `wr${i + 1}`,
+      score: String(400 - i),
+    }));
+    const input: SurplusValueInput = {
+      leagueYear: 2026,
+      players,
+      projectedScores,
+      rosters: [],
+      salaryAverages: {
+        positions: {
+          WR: {
+            top3Average: 9_000_000,
+            top5Average: 7_000_000,
+            medianSalary: 700_000,
+          },
+        },
+      },
+    };
+
+    const results = calculateAllSurplusValues(input);
+    const top = results.find((r) => r.playerId === 'wr1')!;
+    const medianRanked = results.find((r) => r.playerId === 'wr51')!;
+
+    expect(top.estimatedCost).toBeGreaterThanOrEqual(7_500_000);
+    expect(medianRanked.rank).toBe(51);
+    expect(medianRanked.estimatedCost).toBeGreaterThanOrEqual(500_000);
+    expect(medianRanked.estimatedCost).toBeLessThanOrEqual(1_200_000);
   });
 });

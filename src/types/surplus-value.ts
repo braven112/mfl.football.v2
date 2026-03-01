@@ -5,7 +5,16 @@
  * and comparing against estimated auction costs.
  */
 
+export interface PositionSalaryBenchmark {
+  top3Average: number;
+  top5Average: number;
+  medianSalary?: number;
+  starterMedian?: number;
+  averageSalary?: number;
+}
+
 export interface SurplusValueInput {
+  leagueYear?: number;
   projectedScores: Array<{ id: string; score: string }>;
   players: Array<{
     id: string;
@@ -13,6 +22,7 @@ export interface SurplusValueInput {
     position: string;
     team: string;
     birthdate?: string;
+    draftYear?: number;
   }>;
   rosters: Array<{
     id: string;
@@ -24,7 +34,7 @@ export interface SurplusValueInput {
     }>;
   }>;
   salaryAverages: {
-    positions: Record<string, { top3Average: number; top5Average: number }>;
+    positions: Record<string, PositionSalaryBenchmark>;
   };
   customRankings?: Map<string, number>;
   adpDynasty?: Map<string, number>;

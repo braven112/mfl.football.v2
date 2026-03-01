@@ -12,8 +12,22 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
-import collegeLogos from '../../data/college-logos.json';
+import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
+import { calculateAllSurplusValues } from '../../utils/surplus-value';
+import { getAuthUser } from '../../utils/auth';
+import { isAdminFranchise } from '../../config/nav-config';
 import '../../styles/player-cell.css';
+import collegeLogos from '../../data/college-logos.json';
+
+// College logo lookup (case-insensitive)
+const collegeLogosNormalized = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
+);
+function getCollegeLogo(collegeName: string | null): string | null {
+  if (!collegeName) return null;
+  const entry = collegeLogosNormalized[collegeName.toLowerCase()];
+  return (entry as any)?.logo ?? null;
+}
 
 // MFL team code → local SVG filename normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -24,15 +38,6 @@ const MFL_TEAM_CODE_MAP: Record<string, string> = {
 function normalizeMflTeam(code: string): string {
   if (!code) return 'FA';
   return MFL_TEAM_CODE_MAP[code] || code;
-}
-
-// College logo lookup (case-insensitive)
-const collegeLogosNormalized = Object.fromEntries(
-  Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
-);
-function getCollegeLogo(collegeName: string | null): string | null {
-  if (!collegeName) return null;
-  return collegeLogosNormalized[collegeName.toLowerCase()]?.logo ?? null;
 }
 
 // Load player data
@@ -76,6 +81,14 @@ const fpaModules = import.meta.glob(
 );
 const leagueModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/league.json',
+  { eager: true }
+);
+const salaryAvgModules = import.meta.glob(
+  '../../data/mfl-salary-averages-*.json',
+  { eager: true }
+);
+const playerSalaryHistoryModules = import.meta.glob(
+  '../../data/mfl-player-salaries-*.json',
   { eager: true }
 );
 
@@ -200,6 +213,116 @@ if (rostersData?.rosters?.franchise) {
   }
 }
 
+// Build surplus value lookup (same pattern as trade-builder.astro)
+const surplusMap = new Map<string, { dollarValue: number; estimatedCost: number; surplusValue: number }>();
+{
+  // Resolve frozen salary averages year
+  const salaryAvgYear = String(getFrozenSalaryAveragesYear(salaryAvgModules, getModuleData));
+  let salaryAvgData: any = null;
+  for (const [path, mod] of Object.entries(salaryAvgModules)) {
+    if (path.includes(salaryAvgYear)) {
+      salaryAvgData = getModuleData(mod);
+      break;
+    }
+  }
+  if (!salaryAvgData) {
+    const keys = Object.keys(salaryAvgModules).sort().reverse();
+    if (keys.length > 0) salaryAvgData = getModuleData(salaryAvgModules[keys[0]]);
+  }
+
+  // Build input arrays for the surplus calculator
+  const projScoresArray: Array<{ id: string; score: string }> = [];
+  if (projectedScoresData?.projectedScores?.playerScore) {
+    const scores = Array.isArray(projectedScoresData.projectedScores.playerScore)
+      ? projectedScoresData.projectedScores.playerScore
+      : [projectedScoresData.projectedScores.playerScore];
+    for (const s of scores) {
+      if (s?.id && s?.score) projScoresArray.push({ id: s.id, score: s.score });
+    }
+  }
+
+  const rawPlayersList = playersData?.players?.player;
+  const playersArray: Array<{ id: string; name: string; position: string; team: string; birthdate?: string; draftYear?: number }> = [];
+  if (Array.isArray(rawPlayersList)) {
+    for (const p of rawPlayersList) {
+      if (!p?.id || !p?.name || !p?.position) continue;
+      const draftYear = p.draft_year ? parseInt(p.draft_year, 10) : undefined;
+      playersArray.push({
+        id: p.id,
+        name: p.name,
+        position: p.position === 'Def' ? 'DEF' : p.position,
+        team: p.team || '',
+        birthdate: p.birthdate,
+        draftYear: Number.isFinite(draftYear) ? draftYear : undefined,
+      });
+    }
+  }
+
+  const rostersArray: Array<{ id: string; player: Array<{ id: string; salary: string; contractYear: string; status: string }> }> = [];
+  if (rostersData?.rosters?.franchise) {
+    const franchises = Array.isArray(rostersData.rosters.franchise)
+      ? rostersData.rosters.franchise
+      : [rostersData.rosters.franchise];
+    for (const f of franchises) {
+      const fPlayers = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
+      rostersArray.push({
+        id: f.id,
+        player: fPlayers.map((rp: any) => ({
+          id: rp.id,
+          salary: rp.salary ?? '0',
+          contractYear: rp.contractYear ?? '0',
+          status: rp.status ?? 'ROSTER',
+        })),
+      });
+    }
+  }
+
+  if (projScoresArray.length > 0 && salaryAvgData) {
+    const surplusResults = calculateAllSurplusValues({
+      leagueYear: currentYear,
+      projectedScores: projScoresArray,
+      players: playersArray,
+      rosters: rostersArray,
+      salaryAverages: salaryAvgData,
+      adpDynasty: adpDynMap,
+    });
+    for (const r of surplusResults) {
+      surplusMap.set(r.playerId, {
+        dollarValue: r.dollarValue,
+        estimatedCost: r.estimatedCost,
+        surplusValue: r.surplusValue,
+      });
+    }
+  }
+}
+const hasSurplusData = surplusMap.size > 0;
+
+// Player salary by each of the last 3 completed league years.
+const salaryYear1 = currentYear - 1;
+const salaryYear2 = currentYear - 2;
+const salaryYear3 = currentYear - 3;
+const recentSalaryYears = [salaryYear1, salaryYear2, salaryYear3].filter((y) => y > 0);
+const recentSalaryYearSet = new Set(recentSalaryYears);
+const historicalSalaryByYearMap = new Map<string, Record<number, number>>();
+{
+  for (const [path, mod] of Object.entries(playerSalaryHistoryModules)) {
+    const yearMatch = path.match(/mfl-player-salaries-(\d{4})\.json$/);
+    const fileYear = yearMatch ? parseInt(yearMatch[1], 10) : NaN;
+    if (!Number.isFinite(fileYear) || !recentSalaryYearSet.has(fileYear)) continue;
+
+    const data = getModuleData(mod);
+    const players = Array.isArray(data?.players) ? data.players : [];
+    for (const p of players) {
+      if (!p?.id) continue;
+      const salary = parseFloat(String(p.salary ?? 0));
+      if (!Number.isFinite(salary) || salary <= 0) continue;
+      const entry = historicalSalaryByYearMap.get(p.id) ?? {};
+      entry[fileYear] = salary;
+      historicalSalaryByYearMap.set(p.id, entry);
+    }
+  }
+}
+
 // Relevant positions for fantasy
 const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
 
@@ -235,6 +358,12 @@ interface PlayerRow {
   contractYrs: number | null;
   games: number | null;
   ppg: number | null;
+  salaryYear1: number | null;
+  salaryYear2: number | null;
+  salaryYear3: number | null;
+  dollarValue: number | null;
+  estimatedCost: number | null;
+  surplusValue: number | null;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -327,6 +456,12 @@ if (Array.isArray(allPlayers)) {
         const gp = snapCountMap.get(p.id)?.games;
         return (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null;
       })(),
+      salaryYear1: historicalSalaryByYearMap.get(p.id)?.[salaryYear1] ?? null,
+      salaryYear2: historicalSalaryByYearMap.get(p.id)?.[salaryYear2] ?? null,
+      salaryYear3: historicalSalaryByYearMap.get(p.id)?.[salaryYear3] ?? null,
+      dollarValue: surplusMap.get(p.id)?.dollarValue ?? null,
+      estimatedCost: surplusMap.get(p.id)?.estimatedCost ?? null,
+      surplusValue: surplusMap.get(p.id)?.surplusValue ?? null,
     });
   }
 }
@@ -348,64 +483,199 @@ for (const p of freeAgents) {
   faCounts[p.position] = (faCounts[p.position] || 0) + 1;
 }
 
+// Build unique NFL teams list for team filter dropdown
+const nflTeamsSet = new Set<string>();
+for (const p of playerList) {
+  if (p.team && p.team !== 'FA') nflTeamsSet.add(p.team);
+}
+const nflTeamsList = [...nflTeamsSet].sort();
+
 const playerDataJson = JSON.stringify(playerList);
 const faCountsJson = JSON.stringify(faCounts);
+const nflTeamsJson = JSON.stringify(nflTeamsList);
+
+// Admin gate: Value view is only visible to admin franchises
+const authUser = getAuthUser(Astro.request);
+const isAdmin = isAdminFranchise(authUser?.franchiseId);
 ---
 
 <TheLeagueLayout title="Free Agents | TheLeague">
   <div class="players-page">
-    <header class="page-header">
-      <h1>Free Agents</h1>
-      <p class="page-subtitle">
-        {freeAgents.length} available players
-      </p>
-    </header>
-
-    <!-- Category Tabs -->
-    <nav class="category-tabs" id="category-tabs">
-      <button class="cat-tab active" data-pos="ALL">
-        All
-        <span class="cat-count" id="count-ALL">{faCounts.ALL || 0}</span>
-      </button>
-      {positionOrder.map(pos => (
-        <button
-          class="cat-tab"
-          data-pos={pos}
-        >
-          {pos === 'PK' ? 'K' : pos}
-          <span class="cat-count" id={`count-${pos}`}>{faCounts[pos] || 0}</span>
-        </button>
-      ))}
-    </nav>
-
-    <!-- Search & Toggles -->
-    <div class="toolbar">
-      <input
-        type="search"
-        id="player-search"
-        class="search-input"
-        placeholder="Search players..."
-        autocomplete="off"
-      />
-      <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
-        <span class="col-group-toggles__label">View:</span>
-        <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
-        <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+    <!-- Dark Gradient Hero -->
+    <div class="players-hero">
+      <div class="hero-players-bg" aria-hidden="true">
+        <img data-hero-pool data-pos="50% 67%" alt="" class="hero-player-img" data-src="/assets/hero-players/hawks.jpeg" />
+        <img data-hero-pool data-pos="50% 30%" alt="" class="hero-player-img" data-src="/assets/hero-players/puka.webp" />
+        <img data-hero-pool data-pos="50% 0%" alt="" class="hero-player-img" data-src="/assets/hero-players/maye.webp" />
+        <img data-hero-pool data-pos="70% 10%" alt="" class="hero-player-img" data-src="/assets/hero-players/jefferson.jpg" />
+        <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/bijan.webp" />
+        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/breece.jpeg" />
+        <img data-hero-pool data-pos="50% 20%" alt="" class="hero-player-img" data-src="/assets/hero-players/sam.jpeg" />
+        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/lamar.jpg" />
+        <img data-hero-pool data-pos="50% 15%" alt="" class="hero-player-img" data-src="/assets/hero-players/josh.jpg" />
+        <img data-hero-pool data-pos="50% 25%" alt="" class="hero-player-img" data-src="/assets/hero-players/pat.jpg" />
       </div>
-      <label class="roster-toggle">
-        <input type="checkbox" id="show-rostered" />
-        <span>Include rostered</span>
-      </label>
-      <label class="roster-toggle">
-        <input type="checkbox" id="show-rookies" />
-        <span>Include rookies</span>
-      </label>
+      <script is:inline>
+        (function() {
+          var imgs = Array.from(document.querySelectorAll('[data-hero-pool]'));
+          // Shuffle and pick 3
+          for (var i = imgs.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var t = imgs[i]; imgs[i] = imgs[j]; imgs[j] = t;
+          }
+          var picked = imgs.slice(0, 3);
+          var rest = imgs.slice(3);
+          rest.forEach(function(img) { img.remove(); });
+          picked.forEach(function(img, i) {
+            img.src = img.getAttribute('data-src');
+            img.style.animationDelay = (i * 10) + 's';
+            var pos = img.getAttribute('data-pos');
+            if (pos) img.style.objectPosition = pos;
+          });
+        })();
+      </script>
+      <div class="hero-top">
+        <div class="hero-title-group">
+          <h1 class="hero-title">Free Agents</h1>
+          <span class="hero-count">{freeAgents.length} available players</span>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="hero-search">
+        <svg class="hero-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="search"
+          id="player-search"
+          class="hero-search__input"
+          placeholder="Search by player name or NFL team..."
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Position Pills -->
+      <nav class="hero-positions" id="category-tabs">
+        <button class="pos-pill active" data-pos="ALL">
+          All
+          <span class="pos-pill__count" id="count-ALL">{faCounts.ALL || 0}</span>
+        </button>
+        {positionOrder.map(pos => (
+          <button
+            class="pos-pill"
+            data-pos={pos}
+          >
+            {pos === 'PK' ? 'K' : pos}
+            <span class="pos-pill__count" id={`count-${pos}`}>{faCounts[pos] || 0}</span>
+          </button>
+        ))}
+      </nav>
     </div>
 
-    <!-- Table Controls -->
-    <div class="table-controls">
-      <div class="showing-count">
-        Showing <span id="showing-count">50</span> of <span id="total-players">0</span>
+    <!-- Toolbar: counts + view toggles + filter button -->
+    <div class="players-toolbar">
+      <div class="toolbar-left">
+        <span class="showing-count">
+          Showing <strong id="showing-count">50</strong> of <strong id="total-players">0</strong>
+        </span>
+      </div>
+      <div class="toolbar-center">
+        <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
+          <span class="col-group-toggles__label">View:</span>
+          <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
+          <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+          {isAdmin && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <button class="filter-toggle-btn" id="filter-toggle-btn" type="button">
+          <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+          </svg>
+          Filters
+          <span class="filter-badge" id="filter-badge" style="display: none;">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Filters Panel -->
+    <div class="filters-panel" id="filters-panel">
+      <div class="filters-panel__inner">
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label class="filter-label" for="filter-team">NFL Team</label>
+            <select id="filter-team" class="filter-select">
+              <option value="">All Teams</option>
+              {nflTeamsList.map(team => (
+                <option value={team}>{team}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="filter-group filter-group--age">
+            <label class="filter-label">Age Range</label>
+            <div class="filter-range">
+              <input type="number" id="filter-age-min" class="filter-input-num" placeholder="Min" min="18" max="50" />
+              <span class="filter-range__sep">&ndash;</span>
+              <input type="number" id="filter-age-max" class="filter-input-num" placeholder="Max" min="18" max="50" />
+            </div>
+          </div>
+
+          <div class="filter-group filter-group--ht">
+            <label class="filter-label">Height (in)</label>
+            <div class="filter-range">
+              <input type="number" id="filter-ht-min" class="filter-input-num" placeholder="Min" min="60" max="84" />
+              <span class="filter-range__sep">&ndash;</span>
+              <input type="number" id="filter-ht-max" class="filter-input-num" placeholder="Max" min="60" max="84" />
+            </div>
+          </div>
+
+          <div class="filter-group filter-group--wt">
+            <label class="filter-label">Weight (lbs)</label>
+            <div class="filter-range">
+              <input type="number" id="filter-wt-min" class="filter-input-num" placeholder="Min" min="150" max="400" />
+              <span class="filter-range__sep">&ndash;</span>
+              <input type="number" id="filter-wt-max" class="filter-input-num" placeholder="Max" min="150" max="400" />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-exp">Experience</label>
+            <select id="filter-exp" class="filter-select">
+              <option value="">All</option>
+              <option value="rookie">Rookie</option>
+              <option value="1-2">1–2 years</option>
+              <option value="3-5">3–5 years</option>
+              <option value="6-10">6–10 years</option>
+              <option value="10+">10+ years</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-draft">Draft Round</label>
+            <select id="filter-draft" class="filter-select">
+              <option value="">All</option>
+              <option value="1">Round 1</option>
+              <option value="2">Round 2</option>
+              <option value="3">Round 3</option>
+              <option value="4+">Round 4+</option>
+              <option value="udfa">Undrafted</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filters-row-bottom">
+          <label class="filter-checkbox">
+            <input type="checkbox" id="show-rostered" />
+            <span>Include rostered</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="show-rookies" />
+            <span>Include rookies</span>
+          </label>
+          <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
+        </div>
       </div>
     </div>
 
@@ -429,14 +699,14 @@ const faCountsJson = JSON.stringify(faCounts);
             <th class="sortable col-sm col-always-profile" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
+            <th class="sortable col-text col-group--stats" data-sort="college">
+              <div class="th-content th-content--left">College</div>
+            </th>
             <th class="sortable col-sm col-always-profile" data-sort="height">
               <div class="th-content">Ht</div>
             </th>
             <th class="sortable col-sm col-always-profile" data-sort="weight">
               <div class="th-content">Wt</div>
-            </th>
-            <th class="sortable col-text col-group--stats" data-sort="college">
-              <div class="th-content th-content--left">College</div>
             </th>
             {hasSnapCounts && (
               <th class="sortable col-sm col-group--stats" data-sort="games">
@@ -459,13 +729,43 @@ const faCountsJson = JSON.stringify(faCounts);
               </th>
             )}
             {hasLastYrPts && hasSnapCounts && (
-              <th class="sortable col-num col-group--stats" data-sort="ppg">
+              <th class="sortable col-num col-group--stats col-value-ppg" data-sort="ppg">
                 <div class="th-content">PPG</div>
               </th>
             )}
             {hasProjected && (
               <th class="sortable col-num col-group--stats" data-sort="projected">
                 <div class="th-content">Proj</div>
+              </th>
+            )}
+            {isAdmin && hasSurplusData && (
+              <th class="sortable col-num col-group--value col-value-money" data-sort="estimatedCost">
+                <div class="th-content">Est. Cost</div>
+              </th>
+            )}
+            {isAdmin && hasSurplusData && recentSalaryYears.includes(salaryYear1) && (
+              <th class="sortable col-num col-group--value col-value-money" data-sort="salaryYear1">
+                <div class="th-content">{salaryYear1}</div>
+              </th>
+            )}
+            {isAdmin && hasSurplusData && recentSalaryYears.includes(salaryYear2) && (
+              <th class="sortable col-num col-group--value col-value-money" data-sort="salaryYear2">
+                <div class="th-content">{salaryYear2}</div>
+              </th>
+            )}
+            {isAdmin && hasSurplusData && recentSalaryYears.includes(salaryYear3) && (
+              <th class="sortable col-num col-group--value col-value-money" data-sort="salaryYear3">
+                <div class="th-content">{salaryYear3}</div>
+              </th>
+            )}
+            {isAdmin && hasSurplusData && (
+              <th class="sortable col-num col-group--value col-value-money" data-sort="dollarValue">
+                <div class="th-content">$ Value</div>
+              </th>
+            )}
+            {isAdmin && hasSurplusData && (
+              <th class="sortable col-num col-group--value col-value-money col-surplus" data-sort="surplusValue">
+                <div class="th-content">Surplus</div>
               </th>
             )}
             <th class="sortable col-sm col-contract" data-sort="contractYrs" style="display: none;">
@@ -482,7 +782,12 @@ const faCountsJson = JSON.stringify(faCounts);
 
     <!-- Show More -->
     <div class="show-more-wrapper" id="show-more-wrapper">
-      <button class="show-more-btn" id="show-more-btn">Show More</button>
+      <button class="show-more-btn" id="show-more-btn">
+        Load More Players
+        <svg class="show-more-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
     </div>
 
     <!-- No data -->
@@ -500,7 +805,7 @@ const faCountsJson = JSON.stringify(faCounts);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, isAdmin }}>
   const players = JSON.parse(playerDataJson);
 
   // State — default to free agents only
@@ -514,12 +819,26 @@ const faCountsJson = JSON.stringify(faCounts);
   let showRookies = false;
   const BATCH_SIZE = 50;
 
+  // Advanced filter state
+  let filterTeam = '';
+  let filterAgeMin = null;
+  let filterAgeMax = null;
+  let filterExp = '';
+  let filterDraft = '';
+  let filterHtMin = null;
+  let filterHtMax = null;
+  let filterWtMin = null;
+  let filterWtMax = null;
+  let filtersOpen = false;
+
   // Rankings lookup — populated by the rankings module script
   let rankingLookup = { byImport: new Map(), columns: [] };
   let hasExplicitSortPref = false;
 
-  // Column group visibility — stats and rankings are mutually exclusive
-  // 'stats' = show stats columns, 'rankings' = show ranking columns
+  // Column group visibility
+  // 'stats' = traditional stat columns
+  // 'rankings' = ranking import columns
+  // 'value' = focused value view (My Rank + money columns + age)
   let activeView = 'stats';
   let hasRankingColumns = false;
   let hasExplicitViewPref = false;
@@ -527,7 +846,7 @@ const faCountsJson = JSON.stringify(faCounts);
   function loadViewPref() {
     try {
       const saved = localStorage.getItem('playersViewMode');
-      if (saved === 'rankings' || saved === 'stats') {
+      if (saved === 'rankings' || saved === 'stats' || saved === 'value') {
         activeView = saved;
         hasExplicitViewPref = true;
       }
@@ -541,18 +860,62 @@ const faCountsJson = JSON.stringify(faCounts);
   }
 
   function applyGroupVisibility() {
-    const showStats = activeView === 'stats';
-    const showRankings = activeView === 'rankings' && hasRankingColumns;
+    const canShowRankingsView = hasRankingColumns;
+    const canShowValueView = isAdmin && hasSurplusData;
 
-    document.querySelectorAll('.col-group--stats').forEach(el => {
-      el.style.display = showStats ? '' : 'none';
+    if (activeView === 'rankings' && !canShowRankingsView) {
+      activeView = canShowValueView ? 'value' : 'stats';
+    }
+    if (activeView === 'value' && !canShowValueView) {
+      activeView = canShowRankingsView ? 'rankings' : 'stats';
+    }
+
+    const showStats = activeView === 'stats';
+    const showRankings = activeView === 'rankings' && canShowRankingsView;
+    const showValue = activeView === 'value' && canShowValueView;
+
+    // First reset all cell/header display styles.
+    document.querySelectorAll('.players-table th, .players-table td').forEach(el => {
+      el.style.display = '';
     });
-    document.querySelectorAll('.col-group--rankings').forEach(el => {
-      el.style.display = showRankings ? '' : 'none';
-    });
+
+    if (showValue) {
+      // Value view: keep only Player, Age, My Rank, PPG, and the value money columns.
+      document.querySelectorAll('.players-table th, .players-table td').forEach(el => {
+        el.style.display = 'none';
+      });
+      const keepSelectors = [
+        '.players-table th[data-sort="name"]',
+        '.players-table th[data-sort="age"]',
+        '.players-table th.col-my-rank',
+        '.players-table th.col-value-ppg',
+        '.players-table th.col-value-money',
+        '.players-table td.cell-player',
+        '.players-table td.cell-age',
+        '.players-table td.col-my-rank',
+        '.players-table td.col-value-ppg',
+        '.players-table td.col-value-money',
+      ];
+      for (const selector of keepSelectors) {
+        document.querySelectorAll(selector).forEach(el => {
+          el.style.display = '';
+        });
+      }
+    } else {
+      document.querySelectorAll('.col-group--stats').forEach(el => {
+        el.style.display = showStats ? '' : 'none';
+      });
+      document.querySelectorAll('.col-group--rankings').forEach(el => {
+        el.style.display = showRankings ? '' : 'none';
+      });
+      // Hide value-only columns outside value view. Keep My Rank visible in rankings view.
+      document.querySelectorAll('.col-group--value:not(.col-group--rankings)').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
 
     // Update button active states
-    for (const group of ['stats', 'rankings']) {
+    for (const group of ['stats', 'rankings', 'value']) {
       const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
       if (btn) {
         const isActive = group === activeView;
@@ -561,17 +924,23 @@ const faCountsJson = JSON.stringify(faCounts);
       }
     }
 
-    // Show/hide the toggle bar — only visible when rankings are available
+    // Hide unavailable toggle buttons
+    const rankingsBtn = document.getElementById('col-group-btn-rankings');
+    if (rankingsBtn) rankingsBtn.style.display = canShowRankingsView ? '' : 'none';
+    const valueBtn = document.getElementById('col-group-btn-value');
+    if (valueBtn) valueBtn.style.display = canShowValueView ? '' : 'none';
+
+    // Show/hide the toggle bar when at least one alternate view is available
     const toggleBar = document.getElementById('col-group-toggles');
     if (toggleBar) {
-      toggleBar.style.display = hasRankingColumns ? '' : 'none';
+      toggleBar.style.display = (canShowRankingsView || canShowValueView) ? '' : 'none';
     }
 
     updateLastVisibleCol();
   }
 
   function applyContractVisibility() {
-    const display = showRostered ? '' : 'none';
+    const display = (showRostered && activeView !== 'value') ? '' : 'none';
     document.querySelectorAll('.col-contract').forEach(el => {
       el.style.display = display;
     });
@@ -706,6 +1075,30 @@ const faCountsJson = JSON.stringify(faCounts);
           aVal = a.ppg ?? -1;
           bVal = b.ppg ?? -1;
           break;
+        case 'estimatedCost':
+          aVal = a.estimatedCost ?? -1;
+          bVal = b.estimatedCost ?? -1;
+          break;
+        case 'salaryYear1':
+          aVal = a.salaryYear1 ?? -1;
+          bVal = b.salaryYear1 ?? -1;
+          break;
+        case 'salaryYear2':
+          aVal = a.salaryYear2 ?? -1;
+          bVal = b.salaryYear2 ?? -1;
+          break;
+        case 'salaryYear3':
+          aVal = a.salaryYear3 ?? -1;
+          bVal = b.salaryYear3 ?? -1;
+          break;
+        case 'dollarValue':
+          aVal = a.dollarValue ?? -1;
+          bVal = b.dollarValue ?? -1;
+          break;
+        case 'surplusValue':
+          aVal = a.surplusValue ?? -Infinity;
+          bVal = b.surplusValue ?? -Infinity;
+          break;
         default:
           // Dynamic ranking columns: sort key is "ranking_{importId}"
           if (currentSort.startsWith('ranking_')) {
@@ -723,6 +1116,74 @@ const faCountsJson = JSON.stringify(faCounts);
     });
   }
 
+  // Shared advanced-filter predicate (used for both filtering and counting)
+  function passesAdvancedFilters(p) {
+    // NFL Team filter
+    if (filterTeam && p.team !== filterTeam) return false;
+
+    // Age range
+    if (filterAgeMin != null && (p.age == null || p.age < filterAgeMin)) return false;
+    if (filterAgeMax != null && (p.age == null || p.age > filterAgeMax)) return false;
+
+    // Experience filter
+    if (filterExp) {
+      const exp = p.exp;
+      switch (filterExp) {
+        case 'rookie': if (!p.rookie) return false; break;
+        case '1-2': if (exp == null || exp < 1 || exp > 2) return false; break;
+        case '3-5': if (exp == null || exp < 3 || exp > 5) return false; break;
+        case '6-10': if (exp == null || exp < 6 || exp > 10) return false; break;
+        case '10+': if (exp == null || exp < 10) return false; break;
+      }
+    }
+
+    // Draft round filter
+    if (filterDraft) {
+      switch (filterDraft) {
+        case '1': if (p.draftRd !== 1) return false; break;
+        case '2': if (p.draftRd !== 2) return false; break;
+        case '3': if (p.draftRd !== 3) return false; break;
+        case '4+': if (p.draftRd == null || p.draftRd < 4) return false; break;
+        case 'udfa': if (p.draftRd != null) return false; break;
+      }
+    }
+
+    // Height filter (in inches)
+    if (filterHtMin != null && (p.height == null || p.height < filterHtMin)) return false;
+    if (filterHtMax != null && (p.height == null || p.height > filterHtMax)) return false;
+
+    // Weight filter (in lbs)
+    if (filterWtMin != null && (p.weight == null || p.weight < filterWtMin)) return false;
+    if (filterWtMax != null && (p.weight == null || p.weight > filterWtMax)) return false;
+
+    return true;
+  }
+
+  function countActiveFilters() {
+    let count = 0;
+    if (filterTeam) count++;
+    if (filterAgeMin != null || filterAgeMax != null) count++;
+    if (filterHtMin != null || filterHtMax != null) count++;
+    if (filterWtMin != null || filterWtMax != null) count++;
+    if (filterExp) count++;
+    if (filterDraft) count++;
+    if (showRostered) count++;
+    if (showRookies) count++;
+    return count;
+  }
+
+  function updateFilterBadge() {
+    const badge = document.getElementById('filter-badge');
+    const count = countActiveFilters();
+    if (badge) {
+      badge.textContent = String(count);
+      badge.style.display = count > 0 ? '' : 'none';
+    }
+    // Also update the button active state
+    const btn = document.getElementById('filter-toggle-btn');
+    if (btn) btn.classList.toggle('has-filters', count > 0);
+  }
+
   function filterPlayers() {
     const query = searchQuery.toLowerCase();
     filteredPlayers = players.filter(p => {
@@ -735,6 +1196,9 @@ const faCountsJson = JSON.stringify(faCounts);
       // Position filter
       if (activePosition !== 'ALL' && p.position !== activePosition) return false;
 
+      // Advanced filters
+      if (!passesAdvancedFilters(p)) return false;
+
       // Search
       if (query) {
         return p.name.toLowerCase().includes(query) ||
@@ -743,10 +1207,11 @@ const faCountsJson = JSON.stringify(faCounts);
       return true;
     });
 
-    // Update category counts based on current filters + search
+    // Update category counts based on current filters + search (minus position filter)
     const pool = players.filter(p => {
       if (!showRostered && p.rostered) return false;
       if (!showRookies && p.rookie) return false;
+      if (!passesAdvancedFilters(p)) return false;
       if (query) {
         return p.name.toLowerCase().includes(query) ||
                p.team.toLowerCase().includes(query);
@@ -762,6 +1227,7 @@ const faCountsJson = JSON.stringify(faCounts);
       if (el) el.textContent = String(counts[pos] || 0);
     }
 
+    updateFilterBadge();
     sortPlayers();
     visibleCount = BATCH_SIZE;
     render();
@@ -797,8 +1263,7 @@ const faCountsJson = JSON.stringify(faCounts);
       const modalJson = escapeAttr(JSON.stringify({
         id: p.id, espnId: p.espnId || null, name: p.name,
         position: p.position, nflTeam: p.team,
-        college: p.college || null, collegeLogo: p.collegeLogo || null,
-        height: p.height || null,
+        college: p.college || null, height: p.height || null,
         weight: p.weight || null, number: p.jersey || null,
         birthdate: p.birthdate || null, experience: p.exp != null ? p.exp : null,
         draftYear: p.draftYear || null, draftTeam: p.draftTeam || null,
@@ -808,7 +1273,7 @@ const faCountsJson = JSON.stringify(faCounts);
       }));
       const rosteredDot = p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : '';
 
-      html += `<tr class="${rosteredClass}">
+      html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}">
         <td class="cell-rank">${rank}</td>
         <td class="cell-player">
           <div class="player-cell">
@@ -819,7 +1284,7 @@ const faCountsJson = JSON.stringify(faCounts);
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>
               <div class="player-meta">
-                <img src="${logo}" alt="${p.team}" class="player-meta__logo" /><span class="player-meta__pos">${posLabel}</span>
+                ${isDef ? '' : `<img src="${logo}" alt="${p.team}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>
             </div>
           </div>
@@ -830,9 +1295,9 @@ const faCountsJson = JSON.stringify(faCounts);
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
       html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${p.college}" title="${p.college}" class="college-logo" loading="lazy" decoding="async" />` : (p.college ? p.college : '<span class="na">-</span>')}</td>
         <td class="cell-sm col-always-profile">${htDisplay}</td>
-        <td class="cell-sm col-always-profile">${wtDisplay}</td>
-        <td class="cell-text col-group--stats">${p.college ? p.college : '<span class="na">-</span>'}</td>`;
+        <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
 
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
@@ -840,7 +1305,8 @@ const faCountsJson = JSON.stringify(faCounts);
         const avgCls = col.isAverage ? ' col-ranking-avg' : '';
         const compositeCls = col.isComposite ? ' col-ranking-composite' : '';
         const borderCls = col.isLastCompositeMember ? ' col-ranking-member-last' : '';
-        html += `<td class="cell-num col-group--rankings${avgCls}${compositeCls}${borderCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
+        const myRankCls = col.isComposite ? ' col-my-rank col-group--value' : '';
+        html += `<td class="cell-num col-group--rankings${avgCls}${compositeCls}${borderCls}${myRankCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasSnapCounts) {
@@ -854,11 +1320,35 @@ const faCountsJson = JSON.stringify(faCounts);
       }
 
       if (hasLastYrPts && hasSnapCounts) {
-        html += `<td class="cell-num col-group--stats">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats col-value-ppg">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasProjected) {
         html += `<td class="cell-num cell-pts col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+
+      if (isAdmin && hasSurplusData) {
+        const fmtDollar = (v) => {
+          if (v == null) return '<span class="na">-</span>';
+          const abs = Math.abs(v);
+          const sign = v < 0 ? '-' : '';
+          return sign + '$' + (abs >= 1000000 ? (abs / 1000000).toFixed(1) + 'M' : (abs / 1000).toFixed(0) + 'K');
+        };
+        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.estimatedCost)}</td>`;
+        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.salaryYear1)}</td>`;
+        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.salaryYear2)}</td>`;
+        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.salaryYear3)}</td>`;
+        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.dollarValue)}</td>`;
+        if (p.surplusValue != null) {
+          const isPositive = p.surplusValue >= 0;
+          const prefix = isPositive ? '+$' : '-$';
+          const abs = Math.abs(p.surplusValue);
+          const formatted = abs >= 1000000 ? (abs / 1000000).toFixed(1) + 'M' : (abs / 1000).toFixed(0) + 'K';
+          const cls = isPositive ? 'surplus-positive' : 'surplus-negative';
+          html += `<td class="cell-num col-group--value col-value-money col-surplus ${cls}">${prefix}${formatted}</td>`;
+        } else {
+          html += `<td class="cell-num col-group--value col-value-money col-surplus"><span class="na">-</span></td>`;
+        }
       }
 
       html += `<td class="cell-sm col-contract">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
@@ -901,7 +1391,7 @@ const faCountsJson = JSON.stringify(faCounts);
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue']);
 
   // CustomEvent-based API for the rankings module script to interact with this page.
   // All events use the document as the event bus — no global window properties needed.
@@ -912,8 +1402,9 @@ const faCountsJson = JSON.stringify(faCounts);
       // Default to rankings view when available and user hasn't explicitly chosen
       activeView = 'rankings';
     } else if (!e.detail.hasColumns && activeView === 'rankings') {
-      // If rankings were removed and user was viewing them, switch back to stats
-      activeView = 'stats';
+      // If ranking imports are removed while viewing rankings, fall back to
+      // value view when available, otherwise stats.
+      activeView = (isAdmin && hasSurplusData) ? 'value' : 'stats';
     }
     // Auto-sort by "My Rank" composite when it exists and user hasn't explicitly sorted
     if (e.detail.hasComposite && !hasExplicitSortPref) {
@@ -959,14 +1450,14 @@ const faCountsJson = JSON.stringify(faCounts);
     if (!table || table.dataset.init) return;
     table.dataset.init = 'true';
 
-    // Category tabs
+    // Category tabs (position pills in hero)
     const tabsEl = document.getElementById('category-tabs');
     if (tabsEl) {
       tabsEl.addEventListener('click', (e) => {
-        const tab = e.target.closest('.cat-tab');
+        const tab = e.target.closest('.pos-pill');
         if (!tab) return;
         activePosition = tab.getAttribute('data-pos');
-        tabsEl.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+        tabsEl.querySelectorAll('.pos-pill').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         filterPlayers();
       });
@@ -982,6 +1473,17 @@ const faCountsJson = JSON.stringify(faCounts);
           searchQuery = e.target.value;
           filterPlayers();
         }, 200);
+      });
+    }
+
+    // Filter panel toggle
+    const filterToggleBtn = document.getElementById('filter-toggle-btn');
+    const filtersPanel = document.getElementById('filters-panel');
+    if (filterToggleBtn && filtersPanel) {
+      filterToggleBtn.addEventListener('click', () => {
+        filtersOpen = !filtersOpen;
+        filtersPanel.classList.toggle('open', filtersOpen);
+        filterToggleBtn.classList.toggle('active', filtersOpen);
       });
     }
 
@@ -1005,6 +1507,121 @@ const faCountsJson = JSON.stringify(faCounts);
       });
     }
 
+    // NFL Team filter
+    const teamSelect = document.getElementById('filter-team');
+    if (teamSelect) {
+      teamSelect.addEventListener('change', (e) => {
+        filterTeam = e.target.value;
+        filterPlayers();
+      });
+    }
+
+    // Age range filters
+    const ageMin = document.getElementById('filter-age-min');
+    const ageMax = document.getElementById('filter-age-max');
+    if (ageMin) {
+      ageMin.addEventListener('change', (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        filterAgeMin = (val && !isNaN(val)) ? val : null;
+        filterPlayers();
+      });
+    }
+    if (ageMax) {
+      ageMax.addEventListener('change', (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        filterAgeMax = (val && !isNaN(val)) ? val : null;
+        filterPlayers();
+      });
+    }
+
+    // Height range filters
+    const htMin = document.getElementById('filter-ht-min');
+    const htMax = document.getElementById('filter-ht-max');
+    if (htMin) {
+      htMin.addEventListener('change', (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        filterHtMin = (val && !isNaN(val)) ? val : null;
+        filterPlayers();
+      });
+    }
+    if (htMax) {
+      htMax.addEventListener('change', (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        filterHtMax = (val && !isNaN(val)) ? val : null;
+        filterPlayers();
+      });
+    }
+
+    // Weight range filters
+    const wtMin = document.getElementById('filter-wt-min');
+    const wtMax = document.getElementById('filter-wt-max');
+    if (wtMin) {
+      wtMin.addEventListener('change', (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        filterWtMin = (val && !isNaN(val)) ? val : null;
+        filterPlayers();
+      });
+    }
+    if (wtMax) {
+      wtMax.addEventListener('change', (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        filterWtMax = (val && !isNaN(val)) ? val : null;
+        filterPlayers();
+      });
+    }
+
+    // Experience filter
+    const expSelect = document.getElementById('filter-exp');
+    if (expSelect) {
+      expSelect.addEventListener('change', (e) => {
+        filterExp = e.target.value;
+        filterPlayers();
+      });
+    }
+
+    // Draft round filter
+    const draftSelect = document.getElementById('filter-draft');
+    if (draftSelect) {
+      draftSelect.addEventListener('change', (e) => {
+        filterDraft = e.target.value;
+        filterPlayers();
+      });
+    }
+
+    // Clear all filters
+    const clearBtn = document.getElementById('filter-clear-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        filterTeam = '';
+        filterAgeMin = null;
+        filterAgeMax = null;
+        filterHtMin = null;
+        filterHtMax = null;
+        filterWtMin = null;
+        filterWtMax = null;
+        filterExp = '';
+        filterDraft = '';
+        showRostered = false;
+        showRookies = false;
+
+        // Reset DOM controls
+        if (teamSelect) teamSelect.value = '';
+        if (ageMin) ageMin.value = '';
+        if (ageMax) ageMax.value = '';
+        if (htMin) htMin.value = '';
+        if (htMax) htMax.value = '';
+        if (wtMin) wtMin.value = '';
+        if (wtMax) wtMax.value = '';
+        if (expSelect) expSelect.value = '';
+        if (draftSelect) draftSelect.value = '';
+        if (rosterCheck) rosterCheck.checked = false;
+        if (rookieCheck) rookieCheck.checked = false;
+
+        document.dispatchEvent(new CustomEvent('rankings:rostered-changed'));
+        filterPlayers();
+      });
+    }
+
     // Sorting
     document.querySelectorAll('.players-table th.sortable').forEach(th => {
       th.addEventListener('click', () => {
@@ -1021,7 +1638,7 @@ const faCountsJson = JSON.stringify(faCounts);
       });
     });
 
-    // Column group toggles — mutually exclusive stats vs rankings
+    // Column group toggles
     const colGroupToggles = document.getElementById('col-group-toggles');
     if (colGroupToggles) {
       colGroupToggles.addEventListener('click', (e) => {
@@ -1115,7 +1732,7 @@ const faCountsJson = JSON.stringify(faCounts);
       th.dataset.rankingCol = 'true';
 
       if (col.isComposite) {
-        th.classList.add('col-ranking-composite');
+        th.classList.add('col-ranking-composite', 'col-my-rank', 'col-group--value');
         const memberCount = limitedColumns.filter((c: any) => c.isCompositeMember).length;
         th.title = `My Rank — weighted composite of ${memberCount} ranking sources`;
       } else if (col.isAverage) {
@@ -1207,105 +1824,225 @@ const faCountsJson = JSON.stringify(faCounts);
   } else {
     initModalTrigger();
   }
-
-  // Re-initialize after View Transitions (Astro page navigation)
-  document.addEventListener('astro:page-load', initModalTrigger);
 </script>
 
 <style>
+  /* =============================================
+     FREE AGENTS PAGE — SPORTS WEBSITE REDESIGN
+     ============================================= */
+
   .players-page {
     max-width: 100%;
     padding-bottom: 3rem;
   }
 
-  /* Header */
-  .page-header {
-    margin-bottom: 1.25rem;
-  }
-  .page-header h1 {
-    margin: 0 0 0.25rem 0;
-  }
-  .page-subtitle {
-    color: var(--text-secondary-color, #64748b);
-    font-size: 0.9rem;
-    margin: 0;
+  /* ── Remove gap between nav header and hero ── */
+  :global(.container-header) {
+    margin-bottom: 0 !important;
+    padding-bottom: 0.5rem !important;
   }
 
-  /* Category Tabs */
-  .category-tabs {
+  /* ── Dark Gradient Hero ── */
+  .players-hero {
+    background: linear-gradient(135deg, #0f2b4a 0%, #1c497c 50%, #2563eb 100%);
+    color: white;
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: var(--radius-lg, 1rem);
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .players-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Hero Player Background Images (rotating) ── */
+  .hero-players-bg {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 55%;
+    overflow: hidden;
+    pointer-events: none;
+    mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.6) 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.6) 100%);
+  }
+  .hero-players-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    z-index: 1;
+  }
+  .hero-player-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 20%;
+    filter: contrast(1.05) saturate(1.08) brightness(0.85);
+    opacity: 0;
+    animation: heroRotate 30s ease-in-out infinite;
+  }
+
+  @keyframes heroRotate {
+    0%   { opacity: 0; }
+    3%   { opacity: 1; }
+    33%  { opacity: 1; }
+    36%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  .hero-top {
+    position: relative;
+    z-index: 2;
     display: flex;
-    gap: 0.375rem;
-    margin-bottom: 1rem;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.25rem;
+  }
+  .hero-title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
     flex-wrap: wrap;
   }
-  .cat-tab {
+  .hero-title {
+    font-size: var(--font-size-xl, 1.75rem);
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: white;
+  }
+  .hero-count {
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.6);
+    font-weight: 400;
+  }
+
+  /* ── Hero Search ── */
+  .hero-search {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 1.25rem;
+    max-width: 520px;
+  }
+  .hero-search__icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: #94a3b8;
+    pointer-events: none;
+  }
+  .hero-search__input {
+    width: 100%;
+    padding: 0.7rem 0.875rem 0.7rem 2.5rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius-md, 0.5rem);
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    color: white;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .hero-search__input::placeholder {
+    color: rgba(255,255,255,0.45);
+  }
+  .hero-search__input:focus {
+    outline: none;
+    background: rgba(255,255,255,0.95);
+    color: #111;
+    border-color: transparent;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .hero-search__input:focus::placeholder {
+    color: #94a3b8;
+  }
+  .hero-search__input:focus + .hero-search__icon,
+  .hero-search:has(.hero-search__input:focus) .hero-search__icon {
+    color: #64748b;
+  }
+
+  /* ── Position Pills (in hero) ── */
+  .hero-positions {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+  .pos-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border-color, #d1d5db);
-    border-radius: 8px;
-    background: white;
-    font-size: 0.875rem;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius-full, 999px);
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.85);
+    font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
-    color: #4b5563;
+    white-space: nowrap;
   }
-  .cat-tab:hover {
-    border-color: var(--color-primary, #1c497c);
-    color: var(--color-primary, #1c497c);
-  }
-  .cat-tab.active {
-    background: var(--color-primary, #1c497c);
+  .pos-pill:hover {
+    background: rgba(255,255,255,0.2);
     color: white;
-    border-color: var(--color-primary, #1c497c);
+    border-color: rgba(255,255,255,0.35);
   }
-  .cat-count {
+  .pos-pill.active {
+    background: rgba(255,255,255,0.92);
+    color: #0f2b4a;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .pos-pill__count {
     font-size: 0.7rem;
     font-weight: 700;
-    padding: 0.1rem 0.4rem;
+    padding: 0.05rem 0.35rem;
     border-radius: 10px;
-    background: rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.15);
     min-width: 1.25rem;
     text-align: center;
   }
-  .cat-tab.active .cat-count {
-    background: rgba(255,255,255,0.25);
+  .pos-pill.active .pos-pill__count {
+    background: rgba(15,43,74,0.12);
   }
 
-  /* Toolbar */
-  .toolbar {
+  /* ── Toolbar (below hero) ── */
+  .players-toolbar {
     display: flex;
-    gap: 1rem;
     align-items: center;
-    margin-bottom: 0.75rem;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
     flex-wrap: wrap;
   }
-  .search-input {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color, #d1d5db);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    min-width: 220px;
-    background: white;
-  }
-  .search-input:focus {
-    outline: none;
-    border-color: var(--color-primary, #1c497c);
-    box-shadow: 0 0 0 2px rgba(28,73,124,0.12);
-  }
-  .roster-toggle {
+  .toolbar-left, .toolbar-center, .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.8125rem;
-    color: #64748b;
-    cursor: pointer;
-    user-select: none;
+    gap: 0.5rem;
   }
-  .roster-toggle input {
-    accent-color: var(--color-primary, #1c497c);
+  .showing-count {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #94a3b8);
+  }
+  .showing-count strong {
+    color: var(--color-gray-600, #4b5563);
+    font-weight: 600;
   }
 
   /* Column group toggles */
@@ -1313,7 +2050,6 @@ const faCountsJson = JSON.stringify(faCounts);
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    flex-wrap: wrap;
   }
   .col-group-toggles__label {
     font-size: 0.8125rem;
@@ -1322,8 +2058,8 @@ const faCountsJson = JSON.stringify(faCounts);
   }
   .col-group-btn {
     padding: 0.25rem 0.65rem;
-    border: 1px solid var(--border-color, #d1d5db);
-    border-radius: 999px;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-full, 999px);
     background: white;
     font-size: 0.78rem;
     font-weight: 600;
@@ -1342,46 +2078,197 @@ const faCountsJson = JSON.stringify(faCounts);
     color: white;
   }
 
-  /* Table Controls */
-  .table-controls {
-    display: flex;
-    justify-content: space-between;
+  /* ── Filter Toggle Button ── */
+  .filter-toggle-btn {
+    display: inline-flex;
     align-items: center;
-    margin-bottom: 0.5rem;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    background: white;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
   }
-  .showing-count {
-    font-size: 0.8rem;
-    color: #94a3b8;
+  .filter-toggle-btn__icon {
+    width: 15px;
+    height: 15px;
   }
+  .filter-toggle-btn:hover {
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+  .filter-toggle-btn.active,
+  .filter-toggle-btn.has-filters {
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+    background: rgba(28,73,124,0.05);
+  }
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--color-primary, #1c497c);
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* ── Collapsible Filters Panel ── */
+  .filters-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .filters-panel.open {
+    max-height: 300px;
+  }
+  .filters-panel__inner {
+    background: white;
+    border: 1px solid var(--content-border, #dee2e6);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.875rem;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .filter-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    background: white;
+  }
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--color-primary, #1c497c);
+    box-shadow: 0 0 0 2px rgba(28,73,124,0.12);
+  }
+  .filter-range {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .filter-range__sep {
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.875rem;
+  }
+  .filter-input-num {
+    width: 70px;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    text-align: center;
+  }
+  .filter-input-num:focus {
+    outline: none;
+    border-color: var(--color-primary, #1c497c);
+    box-shadow: 0 0 0 2px rgba(28,73,124,0.12);
+  }
+  .filters-row-bottom {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+  .filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    user-select: none;
+  }
+  .filter-checkbox input {
+    accent-color: var(--color-primary, #1c497c);
+  }
+  .filter-clear-btn {
+    margin-left: auto;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--color-error, #dc2626);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: white;
+    color: var(--color-error, #dc2626);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-clear-btn:hover {
+    background: var(--color-error, #dc2626);
+    color: white;
+  }
+
+  /* ── Show More ── */
   .show-more-wrapper {
     display: flex;
     justify-content: center;
-    padding: 1rem 0 0;
+    padding: 1.25rem 0 0;
   }
   .show-more-btn {
-    padding: 0.5rem 2rem;
-    border: 1px solid var(--border-color, #dee2e6);
-    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 2rem;
+    border: 1px solid var(--content-border, #dee2e6);
+    border-radius: var(--radius-md, 0.5rem);
     background: white;
     color: var(--color-primary, #1c497c);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s;
+  }
+  .show-more-btn__icon {
+    width: 16px;
+    height: 16px;
   }
   .show-more-btn:hover {
     border-color: var(--color-primary, #1c497c);
     background: var(--color-primary, #1c497c);
     color: white;
+    box-shadow: var(--shadow-md);
   }
 
-  /* Table */
+  /* ── Table ── */
   .table-wrapper {
     overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: var(--radius-md, 0.5rem);
     background: white;
-    padding-bottom: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    margin-top: 0.5rem;
   }
   .players-table {
     width: 100%;
@@ -1395,19 +2282,24 @@ const faCountsJson = JSON.stringify(faCounts);
     top: 0;
     z-index: 10;
   }
+  .players-table thead tr {
+    border-left: 3px solid #1c497c;
+    border-right: 3px solid #286aa7;
+  }
   .players-table th {
-    padding: 0.5rem 0.325rem;
+    padding: 0.6rem 0.375rem;
     text-align: left;
     font-weight: 600;
     white-space: nowrap;
-    font-size: 0.8rem;
-    letter-spacing: 0.02em;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
   .players-table th:first-child {
-    padding-left: 0.625rem;
+    padding-left: 0.75rem;
   }
   .players-table th.last-visible-col {
-    padding-right: 0.625rem;
+    padding-right: 0.75rem;
   }
   .players-table th.sortable {
     cursor: pointer !important;
@@ -1430,11 +2322,9 @@ const faCountsJson = JSON.stringify(faCounts);
     gap: 0.25rem;
   }
   .sort-arrow {
-    font-size: 0.6rem;
-    opacity: 0.85;
+    font-size: 0.55rem;
+    opacity: 0.8;
   }
-
-  /* Profile columns (Exp, Draft, Ht, Wt) are always visible — no toggle needed */
 
   /* Columns */
   .col-rank { width: min-content; text-align: center; }
@@ -1447,38 +2337,74 @@ const faCountsJson = JSON.stringify(faCounts);
   .col-text { text-align: left; }
   .th-content--left { justify-content: flex-start; }
 
-  /* Cells */
+  /* ── Cells ── */
   :global(.players-table td) {
-    padding: 0.375rem 0.325rem;
+    padding: 0.45rem 0.375rem;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
   }
   :global(.players-table td.last-visible-col) {
-    padding-right: 0.625rem;
+    padding-right: 0.75rem;
   }
-  :global(.players-table tbody tr:first-child td) {
-    padding-top: 0.625rem;
+  :global(.players-table td:first-child) {
+    padding-left: 0.75rem;
+  }
+
+  /* Alternating row backgrounds */
+  :global(.players-table tbody tr:nth-child(even)) {
+    background: var(--color-gray-50, #f9fafb);
   }
   :global(.players-table tbody tr:hover) {
-    background: #f0f4f8;
+    background: rgba(28, 73, 124, 0.04);
+  }
+
+  /* ── Position-colored left accent bars ── */
+  :global(.players-table tbody tr) {
+    border-left: 3px solid transparent;
+  }
+  :global(.players-table tbody tr[data-pos="qb"]) { border-left-color: #dc2626; }
+  :global(.players-table tbody tr[data-pos="rb"]) { border-left-color: #16a34a; }
+  :global(.players-table tbody tr[data-pos="wr"]) { border-left-color: #2563eb; }
+  :global(.players-table tbody tr[data-pos="te"]) { border-left-color: #d97706; }
+  :global(.players-table tbody tr[data-pos="pk"]) { border-left-color: #7c3aed; }
+  :global(.players-table tbody tr[data-pos="def"]) { border-left-color: #854d0e; }
+
+  :global(.college-logo) {
+    height: 1em;
+    width: auto;
+    vertical-align: middle;
+    object-fit: contain;
+  }
+  :global(.cell-college) {
+    text-align: center;
   }
 
   :global(.cell-rank) {
     text-align: center;
-    color: #b0b8c4;
+    color: var(--color-gray-400, #9ca3af);
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
   :global(.cell-age) {
     text-align: center;
     font-size: 0.8125rem;
-    color: #64748b;
+    color: var(--color-gray-600, #4b5563);
+    font-weight: 500;
   }
   :global(.cell-num) {
     text-align: right;
     font-variant-numeric: tabular-nums;
     font-size: 0.8125rem;
   }
+
+  /* Key stat highlight — Projected Points */
+  :global(.cell-pts) {
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* Ranking columns */
   :global(.col-ranking-avg),
   :global(.col-ranking-composite) {
     font-weight: 600;
@@ -1496,9 +2422,7 @@ const faCountsJson = JSON.stringify(faCounts);
     border-right: 1px solid #f1f5f9;
     padding-right: .5rem;
   }
-  :global(.cell-pts) {
-    font-weight: 600;
-  }
+
   :global(.na) {
     color: #d1d5db;
   }
@@ -1509,17 +2433,30 @@ const faCountsJson = JSON.stringify(faCounts);
   :global(.cell-sm) {
     text-align: center;
     font-size: 0.8125rem;
-    color: #64748b;
+    color: var(--color-gray-500, #64748b);
   }
   :global(.cell-text) {
     font-size: 0.8125rem;
-    color: #64748b;
+    color: var(--color-gray-500, #64748b);
     white-space: nowrap;
   }
 
-  /* Rostered row dim */
+  /* Surplus value color coding */
+  :global(.surplus-positive) {
+    color: #059669;
+    font-weight: 600;
+  }
+  :global(.surplus-negative) {
+    color: #dc2626;
+    font-weight: 600;
+  }
+  :global(.col-surplus) {
+    min-width: 80px;
+  }
+
+  /* Rostered row — dashed left border instead of full opacity dim */
   :global(.row--rostered) {
-    opacity: 0.55;
+    opacity: 0.5;
   }
   :global(.row--rostered:hover) {
     opacity: 0.8;
@@ -1548,27 +2485,53 @@ const faCountsJson = JSON.stringify(faCounts);
     font-size: 0.85rem;
   }
 
-  /* Responsive */
+  /* ── Responsive ── */
   @media (max-width: 767px) {
-    .toolbar {
+    .players-hero {
+      padding: 1.25rem 1rem 1.25rem;
+      margin: 0.75rem 0 0 0;
+    }
+    .hero-players-bg {
+      display: none;
+    }
+    .hero-title {
+      font-size: 1.35rem;
+    }
+    .hero-positions {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 2px;
+    }
+    .hero-positions::-webkit-scrollbar {
+      display: none;
+    }
+    .players-toolbar {
       flex-direction: column;
       align-items: stretch;
-    }
-    .search-input {
-      min-width: unset;
-      width: 100%;
-    }
-    .table-controls {
-      flex-direction: column;
       gap: 0.5rem;
+    }
+    .toolbar-left { order: 2; }
+    .toolbar-center { order: 1; }
+    .toolbar-right { order: 3; justify-content: flex-end; }
+    .filters-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .filters-row-bottom {
+      flex-direction: column;
       align-items: flex-start;
+      gap: 0.75rem;
     }
-    .category-tabs {
-      gap: 0.25rem;
+    .filter-clear-btn {
+      margin-left: 0;
     }
-    .cat-tab {
-      padding: 0.375rem 0.625rem;
-      font-size: 0.8125rem;
+  }
+
+  @media (max-width: 480px) {
+    .filters-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>
