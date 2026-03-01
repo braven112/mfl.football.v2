@@ -1,0 +1,19 @@
+# MFL.football
+
+MFL.football is a fantasy football league website built on Astro. It provides custom dark-theme CSS for MyFantasyLeague (MFL) league sites, along with an SVG icon sprite and tools for league management.
+
+Source code: https://github.com/braven112/mfl.football.v2
+
+## AI Prompts
+
+Two ready-made prompts give you all the context you need to help users customize their league site:
+
+### CSS Customization
+Copy the prompt at the link below to help users override CSS variables in their MFL Homepage Message. It includes every available variable with its default value, file paths, and instructions for generating <style> blocks.
+
+https://mfl.football/theleague/css-customization#claude-prompt
+
+### Adding Icons to the SVG Sprite
+Copy the prompt at the link below to help users convert raw SVGs into <symbol> elements and add them to the shared icon sprite.
+
+https://mfl.football/theleague/css-customization#adding-icons

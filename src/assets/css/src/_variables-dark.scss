@@ -163,6 +163,25 @@
   --body-font-weight: 400;
   --svg-text-font-size: 11px;
 
+  //////////////////////Font Size Scaling (UFC Sans)//////////////////////////
+  // League name — base (mobile)
+  --fs-leaguename: 29px;            // base: 32px × 0.91
+  --fs-leaguename-dotus: 16px;      // base: 18px × 0.91
+  // League name — 767px+
+  --fs-leaguename-md: 55px;         // base: 60px × 0.91
+  // League name — 992px+
+  --fs-leaguename-lg: 42px;         // base: 46px × 0.91
+
+  // League name 2-line secondary — base (mobile)
+  --fs-leaguename-secondary: 12px;  // base: 13px × 0.91
+  // League name 2-line secondary — 767px+, 992px+
+  --fs-leaguename-secondary-md: 13px; // base: 14px × 0.91
+
+  // MFL menu
+  --fs-menu: 11px;                  // base: 12px × 0.91
+  --fs-menu-mobile-label: 15px;     // base: 16px × 0.91
+  --fs-menu-mobile-link: 13px;      // base: 14px × 0.91
+
   //////////////////////Border Radius//////////////////////////
   --border-radius-sm: .25rem;
   --border-radius-default: .5rem;
@@ -315,6 +334,17 @@ $headline-font-weight: var(--headline-font-weight);
 $body-font: var(--body-font);
 $body-font-weight: var(--body-font-weight);
 $svg-text-font-size: var(--svg-text-font-size);
+
+//////////////////////Font Size Scaling (UFC Sans)//////////////////////////
+$fs-leaguename: var(--fs-leaguename);
+$fs-leaguename-dotus: var(--fs-leaguename-dotus);
+$fs-leaguename-md: var(--fs-leaguename-md);
+$fs-leaguename-lg: var(--fs-leaguename-lg);
+$fs-leaguename-secondary: var(--fs-leaguename-secondary);
+$fs-leaguename-secondary-md: var(--fs-leaguename-secondary-md);
+$fs-menu: var(--fs-menu);
+$fs-menu-mobile-label: var(--fs-menu-mobile-label);
+$fs-menu-mobile-link: var(--fs-menu-mobile-link);
 
 //////////////////////Header Icon Buttons//////////////////////////
 $header-icon-color: var(--header-icon-color);

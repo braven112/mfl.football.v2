@@ -84,6 +84,20 @@ const groups: VarGroup[] = [
     ]
   },
   {
+    label: 'Font Size Scaling (UFC)', id: 'font-scaling',
+    vars: [
+      { name: '--fs-leaguename', value: '', desc: 'League name font size (mobile)' },
+      { name: '--fs-leaguename-dotus', value: '', desc: 'League name ".us" suffix size' },
+      { name: '--fs-leaguename-md', value: '', desc: 'League name font size (tablet, 767px+)' },
+      { name: '--fs-leaguename-lg', value: '', desc: 'League name font size (desktop, 992px+)' },
+      { name: '--fs-leaguename-secondary', value: '', desc: '2-line league name secondary text (mobile)' },
+      { name: '--fs-leaguename-secondary-md', value: '', desc: '2-line league name secondary text (tablet+)' },
+      { name: '--fs-menu', value: '', desc: 'MFL top menu font size' },
+      { name: '--fs-menu-mobile-label', value: '', desc: 'Mobile menu label font size' },
+      { name: '--fs-menu-mobile-link', value: '', desc: 'Mobile menu link font size' },
+    ]
+  },
+  {
     label: 'MFL Top Menu', id: 'menu',
     vars: [
       { name: '--menu-bg-color', value: '', desc: 'Menu background' },
@@ -206,7 +220,11 @@ const groups: VarGroup[] = [
       { name: '--color-bg-base', value: '', desc: 'Roster card base background' },
       { name: '--color-bg-subtle', value: '', desc: 'Subtle background areas' },
       { name: '--color-bg-practice', value: '', desc: 'Practice squad row' },
+      { name: '--color-bg-practice-alt', value: '', desc: 'Practice squad alternating row' },
       { name: '--color-bg-injured', value: '', desc: 'Injured Reserve row' },
+      { name: '--color-bg-injured-alt', value: '', desc: 'Injured Reserve alternating row' },
+      { name: '--color-border-practice', value: '', desc: 'Practice squad row border' },
+      { name: '--color-border-injured', value: '', desc: 'Injured Reserve row border' },
     ]
   },
   {
