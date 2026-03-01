@@ -1,12 +1,13 @@
 /**
- * TradeValueAnalysis — shows surplus value per player and net balance per side.
+ * TradeValueAnalysis — shows surplus value per player and draft pick,
+ * with net balance per side.
  *
  * Only renders when surplusMap is non-empty (admin users only).
- * Positioned below the cap impact table in the trade builder.
+ * Draft pick values use TheLeague's slotted salary schedule.
  */
 
 import React, { useMemo } from 'react';
-import type { TradeBuilderPlayer, PlayerSurplusData, DraftPickKey } from '../../../types/trade-builder';
+import type { TradeBuilderPlayer, PlayerSurplusData, DraftPickKey, DraftPickValueData } from '../../../types/trade-builder';
 import { formatCompactNumber } from '../../../utils/formatters';
 
 interface Props {
@@ -19,11 +20,16 @@ interface Props {
   teamADraftPicks: DraftPickKey[];
   teamBDraftPicks: DraftPickKey[];
   surplusMap: Record<string, PlayerSurplusData>;
+  pickValueMap?: Record<string, DraftPickValueData>;
 }
 
 function formatSurplus(value: number): string {
   const prefix = value >= 0 ? '+' : '';
   return `${prefix}$${formatCompactNumber(Math.abs(value))}`;
+}
+
+function pickKey(pick: DraftPickKey): string {
+  return `${pick.year}-${pick.round}-${pick.originalPickFor}`;
 }
 
 export default function TradeValueAnalysis({
@@ -36,13 +42,25 @@ export default function TradeValueAnalysis({
   teamADraftPicks,
   teamBDraftPicks,
   surplusMap,
+  pickValueMap,
 }: Props) {
   const analysis = useMemo(() => {
-    const sumSurplus = (players: TradeBuilderPlayer[]) =>
+    const sumPlayerSurplus = (players: TradeBuilderPlayer[]) =>
       players.reduce((sum, p) => sum + (surplusMap[p.id]?.surplusValue ?? 0), 0);
 
-    const teamAGivesSurplus = sumSurplus(teamAPlayers);
-    const teamBGivesSurplus = sumSurplus(teamBPlayers);
+    const sumPickSurplus = (picks: DraftPickKey[]) =>
+      picks.reduce((sum, p) => {
+        const val = pickValueMap?.[pickKey(p)];
+        return sum + (val?.surplusValue ?? 0);
+      }, 0);
+
+    const teamAPlayerSurplus = sumPlayerSurplus(teamAPlayers);
+    const teamBPlayerSurplus = sumPlayerSurplus(teamBPlayers);
+    const teamAPickSurplus = sumPickSurplus(teamADraftPicks);
+    const teamBPickSurplus = sumPickSurplus(teamBDraftPicks);
+
+    const teamAGivesSurplus = teamAPlayerSurplus + teamAPickSurplus;
+    const teamBGivesSurplus = teamBPlayerSurplus + teamBPickSurplus;
 
     return {
       teamAGivesSurplus,
@@ -50,7 +68,7 @@ export default function TradeValueAnalysis({
       netSurplusA: teamBGivesSurplus - teamAGivesSurplus,
       netSurplusB: teamAGivesSurplus - teamBGivesSurplus,
     };
-  }, [teamAPlayers, teamBPlayers, surplusMap]);
+  }, [teamAPlayers, teamBPlayers, teamADraftPicks, teamBDraftPicks, surplusMap, pickValueMap]);
 
   if (Object.keys(surplusMap).length === 0) return null;
 
@@ -79,14 +97,26 @@ export default function TradeValueAnalysis({
     );
   };
 
-  const renderDraftPick = (pick: DraftPickKey) => (
-    <div key={`${pick.year}-${pick.round}-${pick.originalPickFor}`} className="tva__player">
-      <span className="tva__player-name">
-        {pick.year} Rd {pick.round}
-      </span>
-      <span className="tva__player-value tva__player-value--na">n/a</span>
-    </div>
-  );
+  const renderDraftPick = (pick: DraftPickKey) => {
+    const val = pickValueMap?.[pickKey(pick)];
+    const hasPkValue = val && val.surplusValue !== 0;
+
+    return (
+      <div key={pickKey(pick)} className="tva__player">
+        <span className="tva__player-name">
+          {pick.year} Rd {pick.round}
+        </span>
+        {hasPkValue ? (
+          <span className="tva__player-value tva__player-value--positive">
+            {formatSurplus(val.surplusValue)}
+            <span className="tva__pick-detail">/yr</span>
+          </span>
+        ) : (
+          <span className="tva__player-value tva__player-value--na">n/a</span>
+        )}
+      </div>
+    );
+  };
 
   const hasTeamAAssets = teamAPlayers.length > 0 || teamADraftPicks.length > 0;
   const hasTeamBAssets = teamBPlayers.length > 0 || teamBDraftPicks.length > 0;
@@ -250,6 +280,12 @@ export default function TradeValueAnalysis({
           color: var(--text-secondary-color, #64748b);
           font-style: italic;
           font-weight: 400;
+        }
+        .tva__pick-detail {
+          font-weight: 400;
+          font-size: 0.7rem;
+          opacity: 0.7;
+          margin-left: 1px;
         }
         .tva__empty {
           font-size: 0.8rem;

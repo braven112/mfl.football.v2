@@ -30,7 +30,8 @@ import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../co
 import { getAuthUser } from '../../utils/auth';
 import { isAdminFranchise } from '../../config/nav-config';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
-import type { PlayerSurplusData } from '../../types/trade-builder';
+import { buildPickValueMap } from '../../utils/draft-pick-value';
+import type { PlayerSurplusData, DraftPickValueData } from '../../types/trade-builder';
 
 export const prerender = false;
 
@@ -425,6 +426,32 @@ if (showSurplusValue) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Draft Pick Values (admin-only) — assigns dollar surplus to draft picks
+// ---------------------------------------------------------------------------
+let pickValueMap: Record<string, DraftPickValueData> = {};
+
+if (showSurplusValue) {
+  // Gather all draft picks across all teams
+  const allPicks = teams.flatMap((t: any) =>
+    t.draftPicks.map((dp: any) => ({
+      year: dp.year,
+      round: dp.round,
+      originalPickFor: dp.originalPickFor,
+    }))
+  );
+  const rawPickValues = buildPickValueMap(allPicks);
+  for (const [key, val] of Object.entries(rawPickValues)) {
+    pickValueMap[key] = {
+      round: val.round,
+      expectedSalary: val.expectedSalary,
+      surplusValue: val.surplusValue,
+      totalSurplusOverContract: val.totalSurplusOverContract,
+      contractYears: val.contractYears,
+    };
+  }
+}
+
 const pageData = {
   teams,
   salaryYears: SALARY_YEARS,
@@ -433,6 +460,7 @@ const pageData = {
   leagueYear,
   positionAverages,
   ...(Object.keys(surplusMap).length > 0 ? { surplusMap } : {}),
+  ...(Object.keys(pickValueMap).length > 0 ? { pickValueMap } : {}),
 };
 ---
 

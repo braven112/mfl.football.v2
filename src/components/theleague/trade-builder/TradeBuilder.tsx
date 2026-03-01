@@ -389,6 +389,7 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
               teamADraftPicks={state.teamA.draftPicks}
               teamBDraftPicks={state.teamB.draftPicks}
               surplusMap={data.surplusMap}
+              pickValueMap={data.pickValueMap}
             />
           )}
           <MultiYearCapTable

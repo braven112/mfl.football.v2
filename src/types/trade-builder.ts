@@ -69,6 +69,15 @@ export interface PlayerSurplusData {
   surplusValue: number;
 }
 
+/** Draft pick value data (admin-only, from draft-pick-value calculator) */
+export interface DraftPickValueData {
+  round: number;
+  expectedSalary: number;
+  surplusValue: number;
+  totalSurplusOverContract: number;
+  contractYears: number;
+}
+
 /** All data the Astro page passes to React */
 export interface TradeBuilderPageData {
   teams: TradeBuilderTeam[];
@@ -78,6 +87,7 @@ export interface TradeBuilderPageData {
   leagueYear: number;
   positionAverages: PositionSalaryAverages;
   surplusMap?: Record<string, PlayerSurplusData>;
+  pickValueMap?: Record<string, DraftPickValueData>;
 }
 
 /** Key to uniquely identify a draft pick */
