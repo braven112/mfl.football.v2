@@ -9,16 +9,33 @@
  */
 
 import type { APIRoute } from 'astro';
-import { Redis } from '@upstash/redis';
 import { getAuthUser } from '../../utils/auth';
 import { isAdminFranchise } from '../../config/nav-config';
 import type { CustomRankingsState } from '../../types/custom-rankings';
 
-function getRedis(): Redis | null {
+type RedisClient = {
+  get: <T>(key: string) => Promise<T | null>;
+  set: (key: string, value: unknown) => Promise<unknown>;
+};
+
+let loggedMissingRedisModule = false;
+
+async function getRedis(): Promise<RedisClient | null> {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
-  return new Redis({ url, token });
+
+  try {
+    const { Redis } = await import('@upstash/redis');
+    return new Redis({ url, token });
+  } catch (error) {
+    // Local/dev fallback: do not crash route if Redis package is unavailable.
+    if (!loggedMissingRedisModule) {
+      loggedMissingRedisModule = true;
+      console.warn('Custom rankings KV unavailable: @upstash/redis is not installed.', error);
+    }
+    return null;
+  }
 }
 
 function makeKey(franchiseId: string): string {
@@ -34,7 +51,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
-  const redis = getRedis();
+  const redis = await getRedis();
   if (!redis) {
     return new Response(
       JSON.stringify({ data: null, error: 'Storage not configured' }),
@@ -66,7 +83,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  const redis = getRedis();
+  const redis = await getRedis();
   if (!redis) {
     return new Response(
       JSON.stringify({ success: false, error: 'Storage not configured' }),

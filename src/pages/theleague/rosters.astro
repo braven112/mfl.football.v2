@@ -4774,11 +4774,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       };
     }
     if (playerNflLogoDisplay) {
+      const isDef = playerData.position?.toUpperCase() === 'DEF';
       const logo =
-        playerData.nflLogo ||
+        !isDef && (playerData.nflLogo ||
         (playerData.nflTeam && playerData.nflTeam !== 'FA'
           ? getNflLogoUrl(playerData.nflTeam)
-          : '');
+          : ''));
       if (logo) {
         playerNflLogoDisplay.src = logo;
         playerNflLogoDisplay.alt = playerData.nflTeam ? `${playerData.nflTeam} logo` : 'Team logo';
@@ -5645,7 +5646,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 <div>
                   <strong>${player.name}</strong>
                   <div class="player-meta">
-                    <img src="${nflLogo}" alt="${player.nflTeam}" class="player-meta__logo" loading="lazy" />
+                    ${position === 'DEF' ? '' : `<img src="${nflLogo}" alt="${player.nflTeam}" class="player-meta__logo" loading="lazy" />`}
                     <span class="player-meta__pos">${position}</span>
                   </div>
                 </div>
