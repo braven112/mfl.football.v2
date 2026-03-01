@@ -378,6 +378,19 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
 
       {hasTrade && tradeImpactA && tradeImpactB && teamA && teamB && (
         <>
+          {data.surplusMap && Object.keys(data.surplusMap).length > 0 && (
+            <TradeValueAnalysis
+              teamAName={teamA.nameMedium}
+              teamBName={teamB.nameMedium}
+              teamAIcon={teamA.icon}
+              teamBIcon={teamB.icon}
+              teamAPlayers={teamAPlayers}
+              teamBPlayers={teamBPlayers}
+              teamADraftPicks={state.teamA.draftPicks}
+              teamBDraftPicks={state.teamB.draftPicks}
+              surplusMap={data.surplusMap}
+            />
+          )}
           <MultiYearCapTable
             teamAName={teamA.nameMedium}
             teamBName={teamB.nameMedium}
@@ -398,19 +411,6 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
             impactB={tradeImpactB}
             salaryCap={data.salaryCap}
           />
-          {data.surplusMap && Object.keys(data.surplusMap).length > 0 && (
-            <TradeValueAnalysis
-              teamAName={teamA.nameMedium}
-              teamBName={teamB.nameMedium}
-              teamAIcon={teamA.icon}
-              teamBIcon={teamB.icon}
-              teamAPlayers={teamAPlayers}
-              teamBPlayers={teamBPlayers}
-              teamADraftPicks={state.teamA.draftPicks}
-              teamBDraftPicks={state.teamB.draftPicks}
-              surplusMap={data.surplusMap}
-            />
-          )}
         </>
       )}
 
