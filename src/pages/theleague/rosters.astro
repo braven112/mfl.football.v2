@@ -12,6 +12,7 @@ import VeteranExtensionCandidates from '../../components/theleague/VeteranExtens
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
+import ContractDeclarationModal from '../../components/theleague/ContractDeclarationModal.astro';
 import PlayerNewsModal from '../../components/theleague/PlayerNewsModal.astro';
 import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
@@ -19,6 +20,9 @@ import FreeAgentNeedsCard from '../../components/theleague/FreeAgentNeedsCard.as
 import collegeLogos from '../../data/college-logos.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
+import { getTeamEligibility } from '../../utils/contract-eligibility';
+import { getDeclarations } from '../../utils/contract-storage';
+import type { RosterPlayer, MFLPlayerInfo } from '../../types/contract-eligibility';
 import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
@@ -1552,6 +1556,121 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
   }
 }
 
+// --- Contract eligibility data ---
+// Load transactions for the current league year
+const eligibilityYear = getCurrentLeagueYear();
+const eligibilityYearStr = String(eligibilityYear);
+const eligTxKey = Object.keys(transactionsFeeds).find(
+  (path) => extractFeedSeason(path) === eligibilityYearStr
+);
+const eligTxData = eligTxKey ? getModuleData(transactionsFeeds[eligTxKey]) : null;
+const eligRawTransactions = eligTxData?.transactions?.transaction
+  ? (Array.isArray(eligTxData.transactions.transaction)
+      ? eligTxData.transactions.transaction
+      : [eligTxData.transactions.transaction])
+  : [];
+
+// Build players map for eligibility engine
+const eligPlayersMap = new Map<string, MFLPlayerInfo>();
+const eligPlayersFeed = playersFeedBySeason[eligibilityYearStr] ?? {};
+for (const [id, player] of Object.entries(eligPlayersFeed)) {
+  eligPlayersMap.set(id, player as MFLPlayerInfo);
+}
+
+// Get rosters data for eligibility
+const eligRostersFeed = rostersFeeds[Object.keys(rostersFeeds).find(
+  (path) => extractFeedSeason(path) === eligibilityYearStr
+) ?? ''];
+const eligRostersData = eligRostersFeed ? getModuleData(eligRostersFeed) : null;
+const eligFranchises = eligRostersData?.rosters?.franchise ?? [];
+
+// Compute eligibility for all teams
+const eligibilityByTeam: Record<string, Record<string, any>> = {};
+if (Array.isArray(eligFranchises)) {
+  for (const franchise of eligFranchises) {
+    const franchiseId = franchise.id;
+    if (!franchiseId) continue;
+    const players: RosterPlayer[] = (Array.isArray(franchise.player)
+      ? franchise.player
+      : [franchise.player].filter(Boolean)
+    ).filter((p: any) => p?.id);
+
+    const teamResult = getTeamEligibility(
+      franchiseId, players, eligRawTransactions, eligPlayersMap, eligibilityYear,
+    );
+    const playerMap: Record<string, any> = {};
+    for (const p of teamResult.players) {
+      if (p.eligible && (p.declarationType === 'new-acquisition' || p.declarationType === 'rookie-override')) {
+        playerMap[p.playerId] = {
+          type: p.declarationType,
+          yearOptions: p.yearOptions,
+          deadlineTimestamp: p.deadlineTimestamp,
+          isExpired: p.isExpired,
+          currentYears: p.currentYears,
+          currentSalary: p.currentSalary,
+          contractInfo: p.contractInfo,
+          isRookieContract: p.isRookieContract,
+        };
+      }
+    }
+    if (Object.keys(playerMap).length > 0) {
+      eligibilityByTeam[franchiseId] = playerMap;
+    }
+  }
+}
+
+// Test mode: inject mock eligibility data for visual testing
+const testEligibility = Astro.url?.searchParams?.get('testEligibility') === 'true';
+if (testEligibility) {
+  // Pick the default team and inject mock new-acquisition + rookie-override eligibility
+  const testTeamId = defaultTeamId;
+  const testRostersFeed = eligRostersData?.rosters?.franchise?.find((f: any) => f.id === testTeamId);
+  const testPlayers = Array.isArray(testRostersFeed?.player)
+    ? testRostersFeed.player
+    : [testRostersFeed?.player].filter(Boolean);
+
+  if (testPlayers.length >= 2) {
+    const now = Date.now();
+    eligibilityByTeam[testTeamId] = {
+      // First player: new-acquisition with 18h deadline
+      [testPlayers[0].id]: {
+        type: 'new-acquisition',
+        yearOptions: [2, 3, 4, 5],
+        deadlineTimestamp: Math.floor((now + 18 * 60 * 60 * 1000) / 1000),
+        isExpired: false,
+        currentYears: parseInt(testPlayers[0].contractYear, 10) || 1,
+        currentSalary: parseFloat(testPlayers[0].salary) || 500000,
+        contractInfo: testPlayers[0].contractInfo || '',
+        isRookieContract: false,
+      },
+      // Second player: rookie-override with 3h deadline (urgent)
+      [testPlayers[1].id]: {
+        type: 'rookie-override',
+        yearOptions: [1, 2, 3],
+        deadlineTimestamp: Math.floor((now + 3 * 60 * 60 * 1000) / 1000),
+        isExpired: false,
+        currentYears: 4,
+        currentSalary: parseFloat(testPlayers[1].salary) || 300000,
+        contractInfo: 'RC',
+        isRookieContract: true,
+      },
+    };
+  }
+}
+
+// Load existing declarations for indicator display
+const allDeclarations = getDeclarations();
+const declarationsByPlayer: Record<string, { status: string; type: string; requestedYears: number }> = {};
+for (const decl of allDeclarations) {
+  if (decl.status === 'pending' || decl.status === 'approved') {
+    declarationsByPlayer[decl.playerId] = {
+      status: decl.status,
+      type: decl.type,
+      requestedYears: decl.requestedYears,
+    };
+  }
+}
+
 const serializedConfig = JSON.stringify({
   seasons: rostersBySeason,
   seasonOptions,
@@ -1576,10 +1695,16 @@ const serializedConfig = JSON.stringify({
   targetActiveCount: TARGET_ACTIVE_COUNT,
   reserveForRookies: RESERVE_FOR_ROOKIES,
   collegeLogos: collegeLogosNormalized,
-  authUser: authUser ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId } : null,
+  authUser: authUser
+    ? { franchiseId: authUser.franchiseId, leagueId: authUser.leagueId }
+    : testEligibility
+      ? { franchiseId: defaultTeamId, leagueId: '13522' }
+      : null,
   trendWeeks,
   espnNews: espnNewsData?.teams || {},
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
+  eligibilityByTeam,
+  declarationsByPlayer,
 });
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
@@ -1973,7 +2098,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
                 {/* GM Mode Cells */}
                 <td data-label="Rank" data-column="rank" class="gm-col ranking-col ranking-cell"></td>
-                <td data-label="Yrs" data-column="years" class="gm-col">{player.contractYears || 0}</td>
+                <td data-label="Yrs" data-column="years" class="gm-col years-cell" data-player-id={player.id}>{player.contractYears || 0}</td>
                 <td data-label="Actions" data-column="actions" class="actions-cell gm-col">
                   <button
                     class="ufa-action-btn"
@@ -3241,6 +3366,65 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     height: 14px;
   }
 
+  /* --- Years Cell: Eligibility Indicators --- */
+  :global(.years-cell) {
+    position: relative;
+    white-space: nowrap;
+  }
+
+  :global(.years-cell--eligible) {
+    cursor: pointer;
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+
+  :global(.years-cell--eligible:hover) {
+    color: #163d68;
+    text-decoration: underline;
+  }
+
+  :global(.years-cell__value--eligible) {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+
+  :global(.years-cell__asterisk) {
+    font-weight: 700;
+    font-size: 0.875rem;
+    margin-left: 1px;
+    vertical-align: super;
+    line-height: 1;
+  }
+
+  :global(.years-cell__deadline) {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 3px;
+    background: #fef3c7;
+    color: #92400e;
+    vertical-align: middle;
+    line-height: 1.3;
+  }
+
+  :global(.years-cell__deadline--urgent) {
+    background: #fed7aa;
+    color: #9a3412;
+  }
+
+  :global(.years-cell__deadline--critical) {
+    background: #fecaca;
+    color: #991b1b;
+    animation: years-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes years-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
   :global(.salary-cell--future-ufa) {
     text-align: center;
     color: #9ca3af;
@@ -4437,6 +4621,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   </div>
 </div>
 
+<ContractDeclarationModal />
+
 <script
   type="application/json"
   id="roster-config"
@@ -4479,6 +4665,80 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   const franchiseTagsByYear = {}; // Track franchise tags by year: { yearIndex: playerId }
   let currentVeteranExtension = null; // Track which player has veteran extension
   let currentSeason = config.defaultSeason; // Track current season for salary averages
+
+  // --- Contract Declaration State ---
+  const eligibilityByTeam = config.eligibilityByTeam ?? {};
+  const declarationsByPlayer = { ...(config.declarationsByPlayer ?? {}) };
+  const localDeclarations = {}; // Optimistic: { playerId: { status, years } }
+  const ESCALATION_RATE = 1.10;
+
+  const DECLARATION_TYPE_LABELS = {
+    'new-acquisition': 'New Acquisition',
+    'rookie-override': 'Rookie Override',
+    'franchise-tag': 'Franchise Tag',
+    'veteran-extension': 'Veteran Extension',
+    'rookie-extension': 'Rookie Extension',
+  };
+
+  /** Format salary as compact currency */
+  const formatSalaryCompact = (val) => {
+    const n = Number(val);
+    if (!Number.isFinite(n) || n === 0) return '$0';
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${n.toLocaleString()}`;
+  };
+
+  /** Get eligibility for a player on a given team */
+  const getPlayerEligibility = (playerId, teamId) => {
+    const teamElig = eligibilityByTeam[teamId] ?? {};
+    return teamElig[playerId] ?? null;
+  };
+
+  /** Check if the logged-in user owns a given team */
+  const isOwnerViewingTeam = (teamId) => {
+    return config.authUser?.franchiseId === teamId;
+  };
+
+  /** Build the years cell inner content with eligibility indicators.
+   *  teamId is passed from the render context so outer-scope works. */
+  const buildYearsCellContent = (playerId, displayYears, teamId) => {
+    const years = displayYears || 0;
+
+    // Check for local optimistic declaration
+    const localDecl = localDeclarations[playerId];
+    if (localDecl) {
+      const color = localDecl.status === 'approved' ? '#059669' : '#d97706';
+      return '<span class="years-cell__value">' + localDecl.years + '</span><span class="years-cell__asterisk" style="color:' + color + '">*</span>';
+    }
+
+    // Check for existing server declaration
+    const serverDecl = declarationsByPlayer[playerId];
+    if (serverDecl) {
+      const color = serverDecl.status === 'approved' ? '#059669' : '#d97706';
+      return '<span class="years-cell__value">' + serverDecl.requestedYears + '</span><span class="years-cell__asterisk" style="color:' + color + '">*</span>';
+    }
+
+    // Check for eligibility (only if owner is viewing their own team)
+    if (!isOwnerViewingTeam(teamId)) return String(years);
+
+    const elig = getPlayerEligibility(playerId, teamId);
+    if (!elig || elig.isExpired) return String(years);
+
+    // Show eligible indicator with deadline badge
+    let deadlineBadge = '';
+    if (elig.deadlineTimestamp) {
+      const remaining = elig.deadlineTimestamp * 1000 - Date.now();
+      if (remaining > 0) {
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const urgencyClass = hours < 4 ? ' years-cell__deadline--critical' : hours < 12 ? ' years-cell__deadline--urgent' : '';
+        const label = hours < 1 ? '&lt;1h' : hours + 'h';
+        deadlineBadge = '<span class="years-cell__deadline' + urgencyClass + '">' + label + '</span>';
+      }
+    }
+
+    return '<span class="years-cell__value years-cell__value--eligible">' + years + '</span>' + deadlineBadge;
+  };
 
   const DEFAULT_HEADSHOT_URL =
     'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
@@ -6155,7 +6415,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
             ${/* GM Mode Cells */ ''}
             <td data-label="Rank" data-column="rank" class="gm-col ranking-col ranking-cell"></td>
-            <td data-label="Yrs" data-column="years" class="gm-col">${displayYears || 0}</td>
+            <td data-label="Yrs" data-column="years" class="gm-col years-cell" data-player-id="${player.id}">${buildYearsCellContent(player.id, displayYears, currentTeam)}</td>
             ${actionsCell}
             ${salaryCells}
           </tr>`;
@@ -6188,6 +6448,38 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           });
         });
 
+
+        // Eligible years cell clicks — open declaration modal
+        if (isOwnerViewingTeam(currentTeam)) {
+          document.querySelectorAll('.years-cell').forEach(cell => {
+            const playerId = cell.dataset.playerId;
+            if (!playerId) return;
+            const elig = getPlayerEligibility(playerId, currentTeam);
+            const hasDecl = localDeclarations[playerId] || declarationsByPlayer[playerId];
+            if (!elig || elig.isExpired || hasDecl) return;
+
+            cell.classList.add('years-cell--eligible');
+            cell.addEventListener('click', (e) => {
+              e.stopPropagation();
+              // Find the player row to get name/position/headshot data
+              const row = cell.closest('tr');
+              const playerCell = row?.querySelector('[data-column="player"]');
+              const nameEl = playerCell?.querySelector('.player-cell__name');
+              const imgEl = playerCell?.querySelector('.player-cell__avatar img');
+              const metaLogoEl = playerCell?.querySelector('.player-cell__meta-logo');
+              const posEl = playerCell?.querySelector('.player-cell__position');
+
+              openDeclarationModal({
+                id: playerId,
+                name: nameEl?.textContent ?? '',
+                headshot: imgEl?.src ?? DEFAULT_HEADSHOT_URL,
+                nflLogo: metaLogoEl?.src ?? '',
+                position: posEl?.textContent ?? '',
+                eligibility: elig,
+              });
+            });
+          });
+        }
 
         // Injury indicator buttons
         document.querySelectorAll('.injury-indicator').forEach(btn => {
@@ -6653,6 +6945,185 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         });
       }
     };
+
+    // --- Contract Declaration Modal ---
+    const cdmModal = document.getElementById('contract-declaration-modal');
+    const cdmOverlay = cdmModal?.querySelector('.cdm-overlay');
+    const cdmCloseBtn = cdmModal?.querySelector('.cdm-close');
+    const cdmSubmitBtn = document.getElementById('cdm-submit');
+    const cdmError = document.getElementById('cdm-error');
+    const cdmSuccess = document.getElementById('cdm-success');
+    let cdmSelectedYears = null;
+    let cdmPlayerData = null;
+    let cdmDeadlineInterval = null;
+
+    const openDeclarationModal = (data) => {
+      if (!cdmModal) return;
+      cdmPlayerData = data;
+      cdmSelectedYears = null;
+      cdmError.style.display = 'none';
+      cdmSuccess.style.display = 'none';
+      cdmSubmitBtn.disabled = true;
+      cdmSubmitBtn.classList.remove('loading');
+      cdmSubmitBtn.style.display = '';
+      cdmSubmitBtn.textContent = 'Declare Contract';
+
+      // Hero
+      document.getElementById('cdm-headshot').src = data.headshot || DEFAULT_HEADSHOT_URL;
+      document.getElementById('cdm-player-name').textContent = data.name;
+      document.getElementById('cdm-nfl-logo').src = data.nflLogo || '/assets/nfl-logos/NFL.svg';
+      document.getElementById('cdm-meta-text').textContent = data.position || '';
+
+      // Type badge
+      const elig = data.eligibility;
+      const typeBadge = document.getElementById('cdm-type-badge');
+      typeBadge.dataset.type = elig.type;
+      document.getElementById('cdm-type-label').textContent = DECLARATION_TYPE_LABELS[elig.type] || elig.type;
+
+      // Contract info
+      document.getElementById('cdm-current-salary').textContent = formatSalaryCompact(elig.currentSalary);
+      document.getElementById('cdm-current-years').textContent = String(elig.currentYears) + ' year' + (elig.currentYears !== 1 ? 's' : '');
+      const designation = elig.contractInfo || (elig.isRookieContract ? 'RC' : 'Standard');
+      document.getElementById('cdm-current-designation').textContent = designation;
+
+      // Deadline countdown
+      const deadlineEl = document.getElementById('cdm-deadline');
+      if (cdmDeadlineInterval) clearInterval(cdmDeadlineInterval);
+      if (elig.deadlineTimestamp) {
+        deadlineEl.style.display = 'flex';
+        const updateDeadline = () => {
+          const remaining = elig.deadlineTimestamp * 1000 - Date.now();
+          if (remaining <= 0) {
+            document.getElementById('cdm-deadline-text').textContent = 'Deadline passed';
+            deadlineEl.className = 'cdm-deadline cdm-deadline--critical';
+            clearInterval(cdmDeadlineInterval);
+            return;
+          }
+          const hours = Math.floor(remaining / (1000 * 60 * 60));
+          const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+          document.getElementById('cdm-deadline-text').textContent = 'Deadline in ' + hours + 'h ' + minutes + 'm';
+          deadlineEl.className = 'cdm-deadline' + (hours < 4 ? ' cdm-deadline--critical' : hours < 12 ? ' cdm-deadline--urgent' : '');
+        };
+        updateDeadline();
+        cdmDeadlineInterval = setInterval(updateDeadline, 60000);
+      } else {
+        deadlineEl.style.display = 'none';
+      }
+
+      // Year options — build DOM elements safely
+      const yearOptions = elig.yearOptions || [];
+      const yearContainer = document.getElementById('cdm-year-options');
+      yearContainer.replaceChildren();
+      yearOptions.forEach(yr => {
+        const btn = document.createElement('button');
+        btn.className = 'cdm-year-btn';
+        btn.dataset.years = String(yr);
+        const numEl = document.createElement('span');
+        numEl.className = 'cdm-year-btn__number';
+        numEl.textContent = String(yr);
+        const labelEl = document.createElement('span');
+        labelEl.className = 'cdm-year-btn__label';
+        labelEl.textContent = yr === 1 ? 'YEAR' : 'YEARS';
+        btn.appendChild(numEl);
+        btn.appendChild(labelEl);
+        btn.addEventListener('click', () => {
+          yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          cdmSelectedYears = yr;
+          cdmSubmitBtn.disabled = false;
+          updateProjectionTable(elig.currentSalary, yr);
+        });
+        yearContainer.appendChild(btn);
+      });
+
+      // Hide projection initially
+      document.getElementById('cdm-projection-section').style.display = 'none';
+
+      cdmModal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeDeclarationModal = () => {
+      if (!cdmModal) return;
+      cdmModal.classList.remove('active');
+      document.body.style.overflow = '';
+      if (cdmDeadlineInterval) clearInterval(cdmDeadlineInterval);
+      cdmPlayerData = null;
+    };
+
+    const updateProjectionTable = (baseSalary, years) => {
+      const section = document.getElementById('cdm-projection-section');
+      const tbody = document.getElementById('cdm-projection-body');
+      if (!section || !tbody) return;
+
+      const salary = Number(baseSalary) || 0;
+      tbody.replaceChildren();
+      for (let i = 0; i < years; i++) {
+        const projected = Math.round(salary * Math.pow(ESCALATION_RATE, i));
+        const tr = document.createElement('tr');
+        const tdYear = document.createElement('td');
+        tdYear.textContent = 'Year ' + (i + 1);
+        const tdSalary = document.createElement('td');
+        tdSalary.textContent = formatSalaryCompact(projected);
+        tr.appendChild(tdYear);
+        tr.appendChild(tdSalary);
+        tbody.appendChild(tr);
+      }
+      section.style.display = '';
+    };
+
+    const submitDeclaration = async () => {
+      if (!cdmPlayerData || cdmSelectedYears === null) return;
+
+      cdmSubmitBtn.classList.add('loading');
+      cdmSubmitBtn.textContent = 'Submitting...';
+      cdmError.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/contracts/declare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId: cdmPlayerData.id,
+            playerName: cdmPlayerData.name,
+            requestedYears: cdmSelectedYears,
+          }),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Declaration failed');
+
+        // Optimistic update
+        localDeclarations[cdmPlayerData.id] = {
+          status: 'pending',
+          years: cdmSelectedYears,
+        };
+
+        cdmSubmitBtn.style.display = 'none';
+        cdmSuccess.style.display = 'flex';
+
+        // Refresh the years cells
+        updateView();
+
+        // Auto-close after short delay
+        setTimeout(closeDeclarationModal, 1500);
+      } catch (err) {
+        cdmError.textContent = err.message;
+        cdmError.style.display = '';
+        cdmSubmitBtn.classList.remove('loading');
+        cdmSubmitBtn.textContent = 'Declare Contract';
+      }
+    };
+
+    // Wire up modal close/submit
+    cdmOverlay?.addEventListener('click', closeDeclarationModal);
+    cdmCloseBtn?.addEventListener('click', closeDeclarationModal);
+    cdmSubmitBtn?.addEventListener('click', submitDeclaration);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && cdmModal?.classList.contains('active')) {
+        closeDeclarationModal();
+      }
+    });
 
     const updateView = () => {
       resetSort();
