@@ -170,6 +170,12 @@ const entry = {
   excludeFromHero: true,
 };
 
+// Include featured screenshot if provided in staging
+if (staging.featuredImage) {
+  entry.image = staging.featuredImage;
+  entry.imageAlt = staging.featuredImageAlt || 'Weekly rollup screenshot';
+}
+
 // Prepend to whats-new.json
 const whatsNew = JSON.parse(readFileSync(WHATS_NEW_PATH, 'utf-8'));
 whatsNew.unshift(entry);
