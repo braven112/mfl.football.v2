@@ -16,3 +16,13 @@ table.report {
     background-color: transparent;
 }
 }
+
+// Override MFL's base CSS (#MFLBaseCSS.css) table row backgrounds.
+// Our stylesheet loads after MFL's, so same-specificity rules win by cascade.
+.oddtablerow {
+  background-color: $oddtablerow;
+}
+
+.eventablerow {
+  background-color: $eventablerow;
+}
