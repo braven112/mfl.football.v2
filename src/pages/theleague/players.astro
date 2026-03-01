@@ -18,6 +18,7 @@ import { getAuthUser } from '../../utils/auth';
 import { isAdminFranchise } from '../../config/nav-config';
 import '../../styles/player-cell.css';
 import collegeLogos from '../../data/college-logos.json';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
 // College logo lookup (case-insensitive)
 const collegeLogosNormalized = Object.fromEntries(
@@ -427,7 +428,7 @@ if (Array.isArray(allPlayers)) {
       position: pos,
       team: normalizeMflTeam(p.team || ''),
       age: pos === 'DEF' ? 25 : age,
-      espnId: p.espn_id || null,
+      espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
       projected,
       rostered: isRostered,
       exp: pos === 'DEF' ? 5 : exp,
@@ -999,6 +1000,18 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
   const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
+  function buildOnerror(mflId, espnId) {
+    const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
+    const mfl = mflId ? `https://www49.myfantasyleague.com/player_photos_big_2014/${mflId}_thumb.jpg` : null;
+    if (college && mfl) {
+      return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${mfl}'};this.src='${college}'`;
+    }
+    if (college) {
+      return `this.onerror=function(){this.onerror=null;this.src='${defaultHeadshot}'};this.src='${college}'`;
+    }
+    return `this.onerror=null;this.src='${defaultHeadshot}'`;
+  }
+
   function escapeAttr(s) {
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -1279,7 +1292,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           <div class="player-cell">
             <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}">
               <img src="${headshot}" alt="" loading="lazy" decoding="async"
-                onerror="this.onerror=null;this.src='${defaultHeadshot}';" />
+                onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>

@@ -44,6 +44,16 @@ export function getPlayerImageUrl(playerId?: string): string {
 }
 
 /**
+ * Get ESPN college football headshot URL.
+ * Useful as a fallback for rookies who may not yet have an NFL headshot.
+ * @param espnId - ESPN player ID
+ * @returns URL to college football headshot image
+ */
+export function getCollegeHeadshot(espnId: string): string {
+  return `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png`;
+}
+
+/**
  * Get player headshot URL, preferring ESPN high-quality images when available.
  * Falls back to MFL photo, then to default placeholder.
  * @param mflId - MFL player ID
@@ -55,6 +65,29 @@ export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
   return getPlayerImageUrl(mflId);
+}
+
+/**
+ * Build an inline onerror handler string that cascades through headshot fallbacks.
+ *
+ * Fallback chain (when espnId + mflId provided):
+ *   ESPN NFL headshot → ESPN College headshot → MFL headshot → default placeholder
+ *
+ * @param mflId - MFL player ID
+ * @param espnId - ESPN player ID
+ * @returns Inline JS string for an img onerror attribute
+ */
+export function buildHeadshotOnerror(mflId?: string, espnId?: string): string {
+  if (espnId && mflId) {
+    const college = getCollegeHeadshot(espnId);
+    const mfl = getPlayerImageUrl(mflId);
+    return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}'};this.src='${mfl}'};this.src='${college}'`;
+  }
+  if (espnId) {
+    const college = getCollegeHeadshot(espnId);
+    return `this.onerror=function(){this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}'};this.src='${college}'`;
+  }
+  return `this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}'`;
 }
 
 /**

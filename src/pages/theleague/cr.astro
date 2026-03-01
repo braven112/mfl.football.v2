@@ -16,6 +16,7 @@ import { isAdminFranchise } from '../../config/nav-config';
 import { parseNumber } from '../../utils/formatters';
 import { calculatePointsPerDollar } from '../../utils/surplus-value';
 import { calculateAllVORP } from '../../utils/vorp';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
 export const prerender = false;
 
@@ -61,7 +62,7 @@ const mflPlayers = rawPlayers
     name: p.name,
     position: p.position === 'Def' ? 'DEF' : p.position,
     team: p.team || '',
-    espnId: p.espn_id || null,
+    espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
   }));
 
 // ---------------------------------------------------------------------------

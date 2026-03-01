@@ -743,16 +743,45 @@ const { class: className } = Astro.props;
       const headshot = document.getElementById('detail-headshot');
       if (headshot && playerData.id) {
         const DEFAULT_IMG = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+        const MFL_IMG = 'https://www49.myfantasyleague.com/player_photos_big_2014/' + playerData.id + '_thumb.jpg';
+        const COLLEGE_IMG = playerData.espnId
+          ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + playerData.espnId + '.png'
+          : null;
+
         if (isDefense && teamCode) {
           headshot.src = '/assets/nfl-logos/' + teamCode + '.svg';
+          headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
         } else if (playerData.headshot) {
           headshot.src = playerData.headshot;
+          // Fallback chain from pre-set headshot: College → MFL → default
+          if (COLLEGE_IMG) {
+            headshot.onerror = function() {
+              headshot.onerror = function() {
+                headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
+                headshot.src = MFL_IMG;
+              };
+              headshot.src = COLLEGE_IMG;
+            };
+          } else {
+            headshot.onerror = function() {
+              headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
+              headshot.src = MFL_IMG;
+            };
+          }
         } else if (playerData.espnId) {
           headshot.src = 'https://a.espncdn.com/i/headshots/nfl/players/full/' + playerData.espnId + '.png';
+          // Fallback chain: NFL → College → MFL → default
+          headshot.onerror = function() {
+            headshot.onerror = function() {
+              headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
+              headshot.src = MFL_IMG;
+            };
+            headshot.src = COLLEGE_IMG;
+          };
         } else {
-          headshot.src = 'https://www49.myfantasyleague.com/player_photos_big_2014/' + playerData.id + '_thumb.jpg';
+          headshot.src = MFL_IMG;
+          headshot.onerror = function() { headshot.onerror = null; headshot.src = DEFAULT_IMG; };
         }
-        headshot.onerror = function() { headshot.src = DEFAULT_IMG; };
         headshot.alt = playerData.name || 'Player headshot';
       }
 

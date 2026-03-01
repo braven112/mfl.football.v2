@@ -17,6 +17,7 @@ import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
 import FreeAgentNeedsCard from '../../components/theleague/FreeAgentNeedsCard.astro';
 import collegeLogos from '../../data/college-logos.json';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
 import type { PositionNeed } from '../../utils/free-agent-needs';
@@ -1047,7 +1048,8 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       : '-';
 
     const feedPlayer = feedPlayers[player.id] ?? null;
-    const headshot = getPlayerHeadshot(player.id, feedPlayer?.espn_id);
+    const resolvedEspnId = feedPlayer?.espn_id || (espnCollegeIds as any).players?.[player.id]?.espnCollegeId || null;
+    const headshot = getPlayerHeadshot(player.id, resolvedEspnId);
     const collegeName = player.sleeper?.college ?? player.college ?? null;
     const collegeAssets = getCollegeAssets(collegeName);
     const parseDraft = (val) => {
@@ -1062,7 +1064,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
 
     const playerObj = {
       id: player.id,
-      espnId: feedPlayer?.espn_id || null,
+      espnId: resolvedEspnId,
       name: player.name,
       position: player.position ?? 'N/A',
       salary,
@@ -1548,7 +1550,7 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
   for (const need of needs) {
     for (const fa of need.topFreeAgents) {
       const feedPlayer = faPlayerFeed[fa.id];
-      fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id);
+      fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id || (espnCollegeIds as any).players?.[fa.id]?.espnCollegeId);
     }
   }
 }
