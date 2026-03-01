@@ -202,6 +202,13 @@
 
   //////////////////////Container Header//////////////////////////
   --container-header-bg: var(--header-bg);
+
+  //////////////////////Tabs//////////////////////////
+  --tab-text-color: #8a8a8a;
+  --tab-active-text-color: #f7f7f7;
+  --tab-active-indicator-color: var(--accent-color);
+  --tab-separator-color: var(--border-color);
+  --tab-hover-color: #fff;
 }
 
 //////////////////////Colors//////////////////////////
@@ -380,3 +387,10 @@ $live-scoring-border: var(--live-scoring-border);
 
 //////////////////////Container Header//////////////////////////
 $container-header-bg: var(--container-header-bg);
+
+//////////////////////Tabs//////////////////////////
+$tab-text-color: var(--tab-text-color);
+$tab-active-text-color: var(--tab-active-text-color);
+$tab-active-indicator-color: var(--tab-active-indicator-color);
+$tab-separator-color: var(--tab-separator-color);
+$tab-hover-color: var(--tab-hover-color);
