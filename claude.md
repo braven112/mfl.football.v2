@@ -74,6 +74,15 @@ padding-left: 0.625rem;
 border-left: 2px solid var(--color-primary, #1c497c);
 ```
 
+**Section titles with subtitles** — When a section title needs a description, wrap both in `.section-header` so the left-border spans both lines:
+```html
+<div class="section-header">
+  <h3 class="section-header__title">NFL Analysis</h3>
+  <p class="section-header__sub">Players on the same NFL team</p>
+</div>
+```
+The subtitle is `0.8125rem`, `gray-400`, with `0.25rem` gap. Use standalone section title (above) when there's no subtitle.
+
 **Detail rows** — Flex rows with fixed-width uppercase labels (gray-400) + flexible values, separated by gray-50 borders
 
 **Key metrics** — 3-column grid, gray-50 bg cards, large tabular-nums values + micro uppercase labels
