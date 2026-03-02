@@ -130,17 +130,108 @@ https://api.myfantasyleague.com/2025/export?TYPE=assets&L=13522&APIKEY={key}&JSO
 
 ---
 
-#### `myDraftList`
+#### `myDraftList` (Export)
 **Purpose:** Current franchise's draft board and player rankings
 
 **Parameters:**
 - Required: `L` (league ID)
-- Auth: Owner
+- Optional: `APIKEY` (alternative to cookie auth)
+- Auth: Owner (requires `MFL_USER_ID` cookie or `APIKEY`)
 
 **Example:**
 ```
 https://api.myfantasyleague.com/2025/export?TYPE=myDraftList&L=13522&JSON=1
 ```
+
+**Key Insights (updated 2026-02-27):**
+- Returns the authenticated franchise's ordered draft board (list of player IDs)
+- Franchise is determined by the auth cookie — no `FRANCHISE_ID` parameter
+- Without authentication, returns an error: `"API requires logged in user in league ID..."`
+- Response structure (authenticated): Expected to be a `myDraftList` object with ordered player IDs (needs auth testing to confirm exact format)
+
+---
+
+#### `myDraftList` (Import) — WRITE ENDPOINT
+**Purpose:** Set the players in an owner's "My Draft List." Completely overwrites the previous draft list.
+
+**Parameters:**
+- Required: `L` (league ID), `PLAYERS` (comma-separated player IDs)
+- Auth: Owner (requires `MFL_USER_ID` cookie)
+
+**Example:**
+```
+POST https://api.myfantasyleague.com/2025/import?TYPE=myDraftList&L=13522
+Body: PLAYERS=15379,14836,16457,15960,14803,16413
+```
+
+**Key Insights (updated 2026-02-27):**
+- **Destructive overwrite** — the entire previous draft list is replaced; no partial updates
+- The order of player IDs in `PLAYERS` defines the draft board ranking order
+- POST is strongly recommended — large draft boards (200+ players) can exceed GET URL length limits
+- Franchise is determined by the auth cookie — always operates on the logged-in user's franchise
+- **Workflow for custom rankings:** Export current list → modify in UI → re-import full list
+- No "move player" or "insert at position" granularity — you must send the complete ordered list every time
+- **draftPlayerPool relationship (updated 2026-02-27):** TheLeague (13522) has `draftPlayerPool: "Rookie"`, meaning the MFL draft itself only allows selecting rookies. However, the myDraftList API is a **personal ranking tool**, not a draft-pool-restricted feature. The MFL UI describes it as a guide that "appears in the website's Live Draft Room" — it is conceptually separate from the draft pool. Testing with auth is needed to confirm whether the API accepts arbitrary player IDs or enforces the pool restriction. The MFL help docs describe it as a pre-draft organizational tool.
+
+---
+
+#### `myWatchList` (Export)
+**Purpose:** Personal player watch list for tracking players of interest (free agents, trade targets, etc.)
+
+**Parameters:**
+- Required: `L` (league ID)
+- Auth: Owner (requires `MFL_USER_ID` cookie or `APIKEY`)
+
+**Example:**
+```
+https://api.myfantasyleague.com/2026/export?TYPE=myWatchList&L=13522&JSON=1
+```
+
+**Key Insights (added 2026-02-27):**
+- Returns the authenticated franchise's watch list (list of player IDs)
+- Franchise is determined by the auth cookie — no `FRANCHISE_ID` parameter
+- Without authentication, returns: `"API requires logged in user in league ID..."`
+- Response structure (authenticated): Expected to be a `myWatchList` object with player IDs (needs auth testing to confirm exact format)
+- The MFL web UI page for this feature is `options?L={LEAGUE_ID}&O=178`
+- **Key difference from myDraftList:** Watch list is an unordered set for tracking players throughout the season; draft list is an ordered ranking for draft preparation
+
+---
+
+#### `myWatchList` (Import) — WRITE ENDPOINT
+**Purpose:** Add or remove players from an owner's personal watch list
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `ADD` (comma-separated player IDs to add), `REMOVE` (comma-separated player IDs to remove)
+- Auth: Owner (requires `MFL_USER_ID` cookie)
+
+**Example:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=myWatchList&L=13522
+Body: ADD=15379,14836,16457
+```
+
+**Key Insights (added 2026-02-27):**
+- **Non-destructive updates** — unlike myDraftList, you can ADD and REMOVE individual players without overwriting the entire list
+- Supports incremental modifications (ADD only, REMOVE only, or both in one request)
+- Franchise is determined by the auth cookie — always operates on the logged-in user's franchise
+- **No apparent player restrictions** — the API docs do not mention any limitation on which players can be added (rostered, free agent, rookie, veteran all appear to be valid)
+- **No apparent size limit** — the API docs do not document a maximum list size
+- **Best candidate for full-player custom rankings** — since it accepts ADD/REMOVE (incremental) and appears to accept any player, this could serve as backend storage for a custom rankings feature that spans all players (not just rookies)
+
+---
+
+### Personal Player Lists: Comparison (added 2026-02-27)
+
+| Feature | `myDraftList` | `myWatchList` |
+|---------|---------------|---------------|
+| **Purpose** | Ordered draft board for draft preparation | Unordered player tracking list |
+| **Order** | Ordered (ranking position matters) | Unordered (set membership) |
+| **Update style** | Destructive overwrite (PLAYERS=full list) | Incremental (ADD/REMOVE) |
+| **Possible pool restriction** | May be limited to draftPlayerPool (rookies in TheLeague) — needs testing | No documented restrictions |
+| **Use during season** | Primarily pre-draft tool | Year-round player tracking |
+| **MFL UI page** | Draft section (O=07) | For Owners > My Watch List (O=178) |
+| **Custom rankings fit** | Good for rookie draft rankings | Better for full-player rankings |
 
 ---
 
@@ -692,6 +783,45 @@ https://api.myfantasyleague.com/2025/export?TYPE=injuries&L=13522&JSON=1
 ```
 https://api.myfantasyleague.com/2025/export?TYPE=playerProfile&P=14292&JSON=1
 ```
+
+---
+
+#### `playerRanks`
+**Purpose:** External expert player rankings from FantasySharks.com. Read-only reference data, not personalized.
+
+**Parameters:**
+- Optional: `POS` (filter by position, e.g., QB, RB, WR, TE)
+- Optional: `SOURCE` (ranking source, default is `sharks`)
+- Auth: Public (no authentication required, no league ID needed)
+
+**Example:**
+```
+https://api.myfantasyleague.com/2026/export?TYPE=playerRanks&JSON=1
+https://api.myfantasyleague.com/2026/export?TYPE=playerRanks&POS=QB&JSON=1
+```
+
+**Response Structure (confirmed 2026-02-27):**
+```json
+{
+  "player_ranks": {
+    "player": [
+      { "rank": "1", "id": "15281", "last_week": "1", "change": "0" },
+      { "rank": "2", "id": "16211", "last_week": "2", "change": "0" },
+      { "rank": "3", "id": "16162", "last_week": "3", "change": "0" }
+    ]
+  }
+}
+```
+
+**Key Insights (added 2026-02-27):**
+- Returns ranked list of ALL players (not league-specific, not draft-pool-restricted)
+- Fields: `rank`, `id`, `last_week`, `change` — all string values
+- `change` can be numeric string (e.g., "0", "5", "-3") or "NEW" for newly ranked players
+- Field order in JSON varies between entries (not guaranteed)
+- **Not personalizable** — these are static expert rankings, not user-editable
+- Could serve as a **seed/default ordering** for a custom rankings feature
+- Must go to `api.myfantasyleague.com` (not www49 etc.) — direct host URLs return an error
+- No league ID required — these are cross-league rankings
 
 ---
 

@@ -242,8 +242,104 @@ Step 2: GET /export?TYPE=myleagues&JSON=1 with Cookie: MFL_USER_ID=<cookie>
 
 ---
 
+## 2026-02-27 - myDraftList Has Both Read AND Write API Endpoints
+
+**Context:** Researching whether MFL supports programmatic draft board management for custom rankings feature
+
+**Insight:** MFL has a fully functional **import (write) endpoint** for `myDraftList` in addition to the export (read) endpoint. This enables programmatic draft board management.
+
+**Export (Read):**
+```
+GET https://api.myfantasyleague.com/{YEAR}/export?TYPE=myDraftList&L={LEAGUE_ID}&JSON=1
+Auth: Owner (MFL_USER_ID cookie or APIKEY)
+Returns: Authenticated franchise's ordered draft board
+```
+
+**Import (Write):**
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=myDraftList&L={LEAGUE_ID}
+Auth: Owner (MFL_USER_ID cookie)
+Params: PLAYERS=id1,id2,id3,... (comma-separated player IDs, required)
+Behavior: COMPLETELY OVERWRITES the previous draft list — no partial updates
+```
+
+**Key details:**
+- The `PLAYERS` parameter order defines draft board ranking order
+- POST is strongly recommended — large draft boards (200+ players) can exceed GET URL length limits
+- Franchise is determined by auth cookie — no `FRANCHISE_ID` parameter
+- No granular operations (move/insert/remove single player) — must send complete list each time
+- The import endpoint description explicitly says "completely overwrite"
+
+**Workflow for custom rankings feature:**
+1. Export current `myDraftList` to get user's existing draft board
+2. Display in UI for reordering (drag-and-drop, tier assignment, etc.)
+3. On save, import the modified list back via `PLAYERS=id1,id2,id3,...`
+4. Handle the destructive nature carefully — consider confirmation before overwriting
+
+**Related endpoints:**
+- `draftResults` (import) — commissioner-only, loads offline draft results (destructive: deletes all existing results)
+- `live_draft` (misc) — real-time draft commands: DRAFT, PAUSE, RESUME, SKIP, UNDO
+
+**Recommendation:** This opens the door for a "Custom Rankings" or "Draft Board Builder" feature that syncs back to MFL. The complete-overwrite behavior means we should always export first, merge changes, then import — never blindly import without knowing the current state.
+
+---
+
 ## 2026-02-24 - MFL "Coach" Tab / Who Should I Start
 
 **Context:** Investigating what backs the MFL "Coach" feature on their website
 
 **Insight:** MFL has a `whoShouldIStart` API endpoint, but it requires authentication (returns auth error without MFL_USER_ID cookie or APIKEY). The MFL website's lineup advice features likely combine `pointsAllowed`, `projectedScores`, `schedule`, and `injuries` data to generate recommendations. There is no dedicated "coach" export endpoint — the Coach tab on MFL's website appears to be a UI feature that aggregates multiple API data sources.
+
+---
+
+## 2026-02-27 - myWatchList: The Best MFL Endpoint for Full-Player Custom Rankings
+
+**Context:** Investigating all MFL endpoints that could store user-personalized player rankings beyond the rookie-only draft pool
+
+**Insight:** MFL has TWO personalized player list endpoints — `myDraftList` and `myWatchList` — plus a read-only `playerRanks` endpoint. For a full-player custom rankings feature, **myWatchList is the strongest candidate** because it supports incremental ADD/REMOVE operations and has no documented player restrictions.
+
+**Complete inventory of MFL personal player list endpoints:**
+
+1. **`myWatchList`** (export + import)
+   - Export: `GET /export?TYPE=myWatchList&L={ID}&JSON=1` (owner auth)
+   - Import: `POST /import?TYPE=myWatchList&L={ID}` with `ADD=id1,id2` and/or `REMOVE=id3,id4` (owner auth)
+   - **Non-destructive** — ADD and REMOVE are incremental, no overwrite
+   - **No documented player restrictions** — not tied to draftPlayerPool
+   - **Unordered** — appears to be a set, not an ordered list
+   - MFL web UI: `options?L={ID}&O=178`
+   - Purpose: Year-round player tracking (watch free agents, trade targets, etc.)
+
+2. **`myDraftList`** (export + import)
+   - Export: `GET /export?TYPE=myDraftList&L={ID}&JSON=1` (owner auth)
+   - Import: `POST /import?TYPE=myDraftList&L={ID}` with `PLAYERS=id1,id2,id3` (owner auth)
+   - **Destructive overwrite** — completely replaces previous list
+   - **Ordered** — player ID order defines ranking
+   - **Possibly restricted to draftPlayerPool** — TheLeague has draftPlayerPool="Rookie", which MAY limit this to rookie players only. Needs auth testing to confirm.
+   - Purpose: Pre-draft board builder, shown in MFL's Live Draft Room
+
+3. **`playerRanks`** (export only, read-only)
+   - Export: `GET /export?TYPE=playerRanks&JSON=1` (public, no auth)
+   - Optional: `POS` (position filter), `SOURCE` (default: "sharks")
+   - Returns ALL players ranked by FantasySharks experts
+   - **Not personalizable** — static external rankings
+   - Fields: `rank`, `id`, `last_week`, `change`
+   - Could serve as default/seed ordering for custom rankings UI
+
+**Endpoints that do NOT exist on MFL (confirmed 2026-02-27):**
+- No `playerBoard` or `bigBoard` endpoint
+- No `favoritesList` endpoint
+- No `customRankings` endpoint
+- No `tierList` endpoint
+
+**Recommendation for custom rankings feature:**
+- Use `myWatchList` as the MFL-synced "flagged players" list (add/remove players the user cares about)
+- Store the actual ranking ORDER client-side (cookies, localStorage) or server-side (our own DB/API) since myWatchList is unordered
+- Use `playerRanks` as default seed data for initial player ordering
+- Use `myDraftList` specifically for rookie draft board ordering (if it accepts all players, it's even better since it's already ordered)
+- **Critical unknown:** Need to test with auth whether myDraftList accepts non-rookie player IDs when draftPlayerPool="Rookie"
+
+**Evidence:**
+- MFL API docs at `api_info?STATE=details` list both endpoints
+- Unauthenticated calls to both return `"API requires logged in user"` error
+- playerRanks returns proper JSON from `api.myfantasyleague.com` (confirmed response structure)
+- No other personalized list endpoints found in the complete MFL API endpoint inventory
