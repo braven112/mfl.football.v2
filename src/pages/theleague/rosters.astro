@@ -2129,7 +2129,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                           href={r(`/theleague/trade-builder?b=${player.franchiseId}`)}
                           class="trade-bait-link"
                           title="On Trade Block — Open in Trade Builder"
-                          style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;"
                         >
                           🏷️
                         </a>
@@ -2142,7 +2141,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                           data-injury-status={player.injuryStatus}
                           data-injury-body-part={player.injuryBodyPart}
                           title={`${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}`}
-                          style="cursor: pointer; background: none; color: #ef4444; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;"
                         >
                           ({player.injuryStatus.substring(0, 1)})
                         </button>
@@ -2168,7 +2166,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                           src={getNflLogoUrl(player.gameOdds.opponent)}
                           alt={player.gameOdds.opponent}
                           class="opponent-logo"
-                          style="width: 20px; height: 20px; object-fit: contain;"
                         />
                         <span class={`spread-badge ${!player.gameOdds.spreadAmount ? 'spread-neutral' : player.gameOdds.favoredTeam === player.gameOdds.opponent ? 'spread-underdog' : 'spread-favorite'}`}>
                         {!player.gameOdds.spreadAmount ? '-' : (player.gameOdds.favoredTeam === player.gameOdds.opponent ? '-' : '+') + player.gameOdds.spreadAmount}
@@ -2206,10 +2203,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
                   return (
                     <td data-label={`Wk ${scoreData.week}`} data-column={`trend-${scoreData.week}`} class="coach-col trend-week-col trend-cell" style="display:none">
-                      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px;">
+                      <div class="trend-value">
                         {scoreData.score}
-                        {isBetter && <span style="color: #22c55e; font-size: 0.8rem;">↑</span>}
-                        {isWorse && <span style="color: #ef4444; font-size: 0.8rem;">↓</span>}
+                        {isBetter && <span class="trend-arrow trend-arrow--up">↑</span>}
+                        {isWorse && <span class="trend-arrow trend-arrow--down">↓</span>}
                       </div>
                     </td>
                   );
@@ -2222,10 +2219,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                     const isWorse = !isNaN(recent) && !isNaN(season) && recent < season;
 
                     return (
-                      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                      <div class="trend-value">
                         <span class="avg-points">{player.avgRecent}</span>
-                        {isBetter && <span style="color: #22c55e; font-size: 0.9rem; font-weight: bold;">↑</span>}
-                        {isWorse && <span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;">↓</span>}
+                        {isBetter && <span class="trend-arrow trend-arrow--up">↑</span>}
+                        {isWorse && <span class="trend-arrow trend-arrow--down">↓</span>}
                       </div>
                     );
                   })()}
@@ -2234,13 +2231,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                   <span class="avg-points">{player.avgSeason}</span>
                 </td>
                 <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
-                  <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end;">
+                  <div class="trend-value">
                     {player.gameOdds?.opponent && (
                       <img
                         src={getNflLogoUrl(player.gameOdds.opponent)}
                         alt={player.gameOdds.opponent}
                         class="opponent-logo"
-                        style="width: 20px; height: 20px; object-fit: contain;"
                         onerror="this.style.display='none'"
                       />
                     )}
@@ -2442,16 +2438,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     <!-- Players by Team Report -->
     <div class="analytics-section">
-      <h3 class="analytics-section__title">NFL Analysis</h3>
-      <p class="analytics-section__sub">Players on the same NFL team</p>
+      <div class="section-header">
+        <h3 class="section-header__title">NFL Analysis</h3>
+        <p class="section-header__sub">Players on the same NFL team</p>
+      </div>
     </div>
     <div id="playersbyTeamContainer" class="nfl-teams-grid"></div>
     <!-- End Players by Team Report -->
 
     <!-- Players by College Report -->
     <div class="analytics-section">
-      <h3 class="analytics-section__title">College Analysis</h3>
-      <p class="analytics-section__sub">Players who played for the same college</p>
+      <div class="section-header">
+        <h3 class="section-header__title">College Analysis</h3>
+        <p class="section-header__sub">Players who played for the same college</p>
+      </div>
     </div>
     <div id="playersByCollegeContainer" class="nfl-teams-grid"></div>
     <!-- End Players by College Report -->
@@ -2664,9 +2664,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   .eyebrow {
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-size: 0.8rem;
-    color: #64748b;
+    letter-spacing: 0.06em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
     margin-bottom: 0.25rem;
   }
 
@@ -2688,24 +2689,26 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.65rem 1.4rem;
-    border-radius: 999px;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
     border: none;
-    background: #2563eb;
-    color: #fff;
+    background: var(--btn-primary-bg, #1c497c);
+    color: var(--btn-primary-text, #fff);
+    font-size: 0.8125rem;
     font-weight: 600;
     text-decoration: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.15s ease, transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   .btn:hover {
+    background: var(--btn-primary-bg-hover, #164066);
     transform: translateY(-1px);
-    box-shadow: var(--box-shadow-btn-hover);
+    box-shadow: var(--shadow-md);
   }
 
   .btn-secondary {
-    background: #e5e7eb;
-    color: #111827;
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-900, #111827);
     cursor: not-allowed;
   }
 
@@ -2754,7 +2757,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #94a3b8;
+    color: var(--color-gray-400, #9ca3af);
     margin-bottom: 0.25rem;
   }
 
@@ -2779,8 +2782,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     height: 100%;
     padding: 0.25rem;
     border: 2px solid transparent;
-    border-radius: 0.5rem;
-    background: #fff;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -2789,12 +2792,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .team-icon-btn:hover {
-    border-color: #eeeeee;
+    border-color: var(--color-gray-200, #dddedf);
     transform: scale(1.1);
   }
 
   .team-icon-btn[data-active="true"] {
-    background: #f0f9ff;
+    background: var(--color-gray-50, #f9fafb);
     box-shadow: var(--box-shadow-focus-ring);
   }
 
@@ -2942,10 +2945,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       padding-bottom: var(--padding-xxl);/* Make room for tabs below */
       justify-items: center;
       gap: var(--padding-md);
-          border-radius: 1rem;
-    background: #fff;
-    box-shadow: var(--box-shadow-lg);
-    position: relative;
+      border-radius: var(--radius-lg, 1rem);
+      background: var(--content-bg, #fff);
+      box-shadow: var(--shadow-lg);
+      position: relative;
     }
 
 
@@ -2996,8 +2999,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 0.25rem;
     padding: 0.5rem .7rem;
     border: 2px solid transparent;
-    border-radius: 0.5rem;
-    background: #f8fafc;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-gray-50, #f9fafb);
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
@@ -3009,13 +3012,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
   }
   .view-tab:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
+    background: var(--color-gray-200, #dddedf);
+    border-color: var(--color-gray-300, #d1d5db);
   }
 
   .view-tab[data-active="true"] {
-    background: #dbeafe;
-    border-color: #3b82f6;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+    border-color: var(--color-primary, #1c497c);
   }
 
   .view-tab__icon {
@@ -3041,7 +3044,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     transform: translateX(-50%);
     font-size: 0.75rem;
     font-weight: 500;
-    color: #64748b;
+    color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
@@ -3054,7 +3057,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .view-tab[data-active="true"] .view-tab__label {
-    color: #3b82f6;
+    color: var(--color-primary, #1c497c);
   }
 
   /* View Container */
@@ -3077,19 +3080,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .team-card__label {
     text-transform: uppercase;
     font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    color: #94a3b8;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
     margin: 0;
   }
 
   .team-card h2 {
     margin: 0;
-    font-size: 1.6rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
   }
 
   .team-card p {
     margin: 0;
-    color: #64748b;
+    color: var(--color-gray-500, #6b7280);
   }
 
   .roster-summary {
@@ -3099,15 +3106,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .roster-summary article {
-    background: #fff;
-    border-radius: 1rem;
+    background: var(--content-bg, #fff);
+    border-radius: var(--radius-lg, 1rem);
     padding: var(--padding-md) var(--padding-md) var(--padding-xl);
-    box-shadow: var(--box-shadow-md);
+    box-shadow: var(--shadow-md);
   }
 
   .roster-summary p {
     margin: 0;
-    color: #6b7280;
+    color: var(--color-gray-500, #6b7280);
   }
 
   .roster-summary strong {
@@ -3115,13 +3122,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     margin-top: 0.35rem;
     font-size: clamp(1.1rem, 4vw, 1.6rem);
     line-height: 1.2;
+    font-variant-numeric: tabular-nums;
   }
 
   .roster-table-card {
-    background: #fff;
-    border-radius: 1rem;
+    background: var(--content-bg, #fff);
+    border-radius: var(--radius-lg, 1rem);
     padding: var(--padding-md);
-    box-shadow: var(--box-shadow-lg);
+    box-shadow: var(--shadow-lg);
     overflow-x: auto;
   }
 
@@ -3157,10 +3165,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   :global(.chart-card) {
-    background: var(--card-bg-color, #fff);
-    border-radius: 1rem;
+    background: var(--content-bg, #fff);
+    border-radius: var(--radius-lg, 1rem);
     padding: var(--padding-md);
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    box-shadow: var(--shadow-lg);
     display: grid;
     gap: 0.35rem;
     align-content: start;
@@ -3176,15 +3184,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   :global(.chart-card__header h3) {
     margin: 0;
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    color: var(--color-gray-900, #111827);
   }
 
   :global(.chart-card__sub) {
     margin: 0;
-    color: var(--text-secondary-color, #64748b);
-    font-size: 0.9rem;
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.875rem;
   }
 
   .cap-subtotals {
@@ -3196,21 +3204,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.95rem;
-    color: #1f2937;
-    border-bottom: 1px solid #f7f7f7;
+    font-size: 0.875rem;
+    color: var(--color-gray-800, #1f2937);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
     padding-bottom: var(--padding-xs);
   }
 
   .cap-subtotals__row strong {
-    font-size: 0.95rem;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .cap-count {
     font-weight: 600;
     margin-left: 0.35rem;
-    color: #475569;
-    font-size: 0.9rem;
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .legend-dot {
@@ -3248,7 +3258,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .chart-metrics__hint {
-    color: #6b7280;
+    color: var(--color-gray-500, #6b7280);
     font-size: 0.8rem;
     padding-block: 1rem;
     display: block;
@@ -3273,15 +3283,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0;
     border: none;
     background: none;
-    color: #64748b;
+    color: var(--color-gray-500, #6b7280);
     cursor: pointer;
     border-radius: 0.375rem;
     transition: color 0.2s ease, background-color 0.2s ease;
   }
 
   .chart-card-link:hover {
-    color: #2563eb;
-    background-color: #eff6ff;
+    color: var(--color-primary, #1c497c);
+    background-color: var(--color-gray-50, #f9fafb);
   }
 
   /* --- League Planner Layout --- */
@@ -3296,10 +3306,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .planner-section__title {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary-color, #111827);
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
   }
 
   .draft-section {
@@ -3365,10 +3379,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   #rosterCountLabel {
     font-weight: 600;
-    color: #487ae7;
-    background: #dbeafe;
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
     padding: 0.35rem 0.85rem;
     border-radius: 999px;
+    font-variant-numeric: tabular-nums;
   }
 
   .column-controls {
@@ -3377,8 +3392,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
-    font-size: 0.9rem;
-    color: #475569;
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
   }
 
   .column-controls span {
@@ -3389,14 +3404,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    background: #f1f5f9;
+    background: var(--color-gray-50, #f9fafb);
     border-radius: 999px;
     padding: 0.2rem 0.75rem;
     font-weight: 600;
   }
 
   .column-controls input {
-    accent-color: #2563eb;
+    accent-color: var(--color-primary, #1c497c);
   }
 
   .roster-table-wrapper {
@@ -3420,18 +3435,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .roster-table th {
-    font-size: 0.8rem;
+    font-size: 0.625rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--table-header-text-color);
-    padding: 0.5rem;
-    border-bottom: 1px solid #dddcdc;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
     text-align: right;
+    background: var(--color-gray-50, #f9fafb);
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 
   .roster-table td {
     padding: 0.75rem 0.5rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
     vertical-align: middle;
   }
 
@@ -3480,6 +3500,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.salary-cell) {
     text-align: right;
     padding-right: 0.5rem;
+    font-variant-numeric: tabular-nums;
   }
 
   :global(.salary-cell--ufa) {
@@ -3565,7 +3586,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   :global(.yrs-chip__value) {
-    color: #334155;
+    color: var(--color-gray-700, #374151);
     font-weight: 400;
   }
 
@@ -3659,12 +3680,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   :global(.salary-cell--future-ufa) {
     text-align: center;
-    color: #9ca3af;
+    color: var(--color-gray-400, #9ca3af);
     font-weight: 400;
   }
 
   :global(.salary-cell--simulated) {
-    color: #9ca3af !important;
+    color: var(--color-gray-400, #9ca3af) !important;
     font-style: italic;
   }
 
@@ -3693,7 +3714,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   :global(.roster-table td.ranking-cell) {
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
   }
 
@@ -3703,17 +3724,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .roster-table tfoot td {
-    border-top: 2px solid #dddcdc;
+    border-top: 1px solid var(--content-border, #e2e8f0);
     border-bottom: none;
     font-weight: 600;
-    background: #f8fafc;
+    background: var(--color-gray-50, #f9fafb);
   }
 
   .roster-totals__label {
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.75rem;
-    color: #475569;
+    letter-spacing: 0.05em;
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
     text-align: left;
     padding-left: 0.75rem;
   }
@@ -3723,6 +3745,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     font-size: 0.75rem;
     font-weight: 700;
     text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   .roster-totals td[data-column='player'] {
@@ -3734,7 +3757,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   align-items: center;
   gap: 0.35rem;
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--color-gray-500, #6b7280);
 }
 
 :global(.player-meta span) {
@@ -3748,7 +3771,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 :global(.player-meta__pos) {
   font-weight: 300;
-  color: #475569;
+  color: var(--color-gray-600, #4b5563);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -3803,15 +3826,36 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     padding: 0.15rem 0.9rem;
     border-radius: 999px;
-    background: #dbeafe;
-    color: #1e3a8a;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, white);
+    color: var(--color-primary, #1c497c);
     font-size: 0.85rem;
     font-weight: 600;
     margin-right: 0.35rem;
   }
 
+  :global(.trade-bait-link) {
+    margin-left: 0.25rem;
+    font-size: 1rem;
+    display: inline-block;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  :global(.injury-indicator) {
+    cursor: pointer;
+    background: none;
+    color: #ef4444;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-left: 0.25rem;
+    line-height: 1;
+  }
+
   :global(.contract-years) {
-    color: #475569;
+    color: var(--color-gray-600, #4b5563);
     font-weight: 600;
   }
 
@@ -3824,7 +3868,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     grid-template-columns: repeat(7, minmax(70px, 1fr));
     gap: 0.35rem;
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--color-gray-400, #9ca3af);
   }
 
   :global(.timeline-row) {
@@ -3836,12 +3880,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.roster-empty) {
     text-align: center;
     padding: 2rem 1rem;
-    color: #94a3b8;
+    color: var(--color-gray-400, #9ca3af);
   }
 
   :global(.roster-row) {
     border-left: 4px solid transparent;
     transition: background 0.15s ease;
+  }
+
+  :global(.roster-row:hover) {
+    background: var(--color-gray-50, #f9fafb);
   }
 
   :global(.roster-row--active) {
@@ -3872,7 +3920,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   :global(.roster-row--position-divider) {
-    border-top: 2px solid #dddcdc;
+    border-top: 2px solid var(--content-border, #e2e8f0);
   }
 
   :global(.roster-row--active.roster-row--position-divider td), :global(.roster-table tbody tr:first-child td[data-column="player"])  {
@@ -3908,8 +3956,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: flex;
     gap: 1.5rem;
     margin-top: 0.85rem;
-    font-size: 0.9rem;
-    color: #475569;
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
   }
 
   .legend-swatch {
@@ -4750,19 +4798,78 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
   }
 
-  .analytics-section__title + .analytics-section__sub {
-    margin-top: -1rem;
-    margin-bottom: 0;
+  .analytics-section__title {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
   }
-  .analytics-section__sub{
-    color: var(--text-secondary-color, #64748b);
-    font-size: 0.9rem;
+
+  /* Section Header — title + subtitle unified behind a single left-border.
+     Use this whenever a section title needs a descriptive subtitle.
+     The border spans both lines so they read as one cohesive label. */
+  .section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 0.75rem;
+  }
+
+  .section-header__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    line-height: 1;
+  }
+
+  .section-header__sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    line-height: 1.3;
+  }
+
+  /* Legacy standalone subtitle (kept for sections that still use the old markup) */
+  .analytics-section__sub {
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.875rem;
+    margin: -0.5rem 0 0.75rem;
+    padding-left: 0.625rem;
   }
 
   .data-disclaimer {
     margin: 1rem 0 0;
     color: var(--text-secondary-color, #64748b);
     font-size: 0.95rem;
+  }
+
+  /* Trend value cells (coach mode) */
+  .trend-value {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trend-arrow {
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .trend-arrow--up {
+    color: var(--color-secondary, #2e8743);
+  }
+
+  .trend-arrow--down {
+    color: var(--color-error, #dc2626);
   }
 
   /* Coach Mode Toggle */
@@ -4947,7 +5054,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   :global(.opponent-bye) {
-    color: #94a3b8;
+    color: var(--color-gray-400, #9ca3af);
     font-style: italic;
   }
 
@@ -7061,13 +7168,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
           const oppAvgCell = `
             <td data-label="Opp Avg" data-column="oppAvg" class="coach-col" style="display:none">
-              <div style="display: flex; align-items: center; gap: 0.25rem; justify-self: end;">
+              <div class="trend-value">
                 ${player.gameOdds?.opponent ? `
                   <img
                     src="${getLogoUrl(player.gameOdds.opponent)}"
                     alt="${player.gameOdds.opponent}"
                     class="opponent-logo"
-                    style="width: 20px; height: 20px; object-fit: contain;"
                     onerror="this.style.display='none'"
                   />
                 ` : ''}
@@ -7088,12 +7194,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             const season = parseFloat(player.avgSeason);
             const isBetter = !isNaN(recent) && !isNaN(season) && recent > season;
             const isWorse = !isNaN(recent) && !isNaN(season) && recent < season;
-            const arrow = isBetter ? '<span style="color: #22c55e; font-size: 0.9rem; font-weight: bold;">↑</span>' :
-                          isWorse ? '<span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;">↓</span>' : '';
+            const arrow = isBetter ? '<span class="trend-arrow trend-arrow--up">↑</span>' :
+                          isWorse ? '<span class="trend-arrow trend-arrow--down">↓</span>' : '';
 
             return `
               <td data-label="Avg (L3)" data-column="avgRecent" class="coach-col" style="display:none; text-align: right;">
-                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                <div class="trend-value">
                   <span class="avg-points">${player.avgRecent || '-'}</span>
                   ${arrow}
                 </div>
@@ -7113,12 +7219,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             const avg = parseFloat(player.avgSeason);
             const isBetter = !isNaN(score) && !isNaN(avg) && score > avg;
             const isWorse = !isNaN(score) && !isNaN(avg) && score < avg;
-            const arrow = isBetter ? '<span style="color: #22c55e; font-size: 0.8rem;">↑</span>' :
-                          isWorse ? '<span style="color: #ef4444; font-size: 0.8rem;">↓</span>' : '';
+            const arrow = isBetter ? '<span class="trend-arrow trend-arrow--up">↑</span>' :
+                          isWorse ? '<span class="trend-arrow trend-arrow--down">↓</span>' : '';
 
             return `
               <td data-label="Wk ${scoreData.week}" data-column="trend-${scoreData.week}" class="coach-col trend-week-col trend-cell" style="display:none">
-                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 2px;">
+                <div class="trend-value">
                   ${scoreData.score}
                   ${arrow}
                 </div>
@@ -7157,11 +7263,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           ` : '';
 
           const injuryBadge = player.injuryStatus
-            ? `<button class="injury-indicator" data-player-id="${player.id}" data-player-name="${player.name}" data-injury-status="${player.injuryStatus}" data-injury-body-part="${player.injuryBodyPart || ''}" title="${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}" style="cursor: pointer; background: none; color: #e56263; border: none; padding: 0; font-size: 0.9rem; font-weight: 600; margin-left: 0.25rem;">(${player.injuryStatus.substring(0, 1)})</button>`
+            ? `<button class="injury-indicator" data-player-id="${player.id}" data-player-name="${player.name}" data-injury-status="${player.injuryStatus}" data-injury-body-part="${player.injuryBodyPart || ''}" title="${player.injuryStatus}${player.injuryBodyPart ? ` - ${player.injuryBodyPart}` : ''}">(${player.injuryStatus.substring(0, 1)})</button>`
             : '';
 
           const tradeBaitBadge = player.tradeBait
-            ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder" style="margin-left: 0.25rem; font-size: 1rem; display: inline-block; cursor: pointer; text-decoration: none;">🏷️</a>`
+            ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder">🏷️</a>`
             : '';
 
           const playerCellHtml = buildPlayerCellHTML({

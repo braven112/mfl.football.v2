@@ -187,6 +187,53 @@ The left-border accent on uppercase section titles is the most recognizable edit
 }
 ```
 
+### Section Header with Subtitle Pattern
+
+When a section title needs a descriptive subtitle, wrap both in a `.section-header` container so the left-border accent spans both lines. This keeps the title and subtitle visually unified as a single label block, rather than the subtitle dangling loose below the border.
+
+**HTML:**
+```html
+<div class="section-header">
+  <h3 class="section-header__title">NFL Analysis</h3>
+  <p class="section-header__sub">Players on the same NFL team</p>
+</div>
+```
+
+**CSS:**
+```css
+.section-header {
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--color-primary, #1c497c);
+  margin-bottom: 0.75rem;
+}
+
+.section-header__title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  line-height: 1;
+}
+
+.section-header__sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-gray-400, #9ca3af);
+  line-height: 1.3;
+}
+```
+
+**When to use:**
+- Section title + subtitle (e.g., "NFL Analysis" / "Players on the same NFL team")
+- Any editorial section heading that needs a clarifying description
+
+**When NOT to use (use standalone section title instead):**
+- Section titles without subtitles (e.g., "Cap Analysis") — use the plain `.section-title` pattern above
+
+**Evidence:** First implemented in `src/pages/theleague/rosters.astro` for the NFL Analysis and College Analysis sections in the Analytics view.
+
 ### Key Metrics Strip
 
 3-column grid for hero-level stats:
