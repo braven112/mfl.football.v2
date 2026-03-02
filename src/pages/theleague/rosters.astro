@@ -13,6 +13,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
 import ContractDeclarationModal from '../../components/theleague/ContractDeclarationModal.astro';
+import ContractDemoOverlay from '../../components/theleague/ContractDemoOverlay.astro';
 import PlayerNewsModal from '../../components/theleague/PlayerNewsModal.astro';
 import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
@@ -1704,19 +1705,19 @@ if (testEligibility) {
       recentScores: [],
       avgRecent: '-',
       avgSeason: '-',
-      nflTeam: 'CLE',
+      nflTeam: 'LVR',
       opponent: 'BYE',
       oppStats: null,
       gameOdds: null,
       draftYear: 2026,
-      draftTeam: 'CLE',
+      draftTeam: 'LVR',
       draftRound: 1,
       draftPick: 1,
-      nflLogo: getNflLogoUrl('CLE'),
+      nflLogo: getNflLogoUrl('LVR'),
       rosterSlot: 'ROSTER',
       byeWeek: null,
       birthdate: null,
-      headshot: getPlayerHeadshot('17462', null),
+      headshot: getPlayerHeadshot('17462', '4837248'),
       college: 'Indiana',
       collegeLogo: null,
       collegeLogoDark: null,
@@ -1763,17 +1764,25 @@ if (testEligibility) {
       contractInfo: '',
       isRookieContract: false,
     },
-    // Mendoza: #1 overall pick, 4yr RC default, can reduce to 1-3, urgent deadline
-    '17462': {
-      type: 'rookie-override',
-      yearOptions: [1, 2, 3],
-      deadlineTimestamp: Math.floor((now + 3 * 60 * 60 * 1000) / 1000),
-      isExpired: false,
-      currentYears: 4,
-      currentSalary: 3250000,
-      contractInfo: 'RC',
-      isRookieContract: true,
-    },
+    // Mendoza: #1 overall pick, 4yr RC default, can reduce to 1-3, August cutdown deadline
+    // 3rd Sunday in August @ 8:45 PM PT
+    '17462': (() => {
+      const y = new Date().getFullYear();
+      const a = new Date(y, 7, 1);
+      const d = (7 - a.getDay()) % 7 || 7;
+      const ts = new Date(y, 7, 1 + d + 14, 20, 45, 0);
+      const deadline = ts.getTime() > now ? ts : (() => { const a2 = new Date(y+1, 7, 1); const d2 = (7 - a2.getDay()) % 7 || 7; return new Date(y+1, 7, 1 + d2 + 14, 20, 45, 0); })();
+      return {
+        type: 'rookie-override' as const,
+        yearOptions: [1, 2, 3],
+        deadlineTimestamp: Math.floor(deadline.getTime() / 1000),
+        isExpired: false,
+        currentYears: 4,
+        currentSalary: 3250000,
+        contractInfo: 'RC',
+        isRookieContract: true,
+      };
+    })(),
   };
 }
 
@@ -1975,7 +1984,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <!-- GM Mode Columns -->
               <th scope="col" data-column="rank" class="gm-col ranking-col" data-sortable data-sort-key="topRanking" id="rankColHeader">Rank <span class="sort-arrow"></span></th>
               <th scope="col" data-column="years" class="gm-col" data-sortable data-sort-key="contractYears">Yrs <span class="sort-arrow"></span></th>
-              <th scope="col" data-column="actions" class="actions-column gm-col">Actions</th>
+              <th scope="col" data-column="actions" class="actions-column gm-col" title="Contract Actions">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-label="Actions" style="opacity:0.5;vertical-align:middle;">
+                  <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                </svg>
+              </th>
               {SALARY_YEARS.map((year, index) => (
                 <th scope="col" data-column={`year${index + 1}`} class="gm-col" data-sortable data-sort-key={`salary_${index}`}>{year} <span class="sort-arrow"></span></th>
               ))}
@@ -2232,8 +2245,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                     data-player-injury-status={player.injuryStatus || ''}
                     title="Manage Contract"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M12 5v14M5 12h14"/>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
                     </svg>
                   </button>
                 </td>
@@ -3463,21 +3476,44 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     padding: 0;
-    border: 1px solid #f59e0b;
-    background: white;
-    color: #f59e0b;
-    border-radius: 3px;
+    border: 1px solid var(--color-border, #d1d5db);
+    background: var(--color-surface, #fff);
+    color: var(--color-text-tertiary, #6b7280);
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
   }
 
   :global(.ufa-action-btn:hover) {
-    background: #f59e0b;
-    color: white;
-    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+    background: var(--color-bg-hover, #f3f4f6);
+    color: var(--color-text-secondary, #374151);
+    border-color: var(--color-border-strong, #9ca3af);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Left-border accents when sandbox action is active */
+  :global(.ufa-action-btn[data-action-type="franchise"]) {
+    border-left: 2.5px solid var(--color-primary, #1c497c);
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: var(--color-primary, #1c497c);
+  }
+  :global(.ufa-action-btn[data-action-type="extension"]) {
+    border-left: 2.5px solid #059669;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #059669;
+  }
+  :global(.ufa-action-btn[data-action-type="cut"]) {
+    border-left: 2.5px solid #dc2626;
+    background: linear-gradient(135deg, #fef2f2, #fecaca);
+    color: #dc2626;
+  }
+  :global(.ufa-action-btn[data-action-type="trade"]) {
+    border-left: 2.5px solid #d97706;
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    color: #d97706;
   }
 
   :global(.ufa-action-btn svg) {
@@ -3485,61 +3521,115 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     height: 14px;
   }
 
-  /* --- Years Cell: Eligibility Indicators --- */
+  /* --- YRS Chip: Interactive Contract Year Indicator --- */
   :global(.years-cell) {
     position: relative;
     white-space: nowrap;
   }
 
-  :global(.years-cell--eligible) {
+  :global(.yrs-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-variant-numeric: tabular-nums;
+    font-family: inherit;
+    font-size: inherit;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: default;
+    line-height: 1;
+  }
+
+  :global(.yrs-chip__value) {
+    color: #334155;
+    font-weight: 400;
+  }
+
+  /* Eligible: blue left-border chip — the primary interactive state */
+  :global(.yrs-chip--eligible) {
     cursor: pointer;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid rgba(28, 73, 124, 0.15);
+    border-left: 2.5px solid var(--color-primary, #1c497c);
+    border-radius: 4px;
+    padding: 0.1875rem 0.375rem 0.1875rem 0.3125rem;
+    transition: all 0.18s ease;
+  }
+
+  :global(.yrs-chip--eligible:hover) {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: rgba(28, 73, 124, 0.3);
+    border-left-color: var(--color-primary, #1c497c);
+    box-shadow: 0 1px 4px rgba(28, 73, 124, 0.15);
+  }
+
+  :global(.yrs-chip--eligible .yrs-chip__value) {
     color: var(--color-primary, #1c497c);
-    font-weight: 600;
-  }
-
-  :global(.years-cell--eligible:hover) {
-    color: #163d68;
-    text-decoration: underline;
-  }
-
-  :global(.years-cell__value--eligible) {
-    color: var(--color-primary, #1c497c);
-    font-weight: 600;
-  }
-
-  :global(.years-cell__asterisk) {
     font-weight: 700;
-    font-size: 0.875rem;
-    margin-left: 1px;
+  }
+
+  /* Pending: amber left-border chip — editable until deadline */
+  :global(.yrs-chip--pending) {
+    cursor: pointer;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid rgba(217, 119, 6, 0.15);
+    border-left: 2.5px solid #d97706;
+    border-radius: 4px;
+    padding: 0.1875rem 0.375rem 0.1875rem 0.3125rem;
+    transition: all 0.18s ease;
+  }
+
+  :global(.yrs-chip--pending:hover) {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: rgba(217, 119, 6, 0.3);
+    border-left-color: #d97706;
+    box-shadow: 0 1px 4px rgba(217, 119, 6, 0.15);
+  }
+
+  :global(.yrs-chip--pending .yrs-chip__value) {
+    color: #92400e;
+    font-weight: 700;
+  }
+
+  /* Approved: green accent, non-interactive */
+  :global(.yrs-chip--approved .yrs-chip__value) {
+    color: #059669;
+    font-weight: 600;
+  }
+
+  :global(.yrs-chip__asterisk) {
+    font-weight: 700;
+    font-size: 0.75rem;
     vertical-align: super;
     line-height: 1;
   }
 
-  :global(.years-cell__deadline) {
+  /* Deadline badge */
+  :global(.yrs-chip__deadline) {
     display: inline-block;
-    font-size: 0.625rem;
-    font-weight: 600;
+    font-size: 0.5625rem;
+    font-weight: 700;
     padding: 1px 4px;
-    border-radius: 3px;
-    margin-left: 3px;
+    border-radius: 2px;
     background: #fef3c7;
     color: #92400e;
-    vertical-align: middle;
     line-height: 1.3;
+    letter-spacing: 0.02em;
   }
 
-  :global(.years-cell__deadline--urgent) {
+  :global(.yrs-chip__deadline--urgent) {
     background: #fed7aa;
     color: #9a3412;
   }
 
-  :global(.years-cell__deadline--critical) {
+  :global(.yrs-chip__deadline--critical) {
     background: #fecaca;
     color: #991b1b;
-    animation: years-pulse 2s ease-in-out infinite;
+    animation: yrs-pulse 2s ease-in-out infinite;
   }
 
-  @keyframes years-pulse {
+  @keyframes yrs-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
   }
@@ -3558,8 +3648,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.actions-cell) {
     text-align: center;
     vertical-align: middle;
-    padding: 0.5rem;
-    width: 60px;
+    padding: 0.375rem;
+    width: 44px;
+  }
+
+  :global(.actions-column) {
+    text-align: center !important;
+    width: 44px;
   }
 
   :global(.roster-table th[data-column='rank']) {
@@ -4741,6 +4836,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 </div>
 
 <ContractDeclarationModal />
+<ContractDemoOverlay />
 
 <script
   type="application/json"
@@ -4819,6 +4915,32 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return config.authUser?.franchiseId === teamId;
   };
 
+  /** Build deadline badge HTML from an eligibility timestamp */
+  const buildDeadlineBadge = (elig) => {
+    if (!elig?.deadlineTimestamp) return '';
+    const remaining = elig.deadlineTimestamp * 1000 - Date.now();
+    if (remaining <= 0) return '';
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    let urgencyClass = '';
+    let label = '';
+    if (hours < 1) {
+      label = '&lt;1h';
+      urgencyClass = ' yrs-chip__deadline--critical';
+    } else if (hours < 4) {
+      label = hours + 'h';
+      urgencyClass = ' yrs-chip__deadline--critical';
+    } else if (hours < 12) {
+      label = hours + 'h';
+      urgencyClass = ' yrs-chip__deadline--urgent';
+    } else if (hours < 24) {
+      label = hours + 'h';
+    } else {
+      label = days + 'd';
+    }
+    return '<span class="yrs-chip__deadline' + urgencyClass + '">' + label + '</span>';
+  };
+
   /** Build the years cell inner content with eligibility indicators.
    *  teamId is passed from the render context so outer-scope works. */
   const buildYearsCellContent = (playerId, displayYears, teamId) => {
@@ -4827,36 +4949,36 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     // Check for local optimistic declaration
     const localDecl = localDeclarations[playerId];
     if (localDecl) {
-      const color = localDecl.status === 'approved' ? '#059669' : '#d97706';
-      return '<span class="years-cell__value">' + localDecl.years + '</span><span class="years-cell__asterisk" style="color:' + color + '">*</span>';
+      if (localDecl.status === 'approved') {
+        return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + localDecl.years + '</span><span class="yrs-chip__asterisk" style="color:#059669">*</span></span>';
+      }
+      // Pending: editable chip with deadline
+      const elig = getPlayerEligibility(playerId, teamId);
+      const badge = buildDeadlineBadge(elig);
+      return '<button class="yrs-chip yrs-chip--pending" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + localDecl.years + '</span>' + badge + '</button>';
     }
 
     // Check for existing server declaration
     const serverDecl = declarationsByPlayer[playerId];
     if (serverDecl) {
-      const color = serverDecl.status === 'approved' ? '#059669' : '#d97706';
-      return '<span class="years-cell__value">' + serverDecl.requestedYears + '</span><span class="years-cell__asterisk" style="color:' + color + '">*</span>';
+      if (serverDecl.status === 'approved') {
+        return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + serverDecl.requestedYears + '</span><span class="yrs-chip__asterisk" style="color:#059669">*</span></span>';
+      }
+      // Pending: editable chip with deadline
+      const elig = getPlayerEligibility(playerId, teamId);
+      const badge = buildDeadlineBadge(elig);
+      return '<button class="yrs-chip yrs-chip--pending" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + serverDecl.requestedYears + '</span>' + badge + '</button>';
     }
 
     // Check for eligibility (only if owner is viewing their own team)
-    if (!isOwnerViewingTeam(teamId)) return String(years);
+    if (!isOwnerViewingTeam(teamId)) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
     const elig = getPlayerEligibility(playerId, teamId);
-    if (!elig || elig.isExpired) return String(years);
+    if (!elig || elig.isExpired) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
-    // Show eligible indicator with deadline badge
-    let deadlineBadge = '';
-    if (elig.deadlineTimestamp) {
-      const remaining = elig.deadlineTimestamp * 1000 - Date.now();
-      if (remaining > 0) {
-        const hours = Math.floor(remaining / (1000 * 60 * 60));
-        const urgencyClass = hours < 4 ? ' years-cell__deadline--critical' : hours < 12 ? ' years-cell__deadline--urgent' : '';
-        const label = hours < 1 ? '&lt;1h' : hours + 'h';
-        deadlineBadge = '<span class="years-cell__deadline' + urgencyClass + '">' + label + '</span>';
-      }
-    }
-
-    return '<span class="years-cell__value years-cell__value--eligible">' + years + '</span>' + deadlineBadge;
+    // Eligible: interactive chip with deadline badge
+    const badge = buildDeadlineBadge(elig);
+    return '<button class="yrs-chip yrs-chip--eligible" type="button"><span class="yrs-chip__value">' + years + '</span>' + badge + '</button>';
   };
 
   const DEFAULT_HEADSHOT_URL =
@@ -5801,6 +5923,61 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     let currentTeam = defaultTeamId;
     const hiddenColumns = new Set();
 
+    /** Extracts player info from a row for the declaration modal */
+    const extractPlayerDataFromRow = (row, playerId, elig) => {
+      const playerCell = row?.querySelector('[data-column="player"]');
+      const nameEl = playerCell?.querySelector('.player-cell__name');
+      const imgEl = playerCell?.querySelector('.player-cell__avatar img');
+      const metaLogoEl = playerCell?.querySelector('.player-cell__meta-logo');
+      const posEl = playerCell?.querySelector('.player-cell__position');
+      return {
+        id: playerId,
+        name: nameEl?.textContent ?? '',
+        headshot: imgEl?.src ?? DEFAULT_HEADSHOT_URL,
+        nflLogo: metaLogoEl?.src ?? '',
+        position: posEl?.textContent ?? '',
+        eligibility: elig,
+      };
+    };
+
+    /** Attach click handlers to yrs-chip buttons (eligible + pending) */
+    const applyEligibilityStyling = () => {
+      if (!isOwnerViewingTeam(currentTeam)) return;
+
+      // Eligible chips — open fresh declaration modal
+      document.querySelectorAll('.yrs-chip--eligible').forEach(btn => {
+        const cell = btn.closest('.years-cell');
+        const playerId = cell?.dataset?.playerId;
+        if (!playerId) return;
+        const elig = getPlayerEligibility(playerId, currentTeam);
+        if (!elig) return;
+
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const row = cell.closest('tr');
+          openDeclarationModal(extractPlayerDataFromRow(row, playerId, elig));
+        };
+      });
+
+      // Pending chips — reopen modal pre-populated with current selection
+      document.querySelectorAll('.yrs-chip--pending').forEach(btn => {
+        const cell = btn.closest('.years-cell');
+        const playerId = cell?.dataset?.playerId || btn.dataset.declPlayer;
+        if (!playerId) return;
+        const elig = getPlayerEligibility(playerId, currentTeam);
+        if (!elig) return;
+
+        const decl = localDeclarations[playerId] || declarationsByPlayer[playerId];
+        const declaredYears = decl?.years ?? decl?.requestedYears;
+
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const row = cell.closest('tr');
+          openDeclarationModal(extractPlayerDataFromRow(row, playerId, elig), declaredYears);
+        };
+      });
+    };
+
     const formatCountLabel = (count) => `${count} Players`;
 
     const getCapPercent = (tag = 'ACTIVE', isCurrent = true) => {
@@ -6290,6 +6467,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             .join('');
 
           // Add action button for all players
+          const actionType = action?.type || '';
           const actionsCell = `
             <td data-label="Actions" data-column="actions" class="actions-cell gm-col">
               <button
@@ -6303,10 +6481,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 data-player-salary="${action?.originalSalary ?? player.salary ?? 0}"
                 data-player-years="${action?.originalYears ?? player.contractYears ?? 1}"
                 data-player-injury-status="${player.injuryStatus || ''}"
+                ${actionType ? 'data-action-type="' + actionType + '"' : ''}
                 title="Manage Contract"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14M5 12h14"/>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
                 </svg>
               </button>
             </td>
@@ -6569,36 +6748,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 
         // Eligible years cell clicks — open declaration modal
-        if (isOwnerViewingTeam(currentTeam)) {
-          document.querySelectorAll('.years-cell').forEach(cell => {
-            const playerId = cell.dataset.playerId;
-            if (!playerId) return;
-            const elig = getPlayerEligibility(playerId, currentTeam);
-            const hasDecl = localDeclarations[playerId] || declarationsByPlayer[playerId];
-            if (!elig || elig.isExpired || hasDecl) return;
-
-            cell.classList.add('years-cell--eligible');
-            cell.addEventListener('click', (e) => {
-              e.stopPropagation();
-              // Find the player row to get name/position/headshot data
-              const row = cell.closest('tr');
-              const playerCell = row?.querySelector('[data-column="player"]');
-              const nameEl = playerCell?.querySelector('.player-cell__name');
-              const imgEl = playerCell?.querySelector('.player-cell__avatar img');
-              const metaLogoEl = playerCell?.querySelector('.player-cell__meta-logo');
-              const posEl = playerCell?.querySelector('.player-cell__position');
-
-              openDeclarationModal({
-                id: playerId,
-                name: nameEl?.textContent ?? '',
-                headshot: imgEl?.src ?? DEFAULT_HEADSHOT_URL,
-                nflLogo: metaLogoEl?.src ?? '',
-                position: posEl?.textContent ?? '',
-                eligibility: elig,
-              });
-            });
-          });
-        }
+        applyEligibilityStyling();
 
         // Injury indicator buttons
         document.querySelectorAll('.injury-indicator').forEach(btn => {
@@ -7076,7 +7226,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     let cdmPlayerData = null;
     let cdmDeadlineInterval = null;
 
-    const openDeclarationModal = (data) => {
+    const openDeclarationModal = (data, preSelectedYears = null) => {
       if (!cdmModal) return;
       cdmPlayerData = data;
       cdmSelectedYears = null;
@@ -7085,7 +7235,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       cdmSubmitBtn.disabled = true;
       cdmSubmitBtn.classList.remove('loading');
       cdmSubmitBtn.style.display = '';
-      cdmSubmitBtn.textContent = 'Declare Contract';
+      cdmSubmitBtn.textContent = preSelectedYears ? 'Update Declaration' : 'Declare Contract';
 
       // Hero
       document.getElementById('cdm-headshot').src = data.headshot || DEFAULT_HEADSHOT_URL;
@@ -7119,8 +7269,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             return;
           }
           const hours = Math.floor(remaining / (1000 * 60 * 60));
+          const days = Math.floor(hours / 24);
+          const remainingHours = hours % 24;
           const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-          document.getElementById('cdm-deadline-text').textContent = 'Deadline in ' + hours + 'h ' + minutes + 'm';
+          let deadlineText;
+          if (days > 0) {
+            deadlineText = 'Deadline in ' + days + 'd ' + remainingHours + 'h';
+          } else {
+            deadlineText = 'Deadline in ' + hours + 'h ' + minutes + 'm';
+          }
+          document.getElementById('cdm-deadline-text').textContent = deadlineText;
           deadlineEl.className = 'cdm-deadline' + (hours < 4 ? ' cdm-deadline--critical' : hours < 12 ? ' cdm-deadline--urgent' : '');
         };
         updateDeadline();
@@ -7155,8 +7313,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         yearContainer.appendChild(btn);
       });
 
-      // Hide projection initially
-      document.getElementById('cdm-projection-section').style.display = 'none';
+      // Pre-select years if editing a pending declaration
+      if (preSelectedYears) {
+        const matchBtn = yearContainer.querySelector('[data-years="' + preSelectedYears + '"]');
+        if (matchBtn) {
+          matchBtn.classList.add('selected');
+          cdmSelectedYears = preSelectedYears;
+          cdmSubmitBtn.disabled = false;
+          updateProjectionTable(elig.currentSalary, preSelectedYears);
+        }
+      } else {
+        // Hide projection initially for fresh declarations
+        document.getElementById('cdm-projection-section').style.display = 'none';
+      }
 
       cdmModal.classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -7197,6 +7366,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       cdmSubmitBtn.classList.add('loading');
       cdmSubmitBtn.textContent = 'Submitting...';
       cdmError.style.display = 'none';
+
+      // Demo mode: skip API call, show success immediately
+      const isDemoPlayer = demoActive && String(cdmPlayerData.id).startsWith('DEMO_');
+      if (isDemoPlayer) {
+        localDeclarations[cdmPlayerData.id] = {
+          status: 'pending',
+          years: cdmSelectedYears,
+        };
+        cdmSubmitBtn.style.display = 'none';
+        cdmSuccess.style.display = 'flex';
+        updateView();
+        applyEligibilityStyling();
+        setTimeout(closeDeclarationModal, 1500);
+        return;
+      }
 
       try {
         const res = await fetch('/api/contracts/declare', {
@@ -7591,6 +7775,309 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     // Attach delegated modal trigger after table is rendered
     const rosterTbody = document.getElementById('rosterTableBody');
     if (rosterTbody) initPlayerModalTrigger(rosterTbody);
+
+    // ================================================================
+    //  Contract Demo — guided walkthrough with mock data injection
+    // ================================================================
+    const demoTrigger = document.getElementById('cdemo-trigger');
+    const demoExit = document.getElementById('cdemo-exit');
+    const demoBanner = document.getElementById('cdemo-banner');
+    const demoBannerExit = document.getElementById('cdemo-banner-exit');
+    const demoTutorial = document.getElementById('cdemo-tutorial');
+    const demoTutorialClose = document.getElementById('cdemo-tutorial-close');
+    const demoBack = document.getElementById('cdemo-back');
+    const demoNext = document.getElementById('cdemo-next');
+    const demoStart = document.getElementById('cdemo-start');
+    const demoOverlay = demoTutorial?.querySelector('.cdemo-tutorial__overlay');
+
+    let demoActive = false;
+    let demoStep = 1;
+    let demoOriginalPlayers = null; // snapshot before injection
+    let demoOriginalAuthUser = null; // snapshot of auth state before demo
+
+    const DEMO_MOCK_IDS = ['DEMO_HOPKINS', 'DEMO_MENDOZA'];
+
+    const buildDemoPlayers = () => [
+      {
+        id: 'DEMO_HOPKINS',
+        name: 'Hopkins, DeAndre',
+        position: 'WR',
+        salary: 500000,
+        contractYears: 1,
+        totalRemaining: 500000,
+        franchiseId: currentTeam,
+        status: 'ROSTER',
+        contractType: 'Standard',
+        points: 0,
+        projectedPoints: '-',
+        recentScores: [],
+        avgRecent: '-',
+        avgSeason: '-',
+        nflTeam: 'BAL',
+        opponent: 'BYE',
+        oppStats: null,
+        gameOdds: null,
+        draftYear: 2013,
+        draftTeam: 'HOU',
+        draftRound: 1,
+        draftPick: 27,
+        nflLogo: '/assets/nfl-logos/BAL.svg',
+        rosterSlot: 'ROSTER',
+        byeWeek: null,
+        birthdate: null,
+        headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/15795.png',
+        college: 'Clemson',
+        collegeLogo: null,
+        collegeLogoDark: null,
+        height: '73',
+        weight: '210',
+        number: '10',
+        experience: null,
+        depthChartPosition: null,
+        depthChartOrder: null,
+        injuryStatus: null,
+        injuryBodyPart: null,
+        sleeperId: null,
+        sleeperFullName: null,
+        sleeperPosition: null,
+        fantasyPositions: null,
+        gsisId: null,
+        sleeperAge: null,
+        sleeperStatus: null,
+        sleeperActive: null,
+        offenseSnaps: null,
+        defenseSnaps: null,
+        stSnaps: null,
+        gamesPlayed: null,
+        depthChartAhead: null,
+        tradeBait: false,
+        espnId: '15795',
+      },
+      {
+        id: 'DEMO_MENDOZA',
+        name: 'Mendoza, Fernando',
+        position: 'QB',
+        salary: 3250000,
+        contractYears: 4,
+        totalRemaining: 13000000,
+        franchiseId: currentTeam,
+        status: 'ROSTER',
+        contractType: 'Rookie',
+        points: 0,
+        projectedPoints: '-',
+        recentScores: [],
+        avgRecent: '-',
+        avgSeason: '-',
+        nflTeam: 'LVR',
+        opponent: 'BYE',
+        oppStats: null,
+        gameOdds: null,
+        draftYear: 2026,
+        draftTeam: 'LVR',
+        draftRound: 1,
+        draftPick: 1,
+        nflLogo: '/assets/nfl-logos/LVR.svg',
+        rosterSlot: 'ROSTER',
+        byeWeek: null,
+        birthdate: null,
+        headshot: 'https://a.espncdn.com/i/headshots/college-football/players/full/4837248.png',
+        college: 'Indiana',
+        collegeLogo: null,
+        collegeLogoDark: null,
+        height: '75',
+        weight: '220',
+        number: '1',
+        experience: null,
+        depthChartPosition: null,
+        depthChartOrder: null,
+        injuryStatus: null,
+        injuryBodyPart: null,
+        sleeperId: null,
+        sleeperFullName: null,
+        sleeperPosition: null,
+        fantasyPositions: null,
+        gsisId: null,
+        sleeperAge: null,
+        sleeperStatus: null,
+        sleeperActive: null,
+        offenseSnaps: null,
+        defenseSnaps: null,
+        stSnaps: null,
+        gamesPlayed: null,
+        depthChartAhead: null,
+        tradeBait: false,
+        espnId: '4837248',
+      },
+    ];
+
+    const injectDemoData = () => {
+      const { teamData } = getTeamData();
+      if (!teamData?.players) return;
+
+      // Guard: skip if already injected
+      if (teamData.players.some(p => DEMO_MOCK_IDS.includes(p.id))) return;
+
+      // Snapshot original players
+      demoOriginalPlayers = [...teamData.players];
+
+      // Inject mock players at the front
+      teamData.players = [...buildDemoPlayers(), ...teamData.players];
+
+      // Inject eligibility data
+      const now = Date.now();
+      eligibilityByTeam[currentTeam] = eligibilityByTeam[currentTeam] || {};
+      eligibilityByTeam[currentTeam]['DEMO_HOPKINS'] = {
+        type: 'new-acquisition',
+        yearOptions: [2, 3, 4, 5],
+        deadlineTimestamp: Math.floor((now + 18 * 60 * 60 * 1000) / 1000),
+        isExpired: false,
+        currentYears: 1,
+        currentSalary: 500000,
+        contractInfo: '',
+        isRookieContract: false,
+      };
+      // Rookie override deadline = 3rd Sunday in August @ 8:45 PM PT
+      const year = new Date().getFullYear();
+      const aug1 = new Date(year, 7, 1);
+      const dayOfWeek = aug1.getDay();
+      const daysToFirstSunday = (7 - dayOfWeek) % 7 || 7;
+      const thirdSunday = new Date(year, 7, 1 + daysToFirstSunday + 14, 20, 45, 0);
+      // If deadline already passed this year, use next year
+      const rookieDeadline = thirdSunday.getTime() > now ? thirdSunday : new Date(year + 1, 7, 1 + ((7 - new Date(year + 1, 7, 1).getDay()) % 7 || 7) + 14, 20, 45, 0);
+
+      eligibilityByTeam[currentTeam]['DEMO_MENDOZA'] = {
+        type: 'rookie-override',
+        yearOptions: [1, 2, 3],
+        deadlineTimestamp: Math.floor(rookieDeadline.getTime() / 1000),
+        isExpired: false,
+        currentYears: 4,
+        currentSalary: 3250000,
+        contractInfo: 'RC',
+        isRookieContract: true,
+      };
+    };
+
+    const removeDemoData = () => {
+      const { teamData } = getTeamData();
+      if (!teamData || !demoOriginalPlayers) return;
+
+      // Restore original players
+      teamData.players = demoOriginalPlayers;
+      demoOriginalPlayers = null;
+
+      // Remove eligibility entries
+      if (eligibilityByTeam[currentTeam]) {
+        delete eligibilityByTeam[currentTeam]['DEMO_HOPKINS'];
+        delete eligibilityByTeam[currentTeam]['DEMO_MENDOZA'];
+      }
+
+      // Remove any local declarations for demo players
+      delete localDeclarations['DEMO_HOPKINS'];
+      delete localDeclarations['DEMO_MENDOZA'];
+      delete declarationsByPlayer['DEMO_HOPKINS'];
+      delete declarationsByPlayer['DEMO_MENDOZA'];
+    };
+
+    const setDemoStep = (step) => {
+      demoStep = step;
+      // Update panels
+      demoTutorial?.querySelectorAll('.cdemo-panel').forEach(p => {
+        p.classList.toggle('active', Number(p.dataset.step) === step);
+      });
+      // Update stepper dots
+      demoTutorial?.querySelectorAll('.cdemo-stepper__dot').forEach(d => {
+        const s = Number(d.dataset.step);
+        d.classList.toggle('active', s === step);
+        d.classList.toggle('completed', s < step);
+      });
+      // Update stepper lines
+      const lines = demoTutorial?.querySelectorAll('.cdemo-stepper__line');
+      if (lines) {
+        lines[0]?.classList.toggle('completed', step > 1);
+        lines[1]?.classList.toggle('completed', step > 2);
+      }
+      // Toggle nav buttons
+      if (demoBack) demoBack.hidden = step === 1;
+      if (demoNext) demoNext.style.display = step === 3 ? 'none' : '';
+      if (demoStart) demoStart.style.display = step === 3 ? 'inline-flex' : 'none';
+    };
+
+    const openTutorial = () => {
+      demoTutorial?.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      setDemoStep(1);
+    };
+
+    const closeTutorial = () => {
+      demoTutorial?.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+
+    const startDemo = () => {
+      demoActive = true;
+      // Temporarily set auth so eligibility styling renders
+      demoOriginalAuthUser = config.authUser;
+      config.authUser = { franchiseId: currentTeam, leagueId: '13522' };
+      // Inject data and re-render
+      injectDemoData();
+      updateView();
+      // Re-apply blue eligibility styling to newly rendered demo players
+      applyEligibilityStyling();
+      // Update UI: hide trigger, show exit + banner
+      if (demoTrigger) demoTrigger.hidden = true;
+      demoExit?.classList.add('active');
+      demoBanner?.classList.add('active');
+    };
+
+    const exitDemo = () => {
+      if (!demoActive) return;
+      demoActive = false;
+      // Restore original auth state
+      config.authUser = demoOriginalAuthUser;
+      demoOriginalAuthUser = null;
+      // Close any open modals
+      closeDeclarationModal();
+      closeTutorial();
+      // Remove mock data and re-render
+      removeDemoData();
+      updateView();
+      // Update UI: show trigger, hide exit + banner
+      if (demoTrigger) demoTrigger.hidden = false;
+      demoExit?.classList.remove('active');
+      demoBanner?.classList.remove('active');
+    };
+
+    // Wire up demo handlers using onclick to prevent duplicate listeners
+    // (initRosterPage may be called multiple times via astro:page-load)
+    if (demoTrigger) demoTrigger.onclick = () => openTutorial();
+    if (demoNext) demoNext.onclick = () => { if (demoStep < 3) setDemoStep(demoStep + 1); };
+    if (demoBack) demoBack.onclick = () => { if (demoStep > 1) setDemoStep(demoStep - 1); };
+    if (demoStart) demoStart.onclick = () => { closeTutorial(); startDemo(); };
+    if (demoTutorialClose) demoTutorialClose.onclick = () => closeTutorial();
+    if (demoOverlay) demoOverlay.onclick = () => closeTutorial();
+    if (demoExit) demoExit.onclick = exitDemo;
+    if (demoBannerExit) demoBannerExit.onclick = exitDemo;
+
+    // ESC key — use a flag to prevent duplicate keydown listeners
+    if (!window.__cdemoEscBound) {
+      window.__cdemoEscBound = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (document.getElementById('cdemo-tutorial')?.classList.contains('active')) {
+          document.getElementById('cdemo-tutorial')?.classList.remove('active');
+          document.body.style.overflow = '';
+          return;
+        }
+        // Find the active exitDemo via the exit button's click handler
+        document.getElementById('cdemo-exit')?.click();
+      });
+    }
+
+    // If ?testEligibility=true is present, also show the trigger as hidden
+    // (the SSR mock is already injected, no need for the demo button)
+    if (new URLSearchParams(window.location.search).get('testEligibility') === 'true') {
+      if (demoTrigger) demoTrigger.hidden = true;
+    }
   };
 
   if (document.readyState === 'loading') {
