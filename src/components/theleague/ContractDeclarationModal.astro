@@ -6,7 +6,7 @@
  * - new-acquisition: BBID/auction players choose 2-5 years
  * - rookie-override: Rookies reduce from default 4yr RC to 1-3 years
  *
- * Follows PlayerDetailsModal design language.
+ * Follows PlayerDetailsModal editorial design language.
  * Populated entirely by client-side JS — Astro renders the static shell.
  */
 ---
@@ -21,7 +21,7 @@
     </button>
 
     <div class="cdm-body">
-      <!-- Player Hero -->
+      <!-- Hero Identity -->
       <div class="cdm-hero">
         <div class="cdm-hero__avatar">
           <img id="cdm-headshot" src="" alt="Player headshot" />
@@ -41,22 +41,19 @@
         <span class="cdm-type-badge__label" id="cdm-type-label">New Acquisition</span>
       </div>
 
-      <!-- Current Contract Info -->
-      <div class="cdm-section">
-        <h4 class="cdm-section__title">Current Contract</h4>
-        <div class="cdm-contract-info">
-          <div class="cdm-detail">
-            <span class="cdm-detail__label">Salary</span>
-            <span class="cdm-detail__value" id="cdm-current-salary">&mdash;</span>
-          </div>
-          <div class="cdm-detail">
-            <span class="cdm-detail__label">Years</span>
-            <span class="cdm-detail__value" id="cdm-current-years">&mdash;</span>
-          </div>
-          <div class="cdm-detail">
-            <span class="cdm-detail__label">Designation</span>
-            <span class="cdm-detail__value" id="cdm-current-designation">&mdash;</span>
-          </div>
+      <!-- Key Contract Metrics (3-column grid) -->
+      <div class="cdm-metrics">
+        <div class="cdm-metric">
+          <span class="cdm-metric__value" id="cdm-current-salary">&mdash;</span>
+          <span class="cdm-metric__label">Salary</span>
+        </div>
+        <div class="cdm-metric">
+          <span class="cdm-metric__value" id="cdm-current-years">&mdash;</span>
+          <span class="cdm-metric__label">Years</span>
+        </div>
+        <div class="cdm-metric">
+          <span class="cdm-metric__value" id="cdm-current-designation">&mdash;</span>
+          <span class="cdm-metric__label">Designation</span>
         </div>
       </div>
 
@@ -67,7 +64,7 @@
             <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
           </svg>
         </span>
-        <span class="cdm-deadline__text" id="cdm-deadline-text">Deadline in —</span>
+        <span class="cdm-deadline__text" id="cdm-deadline-text">Deadline in &mdash;</span>
       </div>
 
       <!-- Year Selection -->
@@ -81,17 +78,19 @@
       <!-- Salary Projection Table -->
       <div class="cdm-section" id="cdm-projection-section" style="display: none;">
         <h4 class="cdm-section__title">Salary Projection</h4>
-        <table class="cdm-projection-table">
-          <thead>
-            <tr>
-              <th>Year</th>
-              <th>Salary</th>
-            </tr>
-          </thead>
-          <tbody id="cdm-projection-body">
-            <!-- Populated by JS -->
-          </tbody>
-        </table>
+        <div class="cdm-projection-wrapper">
+          <table class="cdm-projection-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th class="cdm-projection-th--salary">Salary</th>
+              </tr>
+            </thead>
+            <tbody id="cdm-projection-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Submit -->
@@ -176,177 +175,179 @@
   }
 
   .cdm-close:hover {
-    background: var(--color-gray-200, #e5e7eb);
-    color: var(--color-gray-700, #374151);
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-800, #1f2937);
   }
 
   /* ================================================================
-     Body & Hero
+     Body (scrollable)
      ================================================================ */
   .cdm-body {
     overflow-y: auto;
-    padding: 1.5rem;
+    padding: 1.75rem 1.75rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
   }
 
+  /* ================================================================
+     Hero — editorial identity block (matches PlayerDetailsModal)
+     ================================================================ */
   .cdm-hero {
     display: flex;
-    align-items: center;
-    gap: 0.875rem;
+    align-items: flex-start;
+    gap: 1rem;
   }
 
   .cdm-hero__avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-lg, 1rem);
     overflow: hidden;
-    background: #f3f4f6;
-    border: 1px solid #e2e8f0;
     flex-shrink: 0;
+    background: var(--color-gray-100, #f3f4f6);
+    box-shadow: var(--shadow-md);
   }
 
   .cdm-hero__avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center top;
   }
 
   .cdm-hero__info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    flex: 1;
     min-width: 0;
+    padding-top: 0.25rem;
   }
 
   .cdm-hero__name {
-    font-size: 1.125rem;
+    font-size: 1.35rem;
     font-weight: 700;
-    color: #111;
-    margin: 0;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
     line-height: 1.2;
+    padding-right: 2rem;
   }
 
   .cdm-hero__meta {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    color: #64748b;
-    font-size: 0.8125rem;
+    gap: 0.4rem;
   }
 
   .cdm-hero__team-logo {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
     flex-shrink: 0;
   }
 
+  .cdm-hero__meta-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
   /* ================================================================
-     Type Badge
+     Type Badge — editorial accent chip
      ================================================================ */
   .cdm-type-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    background: #f0f9ff;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #0369a1;
+    padding: 0.3rem 0.625rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-primary, #1c497c);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     align-self: flex-start;
   }
 
   .cdm-type-badge__dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
-    background: #0ea5e9;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-primary, #1c497c);
   }
 
   .cdm-type-badge[data-type="rookie-override"] {
-    background: #fefce8;
-    color: #a16207;
+    border-left-color: var(--color-warning, #f59e0b);
+    color: var(--color-warning-dark, #d97706);
   }
 
   .cdm-type-badge[data-type="rookie-override"] .cdm-type-badge__dot {
-    background: #eab308;
+    background: var(--color-warning, #f59e0b);
   }
 
   /* ================================================================
-     Sections & Details — matches PlayerDetailsModal language
+     Key Metrics — 3-column grid (matches PlayerDetailsModal)
      ================================================================ */
-  .cdm-section__title {
-    font-size: 0.75rem;
+  .cdm-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+  }
+
+  .cdm-metric {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+  }
+
+  .cdm-metric__value {
+    display: block;
+    font-size: 1.125rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #475569;
-    margin: 0 0 0.75rem;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
-  }
-
-  .cdm-contract-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .cdm-detail {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f1f5f9;
-  }
-
-  .cdm-detail:last-child {
-    border-bottom: none;
-  }
-
-  .cdm-detail__label {
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    width: 5.5rem;
-    flex-shrink: 0;
-  }
-
-  .cdm-detail__value {
-    font-size: 0.9rem;
-    font-weight: 300;
-    color: #1a1a1a;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
     font-variant-numeric: tabular-nums;
   }
 
+  .cdm-metric__label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.25rem;
+  }
+
   /* ================================================================
-     Deadline
+     Deadline — warning strip
      ================================================================ */
   .cdm-deadline {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: #fffbeb;
-    border-radius: 6px;
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 8%, white);
+    border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 20%, white);
+    border-radius: var(--radius-sm, 0.25rem);
     font-size: 0.8125rem;
-    color: #92400e;
+    font-weight: 500;
+    color: var(--color-warning-dark, #d97706);
   }
 
   .cdm-deadline--urgent {
-    background: #fef2f2;
-    color: #991b1b;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, white);
+    border-color: color-mix(in srgb, var(--color-error, #dc2626) 15%, white);
+    color: var(--color-error-dark, #b91c1c);
   }
 
   .cdm-deadline--critical {
-    background: #fef2f2;
-    color: #991b1b;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, white);
+    border-color: color-mix(in srgb, var(--color-error, #dc2626) 15%, white);
+    color: var(--color-error-dark, #b91c1c);
     animation: cdm-pulse 2s ease-in-out infinite;
   }
 
@@ -358,6 +359,25 @@
   .cdm-deadline__icon {
     display: flex;
     flex-shrink: 0;
+  }
+
+  /* ================================================================
+     Section Title — canonical editorial pattern
+     ================================================================ */
+  .cdm-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cdm-section__title {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
   }
 
   /* ================================================================
@@ -373,10 +393,10 @@
   .cdm-year-options :global(.cdm-year-btn) {
     appearance: none;
     position: relative;
-    border: 1px solid #e2e8f0;
-    border-left: 2px solid #cbd5e1;
-    background: #fafbfc;
-    border-radius: 6px;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid var(--color-gray-300, #d1d5db);
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-sm, 0.25rem);
     padding: 0.625rem 0.5rem 0.5rem;
     cursor: pointer;
     transition: all 0.18s ease;
@@ -389,12 +409,12 @@
 
   .cdm-year-options :global(.cdm-year-btn__number) {
     font-size: 1.25rem;
-    font-weight: 300;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: #334155;
+    color: var(--color-gray-700, #374151);
     line-height: 1;
     letter-spacing: -0.01em;
-    transition: color 0.18s ease, font-weight 0.18s ease;
+    transition: color 0.18s ease;
   }
 
   .cdm-year-options :global(.cdm-year-btn__label) {
@@ -402,15 +422,15 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #94a3b8;
+    color: var(--color-gray-400, #9ca3af);
     line-height: 1;
     transition: color 0.18s ease;
   }
 
   .cdm-year-options :global(.cdm-year-btn:hover) {
-    border-color: #94a3b8;
+    border-color: var(--color-gray-400, #9ca3af);
     border-left-color: var(--color-primary, #1c497c);
-    background: #f1f5f9;
+    background: var(--color-gray-100, #f3f4f6);
   }
 
   .cdm-year-options :global(.cdm-year-btn:hover .cdm-year-btn__number) {
@@ -418,24 +438,30 @@
   }
 
   .cdm-year-options :global(.cdm-year-btn.selected) {
-    border-color: rgba(28, 73, 124, 0.2);
+    border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
     border-left: 2px solid var(--color-primary, #1c497c);
-    background: linear-gradient(135deg, #f0f5fa 0%, #e8eff7 100%);
-    box-shadow: 0 1px 3px rgba(28, 73, 124, 0.08);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, white);
+    box-shadow: var(--shadow-sm);
   }
 
   .cdm-year-options :global(.cdm-year-btn.selected .cdm-year-btn__number) {
     color: var(--color-primary, #1c497c);
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .cdm-year-options :global(.cdm-year-btn.selected .cdm-year-btn__label) {
-    color: #64748b;
+    color: var(--color-gray-600, #4b5563);
   }
 
   /* ================================================================
-     Salary Projection Table
+     Salary Projection Table — canonical editorial table
      ================================================================ */
+  .cdm-projection-wrapper {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+  }
+
   .cdm-projection-table {
     width: 100%;
     border-collapse: collapse;
@@ -444,24 +470,40 @@
   }
 
   .cdm-projection-table th {
-    font-size: 0.7rem;
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-400, #9ca3af);
     font-weight: 600;
+    font-size: 0.625rem;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
+    letter-spacing: 0.05em;
+    padding: 0.4rem 0.75rem;
     text-align: left;
-    padding: 0.375rem 0.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .cdm-projection-th--salary {
+    text-align: right;
   }
 
   .cdm-projection-table :global(td) {
-    padding: 0.375rem 0.5rem;
-    color: #334155;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 0.4rem 0.75rem;
+    color: var(--color-gray-700, #374151);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-size: 0.8125rem;
+  }
+
+  .cdm-projection-table :global(td:last-child) {
+    text-align: right;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
   }
 
   .cdm-projection-table :global(tr:last-child td) {
     border-bottom: none;
+  }
+
+  .cdm-projection-table :global(tbody tr:hover) {
+    background: var(--color-gray-50, #f9fafb);
   }
 
   /* ================================================================
@@ -471,6 +513,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding-top: 0.25rem;
   }
 
   .cdm-submit {
@@ -478,7 +521,7 @@
     border: none;
     background: var(--color-primary, #1c497c);
     color: #fff;
-    border-radius: 8px;
+    border-radius: var(--radius-md, 0.5rem);
     padding: 0.75rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -488,7 +531,7 @@
   }
 
   .cdm-submit:hover:not(:disabled) {
-    background: #163d68;
+    background: var(--color-primary-dark, #164066);
   }
 
   .cdm-submit:disabled {
@@ -503,10 +546,11 @@
 
   .cdm-error {
     font-size: 0.8125rem;
-    color: #dc2626;
+    color: var(--color-error, #dc2626);
     padding: 0.5rem 0.75rem;
-    background: #fef2f2;
-    border-radius: 6px;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, white);
+    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, white);
+    border-radius: var(--radius-sm, 0.25rem);
   }
 
   .cdm-success {
@@ -514,23 +558,25 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8125rem;
-    color: #059669;
+    color: var(--color-success-dark, #059669);
     padding: 0.5rem 0.75rem;
-    background: #ecfdf5;
-    border-radius: 6px;
+    background: color-mix(in srgb, var(--color-success, #10b981) 6%, white);
+    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, white);
+    border-radius: var(--radius-sm, 0.25rem);
   }
 
   /* ================================================================
-     Mobile
+     Mobile — bottom-sheet pattern
      ================================================================ */
   @media (max-width: 600px) {
+    .contract-declaration-modal {
+      align-items: flex-end;
+      padding: 0;
+    }
+
     .cdm-content {
       max-height: 92vh;
-      border-radius: 1rem 1rem 0 0;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
       max-width: 100%;
       animation: cdm-slide-up 0.25s ease-out;
     }
@@ -545,12 +591,33 @@
     }
 
     .cdm-hero__avatar {
-      width: 48px;
-      height: 48px;
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-md, 0.5rem);
     }
 
     .cdm-hero__name {
+      font-size: 1.125rem;
+    }
+
+    .cdm-hero__meta-text {
+      font-size: 0.8125rem;
+    }
+
+    .cdm-metrics {
+      gap: 0.5rem;
+    }
+
+    .cdm-metric {
+      padding: 0.625rem 0.375rem;
+    }
+
+    .cdm-metric__value {
       font-size: 1rem;
+    }
+
+    .cdm-metric__label {
+      font-size: 0.625rem;
     }
   }
 </style>

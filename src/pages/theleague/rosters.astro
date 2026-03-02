@@ -3926,221 +3926,438 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 
   /* Contract Action Modal */
+  /* ================================================================
+     Manage Contract Modal — editorial design language
+     ================================================================ */
   :global(.contract-modal) {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem;
   }
 
   :global(.contract-modal__overlay) {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
     backdrop-filter: blur(2px);
+    cursor: pointer;
   }
 
   :global(.contract-modal__content) {
     position: relative;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  :global(.contract-modal__header) {
+    background: var(--color-white, #fff);
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: var(--shadow-xl);
+    max-width: 440px;
+    width: 100%;
+    max-height: 88vh;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    flex-direction: column;
+    overflow: hidden;
+    animation: cm-enter 0.22s ease-out;
   }
 
-  :global(.contract-modal__title) {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin: 0;
+  @keyframes cm-enter {
+    from { opacity: 0; transform: scale(0.97) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
+  /* Close button */
   :global(.contract-modal__close) {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    z-index: 2;
+    background: var(--color-gray-100, #f3f4f6);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    background: none;
-    color: #64748b;
+    color: var(--color-gray-500, #6b7280);
     cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, color 0.15s ease;
+    padding: 0;
   }
 
   :global(.contract-modal__close:hover) {
-    background: #f1f5f9;
-    color: #1e293b;
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-800, #1f2937);
   }
 
+  /* Body */
   :global(.contract-modal__body) {
-    padding: 1.5rem;
-  }
-
-  :global(.contract-modal__player-info) {
+    overflow-y: auto;
+    padding: 1.75rem 1.75rem 1.5rem;
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e2e8f0;
+    flex-direction: column;
+    gap: 1.25rem;
   }
 
-  :global(.contract-player-name-row) {
+  /* Hero — editorial identity block */
+  :global(.cm-hero) {
     display: flex;
-    align-items: center;
-    gap: 0.35rem;
+    align-items: flex-start;
+    gap: 1rem;
   }
 
-  :global(.player-name-display) {
-    font-size: 1.125rem;
-    color: #1e293b;
+  :global(.cm-hero__avatar) {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-lg, 1rem);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--color-gray-100, #f3f4f6);
+    box-shadow: var(--shadow-md);
   }
 
-  :global(.contract-player-injury) {
-    color: #e56263;
+  :global(.cm-hero__avatar img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  :global(.cm-hero__info) {
+    flex: 1;
+    min-width: 0;
+    padding-top: 0.25rem;
+  }
+
+  :global(.cm-hero__name-row) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    margin-bottom: 0.375rem;
+    padding-right: 2rem;
+  }
+
+  :global(.cm-hero__name) {
+    font-size: 1.35rem;
     font-weight: 700;
-    font-size: 0.9rem;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+    line-height: 1.2;
   }
 
-  :global(.contract-player-meta .player-meta__logo) {
-    width: 1.25rem;
-    height: 1.25rem;
+  :global(.cm-hero__injury) {
+    color: var(--color-error, #dc2626);
+    font-weight: 700;
+    font-size: 0.875rem;
+    flex-shrink: 0;
   }
 
-  :global(.player-position-display) {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    background: var(--primary-color);
-    color: white;
-    font-size: 0.75rem;
+  :global(.cm-hero__meta) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  :global(.cm-hero__team-logo) {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  :global(.cm-hero__meta-text) {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* Key Metrics — 2-column grid */
+  :global(.cm-metrics) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+  }
+
+  :global(.cm-metric) {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+  }
+
+  :global(.cm-metric__value) {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.cm-metric__label) {
+    display: block;
+    font-size: 0.6875rem;
     font-weight: 600;
-    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.25rem;
   }
 
-  :global(.contract-modal__current-contract) {
-    margin-bottom: 1.5rem;
+  /* Section title — canonical editorial pattern */
+  :global(.cm-section__title) {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
   }
 
-  :global(.contract-modal__current-contract p) {
-    margin: 0.5rem 0;
-    color: #475569;
-    font-size: 0.9375rem;
-  }
-
+  /* Action buttons */
   :global(.contract-modal__actions) {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   :global(.contract-action-btn) {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-    padding: 1rem;
-    border: 2px solid #e2e8f0;
-    background: white;
-    border-radius: 8px;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 3px solid var(--color-gray-300, #d1d5db);
+    background: var(--color-white, #fff);
+    border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
     text-align: left;
   }
 
-  :global(.contract-action-btn span) {
-    font-size: 1rem;
+  :global(.contract-action-btn__icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md, 0.5rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.18s ease;
+  }
+
+  :global(.contract-action-btn__icon--franchise) {
+    background: color-mix(in srgb, var(--color-info, #3b82f6) 10%, white);
+    color: var(--color-info, #3b82f6);
+  }
+
+  :global(.contract-action-btn__icon--extension) {
+    background: color-mix(in srgb, var(--color-secondary, #2e8743) 10%, white);
+    color: var(--color-secondary, #2e8743);
+  }
+
+  :global(.contract-action-btn__icon--cut) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 10%, white);
+    color: var(--color-error, #dc2626);
+  }
+
+  :global(.contract-action-btn__icon--trade) {
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 10%, white);
+    color: var(--color-warning-dark, #d97706);
+  }
+
+  :global(.contract-action-btn__text) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  :global(.contract-action-btn__text span) {
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--color-gray-900, #111827);
   }
 
   :global(.contract-action-btn .action-description) {
-    font-size: 0.8125rem;
-    color: #64748b;
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
     font-weight: 400;
+    line-height: 1.3;
   }
 
   :global(.contract-action-btn:hover) {
-    border-color: var(--primary-color);
-    background: #f8fafc;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: var(--color-gray-50, #f9fafb);
+    box-shadow: var(--shadow-sm);
   }
 
   :global(.contract-action-btn--franchise:hover) {
-    border-color: #2563eb;
+    border-left-color: var(--color-info, #3b82f6);
   }
 
   :global(.contract-action-btn--extension:hover) {
-    border-color: var(--secondary-color);
+    border-left-color: var(--color-secondary, #2e8743);
   }
 
   :global(.contract-action-btn--cut:hover) {
-    border-color: #dc2626;
+    border-left-color: var(--color-error, #dc2626);
   }
 
   :global(.contract-action-btn--trade:hover) {
-    border-color: #f59e0b;
+    border-left-color: var(--color-warning, #f59e0b);
   }
 
+  /* Extension options */
   :global(.contract-modal__extension-options) {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #dddcdc;
-  }
-
-  :global(.contract-modal__extension-options h4) {
-    margin: 0 0 0.75rem 0;
-    font-size: 1rem;
-    color: #1e293b;
+    padding-top: 0.25rem;
   }
 
   :global(.extension-year-buttons) {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Formula breakdown */
+  :global(.cm-formula) {
+    margin-bottom: 0.75rem;
+  }
+
+  :global(.cm-formula__equation) {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.75rem;
+    font-family: var(--font-family-mono, Menlo, Monaco, monospace);
+    font-size: 0.75rem;
+    color: var(--color-gray-700, #374151);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.cm-formula__steps) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  :global(.cm-formula__step) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  :global(.cm-formula__step:last-child) {
+    border-bottom: none;
+  }
+
+  :global(.cm-formula__step-label) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    width: 7rem;
+    flex-shrink: 0;
+  }
+
+  :global(.cm-formula__step-value) {
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.cm-formula__result) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0.625rem 0.75rem;
+    background: color-mix(in srgb, var(--color-secondary, #2e8743) 6%, white);
+    border: 1px solid color-mix(in srgb, var(--color-secondary, #2e8743) 15%, white);
+    border-radius: var(--radius-sm, 0.25rem);
+    margin-top: 0.5rem;
+  }
+
+  :global(.cm-formula__result-label) {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-secondary-dark, #26743a);
+  }
+
+  :global(.cm-formula__result-value) {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-secondary-dark, #26743a);
+    font-variant-numeric: tabular-nums;
   }
 
   :global(.extension-year-btn) {
-    flex: 1;
-    padding: 0.75rem;
-    border: 2px solid #dddcdc;
-    background: white;
-    border-radius: 6px;
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid var(--color-gray-300, #d1d5db);
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
+  }
+
+  :global(.extension-year-btn__number) {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+    line-height: 1;
+  }
+
+  :global(.extension-year-btn__label) {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    line-height: 1;
   }
 
   :global(.extension-year-btn:hover) {
-    border-color: var(--secondary-color);
-    background: #f0fdf4;
+    border-color: var(--color-gray-400, #9ca3af);
+    border-left-color: var(--color-secondary, #2e8743);
+    background: var(--color-gray-100, #f3f4f6);
   }
 
   :global(.extension-year-btn.active) {
-    border-color: var(--secondary-color);
-    background: var(--secondary-color);
-    color: white;
+    border-color: color-mix(in srgb, var(--color-secondary, #2e8743) 25%, transparent);
+    border-left: 2px solid var(--color-secondary, #2e8743);
+    background: color-mix(in srgb, var(--color-secondary, #2e8743) 6%, white);
+    box-shadow: var(--shadow-sm);
+  }
+
+  :global(.extension-year-btn.active .extension-year-btn__number) {
+    color: var(--color-secondary, #2e8743);
+    font-weight: 700;
+  }
+
+  :global(.extension-year-btn.active .extension-year-btn__label) {
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  :global(.cm-extension-actions) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   :global(.extension-confirm-btn),
@@ -4148,41 +4365,78 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     width: 100%;
     padding: 0.75rem;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0.5rem;
+    transition: background 0.15s ease, opacity 0.15s ease;
   }
 
   :global(.extension-confirm-btn) {
-    background: var(--secondary-color);
-    color: white;
+    background: var(--color-secondary, #2e8743);
+    color: #fff;
   }
 
   :global(.extension-confirm-btn:hover) {
-    background: #26743a;
-    box-shadow: 0 2px 4px rgba(46, 135, 67, 0.3);
+    background: var(--color-secondary-dark, #26743a);
   }
 
   :global(.extension-cancel-btn) {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
   }
 
   :global(.extension-cancel-btn:hover) {
-    background: #e2e8f0;
+    background: var(--color-gray-200, #dddedf);
   }
 
+  /* Mobile — bottom-sheet pattern */
   @media (max-width: 640px) {
-    :global(.contract-modal__content) {
-      width: 95%;
-      max-height: 95vh;
+    :global(.contract-modal) {
+      align-items: flex-end;
+      padding: 0;
     }
 
-    :global(.contract-modal__header),
+    :global(.contract-modal__content) {
+      max-height: 92vh;
+      max-width: 100%;
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      animation: cm-slide-up 0.25s ease-out;
+    }
+
+    @keyframes cm-slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
     :global(.contract-modal__body) {
-      padding: 1rem;
+      padding: 1.25rem;
+    }
+
+    :global(.cm-hero__avatar) {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-md, 0.5rem);
+    }
+
+    :global(.cm-hero__name) {
+      font-size: 1.125rem;
+    }
+
+    :global(.cm-hero__meta-text) {
+      font-size: 0.8125rem;
+    }
+
+    :global(.cm-metrics) {
+      gap: 0.5rem;
+    }
+
+    :global(.cm-metric) {
+      padding: 0.625rem 0.375rem;
+    }
+
+    :global(.cm-metric__value) {
+      font-size: 1rem;
     }
   }
 
@@ -4767,69 +5021,118 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 <div class="contract-modal" id="contract-modal" style="display: none;">
   <div class="contract-modal__overlay"></div>
   <div class="contract-modal__content">
-    <div class="contract-modal__header">
-      <h3 class="contract-modal__title">Manage Contract</h3>
-      <button class="contract-modal__close" title="Close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-      <div class="contract-modal__body">
-        <div class="contract-modal__player-info">
-          <div class="player-cell contract-player-cell">
-            <div class="player-cell__avatar">
-              <img id="contract-player-headshot" src="" alt="Player headshot" />
-            </div>
-            <div>
-              <div class="contract-player-name-row">
-                <strong class="player-name-display contract-player-name"></strong>
-                <span class="contract-player-injury" id="contract-player-injury"></span>
-              </div>
-              <div class="player-meta contract-player-meta">
-                <img
-                  id="contract-player-nfl-logo"
-                  class="player-meta__logo"
-                  src=""
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span class="player-meta__pos" id="contract-player-position"></span>
-              </div>
-            </div>
+    <button class="contract-modal__close" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <div class="contract-modal__body">
+      <!-- Hero Identity -->
+      <div class="cm-hero">
+        <div class="cm-hero__avatar">
+          <img id="contract-player-headshot" src="" alt="Player headshot" />
+        </div>
+        <div class="cm-hero__info">
+          <div class="cm-hero__name-row">
+            <h3 class="cm-hero__name player-name-display contract-player-name"></h3>
+            <span class="cm-hero__injury contract-player-injury" id="contract-player-injury"></span>
+          </div>
+          <div class="cm-hero__meta contract-player-meta">
+            <img
+              id="contract-player-nfl-logo"
+              class="cm-hero__team-logo"
+              src=""
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="cm-hero__meta-text" id="contract-player-position"></span>
           </div>
         </div>
-      <div class="contract-modal__current-contract">
-        <p><strong>Current Salary:</strong> <span class="current-salary-display"></span></p>
-        <p><strong>Years Remaining:</strong> <span class="current-years-display"></span></p>
       </div>
-      <div class="contract-modal__actions">
-        <button class="contract-action-btn contract-action-btn--franchise" data-action="franchise">
-          <span>Franchise Tag</span>
-          <small class="action-description">1 year at higher of 120% or position average</small>
-        </button>
-        <button class="contract-action-btn contract-action-btn--extension" data-action="extension">
-          <span>Veteran Extension</span>
-          <small class="action-description">Extend contract 1-2 years</small>
-        </button>
-        <button class="contract-action-btn contract-action-btn--cut" data-action="cut">
-          <span>Cut Player</span>
-          <small class="action-description">50% cap hit + future penalties</small>
-        </button>
-        <button class="contract-action-btn contract-action-btn--trade" data-action="trade">
-          <span>Trade Player</span>
-          <small class="action-description">No cap penalty</small>
-        </button>
-      </div>
-      <div class="contract-modal__extension-options" style="display: none;">
-        <h4>Extension Length</h4>
-        <div class="extension-year-buttons">
-          <button class="extension-year-btn" data-years="1">1 Year</button>
-          <button class="extension-year-btn" data-years="2">2 Years</button>
+
+      <!-- Key Contract Metrics -->
+      <div class="cm-metrics">
+        <div class="cm-metric">
+          <span class="cm-metric__value current-salary-display">&mdash;</span>
+          <span class="cm-metric__label">Salary</span>
         </div>
-        <button class="extension-confirm-btn">Confirm Extension</button>
-        <button class="extension-cancel-btn">Cancel</button>
+        <div class="cm-metric">
+          <span class="cm-metric__value current-years-display">&mdash;</span>
+          <span class="cm-metric__label">Years Left</span>
+        </div>
+      </div>
+
+      <!-- Contract Actions -->
+      <div class="cm-section">
+        <h4 class="cm-section__title">Actions</h4>
+        <div class="contract-modal__actions">
+          <button class="contract-action-btn contract-action-btn--franchise" data-action="franchise">
+            <div class="contract-action-btn__icon contract-action-btn__icon--franchise">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <div class="contract-action-btn__text">
+              <span>Franchise Tag</span>
+              <small class="action-description">1 year at higher of 120% or position average</small>
+            </div>
+          </button>
+          <button class="contract-action-btn contract-action-btn--extension" data-action="extension">
+            <div class="contract-action-btn__icon contract-action-btn__icon--extension">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            </div>
+            <div class="contract-action-btn__text">
+              <span>Veteran Extension</span>
+              <small class="action-description">Extend contract 1-2 years</small>
+            </div>
+          </button>
+          <button class="contract-action-btn contract-action-btn--cut" data-action="cut">
+            <div class="contract-action-btn__icon contract-action-btn__icon--cut">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </div>
+            <div class="contract-action-btn__text">
+              <span>Cut Player</span>
+              <small class="action-description">50% cap hit + future penalties</small>
+            </div>
+          </button>
+          <button class="contract-action-btn contract-action-btn--trade" data-action="trade">
+            <div class="contract-action-btn__icon contract-action-btn__icon--trade">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+            </div>
+            <div class="contract-action-btn__text">
+              <span>Trade Player</span>
+              <small class="action-description">No cap penalty</small>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Extension Options (shown when Extension is clicked) -->
+      <div class="contract-modal__extension-options" style="display: none;">
+        <h4 class="cm-section__title">Extension Length</h4>
+        <div class="extension-year-buttons">
+          <button class="extension-year-btn" data-years="1">
+            <span class="extension-year-btn__number">1</span>
+            <span class="extension-year-btn__label">Year</span>
+          </button>
+          <button class="extension-year-btn" data-years="2">
+            <span class="extension-year-btn__number">2</span>
+            <span class="extension-year-btn__label">Years</span>
+          </button>
+        </div>
+
+        <!-- Formula Breakdown -->
+        <div class="cm-formula" id="cm-extension-formula" style="display: none;">
+          <h4 class="cm-section__title">Formula</h4>
+          <div class="cm-formula__equation" id="cm-formula-equation"></div>
+          <div class="cm-formula__steps" id="cm-formula-steps"></div>
+          <div class="cm-formula__result" id="cm-formula-result"></div>
+        </div>
+
+        <div class="cm-extension-actions">
+          <button class="extension-confirm-btn">Confirm Extension</button>
+          <button class="extension-cancel-btn">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
@@ -5311,6 +5614,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Reset extension options
     if (extensionOptions) extensionOptions.style.display = 'none';
+    if (formulaEl) formulaEl.style.display = 'none';
     selectedExtensionYears = 1;
     extensionYearButtons?.forEach(btn => btn.classList.remove('active'));
     extensionYearButtons?.[0]?.classList.add('active');
@@ -5326,6 +5630,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     document.body.style.overflow = '';
     selectedPlayer = null;
     if (extensionOptions) extensionOptions.style.display = 'none';
+    if (formulaEl) formulaEl.style.display = 'none';
   };
 
   // Modal close handlers
@@ -5338,17 +5643,83 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   });
 
   // Extension year selection
+  const formulaEl = document.getElementById('cm-extension-formula');
+  const formulaEquation = document.getElementById('cm-formula-equation');
+  const formulaSteps = document.getElementById('cm-formula-steps');
+  const formulaResult = document.getElementById('cm-formula-result');
+
+  const buildFormulaStep = (label, value) => {
+    const step = document.createElement('div');
+    step.className = 'cm-formula__step';
+    const labelEl = document.createElement('span');
+    labelEl.className = 'cm-formula__step-label';
+    labelEl.textContent = label;
+    const valEl = document.createElement('span');
+    valEl.className = 'cm-formula__step-value';
+    valEl.textContent = value;
+    step.appendChild(labelEl);
+    step.appendChild(valEl);
+    return step;
+  };
+
+  const updateExtensionFormula = (extYears) => {
+    if (!formulaEl || !selectedPlayer) return;
+    const { position, salary, years } = selectedPlayer;
+    const existingYears = Number(years ?? 0) || 0;
+    const avgSalary = getReferenceSalary(position, 'extension', config.extensionSeason);
+    const denominator = existingYears + extYears;
+    const proratedPortion = denominator > 0 ? (avgSalary * extYears) / denominator : 0;
+    const baseSalary = Number(salary ?? 0);
+    const newSalary = Math.round(proratedPortion + baseSalary);
+
+    if (formulaEquation) {
+      formulaEquation.replaceChildren();
+      const line1 = document.createTextNode('(Top 5 Avg \u00D7 Ext Yrs / (Existing + Ext)) + Salary');
+      formulaEquation.appendChild(line1);
+      formulaEquation.appendChild(document.createElement('br'));
+      const line2 = document.createTextNode(
+        '(' + formatSalaryCompact(avgSalary) + ' \u00D7 ' + extYears +
+        ' / (' + existingYears + ' + ' + extYears + ')) + ' + formatSalaryCompact(baseSalary)
+      );
+      formulaEquation.appendChild(line2);
+    }
+
+    if (formulaSteps) {
+      formulaSteps.replaceChildren();
+      formulaSteps.appendChild(buildFormulaStep('Top 5 Avg', formatCurrency(avgSalary)));
+      formulaSteps.appendChild(buildFormulaStep('Ext Years', String(extYears)));
+      formulaSteps.appendChild(buildFormulaStep('Total Years', existingYears + ' existing + ' + extYears + ' ext = ' + denominator));
+      formulaSteps.appendChild(buildFormulaStep('Prorated', formatCurrency(Math.round(proratedPortion))));
+    }
+
+    if (formulaResult) {
+      formulaResult.replaceChildren();
+      const labelEl = document.createElement('span');
+      labelEl.className = 'cm-formula__result-label';
+      labelEl.textContent = 'New Base Salary';
+      const valEl = document.createElement('span');
+      valEl.className = 'cm-formula__result-value';
+      valEl.textContent = formatCurrency(newSalary);
+      formulaResult.appendChild(labelEl);
+      formulaResult.appendChild(valEl);
+    }
+
+    formulaEl.style.display = '';
+  };
+
   extensionYearButtons?.forEach(btn => {
     btn.addEventListener('click', () => {
       extensionYearButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedExtensionYears = parseInt(btn.dataset.years || '1', 10);
+      updateExtensionFormula(selectedExtensionYears);
     });
   });
 
   // Extension cancel
   extensionCancelBtn?.addEventListener('click', () => {
     if (extensionOptions) extensionOptions.style.display = 'none';
+    if (formulaEl) formulaEl.style.display = 'none';
   });
 
   // Contract action handlers
@@ -7249,9 +7620,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       typeBadge.dataset.type = elig.type;
       document.getElementById('cdm-type-label').textContent = DECLARATION_TYPE_LABELS[elig.type] || elig.type;
 
-      // Contract info
+      // Contract metrics
       document.getElementById('cdm-current-salary').textContent = formatSalaryCompact(elig.currentSalary);
-      document.getElementById('cdm-current-years').textContent = String(elig.currentYears) + ' year' + (elig.currentYears !== 1 ? 's' : '');
+      document.getElementById('cdm-current-years').textContent = String(elig.currentYears);
       const designation = elig.contractInfo || (elig.isRookieContract ? 'RC' : 'Standard');
       document.getElementById('cdm-current-designation').textContent = designation;
 
