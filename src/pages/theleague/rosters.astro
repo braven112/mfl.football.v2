@@ -5611,12 +5611,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Franchise tag: only eligible in last year of contract (contractYears === 1)
     if (franchiseTagBtn) {
-      franchiseTagBtn.style.display = contractYears === 1 ? 'block' : 'none';
+      franchiseTagBtn.style.display = contractYears === 1 ? 'flex' : 'none';
     }
 
     // Veteran extension: only eligible with 2+ years remaining
     if (extensionBtn) {
-      extensionBtn.style.display = contractYears >= 2 ? 'block' : 'none';
+      extensionBtn.style.display = contractYears >= 2 ? 'flex' : 'none';
     }
 
     // Reset extension options
