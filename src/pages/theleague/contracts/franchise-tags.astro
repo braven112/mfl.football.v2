@@ -1,0 +1,327 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getFranchiseTagsByYear } from '../../../utils/contract-storage';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+
+const leagueYear = getCurrentLeagueYear();
+const tags = getFranchiseTagsByYear(leagueYear);
+
+// Sort: pending first, then approved, then by submission date
+const sorted = [...tags].sort((a, b) => {
+  const statusOrder = { pending: 0, approved: 1, applied: 2, rejected: 3, expired: 4 };
+  const sa = statusOrder[a.status] ?? 5;
+  const sb = statusOrder[b.status] ?? 5;
+  if (sa !== sb) return sa - sb;
+  return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+});
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  applied: 'Applied',
+  rejected: 'Rejected',
+  expired: 'Expired',
+};
+
+function formatSalary(amount: number | undefined): string {
+  if (!amount) return '—';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+---
+
+<TheLeagueLayout title={`Franchise Tags — ${leagueYear}`}>
+  <main class="ft-page">
+    <header class="ft-header">
+      <div class="ft-header__title-row">
+        <div>
+          <p class="ft-header__eyebrow">CONTRACT DECLARATIONS</p>
+          <h1 class="ft-header__title">Franchise Tags</h1>
+          <p class="ft-header__sub">{leagueYear} Offseason &mdash; {sorted.length} tag{sorted.length !== 1 ? 's' : ''} declared</p>
+        </div>
+        <a href="/theleague/rosters" class="ft-back-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Back to Rosters
+        </a>
+      </div>
+    </header>
+
+    {sorted.length === 0 ? (
+      <div class="ft-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <p class="ft-empty__heading">No franchise tags declared</p>
+        <p class="ft-empty__hint">Tags submitted from the rosters page will appear here.</p>
+      </div>
+    ) : (
+      <div class="ft-table-wrap">
+        <table class="ft-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Team</th>
+              <th class="ft-table__num">Current Salary</th>
+              <th class="ft-table__num">Tag Salary</th>
+              <th class="ft-table__center">Status</th>
+              <th>Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(tag => (
+              <tr class="ft-row" data-status={tag.status}>
+                <td class="ft-row__player">
+                  <span class="ft-row__name">{tag.playerName}</span>
+                </td>
+                <td class="ft-row__team">{tag.franchiseName}</td>
+                <td class="ft-row__num">{formatSalary(tag.currentSalary)}</td>
+                <td class="ft-row__num ft-row__num--highlight">{formatSalary(tag.requestedSalary)}</td>
+                <td class="ft-row__center">
+                  <span class={`ft-status ft-status--${tag.status}`}>{statusLabels[tag.status] ?? tag.status}</span>
+                </td>
+                <td class="ft-row__date">{formatDate(tag.submittedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .ft-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .ft-header {
+    margin-bottom: 2rem;
+  }
+
+  .ft-header__title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .ft-header__eyebrow {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0 0 0.25rem;
+  }
+
+  .ft-header__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.25rem;
+  }
+
+  .ft-header__sub {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  .ft-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 6px;
+    text-decoration: none;
+    background: white;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .ft-back-btn:hover {
+    background: var(--color-gray-50, #f9fafb);
+    border-color: var(--color-gray-300, #d1d5db);
+  }
+
+  /* Empty state */
+  .ft-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 4rem 2rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 10px;
+    color: var(--color-gray-400, #9ca3af);
+    text-align: center;
+  }
+
+  .ft-empty__heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  .ft-empty__hint {
+    font-size: 0.875rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0;
+  }
+
+  /* Table */
+  .ft-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 10px;
+  }
+
+  .ft-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .ft-table thead tr {
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .ft-table th {
+    padding: 0.625rem 1rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .ft-table th.ft-table__num,
+  .ft-table th.ft-table__center {
+    text-align: right;
+  }
+
+  .ft-table th.ft-table__center {
+    text-align: center;
+  }
+
+  .ft-row {
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    transition: background 0.12s ease;
+  }
+
+  .ft-row:last-child {
+    border-bottom: none;
+  }
+
+  .ft-row:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .ft-row td {
+    padding: 0.875rem 1rem;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ft-row__player {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .ft-row__name {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ft-row__team {
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.8125rem;
+  }
+
+  .ft-row__num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .ft-row__num--highlight {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+
+  .ft-row__center {
+    text-align: center;
+  }
+
+  .ft-row__date {
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  /* Status badge */
+  .ft-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .ft-status--pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .ft-status--approved {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .ft-status--applied {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .ft-status--rejected {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .ft-status--expired {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  @media (max-width: 640px) {
+    .ft-page {
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    .ft-header__title-row {
+      flex-direction: column-reverse;
+    }
+
+    .ft-row__date {
+      display: none;
+    }
+  }
+</style>

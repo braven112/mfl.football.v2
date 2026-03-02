@@ -27,6 +27,8 @@ export interface EligibilityResult {
   yearOptions?: number[];
   /** For extensions: the calculated new salary */
   extensionSalary?: number;
+  /** For extensions: total contract years after extension (currentYears + 2) */
+  extensionYears?: number;
   /** For franchise tags: the calculated tag salary */
   tagSalary?: number;
   /** Description of how tag salary was determined */

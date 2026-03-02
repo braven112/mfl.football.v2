@@ -119,6 +119,20 @@ export function getTeamFranchiseTag(
 }
 
 /**
+ * Get all active franchise tags for a given league year (all teams).
+ * Used for the franchise tags listing page.
+ */
+export function getFranchiseTagsByYear(leagueYear: number): ContractDeclaration[] {
+  return getDeclarations().filter(
+    d =>
+      d.type === 'franchise-tag' &&
+      d.status !== 'rejected' &&
+      d.status !== 'expired' &&
+      d.submittedAt.startsWith(String(leagueYear)),
+  );
+}
+
+/**
  * Check if a team has already used their extension for a given league year.
  * Returns the existing extension declaration if found.
  */

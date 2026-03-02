@@ -1590,6 +1590,11 @@ const eligFranchises = eligRostersData?.rosters?.franchise ?? [];
 
 // Compute eligibility for all teams
 const eligibilityByTeam: Record<string, Record<string, any>> = {};
+// Use frozen salary averages (pre-week-14 freeze uses prior season) for tag/extension math
+const frozenSalaryAverages = salaryAveragesBySeason[extensionSeason] as {
+  franchiseSalaries?: Record<string, number>;
+  extensionSalaries?: Record<string, number>;
+} | undefined;
 if (Array.isArray(eligFranchises)) {
   for (const franchise of eligFranchises) {
     const franchiseId = franchise.id;
@@ -1601,21 +1606,26 @@ if (Array.isArray(eligFranchises)) {
 
     const teamResult = getTeamEligibility(
       franchiseId, players, eligRawTransactions, eligPlayersMap, eligibilityYear,
+      new Date(), frozenSalaryAverages,
     );
     const playerMap: Record<string, any> = {};
     for (const p of teamResult.players) {
-      if (p.eligible && (p.declarationType === 'new-acquisition' || p.declarationType === 'rookie-override')) {
-        playerMap[p.playerId] = {
-          type: p.declarationType,
-          yearOptions: p.yearOptions,
-          deadlineTimestamp: p.deadlineTimestamp,
-          isExpired: p.isExpired,
-          currentYears: p.currentYears,
-          currentSalary: p.currentSalary,
-          contractInfo: p.contractInfo,
-          isRookieContract: p.isRookieContract,
-        };
-      }
+      if (!p.eligible) continue;
+      const entry: Record<string, any> = {
+        type: p.declarationType,
+        yearOptions: p.yearOptions,
+        deadlineTimestamp: p.deadlineTimestamp,
+        isExpired: p.isExpired,
+        currentYears: p.currentYears,
+        currentSalary: p.currentSalary,
+        contractInfo: p.contractInfo,
+        isRookieContract: p.isRookieContract,
+      };
+      if (p.tagSalary !== undefined) entry.tagSalary = p.tagSalary;
+      if (p.tagBasis !== undefined) entry.tagBasis = p.tagBasis;
+      if (p.extensionSalary !== undefined) entry.extensionSalary = p.extensionSalary;
+      if (p.extensionYears !== undefined) entry.extensionYears = p.extensionYears;
+      playerMap[p.playerId] = entry;
     }
     if (Object.keys(playerMap).length > 0) {
       eligibilityByTeam[franchiseId] = playerMap;
@@ -1944,6 +1954,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
             Clear All Tags
+          </button>
+
+          <button class="submit-franchise-tags-btn" id="submitFranchiseTagsBtn" style="display: none;" title="Submit franchise tag declarations for commissioner approval">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            Submit Franchise Tags
           </button>
 
           <div class="mode-toggle">
@@ -4557,6 +4574,37 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     height: 16px;
   }
 
+  .submit-franchise-tags-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid #1c497c;
+    background: var(--color-primary, #1c497c);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .submit-franchise-tags-btn:hover {
+    background: #163a63;
+    border-color: #163a63;
+    box-shadow: 0 2px 6px rgba(28, 73, 124, 0.4);
+  }
+
+  .submit-franchise-tags-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .submit-franchise-tags-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
   @media (max-width: 960px) {
     .team-card__actions {
       gap: 0.75rem;
@@ -5769,9 +5817,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Check for conflicts with existing tags
     if (actionType === 'franchise') {
-      // Check if there's already a franchise tag for this year
+      // Only 1 franchise tag per team per year — replace if switching players
       if (franchiseTagsByYear[franchiseYearIndex] && franchiseTagsByYear[franchiseYearIndex] !== id) {
-        // Remove previous franchise tag for this year
         const previousPlayerId = franchiseTagsByYear[franchiseYearIndex];
         delete contractActions[previousPlayerId];
       }
@@ -5867,19 +5914,86 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     updateClearAllButton();
   };
 
-  // Update clear all button visibility
+  // Update clear all / submit franchise tags button visibility
   const updateClearAllButton = () => {
     const clearAllBtn = document.getElementById('clearAllTagsBtn');
-    if (clearAllBtn) {
-      const hasActions = Object.keys(contractActions).length > 0;
-      clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
-    }
+    const submitBtn = document.getElementById('submitFranchiseTagsBtn');
+    const hasActions = Object.keys(contractActions).length > 0;
+    const hasFranchiseTags = Object.values(contractActions).some(a => a.type === 'franchise');
+    if (clearAllBtn) clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
+    if (submitBtn) submitBtn.style.display = hasFranchiseTags ? 'inline-flex' : 'none';
   };
 
   // Clear all tags button event listener
   const clearAllBtn = document.getElementById('clearAllTagsBtn');
   clearAllBtn?.addEventListener('click', () => {
     clearAllContractActions();
+  });
+
+  // Submit franchise tags handler
+  const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn');
+  submitFranchiseTagsBtn?.addEventListener('click', async () => {
+    const franchiseActions = Object.values(contractActions).filter(a => a.type === 'franchise');
+    if (!franchiseActions.length) return;
+
+    const franchiseId = config.authUser?.franchiseId ?? currentTeam;
+    const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
+    const leagueId = config.authUser?.leagueId ?? '13522';
+
+    submitFranchiseTagsBtn.disabled = true;
+    const origText = submitFranchiseTagsBtn.textContent.trim();
+    submitFranchiseTagsBtn.textContent = 'Submitting...';
+
+    try {
+      // Only 1 franchise tag per team per year — take the first (and only) one
+      const action = franchiseActions[0];
+      const res = await fetch('/api/contracts/declare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leagueId,
+          playerId: action.playerId,
+          playerName: action.playerName,
+          franchiseId,
+          franchiseName,
+          type: 'franchise-tag',
+          currentYears: action.originalYears,
+          currentSalary: action.originalSalary,
+          currentContractInfo: '',
+          requestedYears: 1,
+          requestedSalary: action.newSalary,
+          requestedContractInfo: 'F',
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Submission failed');
+
+      // Optimistic update: mark as pending in local state
+      localDeclarations[action.playerId] = { status: 'pending', years: 1 };
+      delete contractActions[action.playerId];
+      if (action.ufaYearIndex !== undefined) {
+        delete franchiseTagsByYear[action.ufaYearIndex];
+      }
+
+      recalculateRoster();
+      updateClearAllButton();
+      submitFranchiseTagsBtn.textContent = 'Submitted!';
+      setTimeout(() => {
+        submitFranchiseTagsBtn.textContent = origText;
+        submitFranchiseTagsBtn.disabled = false;
+      }, 2000);
+    } catch (err) {
+      console.error('Franchise tag submission failed:', err);
+      submitFranchiseTagsBtn.textContent = err.message || 'Error — try again';
+      submitFranchiseTagsBtn.style.background = '#dc2626';
+      submitFranchiseTagsBtn.style.borderColor = '#dc2626';
+      setTimeout(() => {
+        submitFranchiseTagsBtn.textContent = origText;
+        submitFranchiseTagsBtn.disabled = false;
+        submitFranchiseTagsBtn.style.background = '';
+        submitFranchiseTagsBtn.style.borderColor = '';
+      }, 3000);
+    }
   });
 
   const initRosterPage = () => {
@@ -7601,6 +7715,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const cdmError = document.getElementById('cdm-error');
     const cdmSuccess = document.getElementById('cdm-success');
     let cdmSelectedYears = null;
+    let cdmSelectedSalary = null; // Pre-computed for franchise-tag and extension types
     let cdmPlayerData = null;
     let cdmDeadlineInterval = null;
 
@@ -7608,12 +7723,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (!cdmModal) return;
       cdmPlayerData = data;
       cdmSelectedYears = null;
+      cdmSelectedSalary = null;
       cdmError.style.display = 'none';
       cdmSuccess.style.display = 'none';
       cdmSubmitBtn.disabled = true;
       cdmSubmitBtn.classList.remove('loading');
       cdmSubmitBtn.style.display = '';
-      cdmSubmitBtn.textContent = preSelectedYears ? 'Update Declaration' : 'Declare Contract';
 
       // Hero
       document.getElementById('cdm-headshot').src = data.headshot || DEFAULT_HEADSHOT_URL;
@@ -7623,9 +7738,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       // Type badge
       const elig = data.eligibility;
+      const type = elig.type;
       const typeBadge = document.getElementById('cdm-type-badge');
-      typeBadge.dataset.type = elig.type;
-      document.getElementById('cdm-type-label').textContent = DECLARATION_TYPE_LABELS[elig.type] || elig.type;
+      typeBadge.dataset.type = type;
+      document.getElementById('cdm-type-label').textContent = DECLARATION_TYPE_LABELS[type] || type;
 
       // Contract metrics
       document.getElementById('cdm-current-salary').textContent = formatSalaryCompact(elig.currentSalary);
@@ -7665,44 +7781,85 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         deadlineEl.style.display = 'none';
       }
 
-      // Year options — build DOM elements safely
-      const yearOptions = elig.yearOptions || [];
-      const yearContainer = document.getElementById('cdm-year-options');
-      yearContainer.replaceChildren();
-      yearOptions.forEach(yr => {
-        const btn = document.createElement('button');
-        btn.className = 'cdm-year-btn';
-        btn.dataset.years = String(yr);
-        const numEl = document.createElement('span');
-        numEl.className = 'cdm-year-btn__number';
-        numEl.textContent = String(yr);
-        const labelEl = document.createElement('span');
-        labelEl.className = 'cdm-year-btn__label';
-        labelEl.textContent = yr === 1 ? 'YEAR' : 'YEARS';
-        btn.appendChild(numEl);
-        btn.appendChild(labelEl);
-        btn.addEventListener('click', () => {
-          yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          cdmSelectedYears = yr;
-          cdmSubmitBtn.disabled = false;
-          updateProjectionTable(elig.currentSalary, yr);
-        });
-        yearContainer.appendChild(btn);
-      });
+      // Show/hide type-specific panels
+      const yearSection = document.getElementById('cdm-year-section');
+      const tagSection = document.getElementById('cdm-tag-section');
+      const extSection = document.getElementById('cdm-extension-section');
+      const projSection = document.getElementById('cdm-projection-section');
+      yearSection.style.display = 'none';
+      tagSection.style.display = 'none';
+      extSection.style.display = 'none';
+      projSection.style.display = 'none';
 
-      // Pre-select years if editing a pending declaration
-      if (preSelectedYears) {
-        const matchBtn = yearContainer.querySelector('[data-years="' + preSelectedYears + '"]');
-        if (matchBtn) {
-          matchBtn.classList.add('selected');
-          cdmSelectedYears = preSelectedYears;
-          cdmSubmitBtn.disabled = false;
-          updateProjectionTable(elig.currentSalary, preSelectedYears);
-        }
+      if (type === 'franchise-tag') {
+        // Franchise tag: fixed 1 year, show salary comparison
+        tagSection.style.display = '';
+        document.getElementById('cdm-tag-current').textContent = formatSalaryCompact(elig.currentSalary);
+        document.getElementById('cdm-tag-new').textContent = formatSalaryCompact(elig.tagSalary);
+        const basisText = elig.tagBasis === 'top 3 average'
+          ? 'Based on the top 3 salaries at position'
+          : 'Based on 120% of current salary';
+        document.getElementById('cdm-tag-basis-text').textContent = basisText;
+        cdmSelectedYears = 1;
+        cdmSelectedSalary = elig.tagSalary ?? null;
+        cdmSubmitBtn.disabled = false;
+        cdmSubmitBtn.textContent = 'Apply Franchise Tag';
+
+      } else if (type === 'veteran-extension' || type === 'rookie-extension') {
+        // Extension: fixed years, show before/after comparison + projection
+        extSection.style.display = '';
+        const extYears = elig.extensionYears ?? (elig.currentYears + 2);
+        const extSalary = elig.extensionSalary ?? elig.currentSalary;
+        const currentLabel = elig.currentYears + 'yr @ ' + formatSalaryCompact(elig.currentSalary);
+        const newLabel = extYears + 'yr @ ' + formatSalaryCompact(extSalary);
+        document.getElementById('cdm-ext-current').textContent = currentLabel;
+        document.getElementById('cdm-ext-new').textContent = newLabel;
+        updateProjectionTable(extSalary, extYears);
+        cdmSelectedYears = extYears;
+        cdmSelectedSalary = extSalary;
+        cdmSubmitBtn.disabled = false;
+        cdmSubmitBtn.textContent = 'Extend Contract';
+
       } else {
-        // Hide projection initially for fresh declarations
-        document.getElementById('cdm-projection-section').style.display = 'none';
+        // new-acquisition / rookie-override: year selector
+        yearSection.style.display = '';
+        cdmSubmitBtn.textContent = preSelectedYears ? 'Update Declaration' : 'Declare Contract';
+
+        const yearOptions = elig.yearOptions || [];
+        const yearContainer = document.getElementById('cdm-year-options');
+        yearContainer.replaceChildren();
+        yearOptions.forEach(yr => {
+          const btn = document.createElement('button');
+          btn.className = 'cdm-year-btn';
+          btn.dataset.years = String(yr);
+          const numEl = document.createElement('span');
+          numEl.className = 'cdm-year-btn__number';
+          numEl.textContent = String(yr);
+          const labelEl = document.createElement('span');
+          labelEl.className = 'cdm-year-btn__label';
+          labelEl.textContent = yr === 1 ? 'YEAR' : 'YEARS';
+          btn.appendChild(numEl);
+          btn.appendChild(labelEl);
+          btn.addEventListener('click', () => {
+            yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            cdmSelectedYears = yr;
+            cdmSubmitBtn.disabled = false;
+            updateProjectionTable(elig.currentSalary, yr);
+          });
+          yearContainer.appendChild(btn);
+        });
+
+        // Pre-select years if editing a pending declaration
+        if (preSelectedYears) {
+          const matchBtn = yearContainer.querySelector('[data-years="' + preSelectedYears + '"]');
+          if (matchBtn) {
+            matchBtn.classList.add('selected');
+            cdmSelectedYears = preSelectedYears;
+            cdmSubmitBtn.disabled = false;
+            updateProjectionTable(elig.currentSalary, preSelectedYears);
+          }
+        }
       }
 
       cdmModal.classList.add('active');
@@ -7741,6 +7898,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const submitDeclaration = async () => {
       if (!cdmPlayerData || cdmSelectedYears === null) return;
 
+      const origBtnText = cdmSubmitBtn.textContent;
       cdmSubmitBtn.classList.add('loading');
       cdmSubmitBtn.textContent = 'Submitting...';
       cdmError.style.display = 'none';
@@ -7760,14 +7918,37 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         return;
       }
 
+      const elig = cdmPlayerData.eligibility;
+      const franchiseId = config.authUser?.franchiseId ?? currentTeam;
+      const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
+      const leagueId = config.authUser?.leagueId ?? '13522';
+
+      // Determine requestedContractInfo based on declaration type
+      let requestedContractInfo;
+      if (elig.type === 'franchise-tag') requestedContractInfo = 'F';
+      else if (elig.type === 'rookie-extension') requestedContractInfo = ''; // graduating from RC
+
       try {
         const res = await fetch('/api/contracts/declare', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            leagueId,
             playerId: cdmPlayerData.id,
             playerName: cdmPlayerData.name,
+            franchiseId,
+            franchiseName,
+            type: elig.type,
+            currentYears: elig.currentYears,
+            currentSalary: elig.currentSalary,
+            currentContractInfo: elig.contractInfo ?? '',
             requestedYears: cdmSelectedYears,
+            requestedSalary: cdmSelectedSalary ?? undefined,
+            requestedContractInfo,
+            deadlineAt: elig.deadlineTimestamp
+              ? new Date(elig.deadlineTimestamp * 1000).toISOString()
+              : undefined,
+            acquisitionTimestamp: elig.acquisitionTimestamp,
           }),
         });
 
@@ -7792,7 +7973,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         cdmError.textContent = err.message;
         cdmError.style.display = '';
         cdmSubmitBtn.classList.remove('loading');
-        cdmSubmitBtn.textContent = 'Declare Contract';
+        cdmSubmitBtn.textContent = origBtnText;
       }
     };
 

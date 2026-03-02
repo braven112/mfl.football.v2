@@ -194,6 +194,12 @@ function getAugustCutdownDate(year: number): Date {
   return thirdSunday;
 }
 
+/** Salary averages used for franchise tag and extension calculations */
+export interface SalaryAverages {
+  franchiseSalaries?: Record<string, number>;
+  extensionSalaries?: Record<string, number>;
+}
+
 /**
  * Get the eligibility result for a single player.
  *
@@ -203,6 +209,8 @@ function getAugustCutdownDate(year: number): Date {
  * 3. Franchise tag (1 year remaining, offseason)
  * 4. Veteran extension (2+ years, not RC)
  * 5. Rookie extension (RC player, offseason)
+ *
+ * @param salaryAverages - Frozen position salary averages for tag/extension calculations
  */
 export function getPlayerEligibility(
   playerId: string,
@@ -212,6 +220,7 @@ export function getPlayerEligibility(
   playerInfo: MFLPlayerInfo | undefined,
   currentYear: number,
   now: Date = new Date(),
+  salaryAverages?: SalaryAverages,
 ): EligibilityResult {
   const currentYears = parseInt(rosterPlayer.contractYear, 10) || 1;
   const currentSalary = parseFloat(rosterPlayer.salary) || 0;
@@ -272,28 +281,44 @@ export function getPlayerEligibility(
 
   // 3. Check for franchise tag eligibility (1 year remaining, offseason only)
   if (currentYears === 1 && window.windowType === 'offseason' && contractInfo !== 'F') {
+    const position = (playerInfo?.position ?? '').toUpperCase();
+    const top3Avg = salaryAverages?.franchiseSalaries?.[position] ?? 0;
+    const increased = currentSalary * 1.2;
+    const tagSalary = Math.round(Math.max(increased, top3Avg));
+    const tagBasis: 'top 3 average' | '20% increase' = top3Avg > increased ? 'top 3 average' : '20% increase';
     return {
       ...base,
       eligible: true,
       declarationType: 'franchise-tag',
+      tagSalary,
+      tagBasis,
     };
   }
 
   // 4. Check for veteran extension (2+ years, NOT RC)
   if (currentYears >= 2 && !isRC && window.windowType === 'offseason') {
+    // Extension salary = currentSalary escalated to the extension point (10% per current year)
+    const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
+    const extensionYears = currentYears + 2;
     return {
       ...base,
       eligible: true,
       declarationType: 'veteran-extension',
+      extensionSalary,
+      extensionYears,
     };
   }
 
   // 5. Check for rookie extension (RC player, offseason)
   if (isRC && window.windowType === 'offseason') {
+    const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
+    const extensionYears = currentYears + 2;
     return {
       ...base,
       eligible: true,
       declarationType: 'rookie-extension',
+      extensionSalary,
+      extensionYears,
     };
   }
 
@@ -302,6 +327,8 @@ export function getPlayerEligibility(
 
 /**
  * Get eligibility results for all players on a team's roster.
+ *
+ * @param salaryAverages - Frozen position salary averages for tag/extension calculations
  */
 export function getTeamEligibility(
   franchiseId: string,
@@ -310,6 +337,7 @@ export function getTeamEligibility(
   playersMap: Map<string, MFLPlayerInfo>,
   currentYear: number,
   now: Date = new Date(),
+  salaryAverages?: SalaryAverages,
 ): TeamEligibilityResult {
   const transactions = parseTransactions(rawTransactions);
 
@@ -322,6 +350,7 @@ export function getTeamEligibility(
       playersMap.get(rp.id),
       currentYear,
       now,
+      salaryAverages,
     ),
   );
 
