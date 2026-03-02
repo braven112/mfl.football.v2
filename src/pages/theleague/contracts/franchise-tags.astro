@@ -2,6 +2,14 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getFranchiseTagsByYear } from '../../../utils/contract-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getAuthUser } from '../../../utils/auth';
+import { isAdminFranchise } from '../../../config/nav-config';
+
+// Auth gate: admin only
+const user = getAuthUser(Astro.request);
+if (!user || !isAdminFranchise(user.franchiseId)) {
+  return Astro.redirect('/theleague');
+}
 
 const leagueYear = getCurrentLeagueYear();
 const tags = getFranchiseTagsByYear(leagueYear);
