@@ -234,6 +234,40 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
               <span class="ds-type-badge ds-type-badge--extension">Extension</span>
             </div>
           </div>
+
+          <div class="ds-badge-group">
+            <h4 class="ds-editorial-section-title">Contract Status Designations</h4>
+            <p class="ds-card__desc" style="margin-bottom: 0.75rem;">Compact chips displayed inline with salary &amp; years. <strong>RC</strong> and <strong>TO</strong> are persistent — they follow a player across seasons. <strong>F</strong> is a decision result applied by the owner and resets each season.</p>
+            <div class="ds-badge-row" style="margin-bottom: 1rem;">
+              <span class="ds-designation ds-designation--rc">RC</span>
+              <span class="ds-designation ds-designation--to">TO</span>
+              <span class="ds-designation ds-designation--f">F</span>
+            </div>
+            <h5 class="ds-editorial-section-title" style="margin-bottom: 0.5rem;">In Context</h5>
+            <div class="ds-designation-examples">
+              <div class="ds-designation-row">
+                <span class="ds-designation ds-designation--rc">RC</span>
+                <span class="ds-designation-info">
+                  <span class="ds-designation-name">Anthony Richardson</span>
+                  <span class="ds-designation-meta">$1.2M · 1 yr — Rookie Contract (non-1st round)</span>
+                </span>
+              </div>
+              <div class="ds-designation-row">
+                <span class="ds-designation ds-designation--to">TO</span>
+                <span class="ds-designation-info">
+                  <span class="ds-designation-name">C.J. Stroud</span>
+                  <span class="ds-designation-meta">$2.5M · 2 yrs — 1st round, team option eligible</span>
+                </span>
+              </div>
+              <div class="ds-designation-row">
+                <span class="ds-designation ds-designation--f">F</span>
+                <span class="ds-designation-info">
+                  <span class="ds-designation-name">Saquon Barkley</span>
+                  <span class="ds-designation-meta">$12.5M · 1 yr — Franchise tagged</span>
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1062,6 +1096,69 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-type-badge--extension {
     background: #f0fdf4;
     color: #15803d;
+  }
+
+  /* Contract Status Designation Chips */
+  .ds-designation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+
+  .ds-designation--rc {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .ds-designation--to {
+    background: #faf5ff;
+    color: #7c3aed;
+  }
+
+  .ds-designation--f {
+    background: #fffbeb;
+    color: #b45309;
+  }
+
+  .ds-designation-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .ds-designation-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-bg-subtle, #f8fafc);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-subtle, #e5e7eb);
+  }
+
+  .ds-designation-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .ds-designation-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-strong, #111827);
+  }
+
+  .ds-designation-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6b7280);
   }
 
   .ds-badge-grid {
