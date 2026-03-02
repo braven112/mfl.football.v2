@@ -4190,25 +4190,31 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     line-height: 1.3;
   }
 
-  :global(.contract-action-btn:hover) {
+  @media (hover: hover) {
+    :global(.contract-action-btn:hover) {
+      background: var(--color-gray-50, #f9fafb);
+      box-shadow: var(--shadow-sm);
+    }
+
+    :global(.contract-action-btn--franchise:hover) {
+      border-left-color: var(--color-info, #3b82f6);
+    }
+
+    :global(.contract-action-btn--extension:hover) {
+      border-left-color: var(--color-secondary, #2e8743);
+    }
+
+    :global(.contract-action-btn--cut:hover) {
+      border-left-color: var(--color-error, #dc2626);
+    }
+
+    :global(.contract-action-btn--trade:hover) {
+      border-left-color: var(--color-warning, #f59e0b);
+    }
+  }
+
+  :global(.contract-action-btn:active) {
     background: var(--color-gray-50, #f9fafb);
-    box-shadow: var(--shadow-sm);
-  }
-
-  :global(.contract-action-btn--franchise:hover) {
-    border-left-color: var(--color-info, #3b82f6);
-  }
-
-  :global(.contract-action-btn--extension:hover) {
-    border-left-color: var(--color-secondary, #2e8743);
-  }
-
-  :global(.contract-action-btn--cut:hover) {
-    border-left-color: var(--color-error, #dc2626);
-  }
-
-  :global(.contract-action-btn--trade:hover) {
-    border-left-color: var(--color-warning, #f59e0b);
   }
 
   /* Extension options */
