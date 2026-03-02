@@ -296,7 +296,8 @@ When building new modals or overlays:
 - Overlay: `rgba(15, 23, 42, 0.45)` + `backdrop-filter: blur(2px)`
 - Modal: `max-width: 580px`, `border-radius: var(--radius-lg)`, `box-shadow: var(--shadow-xl)`
 - Body padding: 1.75rem desktop, 1.25rem mobile
-- Entry animation: `0.22s ease-out` scale(0.97→1) + translateY(6px→0)
+- Entry animation: `0.32s ease-out` scale(0.96→1) + translateY(12px→0) — see ContractDemoOverlay `cdemo-card-enter`
+- Mobile entry: `0.3s ease-out` translateY(100%→0) (bottom sheet slide-up)
 - Close button: 32px circle, gray-100 bg, gray-500 icon, absolute top-right
 - Mobile (≤640px): bottom-sheet style (`align-items: flex-end`, top-only radius)
 
@@ -395,3 +396,35 @@ The green CTA (`--btn-secondary-bg`) is **not a general-purpose CTA**. It is res
 - Source pattern: `.cdemo-nav__next` / `.cdemo-nav__start` in `src/components/theleague/ContractDemoOverlay.astro`
 
 **Recommendation:** Use `--btn-primary-bg` and `--btn-secondary-bg` tokens. Never hardcode `#1c497c` or `#2e8743` directly in CTA styles — always go through the token layer.
+
+---
+
+## 2026-03-01 - Slide Animation System (from ContractDemoOverlay)
+
+**Context:** Documenting the four animation patterns established in the contract demo walkthrough modal.
+
+**Source:** `src/components/theleague/ContractDemoOverlay.astro`
+
+### Animation Catalog
+
+| Name | Keyframes | Duration | Use Case |
+|------|-----------|----------|----------|
+| **Card Enter** | scale(0.96→1) + translateY(12px→0) + fade | 0.32s ease-out | Desktop modal/card entrance |
+| **Slide Up** | translateY(100%→0) | 0.3s ease-out | Mobile bottom-sheet modals |
+| **Panel In** | translateX(16px→0) + fade | 0.3s ease-out | Step-to-step transitions within a modal |
+| **Trigger Enter** | translateX(100%→0) + fade | 0.5s ease-out, 1.5s delay | Floating edge-anchored CTAs |
+
+### Motion Rules
+
+- **Entrances:** Always `ease-out` (decelerate into place)
+- **Duration range:** 0.2s–0.35s for UI elements; 0.5s max for dramatic reveals
+- **Fill mode:** `forwards` when starting from `opacity: 0`
+- **Stagger delays:** 0.05s increments for list items
+- **Mobile override:** Prefer slide-up (bottom sheet) over scale-enter on small screens
+- **Interactive transitions:** `0.3s cubic-bezier(0.4, 0, 0.2, 1)` for hover/focus state changes
+
+### Astro `<style>` Gotcha
+
+`@keyframes` work fine inside scoped `<style>` blocks, but `{ }` characters inside `<code>` HTML tags in the template must be escaped using `set:html` (e.g., `<code set:html="'@keyframes foo { ... }'" />`) to avoid Astro treating them as JS expressions.
+
+**Live demos:** `src/pages/theleague/design-system.astro` (Animation & Motion section)

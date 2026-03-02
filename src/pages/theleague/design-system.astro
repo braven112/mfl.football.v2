@@ -834,8 +834,152 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
       </div>
     </section>
 
+    <!-- ===== Animation & Motion ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Animation &amp; Motion</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Slide Animations</h3>
+        <p class="ds-card__desc">Entrance animations for modals, panels, sidebars, and floating UI. All use <code>ease-out</code> timing for smooth deceleration and <code>forwards</code> fill-mode to hold the end state.</p>
+
+        <!-- Card Enter — scale + translate combo -->
+        <div class="ds-anim-row">
+          <div class="ds-anim-info">
+            <span class="ds-anim-name">Card Enter</span>
+            <span class="ds-anim-desc">Desktop modals &amp; tutorial cards. Subtle scale-up with vertical lift.</span>
+            <div class="ds-code-hint ds-code-hint--multi">
+              <pre><code set:html={`@keyframes cardEnter {\n  from { opacity: 0; transform: scale(0.96) translateY(12px); }\n  to   { opacity: 1; transform: scale(1) translateY(0); }\n}`} /></pre>
+            </div>
+            <div class="ds-anim-specs">
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">DURATION</span> 0.32s</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">TIMING</span> ease-out</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">USAGE</span> Modals, tutorial overlays</span>
+            </div>
+          </div>
+          <div class="ds-anim-preview">
+            <button class="ds-anim-trigger" data-anim="card-enter">Play</button>
+            <div class="ds-anim-stage">
+              <div class="ds-anim-box ds-anim-box--card-enter" id="anim-card-enter">Card</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide Up — bottom sheet mobile -->
+        <div class="ds-anim-row">
+          <div class="ds-anim-info">
+            <span class="ds-anim-name">Slide Up</span>
+            <span class="ds-anim-desc">Mobile bottom-sheet modals. Full <code>translateY(100%)</code> to resting position.</span>
+            <div class="ds-code-hint ds-code-hint--multi">
+              <pre><code set:html={`@keyframes slideUp {\n  from { transform: translateY(100%); }\n  to   { transform: translateY(0); }\n}`} /></pre>
+            </div>
+            <div class="ds-anim-specs">
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">DURATION</span> 0.3s</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">TIMING</span> ease-out</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">USAGE</span> Mobile modals, action sheets</span>
+            </div>
+          </div>
+          <div class="ds-anim-preview">
+            <button class="ds-anim-trigger" data-anim="slide-up">Play</button>
+            <div class="ds-anim-stage ds-anim-stage--clipped">
+              <div class="ds-anim-box ds-anim-box--slide-up" id="anim-slide-up">Sheet</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel In — horizontal slide for step content -->
+        <div class="ds-anim-row">
+          <div class="ds-anim-info">
+            <span class="ds-anim-name">Panel In</span>
+            <span class="ds-anim-desc">Step-to-step transitions within a modal. Short horizontal slide with fade.</span>
+            <div class="ds-code-hint ds-code-hint--multi">
+              <pre><code set:html={`@keyframes panelIn {\n  from { opacity: 0; transform: translateX(16px); }\n  to   { opacity: 1; transform: translateX(0); }\n}`} /></pre>
+            </div>
+            <div class="ds-anim-specs">
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">DURATION</span> 0.3s</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">TIMING</span> ease-out</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">USAGE</span> Wizard steps, tab panels</span>
+            </div>
+          </div>
+          <div class="ds-anim-preview">
+            <button class="ds-anim-trigger" data-anim="panel-in">Play</button>
+            <div class="ds-anim-stage ds-anim-stage--clipped">
+              <div class="ds-anim-box ds-anim-box--panel-in" id="anim-panel-in">Step 2</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trigger Enter — edge-anchored element slides into view -->
+        <div class="ds-anim-row">
+          <div class="ds-anim-info">
+            <span class="ds-anim-name">Trigger Enter</span>
+            <span class="ds-anim-desc">Floating buttons anchored to viewport edge. Slides in from off-screen with delayed start.</span>
+            <div class="ds-code-hint ds-code-hint--multi">
+              <pre><code set:html={`@keyframes triggerEnter {\n  from { transform: translateX(100%); opacity: 0; }\n  to   { transform: translateX(0); opacity: 1; }\n}`} /></pre>
+            </div>
+            <div class="ds-anim-specs">
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">DURATION</span> 0.5s</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">DELAY</span> 1.5s</span>
+              <span class="ds-anim-spec-item"><span class="ds-anim-spec-label">USAGE</span> Floating CTAs, edge triggers</span>
+            </div>
+          </div>
+          <div class="ds-anim-preview">
+            <button class="ds-anim-trigger" data-anim="trigger-enter">Play</button>
+            <div class="ds-anim-stage ds-anim-stage--clipped">
+              <div class="ds-anim-box ds-anim-box--trigger-enter" id="anim-trigger-enter">CTA</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guidelines card -->
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Motion Guidelines</h3>
+        <div class="ds-detail-list">
+          <div class="ds-detail-row">
+            <span class="ds-detail-label">Timing</span>
+            <span class="ds-detail-value">Always <code>ease-out</code> for entrances — elements decelerate into place</span>
+          </div>
+          <div class="ds-detail-row">
+            <span class="ds-detail-label">Duration</span>
+            <span class="ds-detail-value">0.2s–0.35s for UI elements; 0.5s max for dramatic reveals</span>
+          </div>
+          <div class="ds-detail-row">
+            <span class="ds-detail-label">Fill Mode</span>
+            <span class="ds-detail-value"><code>forwards</code> when the element starts hidden (<code>opacity:0</code>)</span>
+          </div>
+          <div class="ds-detail-row">
+            <span class="ds-detail-label">Delays</span>
+            <span class="ds-detail-value">Use for staggered lists (0.05s increments) or deferred UI (1–2s)</span>
+          </div>
+          <div class="ds-detail-row">
+            <span class="ds-detail-label">Mobile</span>
+            <span class="ds-detail-value">Prefer slide-up (bottom sheet) over scale-enter on small screens</span>
+          </div>
+          <div class="ds-detail-row">
+            <span class="ds-detail-label">Transitions</span>
+            <span class="ds-detail-value"><code>0.3s cubic-bezier(0.4, 0, 0.2, 1)</code> for interactive state changes (hover, focus)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 </TheLeagueLayout>
+
+<script>
+  // Animation demo replay
+  document.querySelectorAll('.ds-anim-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const anim = (btn as HTMLButtonElement).dataset.anim;
+      const box = document.getElementById(`anim-${anim}`);
+      if (!box) return;
+      box.classList.remove('playing');
+      void box.offsetWidth;
+      box.classList.add('playing');
+      box.addEventListener('animationend', () => box.classList.remove('playing'), { once: true });
+    });
+  });
+</script>
 
 <style>
   /* ========================================
@@ -1050,6 +1194,20 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     font-family: var(--font-family-mono);
     color: var(--color-gray-600, #4b5563);
     white-space: nowrap;
+  }
+
+  .ds-code-hint--multi {
+    overflow-x: hidden;
+  }
+
+  .ds-code-hint--multi pre {
+    margin: 0;
+    white-space: pre;
+  }
+
+  .ds-code-hint--multi code {
+    white-space: pre;
+    line-height: 1.6;
   }
 
   /* ========================================
@@ -1776,5 +1934,201 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     background: var(--color-gray-50, #f9fafb);
     padding: 0.1rem 0.375rem;
     border-radius: 4px;
+  }
+
+  /* ========================================
+     Animation & Motion
+     ======================================== */
+  .ds-anim-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .ds-anim-row:last-child { border-bottom: none; }
+
+  .ds-anim-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .ds-anim-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .ds-anim-desc {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.5;
+  }
+
+  .ds-anim-desc code {
+    font-size: 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+  }
+
+  .ds-anim-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  .ds-anim-spec-item {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-gray-700, #374151);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ds-anim-spec-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    margin-right: 0.25rem;
+  }
+
+  /* Preview stage */
+  .ds-anim-preview {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ds-anim-trigger {
+    font-family: inherit;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    background: transparent;
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: 4px;
+    padding: 0.25rem 0.625rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .ds-anim-trigger:hover {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+  }
+
+  .ds-anim-stage {
+    width: 80px;
+    height: 64px;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .ds-anim-stage--clipped {
+    overflow: hidden;
+  }
+
+  .ds-anim-box {
+    width: 48px;
+    height: 32px;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Card Enter */
+  .ds-anim-box--card-enter.playing {
+    animation: ds-card-enter 0.32s ease-out both;
+  }
+
+  @keyframes ds-card-enter {
+    from { opacity: 0; transform: scale(0.96) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Slide Up */
+  .ds-anim-box--slide-up {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: 60px;
+    border-radius: 4px 4px 0 0;
+    opacity: 0;
+  }
+
+  .ds-anim-box--slide-up.playing {
+    animation: ds-slide-up 0.3s ease-out forwards;
+  }
+
+  @keyframes ds-slide-up {
+    from { opacity: 1; transform: translateX(-50%) translateY(100%); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* Panel In */
+  .ds-anim-box--panel-in.playing {
+    animation: ds-panel-in 0.3s ease-out both;
+  }
+
+  @keyframes ds-panel-in {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Trigger Enter */
+  .ds-anim-box--trigger-enter {
+    position: absolute;
+    right: 0;
+    border-radius: 4px 0 0 4px;
+    width: 36px;
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  .ds-anim-box--trigger-enter.playing {
+    animation: ds-trigger-enter 0.5s ease-out forwards;
+  }
+
+  @keyframes ds-trigger-enter {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Responsive: stack animation rows on mobile */
+  @media (max-width: 600px) {
+    .ds-anim-row {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .ds-anim-preview {
+      flex-direction: row-reverse;
+      align-self: stretch;
+      justify-content: flex-end;
+    }
   }
 </style>
