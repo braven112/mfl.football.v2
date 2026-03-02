@@ -133,6 +133,14 @@
           "description": "Personalized player rankings with drag-and-drop reordering"
         },
         {
+          "id": "design-system",
+          "label": "Design System",
+          "icon": "star",
+          "path": "/design-system",
+          "external": false,
+          "description": "Editorial design patterns and component reference"
+        },
+        {
           "id": "submit-lineup",
           "label": "Submit Lineup",
           "icon": "lineup",
@@ -265,7 +273,8 @@
     "/calendar": "/calendar",
     "/whats-new": "/whats-new",
     "/import-rankings": "/import-rankings",
-    "/cr": "/cr"
+    "/cr": "/cr",
+    "/design-system": "/design-system"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

@@ -54,6 +54,48 @@ Config locations:
 
 ---
 
+## Editorial Design Standard
+
+**CRITICAL:** All new pages and components must follow the **editorial design language** derived from the PlayerDetailsModal system. This is the visual standard for the entire site.
+
+**Canonical reference:** `src/components/theleague/PlayerDetailsModal.astro`
+**Full pattern catalog:** [design-system.md](docs/claude/insights/domains/design-system.md) (search "Editorial Design Standard")
+**Component guide:** [components.md](docs/claude/components.md) (Editorial Design Standard section)
+
+### Signature Patterns
+
+**Section titles** — Uppercase, left-border accent:
+```css
+font-size: 0.75rem;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.06em;
+padding-left: 0.625rem;
+border-left: 2px solid var(--color-primary, #1c497c);
+```
+
+**Detail rows** — Flex rows with fixed-width uppercase labels (gray-400) + flexible values, separated by gray-50 borders
+
+**Key metrics** — 3-column grid, gray-50 bg cards, large tabular-nums values + micro uppercase labels
+
+**Tables** — Sticky uppercase headers (0.625rem, gray-400), hover rows, tabular-nums for numbers
+
+**Numbers** — Always `font-variant-numeric: tabular-nums`
+
+**Defensive CSS** — Always include token fallbacks: `var(--color-gray-700, #374151)`
+
+### Typography Scale
+
+| Role | Size | Weight | Notes |
+|------|------|--------|-------|
+| Hero/page title | 1.35rem | 700 | line-height: 1.2 |
+| Section title | 0.75rem | 700 | UPPERCASE + left border |
+| Body/values | 0.875rem | 400–500 | |
+| Detail label | 0.75rem | 600 | UPPERCASE, gray-400 |
+| Table header | 0.625rem | 600 | UPPERCASE, gray-400 |
+
+---
+
 ## Player Display (Player Lockup)
 
 **CRITICAL:** Whenever displaying players in a list, card, or table, use the standard **Player Lockup** pattern for consistency:

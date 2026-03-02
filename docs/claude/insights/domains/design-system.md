@@ -151,3 +151,191 @@ transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 **Evidence:** `src/config/nav-config.json` - "next-year" link uses `"icon": "chalkboard"`
 
 **Recommendation:** If creating any new links or references to the Next Year Summary feature, always use the chalkboard icon for consistency.
+
+---
+
+## 2026-03-01 - Editorial Design Standard (Modal-Derived)
+
+**Context:** The PlayerDetailsModal, ContractDeclarationModal, and other modal components established a refined editorial design language that is now the standard for all new pages and components.
+
+**Insight:** The "editorial design" is characterized by specific typography, spacing, color, and layout patterns that create a clean, data-dense, sports-editorial feel. New pages must follow these patterns.
+
+### Typography Hierarchy
+
+| Role | Size | Weight | Color | Extra |
+|------|------|--------|-------|-------|
+| **Hero/Page Title** | 1.35rem | 700 | gray-900 | line-height: 1.2 |
+| **Section Title** | 0.75rem | 700 | gray-900 | UPPERCASE, 0.06em letter-spacing, left border accent |
+| **Body/Values** | 0.875rem | 400–500 | gray-700 | `font-variant-numeric: tabular-nums` for numbers |
+| **Meta/Secondary** | 0.875rem | 500 | gray-600 | Supporting info below titles |
+| **Detail Label** | 0.75rem | 600 | gray-400 | UPPERCASE, 0.04em letter-spacing |
+| **Micro Label** | 0.6875rem | 600 | gray-400 | UPPERCASE, 0.05em letter-spacing (metric cards) |
+| **Table Header** | 0.625rem | 600 | gray-400 | UPPERCASE |
+
+### Section Title Pattern (Signature Element)
+
+The left-border accent on uppercase section titles is the most recognizable editorial pattern:
+```css
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--color-primary, #1c497c);
+}
+```
+
+### Key Metrics Strip
+
+3-column grid for hero-level stats:
+```css
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+}
+.metric-card {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.5rem;
+  text-align: center;
+}
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.metric-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-gray-400);
+}
+```
+
+### Detail Row Pattern
+
+Label + value rows separated by subtle borders (NOT a table — flexbox):
+```css
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+}
+.detail-label {
+  width: 4.5rem;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-gray-400);
+  text-align: right;
+}
+.detail-value {
+  font-size: 0.875rem;
+  color: var(--color-gray-700);
+}
+```
+
+### Pill/Badge Pattern
+
+Compact metadata indicators:
+```css
+.pill {
+  background: var(--color-gray-100, #f3f4f6);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+```
+Semantic variants use light background + dark text (e.g., info: `#f0f9ff` bg, `#0369a1` text).
+
+### Table Styling
+
+```css
+/* Header */
+thead th {
+  background: var(--color-gray-50);
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-gray-400);
+  position: sticky;
+  top: 0;
+}
+
+/* Rows */
+tbody td {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-gray-700);
+  border-bottom: 1px solid var(--color-gray-50);
+}
+tbody tr:hover { background: var(--color-gray-50); }
+
+/* Footer/totals */
+tfoot td {
+  border-top: 1px solid var(--content-border);
+  background: var(--color-gray-50);
+  font-weight: 600;
+}
+```
+
+### Modal Shell (Reference)
+
+When building new modals or overlays:
+- Overlay: `rgba(15, 23, 42, 0.45)` + `backdrop-filter: blur(2px)`
+- Modal: `max-width: 580px`, `border-radius: var(--radius-lg)`, `box-shadow: var(--shadow-xl)`
+- Body padding: 1.75rem desktop, 1.25rem mobile
+- Entry animation: `0.22s ease-out` scale(0.97→1) + translateY(6px→0)
+- Close button: 32px circle, gray-100 bg, gray-500 icon, absolute top-right
+- Mobile (≤640px): bottom-sheet style (`align-items: flex-end`, top-only radius)
+
+### Selected State Pattern (Cards/Options)
+
+Interactive selection uses a left border accent + subtle gradient:
+```css
+.option-selected {
+  border-left: 2px solid var(--color-primary, #1c497c);
+  background: linear-gradient(135deg, #f0f5fa 0%, #e8eff7 100%);
+  box-shadow: 0 1px 3px rgba(28, 73, 124, 0.08);
+}
+```
+
+### Color Usage Rules
+
+| Purpose | Token | Fallback |
+|---------|-------|----------|
+| Primary text | `--color-gray-900` | `#111827` |
+| Secondary text | `--color-gray-700` | `#374151` |
+| Tertiary text | `--color-gray-600` | `#4b5563` |
+| Labels/hints | `--color-gray-400` | `#9ca3af` |
+| Accent/brand | `--color-primary` | `#1c497c` |
+| Subtle bg | `--color-gray-50` | `#f9fafb` |
+| Borders | `--content-border` | `#e2e8f0` |
+| Light borders | `--color-gray-50` | `#f9fafb` |
+
+### Defensive CSS
+
+Always use token fallbacks: `var(--color-gray-700, #374151)`. This ensures components render correctly even if tokens.css fails to load.
+
+### Responsive Rules
+
+- Mobile breakpoint: `max-width: 640px`
+- Reduce padding: 1.75rem → 1.25rem
+- Shrink hero elements (avatars, titles) by ~25%
+- Hide lower-priority table columns
+- Use `:global()` for styles targeting JS-inserted DOM
+
+**Evidence:** PlayerDetailsModal.astro (1072 lines), ContractDeclarationModal.astro, PlayerInjuryModal.astro, PlayerNewsModal.astro
+
+**Recommendation:** Before building any new page or component, reference these patterns. The PlayerDetailsModal is the canonical implementation. When in doubt, match its typography, spacing, and color choices.

@@ -231,6 +231,62 @@ box-shadow:
 
 Layered shadows increase rendering load. Avoid animating shadow tokens directly. Instead, use opacity or transform animations on the element itself.
 
+## Editorial Design Standard
+
+All new pages and components must follow the **editorial design language** established by the PlayerDetailsModal and related modal components. This creates a consistent, data-dense, sports-editorial feel across the site.
+
+**Canonical reference:** `src/components/theleague/PlayerDetailsModal.astro`
+**Full pattern catalog:** `docs/claude/insights/domains/design-system.md` (search "Editorial Design Standard")
+
+### Quick Reference
+
+**Section titles** — The signature editorial element:
+```css
+font-size: 0.75rem;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.06em;
+padding-left: 0.625rem;
+border-left: 2px solid var(--color-primary, #1c497c);
+```
+
+**Typography scale** (most commonly used):
+| Role | Size | Weight |
+|------|------|--------|
+| Page/hero title | 1.35rem | 700 |
+| Section title | 0.75rem | 700, uppercase |
+| Body text | 0.875rem | 400–500 |
+| Detail label | 0.75rem | 600, uppercase, gray-400 |
+| Micro label | 0.6875rem | 600, uppercase |
+| Table header | 0.625rem | 600, uppercase, gray-400 |
+
+**Key metrics** — 3-column grid with gray-50 background cards, tabular-nums values
+
+**Detail rows** — Flex rows with fixed-width right-aligned labels (4.5rem) and flexible values, separated by gray-50 borders
+
+**Tables** — Sticky uppercase headers (gray-50 bg, gray-400 text), hover rows, tabular-nums, color-coded values
+
+**Badges/pills** — Rounded (`radius-full`), gray-100 bg, 0.8125rem, weight 600. Semantic variants use light bg + dark text pairs.
+
+**Numbers** — Always use `font-variant-numeric: tabular-nums` for alignment
+
+**Defensive CSS** — Always include fallback values: `var(--color-gray-700, #374151)`
+
+### Page Layout Checklist
+
+When building a new page following the editorial standard:
+
+- [ ] Section titles use uppercase + left border accent pattern
+- [ ] Typography follows the scale above (no ad-hoc sizes)
+- [ ] Numbers use `tabular-nums`
+- [ ] Colors reference tokens with fallbacks
+- [ ] Tables use sticky headers with uppercase gray-400 labels
+- [ ] Mobile (≤640px) reduces padding and hides low-priority columns
+- [ ] Interactive selections use left border accent + subtle gradient
+- [ ] Shadows use token scale (`--shadow-sm` through `--shadow-xl`)
+
+---
+
 ## Component Organization
 
 ```

@@ -1,0 +1,1468 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import '../../styles/player-cell.css';
+
+export const prerender = false;
+
+// Sample players for the lockup demos
+const samplePlayers = [
+  { name: 'Patrick Mahomes', position: 'QB', nflTeam: 'KC', headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/3139477.png', espnId: '3139477', id: '13116' },
+  { name: "Ja'Marr Chase", position: 'WR', nflTeam: 'CIN', headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4362628.png', espnId: '4362628', id: '15281' },
+  { name: 'Justin Jefferson', position: 'WR', nflTeam: 'MIN', headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4262921.png', espnId: '4262921', id: '14836' },
+  { name: 'Travis Kelce', position: 'TE', nflTeam: 'KC', headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/15847.png', espnId: '15847', id: '11244' },
+  { name: 'Christian McCaffrey', position: 'RB', nflTeam: 'SF', headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/3117251.png', espnId: '3117251', id: '13128' },
+];
+
+const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', headshot: '', id: '0151' };
+---
+
+<TheLeagueLayout title="Design System | The League">
+  <main class="ds-page">
+
+    <!-- ===== Page Header ===== -->
+    <header class="ds-hero">
+      <h1 class="ds-hero__title">Editorial Design System</h1>
+      <p class="ds-hero__subtitle">
+        The living reference for our typography, layout, and component patterns.
+        Every section below shows a real pattern from the codebase — not abstract swatches.
+      </p>
+    </header>
+
+    <!-- ===== Typography Scale ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Typography</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Type Scale</h3>
+        <div class="ds-type-specimen">
+          <div class="ds-type-row">
+            <span class="ds-type-label">HERO TITLE</span>
+            <span class="ds-type-sample ds-type--hero">Roster Analysis</span>
+            <span class="ds-type-spec">1.35rem / 700</span>
+          </div>
+          <div class="ds-type-row">
+            <span class="ds-type-label">SECTION TITLE</span>
+            <span class="ds-type-sample ds-type--section-title"><span class="ds-section-title-inline">Contract Details</span></span>
+            <span class="ds-type-spec">0.75rem / 700 / uppercase</span>
+          </div>
+          <div class="ds-type-row">
+            <span class="ds-type-label">BODY</span>
+            <span class="ds-type-sample ds-type--body">3 years, $4.2M per year with 10% escalation</span>
+            <span class="ds-type-spec">0.875rem / 400–500</span>
+          </div>
+          <div class="ds-type-row">
+            <span class="ds-type-label">META</span>
+            <span class="ds-type-sample ds-type--meta">Kansas City Chiefs &middot; QB &middot; #15</span>
+            <span class="ds-type-spec">0.875rem / 500 / gray-600</span>
+          </div>
+          <div class="ds-type-row">
+            <span class="ds-type-label">DETAIL LABEL</span>
+            <span class="ds-type-sample ds-type--detail-label">COLLEGE</span>
+            <span class="ds-type-spec">0.75rem / 600 / uppercase / gray-400</span>
+          </div>
+          <div class="ds-type-row">
+            <span class="ds-type-label">MICRO LABEL</span>
+            <span class="ds-type-sample ds-type--micro-label">PER GAME</span>
+            <span class="ds-type-spec">0.6875rem / 600 / uppercase</span>
+          </div>
+          <div class="ds-type-row">
+            <span class="ds-type-label">TABLE HEADER</span>
+            <span class="ds-type-sample ds-type--table-header">SALARY</span>
+            <span class="ds-type-spec">0.625rem / 600 / uppercase / gray-400</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Section Title Pattern ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Section Titles</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Left-Border Accent (Signature Pattern)</h3>
+        <p class="ds-card__desc">The most recognizable editorial element. Used for every content section heading across all pages.</p>
+        <div class="ds-examples-stack">
+          <h4 class="ds-editorial-section-title">Contract Details</h4>
+          <h4 class="ds-editorial-section-title">Season Results</h4>
+          <h4 class="ds-editorial-section-title">Roster Breakdown</h4>
+        </div>
+        <div class="ds-code-hint">
+          <code>font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid var(--color-primary);</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Key Metrics Strip ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Key Metrics</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">3-Column Metrics Grid</h3>
+        <p class="ds-card__desc">Hero-level stats in a tight grid. Large tabular-nums values with micro uppercase labels.</p>
+
+        <div class="ds-metrics-grid">
+          <div class="ds-metric-card">
+            <div class="ds-metric-value">$38.2M</div>
+            <div class="ds-metric-label">Cap Used</div>
+          </div>
+          <div class="ds-metric-card">
+            <div class="ds-metric-value">24</div>
+            <div class="ds-metric-label">Rostered</div>
+          </div>
+          <div class="ds-metric-card">
+            <div class="ds-metric-value">$6.8M</div>
+            <div class="ds-metric-label">Cap Space</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <h4 class="ds-editorial-section-title">Variant: 4-Column</h4>
+          <div class="ds-metrics-grid ds-metrics-grid--4">
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">287.4</div>
+              <div class="ds-metric-label">Total Pts</div>
+            </div>
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">18.0</div>
+              <div class="ds-metric-label">Per Game</div>
+            </div>
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">3</div>
+              <div class="ds-metric-label">Yrs Left</div>
+            </div>
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">$4.2M</div>
+              <div class="ds-metric-label">Salary</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Detail Rows ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Detail Rows</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Label + Value Flex Rows</h3>
+        <p class="ds-card__desc">Fixed-width right-aligned uppercase labels with flexible values. Separated by subtle gray-50 borders. Not a table — flexbox.</p>
+
+        <div class="ds-detail-section">
+          <h4 class="ds-editorial-section-title">Player Details</h4>
+          <div class="ds-detail-list">
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Status</span>
+              <span class="ds-detail-value">Active Roster</span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">College</span>
+              <span class="ds-detail-value">Texas Tech</span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Draft</span>
+              <span class="ds-detail-value">2017 Round 1, Pick 10</span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Build</span>
+              <span class="ds-detail-value">6'2" / 225 lbs</span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Age</span>
+              <span class="ds-detail-value">30</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ds-detail-section" style="margin-top: 1.5rem;">
+          <h4 class="ds-editorial-section-title">Contract</h4>
+          <div class="ds-detail-list">
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Type</span>
+              <span class="ds-detail-value"><span class="ds-badge ds-badge--info">Veteran</span></span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Years</span>
+              <span class="ds-detail-value">3 years (2024–2026)</span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Base</span>
+              <span class="ds-detail-value ds-tabular">$4,200,000</span>
+            </div>
+            <div class="ds-detail-row">
+              <span class="ds-detail-label">Current</span>
+              <span class="ds-detail-value ds-tabular">$5,082,000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Badges & Pills ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Badges &amp; Pills</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Status Indicators</h3>
+
+        <div class="ds-badge-grid">
+          <div class="ds-badge-group">
+            <h4 class="ds-editorial-section-title">Pills (Neutral)</h4>
+            <div class="ds-badge-row">
+              <span class="ds-pill">Age 27</span>
+              <span class="ds-pill">3 YRS</span>
+              <span class="ds-pill">QB</span>
+              <span class="ds-pill">Round 1</span>
+            </div>
+          </div>
+
+          <div class="ds-badge-group">
+            <h4 class="ds-editorial-section-title">Semantic Badges</h4>
+            <div class="ds-badge-row">
+              <span class="ds-badge ds-badge--success">Starter</span>
+              <span class="ds-badge ds-badge--info">Veteran</span>
+              <span class="ds-badge ds-badge--warning">Questionable</span>
+              <span class="ds-badge ds-badge--error">IR</span>
+            </div>
+          </div>
+
+          <div class="ds-badge-group">
+            <h4 class="ds-editorial-section-title">Type Badges</h4>
+            <div class="ds-badge-row">
+              <span class="ds-type-badge ds-type-badge--veteran">Veteran</span>
+              <span class="ds-type-badge ds-type-badge--rookie">Rookie</span>
+              <span class="ds-type-badge ds-type-badge--extension">Extension</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Player Lockup ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Player Lockup</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Default Size (40px avatar)</h3>
+        <p class="ds-card__desc">The standard player display. Circular headshot, bold name, NFL logo + position meta row. Uses <code>PlayerCell.astro</code>.</p>
+
+        <div class="ds-player-list">
+          {samplePlayers.map(player => (
+            <div class="ds-player-list__item">
+              <PlayerCell
+                name={player.name}
+                headshot={player.headshot}
+                position={player.position}
+                nflTeam={player.nflTeam}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Compact Size (32px avatar)</h3>
+        <p class="ds-card__desc">For denser layouts like tables. Same pattern, smaller scale.</p>
+
+        <div class="ds-player-list">
+          {samplePlayers.slice(0, 3).map(player => (
+            <div class="ds-player-list__item">
+              <PlayerCell
+                name={player.name}
+                headshot={player.headshot}
+                position={player.position}
+                nflTeam={player.nflTeam}
+                size="compact"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">DEF Handling (Auto)</h3>
+        <p class="ds-card__desc">Team defenses automatically swap the headshot for the NFL team logo. No special caller logic needed.</p>
+
+        <div class="ds-player-list">
+          <div class="ds-player-list__item">
+            <PlayerCell
+              name={defPlayer.name}
+              headshot={defPlayer.headshot}
+              position={defPlayer.position}
+              nflTeam={defPlayer.nflTeam}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Table Pattern ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Tables</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Editorial Table</h3>
+        <p class="ds-card__desc">Sticky uppercase headers, hover rows, tabular-nums, and color-coded values. Player lockups in the first column.</p>
+
+        <div class="ds-table-wrap">
+          <table class="ds-table">
+            <thead>
+              <tr>
+                <th class="ds-table__th--player">Player</th>
+                <th>Pos</th>
+                <th class="ds-table__th--num">Salary</th>
+                <th class="ds-table__th--num">Pts/G</th>
+                <th class="ds-table__th--num">Yrs</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <PlayerCell name="Patrick Mahomes" headshot="https://a.espncdn.com/i/headshots/nfl/players/full/3139477.png" position="QB" nflTeam="KC" size="compact" />
+                </td>
+                <td>QB</td>
+                <td class="ds-tabular">$5,082,000</td>
+                <td class="ds-tabular ds-positive">24.3</td>
+                <td class="ds-tabular">3</td>
+                <td><span class="ds-badge ds-badge--success">S</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <PlayerCell name="Ja'Marr Chase" headshot="https://a.espncdn.com/i/headshots/nfl/players/full/4362628.png" position="WR" nflTeam="CIN" size="compact" />
+                </td>
+                <td>WR</td>
+                <td class="ds-tabular">$3,850,000</td>
+                <td class="ds-tabular ds-positive">19.7</td>
+                <td class="ds-tabular">2</td>
+                <td><span class="ds-badge ds-badge--success">S</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <PlayerCell name="Justin Jefferson" headshot="https://a.espncdn.com/i/headshots/nfl/players/full/4262921.png" position="WR" nflTeam="MIN" size="compact" />
+                </td>
+                <td>WR</td>
+                <td class="ds-tabular">$4,100,000</td>
+                <td class="ds-tabular ds-positive">18.1</td>
+                <td class="ds-tabular">4</td>
+                <td><span class="ds-badge ds-badge--success">S</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <PlayerCell name="Travis Kelce" headshot="https://a.espncdn.com/i/headshots/nfl/players/full/15847.png" position="TE" nflTeam="KC" size="compact" />
+                </td>
+                <td>TE</td>
+                <td class="ds-tabular">$2,200,000</td>
+                <td class="ds-tabular">12.4</td>
+                <td class="ds-tabular">1</td>
+                <td><span class="ds-badge ds-badge--warning">Q</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <PlayerCell name="Christian McCaffrey" headshot="https://a.espncdn.com/i/headshots/nfl/players/full/3117251.png" position="RB" nflTeam="SF" size="compact" />
+                </td>
+                <td>RB</td>
+                <td class="ds-tabular">$3,600,000</td>
+                <td class="ds-tabular ds-negative">0.0</td>
+                <td class="ds-tabular">2</td>
+                <td><span class="ds-badge ds-badge--error">IR</span></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">Total (5 players)</td>
+                <td class="ds-tabular">$18,832,000</td>
+                <td class="ds-tabular">14.9</td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Selected State ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Interactive States</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Selection Pattern</h3>
+        <p class="ds-card__desc">Interactive cards/options use left-border accent + subtle gradient to indicate selection.</p>
+
+        <div class="ds-selection-demo">
+          <div class="ds-option-card">
+            <div class="ds-option-card__years">1 Year</div>
+            <div class="ds-option-card__detail">$4,200,000</div>
+          </div>
+          <div class="ds-option-card ds-option-card--selected">
+            <div class="ds-option-card__years">2 Years</div>
+            <div class="ds-option-card__detail">$4,620,000 avg</div>
+          </div>
+          <div class="ds-option-card">
+            <div class="ds-option-card__years">3 Years</div>
+            <div class="ds-option-card__detail">$5,082,000 avg</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Color Palette ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Color Palette</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Text Hierarchy</h3>
+        <div class="ds-color-grid">
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-gray-900, #111827);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">gray-900</span>
+              <span class="ds-color-use">Primary text</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-gray-700, #374151);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">gray-700</span>
+              <span class="ds-color-use">Secondary text</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-gray-600, #4b5563);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">gray-600</span>
+              <span class="ds-color-use">Tertiary / meta</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-gray-400, #9ca3af);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">gray-400</span>
+              <span class="ds-color-use">Labels / hints</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Brand &amp; Semantic</h3>
+        <div class="ds-color-grid">
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-primary, #1c497c);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">primary</span>
+              <span class="ds-color-use">Accent, links, borders</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-success-dark, #059669);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">success-dark</span>
+              <span class="ds-color-use">Positive values</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-warning, #f59e0b);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">warning</span>
+              <span class="ds-color-use">Caution states</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-error, #dc2626);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">error</span>
+              <span class="ds-color-use">Negative / IR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Surfaces &amp; Borders</h3>
+        <div class="ds-color-grid">
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip ds-color-chip--bordered" style="background: var(--color-white, #ffffff);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">white</span>
+              <span class="ds-color-use">Card backgrounds</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-gray-50, #f9fafb);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">gray-50</span>
+              <span class="ds-color-use">Subtle bg, hover, light borders</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--color-gray-100, #f3f4f6);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">gray-100</span>
+              <span class="ds-color-use">Pill bg, close button bg</span>
+            </div>
+          </div>
+          <div class="ds-color-swatch">
+            <div class="ds-color-chip" style="background: var(--content-border, #e2e8f0);"></div>
+            <div class="ds-color-info">
+              <span class="ds-color-name">content-border</span>
+              <span class="ds-color-use">Card borders, dividers</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Shadows ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Shadows</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Elevation Scale</h3>
+        <p class="ds-card__desc">Layered shadows with blue-tinted color. Each level doubles offset/blur for realistic depth.</p>
+
+        <div class="ds-shadow-grid">
+          <div class="ds-shadow-card" style="box-shadow: var(--shadow-sm);">
+            <span class="ds-shadow-label">shadow-sm</span>
+            <span class="ds-shadow-use">Buttons, inputs</span>
+          </div>
+          <div class="ds-shadow-card" style="box-shadow: var(--shadow-md);">
+            <span class="ds-shadow-label">shadow-md</span>
+            <span class="ds-shadow-use">Cards, dropdowns</span>
+          </div>
+          <div class="ds-shadow-card" style="box-shadow: var(--shadow-lg);">
+            <span class="ds-shadow-label">shadow-lg</span>
+            <span class="ds-shadow-use">Popovers, nav</span>
+          </div>
+          <div class="ds-shadow-card" style="box-shadow: var(--shadow-xl);">
+            <span class="ds-shadow-label">shadow-xl</span>
+            <span class="ds-shadow-use">Modals, dialogs</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Spacing ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Spacing Scale</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Spacing Tokens</h3>
+        <div class="ds-spacing-grid">
+          <div class="ds-spacing-row">
+            <span class="ds-spacing-label">xs</span>
+            <div class="ds-spacing-bar" style="width: 0.25rem;"></div>
+            <span class="ds-spacing-value">4px</span>
+          </div>
+          <div class="ds-spacing-row">
+            <span class="ds-spacing-label">sm</span>
+            <div class="ds-spacing-bar" style="width: 0.5rem;"></div>
+            <span class="ds-spacing-value">8px</span>
+          </div>
+          <div class="ds-spacing-row">
+            <span class="ds-spacing-label">md</span>
+            <div class="ds-spacing-bar" style="width: 1rem;"></div>
+            <span class="ds-spacing-value">16px</span>
+          </div>
+          <div class="ds-spacing-row">
+            <span class="ds-spacing-label">lg</span>
+            <div class="ds-spacing-bar" style="width: 1.5rem;"></div>
+            <span class="ds-spacing-value">24px</span>
+          </div>
+          <div class="ds-spacing-row">
+            <span class="ds-spacing-label">xl</span>
+            <div class="ds-spacing-bar" style="width: 2rem;"></div>
+            <span class="ds-spacing-value">32px</span>
+          </div>
+          <div class="ds-spacing-row">
+            <span class="ds-spacing-label">2xl</span>
+            <div class="ds-spacing-bar" style="width: 3rem;"></div>
+            <span class="ds-spacing-value">48px</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Border Radius ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Border Radius</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Radius Tokens</h3>
+        <div class="ds-radius-grid">
+          <div class="ds-radius-demo">
+            <div class="ds-radius-box" style="border-radius: var(--radius-sm, 0.25rem);"></div>
+            <span class="ds-radius-label">sm (4px)</span>
+          </div>
+          <div class="ds-radius-demo">
+            <div class="ds-radius-box" style="border-radius: var(--radius-md, 0.5rem);"></div>
+            <span class="ds-radius-label">md (8px)</span>
+          </div>
+          <div class="ds-radius-demo">
+            <div class="ds-radius-box" style="border-radius: var(--radius-lg, 1rem);"></div>
+            <span class="ds-radius-label">lg (16px)</span>
+          </div>
+          <div class="ds-radius-demo">
+            <div class="ds-radius-box" style="border-radius: var(--radius-full, 9999px);"></div>
+            <span class="ds-radius-label">full (pill)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Composite Example ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Composite Example</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Player Profile Card</h3>
+        <p class="ds-card__desc">A realistic composition showing how all editorial patterns combine into a cohesive layout.</p>
+
+        <div class="ds-profile-card">
+          <div class="ds-profile-hero">
+            <div class="ds-profile-avatar">
+              <img src="https://a.espncdn.com/i/headshots/nfl/players/full/3139477.png" alt="Patrick Mahomes headshot" />
+            </div>
+            <div class="ds-profile-identity">
+              <div class="ds-profile-name-row">
+                <span class="ds-profile-name">Patrick Mahomes</span>
+                <span class="ds-pill">Age 30</span>
+              </div>
+              <div class="ds-profile-meta">
+                <img src="/assets/nfl-logos/KC.svg" alt="KC logo" class="ds-profile-team-logo" />
+                Kansas City &middot; QB &middot; #15
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-metrics-grid">
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">287.4</div>
+              <div class="ds-metric-label">Total Pts</div>
+            </div>
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">18.0</div>
+              <div class="ds-metric-label">Per Game</div>
+            </div>
+            <div class="ds-metric-card">
+              <div class="ds-metric-value">$5.1M</div>
+              <div class="ds-metric-label">Salary</div>
+            </div>
+          </div>
+
+          <div class="ds-detail-section">
+            <h4 class="ds-editorial-section-title">Details</h4>
+            <div class="ds-detail-list">
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">College</span>
+                <span class="ds-detail-value">Texas Tech</span>
+              </div>
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Draft</span>
+                <span class="ds-detail-value">2017 Rd 1, Pick 10</span>
+              </div>
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Build</span>
+                <span class="ds-detail-value">6'2" / 225 lbs</span>
+              </div>
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Status</span>
+                <span class="ds-detail-value"><span class="ds-badge ds-badge--success">Starter</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-detail-section">
+            <h4 class="ds-editorial-section-title">Contract</h4>
+            <div class="ds-detail-list">
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Type</span>
+                <span class="ds-detail-value"><span class="ds-type-badge ds-type-badge--veteran">Veteran</span></span>
+              </div>
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Term</span>
+                <span class="ds-detail-value">3 years (2024–2026)</span>
+              </div>
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Base</span>
+                <span class="ds-detail-value ds-tabular">$4,200,000</span>
+              </div>
+              <div class="ds-detail-row">
+                <span class="ds-detail-label">Current</span>
+                <span class="ds-detail-value ds-tabular">$5,082,000</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</TheLeagueLayout>
+
+<style>
+  /* ========================================
+     Page Shell
+     ======================================== */
+  .ds-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem);
+  }
+
+  /* ========================================
+     Hero
+     ======================================== */
+  .ds-hero {
+    margin-bottom: var(--spacing-2xl, 3rem);
+  }
+
+  .ds-hero__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+    margin: 0 0 0.5rem;
+  }
+
+  .ds-hero__subtitle {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.5;
+    margin: 0;
+    max-width: 600px;
+  }
+
+  /* ========================================
+     Sections
+     ======================================== */
+  .ds-section {
+    margin-bottom: var(--spacing-2xl, 3rem);
+  }
+
+  .ds-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 var(--spacing-lg, 1.5rem);
+  }
+
+  /* ========================================
+     Cards (containers for each demo)
+     ======================================== */
+  .ds-card {
+    background: var(--color-white, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: var(--spacing-lg, 1.5rem);
+    margin-bottom: var(--spacing-md, 1rem);
+  }
+
+  .ds-card__heading {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.25rem;
+  }
+
+  .ds-card__desc {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0 0 var(--spacing-md, 1rem);
+    line-height: 1.5;
+  }
+
+  .ds-card__desc code {
+    font-size: 0.75rem;
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* ========================================
+     Typography Specimens
+     ======================================== */
+  .ds-type-specimen {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ds-type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .ds-type-row:last-child { border-bottom: none; }
+
+  .ds-type-label {
+    width: 6.5rem;
+    flex-shrink: 0;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .ds-type-sample {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ds-type-spec {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-family: var(--font-family-mono);
+    color: var(--color-gray-400, #9ca3af);
+    text-align: right;
+  }
+
+  .ds-type--hero {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+
+  .ds-section-title-inline {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+  }
+
+  .ds-type--body {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ds-type--meta {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .ds-type--detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .ds-type--micro-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .ds-type--table-header {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ========================================
+     Editorial Section Title (demo instances)
+     ======================================== */
+  .ds-editorial-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.75rem;
+  }
+
+  .ds-examples-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .ds-code-hint {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    padding: 0.5rem 0.75rem;
+    overflow-x: auto;
+  }
+
+  .ds-code-hint code {
+    font-size: 0.6875rem;
+    font-family: var(--font-family-mono);
+    color: var(--color-gray-600, #4b5563);
+    white-space: nowrap;
+  }
+
+  /* ========================================
+     Metrics Grid
+     ======================================== */
+  .ds-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+  }
+
+  .ds-metrics-grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .ds-metric-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.5rem;
+    text-align: center;
+  }
+
+  .ds-metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+  }
+
+  .ds-metric-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.125rem;
+  }
+
+  /* ========================================
+     Detail Rows
+     ======================================== */
+  .ds-detail-section {
+    margin-top: 0;
+  }
+
+  .ds-detail-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ds-detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .ds-detail-row:last-child { border-bottom: none; }
+
+  .ds-detail-label {
+    width: 4.5rem;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    text-align: right;
+  }
+
+  .ds-detail-value {
+    font-size: 0.875rem;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ds-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========================================
+     Badges & Pills
+     ======================================== */
+  .ds-pill {
+    display: inline-block;
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    white-space: nowrap;
+  }
+
+  .ds-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .ds-badge--success {
+    background: var(--color-success-light, #d1fae5);
+    color: var(--color-success-dark, #059669);
+  }
+
+  .ds-badge--info {
+    background: var(--color-info-light, #dbeafe);
+    color: var(--color-info-dark, #2563eb);
+  }
+
+  .ds-badge--warning {
+    background: var(--color-warning-light, #fef3c7);
+    color: var(--color-warning-dark, #d97706);
+  }
+
+  .ds-badge--error {
+    background: var(--color-error-light, #fee2e2);
+    color: var(--color-error-dark, #b91c1c);
+  }
+
+  .ds-type-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .ds-type-badge--veteran {
+    background: #f0f9ff;
+    color: #0369a1;
+  }
+
+  .ds-type-badge--rookie {
+    background: #fefce8;
+    color: #a16207;
+  }
+
+  .ds-type-badge--extension {
+    background: #f0fdf4;
+    color: #15803d;
+  }
+
+  .ds-badge-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .ds-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  /* ========================================
+     Player Lockup Demo
+     ======================================== */
+  .ds-player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .ds-player-list__item {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .ds-player-list__item:last-child { border-bottom: none; }
+
+  /* ========================================
+     Table
+     ======================================== */
+  .ds-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .ds-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+  }
+
+  .ds-table thead th {
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0.5rem 0.625rem;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .ds-table__th--player { min-width: 11rem; }
+  .ds-table__th--num { text-align: right; }
+
+  .ds-table tbody td {
+    padding: 0.4rem 0.625rem;
+    color: var(--color-gray-700, #374151);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    vertical-align: middle;
+  }
+
+  .ds-table tbody tr:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .ds-table tfoot td {
+    padding: 0.5rem 0.625rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    background: var(--color-gray-50, #f9fafb);
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ds-positive { color: var(--color-success-dark, #059669); }
+  .ds-negative { color: var(--color-error, #dc2626); }
+
+  /* ========================================
+     Selection Pattern
+     ======================================== */
+  .ds-selection-demo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ds-option-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fafbfc;
+    cursor: pointer;
+    transition: all var(--transition-fast, 150ms ease);
+  }
+
+  .ds-option-card:hover {
+    border-left-color: var(--color-gray-400, #9ca3af);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .ds-option-card--selected {
+    border-left: 2px solid var(--color-primary, #1c497c);
+    background: linear-gradient(135deg, #f0f5fa 0%, #e8eff7 100%);
+    box-shadow: 0 1px 3px rgba(28, 73, 124, 0.08);
+  }
+
+  .ds-option-card--selected:hover {
+    border-left-color: var(--color-primary, #1c497c);
+    background: linear-gradient(135deg, #f0f5fa 0%, #e8eff7 100%);
+  }
+
+  .ds-option-card__years {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .ds-option-card__detail {
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* ========================================
+     Color Palette
+     ======================================== */
+  .ds-color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+
+  .ds-color-swatch {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .ds-color-chip {
+    width: 100%;
+    height: 3rem;
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .ds-color-chip--bordered {
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .ds-color-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .ds-color-name {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-family: var(--font-family-mono);
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ds-color-use {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ========================================
+     Shadows
+     ======================================== */
+  .ds-shadow-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .ds-shadow-card {
+    background: var(--color-white, #fff);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1.25rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .ds-shadow-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-family: var(--font-family-mono);
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ds-shadow-use {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ========================================
+     Spacing
+     ======================================== */
+  .ds-spacing-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .ds-spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .ds-spacing-label {
+    width: 2rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-family: var(--font-family-mono);
+    color: var(--color-gray-700, #374151);
+    text-align: right;
+  }
+
+  .ds-spacing-bar {
+    height: 1.25rem;
+    background: var(--color-primary, #1c497c);
+    border-radius: var(--radius-sm, 0.25rem);
+    min-width: 4px;
+  }
+
+  .ds-spacing-value {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-family: var(--font-family-mono);
+  }
+
+  /* ========================================
+     Border Radius
+     ======================================== */
+  .ds-radius-grid {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .ds-radius-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .ds-radius-box {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--color-primary, #1c497c);
+    opacity: 0.15;
+    border: 2px solid var(--color-primary, #1c497c);
+  }
+
+  .ds-radius-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    font-family: var(--font-family-mono);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* ========================================
+     Composite Profile Card
+     ======================================== */
+  .ds-profile-card {
+    background: var(--color-white, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 1rem);
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 480px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .ds-profile-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .ds-profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-full, 9999px);
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-md);
+  }
+
+  .ds-profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ds-profile-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .ds-profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ds-profile-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+
+  .ds-profile-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .ds-profile-team-logo {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ========================================
+     Mobile Responsive
+     ======================================== */
+  @media (max-width: 640px) {
+    .ds-page {
+      padding: var(--spacing-lg, 1.5rem) var(--spacing-sm, 0.5rem);
+    }
+
+    .ds-hero__title {
+      font-size: 1.125rem;
+    }
+
+    .ds-card {
+      padding: var(--spacing-md, 1rem);
+    }
+
+    .ds-type-spec {
+      display: none;
+    }
+
+    .ds-type-label {
+      width: 5rem;
+    }
+
+    .ds-metrics-grid--4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ds-color-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ds-shadow-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ds-radius-grid {
+      flex-wrap: wrap;
+    }
+
+    .ds-profile-card {
+      padding: 1.25rem;
+    }
+
+    .ds-profile-avatar {
+      width: 56px;
+      height: 56px;
+    }
+
+    .ds-profile-name {
+      font-size: 1.125rem;
+    }
+
+    .ds-table__th--player {
+      min-width: 9rem;
+    }
+  }
+</style>
