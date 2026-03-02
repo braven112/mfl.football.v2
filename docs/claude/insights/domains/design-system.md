@@ -339,3 +339,59 @@ Always use token fallbacks: `var(--color-gray-700, #374151)`. This ensures compo
 **Evidence:** PlayerDetailsModal.astro (1072 lines), ContractDeclarationModal.astro, PlayerInjuryModal.astro, PlayerNewsModal.astro
 
 **Recommendation:** Before building any new page or component, reference these patterns. The PlayerDetailsModal is the canonical implementation. When in doubt, match its typography, spacing, and color choices.
+
+---
+
+## 2026-03-01 - Button & CTA System (Official Decision)
+
+**Context:** Formalizing the button/CTA hierarchy based on the demo modal's navigation buttons.
+
+**Decision:** The dark blue button (`var(--color-primary, #1c497c)`) from the `ContractDemoOverlay` demo modal ("Next" / "Start Exploring") is the **official primary CTA** for the site — whether implemented as a `<button>` or an `<a>` anchor tag.
+
+### Element Selection Rule
+
+| Element | When to use |
+|---------|-------------|
+| `<button>` | In-page actions — submit form, open modal, trigger JS |
+| `<a href>` | Navigation — links to pages, external URLs, anchors |
+
+The CSS classes (`.btn--primary`, `.btn--secondary`, `.btn--ghost`) are identical for both. **Never use `<a>` without an `href`, and never use `<button>` for navigation.**
+
+### CTA Hierarchy
+
+| Variant | Token | Color | When to use |
+|---------|-------|-------|-------------|
+| **Primary** | `--btn-primary-bg` | `#1c497c` (dark blue) | Default CTA — modals, forms, page-level actions, link CTAs |
+| **Secondary** | `--btn-secondary-bg` | `#2e8743` (green) | Select spaces only — affirmative/go actions (bid submit, roster confirm) |
+| **Ghost / Text** | transparent | `--color-gray-500` | Low-emphasis; paired with a primary CTA (e.g. "Back", "Cancel") |
+
+### Primary CTA Spec (from demo modal)
+```css
+display: inline-flex;
+align-items: center;
+justify-content: center;
+background: var(--btn-primary-bg, #1c497c);
+color: var(--btn-primary-text, #fff);
+font-size: 0.8125rem;
+font-weight: 600;
+border-radius: 8px;
+padding: 0.625rem 1.25rem;
+border: none;
+text-decoration: none; /* required when applied to <a> */
+transition: background 0.15s ease;
+
+/* Hover */
+background: var(--btn-primary-bg-hover, #164066);
+```
+
+### Green CTA (Secondary) Usage Rule
+
+The green CTA (`--btn-secondary-bg`) is **not a general-purpose CTA**. It is reserved for contexts where green communicates "go", "approve", or positive affirmation (e.g. submitting an auction bid, confirming a roster action). Default to primary blue in all other cases.
+
+### Canonical Reference
+
+- Live demos: `src/pages/theleague/design-system.astro` (Buttons & CTAs section)
+- Tokens: `src/styles/tokens.css` under `--btn-primary-*` and `--btn-secondary-*`
+- Source pattern: `.cdemo-nav__next` / `.cdemo-nav__start` in `src/components/theleague/ContractDemoOverlay.astro`
+
+**Recommendation:** Use `--btn-primary-bg` and `--btn-secondary-bg` tokens. Never hardcode `#1c497c` or `#2e8743` directly in CTA styles — always go through the token layer.
