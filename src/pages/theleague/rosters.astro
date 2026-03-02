@@ -1946,6 +1946,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             Clear All Tags
           </button>
 
+          <button class="submit-actions-btn" id="submitActionsBtn" style="display: none;" title="Submit actions to queue for commissioner review">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="submitActionsLabel">Submit Actions</span>
+          </button>
+
+          <button class="view-queue-btn" id="viewQueueBtn" style="display: none;" title="View queued actions">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            View Queue <span class="queue-count-badge" id="queueCountBadge" style="display: none;">0</span>
+          </button>
+
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
               <svg class="mode-icon"><use href={`${spriteUrl}#icon-banknote`}></use></svg> GM
@@ -4501,6 +4511,447 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     fill: currentColor;
   }
 
+  /* ── Submit Actions Button ── */
+  .submit-actions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid #059669;
+    background: #059669;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .submit-actions-btn:hover {
+    background: #047857;
+    border-color: #047857;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+  }
+
+  .submit-actions-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .queue-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: 9999px;
+    background: #059669;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* ================================================================
+     Queue Viewer & Submit Confirmation — Editorial Design
+     ================================================================ */
+
+  /* Shared modal shell */
+  .queue-viewer-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .queue-viewer__overlay {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Close button — matches PDM close */
+  .queue-viewer__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.15s ease, color 0.15s ease;
+    z-index: 1;
+  }
+
+  .queue-viewer__close:hover {
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* ── Queue Viewer Modal ── */
+  .queue-viewer__content {
+    position: relative;
+    background: #fff;
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 520px;
+    width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: editorial-modal-in 0.22s ease-out;
+  }
+
+  .queue-viewer__inner {
+    padding: 1.75rem 1.75rem 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .queue-viewer__kicker {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 0.5rem;
+  }
+
+  .queue-viewer__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 0.375rem;
+    line-height: 1.3;
+  }
+
+  .queue-viewer__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.375rem;
+    height: 1.375rem;
+    padding: 0 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    margin-left: 0.375rem;
+    vertical-align: middle;
+  }
+
+  .queue-viewer__subtitle {
+    font-size: 0.875rem;
+    font-weight: 300;
+    color: #475569;
+    line-height: 1.55;
+    margin: 0 0 1.25rem;
+  }
+
+  .queue-viewer__body {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    margin-bottom: 1rem;
+  }
+
+  .queue-viewer__footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .queue-viewer__clear-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #dc2626;
+    background: transparent;
+    color: #dc2626;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .queue-viewer__clear-btn:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  /* ── Submit Confirmation Modal ── */
+  .submit-confirm__content {
+    position: relative;
+    background: #fff;
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 520px;
+    width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: editorial-modal-in 0.22s ease-out;
+  }
+
+  .submit-confirm__inner {
+    padding: 1.75rem 1.75rem 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .submit-confirm__kicker {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #059669;
+    padding-left: 0.625rem;
+    border-left: 2px solid #059669;
+    margin-bottom: 0.5rem;
+  }
+
+  .submit-confirm__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 0.375rem;
+    line-height: 1.3;
+  }
+
+  .submit-confirm__subtitle {
+    font-size: 0.875rem;
+    font-weight: 300;
+    color: #475569;
+    line-height: 1.55;
+    margin: 0 0 1.25rem;
+  }
+
+  .submit-confirm__warning {
+    padding: 0.75rem 1rem;
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius-md, 0.5rem);
+    color: #92400e;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+
+  .submit-confirm__list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    margin-bottom: 1.25rem;
+  }
+
+  .submit-confirm__footer {
+    display: flex;
+    gap: 0.625rem;
+    justify-content: flex-end;
+  }
+
+  .submit-confirm__btn {
+    padding: 0.6rem 1.375rem;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .submit-confirm__btn--confirm {
+    background: #059669;
+    color: #fff;
+  }
+
+  .submit-confirm__btn--confirm:hover {
+    background: #047857;
+  }
+
+  .submit-confirm__btn--confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .submit-confirm__btn--cancel {
+    background: transparent;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .submit-confirm__btn--cancel:hover {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* ── Queue Item (shared between both modals) ──
+     Dynamic DOM via JS — needs :global() for Astro scope */
+  .queue-viewer__body :global(.queue-item),
+  .submit-confirm__list :global(.queue-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    border-left: 3px solid transparent;
+    transition: background 0.1s ease;
+  }
+
+  .queue-viewer__body :global(.queue-item:last-child),
+  .submit-confirm__list :global(.queue-item:last-child) {
+    border-bottom: none;
+  }
+
+  .queue-viewer__body :global(.queue-item:hover),
+  .submit-confirm__list :global(.queue-item:hover) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .queue-viewer__body :global(.queue-item--franchise),
+  .submit-confirm__list :global(.queue-item--franchise) { border-left-color: #1c497c; }
+  .queue-viewer__body :global(.queue-item--extension),
+  .submit-confirm__list :global(.queue-item--extension) { border-left-color: #059669; }
+  .queue-viewer__body :global(.queue-item--cut),
+  .submit-confirm__list :global(.queue-item--cut) { border-left-color: #dc2626; }
+  .queue-viewer__body :global(.queue-item--trade),
+  .submit-confirm__list :global(.queue-item--trade) { border-left-color: #d97706; }
+
+  .queue-viewer__body :global(.queue-item__info),
+  .submit-confirm__list :global(.queue-item__info) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .queue-viewer__body :global(.queue-item__player),
+  .submit-confirm__list :global(.queue-item__player) {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.3;
+  }
+
+  .queue-viewer__body :global(.queue-item__detail),
+  .submit-confirm__list :global(.queue-item__detail) {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.2rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .queue-viewer__body :global(.queue-item__type-badge),
+  .submit-confirm__list :global(.queue-item__type-badge) {
+    display: inline-block;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.1875rem;
+    margin-right: 0.375rem;
+    vertical-align: middle;
+  }
+
+  .queue-viewer__body :global(.queue-item__type-badge--franchise),
+  .submit-confirm__list :global(.queue-item__type-badge--franchise) { background: #dbeafe; color: #1c497c; }
+  .queue-viewer__body :global(.queue-item__type-badge--extension),
+  .submit-confirm__list :global(.queue-item__type-badge--extension) { background: #d1fae5; color: #065f46; }
+  .queue-viewer__body :global(.queue-item__type-badge--cut),
+  .submit-confirm__list :global(.queue-item__type-badge--cut) { background: #fee2e2; color: #991b1b; }
+  .queue-viewer__body :global(.queue-item__type-badge--trade),
+  .submit-confirm__list :global(.queue-item__type-badge--trade) { background: #fef3c7; color: #92400e; }
+
+  .queue-viewer__body :global(.queue-item__remove),
+  .submit-confirm__list :global(.queue-item__remove) {
+    padding: 0.35rem;
+    border: none;
+    background: none;
+    color: var(--color-gray-300, #d1d5db);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .queue-viewer__body :global(.queue-item__remove:hover),
+  .submit-confirm__list :global(.queue-item__remove:hover) {
+    color: #dc2626;
+    background: #fee2e2;
+  }
+
+  /* Empty message is also dynamically created */
+  .queue-viewer__body :global(.queue-viewer__empty) {
+    text-align: center;
+    padding: 2rem 1.25rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.8125rem;
+    font-weight: 300;
+    line-height: 1.5;
+  }
+
+  /* Entrance animation for both modals */
+  @keyframes editorial-modal-in {
+    from { opacity: 0; transform: scale(0.97) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Queued micro-badge for salary cells */
+  .queued-badge {
+    display: inline-block;
+    font-size: 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.1875rem;
+    background: #d1fae5;
+    color: #065f46;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+  }
+
+  /* View Queue button (shown in live mode next to Clear All) */
+  .view-queue-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #059669;
+    background: #fff;
+    color: #059669;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .view-queue-btn:hover {
+    background: #059669;
+    color: #fff;
+  }
+
   /* Coach Mode Table Styles */
   :global(.roster-table th.coach-col) {
     text-align: left !important;
@@ -4831,6 +5282,53 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <button class="extension-confirm-btn">Confirm Extension</button>
         <button class="extension-cancel-btn">Cancel</button>
       </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Queue Viewer Modal -->
+<div class="queue-viewer-modal" id="queueViewerModal" style="display: none;">
+  <div class="contract-modal__overlay queue-viewer__overlay"></div>
+  <div class="queue-viewer__content">
+    <button class="queue-viewer__close" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="queue-viewer__inner">
+      <div class="queue-viewer__kicker">Pending Review</div>
+      <h3 class="queue-viewer__title">Action Queue <span class="queue-viewer__count" id="queueViewerCount">0</span></h3>
+      <p class="queue-viewer__subtitle">Actions below are waiting for the commissioner to process. Remove any you've changed your mind about.</p>
+      <div class="queue-viewer__body" id="queueList">
+        <p class="queue-viewer__empty">No actions in the queue. Apply contract actions from the roster table, then submit them here.</p>
+      </div>
+      <div class="queue-viewer__footer">
+        <button class="queue-viewer__clear-btn" id="queueClearBtn">Clear Queue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div class="queue-viewer-modal" id="submitConfirmModal" style="display: none;">
+  <div class="contract-modal__overlay submit-confirm__overlay"></div>
+  <div class="submit-confirm__content">
+    <button class="queue-viewer__close submit-confirm__close" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="submit-confirm__inner">
+      <div class="submit-confirm__kicker">Commissioner Submission</div>
+      <h3 class="submit-confirm__title">Confirm Your Moves</h3>
+      <p class="submit-confirm__subtitle">Once submitted, these actions will appear in the commissioner's queue for processing. You can unsubmit from the queue viewer until they're processed.</p>
+      <div class="submit-confirm__warning" id="submitFranchiseWarning" style="display: none;"></div>
+      <div class="submit-confirm__list" id="submitConfirmList"></div>
+      <div class="submit-confirm__footer">
+        <button class="submit-confirm__btn submit-confirm__btn--cancel" id="submitConfirmCancelBtn">Cancel</button>
+        <button class="submit-confirm__btn submit-confirm__btn--confirm" id="submitConfirmBtn">Submit to Commissioner</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4880,6 +5378,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   const franchiseTagsByYear = {}; // Track franchise tags by year: { yearIndex: playerId }
   let currentVeteranExtension = null; // Track which player has veteran extension
   let currentSeason = config.defaultSeason; // Track current season for salary averages
+
+  // Live Action Queue — persisted submitted actions for commissioner review
+  let liveActionQueue = JSON.parse(localStorage.getItem('liveActionQueue') || '[]');
 
   // --- Contract Declaration State ---
   const eligibilityByTeam = config.eligibilityByTeam ?? {};
@@ -5496,6 +5997,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const hasActions = Object.keys(contractActions).length > 0;
       clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
     }
+    // Show/hide Submit button (only when there are unsaved sandbox actions)
+    const submitBtn = document.getElementById('submitActionsBtn');
+    if (submitBtn) {
+      const teamSelect = document.getElementById('rosterTeamSelect');
+      const currentTeamId = teamSelect?.value;
+      const isOwner = currentTeamId && isOwnerViewingTeam(currentTeamId);
+      const hasActions = Object.keys(contractActions).length > 0;
+      submitBtn.style.display = (isOwner && hasActions) ? 'inline-flex' : 'none';
+    }
   };
 
   // Clear all tags button event listener
@@ -5605,6 +6115,323 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     modeBtns.forEach(btn => {
       btn.addEventListener('click', () => setMode(btn.dataset.mode));
     });
+
+    // ============================================
+    // Submit Actions & Queue Management
+    // ============================================
+    const submitActionsBtn = document.getElementById('submitActionsBtn');
+    const viewQueueBtn = document.getElementById('viewQueueBtn');
+    const queueCountBadge = document.getElementById('queueCountBadge');
+    const queueViewerModal = document.getElementById('queueViewerModal');
+    const queueViewerCount = document.getElementById('queueViewerCount');
+    const queueList = document.getElementById('queueList');
+    const queueClearBtn = document.getElementById('queueClearBtn');
+    const submitConfirmModal = document.getElementById('submitConfirmModal');
+    const submitConfirmList = document.getElementById('submitConfirmList');
+    const submitConfirmBtn = document.getElementById('submitConfirmBtn');
+    const submitConfirmCancelBtn = document.getElementById('submitConfirmCancelBtn');
+    const submitFranchiseWarning = document.getElementById('submitFranchiseWarning');
+
+    const FRANCHISE_TAG_WINDOW_START_MONTH = 1; // February (0-indexed)
+    const FRANCHISE_TAG_WINDOW_START_DAY = 1;
+    const FRANCHISE_TAG_WINDOW_END_MONTH = 1; // February
+    const FRANCHISE_TAG_WINDOW_END_DAY = 15;
+
+    function isInFranchiseTagWindow() {
+      const now = new Date();
+      const month = now.getMonth();
+      const day = now.getDate();
+      return month === FRANCHISE_TAG_WINDOW_START_MONTH &&
+        day >= FRANCHISE_TAG_WINDOW_START_DAY &&
+        day <= FRANCHISE_TAG_WINDOW_END_DAY;
+    }
+
+    function syncLiveQueueToStorage() {
+      localStorage.setItem('liveActionQueue', JSON.stringify(liveActionQueue));
+      updateQueueBadge();
+      updateViewQueueBtnVisibility();
+    }
+
+    function updateQueueBadge() {
+      if (!queueCountBadge) return;
+      const count = liveActionQueue.length;
+      queueCountBadge.textContent = count;
+      queueCountBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+
+      if (queueViewerCount) {
+        queueViewerCount.textContent = count;
+        queueViewerCount.style.display = count > 0 ? 'inline-flex' : 'none';
+      }
+    }
+
+    function updateViewQueueBtnVisibility() {
+      if (!viewQueueBtn) return;
+      viewQueueBtn.style.display = liveActionQueue.length > 0 ? 'inline-flex' : 'none';
+    }
+
+    function removeFromLiveQueue(queueId) {
+      liveActionQueue = liveActionQueue.filter(q => q.id !== queueId);
+      syncLiveQueueToStorage();
+    }
+
+    function clearLiveQueue() {
+      if (!confirm('Clear all queued actions? This cannot be undone.')) return;
+      liveActionQueue = [];
+      syncLiveQueueToStorage();
+    }
+
+    function formatQueueTimestamp(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+        d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    const formatCurrencyCompact = new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: 'USD', maximumFractionDigits: 0
+    });
+
+    function buildQueueItemHTML(q) {
+      const typeLabel = q.actionType === 'franchise' ? 'Franchise Tag'
+        : q.actionType === 'extension' ? 'Extension'
+        : q.actionType === 'cut' ? 'Cut'
+        : 'Trade';
+      const salaryDisplay = q.actionType === 'cut' || q.actionType === 'trade'
+        ? formatCurrencyCompact.format(q.originalSalary)
+        : `${formatCurrencyCompact.format(q.originalSalary)} → ${formatCurrencyCompact.format(q.newSalary)}`;
+
+      const item = document.createElement('div');
+      item.className = `queue-item queue-item--${q.actionType}`;
+
+      const info = document.createElement('div');
+      info.className = 'queue-item__info';
+
+      const playerDiv = document.createElement('div');
+      playerDiv.className = 'queue-item__player';
+      const badge = document.createElement('span');
+      badge.className = `queue-item__type-badge queue-item__type-badge--${q.actionType}`;
+      badge.textContent = typeLabel;
+      playerDiv.appendChild(badge);
+      playerDiv.appendChild(document.createTextNode(' ' + q.playerName));
+
+      const detail = document.createElement('div');
+      detail.className = 'queue-item__detail';
+      detail.textContent = `${salaryDisplay} · ${formatQueueTimestamp(q.queuedAt)}`;
+
+      info.appendChild(playerDiv);
+      info.appendChild(detail);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'queue-item__remove';
+      removeBtn.dataset.queueId = q.id;
+      removeBtn.title = 'Remove from queue';
+      removeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+      removeBtn.addEventListener('click', () => {
+        removeFromLiveQueue(q.id);
+        renderQueueViewer();
+      });
+
+      item.appendChild(info);
+      item.appendChild(removeBtn);
+      return item;
+    }
+
+    function renderQueueViewer() {
+      if (!queueList) return;
+      queueList.textContent = '';
+
+      if (liveActionQueue.length === 0) {
+        const emptyMsg = document.createElement('p');
+        emptyMsg.className = 'queue-viewer__empty';
+        emptyMsg.textContent = 'No actions in the queue. Apply contract actions from the roster table, then submit them here.';
+        queueList.appendChild(emptyMsg);
+        return;
+      }
+
+      liveActionQueue.forEach(q => {
+        queueList.appendChild(buildQueueItemHTML(q));
+      });
+    }
+
+    function openQueueViewer() {
+      renderQueueViewer();
+      if (queueViewerModal) queueViewerModal.style.display = 'flex';
+    }
+
+    function closeQueueViewer() {
+      if (queueViewerModal) queueViewerModal.style.display = 'none';
+    }
+
+    // ── Submit Actions Flow ──
+    function validateActions() {
+      const actions = Object.values(contractActions);
+      const warnings = [];
+
+      // Check franchise tag: only valid Feb 1-15
+      const hasFranchise = actions.some(a => a.type === 'franchise');
+      if (hasFranchise && !isInFranchiseTagWindow()) {
+        warnings.push('Franchise tags can only be applied February 1–15. This tag will be noted but cannot be processed until then.');
+      }
+
+      // Check: only one franchise tag per team
+      const franchiseCount = actions.filter(a => a.type === 'franchise').length;
+      if (franchiseCount > 1) {
+        warnings.push(`You have ${franchiseCount} franchise tags applied. Teams are only allowed one franchise tag.`);
+      }
+
+      // Check: only one veteran extension per team per season
+      const extensionCount = actions.filter(a => a.type === 'extension').length;
+      if (extensionCount > 1) {
+        warnings.push(`You have ${extensionCount} veteran extensions applied. Teams are only allowed one per season.`);
+      }
+
+      // Check: if team already has a queued franchise tag or extension
+      const queuedFranchise = liveActionQueue.some(q => q.actionType === 'franchise');
+      const queuedExtension = liveActionQueue.some(q => q.actionType === 'extension');
+      if (hasFranchise && queuedFranchise) {
+        warnings.push('You already have a franchise tag in the queue. Submitting will replace it.');
+      }
+      if (extensionCount > 0 && queuedExtension) {
+        warnings.push('You already have a veteran extension in the queue. Submitting will replace it.');
+      }
+
+      return warnings;
+    }
+
+    function openSubmitConfirmation() {
+      if (!submitConfirmModal || !submitConfirmList) return;
+      const actions = Object.values(contractActions);
+      if (actions.length === 0) return;
+
+      // Validate and show warnings
+      const warnings = validateActions();
+      if (submitFranchiseWarning) {
+        if (warnings.length > 0) {
+          submitFranchiseWarning.textContent = warnings.join(' ');
+          submitFranchiseWarning.style.display = 'block';
+        } else {
+          submitFranchiseWarning.style.display = 'none';
+        }
+      }
+
+      // Block submission if there are hard errors (>1 franchise or >1 extension)
+      const franchiseCount = actions.filter(a => a.type === 'franchise').length;
+      const extensionCount = actions.filter(a => a.type === 'extension').length;
+      const hasBlockingError = franchiseCount > 1 || extensionCount > 1;
+      if (submitConfirmBtn) {
+        submitConfirmBtn.disabled = hasBlockingError;
+      }
+
+      // Render action items in confirmation list
+      submitConfirmList.textContent = '';
+      actions.forEach(action => {
+        submitConfirmList.appendChild(buildQueueItemHTML({
+          id: action.playerId,
+          playerId: action.playerId,
+          playerName: action.playerName,
+          actionType: action.type,
+          originalSalary: action.originalSalary,
+          originalYears: action.originalYears,
+          newSalary: action.newSalary ?? action.originalSalary,
+          newYears: action.newYears ?? action.originalYears,
+          queuedAt: new Date().toISOString(),
+        }));
+      });
+      // Remove the "remove" buttons from submit preview (read-only list)
+      submitConfirmList.querySelectorAll('.queue-item__remove').forEach(btn => btn.remove());
+
+      submitConfirmModal.style.display = 'flex';
+    }
+
+    function closeSubmitConfirmation() {
+      if (submitConfirmModal) submitConfirmModal.style.display = 'none';
+    }
+
+    function submitActionsToQueue() {
+      const actions = Object.values(contractActions);
+      actions.forEach(action => {
+        const queueEntry = {
+          id: crypto.randomUUID(),
+          playerId: action.playerId,
+          playerName: action.playerName,
+          actionType: action.type,
+          params: action.type === 'extension' ? { extensionYears: (action.newYears ?? 0) - (action.originalYears ?? 0) } : {},
+          originalSalary: action.originalSalary,
+          originalYears: action.originalYears,
+          newSalary: action.newSalary ?? action.originalSalary,
+          newYears: action.newYears ?? action.originalYears,
+          queuedAt: new Date().toISOString(),
+        };
+
+        // Replace any existing entry for this player in the queue
+        liveActionQueue = liveActionQueue.filter(q => q.playerId !== action.playerId);
+        liveActionQueue.push(queueEntry);
+      });
+
+      syncLiveQueueToStorage();
+      // Clear sandbox state after submission
+      clearAllContractActions();
+      closeSubmitConfirmation();
+    }
+
+    function restoreLiveQueueToUI() {
+      if (liveActionQueue.length === 0) return;
+      // Replay queued actions into contractActions for visual rendering
+      liveActionQueue.forEach(q => {
+        const actionData = {
+          type: q.actionType,
+          playerId: q.playerId,
+          playerName: q.playerName,
+          originalSalary: q.originalSalary,
+          originalYears: q.originalYears,
+          newSalary: q.newSalary,
+          newYears: q.newYears,
+        };
+
+        if (q.actionType === 'franchise') {
+          actionData.ufaYearIndex = q.originalYears;
+          franchiseTagsByYear[q.originalYears] = q.playerId;
+        } else if (q.actionType === 'extension') {
+          currentVeteranExtension = q.playerId;
+          const extensionYears = (q.params?.extensionYears) || 1;
+          const extResult = calculateVeteranExtension(
+            q.originalYears, '', config.extensionSeason, extensionYears, q.originalSalary
+          );
+          if (extResult?.salaryBreakdown) actionData.salaryBreakdown = extResult.salaryBreakdown;
+          if (extResult?.newYears) actionData.newYears = extResult.newYears;
+          if (extResult?.newSalary) actionData.newSalary = extResult.newSalary;
+        } else if (q.actionType === 'cut') {
+          const penalty = calculateCutPenalty(q.originalSalary, q.originalYears);
+          actionData.currentPenalty = penalty.currentPenalty;
+          actionData.futurePenalty = penalty.futurePenalty;
+          actionData.totalPenalty = penalty.totalPenalty;
+        } else if (q.actionType === 'trade') {
+          actionData.removed = true;
+        }
+
+        contractActions[q.playerId] = actionData;
+      });
+      updateClearAllButton();
+    }
+
+    // Event listeners
+    submitActionsBtn?.addEventListener('click', openSubmitConfirmation);
+    viewQueueBtn?.addEventListener('click', openQueueViewer);
+
+    queueViewerModal?.querySelector('.queue-viewer__close')?.addEventListener('click', closeQueueViewer);
+    queueViewerModal?.querySelector('.queue-viewer__overlay')?.addEventListener('click', closeQueueViewer);
+    queueClearBtn?.addEventListener('click', () => {
+      clearLiveQueue();
+      renderQueueViewer();
+    });
+
+    submitConfirmBtn?.addEventListener('click', submitActionsToQueue);
+    submitConfirmCancelBtn?.addEventListener('click', closeSubmitConfirmation);
+    submitConfirmModal?.querySelector('.submit-confirm__close')?.addEventListener('click', closeSubmitConfirmation);
+    submitConfirmModal?.querySelector('.submit-confirm__overlay')?.addEventListener('click', closeSubmitConfirmation);
+
+    // Init queue UI
+    updateQueueBadge();
+    updateViewQueueBtnVisibility();
 
     // Trend toggle button handler
     const trendToggleBtn = document.getElementById('trendToggleBtn');
@@ -6462,7 +7289,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 }
               }
 
-              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}</td>`;
+              const isQueued = action && liveActionQueue.some(q => q.playerId === player.id);
+              const queuedBadge = (isQueued && cellClass.includes('salary-cell--simulated'))
+                ? '<span class="queued-badge">queued</span>' : '';
+              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}${queuedBadge}</td>`;
             })
             .join('');
 
@@ -7769,6 +8599,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     } else {
       switchView(currentView);
     }
+
+    // Restore live queue to contractActions before first render
+    restoreLiveQueueToUI();
     updateView();
     hydrateTeamFromSession();
 
