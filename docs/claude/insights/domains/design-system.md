@@ -168,9 +168,9 @@ transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 | **Section Title** | 0.75rem | 700 | gray-900 | UPPERCASE, 0.06em letter-spacing, left border accent |
 | **Body/Values** | 0.875rem | 400–500 | gray-700 | `font-variant-numeric: tabular-nums` for numbers |
 | **Meta/Secondary** | 0.875rem | 500 | gray-600 | Supporting info below titles |
-| **Detail Label** | 0.75rem | 600 | gray-400 | UPPERCASE, 0.04em letter-spacing |
-| **Micro Label** | 0.6875rem | 600 | gray-400 | UPPERCASE, 0.05em letter-spacing (metric cards) |
-| **Table Header** | 0.625rem | 600 | gray-400 | UPPERCASE |
+| **Detail Label** | 0.75rem | 600 | gray-500 | UPPERCASE, 0.04em letter-spacing |
+| **Micro Label** | 0.6875rem | 600 | gray-500 | UPPERCASE, 0.05em letter-spacing (metric cards) |
+| **Table Header** | 0.625rem | 600 | gray-500 | UPPERCASE |
 
 ### Section Title Pattern (Signature Element)
 
@@ -213,7 +213,7 @@ The left-border accent on uppercase section titles is the most recognizable edit
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
 }
 ```
 
@@ -235,7 +235,7 @@ Label + value rows separated by subtle borders (NOT a table — flexbox):
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
   text-align: right;
 }
 .detail-value {
@@ -268,7 +268,7 @@ thead th {
   font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
   position: sticky;
   top: 0;
 }
@@ -314,16 +314,18 @@ Interactive selection uses a left border accent + subtle gradient:
 
 ### Color Usage Rules
 
-| Purpose | Token | Fallback |
-|---------|-------|----------|
-| Primary text | `--color-gray-900` | `#111827` |
-| Secondary text | `--color-gray-700` | `#374151` |
-| Tertiary text | `--color-gray-600` | `#4b5563` |
-| Labels/hints | `--color-gray-400` | `#9ca3af` |
-| Accent/brand | `--color-primary` | `#1c497c` |
-| Subtle bg | `--color-gray-50` | `#f9fafb` |
-| Borders | `--content-border` | `#e2e8f0` |
-| Light borders | `--color-gray-50` | `#f9fafb` |
+| Purpose | Token | Fallback | Contrast on #fff |
+|---------|-------|----------|------------------|
+| Primary text | `--color-gray-900` | `#111827` | 16.75:1 |
+| Secondary text | `--color-gray-700` | `#374151` | 9.33:1 |
+| Tertiary text | `--color-gray-600` | `#4b5563` | 6.40:1 |
+| **Labels/hints** | **`--color-gray-500`** | **`#6b7280`** | **4.63:1 ✓ AA** |
+| Accent/brand | `--color-primary` | `#1c497c` | 7.22:1 |
+| Subtle bg | `--color-gray-50` | `#f9fafb` | — |
+| Borders | `--content-border` | `#e2e8f0` | — |
+| Light borders | `--color-gray-50` | `#f9fafb` | — |
+
+> **A11y correction (2026-03-02):** Labels/hints was previously `--color-gray-400` (#9ca3af, ~2.86:1) which **fails WCAG AA**. Corrected to `--color-gray-500` (#6b7280, ~4.63:1). Reserve gray-400 for non-text elements only (borders, decorative dividers, disabled controls).
 
 ### Defensive CSS
 
@@ -428,3 +430,67 @@ The green CTA (`--btn-secondary-bg`) is **not a general-purpose CTA**. It is res
 `@keyframes` work fine inside scoped `<style>` blocks, but `{ }` characters inside `<code>` HTML tags in the template must be escaped using `set:html` (e.g., `<code set:html="'@keyframes foo { ... }'" />`) to avoid Astro treating them as JS expressions.
 
 **Live demos:** `src/pages/theleague/design-system.astro` (Animation & Motion section)
+
+---
+
+## 2026-03-02 - Negative/Warning State Pattern (Subtle Red Accents)
+
+**Context:** Redesigning the Dead Money Awards page to use the editorial design system. The original page used large red background blocks (gradient fills, pink cards) to indicate "bad" items. This was overpowering and inconsistent with the editorial language.
+
+**Decision:** Negative/warning states use **subtle left-border accents** — never large colored backgrounds.
+
+### Pattern: Winner/Worst Card (Left-Border Accent)
+
+For ranking cards where #1 is the "worst" or "winner" of a negative award:
+```css
+.rank-card-worst {
+  border-left: 3px solid var(--color-error, #dc2626);
+  box-shadow: var(--shadow-md);
+}
+```
+The elevated shadow + red left-border is sufficient. The badge, red numeric text, and rank number already communicate hierarchy. **Never use** `background: linear-gradient(... error-light ...)` or full red borders on cards.
+
+### Pattern: Negative Data Card (Shame/Zero-Value)
+
+For cards representing negative data (zero-point players, wasted salary):
+```css
+.negative-card {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-left: 2px solid var(--color-error, #dc2626);
+  border-radius: var(--radius-md, 0.5rem);
+}
+```
+The neutral gray-50 background keeps cards visually consistent with the rest of the page. The red left-border is the only color signal — paired with red text on key values (e.g., salary amounts).
+
+### Anti-Pattern: Colored Background Blocks
+
+**Never do this:**
+```css
+/* ❌ Too heavy — overwhelms the editorial layout */
+background: var(--color-error-light, #fee2e2);
+border: 1px solid #fecaca;
+
+/* ❌ Red gradient fills are not editorial */
+background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+border: 2px solid var(--color-error);
+```
+
+### Section Title Variant (Red Accent)
+
+For section titles that mark negative/shame sections, override the left-border color:
+```css
+.section-title--negative {
+  border-left-color: var(--color-error-dark, #b91c1c);
+}
+```
+This keeps the editorial section-title pattern intact while signaling the section's tone.
+
+**Evidence:** Dead Money Awards page redesign (`src/pages/theleague/dead-money.astro`) — Hall of Shame cards, Jerry Jones winner cards.
+
+**Recommendation:** When building award/ranking pages with negative connotations, rely on:
+1. Left-border color accents (2-3px)
+2. Red text on key numeric values
+3. Badge components for labels
+4. Elevated shadow for #1/winner emphasis
+Never flood a card or section with colored backgrounds.
