@@ -142,13 +142,12 @@ Columns (all visible or configurable):
 - Player
 - Position
 - Age (optional)
-- Contract Type (Rookie, Extension, Franchise, etc.)
+- Contract Status chip (see § 4.2 Tag/Pill — Contract Status Designations)
 - Years Remaining
 - Cap Hit (this year)
 - Total Remaining Salary
 - Dead Money (if cut)
 - Year-by-year salary timeline for up to 7 years (see below)
-- Tags/Badges (e.g., “Extension Eligible”, “Franchise Tag”)
 
 Under each row (expandable):
 - Horizontal “salary strip” showing the next 7 years:
@@ -287,7 +286,41 @@ Once logged in:
 
 - **Tag / Pill**
   - Variants: `primary`, `success`, `warning`, `danger`, `neutral`.
-  - Used for statuses like “Active”, “Extension Eligible”, “Drafted”, “Completed”, “Playoff”, “Eliminated”.
+  - Used for statuses like “Active”, “Drafted”, “Completed”, “Playoff”, “Eliminated”.
+
+- **Contract Status Designations** *(Tag/Pill subtype)*
+  - Compact 1–2 character chips displayed inline with a player's contract info.
+  - Two types:
+    - **Persistent status** — RC, TO. Set at signing and carried across seasons.
+    - **Decision result** — F. Applied by owner action; resets each season.
+  - Displayed alongside salary and years, e.g.:
+
+  ```
+  ┌──────────────────────────────────────────────┐
+  │  [headshot]  C.J. Stroud            [TO]     │
+  │              $2.5M · 2 yrs                   │
+  └──────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────┐
+  │  [headshot]  Anthony Richardson     [RC]     │
+  │              $1.2M · 1 yr                    │
+  └──────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────┐
+  │  [headshot]  Saquon Barkley          [F]     │
+  │              $12.5M · 1 yr                   │
+  └──────────────────────────────────────────────┘
+  ```
+
+  - **Chip styling by designation:**
+    | Chip | Label | Color intent | Notes |
+    |------|-------|-------------|-------|
+    | `RC` | Rookie Contract | Blue / info | Persistent; non-1st round rookies |
+    | `TO` | Team Option Eligible | Purple / special | Persistent; 1st round rookies only |
+    | `F`  | Franchise Tag | Gold / accent | Decision result; any player |
+
+  - Chips should be visually distinct from position badges and injury indicators.
+  - See full designation rules: `docs/contract-status-designations.md`
 
 - **IconButton**
   - Circle pill with icon inside.
