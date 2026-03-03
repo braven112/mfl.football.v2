@@ -17,11 +17,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
       <h1 class="about-hero__title">Most AI experiments live in notebooks.<br>This one lives in production.</h1>
 
       <p class="about-hero__deck">
-        A full-stack dynasty fantasy football platform built from scratch as a sandbox
-        for human-AI collaboration. Not a demo. Not a prototype. A system that 16
-        league members use every week to make decisions worth real fantasy money, built with
-        explicit architectural separations between what machines should own and what
-        they should assist with.
+        A dynasty fantasy football site built from scratch that 16 real people use every
+        single week to make real decisions. It's also a live test for figuring out where AI
+        actually helps — and where it just gets in the way. Not a demo. Not a toy.
+        A real app with real stakes.
       </p>
 
       <div class="about-hero__stack">
@@ -41,7 +40,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     <div class="about-stats">
       <div class="about-stats__item">
         <div class="about-stats__value">15+</div>
-        <div class="about-stats__label">Years of salary history ingested</div>
+        <div class="about-stats__label">Years of player salary data on file</div>
       </div>
       <div class="about-stats__item">
         <div class="about-stats__value">$45M</div>
@@ -53,7 +52,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
       </div>
       <div class="about-stats__item">
         <div class="about-stats__value">0</div>
-        <div class="about-stats__label">AI calls in the deterministic layer</div>
+        <div class="about-stats__label">Times AI touches the rule-based math</div>
       </div>
     </div>
 
@@ -65,7 +64,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <span class="about-section-num">01</span>
           <div>
             <h2 class="about-section-title">The Problem Domain</h2>
-            <p class="about-section-sub">Why dynasty fantasy football is a well-formed substrate for AI research</p>
+            <p class="about-section-sub">Why dynasty fantasy football turned out to be a perfect testing ground for AI</p>
           </div>
         </div>
 
@@ -74,22 +73,21 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             <p>
               Dynasty fantasy football isn't the same game most people know. You don't redraft
               every year. You own players across multiple seasons, sign them to multi-year contracts,
-              manage a salary cap, and plan roster construction the way an NFL front office would —
-              except you're doing it in a league chat at 11pm on a Tuesday, which is its own
+              manage a salary cap, and plan your roster the way an NFL front office would —
+              except you're doing it in a group chat at 11pm on a Tuesday, which is its own
               kind of decision-making environment.
             </p>
             <p>
-              The domain turns out to be an unusually well-formed substrate for exploring AI
-              integration because it combines two kinds of problems that require fundamentally
-              different tools: <strong>hard-constraint satisfaction</strong> and <strong>probabilistic estimation</strong>.
+              It also turns out to be a great place to test AI, because two totally different
+              kinds of problems are happening at the same time: ones with <strong>exact right answers</strong>,
+              and ones that are more like <strong>educated guesses</strong>.
             </p>
             <p>
-              The salary cap is $45M. Not approximately. Not "around." Violating it disqualifies
-              your roster. That constraint is not a place for probabilistic reasoning — it's a
-              function. Meanwhile, figuring out whether a 27-year-old running back is worth a
-              3-year, $9M contract requires reasoning across injury history, usage trends,
-              offensive scheme, age curves, and roster context simultaneously. That is exactly
-              where structured AI reasoning adds value.
+              The salary cap is $45M. Not roughly. Not "around there." Going over disqualifies
+              your roster. That's not a place for AI to weigh in — it's just math. But figuring
+              out whether a 27-year-old running back is worth a 3-year, $9M contract? That involves
+              injury history, usage trends, age, offensive scheme, and a dozen other things
+              all at once. That's exactly where AI can help.
             </p>
           </div>
           <div class="about-domain-box">
@@ -101,17 +99,17 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
                 <div class="about-domain-item">Contract escalation: exactly 10%/yr</div>
                 <div class="about-domain-item">Franchise tag rules: explicitly defined</div>
               </div>
-              <div class="about-domain-type__verdict about-domain-type__verdict--det">Functions. Tests. No AI.</div>
+              <div class="about-domain-type__verdict about-domain-type__verdict--det">Pure math. No AI needed.</div>
             </div>
             <div class="about-domain-type about-domain-type--prob">
-              <div class="about-domain-type__label">Probabilistic Signals</div>
+              <div class="about-domain-type__label">Best Guesses</div>
               <div class="about-domain-type__items">
-                <div class="about-domain-item">Player age &amp; durability curves</div>
-                <div class="about-domain-item">Trade value relative to market</div>
-                <div class="about-domain-item">Auction clearing price prediction</div>
-                <div class="about-domain-item">Free agent fit by roster context</div>
+                <div class="about-domain-item">How fast players decline with age</div>
+                <div class="about-domain-item">What a fair trade actually looks like</div>
+                <div class="about-domain-item">What a player will actually sell for</div>
+                <div class="about-domain-item">Which free agents fill our biggest needs</div>
               </div>
-              <div class="about-domain-type__verdict about-domain-type__verdict--prob">Estimates. Scaffolded AI. Evaluated.</div>
+              <div class="about-domain-type__verdict about-domain-type__verdict--prob">AI helps here. Answers get checked.</div>
             </div>
           </div>
         </div>
@@ -122,84 +120,83 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <div class="about-section-header">
           <span class="about-section-num">02</span>
           <div>
-            <h2 class="about-section-title">Architecture: The Separation</h2>
-            <p class="about-section-sub">The core design decision that made everything else possible</p>
+            <h2 class="about-section-title">How It's Built: The Big Separation</h2>
+            <p class="about-section-sub">The single most important decision made early on — and why it paid off</p>
           </div>
         </div>
 
         <div class="about-prose">
           <p>
-            The core architectural decision was made early and never compromised: deterministic
-            logic and probabilistic reasoning are separated at the interface level, not just
-            organizationally. This sounds obvious. In practice, it requires constant discipline —
-            especially as features compound and the temptation to "just let the model handle it"
-            grows.
+            The most important decision made early — and never changed — was this: keep the
+            exact math completely separate from AI's judgment calls. Not just in theory, but
+            enforced in the actual code. It sounds simple. In reality, it takes discipline to
+            stick to as new features pile up and the easy answer is always "just let AI handle it."
           </p>
         </div>
 
         <div class="about-arch">
           <div class="about-arch__layer about-arch__layer--det">
             <div class="about-arch__layer-header">
-              <span class="about-arch__layer-title">Deterministic Layer</span>
+              <span class="about-arch__layer-title">The Math Layer</span>
               <span class="about-arch__layer-badge">TypeScript · Fully Tested</span>
             </div>
             <div class="about-arch__modules">
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Salary Engine</div>
-                <div class="about-arch__module-desc"><code>salary-calculations.ts</code> — cap math, escalation, dead money</div>
+                <div class="about-arch__module-desc"><code>salary-calculations.ts</code> — cap math, salary escalation, dead money</div>
               </div>
               <div class="about-arch__module">
                 <div class="about-arch__module-name">MFL API Layer</div>
-                <div class="about-arch__module-desc">Typed wrappers around third-party API quirks; normalized data contracts</div>
+                <div class="about-arch__module-desc">Pulls data from the fantasy football API and cleans it up before anything uses it</div>
               </div>
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Contract Logic</div>
-                <div class="about-arch__module-desc">Franchise tag rules, contract expiry, cap hold calculations</div>
+                <div class="about-arch__module-desc">Handles franchise tags, expired contracts, and how much cap space they hold</div>
               </div>
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Year Rollover</div>
-                <div class="about-arch__module-desc">Date-aware league/season year resolution; testable via <code>?testDate=</code></div>
+                <div class="about-arch__module-desc">Figures out which year is "now" for league purposes — testable via <code>?testDate=</code></div>
               </div>
             </div>
           </div>
 
           <div class="about-arch__bridge">
-            <div class="about-arch__bridge-label">Typed Context Window</div>
+            <div class="about-arch__bridge-label">Clean Data Handoff</div>
             <div class="about-arch__bridge-desc">
-              Structured, verified data flows upward. The probabilistic layer receives facts, not raw API responses.
+              Checked, verified facts pass upward. AI gets clean information — not raw messy API responses.
             </div>
           </div>
 
           <div class="about-arch__layer about-arch__layer--prob">
             <div class="about-arch__layer-header">
-              <span class="about-arch__layer-title">Probabilistic Layer</span>
-              <span class="about-arch__layer-badge">Claude API · Scaffolded · Evaluated</span>
+              <span class="about-arch__layer-title">The AI Layer</span>
+              <span class="about-arch__layer-badge">Claude API · Guided · Checked</span>
             </div>
             <div class="about-arch__modules">
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Trade Analysis</div>
-                <div class="about-arch__module-desc">Value framing, relative surplus analysis, contextual reasoning</div>
+                <div class="about-arch__module-desc">Figures out if a trade is fair and who's getting the better end of the deal</div>
               </div>
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Auction Predictor</div>
-                <div class="about-arch__module-desc">Historical signal + roster context + scarcity → clearing price estimate</div>
+                <div class="about-arch__module-desc">Past results + what teams need + how many players are left → price estimate</div>
               </div>
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Free Agent Fit</div>
-                <div class="about-arch__module-desc">Positional need scoring + roster construction heuristics</div>
+                <div class="about-arch__module-desc">Ranks which available players would help your roster the most right now</div>
               </div>
               <div class="about-arch__module">
                 <div class="about-arch__module-name">Decision Support</div>
-                <div class="about-arch__module-desc">Summarization, option framing, risk surface identification</div>
+                <div class="about-arch__module-desc">Summarizes the situation, lays out the options, flags what could go wrong</div>
               </div>
             </div>
           </div>
         </div>
 
         <blockquote class="about-quote">
-          "A model touching salary cap calculations would be a regression, not an enhancement.
-          The question isn't whether AI is powerful enough — it's whether this is the right
-          kind of question to route through a probabilistic system."
+          "Letting AI do the salary cap math would make the app worse, not better.
+          The question isn't whether AI is smart enough — it's whether this is even the
+          right kind of question to ask AI in the first place."
         </blockquote>
       </section>
 
@@ -208,16 +205,16 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <div class="about-section-header">
           <span class="about-section-num">03</span>
           <div>
-            <h2 class="about-section-title">The Scaffolding Pattern</h2>
-            <p class="about-section-sub">Structured interfaces around AI, not chatbot wrappers</p>
+            <h2 class="about-section-title">How AI Is Used</h2>
+            <p class="about-section-sub">Every AI feature follows the same four-step setup — no freestyle chatbots allowed</p>
           </div>
         </div>
 
         <div class="about-prose">
           <p>
-            Every AI-assisted feature follows the same four-component scaffolding pattern.
-            The goal is to make AI behavior <em>predictable</em>, <em>traceable</em>, and
-            <em>improvable</em> — which requires more upfront structure than most teams invest in.
+            Every AI feature on this site follows the same four-step setup. The goal is
+            simple: always know what AI is doing, be able to check its work, and fix it
+            when it's wrong. That takes more planning upfront, but it pays off.
           </p>
         </div>
 
@@ -225,52 +222,51 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-scaffold__item">
             <div class="about-scaffold__num">1</div>
             <div class="about-scaffold__content">
-              <div class="about-scaffold__title">Structured Context Window</div>
+              <div class="about-scaffold__title">Only Give AI What It Needs</div>
               <div class="about-scaffold__body">
-                Each AI call receives a typed, scoped subset of league data relevant to the
-                specific question. Not "here's everything" — a curated context that includes
-                the roster, cap situation, historical data points, and constraints applicable
-                to this decision. The context window is a product decision, not an
-                implementation detail.
+                Every time AI gets asked something, it only receives the data that's
+                relevant to that specific question — not the entire database. Asking about
+                a trade? AI gets that player's contract, your team's cap space, and some
+                recent history. Nothing more. What information AI gets is a decision,
+                not an afterthought.
               </div>
             </div>
           </div>
           <div class="about-scaffold__item">
             <div class="about-scaffold__num">2</div>
             <div class="about-scaffold__content">
-              <div class="about-scaffold__title">Typed Prompt Templates</div>
+              <div class="about-scaffold__title">Ask Specific Questions, Get Useful Answers</div>
               <div class="about-scaffold__body">
-                Prompts are structured templates with explicit output format specifications,
-                reasoning requirements, and constraint declarations. "Given this player's
-                contract, age, and recent performance, rate their trade value 1–10 and
-                explain the top three factors" produces auditable output. "Analyze this
-                player" produces noise.
+                AI questions are specific, not vague. "Given this contract, age, and last
+                season's stats — rate this player's trade value 1–10 and name the three
+                biggest reasons" gives you something you can actually check. "Tell me about
+                this player" gives you a wall of text that sounds plausible but is hard
+                to verify.
               </div>
             </div>
           </div>
           <div class="about-scaffold__item">
             <div class="about-scaffold__num">3</div>
             <div class="about-scaffold__content">
-              <div class="about-scaffold__title">Pre-Deployment Failure Catalog</div>
+              <div class="about-scaffold__title">Know How It Can Go Wrong Before It Does</div>
               <div class="about-scaffold__body">
-                Before any AI feature ships, its failure modes are documented: What does
-                confidently wrong output look like for this feature? What signals indicate
-                the model is hallucinating? What's the graceful fallback? The failure catalog
-                directly informs the evaluation rubric, which means you're testing for
-                failure modes you've already characterized rather than discovering them in production.
+                Before any AI feature goes live, the ways it can fail are written down first.
+                What does a wrong-but-confident answer look like? When should you not trust it?
+                What happens if it breaks completely? Writing this down before launch means
+                you're testing for problems you've already thought through — not stumbling
+                onto them when 16 people are counting on the app.
               </div>
             </div>
           </div>
           <div class="about-scaffold__item">
             <div class="about-scaffold__num">4</div>
             <div class="about-scaffold__content">
-              <div class="about-scaffold__title">Traceable Outputs</div>
+              <div class="about-scaffold__title">Show Your Work</div>
               <div class="about-scaffold__body">
-                Every AI-assisted inference displays the source data it reasoned from.
-                A trade recommendation shows the salary comparison. An auction estimate
-                shows the historical comps. Users can inspect the reasoning chain and
-                identify when the model's inputs were wrong — which is usually more
-                actionable than identifying when its reasoning was wrong.
+                Every AI answer shows what data it used. A trade recommendation shows
+                the salary numbers side by side. An auction estimate shows what similar
+                players sold for in past years. If the answer is wrong, you can trace
+                it back to bad data — which is much easier to fix than bad reasoning.
               </div>
             </div>
           </div>
@@ -282,35 +278,33 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <div class="about-section-header">
           <span class="about-section-num">04</span>
           <div>
-            <h2 class="about-section-title">The Meta-System</h2>
-            <p class="about-section-sub">AI as a development collaborator, not just a product feature</p>
+            <h2 class="about-section-title">AI Builds It Too</h2>
+            <p class="about-section-sub">AI isn't just a feature in the app — it helps write the app itself</p>
           </div>
         </div>
 
         <div class="about-two-col about-two-col--wide-text">
           <div class="about-prose">
             <p>
-              The most technically interesting aspect of this project is not any individual feature.
-              It's the development workflow itself — a structured AI collaboration system built into
-              the development process rather than bolted onto the product.
+              The most interesting part of this project isn't any one feature. It's how
+              the whole thing gets built. AI doesn't just power the features inside the
+              app — it's part of the process of writing the code itself.
             </p>
             <p>
-              The <strong>AI Insights System</strong> is a structured corpus of domain knowledge
-              organized into files by domain (frontend patterns, API quirks, design system tokens,
-              accessibility rules) and by feature (each major feature has its own learnings file).
-              This corpus is loaded into the AI's context at the start of every development task.
-              After each task, new learnings are written back.
+              The <strong>AI Insights System</strong> is a running notebook of everything
+              learned along the way — organized into files by topic (design patterns, API
+              quirks, component rules) and by feature. Before every coding session, the
+              relevant notes get loaded in. After, anything new gets written back.
             </p>
             <p>
-              This creates a feedback loop between the AI's behavior and a maintained knowledge
-              base — essentially prompt-engineering at the organizational level rather than the
-              single-call level. The AI's knowledge of the codebase compounds across sessions
-              rather than resetting.
+              This means AI gets smarter about the project over time instead of forgetting
+              everything between sessions. It's not starting from scratch each time — it
+              has notes. The knowledge stacks up.
             </p>
             <p>
-              The same principles that govern product AI scaffolding govern this system: scoped
-              context, structured format, explicit update criteria, and failure modes that get
-              caught and corrected rather than silently accumulated.
+              The same rules that apply to using AI in the product apply here too: give
+              it only what it needs, keep a clear format, and make sure mistakes get
+              caught and fixed instead of quietly piling up.
             </p>
           </div>
           <div class="about-insights-viz">
@@ -344,9 +338,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         </div>
 
         <blockquote class="about-quote">
-          "The AI Insights System is itself a demonstration of the same principles applied to
-          the product: structured context, explicit formats, and a maintained feedback loop.
-          The development workflow is the feature."
+          "The way the site is built runs on the same principles as the site itself:
+          focused information, clear format, and a feedback loop that improves over time.
+          How it's built is the point."
         </blockquote>
       </section>
 
@@ -355,47 +349,43 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <div class="about-section-header">
           <span class="about-section-num">05</span>
           <div>
-            <h2 class="about-section-title">Reliability by Design</h2>
-            <p class="about-section-sub">What production deployment teaches you about AI systems that notebooks don't</p>
+            <h2 class="about-section-title">What We Learned the Hard Way</h2>
+            <p class="about-section-sub">Two patterns that only show up when real people use your AI features for real</p>
           </div>
         </div>
 
         <div class="about-prose">
           <p>
-            Two reliability patterns emerged that only become visible in production — after a
-            full season of real decisions, real feedback, and real consequences when outputs
-            were wrong.
+            Two patterns showed up that you'd never catch in a test environment — only after
+            a full season of real decisions with real consequences when the answers were wrong.
           </p>
         </div>
 
         <div class="about-reliability-grid">
           <div class="about-reliability-card">
             <div class="about-reliability-card__eyebrow">Pattern 01</div>
-            <div class="about-reliability-card__title">Bounded Inference Outperforms Open-Ended Analysis</div>
+            <div class="about-reliability-card__title">Narrow Questions Beat Wide-Open Ones</div>
             <div class="about-reliability-card__body">
               <p>
-                Scoped questions produce more useful outputs than open-ended ones — not
-                because the model is more capable with constraints, but because constraints
-                make failure modes smaller and more observable. "Rate this player's trade
-                value 1–10 and explain the top three factors" produces output where the
-                failure is detectable: you can check whether the three factors are the
-                right ones. "Analyze this player" produces output where failure is invisible
-                until it matters.
+                Asking AI a specific question works better than asking a broad one. Not because
+                AI is smarter with less to think about — but because a narrow question makes it
+                easier to spot a wrong answer. "Rate this trade value 1–10 and name the three
+                biggest factors" gives you something you can verify. "What do you think about
+                this player?" sounds useful but hides bad answers until they've already
+                cost you something.
               </p>
             </div>
           </div>
           <div class="about-reliability-card">
             <div class="about-reliability-card__eyebrow">Pattern 02</div>
-            <div class="about-reliability-card__title">Inputs Are More Likely Wrong Than Reasoning</div>
+            <div class="about-reliability-card__title">Bad Data Is Usually the Problem, Not Bad AI</div>
             <div class="about-reliability-card__body">
               <p>
-                When AI-assisted outputs are wrong, the root cause is almost always
-                wrong inputs — stale data, an off-by-one in salary calculations, a
-                player whose NFL team changed mid-season. The model's reasoning, given
-                correct inputs, is usually fine. This shifts the reliability investment:
-                the deterministic layer's accuracy directly determines the quality of
-                AI outputs, which means testing the data pipeline is as important as
-                evaluating the model.
+                When AI gives a wrong answer, the data fed to it is usually the culprit —
+                not the AI itself. Outdated stats, a salary that's off by a year, a player
+                who got traded mid-season. Given clean, accurate data, AI's reasoning
+                is usually fine. This means keeping the underlying data accurate matters
+                just as much as anything AI does with it.
               </p>
             </div>
           </div>
@@ -407,31 +397,29 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <div class="about-section-header">
           <span class="about-section-num">06</span>
           <div>
-            <h2 class="about-section-title">Iteration as a System Property</h2>
-            <p class="about-section-sub">How the development model mirrors the AI integration philosophy</p>
+            <h2 class="about-section-title">Ship Small, Learn Fast, Repeat</h2>
+            <p class="about-section-sub">The site is built the same way it works — one piece at a time, always with the next step in mind</p>
           </div>
         </div>
 
         <div class="about-prose">
           <p>
-            The same principles that govern AI scaffolding govern the development process:
-            reduce ambiguity upfront, design for resilience, ship small and observe, close
-            feedback loops. Every feature is a composable component of a larger system rather
-            than a standalone deliverable.
+            The same approach used to build AI features is used to build the whole site:
+            be clear about what you're making, ship something small, see how it works,
+            fix what's broken, and repeat. Every feature is built to work together with
+            the others — not as a one-time standalone thing.
           </p>
           <p>
-            The What's New system — an editorial changelog with a consistent voice, screenshot
-            requirements, and a weekly rollup — is not documentation overhead. It's a
-            forcing function. Writing "what changed and why it matters" in plain English requires
-            understanding what actually changed. If you can't explain it, you haven't finished
-            thinking about it.
+            The What's New section — which updates every week with real screenshots and
+            plain-English explanations — isn't just documentation. It's a discipline. If
+            you can't write clearly what changed and why it matters, you probably don't
+            fully understand what you built yet.
           </p>
           <p>
-            The entire architecture — every utility, every data structure, every API wrapper —
-            is designed with the Auction Price Predictor in mind as the culminating feature.
-            This means features aren't shipped when they work in isolation. They're shipped
-            when they contribute to a system that can eventually support probabilistic auction
-            valuation at the position-scarcity level. Composability is a first-class requirement.
+            Every piece of this site was built with the Auction Price Predictor in mind
+            as the eventual goal. Features don't ship just because they work — they ship
+            when they fit into the larger system. Being able to plug into other features
+            isn't optional, it's a requirement from day one.
           </p>
         </div>
 
@@ -490,24 +478,22 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
         <div class="about-prose">
           <p>
-            Dynasty auction drafts are a hard prediction problem. You're not just estimating
-            player value — you're estimating clearing price, which is a function of player
-            quality, positional scarcity relative to the remaining pool, budget distributions
-            across 12 competing managers, and information asymmetry. The same player goes for
-            dramatically different prices depending on when in the auction they're nominated,
-            how many similar players remain available, and whether the managers with the
-            most budget have already filled their need at that position.
+            Dynasty auctions are one of the hardest things to predict in fantasy sports. You're
+            not just asking "is this player good?" — you're asking "what will someone actually
+            pay for this player, right now, with these 12 managers, given who's already been
+            sold?" The same player can go for double or half the price depending on when they
+            show up in the auction and how desperate people are at that position.
           </p>
           <p>
-            This is precisely the right problem for structured AI reasoning — layered on top
-            of a deterministic foundation that knows exactly how much cap room each team has,
-            exactly which positions remain unfilled, and exactly what each player's historical
-            salary trajectory looks like.
+            That's exactly the kind of messy, multi-factor problem where AI can actually help
+            — as long as it's sitting on top of a solid foundation that knows exactly how much
+            cap space each team has left, which positions still need to be filled, and what
+            players have actually cost in previous years.
           </p>
           <p>
-            Every technical decision made in this project — the separation of layers, the typed
-            context windows, the composable utilities, the historical data ingestion — was made
-            with this system in mind. The foundation is solid. The predictor is what comes next.
+            Every decision made building this site — how the layers split, how data flows,
+            how shared tools are built — was made with this feature in mind. The groundwork
+            is done. This is what comes next.
           </p>
         </div>
 
@@ -516,24 +502,24 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-predictor-box__grid">
             <div class="about-predictor-input">
               <div class="about-predictor-input__label">Historical Salary Data</div>
-              <div class="about-predictor-input__desc">15 years of auction results, normalized by year and position</div>
+              <div class="about-predictor-input__desc">15 years of what players actually sold for, sorted by year and position</div>
             </div>
             <div class="about-predictor-input">
               <div class="about-predictor-input__label">Roster Context</div>
-              <div class="about-predictor-input__desc">Real-time cap room and position gaps per team, deterministically calculated</div>
+              <div class="about-predictor-input__desc">Exactly how much cap space each team has left and which positions they still need to fill</div>
             </div>
             <div class="about-predictor-input">
               <div class="about-predictor-input__label">Positional Scarcity</div>
-              <div class="about-predictor-input__desc">Pool depth at each position, tiered by projected value</div>
+              <div class="about-predictor-input__desc">How many good options are left at each position as the auction winds down</div>
             </div>
             <div class="about-predictor-input">
               <div class="about-predictor-input__label">Player Signal</div>
-              <div class="about-predictor-input__desc">Age, contract status, performance trajectory, NFL context</div>
+              <div class="about-predictor-input__desc">Age, contract situation, recent performance, and what NFL team they're on</div>
             </div>
           </div>
           <div class="about-predictor-box__output">
             <span class="about-predictor-box__output-label">Output →</span>
-            <span class="about-predictor-box__output-val">Estimated clearing price range + positional surplus / deficit framing per team</span>
+            <span class="about-predictor-box__output-val">A price range for what the player will likely sell for, plus how that affects each team's roster situation</span>
           </div>
         </div>
       </section>
@@ -543,23 +529,23 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
         <div class="about-section-header">
           <span class="about-section-num">08</span>
           <div>
-            <h2 class="about-section-title">Cross-Stack Fluency</h2>
-            <p class="about-section-sub">The project required operating across every discipline simultaneously — and treating none of them as someone else's problem</p>
+            <h2 class="about-section-title">Doing It All Yourself</h2>
+            <p class="about-section-sub">When there's no one to hand off to, you learn every part of the system</p>
           </div>
         </div>
 
         <div class="about-prose">
           <p>
-            Most product builders specialize. Design-first PMs defer to engineering on architecture.
-            Engineering-first PMs defer to design on systems. Business-first PMs defer to both.
-            This project had no one to defer to — every layer had to be owned, which meant
-            every discipline had to be fluent enough to make real decisions in.
+            Most teams have specialists. Designers hand off to engineers. Engineers hand off to
+            data teams. Business people delegate everything technical. This project had none of
+            that. Every part of it — design, code, data, AI, content, strategy — had to be
+            figured out and owned by one person.
           </p>
           <p>
-            The result is a system where the design tokens inform the data model, the data model
-            informs the AI context window, the AI context window informs the editorial changelog,
-            and the changelog informs what gets built next. These aren't silos. They're a single
-            system expressed across different disciplines.
+            The result is that everything connects. How the site looks shapes how data is
+            structured. How data is structured shapes what AI is told. What AI produces shapes
+            what goes in the changelog. What's in the changelog shapes what gets built next.
+            It's one system wearing different hats.
           </p>
         </div>
 
@@ -567,9 +553,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-cs-card">
             <div class="about-cs-card__discipline">Design System Tokens</div>
             <div class="about-cs-card__evidence">
-              A complete editorial design language built from scratch — typography scale, CSS custom
-              properties with fallbacks, layered shadow tokens, component pattern catalog. The same
-              token layer powers both leagues without duplication.
+              A full visual style system built from scratch — font sizes, colors, spacing, shadows —
+              all stored as reusable variables. Both leagues share the same system, so fixing
+              a design detail updates everywhere at once.
             </div>
             <div class="about-cs-card__artifact">tokens.css · design-system.astro</div>
           </div>
@@ -577,9 +563,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-cs-card">
             <div class="about-cs-card__discipline">Content Modeling</div>
             <div class="about-cs-card__evidence">
-              The What's New system is a typed JSON schema with category taxonomy, screenshot
-              requirements, editorial voice mandates, and a weekly rollup pipeline via GitHub Actions.
-              Not a list of features — a structured content model.
+              The What's New section isn't just a blog — it's a structured data format with required
+              fields, screenshot rules, and an automatic weekly rollup. If you skip any of it,
+              the build breaks.
             </div>
             <div class="about-cs-card__artifact">whats-new.json · weekly-changelog-rollup.mjs</div>
           </div>
@@ -587,9 +573,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-cs-card">
             <div class="about-cs-card__discipline">Front-End Architecture</div>
             <div class="about-cs-card__evidence">
-              Astro + TypeScript with static generation, a composable component library (PlayerCell,
-              PlayerDetailsModal, TradeBuilder), scoped styles, and dual-league support sharing one
-              codebase without branching logic polluting every file.
+              The site is built with Astro and TypeScript. The same codebase powers two separate
+              leagues — same components, same layout, zero copy-paste. PlayerCell, the Trade
+              Builder, and the Player Modal are all reusable building blocks that work anywhere
+              they're needed.
             </div>
             <div class="about-cs-card__artifact">TheLeagueLayout · league-context.ts</div>
           </div>
@@ -597,57 +584,61 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
           <div class="about-cs-card">
             <div class="about-cs-card__discipline">Performance Engineering</div>
             <div class="about-cs-card__evidence">
-              MFL API responses cached to JSON at build time. Most pages are statically pre-rendered
-              with zero runtime data fetching. The live data layer is opt-in, not the default — which
-              means page load is fast even on slow connections.
+              Data from the MFL API gets downloaded and saved at build time, so most pages don't
+              have to fetch anything when you open them — they're already done. If a page needs
+              live data, it asks for it, but that's the exception. Fast pages, no waiting.
             </div>
             <div class="about-cs-card__artifact">prerender = true · pnpm sync:all</div>
           </div>
 
           <div class="about-cs-card">
-            <div class="about-cs-card__discipline">Analytics Instrumentation</div>
+            <div class="about-cs-card__discipline">Analytics</div>
             <div class="about-cs-card__evidence">
-              Dead Money Awards, Salary-Adjusted MVP, League Summary — structured analytics systems
-              that transform raw salary and scoring data into decision-relevant signals. Built as
-              reusable utilities, not one-off page logic.
+              Dead Money Awards, Salary-Adjusted MVP, League Summary — these aren't just fun pages.
+              They're built on shared math that other tools can reuse. The same salary calculations
+              that power the Dead Money page also power the Trade Builder. Write it once, use it
+              everywhere.
             </div>
             <div class="about-cs-card__artifact">salary-calculations.ts · dead-money.astro</div>
           </div>
 
           <div class="about-cs-card">
-            <div class="about-cs-card__discipline">Business Impact Framing</div>
+            <div class="about-cs-card__discipline">Building With Purpose</div>
             <div class="about-cs-card__evidence">
-              Every feature maps to a measurable competitive outcome: cap efficiency, trade surplus,
-              auction ROI. The dynasty strategy that informs feature priorities is documented in
-              CLAUDE.md — the product brief and the AI brief are the same document.
+              Every feature gets built because it helps someone win: better cap decisions, smarter
+              trades, sharper auction bids. The game strategy and the build plan live in the same
+              document — so the answer to "what should we build next?" is always the same: whatever
+              makes you more competitive.
             </div>
             <div class="about-cs-card__artifact">CLAUDE.md · Team Strategy section</div>
           </div>
 
           <div class="about-cs-card">
-            <div class="about-cs-card__discipline">Executive Narrative</div>
+            <div class="about-cs-card__discipline">Finding Your Voice</div>
             <div class="about-cs-card__evidence">
-              The editorial changelog voice — witty, specific, never dry — is a deliberate choice
-              about how a product communicates its own value. The What's New writing guidelines are
-              as precise as the TypeScript interfaces. Both enforce the same thing: clarity.
+              The What's New entries aren't just patch notes — they have a personality. Funny,
+              specific, written like a person. There are actual rules about how to write them
+              (yes, rules for changelog entries). Because if you can't explain what you built in
+              a way that's worth reading, you might as well not have shipped it.
             </div>
             <div class="about-cs-card__artifact">whats-new.json · CLAUDE.md writing style guide</div>
           </div>
 
           <div class="about-cs-card">
-            <div class="about-cs-card__discipline">Marketing Velocity</div>
+            <div class="about-cs-card__discipline">Shipping Consistently</div>
             <div class="about-cs-card__evidence">
-              Weekly changelog cadence, 7-day hero banner window, automated Monday rollup, screenshot
-              requirements for every release. Every deployment is a communication event with a
-              consistent format — which means it actually happens, every week, without friction.
+              Every release shows up on the homepage for a week. Bug fixes get grouped and posted
+              every Monday automatically. Screenshots are required — the build fails without them.
+              The whole system is set up so that shipping something and telling people about it
+              are the same step.
             </div>
             <div class="about-cs-card__artifact">weekly-changelog-rollup.mjs · hero-resolver.ts</div>
           </div>
         </div>
 
         <blockquote class="about-quote">
-          "These aren't separate skillsets that happen to coexist. They're a single operating
-          model: understand the full system, own the full system, ship the full system."
+          "These aren't separate skills that happen to live in the same person. It's one skill:
+          understand how the whole thing works, own it from top to bottom, and just ship it."
         </blockquote>
       </section>
 
@@ -655,17 +646,17 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
       <section class="about-closing">
         <div class="about-closing__inner">
           <div class="about-closing__text">
-            <h2 class="about-closing__title">The Thesis</h2>
+            <h2 class="about-closing__title">The Bottom Line</h2>
             <p>
-              AI systems that work in production aren't distinguished by model capability.
-              They're distinguished by the quality of the architecture around the model:
-              the separation of concerns, the structure of the context, the clarity of the
-              success criteria, and the discipline to maintain feedback loops over time.
+              The AI tools that actually work in the real world aren't better because they use
+              a smarter model. They're better because of everything around the model: how the
+              questions get asked, what information gets passed in, how the answers get checked,
+              and whether anyone's paying attention when something goes wrong.
             </p>
             <p>
-              This project is a sustained argument for that thesis, built in a domain where
-              the feedback loop is short, the constraints are hard, and the users care about
-              the results every week of the NFL season.
+              This project is proof of that. It's built in a domain where the rules are strict,
+              the stakes are real, and 16 people are checking in every week to see if their team
+              is still competitive. That's about as good a test as you can get.
             </p>
           </div>
           <div class="about-closing__ctas">
