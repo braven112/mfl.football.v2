@@ -1,0 +1,1333 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+---
+
+<TheLeagueLayout title="AI Insights Corpus | The League">
+  <main class="insights-page">
+
+    <!-- ===== HERO ===== -->
+    <header class="insights-hero">
+      <div class="insights-hero__eyebrow">
+        <span class="insights-tag">Development Knowledge Base</span>
+        <span class="insights-dot">·</span>
+        <span class="insights-hero__date">Jan 2026 – Present</span>
+      </div>
+
+      <h1 class="insights-hero__title">Most AI systems forget what they learn.<br>This one writes it down.</h1>
+
+      <p class="insights-hero__deck">
+        A structured corpus of hard-won knowledge accumulated across every development session.
+        API quirks discovered the painful way. Design patterns refined through iteration.
+        Architecture decisions documented before the rationale evaporated. Loaded into context
+        at the start of every task so the machine doesn't have to rediscover the same pothole twice.
+      </p>
+
+      <div class="insights-hero__stack">
+        <span class="insights-stack-item">Design System</span>
+        <span class="insights-stack-dot">·</span>
+        <span class="insights-stack-item">Frontend Patterns</span>
+        <span class="insights-stack-dot">·</span>
+        <span class="insights-stack-item">MFL API Quirks</span>
+        <span class="insights-stack-dot">·</span>
+        <span class="insights-stack-item">Feature Architecture</span>
+        <span class="insights-stack-dot">·</span>
+        <span class="insights-stack-item">Accessibility</span>
+      </div>
+    </header>
+
+    <!-- ===== STATS STRIP ===== -->
+    <div class="insights-stats">
+      <div class="insights-stats__item">
+        <div class="insights-stats__value">4</div>
+        <div class="insights-stats__label">Domain knowledge files</div>
+      </div>
+      <div class="insights-stats__item">
+        <div class="insights-stats__value">8</div>
+        <div class="insights-stats__label">Feature insight files</div>
+      </div>
+      <div class="insights-stats__item">
+        <div class="insights-stats__value">35+</div>
+        <div class="insights-stats__label">Individual insights recorded</div>
+      </div>
+      <div class="insights-stats__item">
+        <div class="insights-stats__value">0</div>
+        <div class="insights-stats__label">Times the same mistake was made twice</div>
+      </div>
+    </div>
+
+    <div class="insights-body">
+
+      <!-- ===== 01: HOW IT WORKS ===== -->
+      <section class="insights-section">
+        <div class="insights-section-header">
+          <span class="insights-section-num">00</span>
+          <div>
+            <h2 class="insights-section-title">The System</h2>
+            <p class="insights-section-sub">How accumulated knowledge becomes a development accelerant</p>
+          </div>
+        </div>
+
+        <div class="insights-prose">
+          <p>
+            Every development session produces discoveries. A third-party API that silently returns
+            stale data during the offseason. A CSS token that renders fine on the design system
+            demo but breaks in every real component. A drag-and-drop library that will not work
+            if you wrap its items in a <code>&lt;div&gt;</code> instead of a
+            <code>React.Fragment</code>. Left undocumented, these discoveries evaporate — and
+            the next session rediscovers them from scratch.
+          </p>
+          <p>
+            The AI Insights System is a structured corpus organized into files by domain
+            (<code>design-system.md</code>, <code>mfl-api.md</code>, <code>frontend.md</code>)
+            and by feature (<code>nav-redesign.md</code>, <code>custom-rankings.md</code>).
+            Before any development task begins, relevant files are loaded into the AI's context.
+            After each task completes, new learnings are written back. The knowledge compounds.
+          </p>
+        </div>
+
+        <div class="insights-flow">
+          <div class="insights-flow__node insights-flow__node--start">Task begins</div>
+          <div class="insights-flow__arrow">→</div>
+          <div class="insights-flow__node">Load domain + feature files into context</div>
+          <div class="insights-flow__arrow">→</div>
+          <div class="insights-flow__node">Execute with accumulated knowledge</div>
+          <div class="insights-flow__arrow">→</div>
+          <div class="insights-flow__node insights-flow__node--end">Write new learnings back</div>
+          <div class="insights-flow__loop">↺ compounds across sessions</div>
+        </div>
+
+        <blockquote class="insights-quote">
+          "The AI Insights System is itself a demonstration of the same principles applied
+          to the product: structured context, explicit formats, and a maintained feedback loop.
+          The development workflow is the feature."
+        </blockquote>
+      </section>
+
+      <!-- ===== 01: DESIGN SYSTEM ===== -->
+      <section class="insights-section">
+        <div class="insights-section-header">
+          <span class="insights-section-num">01</span>
+          <div>
+            <h2 class="insights-section-title">Design System</h2>
+            <p class="insights-section-sub">Tokens, visual patterns, and the editorial language derived from the PlayerDetailsModal</p>
+          </div>
+        </div>
+
+        <div class="insights-prose">
+          <p>
+            The design system grew bottom-up from a single modal component. The PlayerDetailsModal
+            established a typographic and spatial language so coherent that it became the canonical
+            reference for every page that followed. Most of what's documented here is "what
+            the modal taught us" — and what had to be written down to survive the next refactor.
+          </p>
+        </div>
+
+        <div class="insights-grid">
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 1, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Editorial Design Standard</h3>
+            <p class="insights-card__body">
+              The left-border accent on uppercase section titles is the most recognizable
+              editorial pattern in the codebase. Every new page must use it.
+              The modal-derived typographic hierarchy — five distinct roles from 0.625rem
+              table headers to 1.35rem hero titles — is now the site standard.
+            </p>
+            <div class="insights-card__code">
+              <code>.section-title &#123; border-left: 2px solid var(--color-primary); padding-left: 0.625rem; &#125;</code>
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 1, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Button &amp; CTA Hierarchy (Official)</h3>
+            <p class="insights-card__body">
+              Dark blue (<code>#1c497c</code>) is the primary CTA. Green (<code>#2e8743</code>) is
+              reserved only for affirmative/go actions like submitting a bid or confirming
+              a roster change — not general-purpose CTAs. Ghost buttons pair with primary buttons,
+              never solo.
+            </p>
+            <div class="insights-card__rec">
+              Use <code>&lt;a href&gt;</code> for navigation, <code>&lt;button&gt;</code> for
+              in-page actions. Same CSS classes, different elements. Never use <code>&lt;a&gt;</code>
+              without an <code>href</code>.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 2, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Broadcast Diagonal Cut (Flair Pattern)</h3>
+            <p class="insights-card__body">
+              ESPN/FOX-inspired parallelogram clip-path for hero sections that need sports-forward
+              energy. Both edges use an identical 20% horizontal slope — creating true parallel
+              lines that convey motion. Primary-blue accent stripes run along each diagonal edge
+              via pseudo-elements.
+            </p>
+            <div class="insights-card__rec">
+              One per page maximum. Hide below 767px — the geometry doesn't scale to narrow viewports.
+              Used in the Free Agents hero (<code>players.astro</code>).
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 2, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Negative State: Subtle Accents, Not Color Floods</h3>
+            <p class="insights-card__body">
+              Negative/warning states use a red left-border accent (<code>border-left: 3px solid var(--color-error)</code>)
+              and red text on key values. Never use large colored backgrounds or gradient fills.
+              The gray-50 card background stays neutral — the accent does all the signaling.
+            </p>
+            <div class="insights-card__code">
+              <code>/* ❌ Not this */ background: var(--color-error-light);<br>/* ✓ This */ border-left: 3px solid var(--color-error);</code>
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 2, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Table Header: Gray-50, Not Dark Gradient</h3>
+            <p class="insights-card__body">
+              The <code>--table-header-gradient</code> token (dark blue) is a legacy pattern.
+              New pages use the editorial gray-50 header: <code>0.625rem</code> uppercase text,
+              <code>--color-gray-400</code> color, sticky with <code>border-bottom</code>.
+              Hover state uses <code>gray-100</code> background — not the translucent
+              <code>rgba(255,255,255,0.1)</code> that's invisible on light backgrounds.
+            </p>
+            <div class="insights-card__rec">
+              The gradient token is kept for backwards compatibility but should not appear in new work.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 2, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">WCAG Contrast Correction: gray-400 vs gray-500</h3>
+            <p class="insights-card__body">
+              <code>--color-gray-400</code> (#9ca3af, ~2.86:1 contrast) fails WCAG AA for text.
+              Labels, hints, and any readable text must use <code>--color-gray-500</code>
+              (#6b7280, ~4.63:1) or darker. Reserve gray-400 for decorative borders and
+              disabled controls only.
+            </p>
+            <div class="insights-card__rec">
+              This was a widespread issue. Audit any component that used gray-400 as a text color.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Jan 18, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Nav Tokens Must Live in tokens.css</h3>
+            <p class="insights-card__body">
+              Nav CSS variables defined only in <code>_nav-tokens.scss</code> fail on pages that
+              import <code>tokens.css</code> but not the full compiled SCSS bundle.
+              All <code>--nav-*</code> tokens must be defined in both files — <code>tokens.css</code>
+              is the canonical source, SCSS is a mirror.
+            </p>
+            <div class="insights-card__rec">
+              Always include fallback values in component CSS as defensive coding:
+              <code>var(--nav-team-logo-size, 40px)</code>.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 1, 2026</span>
+              <span class="insights-card__domain">Design</span>
+            </div>
+            <h3 class="insights-card__title">Modal Shell Spec (for new modals)</h3>
+            <p class="insights-card__body">
+              Overlay: <code>rgba(15, 23, 42, 0.45)</code> + <code>backdrop-filter: blur(2px)</code>.
+              Modal: <code>max-width: 580px</code>, entry animation 0.32s ease-out with
+              scale(0.96→1) + translateY. Mobile: bottom-sheet slide-up with top-only radius.
+              Close button: 32px circle, absolute top-right.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===== 02: FRONTEND PATTERNS ===== -->
+      <section class="insights-section">
+        <div class="insights-section-header">
+          <span class="insights-section-num">02</span>
+          <div>
+            <h2 class="insights-section-title">Frontend Patterns</h2>
+            <p class="insights-section-sub">Component architecture, player display, headshots, and the gotchas that cost real time</p>
+          </div>
+        </div>
+
+        <div class="insights-prose">
+          <p>
+            Frontend work in this codebase has a consistent source of friction: third-party
+            data that doesn't quite match what you expect, and small normalization gaps that
+            produce broken logos or missing headshots for specific teams. The Player Lockup
+            standard exists because every component that skipped it eventually had broken
+            Kansas City Chiefs logos.
+          </p>
+        </div>
+
+        <div class="insights-grid">
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 23, 2026</span>
+              <span class="insights-card__domain">Frontend</span>
+            </div>
+            <h3 class="insights-card__title">Player Lockup Standard (and why it exists)</h3>
+            <p class="insights-card__body">
+              Multiple components had slightly different player display patterns — some missed
+              DEF handling, some skipped <code>normalizeTeamCode()</code>. The result: broken
+              logos for KCC (file is KC.svg), JAC, NEP, NOS, and DEF players showing a generic
+              silhouette instead of the team logo.
+            </p>
+            <div class="insights-card__rec">
+              Always use <code>PlayerCell.astro</code> or <code>buildPlayerCellHTML()</code>.
+              Test with Kansas City, Jacksonville, New England, and New Orleans. DEF handling
+              is automatic — don't special-case it.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 1, 2026</span>
+              <span class="insights-card__domain">Frontend</span>
+            </div>
+            <h3 class="insights-card__title">ESPN Headshot URLs + College Fallback Chain</h3>
+            <p class="insights-card__body">
+              ESPN uses different athlete IDs for college and NFL — a player's college athlete ID
+              is NOT the same as their NFL player ID. MFL stores ESPN NFL IDs as <code>espn_id</code>
+              but 2026 draft prospects have none. College headshots require a separate mapping file
+              (<code>data/theleague/espn-college-ids.json</code>).
+            </p>
+            <div class="insights-card__code">
+              <code>ESPN NFL → ESPN College → MFL headshot → placeholder</code>
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 12, 2026</span>
+              <span class="insights-card__domain">Frontend</span>
+            </div>
+            <h3 class="insights-card__title">Franchise History for Name/Logo Changes</h3>
+            <p class="insights-card__body">
+              Heavy Chevy rebranded to Dead Cap Walking for 2026. Historical views need to show
+              "Heavy Chevy" for 2024 data. A <code>history[]</code> array in
+              <code>theleague.config.json</code> with <code>yearStart</code>/<code>yearEnd</code>
+              plus all identity fields solves this via <code>getTeamIdentityForYear()</code>.
+            </p>
+            <div class="insights-card__rec">
+              Pages showing historical data must use <code>getTeamIdentityForYear(team, year)</code>
+              from <code>src/utils/team-names.ts</code>. Future rebrands only need a new
+              history entry in config.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Jan 18, 2026</span>
+              <span class="insights-card__domain">Frontend</span>
+            </div>
+            <h3 class="insights-card__title">Dark Mode: Both Media Query AND .dark Class</h3>
+            <p class="insights-card__body">
+              All new components must support dark mode via two mechanisms:
+              <code>@media (prefers-color-scheme: dark)</code> for OS-level preference,
+              and <code>.dark</code> class on <code>:root</code> for a manual toggle.
+              Use <code>:global(.dark)</code> in Astro scoped styles to target the class.
+            </p>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Mar 2, 2026</span>
+              <span class="insights-card__domain">Frontend</span>
+            </div>
+            <h3 class="insights-card__title">Clean URL Rewrites Break on Prerendered Pages</h3>
+            <p class="insights-card__body">
+              Host-level clean URL rewrites (<code>/trade-builder</code> →
+              <code>/theleague/trade-builder</code>) depend on runtime route resolution in
+              <code>middleware.ts</code>. Pages with <code>prerender = true</code> only exist as
+              static output and don't register as runtime route entries — the middleware rewrite
+              cannot resolve them.
+            </p>
+            <div class="insights-card__rec">
+              Any TheLeague page linked from the nav drawer must use <code>prerender = false</code>
+              while clean URL rewriting is active. Affected pages: calendar, league-summary,
+              trade-builder, import-rankings.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===== 03: MFL API ===== -->
+      <section class="insights-section">
+        <div class="insights-section-header">
+          <span class="insights-section-num">03</span>
+          <div>
+            <h2 class="insights-section-title">MFL API Quirks</h2>
+            <p class="insights-section-sub">Third-party API behavior that is not documented, not obvious, and not forgiving</p>
+          </div>
+        </div>
+
+        <div class="insights-prose">
+          <p>
+            MyFantasyLeague's API is mature but idiosyncratic. Most of what's documented here
+            is behavior that only becomes visible under specific conditions — the pre-rollover
+            window, a serverless execution environment, a league with a non-standard
+            <code>draftPlayerPool</code> setting. The notes exist so these conditions don't
+            produce mysterious failures that take hours to trace.
+          </p>
+        </div>
+
+        <div class="insights-grid">
+
+          <div class="insights-card insights-card--wide">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 26, 2026</span>
+              <span class="insights-card__domain">MFL API</span>
+            </div>
+            <h3 class="insights-card__title">Login Authentication: XML, Not JSON</h3>
+            <p class="insights-card__body">
+              The MFL login endpoint does NOT support <code>JSON=1</code> — it returns an
+              empty body. Use <code>XML=1</code> instead. The response is XML:
+              <code>&lt;status MFL_USER_ID="base64cookie"/&gt;</code> on success,
+              <code>&lt;error&gt;Invalid Password&lt;/error&gt;</code> on failure.
+              The standalone <code>/myleagues</code> endpoint always returns HTML from
+              server-side fetch — use <code>export?TYPE=myleagues&amp;JSON=1</code> instead.
+            </p>
+            <div class="insights-card__code">
+              <code>
+                Step 1: POST /login?XML=1 → parse XML for MFL_USER_ID<br>
+                Step 2: GET /export?TYPE=myleagues&amp;JSON=1 with Cookie: MFL_USER_ID=…
+              </code>
+            </div>
+          </div>
+
+          <div class="insights-card insights-card--wide">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 13–14, 2026</span>
+              <span class="insights-card__domain">MFL API</span>
+            </div>
+            <h3 class="insights-card__title">Rosters API Staleness During Pre-Rollover Window</h3>
+            <p class="insights-card__body">
+              Between season end and the Feb 14 league year rollover, the <code>rosters</code>
+              endpoint can return stale data for recent drops — confirmed 31+ hours after
+              drops occurred. The <code>transactions</code> and <code>freeAgents</code> endpoints
+              correctly reflected changes. The <code>rosters</code> endpoint is not the sole
+              source of truth during the offseason.
+            </p>
+            <div class="insights-card__rec">
+              During the offseason, cross-reference <code>rosters</code> with recent
+              <code>TRANS_TYPE=FREE_AGENT</code> transactions. Filter out players in
+              drop-only transactions (<code>|&#123;id&#125;,</code> format). Transaction endpoint requires
+              following HTTP 302 redirects — use <code>-L</code> or a redirect-following client.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 27, 2026</span>
+              <span class="insights-card__domain">MFL API</span>
+            </div>
+            <h3 class="insights-card__title">myWatchList vs myDraftList</h3>
+            <p class="insights-card__body">
+              <code>myDraftList</code> is ordered but destructive (complete overwrite) and
+              possibly restricted to <code>draftPlayerPool</code> players.
+              <code>myWatchList</code> supports incremental ADD/REMOVE and has no documented
+              player restrictions — but is unordered (a set, not a ranked list).
+            </p>
+            <div class="insights-card__rec">
+              For custom rankings: use <code>myWatchList</code> as the MFL-synced "flagged"
+              set. Store ranking order in Upstash Redis or local storage.
+              Use <code>playerRanks</code> (FantasySharks) as the default seed.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 24, 2026</span>
+              <span class="insights-card__domain">MFL API</span>
+            </div>
+            <h3 class="insights-card__title">pointsAllowed: Full Season Only, Strings Not Numbers</h3>
+            <p class="insights-card__body">
+              The <code>pointsAllowed</code> DVP endpoint accepts a <code>W</code> (week) param
+              but completely ignores it — all requests return identical full-season cumulative
+              totals. Point values are strings — always <code>parseFloat()</code> before math.
+              MFL uses non-standard team codes (KCC, JAC, NEP) — always <code>normalizeTeamCode()</code>.
+            </p>
+            <div class="insights-card__rec">
+              For weekly DVP context, combine with <code>nflSchedule</code>. For season-long
+              averages, divide by 17. Filter out entries with <code>name: ""</code>.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 12, 2026</span>
+              <span class="insights-card__domain">MFL API</span>
+            </div>
+            <h3 class="insights-card__title">No Dedicated Franchise History API</h3>
+            <p class="insights-card__body">
+              MFL has no endpoint for franchise name/logo history. The year-specific
+              <code>league</code> export returns names as they were that year.
+              Pre-2016 seasons used different league IDs (e.g., 2007: <code>76273</code>
+              on www42) — all mapped in the <code>history.league</code> array of the
+              current year's league data.
+            </p>
+            <div class="insights-card__rec">
+              Project advantage: <code>data/theleague/mfl-feeds/&#123;YEAR&#125;/league.json</code>
+              is cached for 2011–2025. No additional API calls needed for historical names.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 13, 2026</span>
+              <span class="insights-card__domain">MFL API</span>
+            </div>
+            <h3 class="insights-card__title">Free Agent Status "locked" in Offseason</h3>
+            <p class="insights-card__body">
+              Players dropped during the offseason appear in <code>freeAgents</code> with
+              <code>status: "locked"</code> — they cannot be claimed until the new league
+              year begins or waivers open. This is distinct from <code>status: "available"</code>
+              which means claims are open.
+            </p>
+            <div class="insights-card__rec">
+              Display <code>status: "locked"</code> players with a visual indicator
+              (grayed out or lock icon) to signal they're not claimable.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===== 04: FEATURE INSIGHTS ===== -->
+      <section class="insights-section">
+        <div class="insights-section-header">
+          <span class="insights-section-num">04</span>
+          <div>
+            <h2 class="insights-section-title">Feature Architecture</h2>
+            <p class="insights-section-sub">What building each major feature taught us about the next one</p>
+          </div>
+        </div>
+
+        <div class="insights-prose">
+          <p>
+            Feature development is where abstract architectural decisions meet concrete
+            implementation reality. The nav redesign taught us about the limits of prerendering
+            and the importance of cookie-first server rendering. Custom rankings exposed
+            edge cases in drag-and-drop library assumptions. Each feature's learnings
+            file is a post-mortem for the next engineer.
+          </p>
+        </div>
+
+        <div class="insights-grid">
+
+          <div class="insights-card insights-card--wide">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 28, 2026</span>
+              <span class="insights-card__domain">Custom Rankings</span>
+            </div>
+            <h3 class="insights-card__title">@dnd-kit: Three Silent Killers</h3>
+            <p class="insights-card__body">
+              Drag-and-drop simply stops working if: (1) the sortable container has
+              <code>overflow: hidden</code> — dragged elements appear not to move;
+              (2) <code>restrictToParentElement</code> modifier is used — constrains
+              drag too aggressively; (3) sortable items are wrapped in extra
+              <code>&lt;div&gt;</code>s instead of <code>React.Fragment</code> — confuses
+              position tracking. All three issues can be present simultaneously and interact.
+            </p>
+            <div class="insights-card__rec">
+              Only use <code>restrictToVerticalAxis</code> modifier. Never add
+              <code>overflow: hidden</code> to the sortable container. Use
+              <code>React.Fragment</code> for item wrappers. Check
+              <code>ManageImportsSection.tsx</code> for a working reference pattern.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 28, 2026</span>
+              <span class="insights-card__domain">Custom Rankings</span>
+            </div>
+            <h3 class="insights-card__title">Upstash Redis for Cross-Device KV</h3>
+            <p class="insights-card__body">
+              For per-user state (&lt;10KB) that needs cross-device sync without a full
+              database, Upstash Redis via <code>@upstash/redis</code> is the answer.
+              Auto-reads env vars (<code>UPSTASH_REDIS_REST_URL</code>, <code>UPSTASH_REDIS_REST_TOKEN</code>).
+              Each request is a standalone HTTP call — no connection management.
+            </p>
+            <div class="insights-card__code">
+              <code>key pattern: &#123;feature&#125;:&#123;franchiseId&#125;</code><br>
+              <code>e.g. cr:0003 for franchise 0003's custom rankings</code>
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 28, 2026</span>
+              <span class="insights-card__domain">Custom Rankings</span>
+            </div>
+            <h3 class="insights-card__title">Edit Mode Prevents Accidental Drag</h3>
+            <p class="insights-card__body">
+              @dnd-kit supports empty <code>useSensors()</code> which completely disables drag
+              without unmounting the context. Passing <code>sensors=&#123;isEditing ? editSensors : noSensors&#125;</code>
+              gates drag to an explicit edit mode, preventing accidental reorders while browsing
+              the list.
+            </p>
+            <div class="insights-card__rec">
+              Mobile touch targets for hidden-on-hover UI need explicit fallbacks:
+              always-visible at 0.4 opacity on mobile, full opacity on <code>:active</code>.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Feb 28, 2026</span>
+              <span class="insights-card__domain">Custom Rankings</span>
+            </div>
+            <h3 class="insights-card__title">Composite Hash for Staleness Detection</h3>
+            <p class="insights-card__body">
+              When rankings derive from user-configured composite sources, a hash of the
+              source config (sorted member IDs + player count) reliably detects when the
+              source data changed. On mismatch, <code>mergeWithOverrides()</code> re-seeds
+              from the new composite while preserving manual customizations.
+            </p>
+            <div class="insights-card__rec">
+              For any feature that derives from user-configured data: store a hash alongside
+              the derived state. This enables automatic reconciliation without losing overrides.
+            </div>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Jan 18, 2026</span>
+              <span class="insights-card__domain">Nav Redesign</span>
+            </div>
+            <h3 class="insights-card__title">MutationObserver Beats Custom Events for State Sync</h3>
+            <p class="insights-card__body">
+              The page wrapper needs to respond to drawer state changes (open/close) by
+              adjusting its <code>margin-right</code>. Using MutationObserver to watch for
+              class changes on the drawer element is more robust than custom events — it
+              catches all state changes regardless of how they were triggered, including
+              programmatic changes from <code>window.navDrawer</code> API calls.
+            </p>
+          </div>
+
+          <div class="insights-card">
+            <div class="insights-card__meta">
+              <span class="insights-card__date">Jan 18, 2026</span>
+              <span class="insights-card__domain">Nav Redesign</span>
+            </div>
+            <h3 class="insights-card__title">Playwright Surfaced Critical Spacing Issues</h3>
+            <p class="insights-card__body">
+              E2E testing revealed nav links were 26.59px tall instead of the 40px minimum
+              touch target. SVG icons were rendering at browser default size (hundreds of pixels)
+              because Astro scoped CSS wasn't targeting nested SVGs — required
+              <code>:global(.nav-links__icon svg)</code> and explicit <code>width/height</code>
+              attributes on the SVG element itself.
+            </p>
+            <div class="insights-card__rec">
+              Run Playwright after any CSS changes to catch spacing/sizing regressions.
+              Always add explicit <code>width</code> and <code>height</code> attributes to
+              SVGs used as nav icons.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===== 05: PATTERNS THAT COMPOUND ===== -->
+      <section class="insights-section">
+        <div class="insights-section-header">
+          <span class="insights-section-num">05</span>
+          <div>
+            <h2 class="insights-section-title">Patterns That Compound</h2>
+            <p class="insights-section-sub">The meta-observations that emerge after enough individual insights accumulate</p>
+          </div>
+        </div>
+
+        <div class="insights-prose">
+          <p>
+            After enough individual insights accumulate, second-order patterns start to
+            emerge. These aren't observations about specific API endpoints or CSS tokens —
+            they're observations about the shape of problems in this codebase.
+          </p>
+        </div>
+
+        <div class="insights-patterns">
+          <div class="insights-pattern-card">
+            <div class="insights-pattern-card__num">I</div>
+            <div class="insights-pattern-card__content">
+              <div class="insights-pattern-card__title">Third-Party Data Is Wrong Under Specific Conditions</div>
+              <p class="insights-pattern-card__body">
+                MFL's rosters endpoint returns stale data in the pre-rollover window.
+                ESPN's headshot CDN serves 404s for players without photos instead of
+                a fallback. <code>pointsAllowed</code> ignores the week parameter silently.
+                None of these are bugs in the traditional sense — they're edge conditions
+                that exist at the boundaries between systems. The documentation for these
+                conditions is the codebase.
+              </p>
+            </div>
+          </div>
+
+          <div class="insights-pattern-card">
+            <div class="insights-pattern-card__num">II</div>
+            <div class="insights-pattern-card__content">
+              <div class="insights-pattern-card__title">Small Normalization Gaps Compound into Broken UX</div>
+              <p class="insights-pattern-card__body">
+                A missing <code>normalizeTeamCode()</code> call doesn't fail loudly —
+                it silently serves a 404 for a logo file. Skipping DEF handling in a
+                player component doesn't crash — it shows a generic avatar instead of
+                the team logo. These failures are invisible until someone looks at the
+                specific player or team that triggers them. The Player Lockup standard
+                exists because every shortcut eventually produces a broken logo.
+              </p>
+            </div>
+          </div>
+
+          <div class="insights-pattern-card">
+            <div class="insights-pattern-card__num">III</div>
+            <div class="insights-pattern-card__content">
+              <div class="insights-pattern-card__title">Architecture Decisions Cost More to Change Than to Get Right</div>
+              <p class="insights-pattern-card__body">
+                The clean URL rewrite system requires pages to be server-rendered.
+                The token system requires <code>tokens.css</code> as the canonical source.
+                The franchise history system requires a <code>history[]</code> array in config
+                rather than dynamic API calls. Each of these decisions has a straightforward
+                rationale that is obvious in hindsight — and expensive to retrofit when
+                discovered late. The insights corpus exists to make them obvious upfront.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <blockquote class="insights-quote">
+          "The best time to document a quirk is immediately after discovering it, before
+          the workaround becomes load-bearing and the original problem is forgotten. The
+          second best time is now."
+        </blockquote>
+      </section>
+
+      <!-- ===== CLOSING ===== -->
+      <section class="insights-closing">
+        <div class="insights-closing__inner">
+          <div class="insights-closing__text">
+            <h2 class="insights-closing__title">The File Structure</h2>
+            <p>
+              The corpus lives in <code>docs/claude/insights/</code>. Domain files cover
+              cross-cutting concerns: <code>design-system.md</code>, <code>frontend.md</code>,
+              <code>mfl-api.md</code>, <code>accessibility.md</code>. Feature files cover
+              the learnings specific to each major feature: <code>nav-redesign.md</code>,
+              <code>custom-rankings.md</code>, and growing.
+            </p>
+            <p>
+              Each entry follows a consistent format: date, context, insight, evidence,
+              recommendation. New entries are appended, not edited — the history of how
+              understanding evolved is part of the value.
+            </p>
+          </div>
+          <div class="insights-closing__ctas">
+            <a href="/theleague/about" class="insights-btn insights-btn--primary">
+              Read the Full Case Study
+              <span class="insights-btn__arrow">→</span>
+            </a>
+            <a href="/theleague/whats-new" class="insights-btn insights-btn--ghost">
+              What's New
+              <span class="insights-btn__arrow">→</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.insights-body -->
+  </main>
+</TheLeagueLayout>
+
+<style>
+  /* ===========================
+     Shell
+  =========================== */
+  .insights-page {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+  }
+
+  /* ===========================
+     Hero
+  =========================== */
+  .insights-hero {
+    padding: 2.75rem 0 2.25rem;
+    margin-bottom: 2rem;
+    max-width: 68rem;
+  }
+
+  .insights-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .insights-tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+  }
+
+  .insights-dot {
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.75rem;
+  }
+
+  .insights-hero__date {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-weight: 500;
+  }
+
+  .insights-hero__title {
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 1.125rem;
+  }
+
+  .insights-hero__deck {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 64ch;
+    margin: 0 0 1.5rem;
+  }
+
+  .insights-hero__stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .insights-stack-item {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .insights-stack-dot {
+    color: var(--color-gray-300, #d1d5db);
+    font-size: 0.75rem;
+  }
+
+  /* ===========================
+     Stats Strip
+  =========================== */
+  .insights-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 3rem;
+  }
+
+  .insights-stats__item {
+    padding: 1rem 1.125rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .insights-stats__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary, #1c497c);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .insights-stats__label {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Body
+  =========================== */
+  .insights-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+  }
+
+  /* ===========================
+     Sections
+  =========================== */
+  .insights-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .insights-section-header {
+    display: flex;
+    gap: 1.125rem;
+    align-items: flex-start;
+  }
+
+  .insights-section-num {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.5;
+    letter-spacing: 0.06em;
+    padding-top: 0.05rem;
+    min-width: 1.75rem;
+  }
+
+  .insights-section-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    line-height: 1;
+  }
+
+  .insights-section-sub {
+    margin: 0.3rem 0 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Prose
+  =========================== */
+  .insights-prose {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .insights-prose p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: var(--color-gray-700, #374151);
+    max-width: 68ch;
+  }
+
+  .insights-prose code {
+    font-size: 0.875em;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 0.2em;
+    padding: 0.1em 0.35em;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* ===========================
+     Flow Diagram (Section 00)
+  =========================== */
+  .insights-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .insights-flow__node {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-700, #374151);
+    background: white;
+    border: 1px solid var(--content-border, #e2e8f0);
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  .insights-flow__node--start {
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .insights-flow__node--end {
+    border-color: var(--color-secondary, #2e8743);
+    color: var(--color-secondary, #2e8743);
+  }
+
+  .insights-flow__arrow {
+    font-size: 0.875rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-weight: 600;
+  }
+
+  .insights-flow__loop {
+    width: 100%;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding-left: 0.25rem;
+    opacity: 0.7;
+  }
+
+  /* ===========================
+     Insight Cards Grid
+  =========================== */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .insights-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.125rem 1.25rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-top: 2px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .insights-card--wide {
+    grid-column: span 2;
+  }
+
+  .insights-card__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .insights-card__date {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .insights-card__domain {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+  }
+
+  .insights-card__title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.35;
+  }
+
+  .insights-card__body {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: var(--color-gray-700, #374151);
+    flex: 1;
+  }
+
+  .insights-card__body code {
+    font-size: 0.8125em;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 0.2em;
+    padding: 0.1em 0.3em;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .insights-card__code {
+    background: var(--color-gray-900, #111827);
+    color: #e5e7eb;
+    border-radius: var(--radius-sm, 0.25rem);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    font-family: 'Menlo', 'Monaco', 'Cascadia Code', monospace;
+    overflow-x: auto;
+  }
+
+  .insights-card__code code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+    border-radius: 0;
+  }
+
+  .insights-card__rec {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
+    border-left: 2px solid var(--color-primary, #1c497c);
+    border-radius: 0 var(--radius-sm, 0.25rem) var(--radius-sm, 0.25rem) 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .insights-card__rec code {
+    font-size: 0.85em;
+    background: rgba(0,0,0,0.06);
+    border-radius: 0.2em;
+    padding: 0.1em 0.3em;
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* ===========================
+     Pattern Cards (Section 05)
+  =========================== */
+  .insights-patterns {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .insights-pattern-card {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .insights-pattern-card__num {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary, #1c497c);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    border-radius: 50%;
+    font-style: italic;
+  }
+
+  .insights-pattern-card__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .insights-pattern-card__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  .insights-pattern-card__body {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* ===========================
+     Quote
+  =========================== */
+  .insights-quote {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    border-left: 3px solid var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, transparent);
+    border-radius: 0 var(--radius-md, 0.5rem) var(--radius-md, 0.5rem) 0;
+    font-size: 0.9375rem;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--color-gray-700, #374151);
+    max-width: 64ch;
+  }
+
+  /* ===========================
+     Closing
+  =========================== */
+  .insights-closing {
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    padding-top: 2.5rem;
+  }
+
+  .insights-closing__inner {
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .insights-closing__text {
+    flex: 1;
+    min-width: 20rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .insights-closing__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .insights-closing__text p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .insights-closing__text code {
+    font-size: 0.875em;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 0.2em;
+    padding: 0.1em 0.35em;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .insights-closing__ctas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  /* ===========================
+     Buttons
+  =========================== */
+  .insights-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .insights-btn--primary {
+    background: var(--color-primary, #1c497c);
+    color: white;
+  }
+
+  .insights-btn--primary:hover {
+    background: var(--btn-primary-bg-hover, #164066);
+  }
+
+  .insights-btn--ghost {
+    background: transparent;
+    color: var(--color-gray-600, #4b5563);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .insights-btn--ghost:hover {
+    border-color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-900, #111827);
+  }
+
+  .insights-btn__arrow {
+    opacity: 0.7;
+  }
+
+  /* ===========================
+     Responsive
+  =========================== */
+  @media (max-width: 900px) {
+    .insights-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 700px) {
+    .insights-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .insights-card--wide {
+      grid-column: span 1;
+    }
+
+    .insights-flow {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .insights-flow__arrow {
+      transform: rotate(90deg);
+    }
+
+    .insights-pattern-card {
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+
+    .insights-closing__inner {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .insights-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .insights-hero__title {
+      font-size: clamp(1.625rem, 6vw, 2.5rem);
+    }
+  }
+</style>
