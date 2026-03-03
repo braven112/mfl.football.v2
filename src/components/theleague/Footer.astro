@@ -77,8 +77,6 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 				<ul>
 					<li><a href={resolveLeaguePath(isAFL ? "/afl-fantasy/assets" : "/theleague/assets", hideLeaguePrefix)}>Asset Library</a></li>
 					{!isAFL && <li><a href={resolveLeaguePath("/theleague/icons", hideLeaguePrefix)}>Sprite Icons</a></li>}
-					{!isAFL && <li><a href={resolveLeaguePath("/theleague/css-customization", hideLeaguePrefix)}>CSS Customization</a></li>}
-					{!isAFL && <li><a href={resolveLeaguePath("/theleague/design-system", hideLeaguePrefix)}>Design System</a></li>}
 				</ul>
 			</div>
 			<div class="footer-column">
