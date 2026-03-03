@@ -143,6 +143,15 @@
           "description": "Personalized player rankings with drag-and-drop reordering"
         },
         {
+          "id": "about",
+          "label": "About This Project",
+          "icon": "clipboard",
+          "path": "/about",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Technical case study: AI system architecture, dynasty contracts, and production patterns"
+        },
+        {
           "id": "design-system",
           "label": "Design System",
           "icon": "star",
@@ -284,7 +293,8 @@
     "/whats-new": "/whats-new",
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
-    "/design-system": "/design-system"
+    "/design-system": "/design-system",
+    "/about": "/about"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
