@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import HeroBanner from '../../components/theleague/HeroBanner.astro';
 import '../../styles/player-cell.css';
 
 export const prerender = false;
@@ -89,6 +90,55 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
         </div>
         <div class="ds-code-hint">
           <code>font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid var(--color-primary);</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Hero Banner ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Hero Banner</h2>
+
+      <div class="ds-hero-example">
+        <div class="ds-hero-example__meta">
+          <h3 class="ds-card__heading">Text Only (No Image)</h3>
+          <p class="ds-card__desc">Eyebrow kicker + date, large editorial title, body copy, and CTA actions. Used when there's no screenshot to show.</p>
+        </div>
+        <HeroBanner
+          variant="editorial"
+          kicker="New Feature"
+          kickerDate="Mar 2, 2026"
+          title="The League Has an App Now"
+          summary="That's right. A nineteen-year-old fantasy football league has its own app. Install it to your home screen and try to act surprised."
+          link="/theleague/whats-new"
+          linkLabel="Open The League"
+          allNewsLink="/theleague/whats-new"
+          allNewsLabel="All releases"
+        />
+        <div class="ds-code-hint">
+          <code>variant="editorial" — no image prop</code>
+        </div>
+      </div>
+
+      <div class="ds-hero-example">
+        <div class="ds-hero-example__meta">
+          <h3 class="ds-card__heading">With Image (Split Layout)</h3>
+          <p class="ds-card__desc">Same editorial hero, but with a browser-framed screenshot on the right. Image floats right at ≥768px, stacks below on mobile.</p>
+        </div>
+        <HeroBanner
+          variant="editorial"
+          kicker="New Feature"
+          kickerDate="Feb 26, 2026"
+          title="The League Has an App Now"
+          summary="That's right. A nineteen-year-old fantasy football league has its own app. Install it to your home screen and try to act surprised."
+          link="/theleague/whats-new"
+          linkLabel="Open The League"
+          allNewsLink="/theleague/whats-new"
+          allNewsLabel="All releases"
+          image="pwa-app.webp"
+          imageAlt="The League PWA installed on a home screen"
+        />
+        <div class="ds-code-hint">
+          <code>variant="editorial" image="screenshot.webp" imageAlt="..."</code>
         </div>
       </div>
     </section>
@@ -1179,6 +1229,18 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     flex-direction: column;
     gap: 1rem;
     margin-bottom: 1rem;
+  }
+
+  /* Flush example container — removes card padding so the component renders edge-to-edge */
+  .ds-hero-example {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 2rem;
+  }
+
+  .ds-hero-example__meta {
+    margin-bottom: 0.75rem;
   }
 
   .ds-code-hint {
