@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-03T09:29:11.995Z"
+    "fetchedAt": "2026-03-03T09:50:53.864Z"
   },
   "players": [
     {
@@ -3109,17 +3109,39 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "DET",
+      "team": "HOU",
       "draftYear": 2019,
       "draftTeam": "CHI",
       "birthdate": 865659600,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14071_thumb.jpg",
       "externalIds": {
         "mfl": "14071",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5892",
+        "gsis": " 00-0035685"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5892",
+        "fullName": "David Montgomery",
+        "team": "HOU",
+        "age": 28,
+        "height": "71",
+        "weight": "230",
+        "number": 5,
+        "college": "Iowa State",
+        "birthDate": "1997-06-07",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035685"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -5491,7 +5513,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14071",
+          "name": "Montgomery, David"
+        }
+      ]
     },
     {
       "id": "15368",
