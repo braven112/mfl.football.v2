@@ -1,5 +1,24 @@
 [
   {
+    "id": "weekly-rollup-2026-03-02",
+    "date": "2026-03-02",
+    "title": "Weekly Fixes & Polish (Feb 24-Mar 1)",
+    "summary": "6 bug fixes and style improvements across navigation & routing, what's new, rosters.",
+    "description": [
+      "This week's 6 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Navigation & Routing</strong> — Drawer links for Trade Builder, Import Rankings, League Calendar, and League Summary now open reliably on theleague.us again..",
+      "<strong>What's New</strong> — Category badges on What's New cards with thumbnails are now vertically centered on the border at all screen sizes.",
+      "<strong>Rosters</strong> — Opponent average and rank columns in the player modal weekly stats now show real data from MFL instead of placeholder values. Draft pick numbers on the League Planner now show the correct positions from MFL instead of approximations from standings. Extension candidates and franchise tag options on the League Planner now show only your team's players instead of candidates from every team in the league. Rookie and draft prospect headshots now show their college photo instead of the generic placeholder across Free Agents, Rosters, Draft Predictor, and Trade Builder."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2026-03-03.webp",
+    "imageAlt": "Fernando Mendoza's player details modal showing his Indiana college headshot loaded via the new college headshot fallback"
+  },
+  {
     "id": "free-agents-redesign",
     "date": "2026-02-28",
     "title": "Free Agents, From Scratch",
