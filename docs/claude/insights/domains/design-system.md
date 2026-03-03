@@ -4,6 +4,45 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-03-02 - Editorial Hero Banner Pattern
+
+**Context:** Homepage hero redesign to match the magazine/editorial style from `about.astro`.
+
+**Pattern name:** `HeroBanner` with `variant="editorial"`
+
+**Component:** `src/components/theleague/HeroBanner.astro`
+
+**Design:** Transparent background (blends into page), large bold title (800 weight, `clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem)`), eyebrow badge + date, summary, two-action row (primary CTA button + text link). Image floats right in a tilted browser-frame when available.
+
+**Key props:**
+```astro
+<HeroBanner
+  variant="editorial"
+  title="Large headline here"
+  summary="Body copy — max 54ch"
+  link="/feature-page"
+  linkLabel="Read more"
+  kicker="New Feature"       <!-- gray pill badge, uppercase -->
+  kickerDate="Mar 2, 2026"   <!-- date next to badge -->
+  allNewsLink="/theleague/whats-new"
+  allNewsLabel="All releases"
+  image="feature-screenshot.webp"  <!-- optional, goes RIGHT -->
+  imageAlt="Screenshot of feature"
+/>
+```
+
+**Layout rules:**
+- Text on the LEFT, image on the RIGHT (normal flex row — not `row-reverse` like the old card variant)
+- No card background, border, or box-shadow — blends into page `var(--page-bg)`
+- Mobile (<700px): stacks vertically, image below text
+- The section header label ("Featured News" + "View all releases" link) was removed from the parent — the `allNewsLink` prop handles that link inline
+
+**Where used:** Homepage (`src/pages/theleague/index.astro`) — always `variant="editorial"` now.
+
+**Eyebrow data source:** `hero-resolver.ts` → `featureToHero()` sets `kicker` from `WHATS_NEW_CATEGORY_LABELS[entry.category]` and `kickerDate` from `formatKickerDate(entry.date)`.
+
+---
+
 ## 2026-01-18 - Existing CSS Variable Naming Convention
 
 **Context:** Planning nav design tokens

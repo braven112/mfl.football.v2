@@ -13,8 +13,15 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
+import { WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
+
+/** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
+function formatKickerDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 /** How many days a new feature stays in the hero as top priority */
 const FEATURE_HERO_DAYS = 7;
@@ -42,6 +49,8 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     accentColor: 'var(--color-secondary, #2e8743)',
     image: entry.image,
     imageAlt: entry.imageAlt,
+    kicker: WHATS_NEW_CATEGORY_LABELS[entry.category],
+    kickerDate: formatKickerDate(entry.date),
   };
 }
 
@@ -68,6 +77,8 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
     isActive: event.isActive,
     isUrgent: event.isUrgent,
     isExternal: link?.external,
+    kicker: event.isActive ? 'Happening Now' : event.isUrgent ? 'Coming Up' : 'League Event',
+    kickerDate: dateDisplay,
   };
 }
 
@@ -81,6 +92,7 @@ function getDefaultHero(): HeroContent {
     linkLabel: 'View all updates',
     icon: 'star',
     accentColor: 'var(--color-primary, #1c497c)',
+    kicker: "What's New",
   };
 }
 
