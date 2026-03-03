@@ -487,6 +487,161 @@ The green CTA (`--btn-secondary-bg`) is **not a general-purpose CTA**. It is res
 
 ---
 
+## 2026-03-02 - Page Toolbar / Section Header Row Pattern
+
+**Context:** Applied while aligning the Free Agents page (`src/pages/theleague/players.astro`) with the editorial design standard. The toolbar row below a hero or section break needed editorial identity.
+
+**Insight:** Pages with data tables benefit from a "toolbar row" that combines the editorial section title (left-border accent) with a live count display and optional action buttons (view toggles, filters). This is the page-level analog to the modal section title.
+
+### Toolbar Pattern
+
+```html
+<div class="players-toolbar">
+  <div class="toolbar-left">
+    <h2 class="section-title">Available Players</h2>
+    <span class="count-display" aria-live="polite">
+      <strong id="showing-count">50</strong> of <strong id="total">0</strong>
+    </span>
+  </div>
+  <div class="toolbar-center">
+    <!-- optional: view toggle pills -->
+  </div>
+  <div class="toolbar-right">
+    <!-- action button (Filters, Export, etc.) -->
+  </div>
+</div>
+```
+
+```css
+.players-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 0 0.625rem;
+  border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  flex-wrap: wrap;
+}
+.toolbar-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+/* Section title: the standard editorial left-border accent */
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--color-primary, #1c497c);
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+/* Count display alongside section title */
+.count-display {
+  font-size: 0.75rem;
+  color: var(--color-gray-400, #9ca3af);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.count-display strong {
+  color: var(--color-gray-700, #374151);
+  font-weight: 600;
+}
+```
+
+**Key rules:**
+- Section title always uses the left-border accent (`border-left: 2px solid var(--color-primary)`)
+- Count uses `baseline` alignment with title so numbers sit on same text baseline
+- `aria-live="polite"` on the count container for screen reader updates
+- On mobile: `toolbar-left` can `flex-wrap: wrap` and `gap: 0.5rem`
+
+**Source:** `src/pages/theleague/players.astro` (toolbar section)
+
+---
+
+## 2026-03-02 - Filter Panel Section Title Pattern
+
+**Context:** Applied to the collapsible filter panel on the Free Agents page.
+
+**Insight:** Any collapsible panel, drawer, or expandable section that contains grouped controls should open with an editorial section title. This provides visual hierarchy and confirms to the user what context they're in.
+
+### Filter Panel Pattern
+
+```html
+<div class="filters-panel__inner">
+  <h3 class="section-title">Filters</h3>
+  <div class="filters-grid">
+    <!-- filter groups -->
+  </div>
+</div>
+```
+
+Filter labels follow the **Detail Label** spec from the editorial standard:
+```css
+.filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-gray-400, #9ca3af);  /* NOT gray-500 */
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+```
+
+**Common mistake:** Using `gray-500` for filter labels. Editorial standard uses `gray-400` for all uppercase labels.
+
+**Source:** `src/pages/theleague/players.astro` (filters-panel section)
+
+---
+
+## 2026-03-02 - Table Header: Gray-50 Editorial Standard (Production Confirmed)
+
+**Context:** Converting the Free Agents page from the dark gradient table header to the editorial standard.
+
+**Decision:** The `--table-header-gradient` token (dark blue) is **NOT** the editorial standard for tables. It is a legacy pattern. New pages and refactored pages must use the gray-50 editorial header.
+
+### Correct Table Header CSS
+
+```css
+.my-table thead {
+  background: var(--color-gray-50, #f9fafb);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+}
+.my-table th {
+  padding: 0.5rem 0.375rem;
+  font-size: 0.625rem;      /* NOT 0.7rem or 0.75rem */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-400, #9ca3af);
+  white-space: nowrap;
+}
+/* Hover state (light bg) */
+.my-table th.sortable:hover {
+  background: var(--color-gray-100, #f3f4f6);
+  color: var(--color-gray-600, #4b5563);
+}
+/* Sorted state */
+.my-table th.sorted {
+  background: rgba(28, 73, 124, 0.06);
+  color: var(--color-primary, #1c497c);
+}
+```
+
+**Anti-pattern:** Using `rgba(255,255,255,0.1)` for hover/sorted — this only works on dark backgrounds and is invisible on the editorial gray-50 header.
+
+**The `--table-header-gradient` token** is still defined in tokens.css for backwards compatibility but should not be used in new work.
+
+**Source:** `src/pages/theleague/players.astro` (table styles, confirmed 2026-03-02)
+
+---
+
 ## 2026-03-01 - Slide Animation System (from ContractDemoOverlay)
 
 **Context:** Documenting the four animation patterns established in the contract demo walkthrough modal.
@@ -580,3 +735,140 @@ This keeps the editorial section-title pattern intact while signaling the sectio
 3. Badge components for labels
 4. Elevated shadow for #1/winner emphasis
 Never flood a card or section with colored backgrounds.
+
+---
+
+## 2026-03-02 - Broadcast Diagonal Cut (Flair Pattern)
+
+**Context:** Redesigning the Free Agents hero section to give the rotating player photos a distinctive sports-media presence. Iterated through several approaches (desaturated watermark, bordered frame, sports card with header/footer strips) before landing on the broadcast diagonal cut inspired by ESPN, FOX Sports, and CBS NFL broadcast graphics packages.
+
+**Decision:** The **broadcast diagonal cut** is an official design element for adding visual flair to sections that benefit from bold, sports-forward energy. It should be used sparingly — for hero sections, feature highlights, or promotional areas — not for everyday data layouts. Think of it as the design system's "broadcast mode."
+
+### When to Use
+
+- **Hero sections** with featured imagery (players, action shots, promo graphics)
+- **Feature callouts** or marketing areas that need visual punch
+- **Landing page accents** where the editorial standard alone feels too restrained
+- Any context where you'd see a similar treatment on ESPN SportsCenter or FOX NFL Sunday
+
+### When NOT to Use
+
+- Data tables, forms, modals, or utility UI
+- Anywhere the diagonal geometry would compete with content readability
+- Stacked/repeated — one broadcast cut per page maximum
+
+### Core Technique: Parallelogram Clip-Path
+
+The photo container uses `clip-path: polygon()` to create a parallelogram where both diagonal edges slant at the same angle. The key is that both left and right edges have an identical slope (20% horizontal shift over the full height), creating true parallel lines.
+
+```css
+/* Container: parallelogram with matching diagonal edges */
+.broadcast-photo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  /* Left edge: 20%→0%, Right edge: 110%→90% (same 20% slope) */
+  /* Right point starts off-screen (>100%) so the diagonal */
+  /* enters the visible area partway down, showing only a  */
+  /* small corner of background on the bottom-right         */
+  clip-path: polygon(20% 0, 110% 0, 90% 100%, 0% 100%);
+  background: var(--color-gray-900, #111827);
+}
+```
+
+### Accent Stripes
+
+Thin primary-blue stripes run along each diagonal edge using pseudo-elements with their own `clip-path` polygons. The stripe width is 2.5% of the container. The gradient direction is reversed between left and right for visual balance.
+
+```css
+/* Left accent stripe */
+.broadcast-photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(
+    to bottom,
+    var(--color-primary, #1c497c) 0%,
+    rgba(28, 73, 124, 0.6) 100%
+  );
+  clip-path: polygon(20% 0, 22.5% 0, 2.5% 100%, 0% 100%);
+  pointer-events: none;
+}
+
+/* Right accent stripe (parallel, same slope) */
+.broadcast-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(
+    to bottom,
+    rgba(28, 73, 124, 0.6) 0%,
+    var(--color-primary, #1c497c) 100%
+  );
+  clip-path: polygon(110% 0, 107.5% 0, 87.5% 100%, 90% 100%);
+  pointer-events: none;
+}
+```
+
+### Geometry Rules
+
+The parallelogram math must keep both edges parallel:
+
+| Parameter | Left Edge | Right Edge | Rule |
+|-----------|-----------|------------|------|
+| Top point | 20% | 110% (off-screen) | Difference must match |
+| Bottom point | 0% | 90% | Difference must match |
+| Slope | 20% leftward | 20% leftward | **Identical** = parallel |
+| Stripe width | 2.5% | 2.5% | Match for symmetry |
+
+To adjust how much corner shows on the right, shift both right points equally:
+- **More corner:** decrease values (e.g., 105%→85%)
+- **Less corner:** increase values (e.g., 115%→95%)
+- **No right corner:** use 120%→100% (line exits off-screen entirely)
+
+### Photo Treatment
+
+Images inside the broadcast cut should feel vivid and present — not faded or desaturated:
+
+```css
+.broadcast-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  filter: brightness(1.02) contrast(1.1) saturate(1.15);
+}
+```
+
+### Mobile Behavior
+
+Hide the broadcast photo element entirely below 767px. The diagonal geometry doesn't scale well to narrow viewports and competes with content:
+
+```css
+@media (max-width: 767px) {
+  .broadcast-photo {
+    display: none;
+  }
+}
+```
+
+### Design Lineage
+
+This pattern draws directly from NFL broadcast graphics:
+- **ESPN NFL** — angular geometric player frames with team-color accents
+- **FOX Sports** — diagonal clip-path layouts with bold color bars
+- **CBS NFL** — angled lower-thirds with gradient accent stripes
+
+The parallelogram shape (vs. a simple trapezoid) was chosen because it creates visual motion — the parallel lines imply speed and dynamism, which is the exact energy sports broadcast graphics are designed to convey.
+
+**Source:** `src/pages/theleague/players.astro` (hero section, confirmed 2026-03-02)
+
+**Recommendation:** When a page needs flair beyond the editorial standard, reach for the broadcast diagonal cut. It pairs well with the editorial light background (gray-50) because the dark photo area creates natural contrast. Reserve it for one hero-level element per page to maintain impact.
