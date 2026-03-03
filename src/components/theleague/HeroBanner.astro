@@ -17,8 +17,8 @@ export interface Props {
   icon?: string;
   /** CSS value for the accent color (e.g., "var(--color-secondary)") */
   accentColor?: string;
-  /** Visual variant: feature (green), event (category color), default (blue) */
-  variant?: 'feature' | 'event' | 'default';
+  /** Visual variant: editorial (magazine-style, large title), feature, event, default */
+  variant?: 'editorial' | 'feature' | 'event' | 'default';
   /** Event-only: formatted date or date range */
   dateDisplay?: string;
   /** Event-only: countdown or status text */
@@ -33,6 +33,14 @@ export interface Props {
   image?: string;
   /** Alt text for the screenshot image */
   imageAlt?: string;
+  /** Editorial-only: eyebrow badge label (e.g., "New Feature", "League Event") */
+  kicker?: string;
+  /** Editorial-only: date shown next to the eyebrow badge (e.g., "Mar 2, 2026") */
+  kickerDate?: string;
+  /** Editorial-only: "All news" text link URL (shown next to CTA button) */
+  allNewsLink?: string;
+  /** Editorial-only: label for the all-news link (default: "All releases") */
+  allNewsLabel?: string;
 }
 
 const {
@@ -50,6 +58,10 @@ const {
   isExternal = false,
   image,
   imageAlt,
+  kicker,
+  kickerDate,
+  allNewsLink,
+  allNewsLabel = 'All releases',
 } = Astro.props;
 
 import { spriteUrl } from '../../utils/sprite-url';
@@ -57,8 +69,71 @@ const iconId = icon ? `icon-${icon}` : null;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = icon ? MULTICOLOR_ICONS.includes(icon) : false;
 const isEvent = variant === 'event';
+const isEditorial = variant === 'editorial';
 const imagePath = image ? `/assets/whats-new/${image}` : null;
 ---
+
+{isEditorial ? (
+  <section
+    class={`hero-banner hero-banner--editorial${imagePath ? ' hero-banner--editorial-with-image' : ''}`}
+    aria-label="Featured announcement"
+  >
+    <div class="hero-banner__content">
+      <div class="hero-banner__editorial-body">
+        {(kicker || kickerDate) && (
+          <div class="hero-banner__eyebrow">
+            {kicker && <span class="hero-banner__kicker">{kicker}</span>}
+            {kicker && kickerDate && <span class="hero-banner__eyebrow-sep" aria-hidden="true">·</span>}
+            {kickerDate && <span class="hero-banner__eyebrow-date">{kickerDate}</span>}
+          </div>
+        )}
+        <h2 class="hero-banner__editorial-title">{title}</h2>
+        <p class="hero-banner__editorial-summary">{summary}</p>
+        {(link || allNewsLink) && (
+          <div class="hero-banner__editorial-actions">
+            {link && (
+              <a
+                href={link}
+                class="hero-banner__cta"
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
+              >
+                {linkLabel}
+                <span class="hero-banner__cta-arrow" aria-hidden="true">{isExternal ? '\u2197' : '\u2192'}</span>
+              </a>
+            )}
+            {allNewsLink && (
+              <a href={allNewsLink} class="hero-banner__all-news">
+                {allNewsLabel}
+                <span aria-hidden="true"> &rarr;</span>
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+
+      {imagePath && (
+        <div class="hero-banner__editorial-image">
+          <div class="browser-frame">
+            <div class="browser-frame__bar">
+              <span class="browser-frame__dot browser-frame__dot--red"></span>
+              <span class="browser-frame__dot browser-frame__dot--yellow"></span>
+              <span class="browser-frame__dot browser-frame__dot--green"></span>
+              <span class="browser-frame__url">{link ? `theleague.us${link}` : 'theleague.us'}</span>
+            </div>
+            <img
+              src={imagePath}
+              alt={imageAlt || title}
+              class="hero-banner__image-img"
+              loading="eager"
+            />
+          </div>
+        </div>
+      )}
+
+    </div>
+  </section>
+) : (
 
 <section
   class={`hero-banner hero-banner--${variant}${imagePath ? ' hero-banner--has-image' : ''}`}
@@ -163,6 +238,8 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
     )}
   </div>
 </section>
+
+)}
 
 <style>
   .hero-banner {
@@ -461,6 +538,155 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
 
     .hero-banner__cta {
       width: auto;
+    }
+  }
+
+  /* ════════════════════════════════════════════════════
+     Editorial Variant — Magazine-style hero
+     Text left, image right, large bold title, eyebrow
+     ════════════════════════════════════════════════════ */
+
+  .hero-banner--editorial {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    overflow: visible;
+  }
+
+  .hero-banner--editorial::before {
+    display: none;
+  }
+
+  .hero-banner--editorial:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .hero-banner--editorial .hero-banner__content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2.5rem;
+    padding: 0.5rem 0 1.5rem;
+  }
+
+  /* Text block — always on the left */
+  .hero-banner__editorial-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Eyebrow: badge · date */
+  .hero-banner__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hero-banner__kicker {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .hero-banner__eyebrow-sep {
+    font-size: 0.875rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .hero-banner__eyebrow-date {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Large editorial title */
+  .hero-banner__editorial-title {
+    font-size: clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem);
+    font-weight: 800;
+    color: var(--color-dark, #0f1e2e);
+    line-height: 1.15;
+    max-width: 24ch;
+    margin: 0;
+  }
+
+  /* Summary paragraph */
+  .hero-banner__editorial-summary {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 54ch;
+    margin: 0;
+  }
+
+  /* CTA row: primary button + text link */
+  .hero-banner__editorial-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+  }
+
+  .hero-banner__all-news {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .hero-banner__all-news:hover {
+    text-decoration: underline;
+  }
+
+  /* Image — on the right, browser-frame chrome */
+  .hero-banner__editorial-image {
+    flex: 0 0 46%;
+    max-width: 46%;
+  }
+
+  .hero-banner__editorial-image .browser-frame {
+    width: 100%;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    background: #e5e7eb;
+    transform: rotate(-1deg);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .hero-banner__editorial-image {
+      flex: 0 0 42%;
+      max-width: 42%;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .hero-banner--editorial .hero-banner__content {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .hero-banner__editorial-image {
+      flex: none;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .hero-banner__editorial-title {
+      font-size: clamp(1.5rem, 5vw + 0.5rem, 2rem);
     }
   }
 </style>

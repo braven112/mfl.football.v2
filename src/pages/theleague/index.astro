@@ -55,10 +55,6 @@ const pages = {
 <TheLeagueLayout title="The League - Home">
   <main class="league-home">
     <section class="featured-news">
-      <div class="featured-news__header">
-        <h2 class="featured-news__heading">Featured News</h2>
-        <a href={r("/theleague/whats-new")} class="featured-news__releases-link">View all releases &rarr;</a>
-      </div>
       <HeroBanner
         title={hero.title}
         summary={hero.summary}
@@ -66,7 +62,7 @@ const pages = {
         linkLabel={hero.linkLabel}
         icon={hero.icon}
         accentColor={hero.accentColor}
-        variant={hero.source}
+        variant="editorial"
         dateDisplay={hero.dateDisplay}
         statusText={hero.statusText}
         isActive={hero.isActive}
@@ -74,6 +70,10 @@ const pages = {
         isExternal={hero.isExternal}
         image={hero.image}
         imageAlt={hero.imageAlt}
+        kicker={hero.kicker}
+        kickerDate={hero.kickerDate}
+        allNewsLink={r("/theleague/whats-new")}
+        allNewsLabel="All releases"
       />
     </section>
 

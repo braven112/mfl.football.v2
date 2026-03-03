@@ -67,6 +67,10 @@ export interface HeroContent {
   image?: string;
   /** Alt text for the screenshot image */
   imageAlt?: string;
+  /** Eyebrow badge label (e.g., "New Feature", "Enhancement", "League Event") */
+  kicker?: string;
+  /** Eyebrow date text shown next to the badge (e.g., "Mar 2, 2026") */
+  kickerDate?: string;
 }
 
 /** Human-readable labels for What's New categories */
