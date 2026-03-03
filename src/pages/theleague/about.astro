@@ -1,0 +1,1645 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+
+export const prerender = true;
+---
+
+<TheLeagueLayout title="About This Project | The League">
+  <main class="about-page">
+
+    <!-- ===== HERO ===== -->
+    <header class="about-hero">
+      <div class="about-hero__eyebrow">
+        <span class="about-tag">Production Case Study</span>
+        <span class="about-dot">·</span>
+        <span class="about-hero__date">2025 – Present</span>
+      </div>
+
+      <h1 class="about-hero__title">Most AI experiments live in notebooks.<br>This one lives in production.</h1>
+
+      <p class="about-hero__deck">
+        A full-stack dynasty fantasy football platform built from scratch as a sandbox
+        for human-AI collaboration. Not a demo. Not a prototype. A system that 16
+        league members use every week to make decisions worth real fantasy money, built with
+        explicit architectural separations between what machines should own and what
+        they should assist with.
+      </p>
+
+      <div class="about-hero__stack">
+        <span class="about-stack-item">Astro + TypeScript</span>
+        <span class="about-stack-dot">·</span>
+        <span class="about-stack-item">MFL API Integration</span>
+        <span class="about-stack-dot">·</span>
+        <span class="about-stack-item">Claude API</span>
+        <span class="about-stack-dot">·</span>
+        <span class="about-stack-item">Structured AI Scaffolding</span>
+        <span class="about-stack-dot">·</span>
+        <span class="about-stack-item">Dynasty Contract Engine</span>
+      </div>
+    </header>
+
+    <!-- ===== STATS STRIP ===== -->
+    <div class="about-stats">
+      <div class="about-stats__item">
+        <div class="about-stats__value">15+</div>
+        <div class="about-stats__label">Years of salary history ingested</div>
+      </div>
+      <div class="about-stats__item">
+        <div class="about-stats__value">$45M</div>
+        <div class="about-stats__label">Salary cap — exact, enforced, tested</div>
+      </div>
+      <div class="about-stats__item">
+        <div class="about-stats__value">2</div>
+        <div class="about-stats__label">Leagues on one codebase</div>
+      </div>
+      <div class="about-stats__item">
+        <div class="about-stats__value">0</div>
+        <div class="about-stats__label">AI calls in the deterministic layer</div>
+      </div>
+    </div>
+
+    <div class="about-body">
+
+      <!-- ===== 01: THE PROBLEM DOMAIN ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">01</span>
+          <div>
+            <h2 class="about-section-title">The Problem Domain</h2>
+            <p class="about-section-sub">Why dynasty fantasy football is a well-formed substrate for AI research</p>
+          </div>
+        </div>
+
+        <div class="about-two-col">
+          <div class="about-prose">
+            <p>
+              Dynasty fantasy football isn't the same game most people know. You don't redraft
+              every year. You own players across multiple seasons, sign them to multi-year contracts,
+              manage a salary cap, and plan roster construction the way an NFL front office would —
+              except you're doing it in a league chat at 11pm on a Tuesday, which is its own
+              kind of decision-making environment.
+            </p>
+            <p>
+              The domain turns out to be an unusually well-formed substrate for exploring AI
+              integration because it combines two kinds of problems that require fundamentally
+              different tools: <strong>hard-constraint satisfaction</strong> and <strong>probabilistic estimation</strong>.
+            </p>
+            <p>
+              The salary cap is $45M. Not approximately. Not "around." Violating it disqualifies
+              your roster. That constraint is not a place for probabilistic reasoning — it's a
+              function. Meanwhile, figuring out whether a 27-year-old running back is worth a
+              3-year, $9M contract requires reasoning across injury history, usage trends,
+              offensive scheme, age curves, and roster context simultaneously. That is exactly
+              where structured AI reasoning adds value.
+            </p>
+          </div>
+          <div class="about-domain-box">
+            <div class="about-domain-type">
+              <div class="about-domain-type__label">Hard Constraints</div>
+              <div class="about-domain-type__items">
+                <div class="about-domain-item">Salary cap: exactly $45,000,000</div>
+                <div class="about-domain-item">Roster limit: exactly 28 players</div>
+                <div class="about-domain-item">Contract escalation: exactly 10%/yr</div>
+                <div class="about-domain-item">Franchise tag rules: explicitly defined</div>
+              </div>
+              <div class="about-domain-type__verdict about-domain-type__verdict--det">Functions. Tests. No AI.</div>
+            </div>
+            <div class="about-domain-type about-domain-type--prob">
+              <div class="about-domain-type__label">Probabilistic Signals</div>
+              <div class="about-domain-type__items">
+                <div class="about-domain-item">Player age &amp; durability curves</div>
+                <div class="about-domain-item">Trade value relative to market</div>
+                <div class="about-domain-item">Auction clearing price prediction</div>
+                <div class="about-domain-item">Free agent fit by roster context</div>
+              </div>
+              <div class="about-domain-type__verdict about-domain-type__verdict--prob">Estimates. Scaffolded AI. Evaluated.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 02: ARCHITECTURE ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">02</span>
+          <div>
+            <h2 class="about-section-title">Architecture: The Separation</h2>
+            <p class="about-section-sub">The core design decision that made everything else possible</p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            The core architectural decision was made early and never compromised: deterministic
+            logic and probabilistic reasoning are separated at the interface level, not just
+            organizationally. This sounds obvious. In practice, it requires constant discipline —
+            especially as features compound and the temptation to "just let the model handle it"
+            grows.
+          </p>
+        </div>
+
+        <div class="about-arch">
+          <div class="about-arch__layer about-arch__layer--det">
+            <div class="about-arch__layer-header">
+              <span class="about-arch__layer-title">Deterministic Layer</span>
+              <span class="about-arch__layer-badge">TypeScript · Fully Tested</span>
+            </div>
+            <div class="about-arch__modules">
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Salary Engine</div>
+                <div class="about-arch__module-desc"><code>salary-calculations.ts</code> — cap math, escalation, dead money</div>
+              </div>
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">MFL API Layer</div>
+                <div class="about-arch__module-desc">Typed wrappers around third-party API quirks; normalized data contracts</div>
+              </div>
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Contract Logic</div>
+                <div class="about-arch__module-desc">Franchise tag rules, contract expiry, cap hold calculations</div>
+              </div>
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Year Rollover</div>
+                <div class="about-arch__module-desc">Date-aware league/season year resolution; testable via <code>?testDate=</code></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-arch__bridge">
+            <div class="about-arch__bridge-label">Typed Context Window</div>
+            <div class="about-arch__bridge-desc">
+              Structured, verified data flows upward. The probabilistic layer receives facts, not raw API responses.
+            </div>
+          </div>
+
+          <div class="about-arch__layer about-arch__layer--prob">
+            <div class="about-arch__layer-header">
+              <span class="about-arch__layer-title">Probabilistic Layer</span>
+              <span class="about-arch__layer-badge">Claude API · Scaffolded · Evaluated</span>
+            </div>
+            <div class="about-arch__modules">
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Trade Analysis</div>
+                <div class="about-arch__module-desc">Value framing, relative surplus analysis, contextual reasoning</div>
+              </div>
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Auction Predictor</div>
+                <div class="about-arch__module-desc">Historical signal + roster context + scarcity → clearing price estimate</div>
+              </div>
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Free Agent Fit</div>
+                <div class="about-arch__module-desc">Positional need scoring + roster construction heuristics</div>
+              </div>
+              <div class="about-arch__module">
+                <div class="about-arch__module-name">Decision Support</div>
+                <div class="about-arch__module-desc">Summarization, option framing, risk surface identification</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <blockquote class="about-quote">
+          "A model touching salary cap calculations would be a regression, not an enhancement.
+          The question isn't whether AI is powerful enough — it's whether this is the right
+          kind of question to route through a probabilistic system."
+        </blockquote>
+      </section>
+
+      <!-- ===== 03: AI SCAFFOLDING ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">03</span>
+          <div>
+            <h2 class="about-section-title">The Scaffolding Pattern</h2>
+            <p class="about-section-sub">Structured interfaces around AI, not chatbot wrappers</p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            Every AI-assisted feature follows the same four-component scaffolding pattern.
+            The goal is to make AI behavior <em>predictable</em>, <em>traceable</em>, and
+            <em>improvable</em> — which requires more upfront structure than most teams invest in.
+          </p>
+        </div>
+
+        <div class="about-scaffold">
+          <div class="about-scaffold__item">
+            <div class="about-scaffold__num">1</div>
+            <div class="about-scaffold__content">
+              <div class="about-scaffold__title">Structured Context Window</div>
+              <div class="about-scaffold__body">
+                Each AI call receives a typed, scoped subset of league data relevant to the
+                specific question. Not "here's everything" — a curated context that includes
+                the roster, cap situation, historical data points, and constraints applicable
+                to this decision. The context window is a product decision, not an
+                implementation detail.
+              </div>
+            </div>
+          </div>
+          <div class="about-scaffold__item">
+            <div class="about-scaffold__num">2</div>
+            <div class="about-scaffold__content">
+              <div class="about-scaffold__title">Typed Prompt Templates</div>
+              <div class="about-scaffold__body">
+                Prompts are structured templates with explicit output format specifications,
+                reasoning requirements, and constraint declarations. "Given this player's
+                contract, age, and recent performance, rate their trade value 1–10 and
+                explain the top three factors" produces auditable output. "Analyze this
+                player" produces noise.
+              </div>
+            </div>
+          </div>
+          <div class="about-scaffold__item">
+            <div class="about-scaffold__num">3</div>
+            <div class="about-scaffold__content">
+              <div class="about-scaffold__title">Pre-Deployment Failure Catalog</div>
+              <div class="about-scaffold__body">
+                Before any AI feature ships, its failure modes are documented: What does
+                confidently wrong output look like for this feature? What signals indicate
+                the model is hallucinating? What's the graceful fallback? The failure catalog
+                directly informs the evaluation rubric, which means you're testing for
+                failure modes you've already characterized rather than discovering them in production.
+              </div>
+            </div>
+          </div>
+          <div class="about-scaffold__item">
+            <div class="about-scaffold__num">4</div>
+            <div class="about-scaffold__content">
+              <div class="about-scaffold__title">Traceable Outputs</div>
+              <div class="about-scaffold__body">
+                Every AI-assisted inference displays the source data it reasoned from.
+                A trade recommendation shows the salary comparison. An auction estimate
+                shows the historical comps. Users can inspect the reasoning chain and
+                identify when the model's inputs were wrong — which is usually more
+                actionable than identifying when its reasoning was wrong.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 04: THE META-SYSTEM ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">04</span>
+          <div>
+            <h2 class="about-section-title">The Meta-System</h2>
+            <p class="about-section-sub">AI as a development collaborator, not just a product feature</p>
+          </div>
+        </div>
+
+        <div class="about-two-col about-two-col--wide-text">
+          <div class="about-prose">
+            <p>
+              The most technically interesting aspect of this project is not any individual feature.
+              It's the development workflow itself — a structured AI collaboration system built into
+              the development process rather than bolted onto the product.
+            </p>
+            <p>
+              The <strong>AI Insights System</strong> is a structured corpus of domain knowledge
+              organized into files by domain (frontend patterns, API quirks, design system tokens,
+              accessibility rules) and by feature (each major feature has its own learnings file).
+              This corpus is loaded into the AI's context at the start of every development task.
+              After each task, new learnings are written back.
+            </p>
+            <p>
+              This creates a feedback loop between the AI's behavior and a maintained knowledge
+              base — essentially prompt-engineering at the organizational level rather than the
+              single-call level. The AI's knowledge of the codebase compounds across sessions
+              rather than resetting.
+            </p>
+            <p>
+              The same principles that govern product AI scaffolding govern this system: scoped
+              context, structured format, explicit update criteria, and failure modes that get
+              caught and corrected rather than silently accumulated.
+            </p>
+          </div>
+          <div class="about-insights-viz">
+            <div class="about-insights-header">AI Insights System</div>
+            <div class="about-insights-flow">
+              <div class="about-insights-node about-insights-node--trigger">
+                Task begins
+              </div>
+              <div class="about-insights-arrow">↓</div>
+              <div class="about-insights-node about-insights-node--load">
+                Load relevant domain + feature files into context
+              </div>
+              <div class="about-insights-arrow">↓</div>
+              <div class="about-insights-node about-insights-node--work">
+                AI executes task with accumulated project knowledge
+              </div>
+              <div class="about-insights-arrow">↓</div>
+              <div class="about-insights-node about-insights-node--write">
+                New learnings written back to corpus
+              </div>
+              <div class="about-insights-arrow about-insights-arrow--loop">↑ compounds</div>
+            </div>
+            <div class="about-insights-files">
+              <div class="about-insights-file">domains/design-system.md</div>
+              <div class="about-insights-file">domains/mfl-api.md</div>
+              <div class="about-insights-file">domains/frontend.md</div>
+              <div class="about-insights-file">features/trade-builder.md</div>
+              <div class="about-insights-file">features/auction-predictor.md</div>
+            </div>
+          </div>
+        </div>
+
+        <blockquote class="about-quote">
+          "The AI Insights System is itself a demonstration of the same principles applied to
+          the product: structured context, explicit formats, and a maintained feedback loop.
+          The development workflow is the feature."
+        </blockquote>
+      </section>
+
+      <!-- ===== 05: RELIABILITY ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">05</span>
+          <div>
+            <h2 class="about-section-title">Reliability by Design</h2>
+            <p class="about-section-sub">What production deployment teaches you about AI systems that notebooks don't</p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            Two reliability patterns emerged that only become visible in production — after a
+            full season of real decisions, real feedback, and real consequences when outputs
+            were wrong.
+          </p>
+        </div>
+
+        <div class="about-reliability-grid">
+          <div class="about-reliability-card">
+            <div class="about-reliability-card__eyebrow">Pattern 01</div>
+            <div class="about-reliability-card__title">Bounded Inference Outperforms Open-Ended Analysis</div>
+            <div class="about-reliability-card__body">
+              <p>
+                Scoped questions produce more useful outputs than open-ended ones — not
+                because the model is more capable with constraints, but because constraints
+                make failure modes smaller and more observable. "Rate this player's trade
+                value 1–10 and explain the top three factors" produces output where the
+                failure is detectable: you can check whether the three factors are the
+                right ones. "Analyze this player" produces output where failure is invisible
+                until it matters.
+              </p>
+            </div>
+          </div>
+          <div class="about-reliability-card">
+            <div class="about-reliability-card__eyebrow">Pattern 02</div>
+            <div class="about-reliability-card__title">Inputs Are More Likely Wrong Than Reasoning</div>
+            <div class="about-reliability-card__body">
+              <p>
+                When AI-assisted outputs are wrong, the root cause is almost always
+                wrong inputs — stale data, an off-by-one in salary calculations, a
+                player whose NFL team changed mid-season. The model's reasoning, given
+                correct inputs, is usually fine. This shifts the reliability investment:
+                the deterministic layer's accuracy directly determines the quality of
+                AI outputs, which means testing the data pipeline is as important as
+                evaluating the model.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 06: ITERATION ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">06</span>
+          <div>
+            <h2 class="about-section-title">Iteration as a System Property</h2>
+            <p class="about-section-sub">How the development model mirrors the AI integration philosophy</p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            The same principles that govern AI scaffolding govern the development process:
+            reduce ambiguity upfront, design for resilience, ship small and observe, close
+            feedback loops. Every feature is a composable component of a larger system rather
+            than a standalone deliverable.
+          </p>
+          <p>
+            The What's New system — an editorial changelog with a consistent voice, screenshot
+            requirements, and a weekly rollup — is not documentation overhead. It's a
+            forcing function. Writing "what changed and why it matters" in plain English requires
+            understanding what actually changed. If you can't explain it, you haven't finished
+            thinking about it.
+          </p>
+          <p>
+            The entire architecture — every utility, every data structure, every API wrapper —
+            is designed with the Auction Price Predictor in mind as the culminating feature.
+            This means features aren't shipped when they work in isolation. They're shipped
+            when they contribute to a system that can eventually support probabilistic auction
+            valuation at the position-scarcity level. Composability is a first-class requirement.
+          </p>
+        </div>
+
+        <div class="about-timeline">
+          <div class="about-timeline__phase">
+            <div class="about-timeline__label">Foundation</div>
+            <div class="about-timeline__items">
+              <span class="about-tl-item">MFL API integration</span>
+              <span class="about-tl-item">Salary engine</span>
+              <span class="about-tl-item">Roster hub</span>
+              <span class="about-tl-item">Contract logic</span>
+            </div>
+          </div>
+          <div class="about-timeline__arrow">→</div>
+          <div class="about-timeline__phase">
+            <div class="about-timeline__label">Decision Tools</div>
+            <div class="about-timeline__items">
+              <span class="about-tl-item">Trade builder</span>
+              <span class="about-tl-item">Free agent view</span>
+              <span class="about-tl-item">League planner</span>
+              <span class="about-tl-item">Draft predictor</span>
+            </div>
+          </div>
+          <div class="about-timeline__arrow">→</div>
+          <div class="about-timeline__phase">
+            <div class="about-timeline__label">Analytics Layer</div>
+            <div class="about-timeline__items">
+              <span class="about-tl-item">Salary MVPs</span>
+              <span class="about-tl-item">Dead money</span>
+              <span class="about-tl-item">League summary</span>
+              <span class="about-tl-item">Historical analysis</span>
+            </div>
+          </div>
+          <div class="about-timeline__arrow">→</div>
+          <div class="about-timeline__phase about-timeline__phase--next">
+            <div class="about-timeline__label">Predictive System</div>
+            <div class="about-timeline__items">
+              <span class="about-tl-item">Auction predictor</span>
+              <span class="about-tl-item">AI trade framing</span>
+              <span class="about-tl-item">Value signals</span>
+              <span class="about-tl-item">Scarcity model</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 07: WHATS NEXT ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">07</span>
+          <div>
+            <h2 class="about-section-title">The Auction Price Predictor</h2>
+            <p class="about-section-sub">What this entire system was designed to support</p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            Dynasty auction drafts are a hard prediction problem. You're not just estimating
+            player value — you're estimating clearing price, which is a function of player
+            quality, positional scarcity relative to the remaining pool, budget distributions
+            across 12 competing managers, and information asymmetry. The same player goes for
+            dramatically different prices depending on when in the auction they're nominated,
+            how many similar players remain available, and whether the managers with the
+            most budget have already filled their need at that position.
+          </p>
+          <p>
+            This is precisely the right problem for structured AI reasoning — layered on top
+            of a deterministic foundation that knows exactly how much cap room each team has,
+            exactly which positions remain unfilled, and exactly what each player's historical
+            salary trajectory looks like.
+          </p>
+          <p>
+            Every technical decision made in this project — the separation of layers, the typed
+            context windows, the composable utilities, the historical data ingestion — was made
+            with this system in mind. The foundation is solid. The predictor is what comes next.
+          </p>
+        </div>
+
+        <div class="about-predictor-box">
+          <div class="about-predictor-box__title">Auction Predictor: System Inputs</div>
+          <div class="about-predictor-box__grid">
+            <div class="about-predictor-input">
+              <div class="about-predictor-input__label">Historical Salary Data</div>
+              <div class="about-predictor-input__desc">15 years of auction results, normalized by year and position</div>
+            </div>
+            <div class="about-predictor-input">
+              <div class="about-predictor-input__label">Roster Context</div>
+              <div class="about-predictor-input__desc">Real-time cap room and position gaps per team, deterministically calculated</div>
+            </div>
+            <div class="about-predictor-input">
+              <div class="about-predictor-input__label">Positional Scarcity</div>
+              <div class="about-predictor-input__desc">Pool depth at each position, tiered by projected value</div>
+            </div>
+            <div class="about-predictor-input">
+              <div class="about-predictor-input__label">Player Signal</div>
+              <div class="about-predictor-input__desc">Age, contract status, performance trajectory, NFL context</div>
+            </div>
+          </div>
+          <div class="about-predictor-box__output">
+            <span class="about-predictor-box__output-label">Output →</span>
+            <span class="about-predictor-box__output-val">Estimated clearing price range + positional surplus / deficit framing per team</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 08: CROSS-STACK ===== -->
+      <section class="about-section">
+        <div class="about-section-header">
+          <span class="about-section-num">08</span>
+          <div>
+            <h2 class="about-section-title">Cross-Stack Fluency</h2>
+            <p class="about-section-sub">The project required operating across every discipline simultaneously — and treating none of them as someone else's problem</p>
+          </div>
+        </div>
+
+        <div class="about-prose">
+          <p>
+            Most product builders specialize. Design-first PMs defer to engineering on architecture.
+            Engineering-first PMs defer to design on systems. Business-first PMs defer to both.
+            This project had no one to defer to — every layer had to be owned, which meant
+            every discipline had to be fluent enough to make real decisions in.
+          </p>
+          <p>
+            The result is a system where the design tokens inform the data model, the data model
+            informs the AI context window, the AI context window informs the editorial changelog,
+            and the changelog informs what gets built next. These aren't silos. They're a single
+            system expressed across different disciplines.
+          </p>
+        </div>
+
+        <div class="about-crossstack-grid">
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Design System Tokens</div>
+            <div class="about-cs-card__evidence">
+              A complete editorial design language built from scratch — typography scale, CSS custom
+              properties with fallbacks, layered shadow tokens, component pattern catalog. The same
+              token layer powers both leagues without duplication.
+            </div>
+            <div class="about-cs-card__artifact">tokens.css · design-system.astro</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Content Modeling</div>
+            <div class="about-cs-card__evidence">
+              The What's New system is a typed JSON schema with category taxonomy, screenshot
+              requirements, editorial voice mandates, and a weekly rollup pipeline via GitHub Actions.
+              Not a list of features — a structured content model.
+            </div>
+            <div class="about-cs-card__artifact">whats-new.json · weekly-changelog-rollup.mjs</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Front-End Architecture</div>
+            <div class="about-cs-card__evidence">
+              Astro + TypeScript with static generation, a composable component library (PlayerCell,
+              PlayerDetailsModal, TradeBuilder), scoped styles, and dual-league support sharing one
+              codebase without branching logic polluting every file.
+            </div>
+            <div class="about-cs-card__artifact">TheLeagueLayout · league-context.ts</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Performance Engineering</div>
+            <div class="about-cs-card__evidence">
+              MFL API responses cached to JSON at build time. Most pages are statically pre-rendered
+              with zero runtime data fetching. The live data layer is opt-in, not the default — which
+              means page load is fast even on slow connections.
+            </div>
+            <div class="about-cs-card__artifact">prerender = true · pnpm sync:all</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Analytics Instrumentation</div>
+            <div class="about-cs-card__evidence">
+              Dead Money Awards, Salary-Adjusted MVP, League Summary — structured analytics systems
+              that transform raw salary and scoring data into decision-relevant signals. Built as
+              reusable utilities, not one-off page logic.
+            </div>
+            <div class="about-cs-card__artifact">salary-calculations.ts · dead-money.astro</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Business Impact Framing</div>
+            <div class="about-cs-card__evidence">
+              Every feature maps to a measurable competitive outcome: cap efficiency, trade surplus,
+              auction ROI. The dynasty strategy that informs feature priorities is documented in
+              CLAUDE.md — the product brief and the AI brief are the same document.
+            </div>
+            <div class="about-cs-card__artifact">CLAUDE.md · Team Strategy section</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Executive Narrative</div>
+            <div class="about-cs-card__evidence">
+              The editorial changelog voice — witty, specific, never dry — is a deliberate choice
+              about how a product communicates its own value. The What's New writing guidelines are
+              as precise as the TypeScript interfaces. Both enforce the same thing: clarity.
+            </div>
+            <div class="about-cs-card__artifact">whats-new.json · CLAUDE.md writing style guide</div>
+          </div>
+
+          <div class="about-cs-card">
+            <div class="about-cs-card__discipline">Marketing Velocity</div>
+            <div class="about-cs-card__evidence">
+              Weekly changelog cadence, 7-day hero banner window, automated Monday rollup, screenshot
+              requirements for every release. Every deployment is a communication event with a
+              consistent format — which means it actually happens, every week, without friction.
+            </div>
+            <div class="about-cs-card__artifact">weekly-changelog-rollup.mjs · hero-resolver.ts</div>
+          </div>
+        </div>
+
+        <blockquote class="about-quote">
+          "These aren't separate skillsets that happen to coexist. They're a single operating
+          model: understand the full system, own the full system, ship the full system."
+        </blockquote>
+      </section>
+
+      <!-- ===== CLOSING ===== -->
+      <section class="about-closing">
+        <div class="about-closing__inner">
+          <div class="about-closing__text">
+            <h2 class="about-closing__title">The Thesis</h2>
+            <p>
+              AI systems that work in production aren't distinguished by model capability.
+              They're distinguished by the quality of the architecture around the model:
+              the separation of concerns, the structure of the context, the clarity of the
+              success criteria, and the discipline to maintain feedback loops over time.
+            </p>
+            <p>
+              This project is a sustained argument for that thesis, built in a domain where
+              the feedback loop is short, the constraints are hard, and the users care about
+              the results every week of the NFL season.
+            </p>
+          </div>
+          <div class="about-closing__ctas">
+            <a href="/theleague/rosters" class="about-btn about-btn--primary">
+              Explore the Roster Hub
+              <span class="about-btn__arrow">→</span>
+            </a>
+            <a href="/theleague/trade-builder" class="about-btn about-btn--ghost">
+              Try the Trade Builder
+              <span class="about-btn__arrow">→</span>
+            </a>
+            <a href="/theleague/whats-new" class="about-btn about-btn--ghost">
+              What's New
+              <span class="about-btn__arrow">→</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.about-body -->
+  </main>
+</TheLeagueLayout>
+
+<style>
+  /* ===========================
+     Shell
+  =========================== */
+  .about-page {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+  }
+
+  /* ===========================
+     Hero
+  =========================== */
+  .about-hero {
+    padding: 2.75rem 0 2.25rem;
+    margin-bottom: 2rem;
+    max-width: 68rem;
+  }
+
+  .about-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .about-tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+  }
+
+  .about-dot {
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.75rem;
+  }
+
+  .about-hero__date {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-weight: 500;
+  }
+
+  .about-hero__title {
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 1.125rem;
+  }
+
+  .about-hero__deck {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 64ch;
+    margin: 0 0 1.5rem;
+  }
+
+  .about-hero__stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .about-stack-item {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .about-stack-dot {
+    color: var(--color-gray-300, #d1d5db);
+    font-size: 0.75rem;
+  }
+
+  /* ===========================
+     Stats Strip
+  =========================== */
+  .about-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 3rem;
+  }
+
+  .about-stats__item {
+    padding: 1rem 1.125rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .about-stats__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary, #1c497c);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .about-stats__label {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Body
+  =========================== */
+  .about-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+  }
+
+  /* ===========================
+     Section
+  =========================== */
+  .about-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .about-section-header {
+    display: flex;
+    gap: 1.125rem;
+    align-items: flex-start;
+  }
+
+  .about-section-num {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.5;
+    letter-spacing: 0.06em;
+    padding-top: 0.05rem;
+    min-width: 1.75rem;
+  }
+
+  .about-section-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    line-height: 1;
+  }
+
+  .about-section-sub {
+    margin: 0.3rem 0 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Prose
+  =========================== */
+  .about-prose {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .about-prose p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: var(--color-gray-700, #374151);
+    max-width: 68ch;
+  }
+
+  .about-prose strong {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .about-prose em {
+    font-style: italic;
+  }
+
+  /* ===========================
+     Two-column layout
+  =========================== */
+  .about-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .about-two-col--wide-text {
+    grid-template-columns: 1.25fr 1fr;
+  }
+
+  /* ===========================
+     Domain Box
+  =========================== */
+  .about-domain-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .about-domain-type {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1.125rem;
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .about-domain-type--prob {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, white);
+    border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
+  }
+
+  .about-domain-type__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    margin-bottom: 0.625rem;
+  }
+
+  .about-domain-type--prob .about-domain-type__label {
+    color: var(--color-primary, #1c497c);
+  }
+
+  .about-domain-type__items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .about-domain-item {
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-gray-200, #e5e7eb);
+    line-height: 1.4;
+  }
+
+  .about-domain-type--prob .about-domain-item {
+    border-left-color: color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
+  }
+
+  .about-domain-type__verdict {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+  }
+
+  .about-domain-type__verdict--det {
+    background: var(--color-gray-200, #e5e7eb);
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .about-domain-type__verdict--prob {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 15%, transparent);
+    color: var(--color-primary, #1c497c);
+  }
+
+  /* ===========================
+     Architecture Diagram
+  =========================== */
+  .about-arch {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    max-width: 56rem;
+  }
+
+  .about-arch__layer {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .about-arch__layer--det {
+    background: var(--color-gray-50, #f9fafb);
+    border-bottom: none;
+  }
+
+  .about-arch__layer--prob {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, white);
+  }
+
+  .about-arch__layer-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .about-arch__layer-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .about-arch__layer-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--color-gray-200, #e5e7eb);
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .about-arch__layer--prob .about-arch__layer-badge {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 15%, transparent);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .about-arch__modules {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.625rem;
+  }
+
+  .about-arch__module {
+    background: #fff;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 6px;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .about-arch__layer--prob .about-arch__module {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, white);
+    border-color: color-mix(in srgb, var(--color-primary, #1c497c) 20%, transparent);
+  }
+
+  .about-arch__module-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    margin-bottom: 0.25rem;
+  }
+
+  .about-arch__module-desc {
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .about-arch__module-desc code {
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 0.6875rem;
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .about-arch__bridge {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, white);
+    border-top: 1px dashed color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
+    border-bottom: 1px dashed color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
+  }
+
+  .about-arch__bridge-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .about-arch__bridge-desc {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Quote
+  =========================== */
+  .about-quote {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    border-left: 3px solid var(--color-primary, #1c497c);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 3px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.9375rem;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--color-gray-700, #374151);
+    max-width: 60ch;
+  }
+
+  /* ===========================
+     Scaffold Steps
+  =========================== */
+  .about-scaffold {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    max-width: 56rem;
+  }
+
+  .about-scaffold__item {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    align-items: flex-start;
+  }
+
+  .about-scaffold__item:last-child {
+    border-bottom: none;
+  }
+
+  .about-scaffold__item:nth-child(even) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .about-scaffold__num {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .about-scaffold__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin-bottom: 0.4rem;
+  }
+
+  .about-scaffold__body {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* ===========================
+     AI Insights Viz
+  =========================== */
+  .about-insights-viz {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1.25rem;
+  }
+
+  .about-insights-header {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    margin-bottom: 1rem;
+  }
+
+  .about-insights-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .about-insights-node {
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--content-border, #e2e8f0);
+    background: #fff;
+    color: var(--color-gray-700, #374151);
+    width: 100%;
+  }
+
+  .about-insights-node--trigger { border-left: 3px solid var(--color-gray-300, #d1d5db); }
+  .about-insights-node--load { border-left: 3px solid var(--color-primary, #1c497c); }
+  .about-insights-node--work { border-left: 3px solid #2e8743; }
+  .about-insights-node--write { border-left: 3px solid #d97706; }
+
+  .about-insights-arrow {
+    font-size: 0.875rem;
+    color: var(--color-gray-400, #9ca3af);
+    padding-left: 0.75rem;
+  }
+
+  .about-insights-arrow--loop {
+    color: var(--color-primary, #1c497c);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .about-insights-files {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    padding-top: 0.875rem;
+  }
+
+  .about-insights-file {
+    font-size: 0.75rem;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    color: var(--color-gray-500, #6b7280);
+    padding: 0.2rem 0;
+  }
+
+  /* ===========================
+     Reliability
+  =========================== */
+  .about-reliability-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    max-width: 56rem;
+  }
+
+  .about-reliability-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1.25rem;
+  }
+
+  .about-reliability-card__eyebrow {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+  }
+
+  .about-reliability-card__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin-bottom: 0.625rem;
+    line-height: 1.35;
+  }
+
+  .about-reliability-card__body p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* ===========================
+     Timeline
+  =========================== */
+  .about-timeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    max-width: 56rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+  }
+
+  .about-timeline__phase {
+    flex: 1;
+    padding: 1rem 1.125rem;
+    border-right: 1px solid var(--content-border, #e2e8f0);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .about-timeline__phase:last-child {
+    border-right: none;
+  }
+
+  .about-timeline__phase--next {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 5%, white);
+  }
+
+  .about-timeline__arrow {
+    display: none;
+  }
+
+  .about-timeline__label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    margin-bottom: 0.625rem;
+    opacity: 0.75;
+  }
+
+  .about-timeline__phase--next .about-timeline__label {
+    opacity: 1;
+  }
+
+  .about-timeline__items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .about-tl-item {
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    line-height: 1.3;
+  }
+
+  .about-timeline__phase--next .about-tl-item {
+    color: var(--color-primary, #1c497c);
+    font-weight: 500;
+  }
+
+  /* ===========================
+     Predictor Box
+  =========================== */
+  .about-predictor-box {
+    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    max-width: 56rem;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, white);
+  }
+
+  .about-predictor-box__title {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 20%, transparent);
+  }
+
+  .about-predictor-box__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 20%, transparent);
+  }
+
+  .about-predictor-input {
+    padding: 0.875rem 1rem;
+    border-right: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 20%, transparent);
+  }
+
+  .about-predictor-input:last-child {
+    border-right: none;
+  }
+
+  .about-predictor-input__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin-bottom: 0.3rem;
+  }
+
+  .about-predictor-input__desc {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .about-predictor-box__output {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    padding: 0.875rem 1.25rem;
+  }
+
+  .about-predictor-box__output-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    flex-shrink: 0;
+  }
+
+  .about-predictor-box__output-val {
+    font-size: 0.875rem;
+    color: var(--color-gray-700, #374151);
+    font-style: italic;
+  }
+
+  /* ===========================
+     Cross-Stack Grid
+  =========================== */
+  .about-crossstack-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+
+  .about-cs-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-top: 3px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1rem 1rem 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .about-cs-card__discipline {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+
+  .about-cs-card__evidence {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-gray-600, #4b5563);
+    flex: 1;
+  }
+
+  .about-cs-card__artifact {
+    font-size: 0.6875rem;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    color: var(--color-primary, #1c497c);
+    opacity: 0.75;
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  /* ===========================
+     Closing
+  =========================== */
+  .about-closing {
+    margin-top: 1rem;
+    padding-top: 3rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .about-closing__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .about-closing__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 1.25rem;
+  }
+
+  .about-closing__text {
+    max-width: 64ch;
+  }
+
+  .about-closing__text p {
+    margin: 0 0 0.875rem;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .about-closing__text p:last-child {
+    margin-bottom: 0;
+  }
+
+  .about-closing__ctas {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* ===========================
+     Buttons
+  =========================== */
+  .about-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .about-btn--primary {
+    background: var(--btn-primary-bg, #1c497c);
+    color: #fff;
+    border: 1px solid transparent;
+  }
+
+  .about-btn--primary:hover {
+    background: var(--btn-primary-bg-hover, #164066);
+  }
+
+  .about-btn--ghost {
+    background: transparent;
+    color: var(--color-primary, #1c497c);
+    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
+  }
+
+  .about-btn--ghost:hover {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
+  }
+
+  .about-btn__arrow {
+    transition: transform 0.15s ease;
+  }
+
+  .about-btn:hover .about-btn__arrow {
+    transform: translateX(3px);
+  }
+
+  /* ===========================
+     Responsive
+  =========================== */
+  @media (max-width: 1000px) {
+    .about-crossstack-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .about-arch__modules {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .about-predictor-box__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .about-predictor-input:nth-child(2) {
+      border-right: none;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .about-two-col,
+    .about-two-col--wide-text {
+      grid-template-columns: 1fr;
+    }
+
+    .about-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .about-crossstack-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .about-reliability-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .about-timeline {
+      flex-direction: column;
+    }
+
+    .about-timeline__phase {
+      border-right: none;
+      border-bottom: 1px solid var(--content-border, #e2e8f0);
+    }
+
+    .about-timeline__phase:last-child {
+      border-bottom: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .about-page {
+      padding: 0 1rem 3.5rem;
+    }
+
+    .about-hero__title {
+      font-size: 1.75rem;
+    }
+
+    .about-hero__deck {
+      font-size: 0.9375rem;
+    }
+
+    .about-stats {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .about-arch__modules {
+      grid-template-columns: 1fr;
+    }
+
+    .about-predictor-box__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .about-predictor-input {
+      border-right: none;
+      border-bottom: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 20%, transparent);
+    }
+
+    .about-predictor-input:last-child {
+      border-bottom: none;
+    }
+
+    .about-closing__ctas {
+      flex-direction: column;
+    }
+
+    .about-btn {
+      justify-content: center;
+    }
+
+    .about-quote {
+      font-size: 0.9375rem;
+    }
+
+    .about-scaffold__item {
+      padding: 1rem;
+    }
+  }
+</style>
