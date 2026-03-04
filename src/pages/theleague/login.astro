@@ -6,9 +6,10 @@
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getAuthUser } from '../../utils/auth';
 
-// If user is already authenticated, redirect to theleague
-const authUser = Astro.request.headers.get('cookie')?.includes('session_token');
+// If user is already authenticated with a valid session, redirect to theleague
+const authUser = getAuthUser(Astro.request);
 if (authUser) {
   return Astro.redirect('/theleague');
 }

@@ -5,6 +5,7 @@
  * Allows owners to declare contract years for eligible players:
  * - new-acquisition: BBID/auction players choose 2-5 years
  * - rookie-override: Rookies reduce from default 4yr RC to 1-3 years
+ * - veteran-extension: Multi-step flow — step 1 = year select, step 2 = review
  *
  * Follows PlayerDetailsModal editorial design language.
  * Populated entirely by client-side JS — Astro renders the static shell.
@@ -19,6 +20,18 @@
         <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
     </button>
+
+    <!-- Step Indicator — veteran-extension only, sits above the scrollable body -->
+    <div class="cdm-stepper" id="cdm-stepper" style="display: none;" aria-label="Progress">
+      <div class="cdm-stepper__track">
+        <button class="cdm-stepper__dot active" id="cdm-step-dot-1" aria-label="Go to step 1"><span>1</span></button>
+        <div class="cdm-stepper__line" id="cdm-step-line-1"></div>
+        <button class="cdm-stepper__dot" id="cdm-step-dot-2" aria-label="Step 2" disabled><span>2</span></button>
+        <div class="cdm-stepper__line" id="cdm-step-line-2" style="display: none;"></div>
+        <button class="cdm-stepper__dot" id="cdm-step-dot-3" aria-label="Step 3" disabled style="display: none;"><span>3</span></button>
+      </div>
+      <span class="cdm-stepper__label" id="cdm-stepper-label">Step 1 of ?</span>
+    </div>
 
     <div class="cdm-body">
       <!-- Hero Identity -->
@@ -41,8 +54,8 @@
         <span class="cdm-type-badge__label" id="cdm-type-label">New Acquisition</span>
       </div>
 
-      <!-- Key Contract Metrics (3-column grid) -->
-      <div class="cdm-metrics">
+      <!-- Key Contract Metrics (3-column grid) — hidden on step 2 of veteran-extension -->
+      <div class="cdm-metrics" id="cdm-metrics">
         <div class="cdm-metric">
           <span class="cdm-metric__value" id="cdm-current-salary">&mdash;</span>
           <span class="cdm-metric__label">Salary</span>
@@ -67,7 +80,15 @@
         <span class="cdm-deadline__text" id="cdm-deadline-text">Deadline in &mdash;</span>
       </div>
 
-      <!-- Year Selection (new-acquisition / rookie-override) -->
+      <!-- Action Selection — step 1 for all salary-tool flows (franchise, extension, cut, trade) -->
+      <div class="cdm-section" id="cdm-action-section" style="display: none;">
+        <h4 class="cdm-section__title">Contract Action</h4>
+        <div class="cdm-action-options" id="cdm-action-options">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Year Selection (new-acquisition / rookie-override / veteran-extension step 1) -->
       <div class="cdm-section" id="cdm-year-section">
         <h4 class="cdm-section__title">Select Contract Length</h4>
         <div class="cdm-year-options" id="cdm-year-options">
@@ -99,45 +120,98 @@
         </div>
       </div>
 
-      <!-- Extension Panel (veteran-extension / rookie-extension) -->
-      <div class="cdm-section" id="cdm-extension-section" style="display: none;">
-        <h4 class="cdm-section__title">Extension Terms</h4>
-        <div class="cdm-salary-comparison">
-          <div class="cdm-salary-comparison__col">
-            <span class="cdm-salary-comparison__label">Current</span>
-            <span class="cdm-salary-comparison__value" id="cdm-ext-current">&mdash;</span>
+      <!-- Cut Review — step 2 for cut action -->
+      <div class="cdm-section" id="cdm-cut-section" style="display: none;">
+        <h4 class="cdm-section__title">Financial Breakdown</h4>
+        <div class="cdm-metrics">
+          <div class="cdm-metric">
+            <span class="cdm-metric__value cdm-metric__value--warning" id="cdm-cut-current-hit">&mdash;</span>
+            <span class="cdm-metric__label">Cap Hit Now</span>
           </div>
-          <svg class="cdm-salary-comparison__arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-          <div class="cdm-salary-comparison__col cdm-salary-comparison__col--new">
-            <span class="cdm-salary-comparison__label">After Extension</span>
-            <span class="cdm-salary-comparison__value cdm-salary-comparison__value--highlight" id="cdm-ext-new">&mdash;</span>
+          <div class="cdm-metric">
+            <span class="cdm-metric__value" id="cdm-cut-future-hit">&mdash;</span>
+            <span class="cdm-metric__label">Future Dead $</span>
+          </div>
+          <div class="cdm-metric">
+            <span class="cdm-metric__value cdm-metric__value--positive" id="cdm-cut-savings">&mdash;</span>
+            <span class="cdm-metric__label">Cap Saved</span>
           </div>
         </div>
+        <p class="cdm-cut-note" id="cdm-cut-note">&mdash;</p>
       </div>
 
-      <!-- Salary Projection Table (year-based selections + extension) -->
-      <div class="cdm-section" id="cdm-projection-section" style="display: none;">
-        <h4 class="cdm-section__title">Salary Projection</h4>
-        <div class="cdm-projection-wrapper">
-          <table class="cdm-projection-table">
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th class="cdm-projection-th--salary">Salary</th>
-              </tr>
-            </thead>
-            <tbody id="cdm-projection-body">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
+      <!-- Review Panel — step 2 content (veteran-extension) + immediate for other types -->
+      <div class="cdm-review-panel" id="cdm-review-panel">
+
+        <!-- Extension Panel (veteran-extension / rookie-extension) -->
+        <div class="cdm-section" id="cdm-extension-section" style="display: none;">
+          <h4 class="cdm-section__title">Extension Terms</h4>
+          <div class="cdm-salary-comparison">
+            <div class="cdm-salary-comparison__col">
+              <span class="cdm-salary-comparison__label">Current</span>
+              <span class="cdm-salary-comparison__value" id="cdm-ext-current">&mdash;</span>
+            </div>
+            <svg class="cdm-salary-comparison__arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            <div class="cdm-salary-comparison__col cdm-salary-comparison__col--new">
+              <span class="cdm-salary-comparison__label">After Extension</span>
+              <span class="cdm-salary-comparison__value cdm-salary-comparison__value--highlight" id="cdm-ext-new">&mdash;</span>
+            </div>
+          </div>
+          <!-- Years comparison row -->
+          <div class="cdm-ext-years-row" id="cdm-ext-years-row">
+            <span class="cdm-ext-years-row__label">Term</span>
+            <div class="cdm-ext-years-row__vals">
+              <span id="cdm-ext-years-current">&mdash;</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+              <span class="cdm-ext-years-row__new" id="cdm-ext-years-new">&mdash;</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Submit -->
-      <div class="cdm-actions">
-        <button class="cdm-submit" id="cdm-submit" disabled>Declare Contract</button>
+        <!-- Formula Accordion (veteran-extension only, expanded by default) -->
+        <div class="cdm-formula-section" id="cdm-formula-section" style="display: none;">
+          <button class="cdm-formula-toggle" aria-expanded="false" id="cdm-formula-toggle">
+            <span class="cdm-formula-toggle__label">Formula Breakdown</span>
+            <svg class="cdm-formula-toggle__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="cdm-formula-body" id="cdm-formula-body">
+            <div class="cdm-formula__equation" id="cdm-formula-equation"></div>
+            <div class="cdm-formula__steps" id="cdm-formula-steps"></div>
+            <div class="cdm-formula__result" id="cdm-formula-result"></div>
+          </div>
+        </div>
+
+        <!-- Salary Projection Table (year-based selections + extension) -->
+        <div class="cdm-section" id="cdm-projection-section" style="display: none;">
+          <h4 class="cdm-section__title">Salary Projection</h4>
+          <div class="cdm-projection-wrapper">
+            <table class="cdm-projection-table">
+              <thead>
+                <tr id="cdm-projection-head">
+                  <th>Season</th>
+                  <th class="cdm-projection-th--right">Age</th>
+                  <th class="cdm-projection-th--salary">Salary</th>
+                </tr>
+              </thead>
+              <tbody id="cdm-projection-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /cdm-review-panel -->
+    </div><!-- /cdm-body -->
+
+    <!-- Footer — Back + Submit, always visible regardless of scroll -->
+    <div class="cdm-footer" id="cdm-footer">
+      <div class="cdm-footer__messages">
         <div class="cdm-error" id="cdm-error" style="display: none;"></div>
         <div class="cdm-success" id="cdm-success" style="display: none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -145,6 +219,10 @@
           </svg>
           <span>Declaration submitted for commissioner review</span>
         </div>
+      </div>
+      <div class="cdm-footer__actions">
+        <button class="cdm-footer__back" id="cdm-back-btn" style="display: none;">Back</button>
+        <button class="cdm-submit" id="cdm-submit" disabled>Declare Contract</button>
       </div>
     </div>
   </div>
@@ -195,6 +273,15 @@
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
+  .cdm-content.slide-from-right {
+    animation: cdm-slide-from-right 0.26s ease-out;
+  }
+
+  @keyframes cdm-slide-from-right {
+    from { opacity: 0; transform: translateX(32px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
   /* ================================================================
      Close Button
      ================================================================ */
@@ -222,14 +309,100 @@
   }
 
   /* ================================================================
-     Body (scrollable)
+     Step Indicator — header strip, matches ContractDemoOverlay cdemo-stepper
+     Sits above the scrollable body with a separator line
+     ================================================================ */
+  .cdm-stepper {
+    display: none; /* shown via JS */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+    padding: 0.875rem 1.75rem 0.875rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .cdm-stepper__track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .cdm-stepper__dot {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full, 9999px);
+    border: 2px solid var(--color-gray-200, #e5e7eb);
+    background: var(--color-white, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    flex-shrink: 0;
+    padding: 0;
+    font-family: inherit;
+  }
+
+  .cdm-stepper__dot span {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-gray-400, #9ca3af);
+    transition: color 0.2s ease;
+    pointer-events: none;
+  }
+
+  .cdm-stepper__dot.active {
+    border-color: var(--color-primary, #1c497c);
+    background: var(--color-primary, #1c497c);
+  }
+
+  .cdm-stepper__dot.active span { color: #fff; }
+
+  .cdm-stepper__dot.completed {
+    border-color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    cursor: pointer;
+  }
+
+  .cdm-stepper__dot.completed:hover {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 18%, white);
+  }
+
+  .cdm-stepper__dot.completed span {
+    color: var(--color-primary, #1c497c);
+  }
+
+  .cdm-stepper__line {
+    width: 2rem;
+    height: 2px;
+    background: var(--color-gray-200, #e5e7eb);
+    transition: background 0.3s ease;
+  }
+
+  .cdm-stepper__line.completed {
+    background: var(--color-primary, #1c497c);
+  }
+
+  .cdm-stepper__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ================================================================
+     Body (scrollable middle section)
      ================================================================ */
   .cdm-body {
     overflow-y: auto;
-    padding: 1.75rem 1.75rem 1.5rem;
+    padding: 1.75rem 1.75rem 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    flex: 1;
+    min-height: 0;
   }
 
   /* ================================================================
@@ -377,6 +550,21 @@
     margin-top: 0.25rem;
   }
 
+  .cdm-metric__value--warning {
+    color: var(--color-error, #dc2626);
+  }
+
+  .cdm-metric__value--positive {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .cdm-cut-note {
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0.375rem 0 0;
+    line-height: 1.4;
+  }
+
   /* ================================================================
      Deadline — warning strip
      ================================================================ */
@@ -414,6 +602,24 @@
   .cdm-deadline__icon {
     display: flex;
     flex-shrink: 0;
+  }
+
+  /* ================================================================
+     Review Panel — wraps step-2 sections for slide animation
+     ================================================================ */
+  .cdm-review-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .cdm-review-panel.panel-enter {
+    animation: cdm-panel-in 0.28s ease-out;
+  }
+
+  @keyframes cdm-panel-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   /* ================================================================
@@ -483,6 +689,46 @@
   .cdm-salary-comparison__col--new {
     text-align: right;
     align-items: flex-end;
+  }
+
+  /* Extension years comparison row */
+  .cdm-ext-years-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.875rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    margin-top: 0.375rem;
+  }
+
+  .cdm-ext-years-row__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .cdm-ext-years-row__vals {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdm-ext-years-row__vals svg {
+    color: var(--color-gray-400, #9ca3af);
+    flex-shrink: 0;
+  }
+
+  .cdm-ext-years-row__new {
+    font-weight: 700;
+    color: var(--color-success-dark, #059669);
   }
 
   /* Tag basis note */
@@ -569,6 +815,275 @@
   }
 
   /* ================================================================
+     Action Options — step 1 action selection buttons (salary-tool flows)
+     :global() needed because buttons are created dynamically via JS
+     ================================================================ */
+  .cdm-action-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .cdm-action-options :global(.cdm-action-option) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-sm, 0.25rem);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: left;
+    font-family: inherit;
+    width: 100%;
+  }
+
+  .cdm-action-options :global(.cdm-action-option:hover) {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .cdm-action-options :global(.cdm-action-option:disabled),
+  .cdm-action-options :global(.cdm-action-option--disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .cdm-action-options :global(.cdm-action-option__icon) {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm, 0.25rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .cdm-action-options :global(.cdm-action-option__icon svg) {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+  }
+
+  .cdm-action-options :global(.cdm-action-option__text) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .cdm-action-options :global(.cdm-action-option__label) {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .cdm-action-options :global(.cdm-action-option__desc) {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdm-action-options :global(.cdm-action-option__chevron) {
+    color: var(--color-gray-300, #d1d5db);
+    flex-shrink: 0;
+    transition: color 0.18s ease;
+  }
+
+  /* Color variants on hover */
+  .cdm-action-options :global(.cdm-action-option--franchise:hover) {
+    border-left-color: var(--color-success-dark, #059669);
+  }
+  .cdm-action-options :global(.cdm-action-option--franchise:hover .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-success, #10b981) 12%, white);
+    color: var(--color-success-dark, #059669);
+  }
+
+  .cdm-action-options :global(.cdm-action-option--extension:hover) {
+    border-left-color: var(--color-primary, #1c497c);
+  }
+  .cdm-action-options :global(.cdm-action-option--extension:hover .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .cdm-action-options :global(.cdm-action-option--cut:hover) {
+    border-left-color: var(--color-error, #dc2626);
+  }
+  .cdm-action-options :global(.cdm-action-option--cut:hover .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 8%, white);
+    color: var(--color-error, #dc2626);
+  }
+
+  .cdm-action-options :global(.cdm-action-option--trade:hover),
+  .cdm-action-options :global(.cdm-action-option--trade-simulate:hover) {
+    border-left-color: var(--color-warning, #f59e0b);
+  }
+  .cdm-action-options :global(.cdm-action-option--trade:hover .cdm-action-option__icon),
+  .cdm-action-options :global(.cdm-action-option--trade-simulate:hover .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, white);
+    color: var(--color-warning-dark, #d97706);
+  }
+
+  .cdm-action-options :global(.cdm-action-option--trade-block:hover) {
+    border-left-color: var(--color-primary, #1c497c);
+  }
+  .cdm-action-options :global(.cdm-action-option--trade-block:hover .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, white);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .cdm-action-options :global(.cdm-action-option--trade-builder:hover) {
+    border-left-color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdm-action-options :global(.cdm-action-option--cut-real .cdm-action-option__label) {
+    color: var(--color-error, #dc2626);
+  }
+  .cdm-action-options :global(.cdm-action-option--cut-real:hover) {
+    border-left-color: var(--color-error, #dc2626);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, white);
+  }
+  .cdm-action-options :global(.cdm-action-option--cut-real:hover .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 12%, white);
+    color: var(--color-error, #dc2626);
+  }
+
+  /* Back-to-actions link within sub-views */
+  .cdm-action-options :global(.cdm-action-back) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    padding: 0.25rem 0 0.5rem;
+    transition: color 0.15s ease;
+  }
+  .cdm-action-options :global(.cdm-action-back:hover) {
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* ================================================================
+     Formula Accordion — veteran-extension breakdown
+     ================================================================ */
+  .cdm-formula-section {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+  }
+
+  .cdm-formula-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 0.875rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .cdm-formula-toggle:hover {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .cdm-formula-toggle__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cdm-formula-toggle__chevron {
+    color: var(--color-gray-400, #9ca3af);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .cdm-formula-toggle[aria-expanded="true"] .cdm-formula-toggle__chevron {
+    transform: rotate(180deg);
+  }
+
+  .cdm-formula-body {
+    padding: 0.75rem 0.875rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cdm-formula-body.expanded {
+    display: flex;
+  }
+
+  .cdm-formula__equation {
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    font-family: ui-monospace, monospace;
+    line-height: 1.6;
+  }
+
+  .cdm-formula__steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-top: 1px solid var(--color-gray-100, #f3f4f6);
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  :global(.cdm-formula__step) {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  :global(.cdm-formula__step-label) {
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  :global(.cdm-formula__step-value) {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdm-formula__result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    margin-top: 0.25rem;
+  }
+
+  :global(.cdm-formula__result-label) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  :global(.cdm-formula__result-value) {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-success-dark, #059669);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================================================================
      Salary Projection Table — canonical editorial table
      ================================================================ */
   .cdm-projection-wrapper {
@@ -596,6 +1111,10 @@
     border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
 
+  .cdm-projection-th--right {
+    text-align: right;
+  }
+
   .cdm-projection-th--salary {
     text-align: right;
   }
@@ -607,10 +1126,21 @@
     font-size: 0.8125rem;
   }
 
+  .cdm-projection-table :global(td:nth-child(2)) {
+    text-align: right;
+    color: var(--color-gray-500, #6b7280);
+  }
+
   .cdm-projection-table :global(td:last-child) {
     text-align: right;
     font-weight: 600;
     color: var(--color-gray-900, #111827);
+  }
+
+  /* Hide age column when not provided (no-age mode) */
+  .cdm-projection-table.no-age :global(td:nth-child(2)),
+  .cdm-projection-table.no-age th:nth-child(2) {
+    display: none;
   }
 
   .cdm-projection-table :global(tr:last-child td) {
@@ -622,15 +1152,51 @@
   }
 
   /* ================================================================
-     Actions
+     Footer — fixed at bottom, matches ContractDemoOverlay .cdemo-nav
+     Back (ghost left) + Submit (primary right)
      ================================================================ */
-  .cdm-actions {
+  .cdm-footer {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding-top: 0.25rem;
+    padding: 1rem 1.75rem 1.25rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    background: var(--color-white, #fff);
+    flex-shrink: 0;
   }
 
+  .cdm-footer__messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .cdm-footer__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Back button — ghost style matching demo's .cdemo-nav__back */
+  .cdm-footer__back {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0.625rem 0;
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .cdm-footer__back:hover {
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* Submit button — primary, takes remaining space, matches demo's .cdemo-nav__next */
   .cdm-submit {
     appearance: none;
     border: none;
@@ -640,9 +1206,10 @@
     padding: 0.75rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
     transition: background 0.15s ease, opacity 0.15s ease;
-    width: 100%;
+    flex: 1;
   }
 
   .cdm-submit:hover:not(:disabled) {
@@ -650,7 +1217,7 @@
   }
 
   .cdm-submit:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
@@ -703,6 +1270,14 @@
 
     .cdm-body {
       padding: 1.25rem;
+    }
+
+    .cdm-stepper {
+      padding: 0.75rem 1.25rem;
+    }
+
+    .cdm-footer {
+      padding: 0.875rem 1.25rem 1.25rem;
     }
 
     .cdm-hero__avatar {
