@@ -186,7 +186,7 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const restored = deserializeTradeFromParams(params);
-      if (restored.teamAId && restored.teamBId) {
+      if (restored.teamAId || restored.teamBId) {
         return {
           teamA: {
             franchiseId: restored.teamAId,
