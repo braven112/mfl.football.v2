@@ -7909,6 +7909,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       extSection.style.display = 'none';
       projSection.style.display = 'none';
 
+      // Always reset formula section — only shown on vet-ext step 3
+      const formulaSectionReset = document.getElementById('cdm-formula-section');
+      if (formulaSectionReset) formulaSectionReset.style.display = 'none';
+      if (formulaToggleEl) formulaToggleEl.setAttribute('aria-expanded', 'false');
+      if (formulaBodyEl) formulaBodyEl.classList.remove('expanded');
+
       // Back button: hidden initially
       if (cdmBackBtn) cdmBackBtn.style.display = 'none';
 
@@ -8291,7 +8297,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         actionOptions.appendChild(makeCdmActionBtn(
           'franchise', 'Franchise Tag', '1 year at higher of 120% or position average',
           () => goToFranchiseTagStep2(),
-          false, 'icon-shield'
+          false, 'icon-franchise-tag'
         ));
       }
 
@@ -8299,7 +8305,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         actionOptions.appendChild(makeCdmActionBtn(
           'extension', 'Veteran Extension', 'Extend contract 1\u20132 years',
           () => goToVetExtYearStep(),
-          false, 'icon-file-text'
+          false, 'icon-coin'
         ));
       }
 
