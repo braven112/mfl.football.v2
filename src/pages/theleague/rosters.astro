@@ -1598,6 +1598,34 @@ const eligRostersFeed = rostersFeeds[Object.keys(rostersFeeds).find(
 const eligRostersData = eligRostersFeed ? getModuleData(eligRostersFeed) : null;
 const eligFranchises = eligRostersData?.rosters?.franchise ?? [];
 
+// Compute top-10 positional salary averages for team option calculations.
+// Built from live roster data (all franchises) so it's always accurate.
+const teamOptionSalaries: Record<string, number> = {};
+if (Array.isArray(eligFranchises)) {
+  const positionSalaries: Record<string, number[]> = {};
+  for (const franchise of eligFranchises) {
+    const players = (Array.isArray(franchise.player)
+      ? franchise.player
+      : [franchise.player].filter(Boolean)
+    ).filter((p: any) => p?.id);
+    for (const player of players) {
+      const info = eligPlayersMap.get(player.id);
+      const pos = info?.position?.toUpperCase() ?? '';
+      const salary = parseFloat(player.salary) || 0;
+      if (pos && salary > 0) {
+        positionSalaries[pos] ??= [];
+        positionSalaries[pos].push(salary);
+      }
+    }
+  }
+  for (const [pos, salaries] of Object.entries(positionSalaries)) {
+    const top10 = salaries.sort((a, b) => b - a).slice(0, 10);
+    teamOptionSalaries[pos] = top10.length
+      ? Math.round(top10.reduce((a, b) => a + b, 0) / top10.length)
+      : 0;
+  }
+}
+
 // Compute eligibility for all teams
 const eligibilityByTeam: Record<string, Record<string, any>> = {};
 // Use frozen salary averages (pre-week-14 freeze uses prior season) for tag/extension math
@@ -1942,6 +1970,19 @@ if (testEligibility) {
         isRookieContract: true,
       };
     })(),
+    // Williams, Bryce: 1st round pick (TO), 3 years remaining — eligible for team option or rookie extension
+    '99902': {
+      type: 'team-option' as const,
+      teamOptionSalary: teamOptionSalaries['QB'] || 15000000,
+      extensionSalary: Math.round(2000000 * Math.pow(1.10, 3)),   // $2M × 1.10^3
+      extensionYears: 5,
+      deadlineTimestamp: null,
+      isExpired: false,
+      currentYears: 3,
+      currentSalary: 2000000,
+      contractInfo: 'TO',
+      isRookieContract: false,
+    },
   };
 }
 
@@ -1992,6 +2033,7 @@ const serializedConfig = JSON.stringify({
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
   eligibilityByTeam,
   declarationsByPlayer,
+  teamOptionSalaries,
 });
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
@@ -2420,11 +2462,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                   const isUfa = !(player.contractYears > index);
                   const isFirstYearUfa = isUfa && player.contractYears === index;
                   const isFutureUfa = isUfa && player.contractYears < index;
+                  const isTO = (player as any).contractInfo === 'TO';
+                  const hasOptionWindow = isTO && (player.contractYears ?? 0) >= 2;
+                  const isOptionExpired = isTO && (player.contractYears ?? 0) === 1;
 
-                  let displayValue;
+                  let displayValue: any;
                   let cellClass = 'salary-cell gm-col';
+                  let toOptionSalary: string | null = null;
 
-                  if (isFirstYearUfa) {
+                  if (isFirstYearUfa && hasOptionWindow) {
+                    // Eligible TO slot — show "TO" badge, clickable in client-side
+                    displayValue = 'TO';
+                    cellClass += ' salary-cell--team-option salary-cell--team-option-eligible';
+                  } else if (isFirstYearUfa && isOptionExpired) {
+                    // Option window closed — show greyed-out top-10 salary (what was forfeited)
+                    const pos = (player.position ?? '').toUpperCase();
+                    const optSalary = (teamOptionSalaries as Record<string, number>)[pos] ?? 0;
+                    displayValue = optSalary > 0 ? formatCurrency(optSalary) : 'UFA';
+                    cellClass += ' salary-cell--team-option salary-cell--team-option-expired';
+                  } else if (isFirstYearUfa) {
                     displayValue = 'UFA';
                     cellClass += ' salary-cell--ufa';
                   } else if (isFutureUfa) {
@@ -2442,6 +2498,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                       data-label={year}
                       data-column={`year${index + 1}`}
                       class={cellClass}
+                      data-player-id={isFirstYearUfa && hasOptionWindow ? player.id : undefined}
                     >
                       {displayValue}
                     </td>
@@ -3654,6 +3711,29 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     text-align: center;
     color: #dc2626;
     font-weight: 600;
+  }
+
+  /* Team Option salary cells */
+  :global(.salary-cell--team-option-eligible) {
+    text-align: center;
+    color: var(--color-info, #0ea5e9);
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    text-decoration: underline dotted;
+    transition: opacity 0.15s ease;
+  }
+  :global(.salary-cell--team-option-eligible:hover) {
+    opacity: 0.75;
+  }
+
+  :global(.salary-cell--team-option-expired) {
+    text-align: center;
+    color: var(--color-text-tertiary, #9ca3af);
+    font-size: 0.75rem;
+    text-decoration: line-through;
+    opacity: 0.7;
   }
 
   :global(.ufa-cell-content) {
@@ -5495,6 +5575,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   const DECLARATION_TYPE_LABELS = {
     'new-acquisition': 'New Acquisition',
     'rookie-override': 'Rookie Override',
+    'team-option': '1st Round Option',
     'franchise-tag': 'Franchise Tag',
     'veteran-extension': 'Veteran Extension',
     'rookie-extension': 'Rookie Extension',
@@ -6664,6 +6745,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           openDeclarationModal(extractPlayerDataFromRow(row, playerId, elig), declaredYears);
         };
       });
+
+      // Team option cells — clickable TO badge in salary column
+      document.querySelectorAll('.salary-cell--team-option-eligible[data-player-id]').forEach(cell => {
+        const playerId = cell.dataset.playerId;
+        if (!playerId) return;
+        const elig = getPlayerEligibility(playerId, currentTeam);
+        if (!elig) return;
+
+        cell.onclick = (e) => {
+          e.stopPropagation();
+          const row = cell.closest('tr');
+          openDeclarationModal(extractPlayerDataFromRow(row, playerId, elig));
+        };
+      });
     };
 
     const formatCountLabel = (count) => `${count} Players`;
@@ -7128,9 +7223,24 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               let value;
               let cellClass = 'salary-cell gm-col';
 
+              // TO detection for this slot
+              const isTO = player.contractInfo === 'TO';
+              const remainingYears = parseInt(player.contractYears, 10) || 0;
+              const hasOptionWindow = isTO && remainingYears >= 2;
+              const isOptionExpired = isTO && remainingYears === 1;
+              const toSalaries = config.teamOptionSalaries || {};
+              const playerPos = (player.position ?? '').toUpperCase();
+
               if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
                 value = _capSpaceFmt.format(action.newSalary ?? 0);
                 cellClass += ' salary-cell--simulated';
+              } else if (isFirstYearUfa && hasOptionWindow) {
+                value = 'TO';
+                cellClass += ' salary-cell--team-option salary-cell--team-option-eligible';
+              } else if (isFirstYearUfa && isOptionExpired) {
+                const optSalary = toSalaries[playerPos] ?? 0;
+                value = optSalary > 0 ? formatCurrency.format(optSalary) : 'UFA';
+                cellClass += ' salary-cell--team-option salary-cell--team-option-expired';
               } else if (isFirstYearUfa) {
                 value = 'UFA';
                 cellClass += ' salary-cell--ufa';
@@ -7150,7 +7260,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 }
               }
 
-              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}">${value}</td>`;
+              const toAttr = (isFirstYearUfa && hasOptionWindow) ? ` data-player-id="${player.id}"` : '';
+              return `<td data-label="${year}" data-column="${columnKey}" class="${cellClass}"${toAttr}>${value}</td>`;
             })
             .join('');
 
@@ -7934,6 +8045,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const cdmBackBtn = document.getElementById('cdm-back-btn');
     let cdmSelectedYears = null;
     let cdmSelectedSalary = null; // Pre-computed for franchise-tag and extension types
+    let cdmSubmitType = null;     // Overrides elig.type for team-option sub-choices
     let cdmPlayerData = null;
     let cdmDeadlineInterval = null;
     let cdmFlowType = null; // 'action-select' | 'franchise-tag' | 'veteran-extension' | 'rookie-extension' | etc.
@@ -8002,6 +8114,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       cdmPlayerData = data;
       cdmSelectedYears = null;
       cdmSelectedSalary = null;
+      cdmSubmitType = null;
       cdmError.style.display = 'none';
       cdmSuccess.style.display = 'none';
       cdmSubmitBtn.disabled = true;
@@ -8107,15 +8220,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const tagSection = document.getElementById('cdm-tag-section');
       const extSection = document.getElementById('cdm-extension-section');
       const projSection = document.getElementById('cdm-projection-section');
-      const actionSectionReset = document.getElementById('cdm-action-section');
+      const actionSection = document.getElementById('cdm-action-section');
       const cutSectionReset = document.getElementById('cdm-cut-section');
       const metricsReset = document.getElementById('cdm-metrics');
+      const teamOptionSection = document.getElementById('cdm-team-option-section');
+      const noExerciseSection = document.getElementById('cdm-no-exercise-section');
       yearSection.style.display = 'none';
       tagSection.style.display = 'none';
       extSection.style.display = 'none';
       projSection.style.display = 'none';
-      if (actionSectionReset) actionSectionReset.style.display = 'none';
+      if (actionSection) actionSection.style.display = 'none';
       if (cutSectionReset) cutSectionReset.style.display = 'none';
+      if (teamOptionSection) teamOptionSection.style.display = 'none';
+      if (noExerciseSection) noExerciseSection.style.display = 'none';
       // Restore metrics visibility for non-action-select step 1 (action-select re-hides it below)
       if (metricsReset) metricsReset.style.display = '';
 
@@ -8149,12 +8266,70 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         if (cdmMetricsEl) cdmMetricsEl.style.display = 'none';
 
         // Show action section, hide submit (action buttons are the "submit")
-        const actionSection = document.getElementById('cdm-action-section');
         if (actionSection) actionSection.style.display = '';
         cdmSubmitBtn.style.display = 'none';
 
         // Populate action options
         populateCdmActionOptions(elig);
+
+      } else if (type === 'team-option') {
+        // Show action-select; hide submit until a sub-choice is made
+        cdmSubmitBtn.style.display = 'none';
+        if (actionSection) actionSection.style.display = '';
+
+        // "Exercise Team Option" — adds 1 year at top-10 avg salary
+        const exerciseBtn = document.getElementById('cdm-action-exercise');
+        if (exerciseBtn) {
+          exerciseBtn.onclick = () => {
+            if (actionSection) actionSection.style.display = 'none';
+            if (teamOptionSection) teamOptionSection.style.display = '';
+            // Year 4 salary = current salary escalated to end of current term
+            const yr4Salary = Math.round(elig.currentSalary * Math.pow(1.10, elig.currentYears - 1));
+            document.getElementById('cdm-to-year4-salary').textContent = formatSalaryCompact(yr4Salary);
+            document.getElementById('cdm-to-option-salary').textContent = formatSalaryCompact(elig.teamOptionSalary ?? 0);
+            updateProjectionTable(elig.teamOptionSalary ?? 0, 1);
+            cdmSelectedYears = elig.currentYears + 1;
+            cdmSelectedSalary = elig.teamOptionSalary ?? null;
+            cdmSubmitType = 'team-option';
+            cdmSubmitBtn.style.display = '';
+            cdmSubmitBtn.disabled = false;
+            cdmSubmitBtn.textContent = 'Declare Team Option';
+          };
+        }
+
+        // "Rookie Extension" — reuse extension section (+2 years)
+        const extendBtn = document.getElementById('cdm-action-extend');
+        if (extendBtn) {
+          extendBtn.onclick = () => {
+            if (actionSection) actionSection.style.display = 'none';
+            extSection.style.display = '';
+            const extYears = elig.extensionYears ?? (elig.currentYears + 2);
+            const extSalary = elig.extensionSalary ?? elig.currentSalary;
+            const currentLabel = elig.currentYears + 'yr @ ' + formatSalaryCompact(elig.currentSalary);
+            const newLabel = extYears + 'yr @ ' + formatSalaryCompact(extSalary);
+            document.getElementById('cdm-ext-current').textContent = currentLabel;
+            document.getElementById('cdm-ext-new').textContent = newLabel;
+            updateProjectionTable(extSalary, extYears);
+            cdmSelectedYears = extYears;
+            cdmSelectedSalary = extSalary;
+            cdmSubmitType = 'rookie-extension';
+            cdmSubmitBtn.style.display = '';
+            cdmSubmitBtn.disabled = false;
+            cdmSubmitBtn.textContent = 'Declare Rookie Extension';
+          };
+        }
+
+        // "Don't Exercise" — informational only, no submit
+        const noExBtn = document.getElementById('cdm-action-no-exercise');
+        if (noExBtn) {
+          noExBtn.onclick = () => {
+            if (actionSection) actionSection.style.display = 'none';
+            if (noExerciseSection) noExerciseSection.style.display = '';
+            const finalYrSalary = Math.round(elig.currentSalary * Math.pow(1.10, elig.currentYears - 1));
+            document.getElementById('cdm-no-ex-year4-salary').textContent = formatSalaryCompact(finalYrSalary);
+            cdmSubmitBtn.style.display = 'none';
+          };
+        }
 
       } else if (type === 'franchise-tag') {
         // Franchise tag (direct from yrs-chip): fixed 1 year, show salary comparison
@@ -9108,10 +9283,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
       const leagueId = config.authUser?.leagueId ?? '13522';
 
+      // cdmSubmitType overrides elig.type for team-option sub-choices (exercise vs. extend)
+      const effectiveType = cdmSubmitType ?? elig.type;
+
       // Determine requestedContractInfo based on declaration type
       let requestedContractInfo;
-      if (elig.type === 'franchise-tag') requestedContractInfo = 'F';
-      else if (elig.type === 'rookie-extension') requestedContractInfo = ''; // graduating from RC
+      if (effectiveType === 'franchise-tag') requestedContractInfo = 'F';
+      else if (effectiveType === 'rookie-extension') requestedContractInfo = ''; // graduating from RC
+      else if (effectiveType === 'team-option') requestedContractInfo = ''; // TO designation removed
 
       try {
         const res = await fetch('/api/contracts/declare', {
@@ -9123,7 +9302,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             playerName: cdmPlayerData.name,
             franchiseId,
             franchiseName,
-            type: elig.type,
+            type: effectiveType,
             currentYears: elig.currentYears,
             currentSalary: elig.currentSalary,
             currentContractInfo: elig.contractInfo ?? '',

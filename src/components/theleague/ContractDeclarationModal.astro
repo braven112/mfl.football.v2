@@ -5,7 +5,8 @@
  * Allows owners to declare contract years for eligible players:
  * - new-acquisition: BBID/auction players choose 2-5 years
  * - rookie-override: Rookies reduce from default 4yr RC to 1-3 years
- * - veteran-extension: Multi-step flow — step 1 = year select, step 2 = review
+ * - team-option: 1st round picks choose to exercise 5th-year option or rookie extension
+ * - franchise-tag / veteran-extension / rookie-extension: offseason actions
  *
  * Follows PlayerDetailsModal editorial design language.
  * Populated entirely by client-side JS — Astro renders the static shell.
@@ -142,6 +143,80 @@
 
       <!-- Review Panel — step 2 content (veteran-extension) + immediate for other types -->
       <div class="cdm-review-panel" id="cdm-review-panel">
+
+        <!-- Team Option Action Select (team-option type only) -->
+        <div class="cdm-section" id="cdm-action-section" style="display: none;">
+          <h4 class="cdm-section__title">Choose a Path</h4>
+          <div class="cdm-action-grid">
+            <button class="cdm-action-btn cdm-action-btn--primary" id="cdm-action-exercise">
+              <span class="cdm-action-btn__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </span>
+              <span class="cdm-action-btn__label">Exercise Team Option</span>
+              <span class="cdm-action-btn__desc">Add 1 year at top-10 positional avg</span>
+            </button>
+            <button class="cdm-action-btn cdm-action-btn--success" id="cdm-action-extend">
+              <span class="cdm-action-btn__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </span>
+              <span class="cdm-action-btn__label">Rookie Extension</span>
+              <span class="cdm-action-btn__desc">Add 2 years at extension formula</span>
+            </button>
+            <button class="cdm-action-btn cdm-action-btn--neutral" id="cdm-action-no-exercise">
+              <span class="cdm-action-btn__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
+                </svg>
+              </span>
+              <span class="cdm-action-btn__label">Don't Exercise</span>
+              <span class="cdm-action-btn__desc">Player enters Year 4, then UFA</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Team Option Confirm Panel (after "Exercise" chosen) -->
+        <div class="cdm-section" id="cdm-team-option-section" style="display: none;">
+          <h4 class="cdm-section__title">5th Year Team Option</h4>
+          <div class="cdm-salary-comparison">
+            <div class="cdm-salary-comparison__col">
+              <span class="cdm-salary-comparison__label">Year 4 Salary</span>
+              <span class="cdm-salary-comparison__value" id="cdm-to-year4-salary">&mdash;</span>
+            </div>
+            <svg class="cdm-salary-comparison__arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            <div class="cdm-salary-comparison__col cdm-salary-comparison__col--new">
+              <span class="cdm-salary-comparison__label">Option Year (Yr 5)</span>
+              <span class="cdm-salary-comparison__value cdm-salary-comparison__value--highlight" id="cdm-to-option-salary">&mdash;</span>
+            </div>
+          </div>
+          <div class="cdm-tag-basis" id="cdm-to-basis">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <span>Top-10 positional average</span>
+          </div>
+        </div>
+
+        <!-- Don't Exercise Preview Panel -->
+        <div class="cdm-section" id="cdm-no-exercise-section" style="display: none;">
+          <h4 class="cdm-section__title">Option Not Exercised</h4>
+          <div class="cdm-info-block">
+            <svg class="cdm-info-block__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <p class="cdm-info-block__text">
+              Player will play out their final contract year at
+              <strong id="cdm-no-ex-year4-salary">&mdash;</strong>.
+              After that season they become an unrestricted free agent unless a
+              franchise tag is applied.
+            </p>
+          </div>
+        </div>
 
         <!-- Extension Panel (veteran-extension / rookie-extension) -->
         <div class="cdm-section" id="cdm-extension-section" style="display: none;">
@@ -512,6 +587,16 @@
   .cdm-type-badge[data-type="veteran-extension"] .cdm-type-badge__dot,
   .cdm-type-badge[data-type="rookie-extension"] .cdm-type-badge__dot {
     background: var(--color-success-dark, #059669);
+  }
+
+  /* Team option — info/sky color */
+  .cdm-type-badge[data-type="team-option"] {
+    border-left-color: var(--color-info, #0ea5e9);
+    color: var(--color-info-dark, #0284c7);
+  }
+
+  .cdm-type-badge[data-type="team-option"] .cdm-type-badge__dot {
+    background: var(--color-info, #0ea5e9);
   }
 
   /* ================================================================
@@ -1245,6 +1330,106 @@
     background: color-mix(in srgb, var(--color-success, #10b981) 6%, white);
     border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, white);
     border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  /* ================================================================
+     Team Option Action Grid
+     ================================================================ */
+  .cdm-action-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cdm-action-btn {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 3px solid var(--color-gray-300, #d1d5db);
+    background: var(--color-gray-50, #f9fafb);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+
+  .cdm-action-btn--primary { border-left-color: var(--color-info, #0ea5e9); }
+  .cdm-action-btn--primary:hover {
+    background: color-mix(in srgb, var(--color-info, #0ea5e9) 5%, white);
+    border-color: color-mix(in srgb, var(--color-info, #0ea5e9) 20%, transparent);
+    border-left-color: var(--color-info, #0ea5e9);
+  }
+  .cdm-action-btn--primary .cdm-action-btn__icon { color: var(--color-info, #0ea5e9); }
+
+  .cdm-action-btn--success { border-left-color: var(--color-success-dark, #059669); }
+  .cdm-action-btn--success:hover {
+    background: color-mix(in srgb, var(--color-success, #10b981) 5%, white);
+    border-color: color-mix(in srgb, var(--color-success, #10b981) 20%, transparent);
+    border-left-color: var(--color-success-dark, #059669);
+  }
+  .cdm-action-btn--success .cdm-action-btn__icon { color: var(--color-success-dark, #059669); }
+
+  .cdm-action-btn--neutral { border-left-color: var(--color-gray-400, #9ca3af); }
+  .cdm-action-btn--neutral:hover {
+    background: var(--color-gray-100, #f3f4f6);
+    border-left-color: var(--color-gray-500, #6b7280);
+  }
+  .cdm-action-btn--neutral .cdm-action-btn__icon { color: var(--color-gray-400, #9ca3af); }
+
+  .cdm-action-btn__icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .cdm-action-btn__label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.2;
+  }
+
+  .cdm-action-btn__desc {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.125rem;
+    line-height: 1.3;
+  }
+
+  /* ================================================================
+     Info Block — informational preview (no action)
+     ================================================================ */
+  .cdm-info-block {
+    display: flex;
+    gap: 0.625rem;
+    padding: 0.875rem;
+    background: color-mix(in srgb, var(--color-gray-400, #9ca3af) 6%, white);
+    border: 1px solid color-mix(in srgb, var(--color-gray-400, #9ca3af) 15%, white);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .cdm-info-block__icon {
+    flex-shrink: 0;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.125rem;
+  }
+
+  .cdm-info-block__text {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .cdm-info-block__text strong {
+    color: var(--color-gray-800, #1f2937);
+    font-weight: 600;
   }
 
   /* ================================================================
