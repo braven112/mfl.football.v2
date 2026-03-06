@@ -194,10 +194,11 @@ function getAugustCutdownDate(year: number): Date {
   return thirdSunday;
 }
 
-/** Salary averages used for franchise tag and extension calculations */
+/** Salary averages used for franchise tag, extension, and team option calculations */
 export interface SalaryAverages {
   franchiseSalaries?: Record<string, number>;
   extensionSalaries?: Record<string, number>;
+  /** Top-10 positional averages — used for 1st-round team option salary */
   teamOptionSalaries?: Record<string, number>;
 }
 
@@ -207,10 +208,10 @@ export interface SalaryAverages {
  * Checks all possible declaration types in priority order:
  * 1. New acquisition (BBID/auction within deadline)
  * 2. Rookie override (RC player before August cutdown)
- * 3. Franchise tag (1 year remaining, offseason, non-TO)
- * 4. Team option (TO player, 1 year remaining, offseason)
+ * 3. Team option (TO player, years 1–3, before year 4 begins)
+ * 4. Franchise tag (1 year remaining, offseason)
  * 5. Veteran extension (2+ years, not RC, not TO)
- * 6. Rookie extension (RC or TO player, 2+ years, offseason)
+ * 6. Rookie extension (RC player, offseason)
  *
  * @param salaryAverages - Frozen position salary averages for tag/extension calculations
  */
@@ -281,10 +282,25 @@ export function getPlayerEligibility(
   // The remaining types require an active contract window
   if (!window.inWindow) return base;
 
-  const isTO = contractInfo === 'TO';
+  // 3. Check for team option (TO player, years 1–3, before year 4 begins)
+  // contractYear >= 2 means player still has 2+ years remaining = NOT yet in year 4
+  if (contractInfo === 'TO' && currentYears >= 2 && window.windowType === 'offseason') {
+    const position = (playerInfo?.position ?? '').toUpperCase();
+    const teamOptionSalary = salaryAverages?.teamOptionSalaries?.[position] ?? 0;
+    const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
+    const extensionYears = currentYears + 2;
+    return {
+      ...base,
+      eligible: true,
+      declarationType: 'team-option',
+      teamOptionSalary,
+      extensionSalary,
+      extensionYears,
+    };
+  }
 
-  // 3. Check for franchise tag eligibility (1 year remaining, offseason only, non-TO)
-  if (currentYears === 1 && window.windowType === 'offseason' && contractInfo !== 'F' && !isTO) {
+  // 4. Check for franchise tag eligibility (1 year remaining, offseason only)
+  if (currentYears === 1 && window.windowType === 'offseason' && contractInfo !== 'F') {
     const position = (playerInfo?.position ?? '').toUpperCase();
     const top3Avg = salaryAverages?.franchiseSalaries?.[position] ?? 0;
     const increased = currentSalary * 1.2;
@@ -299,21 +315,9 @@ export function getPlayerEligibility(
     };
   }
 
-  // 4. Check for team option (TO player, 1 year remaining, offseason)
-  if (isTO && currentYears === 1 && window.windowType === 'offseason') {
-    const position = (playerInfo?.position ?? '').toUpperCase();
-    const top10Avg = salaryAverages?.teamOptionSalaries?.[position] ?? 0;
-    return {
-      ...base,
-      eligible: true,
-      declarationType: 'team-option',
-      teamOptionSalary: top10Avg,
-      tagBasis: 'top 10 average',
-    };
-  }
-
   // 5. Check for veteran extension (2+ years, NOT RC, NOT TO)
-  if (currentYears >= 2 && !isRC && !isTO && window.windowType === 'offseason') {
+  // TO players are handled above in check #3; exclude them here to prevent fallthrough
+  if (currentYears >= 2 && !isRC && contractInfo !== 'TO' && window.windowType === 'offseason') {
     // Extension salary = currentSalary escalated to the extension point (10% per current year)
     const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
     const extensionYears = currentYears + 2;
@@ -326,8 +330,8 @@ export function getPlayerEligibility(
     };
   }
 
-  // 6. Check for rookie extension (RC or TO player, 2+ years remaining, offseason)
-  if ((isRC || isTO) && currentYears >= 2 && window.windowType === 'offseason') {
+  // 6. Check for rookie extension (RC player, offseason)
+  if (isRC && window.windowType === 'offseason') {
     const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
     const extensionYears = currentYears + 2;
     return {

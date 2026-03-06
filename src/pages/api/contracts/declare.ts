@@ -114,7 +114,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    if (type === 'veteran-extension' || type === 'rookie-extension') {
+    // team-option counts as an extension (exercise or rookie extension both use the same limit)
+    if (type === 'veteran-extension' || type === 'rookie-extension' || type === 'team-option') {
       const existingExt = getTeamExtension(franchiseId, new Date().getFullYear());
       if (existingExt) {
         return new Response(
