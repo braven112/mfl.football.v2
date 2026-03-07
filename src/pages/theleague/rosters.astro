@@ -5554,7 +5554,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   const initRosterPage = () => {
     // Guard: only run on the rosters page (skip after ViewTransitions navigates away)
     if (!document.getElementById('roster-config')) return;
-
     const {
       seasons = {},
       defaultSeason,
@@ -8628,39 +8627,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (e.key === 'Escape' && cdmModal?.classList.contains('active')) {
         closeDeclarationModal();
       }
-    });
-
-    // Contract action button handlers (inside initRosterPage so openDeclarationModal is in scope)
-    modal?.querySelectorAll('.contract-action-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        if (!action || !selectedPlayer) return;
-
-        if (action === 'extension') {
-          // Close actions modal and open CDM in veteran-extension mode (staged — not immediate API submit)
-          const p = selectedPlayer;
-          closeModal();
-          openDeclarationModal({
-            id: p.id,
-            name: p.name,
-            headshot: p.headshot || getPlayerHeadshot(p.id, p.espnId),
-            nflLogo: p.nflLogo || (p.nflTeam && p.nflTeam !== 'FA' ? getNflLogoUrl(p.nflTeam) : ''),
-            position: p.position,
-            birthdate: p.birthdate ?? null,
-            eligibility: {
-              type: 'veteran-extension',
-              currentSalary: Number(p.salary) || 0,
-              currentYears: Number(p.years) || 0,
-              contractInfo: p.contractInfo || '',
-              yearOptions: [1, 2],
-            },
-            _rawPlayer: p,
-          });
-        } else {
-          // Franchise tag, cut, trade — apply immediately
-          applyContractAction(action);
-        }
-      });
     });
 
     const updateView = () => {
