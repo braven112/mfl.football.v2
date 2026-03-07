@@ -108,4 +108,19 @@ describe('whats-new.json data integrity', () => {
       `Missing image files`,
     ).toEqual([]);
   });
+
+  it('all inline description images exist', () => {
+    const missing: string[] = [];
+    for (const entry of typedEntries) {
+      for (const block of entry.description) {
+        if (typeof block === 'object' && block.type === 'image') {
+          const imgPath = resolve(WHATS_NEW_ASSETS_DIR, block.src);
+          if (!existsSync(imgPath)) {
+            missing.push(`${entry.id} -> ${block.src}`);
+          }
+        }
+      }
+    }
+    expect(missing, 'Missing inline description images').toEqual([]);
+  });
 });

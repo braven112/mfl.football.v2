@@ -9,7 +9,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
-import type { WhatsNewEntry } from '../../../types/whats-new';
+import type { WhatsNewEntry, DescriptionImageBlock } from '../../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import entries from '../../../data/whats-new.json';
 import {
@@ -117,8 +117,29 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
       <div class="wn-detail__body-wrap">
         <h2 class="wn-detail__section-title">The Full Story</h2>
         <div class="wn-detail__body">
-          {entry.description.map((para) => (
-            <p set:html={para} />
+          {entry.description.map((block) => (
+            typeof block === 'string' ? (
+              <p set:html={block} />
+            ) : (block as DescriptionImageBlock).type === 'image' ? (
+              <figure class="wn-detail__inline-figure">
+                <div class="browser-frame browser-frame--inline">
+                  <div class="browser-frame__bar">
+                    <span class="browser-frame__dot browser-frame__dot--red"></span>
+                    <span class="browser-frame__dot browser-frame__dot--yellow"></span>
+                    <span class="browser-frame__dot browser-frame__dot--green"></span>
+                  </div>
+                  <img
+                    src={`/assets/whats-new/${(block as DescriptionImageBlock).src}`}
+                    alt={(block as DescriptionImageBlock).alt}
+                    class="wn-detail__inline-img"
+                    loading="lazy"
+                  />
+                </div>
+                {(block as DescriptionImageBlock).caption && (
+                  <figcaption class="wn-detail__caption">{(block as DescriptionImageBlock).caption}</figcaption>
+                )}
+              </figure>
+            ) : null
           ))}
         </div>
 
@@ -474,6 +495,29 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     color: var(--color-gray-700, #374151);
     margin: 0;
     line-height: 1.7;
+  }
+
+  /* ── Inline images within article body ── */
+  .wn-detail__inline-figure {
+    margin: 0.5rem 0;
+  }
+
+  .browser-frame--inline {
+    transform: none;
+  }
+
+  .wn-detail__inline-img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .wn-detail__caption {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.5rem;
+    font-style: italic;
+    text-align: center;
   }
 
   /* ── CTA ── */

@@ -9,6 +9,20 @@
 /** Entry category determines badge color and hero accent */
 export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'bug-fix' | 'league-event';
 
+/** An inline image block within an article description */
+export interface DescriptionImageBlock {
+  type: 'image';
+  /** Image filename relative to /assets/whats-new/ */
+  src: string;
+  /** Accessible alt text */
+  alt: string;
+  /** Optional caption displayed below the image */
+  caption?: string;
+}
+
+/** A single block in the article description — either a text paragraph or an inline image */
+export type DescriptionBlock = string | DescriptionImageBlock;
+
 /** A single feature announcement entry in whats-new.json */
 export interface WhatsNewEntry {
   /** Unique ID for the entry (kebab-case) */
@@ -19,8 +33,8 @@ export interface WhatsNewEntry {
   title: string;
   /** Short summary (1-2 sentences, shown in hero and cards) */
   summary: string;
-  /** Longer description paragraphs (shown on the What's New page only) */
-  description: string[];
+  /** Longer description paragraphs or inline images (shown on the What's New page only) */
+  description: DescriptionBlock[];
   /** Entry category */
   category: WhatsNewCategory;
   /** Optional link to the relevant page */
