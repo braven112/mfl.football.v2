@@ -4969,7 +4969,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     'franchise-tag': 'Franchise Tag',
     'veteran-extension': 'Veteran Extension',
     'rookie-extension': 'Rookie Extension',
-    'team-option': 'Team Option',
   };
 
   /** Format salary as compact currency */
@@ -7868,40 +7867,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         yearContainer.appendChild(btn);
       });
     };
-
-    // Reset veteran-extension back to step 1 — legacy path (direct vet-ext, not via action-select)
-    const goToVetExtStep1 = () => {
-      cdmCurrentStep = 1;
-      const cdmStepDot1 = document.getElementById('cdm-step-dot-1');
-      const cdmStepDot2 = document.getElementById('cdm-step-dot-2');
-      const cdmStepLine1 = document.getElementById('cdm-step-line-1');
-      const cdmStepperLabel = document.getElementById('cdm-stepper-label');
-
-      // Reset stepper to step 1 of 2
-      if (cdmStepDot1) { cdmStepDot1.classList.remove('completed'); cdmStepDot1.classList.add('active'); }
-      if (cdmStepDot2) { cdmStepDot2.classList.remove('active', 'completed'); }
-      if (cdmStepLine1) { cdmStepLine1.classList.remove('completed'); }
-      if (cdmStepperLabel) cdmStepperLabel.textContent = 'Step 1 of 2';
-
-      // Re-show year selection + key metrics, hide review panel sections
-      const yearSection = document.getElementById('cdm-year-section');
-      if (yearSection) yearSection.style.display = '';
-      const cdmMetricsEl = document.getElementById('cdm-metrics');
-      if (cdmMetricsEl) cdmMetricsEl.style.display = '';
-      document.getElementById('cdm-extension-section').style.display = 'none';
-      document.getElementById('cdm-formula-section').style.display = 'none';
-      document.getElementById('cdm-projection-section').style.display = 'none';
-
-      // Clear year selection and disable submit
-      document.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
-      cdmSubmitBtn.disabled = true;
-
-      // Hide back button — step 1 doesn't have a Back action
-      if (cdmBackBtn) cdmBackBtn.style.display = 'none';
-    };
-
 
     // Helper: build a CDM action option button using safe DOM methods
     const makeCdmActionBtn = (id, label, desc, onClick, disabled, iconId) => {
