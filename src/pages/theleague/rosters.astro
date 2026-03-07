@@ -5059,9 +5059,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const elig = getPlayerEligibility(playerId, teamId);
     if (!elig || elig.isExpired) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
-    // team-option + rookie-extension use the ⋮ action modal, not the yrs-chip
-    // rookie-override (initial contract declaration) still gets an interactive chip
-    if (elig.type === 'team-option' || elig.type === 'rookie-extension' || elig.contractInfo === 'TO') {
+    // Only rookie-override and new-acquisition get interactive yrs-chip buttons
+    if (elig.type !== 'rookie-override' && elig.type !== 'new-acquisition') {
       return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
     }
 
@@ -9004,6 +9003,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     let demoStep = 1;
     let demoOriginalPlayers = null; // snapshot before injection
     let demoOriginalAuthUser = null; // snapshot of auth state before demo
+    let demoOriginalEligibility = null; // snapshot of real eligibility before demo
 
     const DEMO_MOCK_IDS = ['DEMO_HOPKINS', 'DEMO_MENDOZA', 'DEMO_WILLIAMS', 'DEMO_CARTER'];
 
@@ -9246,9 +9246,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // Inject mock players at the front
       teamData.players = [...buildDemoPlayers(), ...teamData.players];
 
-      // Inject eligibility data
+      // Snapshot real eligibility, then replace with empty map for demo-only entries
       const now = Date.now();
-      eligibilityByTeam[currentTeam] = eligibilityByTeam[currentTeam] || {};
+      demoOriginalEligibility = eligibilityByTeam[currentTeam] || {};
+      eligibilityByTeam[currentTeam] = {};
       eligibilityByTeam[currentTeam]['DEMO_HOPKINS'] = {
         type: 'new-acquisition',
         yearOptions: [2, 3, 4, 5],
@@ -9319,12 +9320,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       teamData.players = demoOriginalPlayers;
       demoOriginalPlayers = null;
 
-      // Remove eligibility entries
-      if (eligibilityByTeam[currentTeam]) {
-        delete eligibilityByTeam[currentTeam]['DEMO_HOPKINS'];
-        delete eligibilityByTeam[currentTeam]['DEMO_MENDOZA'];
-        delete eligibilityByTeam[currentTeam]['DEMO_WILLIAMS'];
-        delete eligibilityByTeam[currentTeam]['DEMO_CARTER'];
+      // Restore real eligibility
+      if (demoOriginalEligibility !== null) {
+        eligibilityByTeam[currentTeam] = demoOriginalEligibility;
+        demoOriginalEligibility = null;
       }
 
       // Remove any local declarations for demo players
