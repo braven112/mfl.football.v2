@@ -3628,6 +3628,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .roster-table-wrapper {
     width: 100%;
     overflow-x: auto;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
   }
 
   .roster-table {
@@ -3645,14 +3647,22 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     font-size: 0.85rem;
   }
 
+  .roster-table thead {
+    background: var(--color-gray-50, #f9fafb);
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .roster-table thead tr {
+    border-left: 3px solid var(--color-gray-100, #f3f4f6);
+  }
+
   .roster-table th {
     font-size: 0.625rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--color-gray-400, #9ca3af);
-    padding: 0.4rem 0.5rem;
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    padding: 0.5rem 0.5rem;
     text-align: right;
     background: var(--color-gray-50, #f9fafb);
     position: sticky;

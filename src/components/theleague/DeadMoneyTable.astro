@@ -75,6 +75,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
 
   .roster-table-wrapper {
     overflow-x: auto;
+    border-radius: var(--radius-md, 0.5rem);
   }
 
   .roster-table {
@@ -87,16 +88,24 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
     font-size: 0.8125rem;
   }
 
+  .roster-table thead {
+    background: var(--color-gray-50, #f9fafb);
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .roster-table thead tr {
+    border-left: 3px solid var(--color-gray-100, #f3f4f6);
+  }
+
   .roster-table th {
-    padding: 0.875rem 1rem;
+    padding: 0.5rem 1rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.625rem;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: var(--text-secondary-color, #64748b);
-    background: var(--table-header-bg, #f9fafb);
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    background: var(--color-gray-50, #f9fafb);
   }
 
   .roster-table th[data-column^='dm-year'] {
@@ -152,7 +161,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
 
     .roster-table th,
     .roster-table td {
-      padding: 0.75rem 0.625rem;
+      padding: 0.5rem 0.625rem;
     }
 
     .roster-table--compact {
@@ -160,7 +169,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
     }
 
     .roster-table th {
-      font-size: 0.6875rem;
+      font-size: 0.5625rem;
     }
   }
 </style>
