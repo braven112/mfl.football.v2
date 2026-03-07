@@ -1800,7 +1800,7 @@ if (testEligibility) {
     {
       // Scenario 3: 1st round pick in year 2 — team option window open
       id: '99902',
-      name: 'Williams, Caleb',
+      name: 'Hailmary, Hank',
       position: 'QB',
       salary: 2000000,
       contractYears: 3,
@@ -1814,20 +1814,20 @@ if (testEligibility) {
       recentScores: [],
       avgRecent: '-',
       avgSeason: '-',
-      nflTeam: 'CHI',
+      nflTeam: 'DAL',
       opponent: 'BYE',
       oppStats: null,
       gameOdds: null,
       draftYear: 2024,
-      draftTeam: 'CHI',
+      draftTeam: 'DAL',
       draftRound: 1,
       draftPick: 1,
-      nflLogo: getNflLogoUrl('CHI'),
+      nflLogo: getNflLogoUrl('DAL'),
       rosterSlot: 'ROSTER',
       byeWeek: null,
       birthdate: null,
-      headshot: getPlayerHeadshot('99902', '4432577'),
-      college: 'USC',
+      headshot: getPlayerHeadshot('99902', null),
+      college: 'Iowa Wesleyan',
       collegeLogo: null,
       collegeLogoDark: null,
       height: '73',
@@ -1968,7 +1968,7 @@ if (testEligibility) {
         isRookieContract: true,
       };
     })(),
-    // Williams, Caleb: 2024 #1 overall (TO), 3 years remaining — team option or rookie extension
+    // Hailmary, Hank: mock 2024 #1 overall (TO), 3 years remaining — team option or rookie extension
     '99902': {
       type: 'team-option' as const,
       teamOptionSalary: teamOptionSalaries['QB'] || 15000000,
@@ -5673,10 +5673,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const elig = getPlayerEligibility(playerId, teamId);
     if (!elig || elig.isExpired) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
-    // Admin-only CDM types are managed via the action-select (⋮) button
-    // The yrs column only handles new contracts and rookie override
-    if (elig.type === 'franchise-tag' || elig.type === 'veteran-extension'
-        || elig.type === 'team-option' || elig.type === 'rookie-extension') {
+    // TO players use the action modal (⋮ button), not the yrs-chip — no interactive chip here
+    if (elig.type === 'team-option' || elig.contractInfo === 'TO') {
       return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
     }
 
@@ -5780,7 +5778,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (!averages) return 0;
 
     if (type === 'franchise') return averages.franchiseSalaries?.[position] ?? 0;
-    if (type === 'team-option') return averages.teamOptionSalaries?.[position] ?? 0;
+    // teamOptionSalaries are computed dynamically and stored at config root (not inside salaryAverages)
+    if (type === 'team-option') return config.teamOptionSalaries?.[position] ?? averages.teamOptionSalaries?.[position] ?? 0;
     return averages.extensionSalaries?.[position] ?? 0;
   };
 
@@ -7557,7 +7556,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               franchiseId: btn.dataset.playerFranchiseId || '',
             };
             // Look up real eligibility to get contractInfo/isRookieContract for action filtering
-            const playerElig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId);
+            // Fall back to currentTeam since playerFranchiseId may not be set on the button
+            const playerElig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId || currentTeam);
             const contractInfo = btn.dataset.playerContractInfo
               || playerElig?.contractInfo
               || '';
