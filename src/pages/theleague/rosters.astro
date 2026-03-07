@@ -6002,9 +6002,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const elig = getPlayerEligibility(playerId, currentTeam);
         if (!elig) return;
 
+        // Glow the avatar for this eligible player
+        const row = cell.closest('tr');
+        row?.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+
         btn.onclick = (e) => {
           e.stopPropagation();
-          const row = cell.closest('tr');
           openDeclarationModal(extractPlayerDataFromRow(row, playerId, elig));
         };
       });
@@ -6034,11 +6037,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const elig = getPlayerEligibility(playerId, currentTeam);
         if (!elig) return;
 
+        // Glow the avatar for TO players too
+        const row = cell.closest('tr');
+        row?.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+
         cell.onclick = (e) => {
           e.stopPropagation();
-          const row = cell.closest('tr');
           openDeclarationModal(extractPlayerDataFromRow(row, playerId, elig));
         };
+      });
+
+      // Action button players (rookie-extension, team-option) — glow their avatars
+      document.querySelectorAll('.ufa-action-btn[data-player-id]').forEach(btn => {
+        const playerId = btn.dataset.playerId;
+        if (!playerId) return;
+        const elig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId || currentTeam);
+        if (!elig) return;
+        btn.closest('tr')?.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
       });
     };
 
