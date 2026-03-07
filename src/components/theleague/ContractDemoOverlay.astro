@@ -71,6 +71,8 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <button class="cdemo-stepper__dot" data-step="2"><span>2</span></button>
         <div class="cdemo-stepper__line"></div>
         <button class="cdemo-stepper__dot" data-step="3"><span>3</span></button>
+        <div class="cdemo-stepper__line"></div>
+        <button class="cdemo-stepper__dot" data-step="4"><span>4</span></button>
       </div>
     </div>
 
@@ -99,7 +101,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
           </div>
           <div class="cdemo-minicard__detail">
             <span class="cdemo-minicard__label">Window</span>
-            <span class="cdemo-minicard__value">24h season / 48h offseason</span>
+            <span class="cdemo-minicard__value">24h / 48h</span>
           </div>
         </div>
         <div class="cdemo-minicard cdemo-minicard--rookie">
@@ -117,7 +119,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
           </div>
           <div class="cdemo-minicard__detail">
             <span class="cdemo-minicard__label">Window</span>
-            <span class="cdemo-minicard__value">3rd Sunday in August</span>
+            <span class="cdemo-minicard__value">3rd Sun. in Aug</span>
           </div>
         </div>
         <div class="cdemo-minicard cdemo-minicard--team-option">
@@ -156,6 +158,14 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
             <span class="cdemo-minicard__value">+2 years</span>
           </div>
         </div>
+      </div>
+      <div class="cdemo-panel__footer">
+        <button class="cdemo-glossary-link" id="cdemo-step4-link" type="button">
+          Glossary of terms
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 6h8M6 2l4 4-4 4"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -263,12 +273,98 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       </div>
     </div>
 
+    <!-- Step 4: Glossary -->
+    <div class="cdemo-panel" data-step="4">
+      <div class="cdemo-panel__kicker">Reference</div>
+      <h2 class="cdemo-panel__title">Contract terms, decoded.</h2>
+      <div class="cdemo-iglos">
+        <dl class="cdemo-iglos__list">
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">RC</dt>
+            <dd class="cdemo-iglos__def">Rookie Contract — the default 4-year deal assigned to all drafted rookies.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">TO</dt>
+            <dd class="cdemo-iglos__def">Team Option — 1st-round picks carry a TO flag signaling a pending 5th-year decision before Year 4.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">New Acquisition</dt>
+            <dd class="cdemo-iglos__def">Any player added via waiver, trade, or FA signing. Declaration required within 24h (in-season) or 48h (offseason).</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">Rookie Override</dt>
+            <dd class="cdemo-iglos__def">Optional shorter deal (1–3 yrs) instead of the default 4-year RC. Must be declared before the 3rd Sunday in August.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">Team Option</dt>
+            <dd class="cdemo-iglos__def">Guaranteed 5th year at the top-10 positional salary average. Must be exercised (or declined) before the player enters Year 4.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">Rookie Extension</dt>
+            <dd class="cdemo-iglos__def">Adds 2 years to an RC deal. New salary = current salary × 1.10 per remaining contract year. Before Year 4 only.</dd>
+          </div>
+        </dl>
+        <button class="cdemo-iglos__expand" id="cdemo-glossary-open" type="button">
+          View full glossary
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 6h8M6 2l4 4-4 4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Navigation -->
     <div class="cdemo-nav">
       <button class="cdemo-nav__back" id="cdemo-back">Back</button>
       <button class="cdemo-nav__next" id="cdemo-next">Next</button>
       <button class="cdemo-nav__start" id="cdemo-start">Try It Now</button>
     </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     Glossary Modal
+     ================================================================ -->
+<div class="cdemo-glossary" id="cdemo-glossary" role="dialog" aria-modal="true" aria-label="Contract Terms Glossary">
+  <div class="cdemo-glossary__overlay" id="cdemo-glossary-overlay"></div>
+  <div class="cdemo-glossary__card">
+    <div class="cdemo-glossary__header">
+      <div>
+        <div class="cdemo-glossary__kicker">Reference</div>
+        <h2 class="cdemo-glossary__title">Contract Terms</h2>
+      </div>
+      <button class="cdemo-glossary__close" id="cdemo-glossary-close" aria-label="Close glossary">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M14 4L4 14M4 4l10 10"/>
+        </svg>
+      </button>
+    </div>
+    <dl class="cdemo-glossary__list">
+      <div class="cdemo-glossary__item">
+        <dt class="cdemo-glossary__term">RC</dt>
+        <dd class="cdemo-glossary__def">Rookie Contract. The initial 4-year deal for all drafted rookies. RC players are eligible for overrides, extensions, and team options depending on their round.</dd>
+      </div>
+      <div class="cdemo-glossary__item">
+        <dt class="cdemo-glossary__term">TO</dt>
+        <dd class="cdemo-glossary__def">Team Option designation. 1st-round picks carry a TO flag, signaling that a 5th-year option decision is pending. Owners must exercise it, extend the rookie deal, or let it expire — all before Year 4.</dd>
+      </div>
+      <div class="cdemo-glossary__item">
+        <dt class="cdemo-glossary__term">New Acquisition</dt>
+        <dd class="cdemo-glossary__def">Any player added to a roster via BBID waiver, trade, or free-agent signing. A contract declaration is required within 24 hours during the season or 48 hours in the offseason.</dd>
+      </div>
+      <div class="cdemo-glossary__item">
+        <dt class="cdemo-glossary__term">Rookie Override</dt>
+        <dd class="cdemo-glossary__def">An optional shorter deal (1–3 years) for RC players in their first year, declared instead of the default 4-year rookie contract. Must be submitted before the 3rd Sunday in August.</dd>
+      </div>
+      <div class="cdemo-glossary__item">
+        <dt class="cdemo-glossary__term">Team Option</dt>
+        <dd class="cdemo-glossary__def">A guaranteed 5th year added to a 1st-round pick's contract, paid at the top-10 positional salary average. Must be exercised (or declined) before the player enters Year 4.</dd>
+      </div>
+      <div class="cdemo-glossary__item">
+        <dt class="cdemo-glossary__term">Rookie Extension</dt>
+        <dd class="cdemo-glossary__def">Adds 2 years to an RC player's deal. New salary = current salary × 1.10 per remaining contract year. Before Year 4 only.</dd>
+      </div>
+    </dl>
   </div>
 </div>
 
@@ -706,6 +802,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     font-weight: 300;
     color: #1a1a1a;
     font-variant-numeric: tabular-nums;
+    text-align: right;
   }
 
   /* ================================================================
@@ -954,6 +1051,217 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   .cdemo-nav__start:hover { background: #163d68; }
 
   /* ================================================================
+     Inline Glossary (Step 4)
+     ================================================================ */
+  .cdemo-iglos {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fafbfc;
+  }
+
+  .cdemo-iglos__list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .cdemo-iglos__item {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 0.125rem 0.625rem;
+    padding: 0.5rem 0.875rem;
+    border-bottom: 1px solid #f1f5f9;
+    align-items: baseline;
+  }
+
+  .cdemo-iglos__item:last-child { border-bottom: none; }
+
+  .cdemo-iglos__term {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .cdemo-iglos__def {
+    font-size: 0.75rem;
+    font-weight: 300;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .cdemo-iglos__expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0.5rem 0.875rem;
+    background: none;
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-primary, #1c497c);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .cdemo-iglos__expand:hover { background: #f1f5f9; }
+
+  /* ================================================================
+     Step 1 panel footer — glossary link
+     ================================================================ */
+  .cdemo-panel__footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+  }
+
+  .cdemo-glossary-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-primary, #1c497c);
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+  }
+
+  .cdemo-glossary-link:hover { opacity: 1; }
+
+  /* ================================================================
+     Glossary Modal
+     ================================================================ */
+  .cdemo-glossary {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .cdemo-glossary.active { display: flex; }
+
+  .cdemo-glossary__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+  }
+
+  .cdemo-glossary__card {
+    position: relative;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: cdemo-card-enter 0.28s ease-out;
+  }
+
+  .cdemo-glossary__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+  }
+
+  .cdemo-glossary__kicker {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 0.25rem;
+  }
+
+  .cdemo-glossary__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .cdemo-glossary__close {
+    flex-shrink: 0;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    margin-top: 0.125rem;
+  }
+
+  .cdemo-glossary__close:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .cdemo-glossary__list {
+    overflow-y: auto;
+    padding: 0.5rem 0 1rem;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cdemo-glossary__item {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 0.25rem 0.75rem;
+    padding: 0.625rem 1.5rem;
+    border-bottom: 1px solid #f8fafc;
+    align-items: baseline;
+  }
+
+  .cdemo-glossary__item:last-child { border-bottom: none; }
+
+  .cdemo-glossary__term {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .cdemo-glossary__def {
+    font-size: 0.8125rem;
+    font-weight: 300;
+    color: #475569;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* ================================================================
      Mobile
      ================================================================ */
   @media (max-width: 600px) {
@@ -997,5 +1305,63 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     .cdemo-trigger__label {
       font-size: 0.5rem;
     }
+
+    .cdemo-glossary__card {
+      max-height: 88vh;
+      border-radius: 14px 14px 0 0;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-width: 100%;
+    }
+
+    .cdemo-glossary__item {
+      grid-template-columns: 1fr;
+      gap: 0.125rem;
+    }
+
+    .cdemo-glossary__term {
+      color: var(--color-primary, #1c497c);
+    }
   }
 </style>
+
+<script>
+  // Glossary modal + step 4 navigation
+  (function () {
+    const glossary = document.getElementById('cdemo-glossary');
+    const openBtn  = document.getElementById('cdemo-glossary-open'); // "View full glossary" in step 4
+    const closeBtn = document.getElementById('cdemo-glossary-close');
+    const overlay  = document.getElementById('cdemo-glossary-overlay');
+    const step4Link = document.getElementById('cdemo-step4-link');  // "Glossary of terms →" in step 1
+
+    function openGlossary() {
+      if (!glossary || !closeBtn) return;
+      glossary.classList.add('active');
+      closeBtn.focus();
+    }
+    function closeGlossary() {
+      if (!glossary) return;
+      glossary.classList.remove('active');
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openGlossary);
+    if (closeBtn) closeBtn.addEventListener('click', closeGlossary);
+    overlay?.addEventListener('click', closeGlossary);
+    glossary?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeGlossary();
+    });
+
+    // "Glossary of terms →" in step 1: jump to step 4 in the tutorial
+    if (step4Link) {
+      step4Link.addEventListener('click', () => {
+        if (typeof (window as any).__cdemoSetStep === 'function') {
+          (window as any).__cdemoSetStep(4);
+        } else {
+          openGlossary(); // fallback if tutorial JS not loaded
+        }
+      });
+    }
+  })();
+</script>
