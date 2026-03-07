@@ -235,16 +235,19 @@ export function getFrozenSalaryAveragesYear(
  */
 export function getReferenceSalary(
   position: string,
-  type: 'franchise' | 'extension',
+  type: 'franchise' | 'extension' | 'team-option',
   salaryAverages: any
 ): number {
   if (!salaryAverages?.positions?.[position]) return 0;
-  
+
   const positionData = salaryAverages.positions[position];
-  
+
   if (type === 'franchise') {
     // Franchise tag = average of top 3
     return positionData.top3Average || 0;
+  } else if (type === 'team-option') {
+    // Team option = average of top 10
+    return positionData.top10Average || 0;
   } else {
     // Extension = average of top 5
     return positionData.top5Average || 0;

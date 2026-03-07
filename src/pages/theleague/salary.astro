@@ -216,6 +216,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                     <dd data-extension-average={key}>{formatValue(data.top5Average)}</dd>
                   </div>
                   <div>
+                    <dt>Team Option (Top 10)</dt>
+                    <dd data-team-option-average={key}>{formatValue(data.top10Average)}</dd>
+                  </div>
+                  <div>
                     <dt data-starter-label={key}>Starter Avg (Top {data.starterCount ?? STARTER_COUNTS[key] ?? '?'})</dt>
                     <dd data-starter-average={key}>{formatValue(data.starterAverage)}</dd>
                   </div>
@@ -691,8 +695,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         );
         const totalEl = document.querySelector(`[data-total="${position}"]`);
 
+        const teamOptCell = document.querySelector(
+          `[data-team-option-average="${position}"]`
+        );
+
         if (franCell) franCell.textContent = formatCurrency(data?.top3Average ?? 0);
         if (extCell) extCell.textContent = formatCurrency(data?.top5Average ?? 0);
+        if (teamOptCell) teamOptCell.textContent = formatCurrency(data?.top10Average ?? 0);
         if (starterLabel) {
           const count = data?.starterCount ?? STARTER_COUNTS[position] ?? '?';
           starterLabel.textContent = `Starter Avg (Top ${count})`;
