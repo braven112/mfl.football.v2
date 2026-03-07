@@ -233,11 +233,15 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       </p>
       <div class="cdemo-panel__tips">
         <div class="cdemo-tip">
-          <span class="cdemo-tip__icon">💡</span>
+          <span class="cdemo-tip__icon cdemo-tip__icon--to">TO</span>
           <span>For Team Options, you get three paths: exercise the option year, extend as a rookie deal, or let the player play out their final year.</span>
         </div>
         <div class="cdemo-tip">
-          <span class="cdemo-tip__icon">📋</span>
+          <span class="cdemo-tip__icon cdemo-tip__icon--yrs">
+            <span class="yrs-chip yrs-chip--eligible cdemo-tip__yrs-chip">
+              <span class="yrs-chip__value">4</span>
+            </span>
+          </span>
           <span>Submitted declarations appear in the commissioner queue and are reflected on your roster once approved.</span>
         </div>
       </div>
@@ -848,6 +852,28 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     flex-shrink: 0;
     font-size: 0.875rem;
     line-height: 1.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+  }
+
+  .cdemo-tip__icon--to {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #0ea5e9;
+    text-decoration: underline dotted;
+    line-height: 1;
+  }
+
+  .cdemo-tip__icon--yrs {
+    line-height: 1;
+  }
+
+  .cdemo-tip__yrs-chip {
+    pointer-events: none;
+    cursor: default;
   }
 
   /* ================================================================
