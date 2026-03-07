@@ -78,8 +78,31 @@ const extensionChartData = {
   })),
 };
 
+const teamOptionChartData = {
+  labels: seasons,
+  datasets: positionLabels.map(({ key, label }, index) => ({
+    label,
+    borderWidth: 2,
+    tension: 0.3,
+    data: seasons.map((season) => {
+      const summary = summariesBySeason[season];
+      return summary?.positions?.[key]?.top10Average ?? null;
+    }),
+    borderColor: [
+      '#ff595e',
+      '#1982c4',
+      '#6a4c93',
+      '#ffca3a',
+      '#8ac926',
+      '#1982c4',
+    ][index % 6],
+    backgroundColor: 'transparent',
+  })),
+};
+
 const serializedFranchiseChart = JSON.stringify(franchiseChartData);
 const serializedExtensionChart = JSON.stringify(extensionChartData);
+const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
 ---
 
 <TheLeagueLayout title="Franchise Tag History">
@@ -87,10 +110,10 @@ const serializedExtensionChart = JSON.stringify(extensionChartData);
     <header>
       <h1>Salary Trends Over Time</h1>
       <p>
-        Tracking the average of the top three (franchise tag) and top five
-        (extension) salaries at each position across available seasons. These
-        numbers reflect the data captured for the contract tools and salary
-        benchmarks.
+        Tracking the average of the top three (franchise tag), top five
+        (extension), and top ten (team option) salaries at each position across
+        available seasons. These numbers reflect the data captured for the
+        contract tools and salary benchmarks.
       </p>
     </header>
     {seasons.length ? (
@@ -109,6 +132,13 @@ const serializedExtensionChart = JSON.stringify(extensionChartData);
             data-chart="extension"
           >
             Extension (Top 5)
+          </button>
+          <button
+            type="button"
+            class="chart-toggle__btn"
+            data-chart="team-option"
+          >
+            Team Option (Top 10)
           </button>
         </div>
         <div class="chart-card">
@@ -183,14 +213,24 @@ const serializedExtensionChart = JSON.stringify(extensionChartData);
 ) : null}
 
 {seasons.length ? (
+  <script
+    type="application/json"
+    id="history-chart-team-option"
+    set:html={serializedTeamOptionChart}
+  ></script>
+) : null}
+
+{seasons.length ? (
   <>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module">
       const franchiseDataEl = document.getElementById('history-chart-franchise');
       const extensionDataEl = document.getElementById('history-chart-extension');
+      const teamOptionDataEl = document.getElementById('history-chart-team-option');
       const chartConfigs = {
         franchise: franchiseDataEl ? JSON.parse(franchiseDataEl.textContent) : null,
         extension: extensionDataEl ? JSON.parse(extensionDataEl.textContent) : null,
+        'team-option': teamOptionDataEl ? JSON.parse(teamOptionDataEl.textContent) : null,
       };
       const ctx = document.getElementById('salaryHistoryChart');
       if (ctx && window.Chart && chartConfigs.franchise) {
@@ -240,7 +280,9 @@ const serializedExtensionChart = JSON.stringify(extensionChartData);
             chart.options.scales.y.title.text =
               key === 'franchise'
                 ? 'Average Salary (Top 3)'
-                : 'Average Salary (Top 5)';
+                : key === 'extension'
+                  ? 'Average Salary (Top 5)'
+                  : 'Average Salary (Top 10)';
             chart.update();
           });
         });
