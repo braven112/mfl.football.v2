@@ -9412,11 +9412,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (lines) {
         lines[0]?.classList.toggle('completed', step > 1);
         lines[1]?.classList.toggle('completed', step > 2);
+        lines[2]?.classList.toggle('completed', step > 3);
       }
       // Toggle nav buttons
       if (demoBack) demoBack.hidden = step === 1;
-      if (demoNext) demoNext.style.display = step === 3 ? 'none' : '';
-      if (demoStart) demoStart.style.display = step === 3 ? 'inline-flex' : 'none';
+      if (demoNext) demoNext.style.display = step >= 3 ? 'none' : '';
+      if (demoStart) demoStart.style.display = step >= 3 ? 'inline-flex' : 'none';
     };
 
     const openTutorial = () => {
@@ -9463,6 +9464,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       demoExit?.classList.remove('active');
       demoBanner?.classList.remove('active');
     };
+
+    // Expose setDemoStep for ContractDemoOverlay's inline script (step 4 link)
+    (window as any).__cdemoSetStep = setDemoStep;
 
     // Wire up demo handlers using onclick to prevent duplicate listeners
     // (initRosterPage may be called multiple times via astro:page-load)
