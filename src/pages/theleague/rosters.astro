@@ -8203,10 +8203,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (tagSection) tagSection.style.display = '';
       document.getElementById('cdm-tag-current').textContent = formatSalaryCompact(elig.currentSalary);
       document.getElementById('cdm-tag-new').textContent = formatSalaryCompact(optionSalary);
-      document.getElementById('cdm-tag-basis-text').textContent = 'Based on the top 10 salaries at position';
+      const teamOptionYear = (config.salaryYears?.[0] ?? 2026) + elig.currentYears;
+      document.getElementById('cdm-tag-basis-text').textContent = `Estimate based on the top 10 salaries in ${config.extensionSeason}`;
 
       const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
-      updateProjectionTable(optionSalary, 1, playerAge, config.salaryYears?.[0]);
+      const ageAtOption = playerAge !== null ? playerAge + elig.currentYears : null;
+      updateProjectionTable(optionSalary, 1, ageAtOption, teamOptionYear);
 
       const reviewPanel = document.getElementById('cdm-review-panel');
       if (reviewPanel) {
