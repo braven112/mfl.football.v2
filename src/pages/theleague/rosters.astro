@@ -49,7 +49,6 @@ import {
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser } from '../../utils/auth';
-import { isAdminFranchise } from '../../config/nav-config';
 import fs from 'fs';
 import path from 'path';
 import espnNewsData from '../../../data/theleague/nfl-news-week15.json';
@@ -1287,7 +1286,6 @@ const knownTeamIds = new Set([
 // Get authenticated user and set default team to their franchise if logged in
 const authUser = getAuthUser(Astro.request);
 const isLoggedIn = !!authUser;
-const isAdmin = isAdminFranchise(authUser?.franchiseId);
 const userFranchiseId = normalizeFranchiseId(authUser?.franchiseId);
 
 // Get URL parameters for team preference
@@ -1649,10 +1647,8 @@ if (Array.isArray(eligFranchises)) {
       new Date(), frozenSalaryAverages,
     );
     const playerMap: Record<string, any> = {};
-    const adminOnlyTypes = ['franchise-tag', 'veteran-extension', 'rookie-extension', 'team-option'];
     for (const p of teamResult.players) {
       if (!p.eligible) continue;
-      if (!isAdmin && adminOnlyTypes.includes(p.declarationType)) continue;
       const entry: Record<string, any> = {
         type: p.declarationType,
         yearOptions: p.yearOptions,
@@ -2159,14 +2155,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             Clear All Tags
           </button>
 
-          {isAdmin && (
-            <button class="submit-franchise-tags-btn" id="submitFranchiseTagsBtn" style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              Submit Tags/Extensions
-            </button>
-          )}
+          <button class="submit-franchise-tags-btn" id="submitFranchiseTagsBtn" style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            Submit Tags/Extensions
+          </button>
 
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
