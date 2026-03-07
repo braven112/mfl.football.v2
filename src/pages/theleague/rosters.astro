@@ -1798,42 +1798,41 @@ if (testEligibility) {
       tradeBait: false,
     },
     {
-      // Scenario 3: 1st-round TO pick, 3 years remaining — rookie-extension eligible
-      id: '99901',
-      espnId: '4710752', // Cashius Howell, WR, Texas A&M — deliberate obscure placeholder
-      isMock: true,
-      name: 'Jackson, Caleb',
-      position: 'WR',
+      // Scenario 3: 1st round pick in year 2 — team option window open
+      id: '99902',
+      name: 'Williams, Caleb',
+      position: 'QB',
       salary: 2000000,
       contractYears: 3,
-      totalRemaining: 6000000,
+      contractInfo: 'TO',
+      totalRemaining: 6620000,
       franchiseId: testTeamId,
       status: 'ROSTER',
-      contractType: 'Team Option',
+      contractType: 'Rookie',
       points: 0,
       projectedPoints: '-',
       recentScores: [],
       avgRecent: '-',
       avgSeason: '-',
-      nflTeam: 'DAL',
+      nflTeam: 'CHI',
       opponent: 'BYE',
       oppStats: null,
       gameOdds: null,
       draftYear: 2024,
-      draftTeam: 'DAL',
+      draftTeam: 'CHI',
       draftRound: 1,
       draftPick: 1,
-      nflLogo: getNflLogoUrl('DAL'),
+      nflLogo: getNflLogoUrl('CHI'),
       rosterSlot: 'ROSTER',
       byeWeek: null,
       birthdate: null,
-      headshot: getPlayerHeadshot('99901', '4710752'),
-      college: 'Texas A&M',
-      collegeLogo: getCollegeAssets('Texas A&M')?.logo ?? null,
-      collegeLogoDark: getCollegeAssets('Texas A&M')?.logoDark ?? null,
-      height: '74',
+      headshot: getPlayerHeadshot('99902', '4432577'),
+      college: 'USC',
+      collegeLogo: null,
+      collegeLogoDark: null,
+      height: '73',
       weight: '215',
-      number: '11',
+      number: '18',
       experience: null,
       depthChartPosition: null,
       depthChartOrder: null,
@@ -1855,42 +1854,41 @@ if (testEligibility) {
       tradeBait: false,
     },
     {
-      // Scenario 4: 1st-round TO pick, 1 year remaining — team-option eligible
-      id: '99902',
-      espnId: '4879276', // Bryce Lance, QB, North Dakota State — deliberate obscure placeholder
-      isMock: true,
-      name: 'Williams, Bryce',
-      position: 'QB',
-      salary: 2000000,
-      contractYears: 1,
-      totalRemaining: 2000000,
+      // Scenario 4: 2nd round pick in year 3 — eligible for rookie extension
+      id: '99901',
+      name: 'Carter, Roman',
+      position: 'WR',
+      salary: 1800000,
+      contractYears: 2,
+      contractInfo: 'RC',
+      totalRemaining: 3798000,
       franchiseId: testTeamId,
       status: 'ROSTER',
-      contractType: 'Team Option',
+      contractType: 'Rookie',
       points: 0,
       projectedPoints: '-',
       recentScores: [],
       avgRecent: '-',
       avgSeason: '-',
-      nflTeam: 'DAL',
+      nflTeam: 'PIT',
       opponent: 'BYE',
       oppStats: null,
       gameOdds: null,
-      draftYear: 2022,
-      draftTeam: 'DAL',
-      draftRound: 1,
-      draftPick: 1,
-      nflLogo: getNflLogoUrl('DAL'),
+      draftYear: 2023,
+      draftTeam: 'PIT',
+      draftRound: 2,
+      draftPick: 48,
+      nflLogo: getNflLogoUrl('PIT'),
       rosterSlot: 'ROSTER',
       byeWeek: null,
       birthdate: null,
-      headshot: getPlayerHeadshot('99902', '4879276'),
-      college: 'North Dakota State',
-      collegeLogo: getCollegeAssets('North Dakota State')?.logo ?? null,
-      collegeLogoDark: getCollegeAssets('North Dakota State')?.logoDark ?? null,
+      headshot: getPlayerHeadshot('99901', '4432578'),
+      college: 'Alabama',
+      collegeLogo: null,
+      collegeLogoDark: null,
       height: '72',
-      weight: '205',
-      number: '17',
+      weight: '195',
+      number: '13',
       experience: null,
       depthChartPosition: null,
       depthChartOrder: null,
@@ -1970,7 +1968,7 @@ if (testEligibility) {
         isRookieContract: true,
       };
     })(),
-    // Williams, Bryce: 1st round pick (TO), 3 years remaining — eligible for team option or rookie extension
+    // Williams, Caleb: 2024 #1 overall (TO), 3 years remaining — team option or rookie extension
     '99902': {
       type: 'team-option' as const,
       teamOptionSalary: teamOptionSalaries['QB'] || 15000000,
@@ -1982,6 +1980,18 @@ if (testEligibility) {
       currentSalary: 2000000,
       contractInfo: 'TO',
       isRookieContract: false,
+    },
+    // Carter, Roman: 2023 2nd round WR, 2 years remaining — eligible for rookie extension
+    '99901': {
+      type: 'rookie-extension' as const,
+      extensionSalary: Math.round(1800000 * Math.pow(1.10, 2)),   // $1.8M × 1.10^2 = $2.178M
+      extensionYears: 4,
+      deadlineTimestamp: null,
+      isExpired: false,
+      currentYears: 2,
+      currentSalary: 1800000,
+      contractInfo: 'RC',
+      isRookieContract: true,
     },
   };
 }
@@ -9792,7 +9802,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     let demoOriginalPlayers = null; // snapshot before injection
     let demoOriginalAuthUser = null; // snapshot of auth state before demo
 
-    const DEMO_MOCK_IDS = ['DEMO_HOPKINS', 'DEMO_MENDOZA'];
+    const DEMO_MOCK_IDS = ['DEMO_HOPKINS', 'DEMO_MENDOZA', 'DEMO_WILLIAMS', 'DEMO_CARTER'];
 
     const buildDemoPlayers = () => [
       {
@@ -9905,6 +9915,120 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         tradeBait: false,
         espnId: '4837248',
       },
+      {
+        // Scenario 3: 1st round pick with team option window open
+        id: 'DEMO_WILLIAMS',
+        name: 'Williams, Caleb',
+        position: 'QB',
+        salary: 2000000,
+        contractYears: 3,
+        contractInfo: 'TO',
+        totalRemaining: 6620000,
+        franchiseId: currentTeam,
+        status: 'ROSTER',
+        contractType: 'Rookie',
+        points: 0,
+        projectedPoints: '-',
+        recentScores: [],
+        avgRecent: '-',
+        avgSeason: '-',
+        nflTeam: 'CHI',
+        opponent: 'BYE',
+        oppStats: null,
+        gameOdds: null,
+        draftYear: 2024,
+        draftTeam: 'CHI',
+        draftRound: 1,
+        draftPick: 1,
+        nflLogo: '/assets/nfl-logos/CHI.svg',
+        rosterSlot: 'ROSTER',
+        byeWeek: null,
+        birthdate: null,
+        headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4432577.png',
+        college: 'USC',
+        collegeLogo: null,
+        collegeLogoDark: null,
+        height: '73',
+        weight: '215',
+        number: '18',
+        experience: null,
+        depthChartPosition: null,
+        depthChartOrder: null,
+        injuryStatus: null,
+        injuryBodyPart: null,
+        sleeperId: null,
+        sleeperFullName: null,
+        sleeperPosition: null,
+        fantasyPositions: null,
+        gsisId: null,
+        sleeperAge: null,
+        sleeperStatus: null,
+        sleeperActive: null,
+        offenseSnaps: null,
+        defenseSnaps: null,
+        stSnaps: null,
+        gamesPlayed: null,
+        depthChartAhead: null,
+        tradeBait: false,
+        espnId: '4432577',
+      },
+      {
+        // Scenario 4: 2nd round pick eligible for rookie extension
+        id: 'DEMO_CARTER',
+        name: 'Carter, Roman',
+        position: 'WR',
+        salary: 1800000,
+        contractYears: 2,
+        contractInfo: 'RC',
+        totalRemaining: 3798000,
+        franchiseId: currentTeam,
+        status: 'ROSTER',
+        contractType: 'Rookie',
+        points: 0,
+        projectedPoints: '-',
+        recentScores: [],
+        avgRecent: '-',
+        avgSeason: '-',
+        nflTeam: 'PIT',
+        opponent: 'BYE',
+        oppStats: null,
+        gameOdds: null,
+        draftYear: 2023,
+        draftTeam: 'PIT',
+        draftRound: 2,
+        draftPick: 48,
+        nflLogo: '/assets/nfl-logos/PIT.svg',
+        rosterSlot: 'ROSTER',
+        byeWeek: null,
+        birthdate: null,
+        headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4432578.png',
+        college: 'Alabama',
+        collegeLogo: null,
+        collegeLogoDark: null,
+        height: '72',
+        weight: '195',
+        number: '13',
+        experience: null,
+        depthChartPosition: null,
+        depthChartOrder: null,
+        injuryStatus: null,
+        injuryBodyPart: null,
+        sleeperId: null,
+        sleeperFullName: null,
+        sleeperPosition: null,
+        fantasyPositions: null,
+        gsisId: null,
+        sleeperAge: null,
+        sleeperStatus: null,
+        sleeperActive: null,
+        offenseSnaps: null,
+        defenseSnaps: null,
+        stSnaps: null,
+        gamesPlayed: null,
+        depthChartAhead: null,
+        tradeBait: false,
+        espnId: '4432578',
+      },
     ];
 
     const injectDemoData = () => {
@@ -9952,6 +10076,34 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         contractInfo: 'RC',
         isRookieContract: true,
       };
+
+      // Williams: 1st round pick (TO), 3 years remaining — exercise, extend, or pass
+      const toSalaries = config.teamOptionSalaries || {};
+      eligibilityByTeam[currentTeam]['DEMO_WILLIAMS'] = {
+        type: 'team-option',
+        teamOptionSalary: toSalaries['QB'] || 15000000,
+        extensionSalary: Math.round(2000000 * Math.pow(1.10, 3)),
+        extensionYears: 5,
+        deadlineTimestamp: null,
+        isExpired: false,
+        currentYears: 3,
+        currentSalary: 2000000,
+        contractInfo: 'TO',
+        isRookieContract: false,
+      };
+
+      // Carter: 2nd round WR, 2 years remaining — eligible for rookie extension
+      eligibilityByTeam[currentTeam]['DEMO_CARTER'] = {
+        type: 'rookie-extension',
+        extensionSalary: Math.round(1800000 * Math.pow(1.10, 2)),
+        extensionYears: 4,
+        deadlineTimestamp: null,
+        isExpired: false,
+        currentYears: 2,
+        currentSalary: 1800000,
+        contractInfo: 'RC',
+        isRookieContract: true,
+      };
     };
 
     const removeDemoData = () => {
@@ -9966,13 +10118,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (eligibilityByTeam[currentTeam]) {
         delete eligibilityByTeam[currentTeam]['DEMO_HOPKINS'];
         delete eligibilityByTeam[currentTeam]['DEMO_MENDOZA'];
+        delete eligibilityByTeam[currentTeam]['DEMO_WILLIAMS'];
+        delete eligibilityByTeam[currentTeam]['DEMO_CARTER'];
       }
 
       // Remove any local declarations for demo players
       delete localDeclarations['DEMO_HOPKINS'];
       delete localDeclarations['DEMO_MENDOZA'];
+      delete localDeclarations['DEMO_WILLIAMS'];
+      delete localDeclarations['DEMO_CARTER'];
       delete declarationsByPlayer['DEMO_HOPKINS'];
       delete declarationsByPlayer['DEMO_MENDOZA'];
+      delete declarationsByPlayer['DEMO_WILLIAMS'];
+      delete declarationsByPlayer['DEMO_CARTER'];
     };
 
     const setDemoStep = (step) => {
