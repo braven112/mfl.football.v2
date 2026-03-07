@@ -1856,7 +1856,7 @@ if (testEligibility) {
     {
       // Scenario 4: 2nd round pick in year 3 — eligible for rookie extension
       id: '99901',
-      name: 'Carter, Roman',
+      name: 'Misack, Buck',
       position: 'WR',
       salary: 1800000,
       contractYears: 2,
@@ -1971,8 +1971,9 @@ if (testEligibility) {
     // Hailmary, Hank: mock 2024 #1 overall (TO), 3 years remaining — team option or rookie extension
     '99902': {
       type: 'team-option' as const,
-      teamOptionSalary: teamOptionSalaries['QB'] || 15000000,
-      extensionSalary: Math.round(2000000 * Math.pow(1.10, 3)),   // $2M × 1.10^3
+      teamOptionSalary: frozenSalaryAverages?.teamOptionSalaries?.['QB'] ?? 15000000,
+      // Rookie extension uses same formula as 2-year vet extension
+      extensionSalary: Math.round(((frozenSalaryAverages?.extensionSalaries?.['QB'] ?? 0) * 2 / (3 + 2)) + 2000000),
       extensionYears: 5,
       deadlineTimestamp: null,
       isExpired: false,
@@ -1981,10 +1982,11 @@ if (testEligibility) {
       contractInfo: 'TO',
       isRookieContract: false,
     },
-    // Carter, Roman: 2023 2nd round WR, 2 years remaining — eligible for rookie extension
+    // Misack, Buck: 2023 2nd round WR, 2 years remaining — eligible for rookie extension
+    // Uses same formula as 2-year veteran extension: (top5avg * extYrs / (existing + ext)) + salary
     '99901': {
       type: 'rookie-extension' as const,
-      extensionSalary: Math.round(1800000 * Math.pow(1.10, 2)),   // $1.8M × 1.10^2 = $2.178M
+      extensionSalary: Math.round(((frozenSalaryAverages?.extensionSalaries?.['WR'] ?? 0) * 2 / (2 + 2)) + 1800000),
       extensionYears: 4,
       deadlineTimestamp: null,
       isExpired: false,
@@ -2043,7 +2045,6 @@ const serializedConfig = JSON.stringify({
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
   eligibilityByTeam,
   declarationsByPlayer,
-  teamOptionSalaries,
 });
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
@@ -2487,7 +2488,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                   } else if (isFirstYearUfa && isOptionExpired) {
                     // Option window closed — show greyed-out top-10 salary (what was forfeited)
                     const pos = (player.position ?? '').toUpperCase();
-                    const optSalary = teamOptionSalaries[pos] ?? 0;
+                    const optSalary = frozenSalaryAverages?.teamOptionSalaries?.[pos] ?? 0;
                     displayValue = optSalary > 0 ? formatCurrency(optSalary) : 'UFA';
                     cellClass += ' salary-cell--team-option salary-cell--team-option-expired';
                   } else if (isFirstYearUfa) {
@@ -5158,8 +5159,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (!averages) return 0;
 
     if (type === 'franchise') return averages.franchiseSalaries?.[position] ?? 0;
-    // teamOptionSalaries are computed dynamically and stored at config root (not inside salaryAverages)
-    if (type === 'team-option') return config.teamOptionSalaries?.[position] ?? averages.teamOptionSalaries?.[position] ?? 0;
+    if (type === 'team-option') return averages.teamOptionSalaries?.[position] ?? 0;
     return averages.extensionSalaries?.[position] ?? 0;
   };
 
@@ -6522,7 +6522,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               const remainingYears = parseInt(player.contractYears, 10) || 0;
               const hasOptionWindow = isTO && remainingYears >= 2;
               const isOptionExpired = isTO && remainingYears === 1;
-              const toSalaries = config.teamOptionSalaries || {};
+              const toSalaries = config.salaryAverages?.[config.extensionSeason]?.teamOptionSalaries || {};
               const playerPos = (player.position ?? '').toUpperCase();
 
               if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
@@ -9168,7 +9168,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       {
         // Scenario 4: 2nd round pick eligible for rookie extension
         id: 'DEMO_CARTER',
-        name: 'Carter, Roman',
+        name: 'Misack, Buck',
         position: 'WR',
         salary: 1800000,
         contractYears: 2,
@@ -9271,11 +9271,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       };
 
       // Williams: 1st round pick (TO), 3 years remaining — exercise, extend, or pass
-      const toSalaries = config.teamOptionSalaries || {};
+      const toSalaries = config.salaryAverages?.[config.extensionSeason]?.teamOptionSalaries || {};
+      const extSalaries = config.salaryAverages?.[config.extensionSeason]?.extensionSalaries || {};
       eligibilityByTeam[currentTeam]['DEMO_WILLIAMS'] = {
         type: 'team-option',
         teamOptionSalary: toSalaries['QB'] || 15000000,
-        extensionSalary: Math.round(2000000 * Math.pow(1.10, 3)),
+        // Rookie extension uses same formula as 2-year vet extension
+        extensionSalary: Math.round(((extSalaries['QB'] || 0) * 2 / (3 + 2)) + 2000000),
         extensionYears: 5,
         deadlineTimestamp: null,
         isExpired: false,
@@ -9285,10 +9287,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         isRookieContract: false,
       };
 
-      // Carter: 2nd round WR, 2 years remaining — eligible for rookie extension
+      // Misack: 2nd round WR, 2 years remaining — eligible for rookie extension
+      // Uses same formula as 2-year veteran extension
       eligibilityByTeam[currentTeam]['DEMO_CARTER'] = {
         type: 'rookie-extension',
-        extensionSalary: Math.round(1800000 * Math.pow(1.10, 2)),
+        extensionSalary: Math.round(((getReferenceSalary('WR', 'extension', config.extensionSeason) || 0) * 2 / (2 + 2)) + 1800000),
         extensionYears: 4,
         deadlineTimestamp: null,
         isExpired: false,
@@ -9347,8 +9350,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
       // Toggle nav buttons
       if (demoBack) demoBack.hidden = step === 1;
-      if (demoNext) demoNext.style.display = step >= 3 ? 'none' : '';
-      if (demoStart) demoStart.style.display = step >= 3 ? 'inline-flex' : 'none';
+      if (demoNext) demoNext.style.display = step >= 4 ? 'none' : '';
+      if (demoStart) demoStart.style.display = step >= 4 ? 'inline-flex' : 'none';
     };
 
     const openTutorial = () => {
@@ -9396,13 +9399,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       demoBanner?.classList.remove('active');
     };
 
-    // Expose setDemoStep for ContractDemoOverlay's inline script (step 4 link)
+    // Expose setDemoStep for ContractDemoOverlay's inline script (step 2 glossary link)
     (window as any).__cdemoSetStep = setDemoStep;
 
     // Wire up demo handlers using onclick to prevent duplicate listeners
     // (initRosterPage may be called multiple times via astro:page-load)
     if (demoTrigger) demoTrigger.onclick = () => openTutorial();
-    if (demoNext) demoNext.onclick = () => { if (demoStep < 3) setDemoStep(demoStep + 1); };
+    if (demoNext) demoNext.onclick = () => { if (demoStep < 4) setDemoStep(demoStep + 1); };
     if (demoBack) demoBack.onclick = () => { if (demoStep > 1) setDemoStep(demoStep - 1); };
     if (demoStart) demoStart.onclick = () => { closeTutorial(); startDemo(); };
     if (demoTutorialClose) demoTutorialClose.onclick = () => closeTutorial();

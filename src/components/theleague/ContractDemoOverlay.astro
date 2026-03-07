@@ -169,8 +169,48 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       </div>
     </div>
 
-    <!-- Step 2: Spotting eligible players -->
+    <!-- Step 2: Glossary -->
     <div class="cdemo-panel" data-step="2">
+      <div class="cdemo-panel__kicker">Reference</div>
+      <h2 class="cdemo-panel__title">Contract terms, decoded.</h2>
+      <div class="cdemo-iglos">
+        <dl class="cdemo-iglos__list">
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">RC</dt>
+            <dd class="cdemo-iglos__def">Rookie Contract — the default 4-year deal assigned to all drafted rookies.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">TO</dt>
+            <dd class="cdemo-iglos__def">Team Option — 1st-round picks carry a TO flag signaling a pending 5th-year decision before Year 4.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">New Acquisition</dt>
+            <dd class="cdemo-iglos__def">Any player added via waiver or FA signing. Declaration required within 24h (in-season) or 48h (offseason).</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">Rookie Override</dt>
+            <dd class="cdemo-iglos__def">Optional shorter deal (1–3 yrs) instead of the default 4-year RC. Must be declared before the 3rd Sunday in August.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">Team Option</dt>
+            <dd class="cdemo-iglos__def">Guaranteed 5th year at the top-10 positional salary average. Must be exercised (or declined) before the player enters Year 4.</dd>
+          </div>
+          <div class="cdemo-iglos__item">
+            <dt class="cdemo-iglos__term">Rookie Extension</dt>
+            <dd class="cdemo-iglos__def">Adds 2 years to an RC deal. Uses the same formula as a 2-year veteran extension. Before Year 4 only.</dd>
+          </div>
+        </dl>
+        <button class="cdemo-iglos__expand" id="cdemo-glossary-open" type="button">
+          View full glossary
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 6h8M6 2l4 4-4 4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Spotting eligible players -->
+    <div class="cdemo-panel" data-step="3">
       <div class="cdemo-panel__kicker">Reading the Board</div>
       <h2 class="cdemo-panel__title">Every eligible player is marked — you can't miss them.</h2>
       <p class="cdemo-panel__body">
@@ -230,7 +270,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         </div>
         <div class="cdemo-mockrow">
           <PlayerCell
-            name="Carter, Roman"
+            name="Misack, Buck"
             headshot={getPlayerHeadshot('15777', '4243389')}
             position="WR"
             nflTeam="PIT"
@@ -247,15 +287,15 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       </div>
     </div>
 
-    <!-- Step 3: Try it -->
-    <div class="cdemo-panel" data-step="3">
+    <!-- Step 4: Try it -->
+    <div class="cdemo-panel" data-step="4">
       <div class="cdemo-panel__kicker">Try It Now</div>
       <h2 class="cdemo-panel__title">Four players, four scenarios — click through all of them.</h2>
       <p class="cdemo-panel__body">
-        We've added four demo players to your roster, one for each declaration
+        We've added four sandbox players to your roster, one for each declaration
         type. Click the blue chip or TO badge to open the declaration modal,
-        make a selection, and submit. Declarations go to the commissioner for
-        approval — they're real, not a sandbox.
+        make a selection, and explore. These are demos — nothing is submitted
+        or saved.
       </p>
       <div class="cdemo-panel__tips">
         <div class="cdemo-tip">
@@ -270,46 +310,6 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
           </span>
           <span>Submitted declarations appear in the commissioner queue and are reflected on your roster once approved.</span>
         </div>
-      </div>
-    </div>
-
-    <!-- Step 4: Glossary -->
-    <div class="cdemo-panel" data-step="4">
-      <div class="cdemo-panel__kicker">Reference</div>
-      <h2 class="cdemo-panel__title">Contract terms, decoded.</h2>
-      <div class="cdemo-iglos">
-        <dl class="cdemo-iglos__list">
-          <div class="cdemo-iglos__item">
-            <dt class="cdemo-iglos__term">RC</dt>
-            <dd class="cdemo-iglos__def">Rookie Contract — the default 4-year deal assigned to all drafted rookies.</dd>
-          </div>
-          <div class="cdemo-iglos__item">
-            <dt class="cdemo-iglos__term">TO</dt>
-            <dd class="cdemo-iglos__def">Team Option — 1st-round picks carry a TO flag signaling a pending 5th-year decision before Year 4.</dd>
-          </div>
-          <div class="cdemo-iglos__item">
-            <dt class="cdemo-iglos__term">New Acquisition</dt>
-            <dd class="cdemo-iglos__def">Any player added via waiver, trade, or FA signing. Declaration required within 24h (in-season) or 48h (offseason).</dd>
-          </div>
-          <div class="cdemo-iglos__item">
-            <dt class="cdemo-iglos__term">Rookie Override</dt>
-            <dd class="cdemo-iglos__def">Optional shorter deal (1–3 yrs) instead of the default 4-year RC. Must be declared before the 3rd Sunday in August.</dd>
-          </div>
-          <div class="cdemo-iglos__item">
-            <dt class="cdemo-iglos__term">Team Option</dt>
-            <dd class="cdemo-iglos__def">Guaranteed 5th year at the top-10 positional salary average. Must be exercised (or declined) before the player enters Year 4.</dd>
-          </div>
-          <div class="cdemo-iglos__item">
-            <dt class="cdemo-iglos__term">Rookie Extension</dt>
-            <dd class="cdemo-iglos__def">Adds 2 years to an RC deal. New salary = current salary × 1.10 per remaining contract year. Before Year 4 only.</dd>
-          </div>
-        </dl>
-        <button class="cdemo-iglos__expand" id="cdemo-glossary-open" type="button">
-          View full glossary
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 6h8M6 2l4 4-4 4"/>
-          </svg>
-        </button>
       </div>
     </div>
 
@@ -350,7 +350,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       </div>
       <div class="cdemo-glossary__item">
         <dt class="cdemo-glossary__term">New Acquisition</dt>
-        <dd class="cdemo-glossary__def">Any player added to a roster via BBID waiver, trade, or free-agent signing. A contract declaration is required within 24 hours during the season or 48 hours in the offseason.</dd>
+        <dd class="cdemo-glossary__def">Any player added to a roster via BBID waiver or free-agent signing. A contract declaration is required within 24 hours during the season or 48 hours in the offseason.</dd>
       </div>
       <div class="cdemo-glossary__item">
         <dt class="cdemo-glossary__term">Rookie Override</dt>
@@ -362,7 +362,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       </div>
       <div class="cdemo-glossary__item">
         <dt class="cdemo-glossary__term">Rookie Extension</dt>
-        <dd class="cdemo-glossary__def">Adds 2 years to an RC player's deal. New salary = current salary × 1.10 per remaining contract year. Before Year 4 only.</dd>
+        <dd class="cdemo-glossary__def">Adds 2 years to an RC player's deal. Uses the same formula as a 2-year veteran extension. Before Year 4 only.</dd>
       </div>
     </dl>
   </div>
@@ -1328,10 +1328,10 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
 </style>
 
 <script>
-  // Glossary modal + step 4 navigation
+  // Glossary modal + step 2 navigation
   (function () {
     const glossary = document.getElementById('cdemo-glossary');
-    const openBtn  = document.getElementById('cdemo-glossary-open'); // "View full glossary" in step 4
+    const openBtn  = document.getElementById('cdemo-glossary-open'); // "View full glossary" in step 2
     const closeBtn = document.getElementById('cdemo-glossary-close');
     const overlay  = document.getElementById('cdemo-glossary-overlay');
     const step4Link = document.getElementById('cdemo-step4-link');  // "Glossary of terms →" in step 1
@@ -1353,11 +1353,11 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       if (e.key === 'Escape') closeGlossary();
     });
 
-    // "Glossary of terms →" in step 1: jump to step 4 in the tutorial
+    // "Glossary of terms →" in step 1: jump to step 2 in the tutorial
     if (step4Link) {
       step4Link.addEventListener('click', () => {
         if (typeof (window as any).__cdemoSetStep === 'function') {
-          (window as any).__cdemoSetStep(4);
+          (window as any).__cdemoSetStep(2);
         } else {
           openGlossary(); // fallback if tutorial JS not loaded
         }
