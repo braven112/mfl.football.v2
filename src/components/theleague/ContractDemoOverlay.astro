@@ -12,8 +12,8 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
 <!-- ================================================================
      Floating Trigger Button — right edge of viewport
      ================================================================ -->
-<button class="cdemo-trigger" id="cdemo-trigger" aria-label="Preview contract declarations feature">
-  <span class="cdemo-trigger__badge">Coming Soon</span>
+<button class="cdemo-trigger" id="cdemo-trigger" aria-label="How contract declarations work">
+  <span class="cdemo-trigger__badge">New</span>
   <span class="cdemo-trigger__icon">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -22,7 +22,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       <line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
   </span>
-  <span class="cdemo-trigger__label">Preview</span>
+  <span class="cdemo-trigger__label">How It Works</span>
 </button>
 
 <!-- ================================================================
@@ -42,7 +42,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
      ================================================================ -->
 <div class="cdemo-banner" id="cdemo-banner">
   <span class="cdemo-banner__dot"></span>
-  <span class="cdemo-banner__text">Preview Mode — this feature is coming soon, we want your feedback</span>
+  <span class="cdemo-banner__text">Demo Mode — explore how contract declarations work</span>
   <button class="cdemo-banner__dismiss" id="cdemo-banner-exit" aria-label="Exit demo">
     Exit Demo
     <svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -76,14 +76,12 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
 
     <!-- Step 1: What are contract declarations? -->
     <div class="cdemo-panel active" data-step="1">
-      <div class="cdemo-panel__kicker">Coming Soon</div>
-      <h2 class="cdemo-panel__title">Every acquisition needs a contract.</h2>
+      <div class="cdemo-panel__kicker">Now Live</div>
+      <h2 class="cdemo-panel__title">Contract declarations are built into your roster.</h2>
       <p class="cdemo-panel__body">
-        We're building contract declarations directly into the roster page.
-        When a player joins your roster, you'll set the terms right here — no
-        more message board posts. New pickups default to 1 year but you can lock
-        them in for up to 5. Rookies default to a 4-year deal, but you can
-        reduce it for more flexibility. Miss the deadline and the default sticks.
+        Every player action now has a declaration — set right here, no message
+        board required. Four types cover everything from a waiver pickup to a
+        veteran 1st rounder entering their option year.
       </p>
       <div class="cdemo-panel__cards">
         <div class="cdemo-minicard cdemo-minicard--acquisition">
@@ -114,17 +112,45 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
             <span class="cdemo-minicard__value">1 – 3 years</span>
           </div>
         </div>
+        <div class="cdemo-minicard cdemo-minicard--team-option">
+          <div class="cdemo-minicard__badge cdemo-minicard__badge--team-option">
+            <span class="cdemo-minicard__badge-dot"></span>
+            Team Option
+          </div>
+          <div class="cdemo-minicard__detail">
+            <span class="cdemo-minicard__label">Who</span>
+            <span class="cdemo-minicard__value">1st round picks</span>
+          </div>
+          <div class="cdemo-minicard__detail">
+            <span class="cdemo-minicard__label">Window</span>
+            <span class="cdemo-minicard__value">Before Year 4</span>
+          </div>
+        </div>
+        <div class="cdemo-minicard cdemo-minicard--extension">
+          <div class="cdemo-minicard__badge cdemo-minicard__badge--extension">
+            <span class="cdemo-minicard__badge-dot"></span>
+            Rookie Extension
+          </div>
+          <div class="cdemo-minicard__detail">
+            <span class="cdemo-minicard__label">Who</span>
+            <span class="cdemo-minicard__value">RC players, 2+ yrs</span>
+          </div>
+          <div class="cdemo-minicard__detail">
+            <span class="cdemo-minicard__label">Adds</span>
+            <span class="cdemo-minicard__value">+2 years</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Step 2: Spotting eligible players -->
     <div class="cdemo-panel" data-step="2">
       <div class="cdemo-panel__kicker">Reading the Board</div>
-      <h2 class="cdemo-panel__title">Eligible players are highlighted in the Years column.</h2>
+      <h2 class="cdemo-panel__title">Every eligible player is marked — you can't miss them.</h2>
       <p class="cdemo-panel__body">
-        Look for the blue chips in the Years column — they're buttons. Deadline
-        badges show time remaining. Red means urgent. Click a chip to open
-        the declaration modal.
+        Blue chips in the <strong>Years</strong> column are clickable — tap to declare.
+        1st round picks with an open option window show a blue <strong>TO</strong> badge in the salary column instead.
+        Deadline badges count down in real time.
       </p>
       <div class="cdemo-panel__mockup">
         <div class="cdemo-mockrow">
@@ -136,7 +162,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
             espnId="15795"
             size="compact"
           />
-          <span class="yrs-chip yrs-chip--eligible" role="img" aria-label="1 year, 17 hours remaining">
+          <span class="yrs-chip yrs-chip--eligible" role="img" aria-label="1 year, new acquisition">
             <span class="yrs-chip__value">1</span>
             <span class="yrs-chip__deadline yrs-chip__deadline--critical">17h</span>
           </span>
@@ -151,33 +177,57 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
             espnId="4837248"
             size="compact"
           />
-          <span class="yrs-chip yrs-chip--eligible" role="img" aria-label="4 years, 168 days remaining">
+          <span class="yrs-chip yrs-chip--eligible" role="img" aria-label="4 years, rookie override">
             <span class="yrs-chip__value">4</span>
             <span class="yrs-chip__deadline">168d</span>
+          </span>
+        </div>
+        <div class="cdemo-mockrow">
+          <PlayerCell
+            name="Williams, Caleb"
+            headshot={getPlayerHeadshot('99902', '4432577')}
+            position="QB"
+            nflTeam="CHI"
+            espnId="4432577"
+            size="compact"
+          />
+          <span class="cdemo-to-badge">TO</span>
+        </div>
+        <div class="cdemo-mockrow">
+          <PlayerCell
+            name="Carter, Roman"
+            headshot={getPlayerHeadshot('99901', '4432578')}
+            position="WR"
+            nflTeam="PIT"
+            espnId="4432578"
+            size="compact"
+          />
+          <span class="yrs-chip yrs-chip--eligible" role="img" aria-label="2 years, rookie extension">
+            <span class="yrs-chip__value">2</span>
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Step 3: Try it & give feedback -->
+    <!-- Step 3: Try it -->
     <div class="cdemo-panel" data-step="3">
-      <div class="cdemo-panel__kicker">Test Drive</div>
-      <h2 class="cdemo-panel__title">Try it out, tell us what you think.</h2>
+      <div class="cdemo-panel__kicker">Try It Now</div>
+      <h2 class="cdemo-panel__title">Four players, four scenarios — click through all of them.</h2>
       <p class="cdemo-panel__body">
-        We've added two mock players to your roster so you can take the full
-        flow for a spin. Click the blue years cell, pick a contract length,
-        and review the salary projection. Nothing is saved — this is a
-        sandbox.
+        We've added four demo players to your roster, one for each declaration
+        type. Click the blue chip or TO badge to open the declaration modal,
+        make a selection, and submit. Declarations go to the commissioner for
+        approval — they're real, not a sandbox.
       </p>
-      <div class="cdemo-panel__feedback">
-        <div class="cdemo-feedback__header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          We want your feedback
+      <div class="cdemo-panel__tips">
+        <div class="cdemo-tip">
+          <span class="cdemo-tip__icon">💡</span>
+          <span>For Team Options, you get three paths: exercise the option year, extend as a rookie deal, or let the player play out their final year.</span>
         </div>
-        <p class="cdemo-feedback__body">
-          Does this flow make sense? Is anything confusing? Drop your
-          thoughts on the message board — we'll tune it before launch.
-        </p>
+        <div class="cdemo-tip">
+          <span class="cdemo-tip__icon">📋</span>
+          <span>Submitted declarations appear in the commissioner queue and are reflected on your roster once approved.</span>
+        </div>
       </div>
     </div>
 
@@ -185,7 +235,7 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     <div class="cdemo-nav">
       <button class="cdemo-nav__back" id="cdemo-back">Back</button>
       <button class="cdemo-nav__next" id="cdemo-next">Next</button>
-      <button class="cdemo-nav__start" id="cdemo-start">Start Exploring</button>
+      <button class="cdemo-nav__start" id="cdemo-start">Try It Now</button>
     </div>
   </div>
 </div>
@@ -542,17 +592,17 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   .cdemo-panel__cards {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    gap: 0.625rem;
     margin-top: 0.5rem;
   }
 
   .cdemo-minicard {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 0.875rem;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.625rem;
+    gap: 0.5rem;
     background: #fafbfc;
   }
 
@@ -576,6 +626,16 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     background: #fefce8;
   }
 
+  .cdemo-minicard__badge--team-option {
+    color: #0369a1;
+    background: #e0f2fe;
+  }
+
+  .cdemo-minicard__badge--extension {
+    color: #15803d;
+    background: #f0fdf4;
+  }
+
   .cdemo-minicard__badge-dot {
     width: 5px;
     height: 5px;
@@ -585,6 +645,14 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
 
   .cdemo-minicard__badge--rookie .cdemo-minicard__badge-dot {
     background: #eab308;
+  }
+
+  .cdemo-minicard__badge--team-option .cdemo-minicard__badge-dot {
+    background: #0ea5e9;
+  }
+
+  .cdemo-minicard__badge--extension .cdemo-minicard__badge-dot {
+    background: #22c55e;
   }
 
   .cdemo-minicard__detail {
@@ -714,35 +782,45 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   .cdemo-mock-projection__row:last-child { border-bottom: none; }
 
   /* ================================================================
-     Feedback Card (Step 3)
+     TO Badge in mockup (Step 2)
      ================================================================ */
-  .cdemo-panel__feedback {
-    margin-top: 0.75rem;
-    border: 1px solid #e0e7ef;
-    border-left: 3px solid var(--color-primary, #1c497c);
-    border-radius: 0 8px 8px 0;
-    padding: 0.875rem 1rem;
-    background: #f8fafc;
-  }
-
-  .cdemo-feedback__header {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
+  .cdemo-to-badge {
+    flex-shrink: 0;
     font-size: 0.6875rem;
     font-weight: 700;
-    text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--color-primary, #1c497c);
-    margin-bottom: 0.375rem;
+    color: #0ea5e9;
+    text-decoration: underline dotted;
+    cursor: default;
   }
 
-  .cdemo-feedback__body {
+  /* ================================================================
+     Tips (Step 3)
+     ================================================================ */
+  .cdemo-panel__tips {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .cdemo-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
     font-size: 0.8125rem;
-    font-weight: 300;
     color: #475569;
-    line-height: 1.55;
-    margin: 0;
+    line-height: 1.5;
+  }
+
+  .cdemo-tip__icon {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
 
   /* ================================================================
