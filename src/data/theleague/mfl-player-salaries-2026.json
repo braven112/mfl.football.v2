@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-06T03:19:12.740Z"
+    "fetchedAt": "2026-03-03T04:10:48.327Z"
   },
   "players": [
     {
@@ -49,7 +49,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -1215,13 +1215,40 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14136_thumb.jpg",
       "externalIds": {
         "mfl": "14136",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5872",
+        "gsis": " 00-0035719"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5872",
+        "fullName": "Deebo Samuel",
+        "team": "WAS",
+        "age": 30,
+        "height": "72",
+        "weight": "215",
+        "number": 1,
+        "college": "South Carolina",
+        "birthDate": "1996-01-15",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035719"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        }
+      ]
     },
     {
       "id": "12956",
@@ -1450,7 +1477,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -2690,6 +2717,10 @@
           "name": "McLaurin, Terry"
         },
         {
+          "id": "14136",
+          "name": "Samuel, Deebo"
+        },
+        {
           "id": "17184",
           "name": "Lane, Jaylin"
         }
@@ -2913,7 +2944,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -3078,39 +3109,17 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "HOU",
+      "team": "DET",
       "draftYear": 2019,
       "draftTeam": "CHI",
       "birthdate": 865659600,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14071_thumb.jpg",
       "externalIds": {
         "mfl": "14071",
-        "sleeper": "5892",
-        "gsis": " 00-0035685"
+        "sleeper": null,
+        "gsis": null
       },
-      "sleeper": {
-        "id": "5892",
-        "fullName": "David Montgomery",
-        "team": "HOU",
-        "age": 28,
-        "height": "71",
-        "weight": "230",
-        "number": 5,
-        "college": "Iowa State",
-        "birthDate": "1997-06-07",
-        "status": "Active",
-        "active": true,
-        "position": "RB",
-        "depthChartPosition": "RB",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "RB"
-        ],
-        "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": " 00-0035685"
-      },
+      "sleeper": null,
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -3148,7 +3157,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -3193,8 +3202,8 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -3510,6 +3519,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon"
+        },
         {
           "id": "17134",
           "name": "Williams, Kyle"
@@ -4359,10 +4372,32 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13193_thumb.jpg",
       "externalIds": {
         "mfl": "13193",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "4144",
+        "gsis": "00-0033858"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "4144",
+        "fullName": "Jonnu Smith",
+        "team": "PIT",
+        "age": 30,
+        "height": "75",
+        "weight": "248",
+        "number": 81,
+        "college": "Florida International",
+        "birthDate": "1995-08-22",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 9,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0033858"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -4819,6 +4854,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon"
+        },
         {
           "id": "17134",
           "name": "Williams, Kyle"
@@ -5452,12 +5491,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14071",
-          "name": "Montgomery, David"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15368",
@@ -6852,7 +6886,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon"
+        }
+      ]
     },
     {
       "id": "15756",
@@ -8468,7 +8507,7 @@
         "id": "8137",
         "fullName": "George Pickens",
         "team": "DAL",
-        "age": 25,
+        "age": 24,
         "height": "75",
         "weight": "200",
         "number": 3,
@@ -8793,10 +8832,32 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/12186_thumb.jpg",
       "externalIds": {
         "mfl": "12186",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "2449",
+        "gsis": "00-0031588"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "2449",
+        "fullName": "Stefon Diggs",
+        "team": "NE",
+        "age": 32,
+        "height": "72",
+        "weight": "191",
+        "number": 8,
+        "college": "Maryland",
+        "birthDate": "1993-11-29",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 11,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0031588"
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -9413,7 +9474,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -10929,7 +10990,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -11730,10 +11791,32 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16286_thumb.jpg",
       "externalIds": {
         "mfl": "16286",
-        "sleeper": null,
+        "sleeper": "10937",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "10937",
+        "fullName": "Jake Moody",
+        "team": "WAS",
+        "age": 26,
+        "height": "73",
+        "weight": "210",
+        "number": 16,
+        "college": "Michigan",
+        "birthDate": "1999-11-23",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -12362,6 +12445,10 @@
         {
           "id": "14109",
           "name": "McLaurin, Terry"
+        },
+        {
+          "id": "14136",
+          "name": "Samuel, Deebo"
         }
       ]
     },

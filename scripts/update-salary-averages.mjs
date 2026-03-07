@@ -584,6 +584,7 @@ const summarizeByPosition = (players) => {
     list.sort((a, b) => b.salary - a.salary);
     const top3 = list.slice(0, 3);
     const top5 = list.slice(0, 5);
+    const top10 = list.slice(0, 10);
     const starterCount = STARTER_COUNTS[position] ?? list.length;
     const starters = list.slice(0, starterCount);
     const allSalaries = list.map((player) => player.salary);
@@ -591,6 +592,7 @@ const summarizeByPosition = (players) => {
       totalPlayers: list.length,
       top3Average: average(top3.map((player) => player.salary)),
       top5Average: average(top5.map((player) => player.salary)),
+      top10Average: average(top10.map((player) => player.salary)),
       starterAverage: average(starters.map((player) => player.salary)),
       starterMedian: median(starters.map((player) => player.salary)),
       starterCount,

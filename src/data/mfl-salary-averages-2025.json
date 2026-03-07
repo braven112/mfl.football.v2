@@ -14,8 +14,8 @@
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz"
     },
     "fetchedAt": "2025-12-07T07:47:59.281Z",
-    "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2025-12-07T07:47:59.297Z"
+    "description": "Top salary averages. top10Average estimated from historical top10/top5 ratios (2021-2024); exact data unavailable post-season.",
+    "generatedAt": "2026-03-06T03:10:57.003Z"
   },
   "positions": {
     "RB": {
@@ -53,7 +53,8 @@
           "salary": 7000000,
           "franchiseId": "0009"
         }
-      ]
+      ],
+      "top10Average": 7075588
     },
     "WR": {
       "totalPlayers": 132,
@@ -90,7 +91,8 @@
           "salary": 7600000,
           "franchiseId": "0008"
         }
-      ]
+      ],
+      "top10Average": 6747176
     },
     "TE": {
       "totalPlayers": 58,
@@ -127,7 +129,8 @@
           "salary": 5750000,
           "franchiseId": "0010"
         }
-      ]
+      ],
+      "top10Average": 4013459
     },
     "PK": {
       "totalPlayers": 31,
@@ -164,7 +167,8 @@
           "salary": 600000,
           "franchiseId": "0002"
         }
-      ]
+      ],
+      "top10Average": 641640
     },
     "Def": {
       "totalPlayers": 32,
@@ -201,7 +205,8 @@
           "salary": 1200000,
           "franchiseId": "0001"
         }
-      ]
+      ],
+      "top10Average": 1119227
     },
     "QB": {
       "totalPlayers": 55,
@@ -238,7 +243,8 @@
           "salary": 7400000,
           "franchiseId": "0007"
         }
-      ]
+      ],
+      "top10Average": 6801697
     }
   }
 }

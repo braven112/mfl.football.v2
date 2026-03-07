@@ -198,6 +198,7 @@ function getAugustCutdownDate(year: number): Date {
 export interface SalaryAverages {
   franchiseSalaries?: Record<string, number>;
   extensionSalaries?: Record<string, number>;
+  teamOptionSalaries?: Record<string, number>;
 }
 
 /**
@@ -206,9 +207,10 @@ export interface SalaryAverages {
  * Checks all possible declaration types in priority order:
  * 1. New acquisition (BBID/auction within deadline)
  * 2. Rookie override (RC player before August cutdown)
- * 3. Franchise tag (1 year remaining, offseason)
- * 4. Veteran extension (2+ years, not RC)
- * 5. Rookie extension (RC player, offseason)
+ * 3. Franchise tag (1 year remaining, offseason, non-TO)
+ * 4. Team option (TO player, 1 year remaining, offseason)
+ * 5. Veteran extension (2+ years, not RC, not TO)
+ * 6. Rookie extension (RC or TO player, 2+ years, offseason)
  *
  * @param salaryAverages - Frozen position salary averages for tag/extension calculations
  */
@@ -279,8 +281,10 @@ export function getPlayerEligibility(
   // The remaining types require an active contract window
   if (!window.inWindow) return base;
 
-  // 3. Check for franchise tag eligibility (1 year remaining, offseason only)
-  if (currentYears === 1 && window.windowType === 'offseason' && contractInfo !== 'F') {
+  const isTO = contractInfo === 'TO';
+
+  // 3. Check for franchise tag eligibility (1 year remaining, offseason only, non-TO)
+  if (currentYears === 1 && window.windowType === 'offseason' && contractInfo !== 'F' && !isTO) {
     const position = (playerInfo?.position ?? '').toUpperCase();
     const top3Avg = salaryAverages?.franchiseSalaries?.[position] ?? 0;
     const increased = currentSalary * 1.2;
@@ -295,8 +299,21 @@ export function getPlayerEligibility(
     };
   }
 
-  // 4. Check for veteran extension (2+ years, NOT RC)
-  if (currentYears >= 2 && !isRC && window.windowType === 'offseason') {
+  // 4. Check for team option (TO player, 1 year remaining, offseason)
+  if (isTO && currentYears === 1 && window.windowType === 'offseason') {
+    const position = (playerInfo?.position ?? '').toUpperCase();
+    const top10Avg = salaryAverages?.teamOptionSalaries?.[position] ?? 0;
+    return {
+      ...base,
+      eligible: true,
+      declarationType: 'team-option',
+      teamOptionSalary: top10Avg,
+      tagBasis: 'top 10 average',
+    };
+  }
+
+  // 5. Check for veteran extension (2+ years, NOT RC, NOT TO)
+  if (currentYears >= 2 && !isRC && !isTO && window.windowType === 'offseason') {
     // Extension salary = currentSalary escalated to the extension point (10% per current year)
     const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
     const extensionYears = currentYears + 2;
@@ -309,8 +326,8 @@ export function getPlayerEligibility(
     };
   }
 
-  // 5. Check for rookie extension (RC player, offseason)
-  if (isRC && window.windowType === 'offseason') {
+  // 6. Check for rookie extension (RC or TO player, 2+ years remaining, offseason)
+  if ((isRC || isTO) && currentYears >= 2 && window.windowType === 'offseason') {
     const extensionSalary = Math.round(currentSalary * Math.pow(1.10, currentYears));
     const extensionYears = currentYears + 2;
     return {

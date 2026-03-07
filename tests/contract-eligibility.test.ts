@@ -418,6 +418,85 @@ describe('getPlayerEligibility', () => {
       expect(result.eligible).toBe(true);
       expect(result.declarationType).toBe('rookie-extension');
     });
+
+    it('marks TO player with 2+ years as eligible for rookie extension in offseason', () => {
+      const roster = makeRosterPlayer({ contractYear: '3', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('rookie-extension');
+    });
+
+    it('does NOT mark RC player with only 1 year as eligible for rookie extension', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'RC' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      // RC with 1 year — no eligible action in offseason (no franchise tag, no extension)
+      expect(result.declarationType).not.toBe('rookie-extension');
+    });
+  });
+
+  describe('team-option eligibility', () => {
+    it('marks TO player with 1 year as eligible for team option in offseason', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+      const salaryAverages = {
+        teamOptionSalaries: { WR: 6000000 },
+      };
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now, salaryAverages);
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('team-option');
+      expect(result.teamOptionSalary).toBe(6000000);
+    });
+
+    it('uses teamOptionSalaries for the top 10 average salary', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo({ position: 'QB' });
+      const salaryAverages = {
+        teamOptionSalaries: { QB: 8500000, WR: 6000000 },
+      };
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now, salaryAverages);
+      expect(result.declarationType).toBe('team-option');
+      expect(result.teamOptionSalary).toBe(8500000);
+    });
+
+    it('does NOT mark TO player with 1 year as franchise-tag eligible', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.declarationType).not.toBe('franchise-tag');
+    });
+
+    it('does NOT mark TO player with 2+ years as veteran-extension eligible', () => {
+      const roster = makeRosterPlayer({ contractYear: '3', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.declarationType).not.toBe('veteran-extension');
+    });
+
+    it('mutually exclusive: TO + 1 year gets team-option, not rookie-extension', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.declarationType).toBe('team-option');
+      expect(result.declarationType).not.toBe('rookie-extension');
+    });
+
+    it('mutually exclusive: TO + 2+ years gets rookie-extension, not team-option', () => {
+      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
+      expect(result.declarationType).toBe('rookie-extension');
+      expect(result.declarationType).not.toBe('team-option');
+    });
   });
 });
 
