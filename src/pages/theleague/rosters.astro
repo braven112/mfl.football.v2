@@ -5053,8 +5053,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const elig = getPlayerEligibility(playerId, teamId);
     if (!elig || elig.isExpired) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
-    // TO players use the action modal (⋮ button), not the yrs-chip — no interactive chip here
-    if (elig.type === 'team-option' || elig.contractInfo === 'TO') {
+    // TO/RC players use the action modal (⋮ button), not the yrs-chip — no interactive chip here
+    if (elig.type === 'team-option' || elig.type === 'rookie-extension' || elig.contractInfo === 'TO' || elig.contractInfo === 'RC') {
       return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
     }
 
