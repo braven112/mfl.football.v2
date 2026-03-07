@@ -159,14 +159,6 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
           </div>
         </div>
       </div>
-      <div class="cdemo-panel__footer">
-        <button class="cdemo-glossary-link" id="cdemo-step4-link" type="button">
-          Glossary of terms
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 6h8M6 2l4 4-4 4"/>
-          </svg>
-        </button>
-      </div>
     </div>
 
     <!-- Step 2: Glossary -->
@@ -1115,33 +1107,6 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   .cdemo-iglos__expand:hover { background: #f1f5f9; }
 
   /* ================================================================
-     Step 1 panel footer — glossary link
-     ================================================================ */
-  .cdemo-panel__footer {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 0.25rem;
-  }
-
-  .cdemo-glossary-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    background: none;
-    border: none;
-    padding: 0;
-    font-family: inherit;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--color-primary, #1c497c);
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.15s ease;
-  }
-
-  .cdemo-glossary-link:hover { opacity: 1; }
-
-  /* ================================================================
      Glossary Modal
      ================================================================ */
   .cdemo-glossary {
@@ -1284,6 +1249,15 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
       to { transform: translateY(0); }
     }
 
+    .cdemo-nav {
+      position: sticky;
+      bottom: -1.5rem;
+      margin: 0 -1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #fff;
+      box-shadow: 0 -1px 0 #e2e8f0;
+    }
+
     .cdemo-panel__cards {
       grid-template-columns: 1fr;
     }
@@ -1330,13 +1304,12 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
 </style>
 
 <script>
-  // Glossary modal + step 2 navigation
+  // Glossary modal
   (function () {
     const glossary = document.getElementById('cdemo-glossary');
     const openBtn  = document.getElementById('cdemo-glossary-open'); // "View full glossary" in step 2
     const closeBtn = document.getElementById('cdemo-glossary-close');
     const overlay  = document.getElementById('cdemo-glossary-overlay');
-    const step4Link = document.getElementById('cdemo-step4-link');  // "Glossary of terms →" in step 1
 
     function openGlossary() {
       if (!glossary || !closeBtn) return;
@@ -1354,16 +1327,5 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
     glossary?.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeGlossary();
     });
-
-    // "Glossary of terms →" in step 1: jump to step 2 in the tutorial
-    if (step4Link) {
-      step4Link.addEventListener('click', () => {
-        if (typeof (window as any).__cdemoSetStep === 'function') {
-          (window as any).__cdemoSetStep(2);
-        } else {
-          openGlossary(); // fallback if tutorial JS not loaded
-        }
-      });
-    }
   })();
 </script>
