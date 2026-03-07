@@ -185,9 +185,11 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <div class="cdemo-mockrow">
           <PlayerCell
             name="Hailmary, Hank"
-            headshot={getPlayerHeadshot('99902', null)}
+            headshot={getPlayerHeadshot('16585', '4360698')}
             position="QB"
             nflTeam="DAL"
+            mflId="16585"
+            espnId="4360698"
             size="compact"
           />
           <span class="cdemo-to-badge">TO</span>
@@ -195,15 +197,23 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
         <div class="cdemo-mockrow">
           <PlayerCell
             name="Carter, Roman"
-            headshot={getPlayerHeadshot('99901', '4432578')}
+            headshot={getPlayerHeadshot('15777', '4243389')}
             position="WR"
             nflTeam="PIT"
-            espnId="4432578"
+            mflId="15777"
+            espnId="4243389"
             size="compact"
           />
-          <span class="yrs-chip" role="img" aria-label="2 years, rookie extension">
-            <span class="yrs-chip__value">2</span>
-          </span>
+          <div class="cdemo-action-group">
+            <span class="yrs-chip" role="img" aria-label="2 years">
+              <span class="yrs-chip__value">2</span>
+            </span>
+            <button class="ufa-action-btn cdemo-action-btn-mock" disabled aria-label="Manage contract" title="Open contract actions">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -779,6 +789,21 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   }
 
   .cdemo-mock-projection__row:last-child { border-bottom: none; }
+
+  /* ================================================================
+     Action group — chip + action button side by side
+     ================================================================ */
+  .cdemo-action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .cdemo-action-btn-mock {
+    cursor: default;
+    pointer-events: none;
+  }
 
   /* ================================================================
      TO Badge in mockup (Step 2)
