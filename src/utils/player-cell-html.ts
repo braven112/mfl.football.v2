@@ -46,6 +46,8 @@ export interface PlayerCellOptions {
   mflId?: string;
   /** ESPN player ID (for college headshot fallback). Falls back to playerData.espnId if omitted. */
   espnId?: string;
+  /** Contract status code (RC, TO) — displayed after position */
+  contractStatus?: string;
   /** Extra HTML to inject after the name (e.g., badges) */
   afterName?: string;
   /** Additional CSS class on the root element */
@@ -70,6 +72,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     playerData,
     mflId: explicitMflId,
     espnId: explicitEspnId,
+    contractStatus,
     afterName = '',
     className = '',
   } = opts;
@@ -103,8 +106,9 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
     const logoPart = nflLogoUrl
       ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
       : '';
+    const statusSuffix = contractStatus ? ` - ${esc(contractStatus)}` : '';
     const posPart = position
-      ? `<span class="player-meta__pos">${esc(position)}</span>`
+      ? `<span class="player-meta__pos">${esc(position)}${statusSuffix}</span>`
       : '';
     metaHtml = `<div class="player-meta">${logoPart}${posPart}</div>`;
   }

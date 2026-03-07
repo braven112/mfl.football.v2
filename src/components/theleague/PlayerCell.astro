@@ -52,6 +52,8 @@ export interface Props {
   mflId?: string;
   /** ESPN player ID (for college headshot fallback). Falls back to playerData.espnId if omitted. */
   espnId?: string;
+  /** Contract status code (RC, TO) — displayed after position */
+  contractStatus?: string;
   /** Additional CSS classes */
   class?: string;
 }
@@ -66,6 +68,7 @@ const {
   playerData,
   mflId: explicitMflId,
   espnId: explicitEspnId,
+  contractStatus,
   class: className,
 } = Astro.props;
 
@@ -123,7 +126,7 @@ const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
             decoding="async"
           />
         )}
-        {position && <span class="player-meta__pos">{position}</span>}
+        {position && <span class="player-meta__pos">{position}{contractStatus ? ` - ${contractStatus}` : ''}</span>}
       </div>
     )}
   </div>

@@ -1130,6 +1130,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       gamesPlayed: player.gamesPlayed ?? null,
       depthChartAhead: player.depthChartAhead ?? null,
       tradeBait: tradeBaitPlayerIds.has(String(player.id)),
+      contractInfo: liveData?.contractInfo || '',
     };
 
 
@@ -2278,6 +2279,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                     headshot={player.headshot}
                     position={player.position}
                     nflTeam={player.nflTeam}
+                    contractStatus={player.contractInfo || undefined}
                     playerData={{
                       id: player.id,
                       espnId: player.espnId,
@@ -6765,6 +6767,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             headshot: player.headshot,
             position: player.position,
             nflTeam: player.nflTeam,
+            contractStatus: player.contractInfo || undefined,
             playerData: {
               id: player.id, espnId: player.espnId, name: player.name,
               position: player.position, nflTeam: player.nflTeam, status: player.status,
