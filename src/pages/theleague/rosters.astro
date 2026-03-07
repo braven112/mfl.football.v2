@@ -8074,7 +8074,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
 
     // Wire Back button — guarded (one handler only) + DOM-state-aware
-    // Uses DOM inference so it works correctly even when initRosterPage runs multiple times.
     if (cdmBackBtn && !cdmBackBtn._handlerAdded) {
       cdmBackBtn._handlerAdded = true;
       cdmBackBtn.addEventListener('click', () => {
@@ -8134,22 +8133,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // Hero — mirror the ESPN → College → MFL → default cascade used by PlayerCell/buildHeadshotOnerror
       const cdmHeadshotImg = document.getElementById('cdm-headshot');
       const cdmHeadshotUrl = data.headshot || DEFAULT_HEADSHOT_URL;
-      // Parse espnId from the URL only if it's an ESPN NFL headshot (not MFL or default)
       const cdmEspnMatch = cdmHeadshotUrl.match(/\/headshots\/nfl\/players\/full\/(\d+)\.png/);
       const cdmEspnId = cdmEspnMatch?.[1] ?? null;
       const cdmMflId = data.id ?? null;
       cdmHeadshotImg.src = cdmHeadshotUrl;
       if (cdmEspnId && cdmMflId) {
-        // ESPN NFL → College ESPN → MFL → default
         const cdmCollege = `https://a.espncdn.com/i/headshots/college-football/players/full/${cdmEspnId}.png`;
         const cdmMfl = `https://www49.myfantasyleague.com/player_photos_big_2014/${cdmMflId}_thumb.jpg`;
         cdmHeadshotImg.onerror = function() { this.onerror = function() { this.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; }; this.src = cdmMfl; }; this.src = cdmCollege; };
       } else if (cdmEspnId) {
-        // ESPN NFL → College ESPN → default
         const cdmCollege = `https://a.espncdn.com/i/headshots/college-football/players/full/${cdmEspnId}.png`;
         cdmHeadshotImg.onerror = function() { this.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; }; this.src = cdmCollege; };
       } else {
-        // MFL URL already (no espnId) or unknown — just fall through to default on failure
         cdmHeadshotImg.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; };
       }
       document.getElementById('cdm-player-name').textContent = data.name;
@@ -8230,19 +8225,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const tagSection = document.getElementById('cdm-tag-section');
       const extSection = document.getElementById('cdm-extension-section');
       const projSection = document.getElementById('cdm-projection-section');
-      const actionSection = document.getElementById('cdm-action-section');
+      const actionSectionReset = document.getElementById('cdm-action-section');
       const cutSectionReset = document.getElementById('cdm-cut-section');
       const metricsReset = document.getElementById('cdm-metrics');
-      const teamOptionSection = document.getElementById('cdm-team-option-section');
-      const noExerciseSection = document.getElementById('cdm-no-exercise-section');
       yearSection.style.display = 'none';
       tagSection.style.display = 'none';
       extSection.style.display = 'none';
       projSection.style.display = 'none';
-      if (actionSection) actionSection.style.display = 'none';
+      if (actionSectionReset) actionSectionReset.style.display = 'none';
       if (cutSectionReset) cutSectionReset.style.display = 'none';
-      if (teamOptionSection) teamOptionSection.style.display = 'none';
-      if (noExerciseSection) noExerciseSection.style.display = 'none';
       // Restore metrics visibility for non-action-select step 1 (action-select re-hides it below)
       if (metricsReset) metricsReset.style.display = '';
 
@@ -8276,70 +8267,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         if (cdmMetricsEl) cdmMetricsEl.style.display = 'none';
 
         // Show action section, hide submit (action buttons are the "submit")
+        const actionSection = document.getElementById('cdm-action-section');
         if (actionSection) actionSection.style.display = '';
         cdmSubmitBtn.style.display = 'none';
 
         // Populate action options
         populateCdmActionOptions(elig);
-
-      } else if (type === 'team-option') {
-        // Show action-select; hide submit until a sub-choice is made
-        cdmSubmitBtn.style.display = 'none';
-        if (actionSection) actionSection.style.display = '';
-
-        // "Exercise Team Option" — adds 1 year at top-10 avg salary
-        const exerciseBtn = document.getElementById('cdm-action-exercise');
-        if (exerciseBtn) {
-          exerciseBtn.onclick = () => {
-            if (actionSection) actionSection.style.display = 'none';
-            if (teamOptionSection) teamOptionSection.style.display = '';
-            // Year 4 salary = current salary escalated to end of current term
-            const yr4Salary = Math.round(elig.currentSalary * Math.pow(1.10, elig.currentYears - 1));
-            document.getElementById('cdm-to-year4-salary').textContent = formatSalaryCompact(yr4Salary);
-            document.getElementById('cdm-to-option-salary').textContent = formatSalaryCompact(elig.teamOptionSalary ?? 0);
-            updateProjectionTable(elig.teamOptionSalary ?? 0, 1);
-            cdmSelectedYears = elig.currentYears + 1;
-            cdmSelectedSalary = elig.teamOptionSalary ?? null;
-            cdmSubmitType = 'team-option';
-            cdmSubmitBtn.style.display = '';
-            cdmSubmitBtn.disabled = false;
-            cdmSubmitBtn.textContent = 'Declare Team Option';
-          };
-        }
-
-        // "Rookie Extension" — reuse extension section (+2 years)
-        const extendBtn = document.getElementById('cdm-action-extend');
-        if (extendBtn) {
-          extendBtn.onclick = () => {
-            if (actionSection) actionSection.style.display = 'none';
-            extSection.style.display = '';
-            const extYears = elig.extensionYears ?? (elig.currentYears + 2);
-            const extSalary = elig.extensionSalary ?? elig.currentSalary;
-            const currentLabel = elig.currentYears + 'yr @ ' + formatSalaryCompact(elig.currentSalary);
-            const newLabel = extYears + 'yr @ ' + formatSalaryCompact(extSalary);
-            document.getElementById('cdm-ext-current').textContent = currentLabel;
-            document.getElementById('cdm-ext-new').textContent = newLabel;
-            updateProjectionTable(extSalary, extYears);
-            cdmSelectedYears = extYears;
-            cdmSelectedSalary = extSalary;
-            cdmSubmitType = 'rookie-extension';
-            cdmSubmitBtn.style.display = '';
-            cdmSubmitBtn.disabled = false;
-            cdmSubmitBtn.textContent = 'Declare Rookie Extension';
-          };
-        }
-
-        // "Don't Exercise" — informational only, no submit
-        const noExBtn = document.getElementById('cdm-action-no-exercise');
-        if (noExBtn) {
-          noExBtn.onclick = () => {
-            if (actionSection) actionSection.style.display = 'none';
-            if (noExerciseSection) noExerciseSection.style.display = '';
-            const finalYrSalary = Math.round(elig.currentSalary * Math.pow(1.10, elig.currentYears - 1));
-            document.getElementById('cdm-no-ex-year4-salary').textContent = formatSalaryCompact(finalYrSalary);
-            cdmSubmitBtn.style.display = 'none';
-          };
-        }
 
       } else if (type === 'franchise-tag') {
         // Franchise tag (direct from yrs-chip): fixed 1 year, show salary comparison
@@ -8374,8 +8307,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           if (cdmStepperLabel) cdmStepperLabel.textContent = 'Step 1 of 2';
         }
 
-        const formulaSection = document.getElementById('cdm-formula-section');
-        if (formulaSection) formulaSection.style.display = 'none';
+        if (formulaSectionReset) formulaSectionReset.style.display = 'none';
         if (formulaToggleEl) formulaToggleEl.setAttribute('aria-expanded', 'false');
         if (formulaBodyEl) formulaBodyEl.classList.remove('expanded');
 
@@ -8393,6 +8325,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         cdmSelectedSalary = extSalary;
         cdmSubmitBtn.disabled = false;
         cdmSubmitBtn.textContent = 'Extend Contract';
+
+      } else if (type === 'team-option') {
+        // Team option (direct from yrs-chip): go straight to step 2 review
+        cdmFlowType = 'team-option';
+        cdmCurrentStep = 1;
+        cdmViaActionSelect = false;
+        goToTeamOptionStep2();
 
       } else {
         // new-acquisition / rookie-override: year selector
@@ -8643,6 +8582,40 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     };
 
+    // Reset veteran-extension back to step 1 — legacy path (direct vet-ext, not via action-select)
+    const goToVetExtStep1 = () => {
+      cdmCurrentStep = 1;
+      const cdmStepDot1 = document.getElementById('cdm-step-dot-1');
+      const cdmStepDot2 = document.getElementById('cdm-step-dot-2');
+      const cdmStepLine1 = document.getElementById('cdm-step-line-1');
+      const cdmStepperLabel = document.getElementById('cdm-stepper-label');
+
+      // Reset stepper to step 1 of 2
+      if (cdmStepDot1) { cdmStepDot1.classList.remove('completed'); cdmStepDot1.classList.add('active'); }
+      if (cdmStepDot2) { cdmStepDot2.classList.remove('active', 'completed'); }
+      if (cdmStepLine1) { cdmStepLine1.classList.remove('completed'); }
+      if (cdmStepperLabel) cdmStepperLabel.textContent = 'Step 1 of 2';
+
+      // Re-show year selection + key metrics, hide review panel sections
+      const yearSection = document.getElementById('cdm-year-section');
+      if (yearSection) yearSection.style.display = '';
+      const cdmMetricsEl = document.getElementById('cdm-metrics');
+      if (cdmMetricsEl) cdmMetricsEl.style.display = '';
+      document.getElementById('cdm-extension-section').style.display = 'none';
+      document.getElementById('cdm-formula-section').style.display = 'none';
+      document.getElementById('cdm-projection-section').style.display = 'none';
+
+      // Clear year selection and disable submit
+      document.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
+      cdmSelectedYears = null;
+      cdmSelectedSalary = null;
+      cdmSubmitBtn.disabled = true;
+
+      // Hide back button — step 1 doesn't have a Back action
+      if (cdmBackBtn) cdmBackBtn.style.display = 'none';
+    };
+
+
     // Helper: build a CDM action option button using safe DOM methods
     const makeCdmActionBtn = (id, label, desc, onClick, disabled, iconId) => {
       const btn = document.createElement('button');
@@ -8699,8 +8672,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           false, 'icon-franchise-tag'
         ));
       }
-      if (contractYears === 1 && isTO) {
-        // Team Option — TO players only (5th-year option)
+      if (contractYears >= 2 && isTO) {
+        // Team Option — TO players only (option window is years 1–3 of contract)
         actionOptions.appendChild(makeCdmActionBtn(
           'team-option', 'Team Option', '5th-year option at top 10 position average',
           () => goToTeamOptionStep2(),
@@ -8986,6 +8959,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       cdmSelectedYears = 1;
       cdmSelectedSalary = optionSalary;
+      cdmSubmitType = 'team-option';
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.disabled = false;
       cdmSubmitBtn.textContent = 'Exercise Team Option';
@@ -9102,6 +9076,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       cdmSelectedYears = extYears;
       cdmSelectedSalary = newSalary;
+      cdmSubmitType = 'rookie-extension';
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.disabled = false;
       cdmSubmitBtn.textContent = 'Add Extension';
@@ -9293,8 +9268,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
       const leagueId = config.authUser?.leagueId ?? '13522';
 
-      // cdmSubmitType overrides elig.type for team-option sub-choices (exercise vs. extend)
-      const effectiveType = cdmSubmitType ?? elig.type;
+      // cdmFlowType tracks the current step flow; cdmSubmitType overrides for specific sub-choices.
+      // For action-select flows, use cdmFlowType; otherwise fall back to cdmSubmitType then elig.type
+      const effectiveType = (cdmFlowType && cdmFlowType !== 'action-select') ? cdmFlowType : (cdmSubmitType ?? elig.type);
 
       // Determine requestedContractInfo based on declaration type
       let requestedContractInfo;
