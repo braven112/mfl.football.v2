@@ -2487,7 +2487,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                   } else if (isFirstYearUfa && isOptionExpired) {
                     // Option window closed — show greyed-out top-10 salary (what was forfeited)
                     const pos = (player.position ?? '').toUpperCase();
-                    const optSalary = (teamOptionSalaries as Record<string, number>)[pos] ?? 0;
+                    const optSalary = teamOptionSalaries[pos] ?? 0;
                     displayValue = optSalary > 0 ? formatCurrency(optSalary) : 'UFA';
                     cellClass += ' salary-cell--team-option salary-cell--team-option-expired';
                   } else if (isFirstYearUfa) {
