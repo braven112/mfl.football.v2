@@ -192,7 +192,14 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
             espnId="4360698"
             size="compact"
           />
-          <span class="cdemo-to-badge">TO</span>
+          <div class="cdemo-action-group">
+            <span class="cdemo-to-badge">TO</span>
+            <button class="ufa-action-btn cdemo-action-btn-mock" disabled aria-label="Manage contract" title="Open contract actions">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="cdemo-mockrow">
           <PlayerCell
@@ -204,16 +211,11 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
             espnId="4243389"
             size="compact"
           />
-          <div class="cdemo-action-group">
-            <span class="yrs-chip" role="img" aria-label="2 years">
-              <span class="yrs-chip__value">2</span>
-            </span>
-            <button class="ufa-action-btn cdemo-action-btn-mock" disabled aria-label="Manage contract" title="Open contract actions">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
-              </svg>
-            </button>
-          </div>
+          <button class="ufa-action-btn cdemo-action-btn-mock" disabled aria-label="Manage contract" title="Open contract actions">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
