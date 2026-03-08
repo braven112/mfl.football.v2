@@ -236,8 +236,67 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 		<!-- Navigation progress bar trigger -->
 		<script is:inline>
 			(function() {
-				var bar = document.getElementById('nav-progress');
-				if (!bar) return;
+				var STORAGE_KEY = 'nav-progress-start';
+				var MIN_VISIBLE_MS = 420;
+
+				function getBar() {
+					return document.getElementById('nav-progress');
+				}
+
+				function readStartTime() {
+					try {
+						return Number(sessionStorage.getItem(STORAGE_KEY) || '0');
+					} catch (_) {
+						return 0;
+					}
+				}
+
+				function writeStartTime(value) {
+					try {
+						sessionStorage.setItem(STORAGE_KEY, String(value));
+					} catch (_) {}
+				}
+
+				function clearStartTime() {
+					try {
+						sessionStorage.removeItem(STORAGE_KEY);
+					} catch (_) {}
+				}
+
+				function startProgress() {
+					var bar = getBar();
+					if (!bar) return;
+					writeStartTime(Date.now());
+					bar.classList.remove('active');
+					// Force reflow so re-adding the class restarts the animation
+					void bar.offsetWidth;
+					bar.classList.add('active');
+				}
+
+				function stopProgress() {
+					var bar = getBar();
+					if (bar) {
+						bar.classList.remove('active');
+					}
+					clearStartTime();
+				}
+
+				function settleProgress() {
+					var startedAt = readStartTime();
+					if (!startedAt) {
+						stopProgress();
+						return;
+					}
+
+					var bar = getBar();
+					if (bar && !bar.classList.contains('active')) {
+						bar.classList.add('active');
+					}
+
+					var remaining = Math.max(MIN_VISIBLE_MS - (Date.now() - startedAt), 0);
+					window.setTimeout(stopProgress, remaining);
+				}
+
 				document.addEventListener('click', function(e) {
 					var link = e.target.closest('a[href]');
 					if (!link) return;
@@ -246,11 +305,12 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 					if (link.origin !== location.origin) return;
 					if (link.pathname === location.pathname && link.search === location.search) return;
 					if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-					bar.classList.remove('active');
-					// Force reflow so re-adding the class restarts the animation
-					void bar.offsetWidth;
-					bar.classList.add('active');
+					startProgress();
 				});
+
+				document.addEventListener('astro:before-preparation', startProgress);
+				document.addEventListener('astro:page-load', settleProgress);
+				window.addEventListener('load', settleProgress);
 			})();
 		</script>
 	</body>
