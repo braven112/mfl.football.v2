@@ -5373,6 +5373,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // Team option is separate from franchise tag — a team can exercise both
       result = calculateTeamOption(salary, position, config.extensionSeason);
       result.ufaYearIndex = years; // Year after current contract
+      result.newYears = years + 1; // Total years: current contract + 1 option year
     } else if (actionType === 'rookie-extension') {
       // Rookie extension shares the extension slot with veteran extension
       if (currentVeteranExtension) {
@@ -6533,6 +6534,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               if (action && action.type === 'franchise' && action.ufaYearIndex === index) {
                 value = _capSpaceFmt.format(action.newSalary ?? 0);
                 cellClass += ' salary-cell--simulated';
+              } else if (action && action.type === 'team-option' && action.ufaYearIndex === index) {
+                value = _capSpaceFmt.format(action.newSalary ?? 0);
+                cellClass += ' salary-cell--simulated';
               } else if (isFirstYearUfa && hasOptionWindow) {
                 value = 'TO';
                 cellClass += ' salary-cell--team-option salary-cell--team-option-eligible';
@@ -6950,9 +6954,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           return sum;
         }, 0);
 
-        // Add franchise tag salaries for this specific year
+        // Add franchise tag and team option salaries for this specific year
         Object.values(contractActions).forEach(action => {
-          if (action.type === 'franchise' && action.ufaYearIndex === index) {
+          if ((action.type === 'franchise' || action.type === 'team-option') && action.ufaYearIndex === index) {
             total += Number(action.newSalary ?? 0);
           }
         });
@@ -8621,6 +8625,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           return;
         }
       }
+      // Team option from direct TO cell click — apply locally for cap impact simulation
+      if (cdmFlowType === 'team-option' && cdmPlayerData) {
+        const elig = cdmPlayerData.eligibility;
+        selectedPlayer = cdmPlayerData._rawPlayer || {
+          id: cdmPlayerData.id,
+          name: cdmPlayerData.name,
+          position: cdmPlayerData.position,
+          salary: elig?.currentSalary ?? 0,
+          years: elig?.currentYears ?? 1,
+        };
+        applyContractAction('team-option');
+        closeDeclarationModal();
+        return;
+      }
       // Veteran extension via yrs-chip: staged (batch-submitted later via Submit Tags/Extensions)
       if (cdmPlayerData?.eligibility?.type === 'veteran-extension') {
         if (!cdmSelectedYears || !cdmPlayerData) return;
@@ -8651,9 +8669,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           return player;
         }
 
-        // Apply salary/years changes (but not for franchise tags - those are shown in specific year columns)
-        if (action.type === 'franchise') {
-          // Don't modify player data for franchise tags
+        // Apply salary/years changes (but not for franchise tags or team options - those are shown in specific year columns)
+        if (action.type === 'franchise' || action.type === 'team-option') {
+          // Don't modify player salary data — these render at ufaYearIndex instead
           return player;
         }
 
