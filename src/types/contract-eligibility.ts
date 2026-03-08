@@ -7,11 +7,10 @@
 export type DeclarationType =
   | 'new-acquisition'    // BBID/auction player declaring years (2-5)
   | 'rookie-override'    // Rookie reducing from 4yr RC default (1-3)
-  | 'team-option'        // 1st round pick: exercise 5th-year option or rookie extension (years 1-3)
+  | 'team-option'        // 5th-year option for TO players before Year 4
   | 'franchise-tag'      // Applying franchise tag (1yr remaining)
   | 'veteran-extension'  // Extending veteran contract (+2 years)
-  | 'rookie-extension'   // Extending RC/TO contract (+2 years)
-  | 'team-option';       // 5th-year option for TO players (1yr remaining)
+  | 'rookie-extension';  // Extending RC contract (+2 years)
 
 /** Result of checking a single player's eligibility */
 export interface EligibilityResult {
@@ -37,8 +36,6 @@ export interface EligibilityResult {
   tagSalary?: number;
   /** Description of how tag salary was determined */
   tagBasis?: string;
-  /** For team option: the 5th-year salary (top 10 position average) */
-  teamOptionSalary?: number;
   /** Current contract state */
   currentYears: number;
   currentSalary: number;

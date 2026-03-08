@@ -14,7 +14,6 @@ import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
 import ContractDeclarationModal from '../../components/theleague/ContractDeclarationModal.astro';
 import ContractDemoOverlay from '../../components/theleague/ContractDemoOverlay.astro';
-import PlayerNewsModal from '../../components/theleague/PlayerNewsModal.astro';
 import DraftPicksCard from '../../components/theleague/DraftPicksCard.astro';
 import DraftTeamAssetsView from '../../components/theleague/DraftTeamAssetsView.astro';
 import FreeAgentNeedsCard from '../../components/theleague/FreeAgentNeedsCard.astro';
@@ -51,7 +50,6 @@ import {
 import { getAuthUser } from '../../utils/auth';
 import fs from 'fs';
 import path from 'path';
-import espnNewsData from '../../../data/theleague/nfl-news-week15.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
 import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
@@ -454,25 +452,10 @@ const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
   eager: true,
 });
-const playoffBracketFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/playoff-brackets.json',
-  {
-    eager: true,
-  }
-);
 const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
   eager: true,
 });
-const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', {
-  eager: true,
-});
-const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', {
-  eager: true,
-});
 const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/rosters.json', {
-  eager: true,
-});
-const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
   eager: true,
 });
 const getModuleData = (mod) =>
@@ -1361,10 +1344,6 @@ const initialCapChargesWithDead = initialCapCharges.map(
 );
 const initialCapCharge = initialCapChargesWithDead[0] ?? 0;
 const initialNextYearCapCharge = initialCapChargesWithDead[1] ?? 0;
-const initialActiveCount =
-  initialTeamData.players?.length ??
-  initialTeamData.totals?.rosterCount ??
-  0;
 const {
   contractYearsTotal: initialContractYearsTotal,
   longestContract: initialLongestContract,
@@ -1372,8 +1351,6 @@ const {
 const initialPlayersNextYear = initialRosterRows.filter((p) => (p.contractYears ?? 0) > 1).length;
 const initialRemainingSlots2026 = Math.max(TARGET_ACTIVE_COUNT - initialPlayersNextYear, 1);
 const initialPlayersToCut2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT, 0);
-const initialPlayersToCutToSign2026 = Math.max(initialPlayersNextYear - TARGET_ACTIVE_COUNT + 1, 0);
-const initialNeedsToCutToSign2026 = initialPlayersNextYear >= TARGET_ACTIVE_COUNT;
 const initialDeadMoney2026 = initialDeadMoney[1] ?? 0;
 const initialCapSpace2026 =
   (initialSeasonData?.metadata?.capLimit ?? initialCapLimit) -
@@ -1428,10 +1405,7 @@ const draftSeasonYear = getCurrentSeasonYear();
 const draftNextYear = draftSeasonYear + 1;
 
 // Get last fetched timestamp from meta file
-const fetchMetaKey = Object.keys(fetchMetaFeeds).find(
-  (path) => path.includes(`/${currentLeagueYear}/`)
-);
-const fetchMeta = fetchMetaKey ? getModuleData(fetchMetaFeeds[fetchMetaKey]) : null;
+const fetchMeta = loadFeedJson(currentLeagueYear, 'fetch.meta.json');
 const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 let draftPredictions = [];
 let actualDraftPicks = [];
@@ -1445,22 +1419,13 @@ const standingsKey = Object.keys(standingsFeeds).find(
 );
 const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
 
-const bracketKey = Object.keys(playoffBracketFeeds).find(
-  (path) => extractFeedSeason(path) === String(draftSeasonYear)
-);
-const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
 
 // Load draft results from next year to show actual picks with trades
-const draftResultsKey = Object.keys(draftResultsFeeds).find(
-  (path) => extractFeedSeason(path) === String(draftNextYear)
-);
-const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
 
 // Load transactions from season year to extract trade information
-const transactionsKey = Object.keys(transactionsFeeds).find(
-  (path) => extractFeedSeason(path) === String(draftSeasonYear)
-);
-const transactionsData = transactionsKey ? getModuleData(transactionsFeeds[transactionsKey]) : null;
+const transactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
 
 if (standingsData?.leagueStandings?.franchise) {
   // Build team config map with icons and banners
@@ -1573,10 +1538,7 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
 // Load transactions for the current league year
 const eligibilityYear = getCurrentLeagueYear();
 const eligibilityYearStr = String(eligibilityYear);
-const eligTxKey = Object.keys(transactionsFeeds).find(
-  (path) => extractFeedSeason(path) === eligibilityYearStr
-);
-const eligTxData = eligTxKey ? getModuleData(transactionsFeeds[eligTxKey]) : null;
+const eligTxData = loadFeedJson(eligibilityYearStr, 'transactions.json');
 const eligRawTransactions = eligTxData?.transactions?.transaction
   ? (Array.isArray(eligTxData.transactions.transaction)
       ? eligTxData.transactions.transaction
@@ -2038,7 +2000,6 @@ const serializedConfig = JSON.stringify({
       ? { franchiseId: defaultTeamId, leagueId: '13522' }
       : null,
   trendWeeks,
-  espnNews: espnNewsData?.teams || {},
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
   eligibilityByTeam,
   declarationsByPlayer,
@@ -4914,9 +4875,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 <!-- Player Injury Modal -->
 <PlayerInjuryModal />
 
-<!-- Player News Modal -->
-<PlayerNewsModal />
-
 <ContractDeclarationModal />
 <ContractDemoOverlay />
 
@@ -4950,6 +4908,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   // View switching logic
   let currentView = 'roster';
+  let ensureSecondaryViewReady = () => {};
 
   const viewLabels = {
     'roster': 'Roster & Salary Cap',
@@ -5153,12 +5112,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return formatter.format(Math.round(value));
   };
 
-  const parseCurrency = (value) => {
-    if (!value) return 0;
-    const numeric = parseFloat(value.replace(/[^\d.-]/g, ''));
-    return Number.isNaN(numeric) ? 0 : numeric;
-  };
-
   const getReferenceSalary = (position, type, season) => {
     const averages = config.salaryAverages?.[season];
     if (!averages) return 0;
@@ -5263,6 +5216,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (viewLabelEl && viewLabels[viewName]) {
       viewLabelEl.textContent = viewLabels[viewName];
     }
+
+    ensureSecondaryViewReady(viewName);
   };
 
   /**
@@ -5974,6 +5929,37 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
     const hiddenColumns = new Set();
+    let latestViewVersion = 0;
+    let lastViewContext = null;
+    let secondaryWarmHandle = null;
+    const secondaryViewVersions = {
+      analytics: 0,
+      nextyear: 0,
+    };
+
+    const scheduleIdleWork = (callback) => {
+      if (typeof window.requestIdleCallback === 'function') {
+        return window.requestIdleCallback(callback, { timeout: 300 });
+      }
+      return window.setTimeout(
+        () => callback({ didTimeout: false, timeRemaining: () => 0 }),
+        60
+      );
+    };
+
+    const cancelIdleWork = (handle) => {
+      if (handle === null) return;
+      if (typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(handle);
+        return;
+      }
+      clearTimeout(handle);
+    };
+
+    const clearSecondaryWarmup = () => {
+      cancelIdleWork(secondaryWarmHandle);
+      secondaryWarmHandle = null;
+    };
 
     /** Extracts player info from a row for the declaration modal */
     const extractPlayerDataFromRow = (row, playerId, elig) => {
@@ -6183,12 +6169,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const renderSummary = (
       capCharge = 0,
       nextYearCapCharge = 0,
-      contractYearsTotal = 0,
-      longestContract = 0,
       totals = {},
       deadMoney = 0,
       capLimitOverride = capLimit,
-      rosterLimitOverrideLocal = rosterLimitOverride ?? rosterLimit,
       bucketCaps = { active: 0, practice: 0, injured: 0 },
       playersNextYear = 0,
       lastContractYear = ''
@@ -6235,8 +6218,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (summaryCapNext) summaryCapNext.textContent = formatCapSpaceText(capSpaceNext);
       const summaryPlayersNext = document.getElementById('summaryPlayersNext');
       if (summaryPlayersNext) summaryPlayersNext.textContent = playersNextYear;
-    const summaryLastContract = document.getElementById('summaryLastContract');
-    const summaryAvg2026 = document.getElementById('summaryAvg2026');
+      const summaryLastContract = document.getElementById('summaryLastContract');
       if (summaryLastContract) summaryLastContract.textContent = lastContractYear;
 
       // legacy summary labels (if present)
@@ -7337,6 +7319,201 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         panels.forEach((panel, idx) => {
           panel.style.display = idx === 0 ? 'block' : 'none';
         });
+      }
+    };
+
+    const renderAnalyticsForContext = (viewContext) => {
+      if (!viewContext || secondaryViewVersions.analytics === viewContext.version) {
+        return;
+      }
+
+      const { rows } = viewContext;
+      const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+      const posPalette = ['#a855f7', '#ec4899', '#facc15', '#c084fc'];
+
+      const positionCaps = calculatePositionCaps(rows);
+      const posSlices = Object.entries(positionCaps).map(([label, value], idx) => {
+        const upper = label.toUpperCase();
+        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
+        return { label, value, color };
+      });
+      const posTotal = posSlices.reduce((sum, slice) => sum + slice.value, 0);
+      buildBarChart(posBar, posSlices, positionOrder, posTotal);
+
+      const efficiencyCaps = calculateCapEfficiency(rows);
+      const efficiencySlices = Object.entries(efficiencyCaps).map(([label, value], idx) => {
+        const upper = label.toUpperCase();
+        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
+        return { label, value, color };
+      });
+      const maxEfficiency = efficiencySlices.length > 0
+        ? Math.max(...efficiencySlices.map((slice) => slice.value))
+        : 0;
+      const efficiencyFormatter = (value) => `$${(value / 1000).toFixed(0)}k`;
+      if (efficiencyBar) {
+        buildBarChart(
+          efficiencyBar,
+          efficiencySlices,
+          positionOrder,
+          maxEfficiency,
+          efficiencyFormatter
+        );
+      }
+
+      const ageDistribution = getAgeDistribution(rows);
+      const ageColors = getAgeDistributionColors(ageDistribution.length);
+      const ageDistributionSlices = ageDistribution.map((item, idx) => ({
+        label: item.range,
+        value: item.count,
+        color: ageColors[idx],
+      }));
+      const ageDistTotal = ageDistributionSlices.reduce((sum, slice) => sum + slice.value, 0);
+      if (ageChart) {
+        buildAgeDistributionChart(ageChart, ageDistributionSlices, ageDistTotal);
+      }
+
+      const avgAgeByPos = calculateAverageAgeByPosition(rows);
+      const posAgeSlices = positionOrder
+        .map((pos) => {
+          const data = avgAgeByPos.get(pos);
+          if (!data) return null;
+          const upper = pos.toUpperCase();
+          return {
+            label: pos,
+            value: data.avgAge,
+            color: positionColors[upper] ?? '#999',
+          };
+        })
+        .filter(Boolean);
+      const ageFormatter = (value) => `${value.toFixed(1)} years`;
+      if (posAgeBar) {
+        buildBarChart(posAgeBar, posAgeSlices, positionOrder, 40, ageFormatter, 20);
+      }
+
+      const teamAvgAge = calculateAverageAge(rows);
+      const summaryAvgAge = document.getElementById('summaryAverageAge');
+      if (summaryAvgAge) {
+        summaryAvgAge.textContent =
+          teamAvgAge !== null ? `${teamAvgAge} years` : '—';
+      }
+
+      renderPlayersbyTeam(rows);
+      renderPlayersByCollege(rows);
+      secondaryViewVersions.analytics = viewContext.version;
+    };
+
+    const renderPlannerForContext = (viewContext) => {
+      if (!viewContext || secondaryViewVersions.nextyear === viewContext.version) {
+        return;
+      }
+
+      const {
+        rows,
+        seasonData,
+        capLimitForSeason,
+        capChargesWithDead,
+        deadMoney,
+        teamId,
+        seasonKey,
+      } = viewContext;
+      const playersNextYear = rows.filter((player) => (player.contractYears ?? 0) > 1).length;
+      const remainingSlots2026 = Math.max(targetActiveCount - playersNextYear, 1);
+      const playersToCut2026 = Math.max(playersNextYear - targetActiveCount, 0);
+      const deadMoney2026 = deadMoney[1] ?? 0;
+      const capSpace2026 =
+        capLimitForSeason -
+        (capChargesWithDead?.[1] ?? 0) -
+        reserveForRookies;
+      const avgPerPlayer2026 = Math.max(capSpace2026, 0) / remainingSlots2026;
+      const summaryAvg2026El = document.getElementById('summaryAvg2026');
+      if (summaryAvg2026El) {
+        summaryAvg2026El.textContent = `${_capSpaceFmt.format(avgPerPlayer2026)} × ${remainingSlots2026}`;
+      }
+
+      const summaryDeadMoney2026 = document.getElementById('summaryDeadMoney2026');
+      if (summaryDeadMoney2026) {
+        summaryDeadMoney2026.textContent = _capSpaceFmt.format(deadMoney2026);
+      }
+
+      const needsToCutRosterHint = document.getElementById('needsToCutRoster2026');
+      if (needsToCutRosterHint) {
+        if (playersToCut2026 > 0) {
+          const playerWord = playersToCut2026 === 1 ? 'player' : 'players';
+          needsToCutRosterHint.textContent = `Must cut ${playersToCut2026} ${playerWord} by cutdown`;
+          needsToCutRosterHint.style.display = 'block';
+        } else {
+          needsToCutRosterHint.style.display = 'none';
+        }
+      }
+
+      const allLeaguePlayers = [];
+      if (seasonData?.teams) {
+        Object.values(seasonData.teams).forEach((team) => {
+          const teamPlayers = [
+            ...(team.players || []),
+            ...(team.practiceSquad || []),
+            ...(team.injuredReserve || []),
+          ];
+          allLeaguePlayers.push(...teamPlayers);
+        });
+      }
+
+      const allPlayersForTag = allLeaguePlayers.map((player) => ({
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        salary: player.salary,
+        points: player.points || 0,
+        franchiseId: player.franchiseId,
+        nflTeam: player.nflTeam,
+        headshot: player.headshot,
+        nflLogo: player.nflLogo,
+        contractYears: player.contractYears,
+        gamesPlayed: player.gamesPlayed || null,
+      }));
+
+      const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');
+      if (franchiseTagEl) {
+        franchiseTagEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
+        franchiseTagEl.dataset.currentTeam = teamId;
+      }
+
+      const veteranExtensionEl = document.querySelector('.veteran-extension-candidates');
+      if (veteranExtensionEl) {
+        veteranExtensionEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
+        veteranExtensionEl.dataset.currentTeam = teamId;
+        const seasonSalaryAverages = config.salaryAverages?.[seasonKey] ?? {};
+        veteranExtensionEl.dataset.salaryAverages = JSON.stringify(
+          seasonSalaryAverages.extensionSalaries ?? {}
+        );
+      }
+
+      updateDraftAssetsPanel(teamId);
+      updateFaNeedsPanel(teamId);
+      updateDraftAssets2027Panel(teamId);
+      secondaryViewVersions.nextyear = viewContext.version;
+    };
+
+    const scheduleSecondaryWarmup = () => {
+      clearSecondaryWarmup();
+      if (!lastViewContext) return;
+
+      const targetVersion = lastViewContext.version;
+      secondaryWarmHandle = scheduleIdleWork(() => {
+        secondaryWarmHandle = null;
+        if (!lastViewContext || lastViewContext.version !== targetVersion) return;
+
+        renderAnalyticsForContext(lastViewContext);
+        renderPlannerForContext(lastViewContext);
+      });
+    };
+
+    ensureSecondaryViewReady = (viewName) => {
+      if (!lastViewContext) return;
+      if (viewName === 'analytics') {
+        renderAnalyticsForContext(lastViewContext);
+      } else if (viewName === 'nextyear') {
+        renderPlannerForContext(lastViewContext);
       }
     };
 
@@ -8656,6 +8833,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     });
 
     const updateView = () => {
+      clearSecondaryWarmup();
+      const viewVersion = ++latestViewVersion;
       resetSort();
       const { seasonData, teamData } = getTeamData();
       let rows = buildDisplayRows(teamData);
@@ -8692,7 +8871,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           deadMoney[1] = (deadMoney[1] || 0) + (action.futurePenalty || 0);
         }
       });
-      const yearTotals = updateYearTotals(rows, deadMoney);
+      updateYearTotals(rows, deadMoney);
       const capCharges = calculateCapCharges(rows);
       const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));
       const capCharge = capChargesWithDead?.[0] ?? 0;
@@ -8700,9 +8879,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const { contractYearsTotal, longestContract } = calculateContractYearsMeta(rows);
       const capLimitForSeason = Number(
         seasonData?.metadata?.capLimit ?? capLimit ?? 0
-      );
-      const rosterLimitForSeason = Number(
-        seasonData?.metadata?.rosterLimit ?? rosterLimitOverride ?? rosterLimit ?? 0
       );
       const deadMoneyCurrent = deadMoney[0] ?? 0;
       const playersNextYear = rows.filter((p) => (p.contractYears ?? 0) > 1).length;
@@ -8714,12 +8890,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       renderSummary(
         capCharge,
         nextYearCapCharge,
-        contractYearsTotal,
-        longestContract,
         teamData.totals ?? {},
         deadMoneyCurrent,
         capLimitForSeason,
-        rosterLimitForSeason,
         calculateBucketCaps(rows),
         playersNextYear,
         lastContractYear
@@ -8754,150 +8927,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       renderDeadMoney(seasonData, currentTeam);
 
-      const activeCount = teamData.totals?.rosterCount ?? rows.filter((p) => (p.displayTag ?? 'active') === 'active').length;
-      const remainingSlots2026 = Math.max(targetActiveCount - playersNextYear, 1);
-      const playersToCut2026 = Math.max(playersNextYear - targetActiveCount, 0);
-      const playersToCutToSign2026 = Math.max(playersNextYear - targetActiveCount + 1, 0);
-      const needsToCutToSign2026 = playersNextYear >= targetActiveCount;
-      const deadMoney2026 = deadMoney[1] ?? 0;
-      const capSpace2026 =
-        capLimitForSeason -
-        (capChargesWithDead?.[1] ?? 0) -
-        reserveForRookies;
-      const avgPerPlayer2026 = Math.max(capSpace2026, 0) / remainingSlots2026;
-      const summaryAvg2026El = document.getElementById('summaryAvg2026');
-      if (summaryAvg2026El) summaryAvg2026El.textContent = `${_capSpaceFmt.format(avgPerPlayer2026)} × ${remainingSlots2026}`;
-
-      const summaryDeadMoney2026 = document.getElementById('summaryDeadMoney2026');
-      if (summaryDeadMoney2026) summaryDeadMoney2026.textContent = _capSpaceFmt.format(deadMoney2026);
-
-      const needsToCutRosterHint = document.getElementById('needsToCutRoster2026');
-      if (needsToCutRosterHint) {
-        if (playersToCut2026 > 0) {
-          const playerWord = playersToCut2026 === 1 ? 'player' : 'players';
-          needsToCutRosterHint.textContent = `Must cut ${playersToCut2026} ${playerWord} by cutdown`;
-          needsToCutRosterHint.style.display = 'block';
-        } else {
-          needsToCutRosterHint.style.display = 'none';
-        }
-      }
-
-      const positionCaps = calculatePositionCaps(rows);
-      const posPalette = ['#a855f7', '#ec4899', '#facc15', '#c084fc'];
-      const posSlices = Object.entries(positionCaps).map(([label, value], idx) => {
-        const upper = label.toUpperCase();
-        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
-        return { label, value, color };
-      });
-      const posTotal = posSlices.reduce((sum, s) => sum + s.value, 0);
-      const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
-      buildBarChart(posBar, posSlices, positionOrder, posTotal);
-
-      // Cap efficiency calculations and rendering
-      const efficiencyCaps = calculateCapEfficiency(rows);
-      const efficiencySlices = Object.entries(efficiencyCaps).map(([label, value], idx) => {
-        const upper = label.toUpperCase();
-        const color = positionColors[upper] ?? posPalette[idx % posPalette.length];
-        return { label, value, color };
-      });
-      const maxEfficiency = efficiencySlices.length > 0 ? Math.max(...efficiencySlices.map(s => s.value)) : 0;
-      const efficiencyFormatter = (v) => `$${(v / 1000).toFixed(0)}k`;
-      if (efficiencyBar) {
-        buildBarChart(efficiencyBar, efficiencySlices, positionOrder, maxEfficiency, efficiencyFormatter);
-      }
-
-      // Age-related calculations and rendering
-      const ageDistribution = getAgeDistribution(rows);
-      const ageColors = getAgeDistributionColors(ageDistribution.length);
-      const ageDistributionSlices = ageDistribution.map((item, idx) => ({
-        label: item.range,
-        value: item.count,
-        color: ageColors[idx]
-      }));
-      const ageDistTotal = ageDistributionSlices.reduce((sum, s) => sum + s.value, 0);
-      if (ageChart) {
-        buildAgeDistributionChart(ageChart, ageDistributionSlices, ageDistTotal);
-      }
-
-      const avgAgeByPos = calculateAverageAgeByPosition(rows);
-      const posAgeSlices = positionOrder
-        .map(pos => {
-          const data = avgAgeByPos.get(pos);
-          if (!data) return null;
-          const upper = pos.toUpperCase();
-          const color = positionColors[upper] ?? '#999';
-          return {
-            label: pos,
-            value: data.avgAge,
-            color
-          };
-        })
-        .filter(s => s !== null);
-      const maxAge = 40;
-      const minAge = 20;
-      const ageFormatter = (v) => `${v.toFixed(1)} years`;
-      if (posAgeBar) {
-        buildBarChart(posAgeBar, posAgeSlices, positionOrder, maxAge, ageFormatter, minAge);
-      }
-
-      const teamAvgAge = calculateAverageAge(rows);
-      const summaryAvgAge = document.getElementById('summaryAverageAge');
-      if (summaryAvgAge && teamAvgAge !== null) {
-        summaryAvgAge.textContent = `${teamAvgAge} years`;
-      }
-
-      // Render players by team report
-      renderPlayersbyTeam(rows);
-
-      // Update franchise tag eligibility component
-      // Collect ALL league players for ranking, but only show selected team's eligible players
-      const allLeaguePlayers = [];
-      if (seasonData && seasonData.teams) {
-        Object.values(seasonData.teams).forEach(team => {
-          const teamPlayers = [
-            ...(team.players || []),
-            ...(team.practiceSquad || []),
-            ...(team.injuredReserve || [])
-          ];
-          allLeaguePlayers.push(...teamPlayers);
-        });
-      }
-
-      // Render college report using current team's roster only
-      renderPlayersByCollege(rows);
-
-      // Include all league players for ranking purposes, but also mark which team they belong to
-      const allPlayersForTag = allLeaguePlayers.map(p => ({
-        id: p.id,
-        name: p.name,
-        position: p.position,
-        salary: p.salary,
-        points: p.points || 0,
-        franchiseId: p.franchiseId,
-        nflTeam: p.nflTeam,
-        headshot: p.headshot,
-        nflLogo: p.nflLogo,
-        contractYears: p.contractYears,
-        gamesPlayed: p.gamesPlayed || null,
-      }));
-
-      const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');
-      if (franchiseTagEl) {
-        // Pass all league players for ranking, but filter to current team in component
-        franchiseTagEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
-        franchiseTagEl.dataset.currentTeam = currentTeam;
-      }
-
-      const veteranExtensionEl = document.querySelector('.veteran-extension-candidates');
-      if (veteranExtensionEl) {
-        // Pass all league players for ranking, but filter to current team in component
-        veteranExtensionEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
-        veteranExtensionEl.dataset.currentTeam = currentTeam;
-        // Pass salary averages for extension salary calculation
-        const seasonSalaryAverages = config.salaryAverages?.[currentSeason] ?? {};
-        veteranExtensionEl.dataset.salaryAverages = JSON.stringify(seasonSalaryAverages.extensionSalaries ?? {});
-      }
-
       if (rosterMetadata) {
         rosterMetadata.textContent = `Season ${
           seasonData?.metadata?.season ?? currentSeason
@@ -8907,9 +8936,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         rosterCountLabel.textContent = formatCountLabel(rows.length ?? 0);
       }
 
-      updateDraftAssetsPanel(currentTeam);
-      updateFaNeedsPanel(currentTeam);
-      updateDraftAssets2027Panel(currentTeam);
+      lastViewContext = {
+        version: viewVersion,
+        seasonKey: currentSeason,
+        teamId: currentTeam,
+        seasonData,
+        rows,
+        deadMoney,
+        capChargesWithDead,
+        capLimitForSeason,
+      };
+      ensureSecondaryViewReady(currentView);
+      scheduleSecondaryWarmup();
     };
 
     columnToggles.forEach((toggle) => {

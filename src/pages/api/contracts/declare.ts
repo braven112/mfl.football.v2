@@ -82,6 +82,10 @@ export const POST: APIRoute = async ({ request }) => {
       requestedYears,
       playerId,
       franchiseId,
+      {
+        type,
+        currentContractInfo,
+      },
     );
 
     if (!validation.valid) {

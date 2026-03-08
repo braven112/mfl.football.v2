@@ -4,6 +4,7 @@
  */
 
 import type { ContractValidationResult, ContractValidationError } from '../types/contracts';
+import type { DeclarationType } from '../types/contract-eligibility';
 
 // League season starts on February 15th
 const SEASON_START_MONTH = 2; // February (0-indexed would be 1, but JS uses 0-indexed, so 2 for March would be 2... actually Feb is 1)
@@ -148,7 +149,13 @@ export function validateContractSubmission(
   newYears: number,
   playerId: string,
   franchiseId: string,
+  options: {
+    type?: DeclarationType;
+    currentContractInfo?: string;
+    now?: Date;
+  } = {},
 ): ContractValidationResult {
+  const { type, currentContractInfo, now = new Date() } = options;
   const errors: ContractValidationError[] = [];
 
   // Validate league
@@ -174,9 +181,23 @@ export function validateContractSubmission(
   errors.push(...validateContractYears(newYears));
 
   // Check if in valid window
-  const windowStatus = getContractWindow();
+  const windowStatus = getContractWindow(now);
 
-  if (!windowStatus.inWindow) {
+  if (type === 'team-option') {
+    if (currentContractInfo !== 'TO') {
+      errors.push({
+        field: 'contractInfo',
+        message: 'Team option is only available for TO contracts',
+      });
+    }
+
+    if (oldYears < 2) {
+      errors.push({
+        field: 'contractYears',
+        message: 'Team option must be exercised before the player begins Year 4',
+      });
+    }
+  } else if (!windowStatus.inWindow) {
     errors.push({
       field: 'window',
       message: windowStatus.reason || 'Contract setting window is not currently open',

@@ -26,6 +26,11 @@ function inSeasonDate(year = 2025): Date {
   return new Date(year, 9, 15, 12, 0, 0);
 }
 
+function betweenWindowsDate(year = 2026): Date {
+  // August 25 falls after the 3rd Sunday in August and before Sept. 1
+  return new Date(year, 7, 25, 12, 0, 0);
+}
+
 function makeRosterPlayer(overrides: Partial<RosterPlayer> = {}): RosterPlayer {
   return {
     id: '14867',
@@ -419,13 +424,14 @@ describe('getPlayerEligibility', () => {
       expect(result.declarationType).toBe('rookie-extension');
     });
 
-    it('marks TO player with 2+ years as eligible for rookie extension in offseason', () => {
+    it('does NOT surface TO player with 2+ years as rookie-extension', () => {
       const roster = makeRosterPlayer({ contractYear: '3', contractInfo: 'TO' });
       const playerInfo = makePlayerInfo();
 
       const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
       expect(result.eligible).toBe(true);
-      expect(result.declarationType).toBe('rookie-extension');
+      expect(result.declarationType).toBe('team-option');
+      expect(result.declarationType).not.toBe('rookie-extension');
     });
 
     it('does NOT mark RC player with only 1 year as eligible for rookie extension', () => {
@@ -434,13 +440,15 @@ describe('getPlayerEligibility', () => {
 
       const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
       // RC with 1 year — no eligible action in offseason (no franchise tag, no extension)
+      expect(result.eligible).toBe(false);
+      expect(result.declarationType).toBeNull();
       expect(result.declarationType).not.toBe('rookie-extension');
     });
   });
 
   describe('team-option eligibility', () => {
-    it('marks TO player with 1 year as eligible for team option in offseason', () => {
-      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+    it('marks TO player before Year 4 as eligible for team option', () => {
+      const roster = makeRosterPlayer({ contractYear: '3', contractInfo: 'TO' });
       const playerInfo = makePlayerInfo();
       const salaryAverages = {
         teamOptionSalaries: { WR: 6000000 },
@@ -452,8 +460,17 @@ describe('getPlayerEligibility', () => {
       expect(result.teamOptionSalary).toBe(6000000);
     });
 
+    it('keeps team option available outside the generic contract window', () => {
+      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
+      const playerInfo = makePlayerInfo();
+
+      const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, betweenWindowsDate());
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('team-option');
+    });
+
     it('uses teamOptionSalaries for the top 10 average salary', () => {
-      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
       const playerInfo = makePlayerInfo({ position: 'QB' });
       const salaryAverages = {
         teamOptionSalaries: { QB: 8500000, WR: 6000000 },
@@ -464,8 +481,8 @@ describe('getPlayerEligibility', () => {
       expect(result.teamOptionSalary).toBe(8500000);
     });
 
-    it('does NOT mark TO player with 1 year as franchise-tag eligible', () => {
-      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+    it('does NOT mark TO player before Year 4 as franchise-tag eligible', () => {
+      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
       const playerInfo = makePlayerInfo();
 
       const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
@@ -480,8 +497,8 @@ describe('getPlayerEligibility', () => {
       expect(result.declarationType).not.toBe('veteran-extension');
     });
 
-    it('mutually exclusive: TO + 1 year gets team-option, not rookie-extension', () => {
-      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
+    it('uses team-option as the primary TO decision marker before Year 4', () => {
+      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
       const playerInfo = makePlayerInfo();
 
       const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
@@ -489,12 +506,12 @@ describe('getPlayerEligibility', () => {
       expect(result.declarationType).not.toBe('rookie-extension');
     });
 
-    it('mutually exclusive: TO + 2+ years gets rookie-extension, not team-option', () => {
-      const roster = makeRosterPlayer({ contractYear: '2', contractInfo: 'TO' });
+    it('does NOT mark TO player in Year 4 as team-option eligible', () => {
+      const roster = makeRosterPlayer({ contractYear: '1', contractInfo: 'TO' });
       const playerInfo = makePlayerInfo();
 
       const result = getPlayerEligibility('14867', '0009', roster, [], playerInfo, currentYear, now);
-      expect(result.declarationType).toBe('rookie-extension');
+      expect(result.eligible).toBe(false);
       expect(result.declarationType).not.toBe('team-option');
     });
   });

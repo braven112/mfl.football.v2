@@ -341,7 +341,7 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         source: 'feature',
         title: 'Full Feature',
         summary: 'Full summary',
@@ -349,7 +349,11 @@ describe('resolveHeroContent', () => {
         linkLabel: 'Go There',
         icon: 'star',
         accentColor: 'var(--color-secondary, #2e8743)',
+        kicker: 'New Feature',
+        kickerDate: 'Feb 16, 2026',
       });
+      expect(result.image).toBeUndefined();
+      expect(result.imageAlt).toBeUndefined();
       // Feature-sourced content should NOT have heroEventId
       expect(result.heroEventId).toBeUndefined();
     });
