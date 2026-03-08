@@ -184,8 +184,15 @@ const isAuthenticated = !!teamInfo;
         </>
       ) : (
         <>
-          {/* Guest: Sign In CTA */}
-          <a href={loginUrl} class="header-signin">Sign In</a>
+          {/* Guest: Sign In link */}
+          <a href={loginUrl} class="header-signin" title="Sign in">
+            <svg class="header-signin__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            <span class="header-signin__text">Sign In</span>
+          </a>
         </>
       )}
 
@@ -521,26 +528,37 @@ const isAuthenticated = !!teamInfo;
   .header-signin {
     display: inline-flex;
     align-items: center;
-    padding: 0.375rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #ffffff;
-    background: var(--primary-color, #1c497c);
+    gap: 0.25rem;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--primary-color, #1c497c);
+    background: none;
     border-radius: 0.375rem;
     text-decoration: none;
-    transition: background-color 0.15s ease;
+    transition: color 0.15s ease, background-color 0.15s ease;
     white-space: nowrap;
   }
 
   .header-signin:hover {
-    background: #153b64;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--secondary-color, #2e8743);
     text-decoration: none;
-    color: #ffffff;
   }
 
   .header-signin:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--primary-color, #1c497c);
+    box-shadow: 0 0 0 2px var(--primary-color, #1c497c);
+  }
+
+  .header-signin__icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .header-signin__text {
+    line-height: 1;
   }
 
   /* ==============================================
