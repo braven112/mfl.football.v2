@@ -1648,6 +1648,7 @@ if (testEligibility) {
     {
       // Scenario 1: Free agent BBID pickup — new-acquisition
       id: '11232',
+      isMock: true,
       name: 'Hopkins, DeAndre',
       position: 'WR',
       salary: 500000,
@@ -1703,6 +1704,7 @@ if (testEligibility) {
     {
       // Scenario 2: Consensus #1 overall pick — rookie-override
       id: '17462',
+      isMock: true,
       espnId: (espnCollegeIds as any).players?.['17462']?.espnCollegeId ?? null,
       name: 'Mendoza, Fernando',
       position: 'QB',
@@ -1759,6 +1761,7 @@ if (testEligibility) {
     {
       // Scenario 3: 1st round pick in year 2 — team option window open
       id: '99902',
+      isMock: true,
       name: 'Hailmary, Hank',
       position: 'QB',
       salary: 2000000,
@@ -1815,6 +1818,7 @@ if (testEligibility) {
     {
       // Scenario 4: 2nd round pick in year 3 — eligible for rookie extension
       id: '99901',
+      isMock: true,
       name: 'Misack, Buck',
       position: 'WR',
       salary: 1800000,
@@ -5992,9 +5996,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const elig = getPlayerEligibility(playerId, currentTeam);
         if (!elig) return;
 
-        // Glow the avatar for this eligible player
         const row = cell.closest('tr');
-        row?.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+        if (row?.classList.contains('roster-row--mock')) {
+          row.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+        }
 
         btn.onclick = (e) => {
           e.stopPropagation();
@@ -6027,9 +6032,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const elig = getPlayerEligibility(playerId, currentTeam);
         if (!elig) return;
 
-        // Glow the avatar for TO players too
         const row = cell.closest('tr');
-        row?.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+        if (row?.classList.contains('roster-row--mock')) {
+          row.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+        }
 
         cell.onclick = (e) => {
           e.stopPropagation();
@@ -6037,13 +6043,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         };
       });
 
-      // Action button players (rookie-extension, team-option) — glow their avatars
+      // Action button players (rookie-extension, team-option) stay clickable via the menu.
       document.querySelectorAll('.ufa-action-btn[data-player-id]').forEach(btn => {
         const playerId = btn.dataset.playerId;
         if (!playerId) return;
         const elig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId || currentTeam);
         if (!elig) return;
-        btn.closest('tr')?.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+        const row = btn.closest('tr');
+        if (row?.classList.contains('roster-row--mock')) {
+          row.querySelector('.player-cell__avatar')?.classList.add('player-cell__avatar--eligible');
+        }
       });
     };
 
@@ -6728,6 +6737,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           }
           if (player.activeStripe) {
             rowClasses.push('roster-row--active-alt');
+          }
+          if (player.isMock) {
+            rowClasses.push('roster-row--mock');
           }
 
           // Add contract action indicator
@@ -9066,6 +9078,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const buildDemoPlayers = () => [
       {
         id: 'DEMO_HOPKINS',
+        isMock: true,
         name: 'Hopkins, DeAndre',
         position: 'WR',
         salary: 500000,
@@ -9121,6 +9134,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       },
       {
         id: 'DEMO_MENDOZA',
+        isMock: true,
         name: 'Mendoza, Fernando',
         position: 'QB',
         salary: 3250000,
@@ -9177,6 +9191,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       {
         // Scenario 3: 1st round pick with team option window open
         id: 'DEMO_WILLIAMS',
+        isMock: true,
         name: 'Hailmary, Hank',
         position: 'QB',
         salary: 2000000,
@@ -9233,6 +9248,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       {
         // Scenario 4: 2nd round pick eligible for rookie extension
         id: 'DEMO_CARTER',
+        isMock: true,
         name: 'Misack, Buck',
         position: 'WR',
         salary: 1800000,
