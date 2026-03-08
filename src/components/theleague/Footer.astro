@@ -56,12 +56,18 @@ const championIcon = championTeam?.assets?.icons?.[0]?.relativePath;
 			<div class="footer-champion">
 				<h3 class="champion-title">Defending League Champions</h3>
 				<div class="champion-banner">
-					{championBanner && (
-						<img src={championBanner} alt={`${championTeam?.name} - ${championYear} Champions`} />
-					)}
+						{championBanner && (
+							<img
+								src={championBanner}
+								alt={`${championTeam?.name} - ${championYear} Champions`}
+								loading="lazy"
+								decoding="async"
+								fetchpriority="low"
+							/>
+						)}
+					</div>
 				</div>
-			</div>
-		)}
+			)}
 
 		<!-- Footer Navigation Columns -->
 		<div class="footer-nav">
