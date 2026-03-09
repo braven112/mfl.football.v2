@@ -12,6 +12,14 @@ export type DateResolution =
   | { type: 'configured'; configKey: string }
   | { type: 'relative'; rule: string; relativeTo: string };
 
+/** Configuration for syncing an event to MFL's calendar API */
+export interface MFLCalendarSync {
+  /** MFL EVENT_TYPE: TRADE, WAIVER_BBID, WAIVER_LOCK, WAIVER_UNLOCK, DRAFT_START, AUCTION_START, CUSTOM */
+  eventType: string;
+  /** Override the event name for the MFL calendar entry (defaults to event name) */
+  title?: string;
+}
+
 /** A link associated with an event (action or result) */
 export interface EventLink {
   label: string;
@@ -35,6 +43,8 @@ export interface LeagueEventDefinition {
   /** Days before the event to show urgency styling */
   urgencyDays?: number;
   sortOrder: number;
+  /** If set, this event will be synced to MFL's calendar via the sync script */
+  mflSync?: MFLCalendarSync;
 }
 
 /** A resolved event with concrete Date objects for a specific league year */

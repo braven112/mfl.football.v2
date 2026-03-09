@@ -29,6 +29,7 @@
     "sync:all": "pnpm run sync:theleague && pnpm run sync:afl",
     "sync:theleague": "node scripts/sync-theleague-assets.mjs",
     "sync:afl": "node scripts/sync-afl-asset-urls.mjs && node scripts/sync-afl-assets.mjs",
+    "sync:calendar": "npx tsx scripts/sync-calendar-to-mfl.ts",
     "sync:afl-urls": "node scripts/sync-afl-asset-urls.mjs",
     "upload:psds": "node --env-file=.env scripts/upload-psds-to-blob.mjs",
     "watch:theleague": "node scripts/watch-theleague-assets.mjs",

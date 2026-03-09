@@ -18,6 +18,8 @@ import { spriteUrl } from '../../utils/sprite-url';
 interface Props extends NavFooterProps {
   /** Current league for constructing roster link */
   league?: LeagueSlug;
+  /** Admin franchise IDs for role switcher visibility */
+  adminFranchiseIds?: string[];
 }
 
 const {
@@ -28,6 +30,7 @@ const {
   leagueId,
   verifyTeamUrl,
   league = 'theleague',
+  adminFranchiseIds = [],
 } = Astro.props;
 
 // Build the roster GM page URL
@@ -62,6 +65,7 @@ function getFooterLinkUrl(link: NavFooterLink): string {
 }
 
 const isAuthenticated = !!team;
+const isAdmin = isAuthenticated && adminFranchiseIds.includes(team.franchiseId);
 ---
 
 <footer
@@ -69,34 +73,69 @@ const isAuthenticated = !!team;
   role="contentinfo"
 >
   {isAuthenticated ? (
-    <!-- Authenticated State: Team Info - Links to Rosters page -->
-    <a href={rosterUrl} class="nav-footer__team" aria-label={`View ${team.teamName} roster`}>
-      <div class="nav-footer__team-logo">
-        {team.iconUrl ? (
-          <img
-            src={team.iconUrl}
-            alt={`${team.teamName} logo`}
-            class="nav-footer__team-img"
-            width="40"
-            height="40"
-            loading="lazy"
-          />
-        ) : (
-          <!-- Fallback icon if no team logo -->
-          <div class="nav-footer__team-placeholder">
-            <svg class="nav-footer__icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-shield-2`}></use>
-            </svg>
-          </div>
-        )}
-      </div>
-      <div class="nav-footer__team-info">
-        <span class="nav-footer__team-name">{team.teamName}</span>
-        {team.ownerName && (
-          <span class="nav-footer__owner-name">{team.ownerName}</span>
-        )}
-      </div>
-    </a>
+    <!-- Authenticated State: Team Info with optional role switcher -->
+    <div
+      class="nav-footer__team-row"
+      data-team-name={team.teamName}
+      data-team-icon={team.iconUrl || ''}
+      data-team-owner={team.ownerName || ''}
+      data-roster-url={rosterUrl}
+    >
+      <a href={rosterUrl} class="nav-footer__team" id="nav-team-link" aria-label={`View ${team.teamName} roster`}>
+        <div class="nav-footer__team-logo" id="nav-team-logo">
+          {team.iconUrl ? (
+            <img
+              src={team.iconUrl}
+              alt={`${team.teamName} logo`}
+              class="nav-footer__team-img"
+              width="40"
+              height="40"
+              loading="lazy"
+            />
+          ) : (
+            <!-- Fallback icon if no team logo -->
+            <div class="nav-footer__team-placeholder">
+              <svg class="nav-footer__icon" aria-hidden="true">
+                <use href={`${spriteUrl}#icon-shield-2`}></use>
+              </svg>
+            </div>
+          )}
+        </div>
+        <div class="nav-footer__team-info">
+          <span class="nav-footer__team-name" id="nav-team-name">{team.teamName}</span>
+          {team.ownerName && (
+            <span class="nav-footer__owner-name" id="nav-team-owner">{team.ownerName}</span>
+          )}
+        </div>
+      </a>
+
+      {/* Role switch toggle (admin franchises only, shown via client JS) */}
+      {isAdmin && (
+        <button
+          type="button"
+          class="nav-footer__role-btn"
+          id="role-switch-btn"
+          aria-label="Switch role"
+          title="Switch role"
+          style="display: none;"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M7 15l5 5 5-5" />
+            <path d="M7 9l5-5 5 5" />
+          </svg>
+        </button>
+      )}
+    </div>
   ) : (
     <!-- Unauthenticated State: Verify Prompt -->
     <a
@@ -243,6 +282,62 @@ const isAuthenticated = !!team;
   }
 
   /* ==============================================
+   * TEAM ROW - Wrapper for team info + role switch
+   * ============================================== */
+  .nav-footer__team-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .nav-footer__team-row .nav-footer__team {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Role switch button (up/down arrows like league switcher) */
+  .nav-footer__role-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    border-radius: var(--nav-border-radius-sm, 4px);
+    color: var(--nav-text-muted, #6b7280);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: var(--nav-hover-transition, background-color 0.15s ease);
+  }
+
+  .nav-footer__role-btn:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+    color: var(--nav-text, #333333);
+  }
+
+  .nav-footer__role-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  .nav-footer__role-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Commissioner avatar — circular with background image */
+  .nav-footer__team-logo--commish {
+    border-radius: 50%;
+  }
+
+  .nav-footer__team-logo--commish .nav-footer__team-img {
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  /* ==============================================
    * UNAUTHENTICATED STATE - Verify Prompt
    * ============================================== */
   .nav-footer__verify {
@@ -375,8 +470,127 @@ const isAuthenticated = !!team;
   @media (prefers-reduced-motion: reduce) {
     .nav-footer__verify,
     .nav-footer__verify-arrow,
-    .nav-footer__link {
+    .nav-footer__link,
+    .nav-footer__role-btn {
       transition: none;
     }
   }
 </style>
+
+<script is:inline>
+  (function initRoleSwitcher() {
+    var btn = document.getElementById('role-switch-btn');
+    if (!btn) return;
+
+    var teamRow = btn.closest('.nav-footer__team-row');
+    if (!teamRow) return;
+
+    var teamLink = document.getElementById('nav-team-link');
+    var teamLogo = document.getElementById('nav-team-logo');
+    var teamName = document.getElementById('nav-team-name');
+    var teamOwner = document.getElementById('nav-team-owner');
+
+    var origName = teamRow.dataset.teamName || '';
+    var origIcon = teamRow.dataset.teamIcon || '';
+    var origOwner = teamRow.dataset.teamOwner || '';
+    var rosterUrl = teamRow.dataset.rosterUrl || '';
+
+    var COMMISH_AVATAR = '/assets/icons/commissioner.jpeg';
+    var currentRole = 'owner';
+
+    function buildImg(src, alt) {
+      var img = document.createElement('img');
+      img.src = src;
+      img.alt = alt;
+      img.className = 'nav-footer__team-img';
+      img.width = 40;
+      img.height = 40;
+      img.loading = 'lazy';
+      return img;
+    }
+
+    function replaceLogoContent(src, alt) {
+      while (teamLogo.firstChild) teamLogo.removeChild(teamLogo.firstChild);
+      teamLogo.appendChild(buildImg(src, alt));
+    }
+
+    function applyOwnerView() {
+      if (teamName) teamName.textContent = origName;
+      if (teamOwner) {
+        teamOwner.textContent = origOwner;
+        teamOwner.style.display = origOwner ? '' : 'none';
+      }
+      if (teamLogo) {
+        teamLogo.classList.remove('nav-footer__team-logo--commish');
+        if (origIcon) replaceLogoContent(origIcon, origName + ' logo');
+      }
+      if (teamLink) {
+        teamLink.href = rosterUrl;
+        teamLink.setAttribute('aria-label', 'View ' + origName + ' roster');
+      }
+      btn.title = 'Switch to Commissioner';
+      btn.setAttribute('aria-label', 'Switch to Commissioner');
+    }
+
+    function applyCommishView() {
+      if (teamName) teamName.textContent = 'Commissioner';
+      if (teamOwner) {
+        teamOwner.textContent = origName;
+        teamOwner.style.display = '';
+      }
+      if (teamLogo) {
+        teamLogo.classList.add('nav-footer__team-logo--commish');
+        replaceLogoContent(COMMISH_AVATAR, 'Commissioner');
+      }
+      if (teamLink) {
+        teamLink.href = rosterUrl;
+        teamLink.setAttribute('aria-label', 'Commissioner mode');
+      }
+      btn.title = 'Switch to Owner';
+      btn.setAttribute('aria-label', 'Switch to Owner');
+    }
+
+    function applyRole(role) {
+      currentRole = role;
+      if (role === 'commissioner' || role === 'admin') {
+        applyCommishView();
+      } else {
+        applyOwnerView();
+      }
+    }
+
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.authenticated || !data.user) return;
+        applyRole(data.user.role || 'owner');
+        btn.style.display = '';
+      })
+      .catch(function() {});
+
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      var newRole = (currentRole === 'commissioner' || currentRole === 'admin') ? 'owner' : 'commissioner';
+      btn.disabled = true;
+
+      fetch('/api/auth/role-switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ role: newRole }),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            applyRole(data.role);
+          }
+        })
+        .catch(function() {})
+        .finally(function() {
+          btn.disabled = false;
+        });
+    });
+  })();
+</script>

@@ -1,0 +1,504 @@
+---
+/**
+ * Calendar Sync Admin Page
+ *
+ * Commissioner-only page to preview and push league calendar events to MFL.
+ * Requires commissioner or admin role.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+
+export const prerender = false;
+
+const user = getAuthUser(Astro.request);
+const isAuthorized = user && (user.role === 'commissioner' || user.role === 'admin');
+
+if (!isAuthorized) {
+  return Astro.redirect('/theleague');
+}
+
+const currentYear = getCurrentLeagueYear();
+---
+
+<TheLeagueLayout title="Calendar Sync">
+  <div class="sync-page">
+    <header class="sync-hero">
+      <h1 class="sync-title">Calendar Sync</h1>
+      <p class="sync-subtitle">Push league events to MFL's calendar</p>
+    </header>
+
+    <div class="sync-workflow">
+      <div class="section-header">
+        <h3 class="section-header__title">Yearly Workflow</h3>
+        <p class="section-header__sub">Run after new MFL league is created (~Feb 14)</p>
+      </div>
+      <ol class="workflow-steps">
+        <li>Clear MFL calendar in admin UI (no delete API)</li>
+        <li>Click <strong>Preview</strong> to see what will be posted</li>
+        <li>Click <strong>Sync to MFL</strong> to push events</li>
+        <li>Click <strong>Read MFL Calendar</strong> to validate</li>
+      </ol>
+    </div>
+
+    <div class="sync-controls">
+      <div class="control-row">
+        <label class="control-label" for="sync-year">Year</label>
+        <select id="sync-year" class="control-select">
+          {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+            <option value={y} selected={y === currentYear}>{y}</option>
+          ))}
+        </select>
+      </div>
+
+      <div class="control-row actions">
+        <button id="btn-preview" class="sync-btn sync-btn--preview">Preview</button>
+        <button id="btn-read" class="sync-btn sync-btn--read">Read MFL Calendar</button>
+        <button id="btn-sync" class="sync-btn sync-btn--sync">Sync to MFL</button>
+      </div>
+    </div>
+
+    <div id="sync-status" class="sync-status" style="display: none;"></div>
+
+    <div id="sync-results" class="sync-results" style="display: none;">
+      <div class="section-header">
+        <h3 class="section-header__title" id="results-title">Results</h3>
+        <p class="section-header__sub" id="results-subtitle"></p>
+      </div>
+      <div class="table-wrapper">
+        <table class="sync-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>MFL Type</th>
+              <th>Start</th>
+              <th>End</th>
+              <th id="col-status" style="display: none;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="read-results" class="sync-results" style="display: none;">
+      <div class="section-header">
+        <h3 class="section-header__title">MFL Calendar</h3>
+        <p class="section-header__sub" id="read-subtitle"></p>
+      </div>
+      <pre id="read-body" class="read-output"></pre>
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .sync-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .sync-hero {
+    margin-bottom: 2rem;
+  }
+
+  .sync-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .sync-subtitle {
+    font-size: 0.875rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0.25rem 0 0;
+  }
+
+  .section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 1rem;
+  }
+
+  .section-header__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+  }
+
+  .section-header__sub {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0.25rem 0 0;
+  }
+
+  .sync-workflow {
+    margin-bottom: 2rem;
+    padding: 1.25rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: 0.5rem;
+  }
+
+  .workflow-steps {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.8;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .sync-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .control-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .control-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .control-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    background: white;
+    font-family: inherit;
+  }
+
+  .actions {
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .sync-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+
+  .sync-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .sync-btn--preview {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-700, #374151);
+  }
+
+  .sync-btn--preview:hover:not(:disabled) {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .sync-btn--read {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+  }
+
+  .sync-btn--read:hover:not(:disabled) {
+    background: #dbeafe;
+  }
+
+  .sync-btn--sync {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+  }
+
+  .sync-btn--sync:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+
+  .sync-status {
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .sync-status.loading {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
+
+  .sync-status.success {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .sync-status.error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  .sync-results {
+    margin-top: 1.5rem;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .sync-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .sync-table th {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    position: sticky;
+    top: 0;
+    background: white;
+  }
+
+  .sync-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sync-table tr:hover td {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .status-ok {
+    color: #166534;
+    font-weight: 600;
+  }
+
+  .status-fail {
+    color: #991b1b;
+    font-weight: 600;
+  }
+
+  .read-output {
+    padding: 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 640px) {
+    .sync-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .actions {
+      flex-wrap: wrap;
+    }
+
+    .sync-btn {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+</style>
+
+<script is:inline>
+  const yearSelect = document.getElementById('sync-year');
+  const btnPreview = document.getElementById('btn-preview');
+  const btnRead = document.getElementById('btn-read');
+  const btnSync = document.getElementById('btn-sync');
+  const statusEl = document.getElementById('sync-status');
+  const resultsEl = document.getElementById('sync-results');
+  const readResultsEl = document.getElementById('read-results');
+  const resultsTitle = document.getElementById('results-title');
+  const resultsSubtitle = document.getElementById('results-subtitle');
+  const resultsBody = document.getElementById('results-body');
+  const colStatus = document.getElementById('col-status');
+  const readSubtitle = document.getElementById('read-subtitle');
+  const readBody = document.getElementById('read-body');
+
+  function getYear() {
+    return parseInt(yearSelect.value, 10);
+  }
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'sync-status ' + type;
+    statusEl.style.display = 'block';
+  }
+
+  function hideStatus() {
+    statusEl.style.display = 'none';
+  }
+
+  function setButtonsDisabled(disabled) {
+    btnPreview.disabled = disabled;
+    btnRead.disabled = disabled;
+    btnSync.disabled = disabled;
+  }
+
+  function formatDate(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+  }
+
+  function renderEventTable(events, showStatusCol, results) {
+    resultsBody.textContent = '';
+    colStatus.style.display = showStatusCol ? '' : 'none';
+
+    const resultMap = {};
+    if (results) {
+      results.forEach(function(r) { resultMap[r.name] = r; });
+    }
+
+    events.forEach(function(event) {
+      const tr = document.createElement('tr');
+      const tdName = document.createElement('td');
+      tdName.textContent = event.name;
+      tr.appendChild(tdName);
+
+      const tdType = document.createElement('td');
+      tdType.textContent = event.eventType;
+      tr.appendChild(tdType);
+
+      const tdStart = document.createElement('td');
+      tdStart.textContent = formatDate(event.startDate);
+      tr.appendChild(tdStart);
+
+      const tdEnd = document.createElement('td');
+      tdEnd.textContent = formatDate(event.endDate);
+      tr.appendChild(tdEnd);
+
+      if (showStatusCol) {
+        const tdStatus = document.createElement('td');
+        const result = resultMap[event.name];
+        if (result) {
+          tdStatus.textContent = result.success ? 'OK' : result.error || 'Failed';
+          tdStatus.className = result.success ? 'status-ok' : 'status-fail';
+        }
+        tr.appendChild(tdStatus);
+      }
+
+      resultsBody.appendChild(tr);
+    });
+
+    resultsEl.style.display = 'block';
+    readResultsEl.style.display = 'none';
+  }
+
+  async function callSyncAPI(action) {
+    const response = await fetch('/api/admin/sync-calendar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: action, year: getYear() }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(function() { return {}; });
+      throw new Error(data.error || 'Request failed: ' + response.status);
+    }
+
+    return response.json();
+  }
+
+  btnPreview.addEventListener('click', async function() {
+    setButtonsDisabled(true);
+    showStatus('Loading preview...', 'loading');
+
+    try {
+      const data = await callSyncAPI('preview');
+      hideStatus();
+      resultsTitle.textContent = 'Preview';
+      resultsSubtitle.textContent = data.events.length + ' event(s) for ' + data.year;
+      renderEventTable(data.events, false);
+    } catch (err) {
+      showStatus('Error: ' + err.message, 'error');
+    } finally {
+      setButtonsDisabled(false);
+    }
+  });
+
+  btnRead.addEventListener('click', async function() {
+    setButtonsDisabled(true);
+    showStatus('Reading MFL calendar...', 'loading');
+
+    try {
+      const data = await callSyncAPI('read');
+      hideStatus();
+      readSubtitle.textContent = 'Year ' + data.year;
+      readBody.textContent = JSON.stringify(data.calendar, null, 2);
+      readResultsEl.style.display = 'block';
+      resultsEl.style.display = 'none';
+    } catch (err) {
+      showStatus('Error: ' + err.message, 'error');
+    } finally {
+      setButtonsDisabled(false);
+    }
+  });
+
+  btnSync.addEventListener('click', async function() {
+    if (!confirm('This will push all calendar events to MFL for year ' + getYear() + '. Continue?')) {
+      return;
+    }
+
+    setButtonsDisabled(true);
+    showStatus('Syncing events to MFL... This may take a minute.', 'loading');
+
+    try {
+      const data = await callSyncAPI('sync');
+      const summary = data.summary;
+      showStatus(
+        summary.successes + ' of ' + summary.total + ' events synced successfully'
+          + (summary.failures > 0 ? ' (' + summary.failures + ' failed)' : ''),
+        summary.failures > 0 ? 'error' : 'success',
+      );
+      resultsTitle.textContent = 'Sync Results';
+      resultsSubtitle.textContent = 'Year ' + data.year;
+
+      // Build events from results for the table
+      const previewData = await callSyncAPI('preview');
+      renderEventTable(previewData.events, true, data.results);
+    } catch (err) {
+      showStatus('Error: ' + err.message, 'error');
+    } finally {
+      setButtonsDisabled(false);
+    }
+  });
+</script>

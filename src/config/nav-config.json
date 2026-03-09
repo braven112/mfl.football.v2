@@ -52,6 +52,16 @@
           "description": "View all franchise tag declarations for the current offseason"
         },
         {
+          "id": "calendar-sync",
+          "label": "Calendar Sync",
+          "icon": "calendar",
+          "path": "/admin/calendar-sync",
+          "external": false,
+          "leagueOnly": "theleague",
+          "visibility": "admin",
+          "description": "Push league calendar events to MFL"
+        },
+        {
           "id": "draft-predictor",
           "label": "Draft Order",
           "icon": "draft-podium",
@@ -276,7 +286,8 @@
     "/whats-new": "/whats-new",
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
-    "/about": "/about"
+    "/about": "/about",
+    "/admin/calendar-sync": "/admin/calendar-sync"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

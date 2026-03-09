@@ -22,6 +22,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     startDate: { type: 'fixed', month: 2, day: 1, time: '20:45' },
     urgencyDays: 7,
     sortOrder: 1,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'tagging-period',
@@ -40,6 +41,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 3,
     sortOrder: 2,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'last-day-release',
@@ -57,6 +59,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 3,
     sortOrder: 3,
+    mflSync: { eventType: 'WAIVER_LOCK', title: 'Roster Lock — Last Day to Release' },
   },
   {
     id: 'new-season-starts',
@@ -73,6 +76,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
       },
     ],
     sortOrder: 4,
+    mflSync: { eventType: 'WAIVER_UNLOCK', title: 'New Season — Contracts Roll Over' },
   },
   {
     id: 'tag-offer-period',
@@ -91,6 +95,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 3,
     sortOrder: 5,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'tag-matching-period',
@@ -109,6 +114,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 2,
     sortOrder: 6,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'offseason-fa-opens',
@@ -133,6 +139,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 5,
     sortOrder: 7,
+    mflSync: { eventType: 'AUCTION_START', title: 'Offseason Free Agency Opens' },
   },
   {
     id: 'nfl-draft',
@@ -142,6 +149,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     category: 'draft',
     startDate: { type: 'configured', configKey: 'nflDraftDate' },
     sortOrder: 8,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'rookie-draft',
@@ -166,6 +174,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 7,
     sortOrder: 9,
+    mflSync: { eventType: 'DRAFT_START', title: 'Rookie Draft' },
   },
   {
     id: 'declare-rookie-contracts',
@@ -183,6 +192,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 7,
     sortOrder: 10,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'offseason-fa-closes',
@@ -193,6 +203,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     startDate: { type: 'computed', rule: 'third-sunday-august' },
     urgencyDays: 7,
     sortOrder: 11,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'nfl-season-starts',
@@ -209,6 +220,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
       },
     ],
     sortOrder: 12,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'trading-deadline',
@@ -226,6 +238,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 7,
     sortOrder: 13,
+    mflSync: { eventType: 'TRADE', title: 'Trading Deadline' },
   },
   {
     id: 'in-season-fa-ends',
@@ -235,6 +248,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     category: 'regular-season',
     startDate: { type: 'computed', rule: 'after-week-16' },
     sortOrder: 14,
+    mflSync: { eventType: 'WAIVER_LOCK', title: 'In-Season FA Ends' },
   },
   {
     id: 'playoffs-start',
@@ -259,6 +273,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 7,
     sortOrder: 15,
+    mflSync: { eventType: 'CUSTOM' },
   },
   {
     id: 'league-championship',
@@ -283,5 +298,6 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     ],
     urgencyDays: 7,
     sortOrder: 16,
+    mflSync: { eventType: 'CUSTOM' },
   },
 ];
