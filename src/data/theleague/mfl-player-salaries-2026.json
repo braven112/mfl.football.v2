@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-09T17:33:19.776Z"
+    "fetchedAt": "2026-03-09T17:54:09.285Z"
   },
   "players": [
     {
@@ -1428,13 +1428,44 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15768_thumb.jpg",
       "externalIds": {
         "mfl": "15768",
-        "sleeper": null,
+        "sleeper": "8142",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "8142",
+        "fullName": "Alec Pierce",
+        "team": "IND",
+        "age": 25,
+        "height": "75",
+        "weight": "211",
+        "number": 14,
+        "college": "Cincinnati",
+        "birthDate": "2000-05-02",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14842",
+          "name": "Pittman, Michael"
+        },
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        }
+      ]
     },
     {
       "id": "14833",
