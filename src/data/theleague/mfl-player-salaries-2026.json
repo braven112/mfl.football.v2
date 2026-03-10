@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-10T03:12:35.762Z"
+    "fetchedAt": "2026-03-10T04:00:06.884Z"
   },
   "players": [
     {
@@ -8782,13 +8782,48 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15787_thumb.jpg",
       "externalIds": {
         "mfl": "15787",
-        "sleeper": null,
+        "sleeper": "8188",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "8188",
+        "fullName": "Tyquan Thornton",
+        "team": "KC",
+        "age": 25,
+        "height": "74",
+        "weight": "185",
+        "number": 80,
+        "college": "Baylor",
+        "birthDate": "2000-08-07",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 6,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16620",
+          "name": "Worthy, Xavier"
+        },
+        {
+          "id": "16194",
+          "name": "Rice, Rashee"
+        },
+        {
+          "id": "17086",
+          "name": "Royals, Jalen"
+        }
+      ]
     },
     {
       "id": "15319",
