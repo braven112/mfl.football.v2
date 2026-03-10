@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-10T07:35:21.671Z"
+    "fetchedAt": "2026-03-10T07:54:19.044Z"
   },
   "players": [
     {
@@ -339,20 +339,47 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "PIT",
+      "team": "TB",
       "draftYear": 2021,
       "draftTeam": "PHI",
       "birthdate": 921387600,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15255_thumb.jpg",
       "externalIds": {
         "mfl": "15255",
-        "sleeper": null,
+        "sleeper": "7567",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "7567",
+        "fullName": "Kenneth Gainwell",
+        "team": "TB",
+        "age": 26,
+        "height": "69",
+        "weight": "200",
+        "number": 14,
+        "college": "Memphis",
+        "birthDate": "1999-03-14",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16598",
+          "name": "Irving, Bucky"
+        }
+      ]
     },
     {
       "id": "16778",
@@ -3339,20 +3366,47 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "BAL",
+      "team": "NYG",
       "draftYear": 2022,
       "draftTeam": "BAL",
       "birthdate": 956034000,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15798_thumb.jpg",
       "externalIds": {
         "mfl": "15798",
-        "sleeper": null,
+        "sleeper": "8131",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "8131",
+        "fullName": "Isaiah Likely",
+        "team": "NYG",
+        "age": 25,
+        "height": "76",
+        "weight": "245",
+        "number": 80,
+        "college": "Coastal Carolina",
+        "birthDate": "2000-04-18",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16649",
+          "name": "Johnson, Theo"
+        }
+      ]
     },
     {
       "id": "16176",
@@ -8425,6 +8479,10 @@
         {
           "id": "16649",
           "name": "Johnson, Theo"
+        },
+        {
+          "id": "15798",
+          "name": "Likely, Isaiah"
         }
       ]
     },
