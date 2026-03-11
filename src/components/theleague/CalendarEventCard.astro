@@ -29,6 +29,8 @@ const category = event.definition.category;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = event.definition.icon ? MULTICOLOR_ICONS.includes(event.definition.icon) : false;
 
+const eventStatus = event.isActive ? 'active' : event.isPast ? 'past' : 'upcoming';
+
 const cardClasses = [
   'calendar-card',
   `calendar-card--${category}`,
@@ -38,7 +40,7 @@ const cardClasses = [
 ].filter(Boolean).join(' ');
 ---
 
-<article class={cardClasses}>
+<article class={cardClasses} data-event-status={eventStatus}>
   {(event.isPast || event.isActive) && (
     <span class="calendar-card__badge">{statusText}</span>
   )}
