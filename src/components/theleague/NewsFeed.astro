@@ -6,25 +6,24 @@
  * Section 2: Latest News (placeholder articles for phase 1)
  */
 
-// Placeholder news articles for phase 1
 const placeholderArticles = [
   {
-    headline: '2026 NFL Free Agency: Key Signings Tracker',
+    headline: '2026 NFL Free Agency: Live Updates',
     date: 'Mar 12, 2026',
-    description: 'Follow all the major moves as teams reshape their rosters heading into the new league year.',
-    url: 'https://www.espn.com/nfl/story/_/id/free-agency-tracker',
+    description: 'Latest signings, trades, cuts and contract restructures as free agency unfolds.',
+    url: 'https://www.espn.com/nfl/story/_/id/47899175/2026-nfl-free-agency-tracker-live-updates-signings-trades-cuts-contracts-rumors',
   },
   {
-    headline: 'NFL Draft Big Board: Top 50 Prospects',
+    headline: 'NFL Free Agency: Team-by-Team Tracker',
     date: 'Mar 10, 2026',
-    description: 'Our scouts rank the top prospects for the upcoming NFL Draft and project their fantasy impact.',
-    url: 'https://www.espn.com/nfl/draft/',
+    description: 'Every team\'s offseason moves, signings, and trades in one place.',
+    url: 'https://www.espn.com/nfl/story/_/id/48054795/indianapolis-colts-2026-free-agency-tracker-offseason-moves-signings-trades',
   },
   {
-    headline: 'Fantasy Football Offseason Rankings Update',
+    headline: 'NFL News & Scores',
     date: 'Mar 8, 2026',
-    description: 'Updated dynasty and redraft rankings reflecting free agency moves and coaching changes.',
-    url: 'https://www.espn.com/fantasy/football/',
+    description: 'Headlines, scores, and analysis from around the league.',
+    url: 'https://www.espn.com/nfl/',
   },
 ];
 ---
@@ -73,6 +72,7 @@ const placeholderArticles = [
   const CACHE_KEY = 'sleeper_players_nfl';
   const CACHE_TS_KEY = 'sleeper_players_nfl_ts';
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const FETCH_TIMEOUT_MS = 8000; // 8s timeout for the large players fetch
 
   interface SleeperPlayer {
     player_id: string;
@@ -94,7 +94,13 @@ const placeholderArticles = [
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  async function getCachedPlayers(): Promise<PlayersMap | null> {
+  function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+  }
+
+  function getCachedPlayers(): PlayersMap | null {
     try {
       const ts = localStorage.getItem(CACHE_TS_KEY);
       if (!ts) return null;
@@ -109,39 +115,35 @@ const placeholderArticles = [
   }
 
   async function fetchAndCachePlayers(): Promise<PlayersMap> {
-    const resp = await fetch(PLAYERS_API);
+    const resp = await fetchWithTimeout(PLAYERS_API, FETCH_TIMEOUT_MS);
     if (!resp.ok) throw new Error(`Players API returned ${resp.status}`);
     const data: PlayersMap = await resp.json();
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
       localStorage.setItem(CACHE_TS_KEY, String(Date.now()));
     } catch {
-      // localStorage may be full; silently continue without caching
+      // localStorage may be full; silently continue
     }
     return data;
   }
 
-  async function getPlayers(): Promise<PlayersMap> {
-    const cached = await getCachedPlayers();
-    if (cached) return cached;
-    return fetchAndCachePlayers();
-  }
-
-  function renderTrendingList(trending: TrendingEntry[], players: PlayersMap): string {
+  function renderTrendingList(trending: TrendingEntry[], players: PlayersMap | null): string {
     if (!trending.length) {
       return '<p class="news-feed__empty">No trending players right now.</p>';
     }
 
     const items = trending.map((entry, i) => {
-      const p = players[entry.player_id];
-      const rawName = p?.full_name || p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : `ID ${entry.player_id}`;
+      const p = players?.[entry.player_id];
+      const rawName = p?.full_name
+        || (p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : '')
+        || `Player ${entry.player_id}`;
       const name = esc(rawName);
       const position = esc(p?.position || '—');
       const team = esc(p?.team || 'FA');
       const rank = i + 1;
 
       return `
-        <li class="news-feed__player">
+        <li class="news-feed__player" data-player-id="${esc(entry.player_id)}">
           <span class="news-feed__player-rank">${rank}</span>
           <div class="news-feed__player-info">
             <span class="news-feed__player-name">${name}</span>
@@ -154,8 +156,16 @@ const placeholderArticles = [
     return `<ol class="news-feed__player-list">${items}</ol>`;
   }
 
-  function renderError(): string {
-    return '<p class="news-feed__empty">Unable to load trending data.</p>';
+  function updatePlayerNames(container: HTMLElement, players: PlayersMap) {
+    container.querySelectorAll('[data-player-id]').forEach(li => {
+      const id = li.getAttribute('data-player-id') || '';
+      const p = players[id];
+      if (!p) return;
+      const nameEl = li.querySelector('.news-feed__player-name');
+      const metaEl = li.querySelector('.news-feed__player-meta');
+      if (nameEl) nameEl.textContent = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim();
+      if (metaEl) metaEl.textContent = `${p.position || '—'} · ${p.team || 'FA'}`;
+    });
   }
 
   async function init() {
@@ -163,23 +173,27 @@ const placeholderArticles = [
     if (!container) return;
 
     try {
-      // Fetch trending data and player database in parallel
-      const [trendingResp, players] = await Promise.all([
-        fetch(TRENDING_API),
-        getPlayers(),
-      ]);
-
+      // Step 1: Fetch trending data (small payload, fast)
+      const trendingResp = await fetchWithTimeout(TRENDING_API, 5000);
       if (!trendingResp.ok) throw new Error(`Trending API returned ${trendingResp.status}`);
       const trending: TrendingEntry[] = await trendingResp.json();
 
-      container.innerHTML = renderTrendingList(trending, players);
+      // Step 2: Try cached players first for instant render
+      const cached = getCachedPlayers();
+      container.innerHTML = renderTrendingList(trending, cached);
+
+      // Step 3: If no cache, fetch player names in background and update in-place
+      if (!cached) {
+        fetchAndCachePlayers()
+          .then(players => updatePlayerNames(container, players))
+          .catch(err => console.warn('NewsFeed: player names unavailable', err));
+      }
     } catch (err) {
       console.error('NewsFeed: failed to load trending players', err);
-      container.innerHTML = renderError();
+      container.innerHTML = '<p class="news-feed__empty">Unable to load trending data.</p>';
     }
   }
 
-  // Run on DOMContentLoaded or immediately if already loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
