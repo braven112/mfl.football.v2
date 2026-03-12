@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-12T07:52:28.716Z"
+    "fetchedAt": "2026-03-12T08:07:52.282Z"
   },
   "players": [
     {
@@ -8523,7 +8523,7 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "NE",
+      "team": "FA",
       "draftYear": 2015,
       "draftTeam": "MIN",
       "birthdate": 754549200,
@@ -9467,7 +9467,7 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "TEN",
+      "team": "WAS",
       "draftYear": 2022,
       "draftTeam": "TEN",
       "birthdate": 936766800,
@@ -9675,20 +9675,47 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "WAS",
+      "team": "JAX",
       "draftYear": 2023,
       "draftTeam": "WAS",
       "birthdate": 969944400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16174_thumb.jpg",
       "externalIds": {
         "mfl": "16174",
-        "sleeper": null,
+        "sleeper": "10219",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "10219",
+        "fullName": "Chris Rodriguez",
+        "team": "JAX",
+        "age": 26,
+        "height": "71",
+        "weight": "224",
+        "number": 36,
+        "college": "Kentucky",
+        "birthDate": "1999-09-26",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17052",
+          "name": "Tuten, Bhayshul"
+        }
+      ]
     },
     {
       "id": "16151",
