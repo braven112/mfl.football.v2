@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-12T16:18:52.735Z"
+    "fetchedAt": "2026-03-12T16:45:54.260Z"
   },
   "players": [
     {
@@ -6856,13 +6856,40 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16178_thumb.jpg",
       "externalIds": {
         "mfl": "16178",
-        "sleeper": null,
+        "sleeper": "9511",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "9511",
+        "fullName": "Keaton Mitchell",
+        "team": "BAL",
+        "age": 24,
+        "height": "68",
+        "weight": "190",
+        "number": 34,
+        "college": "East Carolina",
+        "birthDate": "2002-01-17",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "12626",
+          "name": "Henry, Derrick"
+        }
+      ]
     },
     {
       "id": "16212",
