@@ -44,7 +44,8 @@ jobs:
 
       - name: Run MFL integration tests
         env:
-          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          # INTENTIONAL BREAKAGE — testing rollback (will be auto-reverted)
+          MFL_USER_ID: 'INVALID_CREDENTIAL_FOR_ROLLBACK_TEST'
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
           # Hardcoded to test league — safe to write/revert without affecting production
           MFL_LEAGUE_ID: '36189'
