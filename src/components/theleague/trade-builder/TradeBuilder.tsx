@@ -377,28 +377,21 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     if (!teamA || !teamB) return;
 
     // Determine which side the authenticated user is on.
-    // Primary: match authUser.franchiseId against trade sides.
-    // Fallback: match defaultTeamId (cookie preference) if session franchiseId
-    // doesn't match (MFL sometimes stores "0000" for commissioners).
+    // 1. Match authUser.franchiseId against trade sides
+    // 2. Match defaultTeamId (cookie preference) — handles commissioner "0000"
+    // 3. Default to Team A — convention is "your team on the left".
+    //    MFL validates server-side that the cookie holder can propose this trade.
     const currentUserSide = (() => {
       const fA = state.teamA.franchiseId;
       const fB = state.teamB.franchiseId;
       const userFid = authUser?.franchiseId;
       if (userFid && userFid === fA) return 'A' as const;
       if (userFid && userFid === fB) return 'B' as const;
-      // Fallback: use cookie-based team preference
       if (defaultTeamId && defaultTeamId === fA) return 'A' as const;
       if (defaultTeamId && defaultTeamId === fB) return 'B' as const;
-      return null;
+      // Last resort: assume Team A (left side). MFL will reject if wrong.
+      return 'A' as const;
     })();
-
-    if (!currentUserSide) {
-      setSubmissionStatus({
-        status: 'error',
-        errorMessage: 'Your team must be part of this trade to submit.',
-      });
-      return;
-    }
 
     setSubmissionStatus({ status: 'submitting', errorMessage: null });
 
