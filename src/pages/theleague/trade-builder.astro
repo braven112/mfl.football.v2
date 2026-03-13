@@ -470,5 +470,6 @@ const pageData = {
     client:load
     pageData={JSON.stringify(pageData)}
     defaultTeamId={defaultTeam}
+    authUser={user ? JSON.stringify({ name: user.name, franchiseId: user.franchiseId, leagueId: user.leagueId, role: user.role }) : undefined}
   />
 </TheLeagueLayout>

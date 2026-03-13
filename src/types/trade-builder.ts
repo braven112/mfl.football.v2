@@ -156,3 +156,46 @@ export interface PositionChange {
   gained: number;
   netChange: number;
 }
+
+// ---------------------------------------------------------------------------
+// Trade Submission & Pending Trades
+// ---------------------------------------------------------------------------
+
+/** Auth user info passed from Astro to React */
+export interface TradeBuilderAuthUser {
+  name: string;
+  franchiseId: string;
+  leagueId: string;
+  role: string;
+}
+
+/** A pending trade from MFL's pendingTrades export */
+export interface PendingTrade {
+  tradeId: string;
+  offeredBy: string;
+  offeredTo: string;
+  willGiveUp: string;
+  willReceive: string;
+  timestamp: number;
+  expires: number;
+  comments: string;
+  byCommish: boolean;
+}
+
+/** Submission status for the confirmation modal */
+export interface TradeSubmissionState {
+  status: 'idle' | 'submitting' | 'success' | 'error';
+  errorMessage: string | null;
+}
+
+/** Extended trade actions for submission UI */
+export type TradeActionExtended =
+  | TradeAction
+  | { type: 'SHOW_CONFIRMATION_MODAL' }
+  | { type: 'HIDE_CONFIRMATION_MODAL' }
+  | { type: 'TOGGLE_PENDING_PANEL' }
+  | { type: 'HIDE_PENDING_PANEL' }
+  | { type: 'SUBMIT_TRADE_START' }
+  | { type: 'SUBMIT_TRADE_SUCCESS' }
+  | { type: 'SUBMIT_TRADE_ERROR'; message: string }
+  | { type: 'SUBMIT_TRADE_RESET' };
