@@ -343,3 +343,42 @@ Behavior: COMPLETELY OVERWRITES the previous draft list — no partial updates
 - Unauthenticated calls to both return `"API requires logged in user"` error
 - playerRanks returns proper JSON from `api.myfantasyleague.com` (confirmed response structure)
 - No other personalized list endpoints found in the complete MFL API endpoint inventory
+
+---
+
+## 2026-03-13 - Commissioner Write Operations Require www49 Host AND Two Cookies
+
+**Context:** Testing contract salary writes against test league 36189
+
+**Insight:** MFL commissioner-level import/write operations have TWO critical requirements that differ from read operations:
+
+1. **Host matters:** `api.myfantasyleague.com` rejects commissioner writes with "API requires commissioner access" even with valid cookies. Writes MUST target `www49.myfantasyleague.com` (the league's actual host) directly.
+
+2. **Two cookies required:** Commissioner writes need BOTH:
+   - `MFL_USER_ID` — authenticates the user
+   - `MFL_IS_COMMISH` — grants commissioner privilege
+
+   Read operations only need `MFL_USER_ID`.
+
+**Evidence:**
+```
+# FAILS — api subdomain rejects commissioner imports
+POST https://api.myfantasyleague.com/2026/import?TYPE=salaries&L=36189&APPEND=1
+Cookie: MFL_USER_ID=xxx; MFL_IS_COMMISH=yyy
+→ <error>API requires commissioner access for league id 36189</error>
+
+# WORKS — www49 with both cookies
+POST https://www49.myfantasyleague.com/2026/import?TYPE=salaries&L=36189&APPEND=1
+Cookie: MFL_USER_ID=xxx; MFL_IS_COMMISH=yyy
+→ <status>OK</status>
+```
+
+**Impact:** The contract writer (`src/utils/mfl-contract-writer.ts`) was using `api.myfantasyleague.com` as default host, which would fail for all commissioner writes. Fixed to use `www49` for writes and both cookies.
+
+**Environment variables (names match the MFL cookie names):**
+- `MFL_USER_ID` — the `MFL_USER_ID` cookie value
+- `MFL_IS_COMMISH` — the `MFL_IS_COMMISH` cookie value
+- `MFL_WRITE_HOST` — override write host (default: `https://www49.myfantasyleague.com`)
+- `MFL_HOST` — override read host (default: `https://api.myfantasyleague.com`)
+
+**Recommendation:** When obtaining commissioner credentials for any MFL league, always capture BOTH cookies from the browser. The `MFL_IS_COMMISH` cookie is set separately by MFL's commissioner login flow.

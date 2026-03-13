@@ -10,9 +10,13 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
-const MFL_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
+// Reads use api.myfantasyleague.com; writes MUST use www49 (commissioner writes fail on the api subdomain)
+const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
+const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
 const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || '13522';
-const MFL_COMMISSIONER_COOKIE = process.env.MFL_COMMISSIONER_COOKIE || '';
+// Cookie names match the actual MFL cookie names for clarity
+const MFL_USER_ID = process.env.MFL_USER_ID || '';
+const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH || '';
 
 const BACKUP_DIR = join(process.cwd(), 'data/theleague/contract-backups');
 const MAX_BACKUP_AGE_DAYS = 30;
@@ -60,18 +64,18 @@ function ensureBackupDir(): void {
  * Returns the backup file path on success, null on failure.
  */
 export async function createPreWriteBackup(): Promise<string | null> {
-  if (!MFL_COMMISSIONER_COOKIE) {
-    console.error('MFL_COMMISSIONER_COOKIE not set, skipping backup');
+  if (!MFL_USER_ID) {
+    console.error('MFL_USER_ID not set, skipping backup');
     return null;
   }
 
   try {
     const year = getYear();
-    const url = `${MFL_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
+    const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
 
     const response = await fetch(url, {
       headers: {
-        Cookie: `MFL_USER_ID=${MFL_COMMISSIONER_COOKIE}`,
+        Cookie: `MFL_USER_ID=${MFL_USER_ID}`,
       },
       redirect: 'follow',
     });
@@ -152,10 +156,10 @@ function buildSalaryXML(params: ContractWriteParams): string {
 export async function writeContractToMFL(
   params: ContractWriteParams,
 ): Promise<ContractWriteResult> {
-  if (!MFL_COMMISSIONER_COOKIE) {
+  if (!MFL_USER_ID) {
     return {
       success: false,
-      error: 'MFL_COMMISSIONER_COOKIE environment variable is not set',
+      error: 'MFL_USER_ID environment variable is not set',
       attempts: 0,
     };
   }
@@ -164,10 +168,18 @@ export async function writeContractToMFL(
   const backupFile = await createPreWriteBackup();
 
   const year = getYear();
-  const url = `${MFL_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
+  // Commissioner writes MUST use www49 host (api subdomain rejects commissioner imports)
+  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
   const xmlData = buildSalaryXML(params);
 
   const body = new URLSearchParams({ DATA: xmlData });
+
+  // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
+  const cookieParts = [`MFL_USER_ID=${MFL_USER_ID}`];
+  if (MFL_IS_COMMISH) {
+    cookieParts.push(`MFL_IS_COMMISH=${MFL_IS_COMMISH}`);
+  }
+  const cookieHeader = cookieParts.join('; ');
 
   const delays = [1000, 3000, 9000]; // Exponential backoff: 1s, 3s, 9s
   let lastError = '';
@@ -178,7 +190,7 @@ export async function writeContractToMFL(
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: `MFL_USER_ID=${MFL_COMMISSIONER_COOKIE}`,
+          Cookie: cookieHeader,
         },
         body: body.toString(),
         redirect: 'follow',
@@ -227,10 +239,10 @@ export async function writeContractToMFL(
 export async function writeMultipleContractsToMFL(
   players: ContractWriteParams[],
 ): Promise<ContractWriteResult> {
-  if (!MFL_COMMISSIONER_COOKIE) {
+  if (!MFL_USER_ID) {
     return {
       success: false,
-      error: 'MFL_COMMISSIONER_COOKIE environment variable is not set',
+      error: 'MFL_USER_ID environment variable is not set',
       attempts: 0,
     };
   }
@@ -242,7 +254,8 @@ export async function writeMultipleContractsToMFL(
   const backupFile = await createPreWriteBackup();
 
   const year = getYear();
-  const url = `${MFL_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
+  // Commissioner writes MUST use www49 host (api subdomain rejects commissioner imports)
+  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
 
   const playerXml = players
     .map(
@@ -253,6 +266,13 @@ export async function writeMultipleContractsToMFL(
   const xmlData = `<salaries><leagueUnit unit="LEAGUE">${playerXml}</leagueUnit></salaries>`;
   const body = new URLSearchParams({ DATA: xmlData });
 
+  // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
+  const cookieParts = [`MFL_USER_ID=${MFL_USER_ID}`];
+  if (MFL_IS_COMMISH) {
+    cookieParts.push(`MFL_IS_COMMISH=${MFL_IS_COMMISH}`);
+  }
+  const cookieHeader = cookieParts.join('; ');
+
   const delays = [1000, 3000, 9000];
   let lastError = '';
 
@@ -262,7 +282,7 @@ export async function writeMultipleContractsToMFL(
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: `MFL_USER_ID=${MFL_COMMISSIONER_COOKIE}`,
+          Cookie: cookieHeader,
         },
         body: body.toString(),
         redirect: 'follow',

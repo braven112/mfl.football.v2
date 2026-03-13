@@ -26,8 +26,10 @@ describe('mfl-contract-writer', () => {
     vi.resetModules();
     process.env = {
       ...originalEnv,
-      MFL_COMMISSIONER_COOKIE: 'test_cookie_value',
+      MFL_USER_ID: 'test_cookie_value',
+      MFL_IS_COMMISH: 'test_commish_value',
       MFL_HOST: 'https://api.myfantasyleague.com',
+      MFL_WRITE_HOST: 'https://www49.myfantasyleague.com',
       MFL_LEAGUE_ID: '13522',
     };
   });
@@ -110,7 +112,7 @@ describe('mfl-contract-writer', () => {
       expect(bodyStr).toContain('contractInfo%3D%22RC%22');
     });
 
-    it('uses MFL_COMMISSIONER_COOKIE for auth', async () => {
+    it('uses MFL_USER_ID for auth', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
@@ -129,11 +131,12 @@ describe('mfl-contract-writer', () => {
       });
 
       const writeCall = mockFetch.mock.calls[1];
-      expect(writeCall[1].headers.Cookie).toBe('MFL_USER_ID=test_cookie_value');
+      expect(writeCall[1].headers.Cookie).toBe('MFL_USER_ID=test_cookie_value; MFL_IS_COMMISH=test_commish_value');
     });
 
-    it('fails when MFL_COMMISSIONER_COOKIE is not set', async () => {
-      process.env.MFL_COMMISSIONER_COOKIE = '';
+    it('fails when MFL_USER_ID is not set', async () => {
+      process.env.MFL_USER_ID = '';
+      process.env.MFL_IS_COMMISH = '';
 
       const { writeContractToMFL } = await import('../src/utils/mfl-contract-writer');
       const result = await writeContractToMFL({
@@ -144,7 +147,7 @@ describe('mfl-contract-writer', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('MFL_COMMISSIONER_COOKIE');
+      expect(result.error).toContain('MFL_USER_ID');
       expect(result.attempts).toBe(0);
     });
 
@@ -309,7 +312,7 @@ describe('mfl-contract-writer', () => {
     });
 
     it('returns null when cookie is missing', async () => {
-      process.env.MFL_COMMISSIONER_COOKIE = '';
+      process.env.MFL_USER_ID = '';
 
       const { createPreWriteBackup } = await import('../src/utils/mfl-contract-writer');
       const filepath = await createPreWriteBackup();

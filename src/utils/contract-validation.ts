@@ -129,7 +129,7 @@ function validateLeagueId(leagueId: string): ContractValidationError[] {
   const errors: ContractValidationError[] = [];
 
   // Allow both production league and test league
-  const ALLOWED_LEAGUES = ['13522', '18202'];
+  const ALLOWED_LEAGUES = ['13522', '18202', '36189'];
   if (!ALLOWED_LEAGUES.includes(leagueId)) {
     errors.push({
       field: 'leagueId',

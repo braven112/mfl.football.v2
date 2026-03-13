@@ -143,7 +143,7 @@ export function getTeamExtension(
   return getDeclarations().find(
     d =>
       d.franchiseId === franchiseId &&
-      (d.type === 'veteran-extension' || d.type === 'rookie-extension') &&
+      (d.type === 'veteran-extension' || d.type === 'rookie-extension' || d.type === 'team-option') &&
       d.status !== 'rejected' &&
       d.status !== 'expired' &&
       d.submittedAt.startsWith(String(leagueYear)),
