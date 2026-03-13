@@ -37,5 +37,7 @@ src/data/salary-history/**/summary-2*.json
 *.psd
 *.ai
 
-# Claude Code
-.claude/
+# Claude Code (personal/machine-specific)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/memory/
