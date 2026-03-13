@@ -1,5 +1,23 @@
 [
   {
+    "id": "login-redesign",
+    "date": "2026-03-12",
+    "title": "Login Page Redesign",
+    "summary": "The sign-in page got the editorial treatment — clean labels, proper spacing, and a form that finally looks like it belongs on this site.",
+    "description": [
+      "The old login page had all the visual personality of a hospital check-in kiosk. Two input fields, a button, and the quiet implication that design was somebody else's problem. It worked, technically, the same way a folding chair works at a dinner party — functional, sure, but nobody's impressed.",
+      "The new sign-in page follows the same editorial design language as the rest of the site: uppercase micro-labels, considered spacing, a CTA button that actually looks like it wants to be clicked, and a security note that gently reminds you we never store your password. The form is also built as a reusable component now — meaning it can drop into a modal on any page without a single line of duplicate code. Accessibility got the full treatment too: proper focus rings, ARIA error announcements, and keyboard navigation that doesn't fight you.",
+      "It's a login page. It shouldn't need a press release. But it also shouldn't look like it was built during a lunch break in 2009."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/login",
+    "linkLabel": "See it in action",
+    "icon": "lock",
+    "image": "login-redesign.webp",
+    "imageAlt": "Redesigned login page with editorial-style uppercase labels, clean input fields, and a prominent Sign In button following the site's design language",
+    "excludeFromHero": true
+  },
+  {
     "id": "weekly-rollup-2026-03-09",
     "date": "2026-03-09",
     "title": "Weekly Fixes & Polish (Mar 2-2)",

@@ -378,8 +378,8 @@ tfoot td {
 
 ### Modal Shell (Reference)
 
-When building new modals or overlays:
-- Overlay: `rgba(15, 23, 42, 0.45)` + `backdrop-filter: blur(2px)`
+**CRITICAL:** When building new modals or overlays, the backdrop MUST use the frosted-glass blur effect. Never use a plain dark overlay without blur — this is a core part of the site's visual identity.
+- **Overlay (mandatory):** `rgba(15, 23, 42, 0.45)` + `backdrop-filter: blur(2px)` — the blur is NOT optional
 - Modal: `max-width: 580px`, `border-radius: var(--radius-lg)`, `box-shadow: var(--shadow-xl)`
 - Body padding: 1.75rem desktop, 1.25rem mobile
 - Entry animation: `0.32s ease-out` scale(0.96→1) + translateY(12px→0) — see ContractDemoOverlay `cdemo-card-enter`
