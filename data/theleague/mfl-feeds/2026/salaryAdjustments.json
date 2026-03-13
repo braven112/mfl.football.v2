@@ -1,19 +1,21 @@
 {
+  "encoding": "utf-8",
+  "version": "1.0",
   "salaryAdjustments": {
     "salaryAdjustment": [
       {
-        "franchise_id": "0001",
-        "id": "0",
         "description": "2026 Dead Money",
-        "amount": "636125",
-        "timestamp": "1771139599"
+        "id": "0",
+        "franchise_id": "0001",
+        "timestamp": "1771139599",
+        "amount": "636125"
       },
       {
-        "franchise_id": "0002",
-        "id": "1",
-        "description": "2026 Dead Money",
         "amount": "1059625",
-        "timestamp": "1771139599"
+        "timestamp": "1771139599",
+        "franchise_id": "0002",
+        "description": "2026 Dead Money",
+        "id": "1"
       },
       {
         "amount": "552736",
@@ -23,25 +25,25 @@
         "description": "2026 Dead Money"
       },
       {
-        "id": "11",
         "description": "2026 Dead Money",
+        "id": "11",
         "franchise_id": "0013",
         "timestamp": "1771139599",
         "amount": "4633500"
       },
       {
-        "franchise_id": "0014",
+        "timestamp": "1771139599",
+        "amount": "796250",
         "id": "12",
         "description": "2026 Dead Money",
-        "amount": "796250",
-        "timestamp": "1771139599"
+        "franchise_id": "0014"
       },
       {
         "amount": "693875",
         "timestamp": "1771139599",
         "franchise_id": "0015",
-        "id": "13",
-        "description": "2026 Dead Money"
+        "description": "2026 Dead Money",
+        "id": "13"
       },
       {
         "amount": "136125",
@@ -51,25 +53,25 @@
         "id": "14"
       },
       {
-        "timestamp": "1771139599",
-        "amount": "840125",
-        "description": "2026 Dead Money",
         "id": "2",
-        "franchise_id": "0003"
+        "description": "2026 Dead Money",
+        "franchise_id": "0003",
+        "timestamp": "1771139599",
+        "amount": "840125"
       },
       {
-        "franchise_id": "0005",
         "id": "3",
         "description": "2026 Dead Money",
-        "amount": "1783750",
-        "timestamp": "1771139599"
+        "franchise_id": "0005",
+        "timestamp": "1771139599",
+        "amount": "1783750"
       },
       {
+        "timestamp": "1771139599",
+        "amount": "450771",
         "id": "4",
         "description": "2026 Dead Money",
-        "franchise_id": "0006",
-        "timestamp": "1771139599",
-        "amount": "450771"
+        "franchise_id": "0006"
       },
       {
         "description": "2026 Dead Money",
@@ -86,28 +88,26 @@
         "franchise_id": "0008"
       },
       {
-        "description": "2026 Dead Money",
-        "id": "7",
         "franchise_id": "0009",
-        "timestamp": "1771139599",
-        "amount": "798941"
-      },
-      {
-        "franchise_id": "0010",
-        "id": "8",
+        "id": "7",
         "description": "2026 Dead Money",
-        "amount": "1440601",
+        "amount": "798941",
         "timestamp": "1771139599"
       },
       {
-        "id": "9",
-        "description": "2026 Dead Money",
-        "franchise_id": "0011",
         "timestamp": "1771139599",
-        "amount": "741813"
+        "amount": "1440601",
+        "description": "2026 Dead Money",
+        "id": "8",
+        "franchise_id": "0010"
+      },
+      {
+        "amount": "741813",
+        "timestamp": "1771139599",
+        "franchise_id": "0011",
+        "id": "9",
+        "description": "2026 Dead Money"
       }
     ]
-  },
-  "version": "1.0",
-  "encoding": "utf-8"
+  }
 }
