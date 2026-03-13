@@ -2,25 +2,21 @@
  * MFL Integration Test — Contract Write Operations
  *
  * Validates that writeContractToMFL() can write salary/contract data
- * to MFL test league 36189 and read it back correctly.
+ * to MFL and read it back correctly.
  *
- * Run with: MFL_USER_ID=xxx MFL_IS_COMMISH=xxx pnpm test:mfl-integration
+ * Run with: MFL_USER_ID=xxx MFL_IS_COMMISH=xxx MFL_LEAGUE_ID=xxx pnpm test:mfl-integration
  *
  * Safety:
- * - Hardcodes league 36189 (never touches production 13522)
  * - Always reverts changes in a finally block
  * - Uses APPEND=1 (built into the writer)
  */
-
-// Force test league — MUST be set before importing the writer
-process.env.MFL_LEAGUE_ID = '36189';
 
 import { writeContractToMFL } from '../src/utils/mfl-contract-writer.js';
 
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_USER_ID = process.env.MFL_USER_ID;
 const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH;
-const TEST_LEAGUE_ID = '36189';
+const LEAGUE_ID = process.env.MFL_LEAGUE_ID;
 const FETCH_TIMEOUT_MS = 30_000;
 // MFL write propagation is typically 1-3s but can spike under load
 const MFL_REPLICATION_DELAY_MS = 3_000;
@@ -116,7 +112,7 @@ async function fetchMFL(url: string): Promise<unknown> {
 
 async function readPlayerSalary(playerId: string): Promise<MFLPlayerSalary | null> {
   const year = new Date().getFullYear();
-  const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${TEST_LEAGUE_ID}&JSON=1`;
+  const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${LEAGUE_ID}&JSON=1`;
   const data = (await fetchMFL(url)) as MFLSalaryResponse;
   const players = data.salaries?.leagueUnit?.player;
   if (!players) return null;
@@ -151,7 +147,7 @@ async function runTests(): Promise<boolean> {
   const runner = new TestRunner();
 
   console.log(`\n${c.blue}MFL Integration Tests — Contract Write Operations${c.reset}`);
-  console.log(`${c.dim}League: ${TEST_LEAGUE_ID} (test league)${c.reset}\n`);
+  console.log(`${c.dim}League: ${LEAGUE_ID} (test league)${c.reset}\n`);
 
   // Pre-flight checks
   if (!MFL_USER_ID) {
@@ -162,17 +158,15 @@ async function runTests(): Promise<boolean> {
     console.error(`${c.red}MFL_IS_COMMISH env var is required${c.reset}`);
     process.exit(1);
   }
-
-  // Safety: verify we're targeting test league
-  if (process.env.MFL_LEAGUE_ID !== TEST_LEAGUE_ID) {
-    console.error(`${c.red}SAFETY: MFL_LEAGUE_ID must be ${TEST_LEAGUE_ID}, got ${process.env.MFL_LEAGUE_ID}${c.reset}`);
+  if (!LEAGUE_ID) {
+    console.error(`${c.red}MFL_LEAGUE_ID env var is required${c.reset}`);
     process.exit(1);
   }
 
   // Find a player to test with — read the first player from the salary export
-  console.log(`${c.dim}Reading salary data from league ${TEST_LEAGUE_ID}...${c.reset}`);
+  console.log(`${c.dim}Reading salary data from league ${LEAGUE_ID}...${c.reset}`);
   const year = new Date().getFullYear();
-  const salaryUrl = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${TEST_LEAGUE_ID}&JSON=1`;
+  const salaryUrl = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${LEAGUE_ID}&JSON=1`;
 
   let salaryData: MFLSalaryResponse;
   try {
@@ -183,7 +177,7 @@ async function runTests(): Promise<boolean> {
   }
   const allPlayers = salaryData.salaries?.leagueUnit?.player;
   if (!allPlayers) {
-    console.error(`${c.red}No salary data found in league ${TEST_LEAGUE_ID}${c.reset}`);
+    console.error(`${c.red}No salary data found in league ${LEAGUE_ID}${c.reset}`);
     process.exit(1);
   }
 
@@ -191,7 +185,7 @@ async function runTests(): Promise<boolean> {
   // Pick the first player with a salary > 0 as our test subject
   const testPlayer = playerList.find(p => parseFloat(p.salary) > 0);
   if (!testPlayer) {
-    console.error(`${c.red}No player with salary > 0 found in league ${TEST_LEAGUE_ID}${c.reset}`);
+    console.error(`${c.red}No player with salary > 0 found in league ${LEAGUE_ID}${c.reset}`);
     process.exit(1);
   }
 

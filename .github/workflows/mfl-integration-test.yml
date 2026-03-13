@@ -46,8 +46,7 @@ jobs:
         env:
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
-          # Test league only — never change to production (13522)
-          MFL_LEAGUE_ID: '36189'
+          MFL_LEAGUE_ID: ${{ secrets.MFL_LEAGUE_ID }}
         run: pnpm test:mfl-integration
 
   rollback:
@@ -101,7 +100,7 @@ jobs:
               body: [
                 `## MFL Contract Write Test Failed`,
                 ``,
-                `The integration test against test league 36189 failed after a push to main.`,
+                `The MFL contract write integration test failed after a push to main.`,
                 `The commit has been **automatically reverted**.`,
                 ``,
                 `| Field | Value |`,
