@@ -1,22 +1,29 @@
-import React, { useReducer, useMemo, useCallback, useEffect } from 'react';
+import React, { useReducer, useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import type {
   TradeBuilderPageData,
   TradeState,
   TradeAction,
   TradeSide,
   DraftPickKey,
+  TradeBuilderAuthUser,
+  TradeSubmissionState,
+  PendingTrade,
 } from '../../../types/trade-builder';
 import {
   computeTeamTradeImpact,
   serializeTradeToParams,
   deserializeTradeFromParams,
 } from '../../../utils/trade-calculations';
+import { buildMflAssetString, parseFpCode } from '../../../utils/trade-asset-parsing';
 import TeamPanel from './TeamPanel';
 import TradeBaitMarketplace from './TradeBaitMarketplace';
 import MultiYearCapTable from './MultiYearCapTable';
 import TradeAnalysisSummary from './TradeAnalysisSummary';
 import TradeValueAnalysis from './TradeValueAnalysis';
 import RookieExtensionModal from './RookieExtensionModal';
+import TradeConfirmationModal from './TradeConfirmationModal';
+import PendingTradesPanel from './PendingTradesPanel';
+import LoginModal from './LoginModal';
 
 const EMPTY_SIDE: TradeSide = {
   franchiseId: null,
@@ -121,13 +128,11 @@ function tradeReducer(state: TradeState, action: TradeAction): TradeState {
         rookieModalTarget: null,
       };
     case 'START_TRADE_FOR_PLAYER': {
-      // If the clicked player's team is already Team A, swap so it becomes B
       const targetFranchise = action.franchiseId;
       const currentA = state.teamA.franchiseId;
       const currentB = state.teamB.franchiseId;
 
       if (targetFranchise === currentA) {
-        // Swap teams so this franchise moves to B side, then add player
         return {
           ...state,
           teamA: { ...state.teamB },
@@ -141,7 +146,6 @@ function tradeReducer(state: TradeState, action: TradeAction): TradeState {
         };
       }
 
-      // If it's already Team B, just add the player
       if (targetFranchise === currentB) {
         return {
           ...state,
@@ -154,7 +158,6 @@ function tradeReducer(state: TradeState, action: TradeAction): TradeState {
         };
       }
 
-      // New team — set as Team B, reset that side, add the player
       return {
         ...state,
         teamB: {
@@ -173,13 +176,30 @@ function tradeReducer(state: TradeState, action: TradeAction): TradeState {
 interface Props {
   pageData: string;
   defaultTeamId: string;
+  authUser?: string;
 }
 
-export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
+export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUserJson }: Props) {
   const data: TradeBuilderPageData = useMemo(
     () => JSON.parse(pageData),
     [pageData]
   );
+
+  const [authUser, setAuthUser] = useState<TradeBuilderAuthUser | null>(
+    () => (authUserJson ? JSON.parse(authUserJson) : null)
+  );
+
+  // Refs for focus return
+  const submitBtnRef = useRef<HTMLButtonElement>(null);
+
+  // UI state for submission flow
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showPendingPanel, setShowPendingPanel] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<TradeSubmissionState>({
+    status: 'idle',
+    errorMessage: null,
+  });
 
   // Initialize from URL params or defaults
   const initialState = useMemo((): TradeState => {
@@ -252,8 +272,6 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
   const tradeImpactA = useMemo(() => {
     if (!teamA || (teamAPlayers.length === 0 && teamBPlayers.length === 0))
       return null;
-    // Team A sends teamAPlayers, receives teamBPlayers
-    // For incoming players (teamBPlayers), check if the OTHER side has rookie extensions
     return computeTeamTradeImpact(
       teamA,
       teamAPlayers,
@@ -265,7 +283,6 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
   const tradeImpactB = useMemo(() => {
     if (!teamB || (teamAPlayers.length === 0 && teamBPlayers.length === 0))
       return null;
-    // Team B sends teamBPlayers, receives teamAPlayers
     return computeTeamTradeImpact(
       teamB,
       teamBPlayers,
@@ -279,6 +296,25 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
     teamBPlayers.length > 0 ||
     state.teamA.draftPicks.length > 0 ||
     state.teamB.draftPicks.length > 0;
+
+  // Both sides need at least one asset for a valid trade
+  const hasValidTrade =
+    (teamAPlayers.length > 0 || state.teamA.draftPicks.length > 0) &&
+    (teamBPlayers.length > 0 || state.teamB.draftPicks.length > 0);
+
+  // Check if the auth user's franchise is part of the trade
+  const userIsPartOfTrade =
+    authUser &&
+    (state.teamA.franchiseId === authUser.franchiseId ||
+      state.teamB.franchiseId === authUser.franchiseId);
+
+  // Determine which team the user is (for orienting the submission)
+  const userSide: 'A' | 'B' | null = useMemo(() => {
+    if (!authUser) return null;
+    if (state.teamA.franchiseId === authUser.franchiseId) return 'A';
+    if (state.teamB.franchiseId === authUser.franchiseId) return 'B';
+    return null;
+  }, [authUser, state.teamA.franchiseId, state.teamB.franchiseId]);
 
   // Copy share link
   const handleCopyLink = useCallback(() => {
@@ -317,6 +353,98 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
     return team?.players.find((p) => p.id === playerId) ?? null;
   }, [state.rookieModalTarget, teamA, teamB]);
 
+  // Handle submit trade click
+  const handleSubmitTradeClick = useCallback(() => {
+    if (!authUser) {
+      setShowLoginModal(true);
+      return;
+    }
+    setSubmissionStatus({ status: 'idle', errorMessage: null });
+    setShowConfirmationModal(true);
+  }, [authUser]);
+
+  // Handle successful inline login
+  const handleLoginSuccess = useCallback((user: TradeBuilderAuthUser) => {
+    setAuthUser(user);
+    setShowLoginModal(false);
+    // Immediately open the confirmation modal now that we're authenticated
+    setSubmissionStatus({ status: 'idle', errorMessage: null });
+    setShowConfirmationModal(true);
+  }, []);
+
+  // Submit trade to MFL
+  const handleSubmitTrade = useCallback(async (message: string) => {
+    if (!authUser || !userSide || !teamA || !teamB) return;
+
+    setSubmissionStatus({ status: 'submitting', errorMessage: null });
+
+    // The user's side gives up their assets, receives the other side's assets
+    const userTeamSide = userSide === 'A' ? state.teamA : state.teamB;
+    const otherTeamSide = userSide === 'A' ? state.teamB : state.teamA;
+    const otherTeam = userSide === 'A' ? teamB : teamA;
+
+    const willGiveUp = buildMflAssetString(userTeamSide.playerIds, userTeamSide.draftPicks);
+    const willReceive = buildMflAssetString(otherTeamSide.playerIds, otherTeamSide.draftPicks);
+
+    try {
+      const res = await fetch('/api/trades/submit', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offeredTo: otherTeam.franchiseId,
+          willGiveUp,
+          willReceive,
+          comments: message || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setSubmissionStatus({ status: 'success', errorMessage: null });
+      } else {
+        setSubmissionStatus({
+          status: 'error',
+          errorMessage: data.message || 'Failed to submit trade',
+        });
+      }
+    } catch {
+      setSubmissionStatus({
+        status: 'error',
+        errorMessage: 'Network error. Please try again.',
+      });
+    }
+  }, [authUser, userSide, state.teamA, state.teamB, teamA, teamB]);
+
+  // Load a pending trade into the builder
+  const handleLoadTradeIntoBuilder = useCallback((trade: PendingTrade, _mode: 'counter' | 'view') => {
+    // Reset any prior submission state
+    setSubmissionStatus({ status: 'idle', errorMessage: null });
+    // Set teams
+    dispatch({ type: 'SET_TEAM', side: 'A', franchiseId: trade.offeredBy });
+    dispatch({ type: 'SET_TEAM', side: 'B', franchiseId: trade.offeredTo });
+
+    // Parse and add assets using shared utility
+    const parseAndLoad = (assetStr: string, side: 'A' | 'B') => {
+      if (!assetStr) return;
+      const parts = assetStr.split(',').filter(Boolean);
+      for (const part of parts) {
+        const trimmed = part.trim();
+        const pick = parseFpCode(trimmed);
+        if (pick) {
+          dispatch({ type: 'ADD_DRAFT_PICK', side, pick });
+        } else if (/^\d+$/.test(trimmed)) {
+          dispatch({ type: 'ADD_PLAYER', side, playerId: trimmed });
+        }
+      }
+    };
+
+    // willGiveUp = what offeredBy gives, willReceive = what offeredTo gives
+    parseAndLoad(trade.willGiveUp, 'A');
+    parseAndLoad(trade.willReceive, 'B');
+  }, []);
+
   return (
     <div className="trade-builder">
       <div className="trade-builder__header">
@@ -336,6 +464,32 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
           >
             Copy Link
           </button>
+          {authUser && (
+            <button
+              className="btn btn--secondary"
+              onClick={() => setShowPendingPanel(true)}
+            >
+              My Trades
+            </button>
+          )}
+          {hasValidTrade && (
+            <>
+              <button
+                ref={submitBtnRef}
+                className="btn btn--primary"
+                onClick={handleSubmitTradeClick}
+                disabled={authUser ? !userIsPartOfTrade : false}
+                aria-describedby={authUser && !userIsPartOfTrade ? 'submit-disabled-hint' : undefined}
+              >
+                Submit Trade
+              </button>
+              {authUser && !userIsPartOfTrade && (
+                <span id="submit-disabled-hint" className="visually-hidden">
+                  Your team must be part of this trade to submit
+                </span>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -441,6 +595,53 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         />
       )}
 
+      {showLoginModal && !authUser && (
+        <LoginModal
+          onClose={() => setShowLoginModal(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {showConfirmationModal && teamA && teamB && tradeImpactA && tradeImpactB && (
+        <TradeConfirmationModal
+          teamA={teamA}
+          teamB={teamB}
+          allTeams={data.teams}
+          teamAPlayers={teamAPlayers}
+          teamBPlayers={teamBPlayers}
+          teamADraftPicks={state.teamA.draftPicks}
+          teamBDraftPicks={state.teamB.draftPicks}
+          teamARookieExtensions={state.teamA.rookieExtensions}
+          teamBRookieExtensions={state.teamB.rookieExtensions}
+          impactA={tradeImpactA}
+          impactB={tradeImpactB}
+          submissionStatus={submissionStatus}
+          onSubmit={handleSubmitTrade}
+          onClose={() => {
+            setShowConfirmationModal(false);
+            setSubmissionStatus({ status: 'idle', errorMessage: null });
+            // Return focus to the submit button
+            submitBtnRef.current?.focus();
+          }}
+        />
+      )}
+
+      {authUser && (
+        <PendingTradesPanel
+          authUser={authUser}
+          teams={data.teams}
+          isOpen={showPendingPanel}
+          onClose={() => setShowPendingPanel(false)}
+          onLoadIntoBuilder={handleLoadTradeIntoBuilder}
+        />
+      )}
+
+      {/* Screen reader announcements */}
+      <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+        {submissionStatus.status === 'success' && 'Trade proposal sent'}
+        {submissionStatus.status === 'error' && `Trade submission failed: ${submissionStatus.errorMessage}`}
+      </div>
+
       <style>{`
         .trade-builder {
           max-width: 1200px;
@@ -462,6 +663,7 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         .trade-builder__actions {
           display: flex;
           gap: 0.5rem;
+          flex-wrap: wrap;
         }
         .btn {
           padding: 0.5rem 1rem;
@@ -476,6 +678,10 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
           opacity: 0.4;
           cursor: not-allowed;
         }
+        .btn:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
+        }
         .btn--secondary {
           background: var(--primary-content-bg-color, #fff);
           color: var(--text-color, #1f2937);
@@ -483,6 +689,15 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         .btn--secondary:not(:disabled):hover {
           border-color: var(--primary-color, #1c497c);
           background: var(--primary-light-bg, #f0f4f8);
+        }
+        .btn--primary {
+          background: var(--btn-primary-bg, #1c497c);
+          color: #fff;
+          border-color: var(--btn-primary-bg, #1c497c);
+        }
+        .btn--primary:not(:disabled):hover {
+          background: var(--btn-primary-bg-hover, #164066);
+          border-color: var(--btn-primary-bg-hover, #164066);
         }
         .trade-builder__panels {
           display: grid;
@@ -513,6 +728,17 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
         .trade-builder__swap:hover {
           transform: scale(1.1);
         }
+        .visually-hidden {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border-width: 0;
+        }
         @media (max-width: 768px) {
           .trade-builder__panels {
             grid-template-columns: 1fr;
@@ -525,6 +751,21 @@ export default function TradeBuilder({ pageData, defaultTeamId }: Props) {
           }
           .trade-builder__swap:hover {
             transform: rotate(90deg) scale(1.1);
+          }
+        }
+        @media (max-width: 640px) {
+          .trade-builder__header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+          }
+          .trade-builder__actions {
+            width: 100%;
+          }
+          .trade-builder__actions .btn {
+            flex: 1;
+            min-width: 0;
+            text-align: center;
           }
         }
       `}</style>
