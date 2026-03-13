@@ -13,6 +13,8 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -76,6 +78,21 @@ export const POST: APIRoute = async ({ request }) => {
     const result = await mflClient.updateTradeBait(playerId, action, user.franchiseId);
 
     if (result.success) {
+      // Update local tradeBait.json cache so page reloads reflect the change
+      // immediately (before the next scheduled MFL sync)
+      if (result.allPlayerIds) {
+        try {
+          const cachePath = path.resolve(
+            process.cwd(),
+            `data/theleague/mfl-feeds/${leagueYear}/tradeBait.json`,
+          );
+          fs.writeFileSync(cachePath, JSON.stringify(result.allPlayerIds, null, 2), 'utf8');
+        } catch (cacheErr) {
+          // Cache update is best-effort — don't fail the request
+          console.warn('Failed to update local tradeBait.json cache:', cacheErr);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
