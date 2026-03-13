@@ -2,11 +2,12 @@
  * MFL Integration Test — Contract Write Operations
  *
  * Validates that writeContractToMFL() can write salary/contract data
- * to MFL and read it back correctly.
+ * to MFL test league 36189 and read it back correctly.
  *
- * Run with: MFL_USER_ID=xxx MFL_IS_COMMISH=xxx MFL_LEAGUE_ID=xxx pnpm test:mfl-integration
+ * Run with: MFL_USER_ID=xxx MFL_IS_COMMISH=xxx MFL_LEAGUE_ID=36189 pnpm test:mfl-integration
  *
  * Safety:
+ * - Hardcodes league 36189 (never touches production 13522)
  * - Always reverts changes in a finally block
  * - Uses APPEND=1 (built into the writer)
  */
@@ -16,7 +17,7 @@ import { writeContractToMFL } from '../src/utils/mfl-contract-writer.js';
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_USER_ID = process.env.MFL_USER_ID;
 const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH;
-const LEAGUE_ID = process.env.MFL_LEAGUE_ID;
+const LEAGUE_ID = '36189';
 const FETCH_TIMEOUT_MS = 30_000;
 // MFL write propagation is typically 1-3s but can spike under load
 const MFL_REPLICATION_DELAY_MS = 3_000;
@@ -158,10 +159,9 @@ async function runTests(): Promise<boolean> {
     console.error(`${c.red}MFL_IS_COMMISH env var is required${c.reset}`);
     process.exit(1);
   }
-  if (!LEAGUE_ID) {
-    console.error(`${c.red}MFL_LEAGUE_ID env var is required${c.reset}`);
-    process.exit(1);
-  }
+
+  // Safety: force test league even if env says otherwise
+  process.env.MFL_LEAGUE_ID = LEAGUE_ID;
 
   // Find a player to test with — read the first player from the salary export
   console.log(`${c.dim}Reading salary data from league ${LEAGUE_ID}...${c.reset}`);
