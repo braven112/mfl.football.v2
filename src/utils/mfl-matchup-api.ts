@@ -419,6 +419,105 @@ export class MFLMatchupApiClient {
   }
 
   /**
+   * Update trade bait for the authenticated user's franchise.
+   * MFL's tradeBait import OVERWRITES the entire list, so we must:
+   *   1. Read the current trade bait for all franchises
+   *   2. Find the authenticated user's franchise entries
+   *   3. Add or remove the player ID
+   *   4. POST the complete updated list back
+   *
+   * @param playerId - The MFL player ID to add or remove
+   * @param action - 'add' to put the player on the trade block, 'remove' to take them off
+   * @param franchiseId - The franchise ID of the authenticated user (used to filter current entries)
+   * @returns Object with success status and optional error message
+   */
+  async updateTradeBait(
+    playerId: string,
+    action: 'add' | 'remove',
+    franchiseId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.mflUserId) {
+      return { success: false, error: 'Authentication required for trade bait updates' };
+    }
+
+    try {
+      // Step 1: Read current trade bait for all franchises
+      const readUrl = this.buildUrl('tradeBait');
+      const response = await this.makeRequest<any>(readUrl);
+
+      // Step 2: Parse the current trade bait entries for this franchise
+      // MFL returns single object (not array) when there's only one franchise with trade bait
+      let tradeBaitEntries: any[] = [];
+      const rawEntries = response?.tradeBaits?.tradeBait;
+      if (rawEntries) {
+        tradeBaitEntries = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
+      }
+
+      // Find the current franchise's entry
+      const franchiseEntry = tradeBaitEntries.find(
+        (entry: any) => entry.franchise_id === franchiseId
+      );
+
+      // Get current player IDs for this franchise
+      let currentPlayerIds: string[] = [];
+      if (franchiseEntry?.willGiveUp) {
+        currentPlayerIds = typeof franchiseEntry.willGiveUp === 'string'
+          ? franchiseEntry.willGiveUp.split(',').map((id: string) => id.trim()).filter(Boolean)
+          : [String(franchiseEntry.willGiveUp)];
+      }
+
+      // Step 3: Merge or remove the player ID
+      if (action === 'add') {
+        if (currentPlayerIds.includes(playerId)) {
+          return { success: true }; // Already on trade block
+        }
+        currentPlayerIds.push(playerId);
+      } else {
+        if (!currentPlayerIds.includes(playerId)) {
+          return { success: true }; // Already not on trade block
+        }
+        currentPlayerIds = currentPlayerIds.filter(id => id !== playerId);
+      }
+
+      // Step 4: POST the complete updated list
+      // Use the same baseUrl — api.myfantasyleague.com redirects to the correct www## host
+      const importUrl = `${this.baseUrl}/${this.config.year}/import`;
+
+      const params = new URLSearchParams();
+      params.set('TYPE', 'tradeBait');
+      params.set('L', this.config.leagueId);
+      params.set('WILL_GIVE_UP', currentPlayerIds.join(','));
+      params.set('IN_EXCHANGE_FOR', '');
+
+      const importResponse = await fetch(importUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Cookie': `MFL_USER_ID=${this.config.mflUserId}`,
+        },
+        body: params.toString(),
+        redirect: 'follow',
+      });
+
+      // MFL returns HTTP 200 even for errors — check response body for error XML
+      const responseText = await importResponse.text();
+      if (responseText.includes('<error>')) {
+        const errorMatch = responseText.match(/<error>(.*?)<\/error>/);
+        const errorMsg = errorMatch?.[1] || 'Unknown MFL error';
+        return { success: false, error: errorMsg };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to update trade bait:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update trade bait',
+      };
+    }
+  }
+
+  /**
    * Submit IR move for a player (requires authentication)
    */
   async movePlayerToIR(playerId: string, franchiseId: string): Promise<boolean> {

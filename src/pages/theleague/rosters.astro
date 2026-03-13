@@ -6576,6 +6576,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 data-player-contract-info="${player.contractInfo || ''}"
                 data-player-injury-status="${player.injuryStatus || ''}"
                 data-player-franchise-id="${player.franchiseId || ''}"
+                data-player-trade-bait="${player.tradeBait ? 'true' : 'false'}"
                 ${actionType ? 'data-action-type="' + actionType + '"' : ''}
                 title="Manage Contract"
               >
@@ -6843,6 +6844,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               years: playerYears,
               birthdate: birthdateRaw ? Number(birthdateRaw) : null,
               franchiseId: btn.dataset.playerFranchiseId || '',
+              tradeBait: btn.dataset.playerTradeBait === 'true',
             };
             // Look up real eligibility to get contractInfo/isRookieContract for action filtering
             // Fall back to currentTeam since playerFranchiseId may not be set on the button
@@ -8205,12 +8207,101 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         false, 'icon-bar-chart'
       ));
 
+      const isOnTradeBlock = cdmPlayerData?.tradeBait || cdmPlayerData?._rawPlayer?.tradeBait || false;
+      const tradeBlockAction = isOnTradeBlock ? 'remove' : 'add';
+      const tradeBlockLabel = isOnTradeBlock ? 'Remove from Trade Block' : 'Add to Trade Block';
+      const tradeBlockDesc = !isLoggedIn
+        ? 'Sign in to use this feature'
+        : isOnTradeBlock
+          ? 'Take this player off your trade block'
+          : 'Notify other teams this player is available';
+
       actionOptions.appendChild(makeCdmActionBtn(
-        'trade-block', 'Add to Trade Block',
-        isLoggedIn ? 'Notify other teams this player is available' : 'Sign in to use this feature',
-        isLoggedIn ? () => {
-          // TODO: MFL API call to add player to trade block
-          closeDeclarationModal();
+        'trade-block', tradeBlockLabel,
+        tradeBlockDesc,
+        isLoggedIn ? async () => {
+          const playerId = cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '';
+          if (!playerId) return;
+
+          // Find the button and show loading state
+          const tbBtn = actionOptions.querySelector('.cdm-action-option--trade-block');
+          const tbLabel = tbBtn?.querySelector('.cdm-action-option__label');
+          const tbDesc = tbBtn?.querySelector('.cdm-action-option__desc');
+          const origLabel = tbLabel?.textContent || '';
+          const origDesc = tbDesc?.textContent || '';
+          if (tbBtn) tbBtn.disabled = true;
+          if (tbLabel) tbLabel.textContent = tradeBlockAction === 'add' ? 'Adding...' : 'Removing...';
+          if (tbDesc) tbDesc.textContent = 'Updating trade block on MFL...';
+
+          try {
+            const res = await fetch('/api/trade-bait', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ playerId, action: tradeBlockAction }),
+            });
+
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Failed to update trade block');
+
+            // Success — update local state
+            const newTradeBait = tradeBlockAction === 'add';
+
+            // Update the player data in the current season data
+            const { teamData } = getTeamData();
+            const allPlayerArrays = [
+              teamData.players ?? [],
+              teamData.practiceSquad ?? [],
+              teamData.injuredReserve ?? [],
+            ];
+            for (const arr of allPlayerArrays) {
+              const p = arr.find(pl => String(pl.id) === String(playerId));
+              if (p) { p.tradeBait = newTradeBait; break; }
+            }
+
+            // Update the CDM player data for future toggles
+            if (cdmPlayerData) cdmPlayerData.tradeBait = newTradeBait;
+            if (cdmPlayerData?._rawPlayer) cdmPlayerData._rawPlayer.tradeBait = newTradeBait;
+
+            // Update the ufa-action-btn data attribute for future CDM opens
+            const ufaBtn = document.querySelector(`.ufa-action-btn[data-player-id="${playerId}"]`);
+            if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
+
+            // Update the trade bait badge in the roster table
+            const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+            if (playerRow) {
+              const existingBadge = playerRow.querySelector('.trade-bait-link');
+              if (newTradeBait && !existingBadge) {
+                // Add the badge
+                const nameEl = playerRow.querySelector('.player-cell__name');
+                if (nameEl) {
+                  const badge = document.createElement('a');
+                  badge.href = resolveLeaguePath('/theleague/trade-builder?b=' + (cdmPlayerData?.franchiseId || cdmPlayerData?._rawPlayer?.franchiseId || ''));
+                  badge.className = 'trade-bait-link';
+                  badge.title = 'On Trade Block \u2014 Open in Trade Builder';
+                  badge.textContent = '\uD83C\uDFF7\uFE0F';
+                  nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+                }
+              } else if (!newTradeBait && existingBadge) {
+                existingBadge.remove();
+              }
+            }
+
+            // Show success feedback
+            if (tbLabel) tbLabel.textContent = tradeBlockAction === 'add' ? 'Added to Trade Block' : 'Removed from Trade Block';
+            if (tbDesc) tbDesc.textContent = tradeBlockAction === 'add' ? 'Other owners can now see this player is available' : 'Player has been taken off your trade block';
+            if (tbBtn) tbBtn.classList.add('cdm-action-option--success');
+
+            setTimeout(closeDeclarationModal, 1200);
+          } catch (err) {
+            // Show error state and restore button
+            if (tbLabel) tbLabel.textContent = origLabel;
+            if (tbDesc) tbDesc.textContent = err.message || 'Something went wrong. Try again.';
+            if (tbBtn) { tbBtn.disabled = false; tbBtn.classList.add('cdm-action-option--error'); }
+            setTimeout(() => {
+              if (tbDesc) tbDesc.textContent = origDesc;
+              if (tbBtn) tbBtn.classList.remove('cdm-action-option--error');
+            }, 3000);
+          }
         } : null,
         !isLoggedIn,
         'icon-bookmark'

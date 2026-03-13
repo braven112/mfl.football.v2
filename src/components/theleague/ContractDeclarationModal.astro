@@ -939,6 +939,27 @@
     border-left-color: var(--color-gray-500, #6b7280);
   }
 
+  /* Trade block success state */
+  .cdm-action-options :global(.cdm-action-option--success) {
+    border-left-color: var(--color-success, #10b981);
+    background: color-mix(in srgb, var(--color-success, #10b981) 8%, white);
+  }
+  .cdm-action-options :global(.cdm-action-option--success .cdm-action-option__icon) {
+    background: color-mix(in srgb, var(--color-success, #10b981) 15%, white);
+    color: var(--color-success-dark, #059669);
+  }
+  .cdm-action-options :global(.cdm-action-option--success .cdm-action-option__label) {
+    color: var(--color-success-dark, #059669);
+  }
+
+  /* Trade block error state */
+  .cdm-action-options :global(.cdm-action-option--error) {
+    border-left-color: var(--color-error, #dc2626);
+  }
+  .cdm-action-options :global(.cdm-action-option--error .cdm-action-option__desc) {
+    color: var(--color-error, #dc2626);
+  }
+
   .cdm-action-options :global(.cdm-action-option--cut-real .cdm-action-option__label) {
     color: var(--color-error, #dc2626);
   }
