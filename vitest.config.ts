@@ -5,6 +5,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.js'],
+    // Requires MFL API credentials — run separately via pnpm test:mfl-integration
+    exclude: ['tests/mfl-write-integration.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

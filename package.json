@@ -40,6 +40,7 @@
     "test:unit": "vitest run",
     "test:e2e": "node tests/e2e-cookie-test.mjs",
     "test:watch": "vitest",
+    "test:mfl-integration": "tsx tests/mfl-write-integration.test.ts",
     "test:coverage": "vitest run --coverage",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "check:bundle:src": "node scripts/check-bundle-size.mjs --src",
@@ -66,6 +67,7 @@
     "react": "19.2.4",
     "sass": "^1.76.0",
     "terser": "^5.44.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^5.0.0",
     "vitest": "^1.0.0"
