@@ -493,22 +493,13 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
             </button>
           )}
           {hasValidTrade && (
-            <>
-              <button
-                ref={submitBtnRef}
-                className="btn btn--primary"
-                onClick={handleSubmitTradeClick}
-                disabled={authUser ? !userIsPartOfTrade : false}
-                aria-describedby={authUser && !userIsPartOfTrade ? 'submit-disabled-hint' : undefined}
-              >
-                Submit Trade
-              </button>
-              {authUser && !userIsPartOfTrade && (
-                <span id="submit-disabled-hint" className="visually-hidden">
-                  Your team must be part of this trade to submit
-                </span>
-              )}
-            </>
+            <button
+              ref={submitBtnRef}
+              className="btn btn--primary"
+              onClick={handleSubmitTradeClick}
+            >
+              Submit Trade
+            </button>
           )}
         </div>
       </div>
