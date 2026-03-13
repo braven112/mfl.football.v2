@@ -1,18 +1,19 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import leagueAssets from '../../data/theleague.assets.json';
+import leagueConfig from '../../data/theleague.config.json';
 import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
 
 const playerModules = import.meta.glob(
   '../../data/mfl-player-salaries-*.json',
   { eager: true }
 );
 
-const getModuleData = (mod) =>
+const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
-const extractSeason = (filepath) => {
+const extractSeason = (filepath: string) => {
   const match = filepath.match(/(\d{4})\.json$/);
   return match ? match[1] : null;
 };
@@ -29,15 +30,16 @@ const positionLabelMap = new Map(
   positionLabels.map(({ key, label }) => [key, label])
 );
 
-const franchiseLookup = new Map(
-  (leagueAssets.teams ?? []).map((team) => [
-    team.id,
-    {
-      name: team.name,
-      icon: team.assets?.icons?.[0]?.relativePath,
-    },
-  ])
-);
+function getFranchiseForYear(franchiseId: string, season: string | number) {
+  const team = leagueConfig.teams.find((entry: any) => entry.franchiseId === franchiseId);
+  if (!team) return null;
+
+  const identity = getTeamIdentityForYear(team, Number(season));
+  return {
+    name: chooseTeamName({ fullName: identity.name, nameMedium: identity.nameMedium }),
+    icon: identity.icon,
+  };
+}
 
 const overallCandidates = [];
 const positionBuckets = new Map();
@@ -231,10 +233,10 @@ const formatContract = (salary: number, years: number) => {
 };
 const formatPoints = (value: number) =>
   Number.isFinite(value) ? value.toFixed(1) : '0.0';
-const getNflLogo = (team) => {
+const getNflLogo = (team: string) => {
   let code = (team ?? '').toUpperCase() || 'FA';
   // Normalize team codes that don't match logo filenames
-  const teamCodeMap = {
+  const teamCodeMap: Record<string, string> = {
     'TBB': 'TB',   // Tampa Bay Buccaneers
     'GBP': 'GB',   // Green Bay Packers
     'NEP': 'NE',   // New England Patriots
@@ -310,7 +312,7 @@ const getNflLogo = (team) => {
                     <h3 class="position-group-title">{label}</h3>
                     <div class={players.length === 4 ? 'position-cards-quad' : players.length > 1 ? 'position-cards-multi' : 'position-cards-single'}>
                       {players.map(player => {
-                        const franchise = player.franchiseId ? franchiseLookup.get(player.franchiseId) : null;
+                        const franchise = player.franchiseId ? getFranchiseForYear(player.franchiseId, player.season) : null;
                         const nflLogo = player.team ? getNflLogo(player.team) : null;
                         const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
                         const slotLabel = player.slotLabel ?? label;
@@ -381,7 +383,7 @@ const getNflLogo = (team) => {
                   <h3 class="position-group-title">{label}</h3>
                   <div class={players.length === 4 ? 'position-cards-quad' : players.length > 1 ? 'position-cards-multi' : 'position-cards-single'}>
                     {players.map(player => {
-                      const franchise = player.franchiseId ? franchiseLookup.get(player.franchiseId) : null;
+                      const franchise = player.franchiseId ? getFranchiseForYear(player.franchiseId, player.season) : null;
                       const nflLogo = player.team ? getNflLogo(player.team) : null;
                       const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);
                       const slotLabel = player.slotLabel ?? label;
@@ -438,7 +440,7 @@ const getNflLogo = (team) => {
       {overallCandidates.length ? (
         overallCandidates.map((player) => {
           const franchise = player.franchiseId
-            ? franchiseLookup.get(player.franchiseId)
+            ? getFranchiseForYear(player.franchiseId, player.season)
             : null;
           const nflLogo = player.team ? getNflLogo(player.team) : null;
           return (
@@ -511,7 +513,7 @@ const getNflLogo = (team) => {
               {list.length ? (
                 list.map((player) => {
                   const franchise = player.franchiseId
-                    ? franchiseLookup.get(player.franchiseId)
+                    ? getFranchiseForYear(player.franchiseId, player.season)
                     : null;
                   const nflLogo = player.team ? getNflLogo(player.team) : null;
                   const isLeagueMvp = overallMvpIds.has(`${player.id}-${player.season}`);

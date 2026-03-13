@@ -13,7 +13,7 @@ import {
   type SeededTeam,
   type NormalizedBracket,
 } from '../../utils/playoffs';
-import { chooseTeamName, resolveConfigForYear } from '../../utils/team-names';
+import { chooseTeamName, resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 import leagueConfigRaw from '../../data/theleague.config.json';
 import { getAuthUser } from '../../utils/auth';
 import {
@@ -133,16 +133,17 @@ const preferredTeamId = resolveTeamSelection({
   authUserFranchise: authUser?.franchiseId,
   defaultTeam: undefined,
 }) || undefined;
+const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfigRaw, preferredTeamId, selectedYear);
 
 // Determine which bracket contains the preferred team
 let defaultView: TabView = 'winners'; // Default to championship bracket
-if (preferredTeamId) {
+if (yearPreferredTeamId) {
   // Check if team is in championship seeds (top 7)
   const isInChampionship = Array.from(seedMaps.championshipSeeds.values())
-    .some(team => team.id === preferredTeamId);
+    .some(team => team.id === yearPreferredTeamId);
   // Check if team is in toilet bowl (bottom 7)
   const isInToilet = Array.from(seedMaps.toiletSeeds.values())
-    .some(team => team.id === preferredTeamId);
+    .some(team => team.id === yearPreferredTeamId);
 
   if (isInToilet) {
     defaultView = 'toilet';

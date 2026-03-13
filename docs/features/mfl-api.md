@@ -516,7 +516,7 @@ https://api.myfantasyleague.com/2025/export?TYPE=transactions&L=13522&W=15&JSON=
 
 ---
 
-#### `tradeBait` ✅ Currently Used
+#### `tradeBait` (Export) ✅ Currently Used
 **Purpose:** Trade bait for all franchises
 
 **Parameters:**
@@ -530,8 +530,26 @@ https://api.myfantasyleague.com/2025/export?TYPE=tradeBait&L=13522&JSON=1
 https://api.myfantasyleague.com/2025/export?TYPE=tradeBait&L=13522&INCLUDE_DRAFT_PICKS=1&JSON=1
 ```
 
+**Response Structure (confirmed from `fetch-trade-bait.mjs`):**
+```json
+{
+  "tradeBaits": {
+    "tradeBait": [
+      {
+        "franchise_id": "0008",
+        "willGiveUp": "15749,14836",
+        "inExchangeFor": "Looking for WR1"
+      }
+    ]
+  }
+}
+```
+
+Note: `willGiveUp` uses camelCase in the export response, but `WILL_GIVE_UP` (screaming snake case) in the import request. The export field may be a comma-separated string without a trailing comma (unlike `pendingTrades` which has a trailing comma).
+
 **Used In:**
 - [scripts/fetch-mfl-feeds.mjs](scripts/fetch-mfl-feeds.mjs)
+- [scripts/fetch-trade-bait.mjs](scripts/fetch-trade-bait.mjs)
 
 ---
 
@@ -714,17 +732,89 @@ https://api.myfantasyleague.com/2025/export?TYPE=schedule&L=13522&W=15&JSON=1
 
 ---
 
-#### `calendar`
-**Purpose:** League calendar events summary
+#### `calendar` (Export)
+**Purpose:** League calendar events — returns all events currently on the MFL league calendar
 
 **Parameters:**
 - Required: `L` (league ID)
-- Auth: Owner
+- Auth: Owner (requires `MFL_USER_ID` cookie or `APIKEY`)
+
+**Response Formats:**
+- `JSON=1` → JSON object with calendar events
+- `XML=1` → XML calendar data
+- Default (no format param) → ICS (iCalendar) format for calendar app subscriptions
 
 **Example:**
 ```
 https://api.myfantasyleague.com/2025/export?TYPE=calendar&L=13522&JSON=1
+https://api.myfantasyleague.com/2025/export?TYPE=calendar&L=13522
 ```
+
+**Key Insights (updated 2026-03-08):**
+- Requires authentication — returns error without `MFL_USER_ID` cookie or `APIKEY`
+- The default (no JSON/XML param) response format appears to be ICS per the MFL API overview documentation
+- Contains both MFL system-generated events (waiver processing, trade deadlines) and commissioner-created custom events
+- The JSON response structure needs authenticated testing to confirm exact field names
+
+---
+
+#### `calendarEvent` (Import) — WRITE ENDPOINT
+**Purpose:** Add events to the MFL league calendar. Commissioner-only write endpoint.
+
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=calendarEvent&L={LEAGUE_ID}
+```
+
+**Parameters:**
+- `L` (required): League ID
+- `EVENT_TYPE` (required): Event category identifier. Known values:
+  - `DRAFT_START` — Draft start time
+  - `AUCTION_START` — Auction start time
+  - `TRADE` — Trade deadline
+  - `WAIVER_REVERSE` — Reverse-order waiver processing
+  - `WAIVER_BBID` — Blind bid waiver processing
+  - `WAIVER_UNLOCK` — Waivers unlock (free agency opens)
+  - `WAIVER_LOCK` — Waivers lock (roster lock)
+  - `CUSTOM` — Custom/user-defined event
+- `START_TIME` (required): Unix timestamp (seconds) for event start
+- `END_TIME` (optional): Unix timestamp (seconds) for event end
+- `HAPPENS` (optional): Number of weeks to repeat the event (creates recurring weekly events)
+
+**Authentication:** Commissioner-level cookie required
+
+**Method:** POST (import endpoints are POST-based)
+
+**Key Insights (updated 2026-03-08):**
+- **Commissioner-only** — requires commissioner-level MFL session cookie, not just owner auth
+- The `HAPPENS` parameter creates recurring events: setting `HAPPENS=17` with a weekly event would create it for all 17 NFL weeks
+- `EVENT_TYPE` values like `TRADE`, `WAIVER_BBID`, `WAIVER_LOCK`, `WAIVER_UNLOCK` correspond to MFL functional events that may actually **control league behavior** (e.g., setting `TRADE` with a `START_TIME` may set/move the trade deadline)
+- `CUSTOM` type is for informational events that don't affect league mechanics
+- **No documented delete/edit API** — there is no known way to delete or modify existing calendar events via the API. If an event needs to be changed, you may need to re-create it or use the MFL web UI
+- The distinction between "functional" event types (TRADE, WAIVER_*) and "informational" (CUSTOM) needs authenticated testing to confirm whether importing a TRADE event actually moves the trade deadline or just adds a calendar entry
+- Unix timestamps are assumed to be in **seconds** (standard Unix time), not milliseconds
+
+**Example — Add a custom offseason event:**
+```
+POST https://api.myfantasyleague.com/2025/import?TYPE=calendarEvent&L=13522
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={commissioner_cookie}
+
+EVENT_TYPE=CUSTOM&START_TIME=1711065600&END_TIME=1711152000
+```
+
+**Example — Set recurring weekly waiver processing:**
+```
+POST https://api.myfantasyleague.com/2025/import?TYPE=calendarEvent&L=13522
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={commissioner_cookie}
+
+EVENT_TYPE=WAIVER_BBID&START_TIME=1725580800&HAPPENS=17
+```
+
+**Related APIs:**
+- `calendar` (export) — Read back all calendar events
+- `league` (export) — Contains some league date settings (trade deadlines, waiver configuration) in the league setup
 
 ---
 
@@ -894,13 +984,205 @@ https://api.myfantasyleague.com/2025/export?TYPE=salaryAdjustments&L=13522&JSON=
 
 ---
 
-#### `tradeProposal`
-**Purpose:** Propose trade to another franchise
+#### `tradeProposal` — WRITE ENDPOINT
+**Purpose:** Propose a trade to another franchise
+
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeProposal&L=13522
+```
 
 **Parameters:**
-- Required: `L`, `OFFEREDTO`, `WILL_GIVE_UP`, `WILL_RECEIVE`
-- Optional: `COMMENTS`, `EXPIRES`, `FRANCHISE_ID`
-- Auth: Owner
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `L` | Yes | League ID |
+| `OFFEREDTO` | Yes | Target franchise ID in 4-digit padded string format (e.g., `"0003"`) |
+| `WILL_GIVE_UP` | Yes | Comma-separated list of assets you are offering (see Asset Format below) |
+| `WILL_RECEIVE` | Yes | Comma-separated list of assets you want to receive (see Asset Format below) |
+| `COMMENTS` | No | Short message to the trade target (free text) |
+| `EXPIRES` | No | Unix timestamp for proposal expiration; defaults to one week from submission |
+| `FRANCHISE_ID` | No | Commissioner use only: act on behalf of a franchise owner |
+
+**Auth:** Owner (requires `MFL_USER_ID` cookie)
+
+**Asset Format in `WILL_GIVE_UP` / `WILL_RECEIVE`:**
+
+| Asset Type | Format | Example | Notes |
+|------------|--------|---------|-------|
+| Player | Numeric MFL player ID | `15749` | Standard MFL player ID |
+| Current-year draft pick | `DP_{round-1}_{pick-1}` | `DP_2_10` for round 3, pick 11 | Round and pick are **zero-indexed** (one less than actual) |
+| Future-year draft pick | `FP_{franchiseId}_{year}_{round}` | `FP_0005_2027_2` | Round is the **actual** round number; franchise is 4-digit padded |
+| Blind bid dollars | `BB_{amount}` | `BB_10.50` | Decimal notation |
+
+Multiple assets are comma-separated: `WILL_GIVE_UP=15749,FP_0005_2027_1`
+
+**Example Request:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeProposal&L=13522
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={cookie}
+
+OFFEREDTO=0003&WILL_GIVE_UP=15749,DP_1_05&WILL_RECEIVE=16211,FP_0003_2027_1&COMMENTS=Let%27s+deal&EXPIRES=1774544400
+```
+
+---
+
+#### `tradeResponse` — WRITE ENDPOINT
+**Purpose:** Accept, reject, or withdraw (revoke) a pending trade proposal
+
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeResponse&L=13522
+```
+
+**Parameters:**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `L` | Yes | League ID |
+| `TRADE_ID` | Yes | Trade identifier from the `pendingTrades` export response |
+| `RESPONSE` | Yes | Action to take — valid values: `accept`, `reject`, `revoke` |
+| `COMMENTS` | No | Message (useful for rejections to explain why) |
+| `FRANCHISE_ID` | No | Commissioner use only: act on behalf of a franchise owner |
+
+**Auth:** Owner (requires `MFL_USER_ID` cookie)
+
+**RESPONSE Value Rules:**
+- `accept` — only the **target** franchise (the one who received the offer) may use this
+- `reject` — only the **target** franchise (the one who received the offer) may use this
+- `revoke` — only the **originating** franchise (the one who sent the offer) may use this
+
+Attempting to use the wrong RESPONSE value for your role will fail.
+
+**Example: Accept a trade**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeResponse&L=13522
+Cookie: MFL_USER_ID={cookie}
+
+TRADE_ID=12345&RESPONSE=accept
+```
+
+**Example: Reject a trade with a message**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeResponse&L=13522
+Cookie: MFL_USER_ID={cookie}
+
+TRADE_ID=12345&RESPONSE=reject&COMMENTS=Not+enough+value+for+my+WR1
+```
+
+**Example: Revoke (withdraw) your own proposal**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeResponse&L=13522
+Cookie: MFL_USER_ID={cookie}
+
+TRADE_ID=12345&RESPONSE=revoke
+```
+
+---
+
+#### `pendingTrades` — READ ENDPOINT
+**Purpose:** Retrieve all pending trade proposals (sent and received) for the authenticated franchise
+
+**Endpoint:**
+```
+GET https://api.myfantasyleague.com/2026/export?TYPE=pendingTrades&L=13522&JSON=1
+```
+
+**Parameters:**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `L` | Yes | League ID |
+| `FRANCHISE_ID` | No | Commissioner use only: specify which franchise to view. Pass `0000` to get trades pending commissioner approval |
+| `APIKEY` | No | Alternative to cookie auth |
+
+**Auth:** Owner (requires `MFL_USER_ID` cookie or `APIKEY`)
+
+**Response Structure:**
+
+The response mirrors the completed trade transaction format (confirmed via `transactions` endpoint with `TRANS_TYPE=TRADE`):
+
+```json
+{
+  "pendingTrades": {
+    "trade": [
+      {
+        "id": "12345",
+        "franchise": "0008",
+        "franchise2": "0010",
+        "franchise1_gave_up": "15749,DP_1_05,",
+        "franchise2_gave_up": "16211,FP_0003_2027_1,",
+        "timestamp": "1773270789",
+        "expires": "1774544400",
+        "comments": "Let's deal",
+        "by_commish": "0"
+      }
+    ]
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
+}
+```
+
+**Key Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `id` | Trade ID — use this as `TRADE_ID` in `tradeResponse` |
+| `franchise` | The franchise who **originated** the trade proposal (same as `franchise1`) |
+| `franchise2` | The franchise who **received** the trade offer |
+| `franchise1_gave_up` | Assets offered by `franchise` — comma-separated string with trailing comma |
+| `franchise2_gave_up` | Assets offered by `franchise2` — comma-separated string with trailing comma |
+| `timestamp` | Unix timestamp of when the trade was proposed |
+| `expires` | Unix timestamp of when the offer expires |
+| `comments` | Optional message from the proposing franchise |
+| `by_commish` | `"1"` if initiated by commissioner, `"0"` otherwise |
+
+**Important notes:**
+- MFL may return a single object (not array) when there is exactly one pending trade — always normalize to array before iterating
+- Asset strings end with a trailing comma (e.g., `"15749,"` not `"15749"`) — strip before parsing
+- Draft pick format matches proposal format: `DP_{r-1}_{p-1}` for current year, `FP_{franchiseId}_{year}_{round}` for future picks
+- When there are no pending trades, the response returns `"pendingTrades": ""` (empty string, not empty object) — guard against this
+
+**Empty state response (no pending trades):**
+```json
+{
+  "pendingTrades": "",
+  "encoding": "utf-8",
+  "version": "1.0"
+}
+```
+
+---
+
+#### `tradeBait` (Import) — WRITE ENDPOINT
+**Purpose:** Set the authenticated franchise's trade block (overwrites any previous trade bait)
+
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeBait&L=13522
+```
+
+**Parameters:**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `L` | Yes | League ID |
+| `WILL_GIVE_UP` | Yes | Comma-separated list of player IDs being offered (same asset format as `tradeProposal`) |
+| `IN_EXCHANGE_FOR` | No | Free-text description of desired return (max 256 characters) |
+
+**Auth:** Owner (requires `MFL_USER_ID` cookie)
+
+**Behavior:** Completely overwrites any previously entered trade bait. To clear your trade block, send `WILL_GIVE_UP` with an empty value.
+
+**Example:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=tradeBait&L=13522
+Cookie: MFL_USER_ID={cookie}
+
+WILL_GIVE_UP=15749,14836&IN_EXCHANGE_FOR=Looking+for+WR1+or+mid-1st+pick
+```
 
 ---
 

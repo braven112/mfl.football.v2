@@ -18,7 +18,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { resolveConfigForYear } from '../../utils/team-names';
+import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -100,6 +100,7 @@ const preferredTeamId = resolveTeamSelection({
   authUserFranchise: authUser?.franchiseId,
   defaultTeam: undefined, // Don't default if no preference
 }) || undefined;
+const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfig, preferredTeamId, selectedYear);
 
 // Division Champions by Year (previous year's defending champs)
 const championsByYear: Record<number, Record<string, string>> = {
@@ -247,7 +248,7 @@ const defendingChampions = championsByYear[previousYear] || {};
               defendingChampion={defendingChampions[division.name]}
               defendingChampionYear={previousYear}
               year={selectedYear}
-              preferredTeamId={preferredTeamId}
+              preferredTeamId={yearPreferredTeamId}
             />
           ))}
         </div>
@@ -255,13 +256,13 @@ const defendingChampions = championsByYear[previousYear] || {};
 
       {view === 'league' && (
         <div class="league-view">
-          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} preferredTeamId={preferredTeamId} />
+          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} preferredTeamId={yearPreferredTeamId} />
         </div>
       )}
 
       {view === 'all_play' && (
         <div class="all-play-view">
-          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} preferredTeamId={preferredTeamId} />
+          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} preferredTeamId={yearPreferredTeamId} />
         </div>
       )}
 

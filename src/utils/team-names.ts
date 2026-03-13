@@ -7,6 +7,8 @@
  */
 export const MAX_TEAM_NAME_LENGTH = 15;
 export const MAX_SHORT_NAME_LENGTH = 10;
+export const HISTORICAL_TEAM_ICON_FALLBACK = '/assets/theleague/history/historical-team-placeholder.svg';
+export const HISTORICAL_TEAM_BANNER_FALLBACK = '/assets/theleague/history/historical-team-banner-placeholder.svg';
 
 /**
  * Choose the best team name from available options with a maximum length limit.
@@ -124,6 +126,17 @@ export interface FranchiseHistoryEntry {
 }
 
 /**
+ * Maps a current owner's team to the historical franchise ID that represents
+ * that owner for a given year. This is only needed when an owner leaves and
+ * later returns under a different franchise ID.
+ */
+export interface OwnerHistoryEntry {
+  franchiseId: string;
+  yearStart: number;
+  yearEnd: number;
+}
+
+/**
  * A team config entry from theleague.config.json (with optional history).
  */
 export interface TeamConfig {
@@ -138,6 +151,7 @@ export interface TeamConfig {
   banner?: string;
   groupMe?: string;
   history?: FranchiseHistoryEntry[];
+  ownerHistory?: OwnerHistoryEntry[];
 }
 
 /**
@@ -154,6 +168,22 @@ export interface TeamIdentity {
   banner?: string;
   groupMe?: string;
   isHistorical: boolean;
+}
+
+function normalizeHistoricalAssetUrl(
+  url: string | undefined,
+  fallback: string
+): string | undefined {
+  if (!url) return fallback;
+
+  const trimmed = url.trim();
+  if (!trimmed) return fallback;
+
+  if (trimmed.startsWith('http://')) {
+    return `https://${trimmed.slice('http://'.length)}`;
+  }
+
+  return trimmed;
 }
 
 /**
@@ -184,8 +214,8 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
           nameShort: entry.nameShort,
           abbrev: entry.abbrev,
           aliases: entry.aliases,
-          icon: entry.icon,
-          banner: entry.banner,
+          icon: normalizeHistoricalAssetUrl(entry.icon, HISTORICAL_TEAM_ICON_FALLBACK),
+          banner: normalizeHistoricalAssetUrl(entry.banner, HISTORICAL_TEAM_BANNER_FALLBACK),
           groupMe: entry.groupMe,
           isHistorical: true,
         };
@@ -204,6 +234,42 @@ export function getTeamIdentityForYear(team: TeamConfig, year: number): TeamIden
     groupMe: team.groupMe,
     isHistorical: false,
   };
+}
+
+/**
+ * Resolve which franchise ID should represent a current owner's team for a
+ * given historical season.
+ *
+ * Most teams simply map to their current franchise ID for all years. When a
+ * current owner returned to the league under a different franchise ID, the
+ * optional `ownerHistory` mapping lets historical filters/highlights follow the
+ * owner's actual lineage instead of the franchise's full identity history.
+ */
+export function getOwnerHistoryFranchiseIdForYear(team: TeamConfig, year: number): string | null {
+  if (!team.ownerHistory?.length) {
+    return team.franchiseId;
+  }
+
+  for (const entry of team.ownerHistory) {
+    if (year >= entry.yearStart && year <= entry.yearEnd) {
+      return entry.franchiseId;
+    }
+  }
+
+  return null;
+}
+
+export function resolvePreferredTeamIdForYear<T extends { teams: TeamConfig[] }>(
+  config: T,
+  preferredTeamId: string | undefined | null,
+  year: number
+): string | undefined {
+  if (!preferredTeamId) return undefined;
+
+  const team = config.teams.find((entry) => entry.franchiseId === preferredTeamId);
+  if (!team) return preferredTeamId;
+
+  return getOwnerHistoryFranchiseIdForYear(team, year) ?? undefined;
 }
 
 /**
