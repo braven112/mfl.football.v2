@@ -435,7 +435,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     action: 'add' | 'remove',
     franchiseId: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; allPlayerIds?: string[] }> {
     if (!this.config.mflUserId) {
       return { success: false, error: 'Authentication required for trade bait updates' };
     }
@@ -507,7 +507,22 @@ export class MFLMatchupApiClient {
         return { success: false, error: errorMsg };
       }
 
-      return { success: true };
+      // Build the complete list of all trade bait player IDs across ALL franchises
+      // (matches the format of tradeBait.json used for local caching)
+      const allPlayerIds = new Set<string>();
+      for (const entry of tradeBaitEntries) {
+        if (entry.franchise_id === franchiseId) continue; // Skip — we'll use our updated list
+        if (entry.willGiveUp) {
+          const ids = typeof entry.willGiveUp === 'string'
+            ? entry.willGiveUp.split(',').map((id: string) => id.trim()).filter(Boolean)
+            : [String(entry.willGiveUp)];
+          ids.forEach(id => allPlayerIds.add(id));
+        }
+      }
+      // Add the updated list for the current franchise
+      currentPlayerIds.forEach(id => allPlayerIds.add(id));
+
+      return { success: true, allPlayerIds: Array.from(allPlayerIds) };
     } catch (error) {
       console.error('Failed to update trade bait:', error);
       return {

@@ -8267,11 +8267,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
 
             // Update the trade bait badge in the roster table
+            // Badge goes INSIDE .player-cell__name (matching the server-side after-name slot)
             const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
             if (playerRow) {
               const existingBadge = playerRow.querySelector('.trade-bait-link');
               if (newTradeBait && !existingBadge) {
-                // Add the badge
                 const nameEl = playerRow.querySelector('.player-cell__name');
                 if (nameEl) {
                   const badge = document.createElement('a');
@@ -8279,7 +8279,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                   badge.className = 'trade-bait-link';
                   badge.title = 'On Trade Block \u2014 Open in Trade Builder';
                   badge.textContent = '\uD83C\uDFF7\uFE0F';
-                  nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+                  nameEl.appendChild(badge);
                 }
               } else if (!newTradeBait && existingBadge) {
                 existingBadge.remove();
