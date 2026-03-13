@@ -374,14 +374,34 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
 
   // Submit trade to MFL
   const handleSubmitTrade = useCallback(async (message: string) => {
-    if (!authUser || !userSide || !teamA || !teamB) return;
+    if (!teamA || !teamB) return;
+
+    // Determine user side at call time (not from stale closure) to handle
+    // the case where authUser was just set via inline login in the same render cycle.
+    const currentUserSide = (() => {
+      const fA = state.teamA.franchiseId;
+      const fB = state.teamB.franchiseId;
+      // Check latest authUser from state (authUser ref may be stale in useCallback)
+      // We know we're authenticated because the confirmation modal is open
+      if (authUser?.franchiseId === fA) return 'A' as const;
+      if (authUser?.franchiseId === fB) return 'B' as const;
+      return null;
+    })();
+
+    if (!currentUserSide) {
+      setSubmissionStatus({
+        status: 'error',
+        errorMessage: 'Your team must be part of this trade to submit',
+      });
+      return;
+    }
 
     setSubmissionStatus({ status: 'submitting', errorMessage: null });
 
     // The user's side gives up their assets, receives the other side's assets
-    const userTeamSide = userSide === 'A' ? state.teamA : state.teamB;
-    const otherTeamSide = userSide === 'A' ? state.teamB : state.teamA;
-    const otherTeam = userSide === 'A' ? teamB : teamA;
+    const userTeamSide = currentUserSide === 'A' ? state.teamA : state.teamB;
+    const otherTeamSide = currentUserSide === 'A' ? state.teamB : state.teamA;
+    const otherTeam = currentUserSide === 'A' ? teamB : teamA;
 
     const willGiveUp = buildMflAssetString(userTeamSide.playerIds, userTeamSide.draftPicks);
     const willReceive = buildMflAssetString(otherTeamSide.playerIds, otherTeamSide.draftPicks);
@@ -415,7 +435,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
         errorMessage: 'Network error. Please try again.',
       });
     }
-  }, [authUser, userSide, state.teamA, state.teamB, teamA, teamB]);
+  }, [authUser, state.teamA, state.teamB, teamA, teamB]);
 
   // Load a pending trade into the builder
   const handleLoadTradeIntoBuilder = useCallback((trade: PendingTrade, _mode: 'counter' | 'view') => {
