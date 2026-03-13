@@ -381,17 +381,23 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     const currentUserSide = (() => {
       const fA = state.teamA.franchiseId;
       const fB = state.teamB.franchiseId;
-      // Check latest authUser from state (authUser ref may be stale in useCallback)
-      // We know we're authenticated because the confirmation modal is open
-      if (authUser?.franchiseId === fA) return 'A' as const;
-      if (authUser?.franchiseId === fB) return 'B' as const;
+      const userFid = authUser?.franchiseId;
+      // Normalize for comparison — strip leading zeros for numeric IDs
+      const normalize = (id: string | null | undefined) =>
+        id ? String(parseInt(id, 10) || id) : '';
+      const nUser = normalize(userFid);
+      const nA = normalize(fA);
+      const nB = normalize(fB);
+      console.log('[trade-submit] franchiseId comparison:', { userFid, fA, fB, nUser, nA, nB });
+      if (nUser && nUser === nA) return 'A' as const;
+      if (nUser && nUser === nB) return 'B' as const;
       return null;
     })();
 
     if (!currentUserSide) {
       setSubmissionStatus({
         status: 'error',
-        errorMessage: 'Your team must be part of this trade to submit',
+        errorMessage: `Your team must be part of this trade to submit. (Your franchise: ${authUser?.franchiseId}, Team A: ${state.teamA.franchiseId}, Team B: ${state.teamB.franchiseId})`,
       });
       return;
     }
