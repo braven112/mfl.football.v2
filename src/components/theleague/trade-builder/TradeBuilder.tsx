@@ -376,28 +376,26 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
   const handleSubmitTrade = useCallback(async (message: string) => {
     if (!teamA || !teamB) return;
 
-    // Determine user side at call time (not from stale closure) to handle
-    // the case where authUser was just set via inline login in the same render cycle.
+    // Determine which side the authenticated user is on.
+    // Primary: match authUser.franchiseId against trade sides.
+    // Fallback: match defaultTeamId (cookie preference) if session franchiseId
+    // doesn't match (MFL sometimes stores "0000" for commissioners).
     const currentUserSide = (() => {
       const fA = state.teamA.franchiseId;
       const fB = state.teamB.franchiseId;
       const userFid = authUser?.franchiseId;
-      // Normalize for comparison — strip leading zeros for numeric IDs
-      const normalize = (id: string | null | undefined) =>
-        id ? String(parseInt(id, 10) || id) : '';
-      const nUser = normalize(userFid);
-      const nA = normalize(fA);
-      const nB = normalize(fB);
-      console.log('[trade-submit] franchiseId comparison:', { userFid, fA, fB, nUser, nA, nB });
-      if (nUser && nUser === nA) return 'A' as const;
-      if (nUser && nUser === nB) return 'B' as const;
+      if (userFid && userFid === fA) return 'A' as const;
+      if (userFid && userFid === fB) return 'B' as const;
+      // Fallback: use cookie-based team preference
+      if (defaultTeamId && defaultTeamId === fA) return 'A' as const;
+      if (defaultTeamId && defaultTeamId === fB) return 'B' as const;
       return null;
     })();
 
     if (!currentUserSide) {
       setSubmissionStatus({
         status: 'error',
-        errorMessage: `Your team must be part of this trade to submit. (Your franchise: ${authUser?.franchiseId}, Team A: ${state.teamA.franchiseId}, Team B: ${state.teamB.franchiseId})`,
+        errorMessage: 'Your team must be part of this trade to submit.',
       });
       return;
     }
@@ -441,7 +439,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
         errorMessage: 'Network error. Please try again.',
       });
     }
-  }, [authUser, state.teamA, state.teamB, teamA, teamB]);
+  }, [authUser, defaultTeamId, state.teamA, state.teamB, teamA, teamB]);
 
   // Load a pending trade into the builder
   const handleLoadTradeIntoBuilder = useCallback((trade: PendingTrade, _mode: 'counter' | 'view') => {
