@@ -93,6 +93,12 @@ The subtitle is `0.8125rem`, `gray-400`, with `0.25rem` gap. Use standalone sect
 
 **Defensive CSS** — Always include token fallbacks: `var(--color-gray-700, #374151)`
 
+**Modal/overlay backdrop** — **CRITICAL:** Every modal and overlay MUST use the frosted-glass backdrop blur. Never use a plain dark overlay without blur:
+```css
+background: rgba(15, 23, 42, 0.45);
+backdrop-filter: blur(2px);
+```
+
 ### Typography Scale
 
 | Role | Size | Weight | Notes |

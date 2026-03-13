@@ -1,0 +1,529 @@
+---
+/**
+ * LoginForm — Reusable editorial login form
+ *
+ * Works in two contexts:
+ * 1. Standalone page — wrapped by login.astro with centering
+ * 2. Modal — wrapped by any page's modal shell with compact=true
+ *
+ * Does NOT include any modal overlay, backdrop, or page layout.
+ */
+
+export interface Props {
+  /** Compact mode reduces spacing for modal embedding */
+  compact?: boolean;
+  /** Show the league logo above the title (default: true when compact) */
+  showLogo?: boolean;
+  /** Override the default redirect URL after login */
+  redirectUrl?: string;
+  /** League ID override (defaults to 13522) */
+  leagueId?: string;
+  /** Optional class for consumer styling hooks */
+  class?: string;
+}
+
+const {
+  compact = false,
+  showLogo = compact,
+  redirectUrl,
+  leagueId = '13522',
+  class: className,
+} = Astro.props;
+---
+
+<div
+  class:list={['login-form', { 'login-form--compact': compact }, className]}
+  data-redirect-url={redirectUrl}
+  data-league-id={leagueId}
+>
+  <!-- Branded Header -->
+  <div class:list={['login-header', { 'login-header--compact': compact }]}>
+    {showLogo && (
+      <img
+        class="login-header__logo"
+        src="/assets/logos/theleague-logo.svg"
+        alt="The League logo"
+        width={compact ? 48 : 64}
+        height={compact ? 48 : 64}
+      />
+    )}
+    <h2 class="login-header__title">Sign In</h2>
+    <p class="login-header__subtitle">Enter your MFL credentials</p>
+  </div>
+
+  <!-- Login Form -->
+  <form
+    class="login-form__form"
+    id="login-form"
+    aria-label="Sign in to The League"
+  >
+    <!-- Error Banner -->
+    <div
+      class="login-form__error"
+      id="login-error"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+    >
+      <svg class="login-form__error-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 4.5v4M8 10.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p class="login-form__error-text" id="login-error-text"></p>
+    </div>
+
+    <!-- Username -->
+    <div class="login-field">
+      <label class="login-field__label" for="login-username">Username</label>
+      <input
+        class="login-field__input"
+        id="login-username"
+        type="text"
+        placeholder="MFL username"
+        required
+        aria-required="true"
+        autocomplete="username"
+        autofocus={!compact}
+      />
+    </div>
+
+    <!-- Password -->
+    <div class="login-field">
+      <label class="login-field__label" for="login-password">Password</label>
+      <input
+        class="login-field__input"
+        id="login-password"
+        type="password"
+        placeholder="MFL password"
+        required
+        aria-required="true"
+        autocomplete="current-password"
+      />
+    </div>
+
+    <!-- Submit -->
+    <button
+      class="login-form__submit"
+      type="submit"
+      id="login-submit"
+    >
+      <span class="login-form__spinner" aria-hidden="true"></span>
+      <span class="login-form__submit-text">Sign In</span>
+    </button>
+
+    <!-- Security Note -->
+    <p class="login-form__note">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <rect x="2.5" y="5.5" width="7" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      Credentials are validated directly with MyFantasyLeague.com. We never store your password.
+    </p>
+  </form>
+</div>
+
+<script>
+  // Multi-instance safe — each .login-form gets its own handler
+  document.querySelectorAll<HTMLElement>('.login-form').forEach((formWrapper) => {
+    const form = formWrapper.querySelector('form') as HTMLFormElement | null;
+    const submitBtn = formWrapper.querySelector('.login-form__submit') as HTMLButtonElement | null;
+    const errorContainer = formWrapper.querySelector('.login-form__error');
+    const errorText = formWrapper.querySelector('.login-form__error-text');
+    const usernameInput = formWrapper.querySelector('[autocomplete="username"]') as HTMLInputElement | null;
+    const passwordInput = formWrapper.querySelector('[autocomplete="current-password"]') as HTMLInputElement | null;
+
+    if (!form) return;
+
+    // ── Redirect resolution ──────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    let redirectUrl = params.get('redirect');
+
+    if (!redirectUrl) {
+      redirectUrl = sessionStorage.getItem('loginRedirectUrl') || document.referrer;
+    }
+
+    if (redirectUrl && redirectUrl !== document.location.href) {
+      sessionStorage.setItem('loginRedirectUrl', redirectUrl);
+    }
+
+    // Server-rendered redirect from component prop (highest priority)
+    const componentRedirect = formWrapper.dataset.redirectUrl;
+    const leagueId = formWrapper.dataset.leagueId || '13522';
+
+    // ── Form submission ──────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!usernameInput || !passwordInput || !submitBtn) return;
+
+      // Clear previous errors
+      errorContainer?.classList.remove('login-form__error--visible');
+      usernameInput.classList.remove('login-field__input--error');
+      usernameInput.removeAttribute('aria-invalid');
+      usernameInput.removeAttribute('aria-describedby');
+      passwordInput.classList.remove('login-field__input--error');
+      passwordInput.removeAttribute('aria-invalid');
+      passwordInput.removeAttribute('aria-describedby');
+
+      // Enter loading state
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
+      submitBtn.classList.add('login-form__submit--loading');
+      usernameInput.disabled = true;
+      passwordInput.disabled = true;
+
+      const btnText = submitBtn.querySelector('.login-form__submit-text');
+      if (btnText) btnText.textContent = 'Signing in\u2026';
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            username: usernameInput.value,
+            password: passwordInput.value,
+            leagueId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        // Success — redirect
+        if (btnText) btnText.textContent = 'Redirecting\u2026';
+
+        let finalUrl = componentRedirect
+          || sessionStorage.getItem('loginRedirectUrl')
+          || '/theleague';
+
+        if (finalUrl.includes('://')) {
+          try { finalUrl = new URL(finalUrl).pathname; }
+          catch { finalUrl = '/theleague'; }
+        }
+
+        sessionStorage.removeItem('loginRedirectUrl');
+        window.location.href = finalUrl;
+
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Login failed';
+
+        // Show error
+        if (errorText) errorText.textContent = msg;
+        errorContainer?.classList.add('login-form__error--visible');
+
+        // Mark inputs with error state + a11y linkage
+        const errorId = errorText?.id || 'login-error-text';
+        usernameInput.classList.add('login-field__input--error');
+        usernameInput.setAttribute('aria-invalid', 'true');
+        usernameInput.setAttribute('aria-describedby', errorId);
+        passwordInput.classList.add('login-field__input--error');
+        passwordInput.setAttribute('aria-invalid', 'true');
+        passwordInput.setAttribute('aria-describedby', errorId);
+
+        // Shake animation
+        form.classList.add('login-form__form--shake');
+        form.addEventListener('animationend', () => {
+          form.classList.remove('login-form__form--shake');
+        }, { once: true });
+
+        // Reset loading state
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.classList.remove('login-form__submit--loading');
+        usernameInput.disabled = false;
+        passwordInput.disabled = false;
+        if (btnText) btnText.textContent = 'Sign In';
+
+        // Focus username for re-entry
+        usernameInput.focus();
+      }
+    });
+  });
+</script>
+
+<style>
+  /* ── Container ─────────────────────────────────────────────── */
+  .login-form {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .login-form--compact {
+    max-width: 360px;
+  }
+
+  /* ── Branded Header ────────────────────────────────────────── */
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .login-header--compact {
+    margin-bottom: 1.5rem;
+  }
+
+  .login-header__logo {
+    display: block;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    object-fit: contain;
+  }
+
+  .login-header--compact .login-header__logo {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.75rem;
+  }
+
+  .login-header__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+    margin: 0 0 0.375rem;
+  }
+
+  .login-header--compact .login-header__title {
+    font-size: 1.125rem;
+  }
+
+  .login-header__subtitle {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  /* ── Form Layout ───────────────────────────────────────────── */
+  .login-form__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg, 1.5rem);
+  }
+
+  .login-form--compact .login-form__form {
+    gap: var(--spacing-md, 1rem);
+  }
+
+  /* ── Error Banner ──────────────────────────────────────────── */
+  .login-form__error {
+    display: none;
+    align-items: flex-start;
+    gap: var(--spacing-sm, 0.5rem);
+    padding: 0.75rem 1rem;
+    background: var(--color-error-light, #fee2e2);
+    border: 1px solid var(--color-error-light, #fecaca);
+    border-left: 2px solid var(--color-error, #dc2626);
+    border-radius: var(--radius-sm, 0.25rem);
+    color: var(--color-error-dark, #b91c1c);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .login-form__error--visible {
+    display: flex;
+    animation: login-error-enter 0.25s ease-out;
+  }
+
+  .login-form__error-icon {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .login-form__error-text {
+    margin: 0;
+  }
+
+  @keyframes login-error-enter {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Field Groups ──────────────────────────────────────────── */
+  .login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .login-field__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+    padding-left: 0.125rem;
+  }
+
+  .login-field__input {
+    padding: 0.6875rem 0.875rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: var(--color-gray-900, #111827);
+    background: var(--color-white, #fff);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .login-field__input::placeholder {
+    color: var(--color-gray-400, #9ca3af);
+    font-weight: 400;
+  }
+
+  .login-field__input:focus {
+    border-color: var(--input-border-focus, var(--color-primary, #1c497c));
+    box-shadow: var(--shadow-focus-ring, 0 0 0 3px rgba(28, 73, 124, 0.25));
+  }
+
+  .login-field__input:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  .login-field__input:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .login-field__input--error {
+    border-color: var(--color-error, #dc2626);
+  }
+
+  .login-field__input--error:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  }
+
+  .login-field__input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* ── Submit Button ─────────────────────────────────────────── */
+  .login-form__submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: var(--btn-primary-bg, #1c497c);
+    color: var(--btn-primary-text, #fff);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    margin-top: 0.25rem;
+    min-height: 44px;
+  }
+
+  .login-form__submit:hover:not(:disabled) {
+    background: var(--btn-primary-bg-hover, #164066);
+  }
+
+  .login-form__submit:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+    box-shadow: var(--shadow-focus-ring, 0 0 0 3px rgba(28, 73, 124, 0.25));
+  }
+
+  .login-form__submit:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
+  .login-form__submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  /* ── Loading Spinner ───────────────────────────────────────── */
+  .login-form__spinner {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--btn-primary-text, #fff);
+    border-radius: var(--radius-full, 9999px);
+    animation: login-spin 0.6s linear infinite;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .login-form__submit--loading .login-form__spinner {
+    display: block;
+  }
+
+  @keyframes login-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Security Note ─────────────────────────────────────────── */
+  .login-form__note {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    text-align: center;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .login-form__note svg {
+    vertical-align: -0.125em;
+    margin-right: 0.25rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* ── Shake Animation ───────────────────────────────────────── */
+  @keyframes login-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+  }
+
+  .login-form__form--shake {
+    animation: login-shake 0.35s ease-out;
+  }
+
+  /* ── Reduced Motion ────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .login-field__input,
+    .login-form__submit {
+      transition: none;
+    }
+
+    .login-form__submit:active:not(:disabled) {
+      transform: none;
+    }
+
+    .login-form__form--shake {
+      animation: none;
+    }
+
+    .login-form__error--visible {
+      animation: none;
+    }
+  }
+
+  /* ── Mobile ────────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .login-header__logo {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 0.75rem;
+    }
+
+    .login-header__title {
+      font-size: 1.125rem;
+    }
+
+    .login-header {
+      margin-bottom: 1.5rem;
+    }
+  }
+</style>
