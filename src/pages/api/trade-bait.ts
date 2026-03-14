@@ -5,6 +5,11 @@
  * Uses the user's MFL cookie (authUser.id) for per-user authentication,
  * NOT the server-level process.env.MFL_USER_ID.
  *
+ * Security:
+ * - Validates the player belongs to the user's roster before allowing add
+ * - Scopes all MFL writes to the authenticated user's franchise
+ * - Never uses commissioner credentials for owner-level operations
+ *
  * MFL's tradeBait import is a destructive overwrite — we read the current
  * list, merge/remove the player, then write back the complete list.
  */
@@ -74,7 +79,24 @@ export const POST: APIRoute = async ({ request }) => {
       mflUserId: user.id, // Per-user auth — the user's MFL cookie
     });
 
-    // 4. Perform the read-merge-write operation
+    // 4. SECURITY: Verify the player belongs to the user's roster
+    //    This prevents any user from adding players they don't own to trade bait,
+    //    and ensures commissioner-level cookies can't modify other teams.
+    if (action === 'add') {
+      const rosters = await mflClient.getRosters();
+      const userRoster = rosters[user.franchiseId];
+
+      if (!userRoster || !userRoster.includes(playerId)) {
+        return new Response(
+          JSON.stringify({
+            error: 'You can only add players from your own roster to the trade block.',
+          }),
+          { status: 403, headers: JSON_HEADERS },
+        );
+      }
+    }
+
+    // 5. Perform the read-merge-write operation
     const result = await mflClient.updateTradeBait(playerId, action, user.franchiseId);
 
     if (result.success) {
