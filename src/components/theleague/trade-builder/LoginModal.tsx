@@ -77,12 +77,18 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522'
       }
 
       // Map API response to TradeBuilderAuthUser
-      onLoginSuccess({
+      const user = {
         name: data.user.username,
         franchiseId: data.user.franchiseId,
         leagueId: data.user.leagueId,
         role: data.user.role,
-      });
+      };
+      onLoginSuccess(user);
+
+      // Notify nav footer to update from "Verify Your Team" → team info
+      window.dispatchEvent(new CustomEvent('auth:login', {
+        detail: { franchiseId: user.franchiseId },
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setIsSubmitting(false);

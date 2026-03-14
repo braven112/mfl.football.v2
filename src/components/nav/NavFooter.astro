@@ -16,10 +16,17 @@
 
 import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav';
 import { spriteUrl } from '../../utils/sprite-url';
+import leagueConfigData from '../../data/theleague.config.json';
 
 interface Props extends NavFooterProps {
   /** Current league for constructing roster link */
   league?: LeagueSlug;
+}
+
+// Build minimal team lookup map for client-side auth:login handling
+const teamMap: Record<string, { name: string; icon: string | null }> = {};
+for (const t of leagueConfigData.teams) {
+  teamMap[t.franchiseId] = { name: t.name, icon: t.icon || null };
 }
 
 const {
@@ -74,6 +81,10 @@ const showCommish = isCommissioner && isCommishMode;
 <footer
   class="nav-footer"
   role="contentinfo"
+  data-nav-footer
+  data-team-map={JSON.stringify(teamMap)}
+  data-roster-url={rosterUrl}
+  data-sprite-url={spriteUrl}
 >
   {/* Authenticated State: Team Info Row with optional commissioner toggle */}
   {isAuthenticated && (
@@ -340,6 +351,83 @@ const showCommish = isCommissioner && isCommishMode;
 
   // Initialize on page load and after View Transitions
   document.addEventListener('astro:page-load', initCommishToggle);
+</script>
+
+{/* Client-side auth:login handler — swaps "Verify Your Team" → team info when login happens without page reload */}
+<script>
+  function initAuthLoginListener() {
+    window.addEventListener('auth:login', ((e: CustomEvent<{ franchiseId: string }>) => {
+      const footer = document.querySelector('[data-nav-footer]') as HTMLElement | null;
+      if (!footer) return;
+
+      const teamMapRaw = footer.dataset.teamMap;
+      const rosterUrl = footer.dataset.rosterUrl || '/theleague/rosters';
+      const spUrl = footer.dataset.spriteUrl || '/assets/icons/sprite.svg';
+      if (!teamMapRaw) return;
+
+      let teamMap: Record<string, { name: string; icon: string | null }>;
+      try { teamMap = JSON.parse(teamMapRaw); } catch { return; }
+
+      const franchiseId = e.detail?.franchiseId;
+      if (!franchiseId) return;
+
+      const team = teamMap[franchiseId];
+      if (!team) return;
+
+      // Find and remove the verify prompt
+      const verifyEl = footer.querySelector('.nav-footer__verify');
+      if (!verifyEl) return; // Already authenticated — nothing to swap
+
+      // Build the authenticated team row
+      const teamRow = document.createElement('div');
+      teamRow.className = 'nav-footer__team-row';
+
+      const link = document.createElement('a');
+      link.href = rosterUrl;
+      link.className = 'nav-footer__team';
+      link.setAttribute('aria-label', `View ${team.name} roster`);
+
+      const logoDiv = document.createElement('div');
+      logoDiv.className = 'nav-footer__team-logo';
+      if (team.icon) {
+        const img = document.createElement('img');
+        img.src = team.icon;
+        img.alt = `${team.name} logo`;
+        img.className = 'nav-footer__team-img';
+        img.width = 40;
+        img.height = 40;
+        img.loading = 'lazy';
+        logoDiv.appendChild(img);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'nav-footer__team-placeholder';
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'nav-footer__icon');
+        svg.setAttribute('aria-hidden', 'true');
+        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.setAttribute('href', `${spUrl}#icon-shield-2`);
+        svg.appendChild(use);
+        placeholder.appendChild(svg);
+        logoDiv.appendChild(placeholder);
+      }
+
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'nav-footer__team-info';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'nav-footer__team-name';
+      nameSpan.textContent = team.name;
+      infoDiv.appendChild(nameSpan);
+
+      link.appendChild(logoDiv);
+      link.appendChild(infoDiv);
+      teamRow.appendChild(link);
+
+      // Swap: remove verify, insert team row before footer links
+      verifyEl.replaceWith(teamRow);
+    }) as EventListener);
+  }
+
+  document.addEventListener('astro:page-load', initAuthLoginListener);
 </script>
 
 <style>
