@@ -168,8 +168,12 @@ export default function TeamPanel({
         .team-panel__team-icon {
           width: 36px;
           height: 36px;
-          object-fit: contain;
+          object-fit: cover;
+          object-position: top center;
           flex-shrink: 0;
+          border-radius: var(--radius-full, 9999px);
+          border: 1px solid var(--content-border, #e2e8f0);
+          background: var(--color-gray-100, #f3f4f6);
         }
         .team-panel__select {
           width: 100%;

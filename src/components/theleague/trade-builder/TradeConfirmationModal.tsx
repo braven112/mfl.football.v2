@@ -129,6 +129,7 @@ export default function TradeConfirmationModal({
           const ext = extensions[p.id];
           return (
             <div key={p.id} className="tcm-asset-row">
+              <img src={p.headshot} alt="" className="tcm-asset-avatar" />
               <span className="tcm-asset-name">{p.name}</span>
               <span className="tcm-asset-pos">{p.position}</span>
               <span className="tcm-asset-salary">
@@ -398,8 +399,12 @@ export default function TradeConfirmationModal({
         .tcm-team-icon {
           width: 24px;
           height: 24px;
-          object-fit: contain;
+          object-fit: cover;
+          object-position: top center;
           flex-shrink: 0;
+          border-radius: var(--radius-full, 9999px);
+          border: 1px solid var(--content-border, #e2e8f0);
+          background: var(--color-gray-100, #f3f4f6);
         }
         .tcm-team-name {
           font-size: 0.75rem;
@@ -417,6 +422,15 @@ export default function TradeConfirmationModal({
         .tcm-assets {
           display: flex;
           flex-direction: column;
+        }
+        .tcm-asset-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: var(--radius-full, 9999px);
+          object-fit: cover;
+          object-position: top center;
+          background: var(--color-gray-100, #f3f4f6);
+          flex-shrink: 0;
         }
         .tcm-asset-row {
           display: flex;
