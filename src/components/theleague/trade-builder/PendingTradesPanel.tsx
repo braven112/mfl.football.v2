@@ -56,12 +56,10 @@ export default function PendingTradesPanel({
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       // Close the nav drawer if open to prevent z-index overlap
-      const navDrawer = document.querySelector('[data-nav-drawer]') as HTMLElement | null;
-      if (navDrawer?.classList.contains('nav-drawer--open')) {
-        navDrawer.classList.remove('nav-drawer--open');
-        navDrawer.setAttribute('aria-hidden', 'true');
-        const overlay = document.querySelector('[data-nav-overlay]') as HTMLElement | null;
-        if (overlay) overlay.style.display = 'none';
+      // Uses the exposed window.navDrawer API to properly clean up state
+      const navApi = (window as any).navDrawer;
+      if (navApi?.isOpen?.()) {
+        navApi.close();
       }
       fetchTrades();
       closeRef.current?.focus();

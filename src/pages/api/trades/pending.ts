@@ -50,10 +50,32 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    const data = await mflResponse.json();
+    const responseText = await mflResponse.text();
+    console.log('[trades/pending] MFL raw response (first 500 chars):', responseText.substring(0, 500));
+
+    let data: any;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('[trades/pending] Failed to parse MFL response as JSON');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Invalid response from MFL' }),
+        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      );
+    }
+
+    // Check for MFL error responses (auth failure, etc.)
+    if (data?.error) {
+      console.error('[trades/pending] MFL returned error:', JSON.stringify(data.error));
+      return new Response(
+        JSON.stringify({ success: false, message: 'MFL authentication error. Try logging out and back in.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      );
+    }
 
     // MFL returns empty string when no trades, or { pendingTrades: { trade: [...] } }
     const rawTrades = data?.pendingTrades?.trade;
+    console.log('[trades/pending] pendingTrades type:', typeof data?.pendingTrades, '| trade type:', typeof rawTrades, '| rawTrades:', JSON.stringify(rawTrades)?.substring(0, 200));
     if (!rawTrades) {
       return new Response(
         JSON.stringify({ success: true, trades: [] }),
