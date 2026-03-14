@@ -6,6 +6,9 @@
  * The action determines who can call it:
  *   - accept/reject: only the trade recipient
  *   - revoke: only the trade originator
+ *
+ * IMPORTANT: Write operations must target the league-specific host (www49)
+ * not the api.myfantasyleague.com load balancer.
  */
 
 import type { APIRoute } from 'astro';
@@ -47,7 +50,9 @@ export const POST: APIRoute = async ({ request }) => {
     const leagueId = user.leagueId || '13522';
     const mflCookie = user.id;
 
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
+    // Must use league-specific host for write operations
+    const mflHost = `www${Number(leagueId) % 50}.myfantasyleague.com`;
+    const importUrl = `https://${mflHost}/${year}/import`;
     const params = new URLSearchParams({
       TYPE: 'tradeResponse',
       L: leagueId,
@@ -60,6 +65,8 @@ export const POST: APIRoute = async ({ request }) => {
       params.set('COMMENTS', comments.trim());
     }
 
+    console.log(`[trades/respond] POST ${importUrl} tradeId=${tradeId} response=${response}`);
+
     const mflResponse = await fetch(importUrl, {
       method: 'POST',
       headers: {
@@ -67,9 +74,21 @@ export const POST: APIRoute = async ({ request }) => {
         Cookie: `MFL_USER_ID=${mflCookie}`,
       },
       body: params.toString(),
+      redirect: 'manual',
     });
 
+    // Redirect = wrong host or MFL bouncing
+    if (mflResponse.status >= 300 && mflResponse.status < 400) {
+      const location = mflResponse.headers.get('location');
+      console.error('[trades/respond] Unexpected redirect:', mflResponse.status, location);
+      return new Response(
+        JSON.stringify({ success: false, message: 'MFL redirected the request. Action was not completed.' }),
+        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      );
+    }
+
     const responseText = await mflResponse.text();
+    console.log('[trades/respond] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
     if (!mflResponse.ok) {
       console.error('[trades/respond] MFL error:', mflResponse.status, responseText);
