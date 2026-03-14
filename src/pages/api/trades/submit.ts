@@ -3,9 +3,11 @@
  *
  * Submit a trade proposal to MFL on behalf of the authenticated user.
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
+ * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
  *
- * IMPORTANT: Node's fetch converts POST→GET on 302 redirect, losing the body.
- * We use redirect: 'manual' and re-POST to the redirect target to preserve it.
+ * MFL redirects api.myfantasyleague.com to a host-specific URL (e.g., www49).
+ * Node's fetch converts POST→GET on 302, losing the body. To survive this,
+ * we put all parameters in the URL query string so they persist through redirects.
  */
 
 import type { APIRoute } from 'astro';
@@ -13,49 +15,6 @@ import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
-
-/** POST to MFL, following up to 3 redirects while preserving the POST body. */
-async function mflPost(
-  url: string,
-  body: string,
-  cookies: { userId: string; commish?: string },
-  maxRedirects = 3
-): Promise<Response> {
-  let currentUrl = url;
-  for (let i = 0; i <= maxRedirects; i++) {
-    const res = await fetch(currentUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: cookies.commish
-          ? `MFL_USER_ID=${cookies.userId}; MFL_IS_COMMISH=${cookies.commish}`
-          : `MFL_USER_ID=${cookies.userId}`,
-      },
-      body,
-      redirect: 'manual',
-    });
-
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) break;
-      console.log(`[trades/submit] Following redirect ${res.status} → ${location}`);
-      currentUrl = location;
-      continue;
-    }
-
-    return res;
-  }
-
-  // If we exhausted redirects, make one last attempt with follow
-  return fetch(currentUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Cookie: `MFL_USER_ID=${cookie}`,
-    },
-    body,
-  });
-}
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -87,8 +46,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
 
+    // Put params in URL query string so they survive POST→GET redirect conversion
     const params = new URLSearchParams({
       TYPE: 'tradeProposal',
       L: leagueId,
@@ -102,12 +61,18 @@ export const POST: APIRoute = async ({ request }) => {
       params.set('COMMENTS', comments.trim());
     }
 
-    console.log(`[trades/submit] POST ${importUrl} offeredTo=${offeredTo} body=${params.toString()}`);
+    const importUrl = `https://api.myfantasyleague.com/${year}/import?${params.toString()}`;
 
-    const mflResponse = await mflPost(importUrl, params.toString(), {
-      userId: user.id,
-      commish: user.commishCookie,
+    console.log(`[trades/submit] GET ${importUrl}`);
+
+    // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH
+    const mflResponse = await fetch(importUrl, {
+      method: 'GET',
+      headers: {
+        Cookie: `MFL_USER_ID=${user.id}`,
+      },
     });
+
     const responseText = await mflResponse.text();
     console.log('[trades/submit] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
@@ -129,9 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Verify the response actually confirms a trade — MFL returns HTML on GET
-    // (which happens when the POST body is lost). A successful trade import
-    // returns a short JSON/XML response, not a full HTML page.
+    // Detect when MFL returns an HTML page instead of an API response
     if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
       return new Response(
         JSON.stringify({ success: false, message: 'MFL did not process the trade. Please try again.' }),

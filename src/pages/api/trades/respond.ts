@@ -3,9 +3,9 @@
  *
  * Respond to a pending trade on MFL (accept, reject, or revoke/withdraw).
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
+ * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
  *
- * IMPORTANT: Node's fetch converts POST→GET on 302 redirect, losing the body.
- * We use redirect: 'manual' and re-POST to the redirect target to preserve it.
+ * Parameters go in the URL query string to survive MFL's 302 redirects.
  */
 
 import type { APIRoute } from 'astro';
@@ -15,50 +15,6 @@ import { getCurrentLeagueYear } from '../../../utils/league-year';
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const VALID_RESPONSES = ['accept', 'reject', 'revoke'] as const;
 type TradeResponse = (typeof VALID_RESPONSES)[number];
-
-/** POST to MFL, following up to 3 redirects while preserving the POST body. */
-async function mflPost(
-  url: string,
-  body: string,
-  cookies: { userId: string; commish?: string },
-  maxRedirects = 3
-): Promise<Response> {
-  const cookieHeader = cookies.commish
-    ? `MFL_USER_ID=${cookies.userId}; MFL_IS_COMMISH=${cookies.commish}`
-    : `MFL_USER_ID=${cookies.userId}`;
-
-  let currentUrl = url;
-  for (let i = 0; i <= maxRedirects; i++) {
-    const res = await fetch(currentUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: cookieHeader,
-      },
-      body,
-      redirect: 'manual',
-    });
-
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) break;
-      console.log(`[trades/respond] Following redirect ${res.status} → ${location}`);
-      currentUrl = location;
-      continue;
-    }
-
-    return res;
-  }
-
-  return fetch(currentUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Cookie: cookieHeader,
-    },
-    body,
-  });
-}
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -97,8 +53,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
 
+    // Put params in URL query string to survive POST→GET redirect conversion
     const params = new URLSearchParams({
       TYPE: 'tradeResponse',
       L: leagueId,
@@ -111,12 +67,18 @@ export const POST: APIRoute = async ({ request }) => {
       params.set('COMMENTS', comments.trim());
     }
 
-    console.log(`[trades/respond] POST ${importUrl} tradeId=${tradeId} response=${response}`);
+    const importUrl = `https://api.myfantasyleague.com/${year}/import?${params.toString()}`;
 
-    const mflResponse = await mflPost(importUrl, params.toString(), {
-      userId: user.id,
-      commish: user.commishCookie,
+    console.log(`[trades/respond] GET ${importUrl}`);
+
+    // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH
+    const mflResponse = await fetch(importUrl, {
+      method: 'GET',
+      headers: {
+        Cookie: `MFL_USER_ID=${user.id}`,
+      },
     });
+
     const responseText = await mflResponse.text();
     console.log('[trades/respond] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
@@ -138,7 +100,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Detect when POST body was lost (MFL returns HTML page instead of API response)
+    // Detect when MFL returns HTML instead of API response
     if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
       return new Response(
         JSON.stringify({ success: false, message: 'MFL did not process the request. Please try again.' }),
