@@ -189,6 +189,25 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     () => (authUserJson ? JSON.parse(authUserJson) : null)
   );
 
+  // Hydrate authUser from session cookie if server didn't provide it
+  // (happens with client-side navigation via ViewTransitions)
+  useEffect(() => {
+    if (authUser) return;
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.authenticated && data.user?.franchiseId) {
+          setAuthUser({
+            name: data.user.username,
+            franchiseId: data.user.franchiseId,
+            leagueId: data.user.leagueId,
+            role: data.user.role,
+          });
+        }
+      })
+      .catch(() => {}); // Silent — user just isn't logged in
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Refs for focus return
   const submitBtnRef = useRef<HTMLButtonElement>(null);
 
