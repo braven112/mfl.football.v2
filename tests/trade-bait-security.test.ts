@@ -4,7 +4,8 @@
  * Verifies:
  * - No write endpoint uses process.env.MFL_USER_ID (commish credentials)
  * - Roster ownership is validated before writes
- * - Only contracts use commish-level auth
+ * - Only contract endpoints use commish-level auth
+ * - Contract endpoints verify the logged-in user IS the commissioner before proceeding
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -107,5 +108,31 @@ describe('write endpoint security', () => {
     );
     expect(contractWriter).toContain('process.env.MFL_USER_ID');
     expect(contractWriter).toContain('MFL_IS_COMMISH');
+  });
+
+  it('contract endpoints that use commish credentials must verify user IS the commissioner', () => {
+    // Commish credentials can ONLY be used by the commish — not by any authenticated user.
+    // Every endpoint that touches commish-level operations must check user.role.
+    for (const endpoint of COMMISH_ALLOWED) {
+      const file = apiFiles.find(({ file: f }) => path.relative(apiDir, f) === endpoint);
+      expect(file, `${endpoint} should exist`).toBeDefined();
+
+      const content = file!.content;
+      const rel = endpoint;
+
+      // Must authenticate the user first
+      expect(content).toContain('getAuthUser(request)');
+
+      // Must check that the logged-in user has commissioner role
+      const hasRoleCheck =
+        content.includes("user.role !== 'commissioner'") ||
+        content.includes("user.role === 'commissioner'") ||
+        content.includes('isCommissioner');
+
+      expect(hasRoleCheck).toBe(true);
+
+      // Must return 403 if not commissioner
+      expect(content).toContain('Commissioner access required');
+    }
   });
 });
