@@ -197,3 +197,26 @@ Future franchise rebrandings just need a new history entry added to the config.
 2. Set initial visibility via inline `style` (no FOUC)
 3. Toggle via `el.style.display = showAdmin ? '' : 'none'`
 4. Store state in a cookie for SSR consistency on next page load
+
+---
+
+## 2026-03-14 - Astro Scoped CSS Specificity with Dynamic Classes
+
+**Context:** League Summary page used `:global(.league-summary__th--sorted)` to style dynamically-added classes, but the styles were losing to scoped rules.
+
+**Insight:** Astro adds `[data-astro-cid-xxx]` attribute selectors to scoped CSS rules. A `:global(.dynamic-class)` rule has lower specificity than a scoped `.base-class[data-astro-cid-xxx]` rule. To win, combine the scoped class with the global class: `.base-class:global(.dynamic-class)`.
+
+**Pattern:**
+```css
+/* ❌ Loses to scoped .league-summary__th */
+:global(.league-summary__th--sorted) {
+  color: var(--color-primary);
+}
+
+/* ✅ Wins because it includes the scoped class */
+.league-summary__th:global(.league-summary__th--sorted) {
+  color: var(--color-primary);
+}
+```
+
+**Evidence:** `src/components/theleague/LeagueSummaryTable.astro` — sorted column headers and preferred team row both needed this fix.

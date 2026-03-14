@@ -896,3 +896,52 @@ The parallelogram shape (vs. a simple trapezoid) was chosen because it creates v
 ```
 
 **Contrast rule for small white-on-color text:** At `0.75rem` (12px), white text on `--color-error` (#dc2626) is borderline (~4.0:1). Use `--color-error-dark` (#b91c1c, ~4.87:1) for backgrounds with white text at small sizes.
+
+---
+
+## 2026-03-14 - CRITICAL: Use Inset Box-Shadow for Table Row Indicators, Never border-left
+
+**Context:** League Summary page had a preferred team highlight using `border-left: 3px solid` on a `<tr>`. This created a visible white gap between the row border and the table header because `border-left` on table rows doesn't span the full visual row height — it's interrupted by row spacing, cell padding, and border-collapse behavior.
+
+**Rule:** When highlighting a table row with a colored left indicator, **always use `box-shadow: inset` on the first `<td>`**, never `border-left` on the `<tr>` or `<td>`.
+
+**Pattern:**
+```css
+/* ❌ WRONG — creates white gap between rows */
+.table-row--highlighted {
+  border-left: 3px solid var(--color-primary);
+}
+
+/* ❌ STILL WRONG — gap between cell border and row spacing */
+.table-row--highlighted td:first-child {
+  border-left: 3px solid var(--color-primary);
+}
+
+/* ✅ CORRECT — seamless indicator with no gaps */
+.table-row--highlighted td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary, #1c497c);
+}
+```
+
+**Why box-shadow works:** It paints inside the cell's box without affecting layout or creating gaps. Unlike `border-left`, it doesn't participate in border-collapse calculations and isn't interrupted by row spacing.
+
+**When this applies:**
+- Preferred/selected team highlighting in multi-team tables
+- Active row indicators in any sortable data table
+- "My team" highlighting in standings, league summary, or comparison views
+- Any table where a colored left-edge indicator marks a specific row
+
+**When border-left is fine:**
+- Section titles (editorial accent) — block elements, not table rows
+- Cards and panels — no row-spacing gap issue
+- `<thead> <tr>` with nearly-invisible gray spacer borders
+
+**Evidence:** `src/components/theleague/LeagueSummaryTable.astro` — preferred team row highlight.
+
+**Known instances that need this fix:**
+- **`src/pages/theleague/rosters.astro`** (lines 4095–4132): `.roster-row` uses `border-left: 4px solid transparent` with colored variants for active (green `#57b881`), practice (blue `#487ae7`), injured (red `#e56263`), and contract-action (amber `#f59e0b`). These are all on `<tr>` elements and will show the same gap. Fix: change all to `box-shadow: inset 4px 0 0 {color}` on the first `<td>`.
+- **`src/pages/theleague/rosters.astro`** (line 4221): `.roster-row--contract-action` uses `border-left: 3px solid #f59e0b !important` — same issue.
+- Any future multi-team table that highlights rows (standings, league comparison, draft order, etc).
+
+**Pages where border-left is fine (not table rows):**
+- Section titles, cards, chips, buttons — these are block/inline elements where border-left works correctly.
