@@ -300,6 +300,7 @@ describe('computeLeagueSummary draft capital', () => {
       ['0001', {
         total: 4,
         byRound: new Map([[1, 1], [2, 2], [3, 1]]),
+        picks: [{ round: 1, pickInRound: 1 }, { round: 2, pickInRound: 1 }, { round: 2, pickInRound: 2 }, { round: 3, pickInRound: 1 }],
       }],
     ]);
     const teams = [makeTeam()];
