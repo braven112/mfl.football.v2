@@ -42,16 +42,6 @@
           "description": "Phase-aware offseason planner with free agent needs analysis"
         },
         {
-          "id": "franchise-tags",
-          "label": "Franchise Tags",
-          "icon": "star",
-          "path": "/contracts/franchise-tags",
-          "external": false,
-          "leagueOnly": "theleague",
-          "visibility": "admin",
-          "description": "View all franchise tag declarations for the current offseason"
-        },
-        {
           "id": "draft-predictor",
           "label": "Draft Order",
           "icon": "draft-podium",
@@ -101,6 +91,15 @@
           "external": false,
           "leagueOnly": "theleague",
           "description": "See the latest features and improvements"
+        },
+        {
+          "id": "rules",
+          "label": "Rules",
+          "icon": "gavel",
+          "path": "/rules",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "League rules and bylaws"
         }
       ]
     },
@@ -276,7 +275,8 @@
     "/whats-new": "/whats-new",
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
-    "/about": "/about"
+    "/about": "/about",
+    "/rules": "/rules"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
