@@ -22,6 +22,13 @@ export const GET: APIRoute = async ({ request }) => {
     );
   }
 
+  if (!user.franchiseId) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'No franchise associated with your account.' }),
+      { status: 403, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+    );
+  }
+
   try {
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
