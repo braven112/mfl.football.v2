@@ -1,48 +1,52 @@
 /**
- * API endpoint for submitting a trade proposal to MFL
  * POST /api/trades/submit
  *
- * Requires authenticated user. The user's MFL cookie (stored as userId in session)
- * is forwarded to MFL to identify the proposing franchise.
+ * Submit a trade proposal to MFL on behalf of the authenticated user.
+ * Uses the user's MFL cookie (authUser.id) for per-user authentication,
+ * NOT the server-level process.env.MFL_USER_ID.
  *
- * IMPORTANT: Write operations must target the league-specific host (www49)
- * not the api.myfantasyleague.com load balancer, which 302-redirects POSTs
- * and Node's fetch converts them to GETs (losing the request body).
+ * Follows the same pattern as /api/trade-bait — uses api.myfantasyleague.com
+ * with redirect: 'follow' and no FRANCHISE_ID override.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 
+const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
 
   if (!user) {
     return new Response(
-      JSON.stringify({ success: false, message: 'Authentication required' }),
-      { status: 401, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      JSON.stringify({ success: false, message: 'Authentication required. Please sign in.' }),
+      { status: 401, headers: JSON_HEADERS }
+    );
+  }
+
+  if (!user.id) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'MFL session not found. Please sign in again.' }),
+      { status: 401, headers: JSON_HEADERS }
     );
   }
 
   try {
     const body = await request.json();
-    const { offeredTo, willGiveUp, willReceive, comments, franchiseId } = body;
+    const { offeredTo, willGiveUp, willReceive, comments } = body;
 
     if (!offeredTo || !willGiveUp || !willReceive) {
       return new Response(
         JSON.stringify({ success: false, message: 'Missing required fields: offeredTo, willGiveUp, willReceive' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+        { status: 400, headers: JSON_HEADERS }
       );
     }
 
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
-    const mflCookie = user.id; // MFL_USER_ID cookie stored as userId during login
+    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
 
-    // Must use league-specific host for write operations — NOT api.myfantasyleague.com
-    // MFL's internal routing doesn't follow a simple formula, so use the known host
-    const mflHost = 'www49.myfantasyleague.com';
-    const importUrl = `https://${mflHost}/${year}/import`;
     const params = new URLSearchParams({
       TYPE: 'tradeProposal',
       L: leagueId,
@@ -52,59 +56,26 @@ export const POST: APIRoute = async ({ request }) => {
       JSON: '1',
     });
 
-    // Commissioner accounts (franchiseId "0000") must specify which franchise
-    // they're acting as. The client sends the actual franchise ID.
-    if (franchiseId && franchiseId !== '0000') {
-      params.set('FRANCHISE_ID', franchiseId);
-    }
-
     if (comments?.trim()) {
       params.set('COMMENTS', comments.trim());
     }
 
-    const fetchBody = params.toString();
-    const fetchHeaders = {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Cookie: `MFL_USER_ID=${mflCookie}`,
-    };
+    console.log(`[trades/submit] POST ${importUrl} offeredTo=${offeredTo}`);
 
-    console.log(`[trades/submit] POST ${importUrl} offeredTo=${offeredTo} franchiseId=${franchiseId || 'none'}`);
-
-    // Use redirect: 'manual' so Node doesn't convert POST→GET on 302.
-    // If MFL redirects, re-POST to the redirect target.
-    let mflResponse = await fetch(importUrl, {
+    const mflResponse = await fetch(importUrl, {
       method: 'POST',
-      headers: fetchHeaders,
-      body: fetchBody,
-      redirect: 'manual',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: `MFL_USER_ID=${user.id}`,
+      },
+      body: params.toString(),
+      redirect: 'follow',
     });
-
-    // Follow redirect manually — re-POST to the new location
-    if (mflResponse.status >= 300 && mflResponse.status < 400) {
-      const location = mflResponse.headers.get('location');
-      console.log('[trades/submit] Following redirect to:', location);
-      if (location) {
-        mflResponse = await fetch(location, {
-          method: 'POST',
-          headers: fetchHeaders,
-          body: fetchBody,
-          redirect: 'manual',
-        });
-      }
-    }
 
     const responseText = await mflResponse.text();
     console.log('[trades/submit] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
-    if (!mflResponse.ok) {
-      console.error('[trades/submit] MFL error:', mflResponse.status, responseText);
-      return new Response(
-        JSON.stringify({ success: false, message: `MFL API error: ${mflResponse.status}` }),
-        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-      );
-    }
-
-    // Check for MFL error responses in the body
+    // MFL returns HTTP 200 even for errors — check response body
     if (responseText.includes('<error>') || responseText.includes('"error"')) {
       console.error('[trades/submit] MFL returned error:', responseText);
       const errorMatch = responseText.match(/<error[^>]*>(.*?)<\/error>/s)
@@ -112,19 +83,27 @@ export const POST: APIRoute = async ({ request }) => {
       const errorMsg = errorMatch?.[1] || 'MFL rejected the trade proposal';
       return new Response(
         JSON.stringify({ success: false, message: errorMsg }),
-        { status: 400, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+        { status: 400, headers: JSON_HEADERS }
+      );
+    }
+
+    if (!mflResponse.ok) {
+      console.error('[trades/submit] MFL error:', mflResponse.status, responseText);
+      return new Response(
+        JSON.stringify({ success: false, message: `MFL API error: ${mflResponse.status}` }),
+        { status: 502, headers: JSON_HEADERS }
       );
     }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Trade proposal submitted' }),
-      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      { status: 200, headers: JSON_HEADERS }
     );
   } catch (error) {
     console.error('[trades/submit] Error:', error);
     return new Response(
       JSON.stringify({ success: false, message: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      { status: 500, headers: JSON_HEADERS }
     );
   }
 };

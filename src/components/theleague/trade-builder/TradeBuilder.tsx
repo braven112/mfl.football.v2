@@ -413,9 +413,6 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           willGiveUp,
           willReceive,
           comments: message || undefined,
-          // Send the actual franchise ID for commissioner accounts whose
-          // session has "0000" — MFL needs FRANCHISE_ID to know who's proposing
-          franchiseId: userTeamSide.franchiseId,
         }),
       });
 
