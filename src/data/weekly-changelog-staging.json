@@ -1,4 +1,12 @@
 {
   "weekOf": "2026-03-16",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-03-13",
+      "type": "bug-fix",
+      "summary": "Trade submissions now work for all league owners, not just the commissioner — the MFL authentication cookie was being silently stripped during cross-origin redirects, causing every trade proposal to fail",
+      "impact": "user",
+      "area": "trade-builder"
+    }
+  ]
 }

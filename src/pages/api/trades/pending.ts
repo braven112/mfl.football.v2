@@ -3,11 +3,13 @@
  * GET /api/trades/pending
  *
  * Returns all pending trades for the authenticated user's franchise.
+ * Uses mflFetch() to preserve Cookie headers across MFL's cross-origin redirects.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { mflFetch } from '../../../utils/mfl-fetch';
 import type { PendingTrade } from '../../../types/trade-builder';
 
 export const GET: APIRoute = async ({ request }) => {
@@ -27,12 +29,10 @@ export const GET: APIRoute = async ({ request }) => {
 
     const exportUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=pendingTrades&L=${leagueId}&JSON=1`;
 
-    const mflResponse = await fetch(exportUrl, {
+    const mflResponse = await mflFetch({
+      url: exportUrl,
       method: 'GET',
-      headers: {
-        Cookie: `MFL_USER_ID=${mflCookie}`,
-      },
-      redirect: 'follow',
+      mflUserCookie: mflCookie,
     });
 
     if (!mflResponse.ok) {

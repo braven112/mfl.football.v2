@@ -382,3 +382,36 @@ Cookie: MFL_USER_ID=xxx; MFL_IS_COMMISH=yyy
 - `MFL_HOST` — override read host (default: `https://api.myfantasyleague.com`)
 
 **Recommendation:** When obtaining commissioner credentials for any MFL league, always capture BOTH cookies from the browser. The `MFL_IS_COMMISH` cookie is set separately by MFL's commissioner login flow.
+
+---
+
+## 2026-03-13 - Node.js Undici Strips Cookie Headers on Cross-Origin Redirects
+
+**Context:** All trade submissions (submit, respond, pending) were failing silently because MFL's `api.myfantasyleague.com` 302-redirects to `www49.myfantasyleague.com`, and Node.js undici strips the Cookie header on cross-origin redirects.
+
+**Insight:** Node.js's built-in `fetch()` (powered by undici) automatically strips sensitive headers — including `Cookie`, `Authorization`, and `Proxy-Authorization` — when following redirects to a different origin. Since `api.myfantasyleague.com` and `www49.myfantasyleague.com` are different origins, the `MFL_USER_ID` cookie was silently dropped on every authenticated request that went through the redirect.
+
+**Evidence:**
+```javascript
+// Cookie is present on first request to api.myfantasyleague.com
+// After 302 redirect to www49.myfantasyleague.com, Cookie header is GONE
+// MFL returns "API requires a logged in user" error
+```
+
+**Additional finding:** MFL's redirect behavior differs by endpoint and method:
+
+| Endpoint | Method | Redirects? | Notes |
+|----------|--------|------------|-------|
+| `/export` | GET | Yes — 302 to www49 | Cookie stripped on redirect |
+| `/import` | GET | Yes — 302 to www49 | Cookie stripped on redirect |
+| `/import` | POST | **No redirect** | Processed directly at api.mfl |
+
+**Fix:** Created `src/utils/mfl-fetch.ts` which uses `redirect: 'manual'` and follows redirects manually, re-attaching the Cookie header on each hop. All trade API routes now use this utility.
+
+**Recommendation:** NEVER use raw `fetch()` with `redirect: 'follow'` (the default) when making authenticated requests to `api.myfantasyleague.com`. Always use `mflFetch()` from `src/utils/mfl-fetch.ts`. This also applies to `src/utils/mfl-matchup-api.ts:updateTradeBait()` which may have the same bug (uses POST with `redirect: 'follow'` — currently works because POST to `/import` doesn't redirect, but is fragile).
+
+**Key files:**
+- `src/utils/mfl-fetch.ts` — the redirect-safe fetch utility
+- `src/pages/api/trades/submit.ts` — uses mflFetch
+- `src/pages/api/trades/respond.ts` — uses mflFetch
+- `src/pages/api/trades/pending.ts` — uses mflFetch

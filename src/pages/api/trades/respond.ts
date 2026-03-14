@@ -5,12 +5,15 @@
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
  * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
  *
- * Parameters go in the URL query string to survive MFL's 302 redirects.
+ * Uses mflFetch() to handle the cross-origin redirect from
+ * api.myfantasyleague.com → www49, which would otherwise strip the
+ * Cookie header and cause "API requires a logged in user" errors.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { mflFetch } from '../../../utils/mfl-fetch';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const VALID_RESPONSES = ['accept', 'reject', 'revoke'] as const;
@@ -54,29 +57,27 @@ export const POST: APIRoute = async ({ request }) => {
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
 
-    // Put params in URL query string to survive POST→GET redirect conversion
     const params = new URLSearchParams({
       TYPE: 'tradeResponse',
       L: leagueId,
       TRADE_ID: tradeId,
       RESPONSE: response,
-      JSON: '1',
     });
 
     if (comments?.trim()) {
       params.set('COMMENTS', comments.trim());
     }
 
-    const importUrl = `https://api.myfantasyleague.com/${year}/import?${params.toString()}`;
+    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
 
-    console.log(`[trades/respond] GET ${importUrl}`);
+    console.log(`[trades/respond] POST ${importUrl} (TRADE_ID=${tradeId}, RESPONSE=${response})`);
 
     // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH
-    const mflResponse = await fetch(importUrl, {
-      method: 'GET',
-      headers: {
-        Cookie: `MFL_USER_ID=${user.id}`,
-      },
+    const mflResponse = await mflFetch({
+      url: importUrl,
+      method: 'POST',
+      mflUserCookie: user.id,
+      body: params.toString(),
     });
 
     const responseText = await mflResponse.text();

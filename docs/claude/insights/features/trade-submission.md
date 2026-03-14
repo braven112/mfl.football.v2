@@ -54,3 +54,11 @@ The trade builder already serializes state to URL params (`?a=0001&b=0012&ap=166
 ## Overlay Click Safety
 
 Gate overlay/backdrop `onClick` handlers on `!isSubmitting` during async operations to prevent accidental dismissal mid-flight. The cancel button already has `disabled={isSubmitting}` but the overlay needs the same protection.
+
+## Cross-Origin Cookie Stripping (Critical Bug Fix — 2026-03-13)
+
+Node.js undici strips Cookie headers on cross-origin 302 redirects. MFL's `api.myfantasyleague.com` redirects to `www49.myfantasyleague.com`, which silently drops the `MFL_USER_ID` cookie. All trade API routes MUST use `mflFetch()` from `src/utils/mfl-fetch.ts` instead of raw `fetch()` to preserve authentication across redirects.
+
+## Franchise Validation in TradeConfirmationModal
+
+The confirmation modal now validates that the authenticated user's franchise is part of the trade before allowing submission. Shows a "Proposing as [Team Name]" indicator and blocks submission with "Not Your Trade" if the user isn't a participant. The error message is placed in the footer (not the body) so it remains visible near the disabled button on mobile viewports.
