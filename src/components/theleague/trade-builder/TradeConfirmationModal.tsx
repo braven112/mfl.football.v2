@@ -22,6 +22,8 @@ interface Props {
   impactA: TeamTradeImpact;
   impactB: TeamTradeImpact;
   submissionStatus: TradeSubmissionState;
+  /** The logged-in user's franchise ID — used to show "Trading as" and validate */
+  userFranchiseId: string | null;
   onSubmit: (message: string) => void;
   onClose: () => void;
 }
@@ -39,6 +41,7 @@ export default function TradeConfirmationModal({
   impactA,
   impactB,
   submissionStatus,
+  userFranchiseId,
   onSubmit,
   onClose,
 }: Props) {
@@ -48,6 +51,12 @@ export default function TradeConfirmationModal({
 
   const isSubmitting = submissionStatus.status === 'submitting';
   const isSuccess = submissionStatus.status === 'success';
+
+  // Determine if the user's franchise is part of this trade
+  const userIsTeamA = userFranchiseId === teamA.franchiseId;
+  const userIsTeamB = userFranchiseId === teamB.franchiseId;
+  const userIsPartOfTrade = userIsTeamA || userIsTeamB;
+  const userTeam = userIsTeamA ? teamA : userIsTeamB ? teamB : null;
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -175,6 +184,14 @@ export default function TradeConfirmationModal({
         <div className="tcm-body">
           <h2 id="tcm-title" className="tcm-title">Confirm Trade Proposal</h2>
 
+          {userTeam && (
+            <div className="tcm-trading-as">
+              <img src={userTeam.icon} alt="" className="tcm-trading-as__icon" />
+              <span className="tcm-trading-as__label">Proposing as</span>
+              <span className="tcm-trading-as__name">{userTeam.nameShort || userTeam.nameMedium}</span>
+            </div>
+          )}
+
           {renderTeamSection(teamA, teamAPlayers, teamADraftPicks, teamARookieExtensions)}
 
           <div className="tcm-swap-indicator" aria-hidden="true">
@@ -220,6 +237,14 @@ export default function TradeConfirmationModal({
         </div>
 
         <div className="tcm-footer">
+          {!userIsPartOfTrade && (
+            <div id="tcm-not-participant-error" className="tcm-error" role="alert">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+              </svg>
+              You must be one of the teams in this trade to submit it.
+            </div>
+          )}
           {submissionStatus.status === 'error' && (
             <div className="tcm-error" role="alert">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -247,9 +272,10 @@ export default function TradeConfirmationModal({
             <button
               className="tcm-btn-submit"
               onClick={() => onSubmit(message)}
-              disabled={isSubmitting || isSuccess}
+              disabled={isSubmitting || isSuccess || !userIsPartOfTrade}
+              aria-describedby={!userIsPartOfTrade ? 'tcm-not-participant-error' : undefined}
             >
-              {isSubmitting ? 'Sending...' : isSuccess ? 'Sent!' : submissionStatus.status === 'error' ? 'Retry' : 'Send Proposal'}
+              {!userIsPartOfTrade ? 'Not Your Trade' : isSubmitting ? 'Sending...' : isSuccess ? 'Sent!' : submissionStatus.status === 'error' ? 'Retry' : 'Send Proposal'}
             </button>
           </div>
         </div>
@@ -316,6 +342,38 @@ export default function TradeConfirmationModal({
           font-weight: 700;
           color: var(--color-gray-900, #111827);
           margin: 0 0 1.25rem 0;
+        }
+        .tcm-trading-as {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 0.75rem;
+          background: var(--color-gray-50, #f9fafb);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-md, 0.5rem);
+          margin-bottom: 1rem;
+        }
+        .tcm-trading-as__icon {
+          width: 20px;
+          height: 20px;
+          object-fit: contain;
+          flex-shrink: 0;
+        }
+        .tcm-trading-as__label {
+          font-size: 0.6875rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: var(--color-gray-500, #6b7280);
+        }
+        .tcm-trading-as__name {
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: var(--color-gray-900, #111827);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          min-width: 0;
         }
         .tcm-team-section {
           margin-bottom: 0.5rem;

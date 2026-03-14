@@ -5,14 +5,15 @@
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
  * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
  *
- * MFL redirects api.myfantasyleague.com to a host-specific URL (e.g., www49).
- * Node's fetch converts POST→GET on 302, losing the body. To survive this,
- * we put all parameters in the URL query string so they persist through redirects.
+ * Uses mflFetch() to handle the cross-origin redirect from
+ * api.myfantasyleague.com → www49, which would otherwise strip the
+ * Cookie header and cause "API requires a logged in user" errors.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { mflFetch } from '../../../utils/mfl-fetch';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -47,30 +48,28 @@ export const POST: APIRoute = async ({ request }) => {
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
 
-    // Put params in URL query string so they survive POST→GET redirect conversion
     const params = new URLSearchParams({
       TYPE: 'tradeProposal',
       L: leagueId,
       OFFEREDTO: offeredTo,
       WILL_GIVE_UP: willGiveUp,
       WILL_RECEIVE: willReceive,
-      JSON: '1',
     });
 
     if (comments?.trim()) {
       params.set('COMMENTS', comments.trim());
     }
 
-    const importUrl = `https://api.myfantasyleague.com/${year}/import?${params.toString()}`;
+    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
 
-    console.log(`[trades/submit] GET ${importUrl}`);
+    console.log(`[trades/submit] POST ${importUrl} (OFFEREDTO=${offeredTo})`);
 
     // Owner mode: only MFL_USER_ID cookie, no MFL_IS_COMMISH
-    const mflResponse = await fetch(importUrl, {
-      method: 'GET',
-      headers: {
-        Cookie: `MFL_USER_ID=${user.id}`,
-      },
+    const mflResponse = await mflFetch({
+      url: importUrl,
+      method: 'POST',
+      mflUserCookie: user.id,
+      body: params.toString(),
     });
 
     const responseText = await mflResponse.text();

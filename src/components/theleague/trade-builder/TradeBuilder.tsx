@@ -624,6 +624,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           impactA={tradeImpactA}
           impactB={tradeImpactB}
           submissionStatus={submissionStatus}
+          userFranchiseId={authUser?.franchiseId ?? null}
           onSubmit={handleSubmitTrade}
           onClose={() => {
             setShowConfirmationModal(false);
