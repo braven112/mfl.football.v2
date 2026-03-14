@@ -6,7 +6,9 @@
  * 1. Authenticated state: Team logo, name, and owner info
  * 2. Unauthenticated state: "Verify Your Team" prompt with link to MFL
  *
- * Supports collapsed mode where only the icon/logo is shown with a tooltip.
+ * Commissioners see a toggle button (up/down chevron) to switch between
+ * owner mode and commissioner mode. Commissioner mode shows a circular
+ * Goodell avatar and "Commissioner / League Office" labels.
  *
  * @see NavFooterProps in src/types/nav.ts
  * @see Design tokens in src/assets/css/src/_nav-tokens.scss
@@ -28,6 +30,8 @@ const {
   leagueId,
   verifyTeamUrl,
   league = 'theleague',
+  isCommissioner = false,
+  isCommishMode = false,
 } = Astro.props;
 
 // Build the roster GM page URL
@@ -62,43 +66,105 @@ function getFooterLinkUrl(link: NavFooterLink): string {
 }
 
 const isAuthenticated = !!team;
+
+// Determine initial display state for commissioner toggle
+const showCommish = isCommissioner && isCommishMode;
 ---
 
 <footer
   class="nav-footer"
   role="contentinfo"
 >
-  {isAuthenticated ? (
-    <!-- Authenticated State: Team Info - Links to Rosters page -->
-    <a href={rosterUrl} class="nav-footer__team" aria-label={`View ${team.teamName} roster`}>
-      <div class="nav-footer__team-logo">
-        {team.iconUrl ? (
-          <img
-            src={team.iconUrl}
-            alt={`${team.teamName} logo`}
-            class="nav-footer__team-img"
-            width="40"
-            height="40"
-            loading="lazy"
-          />
-        ) : (
-          <!-- Fallback icon if no team logo -->
-          <div class="nav-footer__team-placeholder">
-            <svg class="nav-footer__icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-shield-2`}></use>
-            </svg>
-          </div>
-        )}
-      </div>
-      <div class="nav-footer__team-info">
-        <span class="nav-footer__team-name">{team.teamName}</span>
-        {team.ownerName && (
-          <span class="nav-footer__owner-name">{team.ownerName}</span>
-        )}
-      </div>
-    </a>
-  ) : (
-    <!-- Unauthenticated State: Verify Prompt -->
+  {/* Authenticated State: Team Info Row with optional commissioner toggle */}
+  {isAuthenticated && (
+    <div class="nav-footer__team-row">
+      <a
+        href={rosterUrl}
+        class="nav-footer__team"
+        aria-label={showCommish ? 'Commissioner dashboard' : `View ${team.teamName} roster`}
+        data-commish-link
+        data-owner-label={`View ${team.teamName} roster`}
+      >
+        <div
+          class:list={['nav-footer__team-logo', { 'nav-footer__team-logo--commish': showCommish }]}
+          data-commish-swap="logo"
+        >
+          {showCommish && (
+            <img
+              src="/assets/commissioner-avatar.webp"
+              alt="Commissioner"
+              class="nav-footer__team-img"
+              width="40"
+              height="40"
+              loading="lazy"
+            />
+          )}
+          {!showCommish && team.iconUrl && (
+            <img
+              src={team.iconUrl}
+              alt={`${team.teamName} logo`}
+              class="nav-footer__team-img"
+              width="40"
+              height="40"
+              loading="lazy"
+            />
+          )}
+          {!showCommish && !team.iconUrl && (
+            <div class="nav-footer__team-placeholder">
+              <svg class="nav-footer__icon" aria-hidden="true">
+                <use href={`${spriteUrl}#icon-shield-2`}></use>
+              </svg>
+            </div>
+          )}
+        </div>
+        <div class="nav-footer__team-info" data-commish-swap="info">
+          <span class="nav-footer__team-name">{showCommish ? 'Commissioner' : team.teamName}</span>
+          {showCommish && (
+            <span class="nav-footer__owner-name">League Office</span>
+          )}
+          {!showCommish && team.ownerName && (
+            <span class="nav-footer__owner-name">{team.ownerName}</span>
+          )}
+        </div>
+      </a>
+      {isCommissioner && (
+        <button
+          type="button"
+          class="nav-footer__commish-toggle"
+          aria-label={showCommish ? 'Switch to owner mode' : 'Switch to commissioner mode'}
+          aria-pressed={showCommish ? 'true' : 'false'}
+          data-commish-toggle
+          data-commish-team-name={team.teamName}
+          data-commish-team-icon={team.iconUrl || ''}
+          data-commish-team-owner={team.ownerName || ''}
+          data-sprite-url={spriteUrl}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M7 15l5 5 5-5" />
+            <path d="M7 9l5-5 5 5" />
+          </svg>
+        </button>
+      )}
+    </div>
+  )}
+
+  {/* Screen reader announcement region for commissioner toggle */}
+  {isAuthenticated && isCommissioner && (
+    <div class="visually-hidden" aria-live="polite" role="status" aria-atomic="true" data-commish-announce></div>
+  )}
+
+  {/* Unauthenticated State: Verify Prompt */}
+  {!isAuthenticated && (
     <a
       href={`${leagueBase}/login`}
       class="nav-footer__verify"
@@ -139,6 +205,143 @@ const isAuthenticated = !!team;
   )}
 </footer>
 
+{/* Commissioner toggle client-side behavior — unconditional script, guarded by element check */}
+<script>
+  function initCommishToggle() {
+    const COOKIE_NAME = 'commish-mode';
+    const toggle = document.querySelector('[data-commish-toggle]') as HTMLButtonElement | null;
+    const announcer = document.querySelector('[data-commish-announce]');
+    if (!toggle) return;
+
+    // Read team data from toggle's data attributes (server-rendered, trusted)
+    const teamName = toggle.dataset.commishTeamName || 'My Team';
+    const teamIcon = toggle.dataset.commishTeamIcon || '';
+    const teamOwner = toggle.dataset.commishTeamOwner || '';
+    const spUrl = toggle.dataset.spriteUrl || '/assets/icons/sprite.svg';
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function isCommishMode(): boolean {
+      return document.cookie.split('; ').some(c => c === `${COOKIE_NAME}=true`);
+    }
+
+    function setCommishCookie(enabled: boolean): void {
+      if (enabled) {
+        document.cookie = `${COOKIE_NAME}=true; path=/; max-age=31536000; SameSite=Lax`;
+      } else {
+        document.cookie = `${COOKIE_NAME}=; path=/; max-age=0`;
+      }
+    }
+
+    /** Build footer content using safe DOM methods */
+    function buildImg(src: string, alt: string): HTMLImageElement {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = alt;
+      img.className = 'nav-footer__team-img';
+      img.width = 40;
+      img.height = 40;
+      img.loading = 'lazy';
+      return img;
+    }
+
+    function buildPlaceholder(): HTMLDivElement {
+      const div = document.createElement('div');
+      div.className = 'nav-footer__team-placeholder';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'nav-footer__icon');
+      svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', `${spUrl}#icon-shield-2`);
+      svg.appendChild(use);
+      div.appendChild(svg);
+      return div;
+    }
+
+    function buildTextSpan(className: string, text: string): HTMLSpanElement {
+      const span = document.createElement('span');
+      span.className = className;
+      span.textContent = text;
+      return span;
+    }
+
+    function updateFooterContent(isCommish: boolean): void {
+      const logoEl = document.querySelector('[data-commish-swap="logo"]') as HTMLElement | null;
+      const infoEl = document.querySelector('[data-commish-swap="info"]') as HTMLElement | null;
+      const linkEl = document.querySelector('[data-commish-link]') as HTMLAnchorElement | null;
+      if (!logoEl || !infoEl || !linkEl) return;
+
+      logoEl.replaceChildren();
+      infoEl.replaceChildren();
+
+      if (isCommish) {
+        logoEl.classList.add('nav-footer__team-logo--commish');
+        logoEl.appendChild(buildImg('/assets/commissioner-avatar.webp', 'Commissioner'));
+        infoEl.appendChild(buildTextSpan('nav-footer__team-name', 'Commissioner'));
+        infoEl.appendChild(buildTextSpan('nav-footer__owner-name', 'League Office'));
+        linkEl.setAttribute('aria-label', 'Commissioner dashboard');
+      } else {
+        logoEl.classList.remove('nav-footer__team-logo--commish');
+        if (teamIcon) {
+          logoEl.appendChild(buildImg(teamIcon, `${teamName} logo`));
+        } else {
+          logoEl.appendChild(buildPlaceholder());
+        }
+        infoEl.appendChild(buildTextSpan('nav-footer__team-name', teamName));
+        if (teamOwner) {
+          infoEl.appendChild(buildTextSpan('nav-footer__owner-name', teamOwner));
+        }
+        linkEl.setAttribute('aria-label', linkEl.dataset.ownerLabel || `View ${teamName} roster`);
+      }
+    }
+
+    function updateAdminNavLinks(showAdmin: boolean): void {
+      const adminLinks = document.querySelectorAll('[data-visibility="admin"]');
+      adminLinks.forEach(el => {
+        (el as HTMLElement).style.display = showAdmin ? '' : 'none';
+      });
+      const adminSections = document.querySelectorAll('[data-section-visibility="admin"]');
+      adminSections.forEach(el => {
+        (el as HTMLElement).style.display = showAdmin ? '' : 'none';
+      });
+    }
+
+    toggle.addEventListener('click', () => {
+      const entering = !isCommishMode();
+      setCommishCookie(entering);
+
+      // ARIA updates fire immediately — no delay
+      toggle.setAttribute('aria-pressed', String(entering));
+      toggle.setAttribute('aria-label',
+        entering ? 'Switch to owner mode' : 'Switch to commissioner mode'
+      );
+
+      if (announcer) {
+        announcer.textContent = entering
+          ? 'Commissioner mode activated'
+          : 'Owner mode activated';
+        setTimeout(() => { announcer.textContent = ''; }, 1000);
+      }
+
+      // Visual crossfade (skipped for reduced motion)
+      if (prefersReducedMotion) {
+        updateFooterContent(entering);
+        updateAdminNavLinks(entering);
+      } else {
+        const swaps = document.querySelectorAll('[data-commish-swap]');
+        swaps.forEach(el => el.classList.add('is-fading'));
+        setTimeout(() => {
+          updateFooterContent(entering);
+          updateAdminNavLinks(entering);
+          swaps.forEach(el => el.classList.remove('is-fading'));
+        }, 200);
+      }
+    });
+  }
+
+  // Initialize on page load and after View Transitions
+  document.addEventListener('astro:page-load', initCommishToggle);
+</script>
+
 <style>
   /* ==============================================
    * NAV FOOTER - Base Styles
@@ -156,6 +359,20 @@ const isAuthenticated = !!team;
     box-shadow: 0 -1px 1px hsl(220deg 3% 15% / 0.08),
                 0 -2px 2px hsl(220deg 3% 15% / 0.06),
                 0 -3px 4px hsl(220deg 3% 15% / 0.04);
+  }
+
+  /* ==============================================
+   * TEAM ROW - Wrapper for team info + toggle
+   * ============================================== */
+  .nav-footer__team-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-xs, 4px);
+  }
+
+  .nav-footer__team-row .nav-footer__team {
+    flex: 1;
+    min-width: 0;
   }
 
   /* ==============================================
@@ -193,6 +410,11 @@ const isAuthenticated = !!team;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Circular avatar for commissioner mode */
+  .nav-footer__team-logo--commish {
+    border-radius: 50%;
   }
 
   .nav-footer__team-img {
@@ -240,6 +462,60 @@ const isAuthenticated = !!team;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ==============================================
+   * COMMISSIONER TOGGLE - Up/down chevron button
+   * ============================================== */
+  .nav-footer__commish-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--nav-border-radius-sm, 4px);
+    color: var(--nav-text-muted, #6b7280);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    position: relative;
+    transition: var(--nav-hover-transition, background-color 0.15s ease);
+  }
+
+  /* Expand tap area to 44px minimum (WCAG 2.5.8) */
+  .nav-footer__commish-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-footer__commish-toggle:hover {
+    background: var(--nav-hover-bg, #f3f4f6);
+    color: var(--nav-text, #333333);
+  }
+
+  .nav-footer__commish-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  /* Active pressed state — subtle primary tint */
+  .nav-footer__commish-toggle[aria-pressed="true"] {
+    background: rgba(28, 73, 124, 0.08);
+    color: var(--color-primary, #1c497c);
+  }
+
+  /* Crossfade transition on swappable content */
+  [data-commish-swap] {
+    transition: opacity 0.2s ease;
+  }
+
+  :global([data-commish-swap].is-fading) {
+    opacity: 0;
   }
 
   /* ==============================================
@@ -370,12 +646,46 @@ const isAuthenticated = !!team;
   }
 
   /* ==============================================
+   * DARK MODE
+   * ============================================== */
+  :global(.dark) .nav-footer__commish-toggle {
+    color: var(--nav-text-muted);
+  }
+
+  :global(.dark) .nav-footer__commish-toggle:hover {
+    background: var(--nav-hover-bg);
+    color: var(--nav-text);
+  }
+
+  :global(.dark) .nav-footer__commish-toggle[aria-pressed="true"] {
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+  }
+
+  /* ==============================================
+   * VISUALLY HIDDEN (accessible screen reader text)
+   * ============================================== */
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* ==============================================
    * ACCESSIBILITY
    * ============================================== */
   @media (prefers-reduced-motion: reduce) {
     .nav-footer__verify,
     .nav-footer__verify-arrow,
-    .nav-footer__link {
+    .nav-footer__link,
+    .nav-footer__commish-toggle,
+    [data-commish-swap] {
       transition: none;
     }
   }

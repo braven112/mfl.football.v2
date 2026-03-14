@@ -139,3 +139,61 @@ Future franchise rebrandings just need a new history entry added to the config.
 **Evidence:** FreeAgentNeedsCard.astro had broken Kansas City Chiefs logo (KCC.svg not found — file is KC.svg). DEF players showed generic silhouette instead of team logo.
 
 **Recommendation:** Before building any new player list/card/table, check CLAUDE.md > Player Display for the required pattern. Use `normalizeTeamCode()` for ALL NFL logo URLs. Test with JAC, KCC, NEP, NOS teams.
+
+---
+
+## 2026-03-13 - Conditional `<script>` Tags Break Astro Deduplication
+
+**Context:** Performance review of the commissioner toggle feature in `src/components/nav/NavFooter.astro`.
+
+**Insight:** Wrapping an Astro `<script>` block inside a JSX-style conditional (`{condition && (<script>...</script>)}`) defeats Astro's module deduplication. Astro deduplicates scripts by content hash, but only for unconditionally rendered scripts. A conditionally rendered `<script>` is treated as a dynamic expression and may be injected multiple times across View Transitions navigations. Additionally, `astro:page-load` listeners registered inside such a conditional accumulate without being removed on subsequent navigations, creating ghost listeners.
+
+**Evidence:** `src/components/nav/NavFooter.astro` lines 209–344. The `initCommishToggle` function registers a new `astro:page-load` listener on every call without removing the previous one.
+
+**Recommendation:** Always place `<script>` blocks unconditionally and guard initialization logic inside the function body instead:
+```astro
+<!-- DO NOT do this -->
+{isCommissioner && (
+  <script>
+    document.addEventListener('astro:page-load', init);
+  </script>
+)}
+
+<!-- DO this instead -->
+<script>
+  function init() {
+    const el = document.querySelector('[data-my-trigger]');
+    if (!el) return; // Guard here, not at the script level
+    // ...
+  }
+  document.addEventListener('astro:page-load', init);
+</script>
+```
+
+---
+
+## 2026-03-13 - Admin Visibility Filtering Is Commissioner-Safe
+
+**Context:** Performance review of commissioner toggle — verifying admin nav links aren't stripped before NavLinks sees them.
+
+**Insight:** The layout-level `getVisibleSections(league, myteam, adminFranchiseIds)` does NOT strip admin sections for commissioners, because `isCommissioner` requires `adminFranchiseIds.includes(myteam)` — the same check `isSectionVisible()` uses. So admin sections always survive the layout filter for commissioner users. NavLinks then adds its own override to render admin links as hidden (toggleable) rather than omitted.
+
+**Evidence:** `TheLeagueLayout.astro` line 147–151, `nav-utils.ts` line 237–239. Both use `adminFranchiseIds.includes(franchiseId)` as the gate.
+
+**Recommendation:** This two-pass pattern is safe but could be simplified in a future refactor. If a non-commissioner admin role is ever added (where `isCommissioner` differs from `isAdmin`), the filtering would need revisiting.
+
+---
+
+## 2026-03-13 - Client-Side Admin Link Toggle Pattern
+
+**Context:** Commissioner toggle needs to show/hide admin-only nav links without a page reload.
+
+**Insight:** Admin links are always rendered in the DOM for commissioners but hidden with `style="display: none;"` when not in commish mode. The toggle uses `data-visibility="admin"` and `data-section-visibility="admin"` attributes as selectors, flipping display on/off. This avoids re-fetching or re-rendering sections.
+
+**Evidence:** `NavLinks.astro` lines 262–298 (data attributes), `NavFooter.astro` `updateAdminNavLinks()` function.
+
+**Recommendation:** For any future client-side visibility toggle, follow this pattern:
+1. Server-render all possible content with data attributes for toggling
+2. Set initial visibility via inline `style` (no FOUC)
+3. Toggle via `el.style.display = showAdmin ? '' : 'none'`
+4. Store state in a cookie for SSR consistency on next page load
