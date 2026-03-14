@@ -91,7 +91,7 @@ const showCommish = isCommissioner && isCommishMode;
         >
           {showCommish && (
             <img
-              src="/assets/commissioner-avatar.webp"
+              src="/assets/commissioner-avatar.webp?v=5"
               alt="Commissioner"
               class="nav-footer__team-img"
               width="40"
@@ -275,7 +275,7 @@ const showCommish = isCommissioner && isCommishMode;
 
       if (isCommish) {
         logoEl.classList.add('nav-footer__team-logo--commish');
-        logoEl.appendChild(buildImg('/assets/commissioner-avatar.webp', 'Commissioner'));
+        logoEl.appendChild(buildImg('/assets/commissioner-avatar.webp?v=5', 'Commissioner'));
         infoEl.appendChild(buildTextSpan('nav-footer__team-name', 'Commissioner'));
         infoEl.appendChild(buildTextSpan('nav-footer__owner-name', 'League Office'));
         linkEl.setAttribute('aria-label', 'Commissioner dashboard');
