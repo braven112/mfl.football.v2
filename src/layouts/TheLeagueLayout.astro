@@ -143,6 +143,10 @@ const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds();
 
+// Commissioner mode: check if user is a commissioner and read toggle state
+const isCommissioner = !!myteam && adminFranchiseIds.includes(myteam);
+const isCommishMode = isCommissioner && Astro.cookies.get('commish-mode')?.value === 'true';
+
 // Get visible navigation sections
 const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 ---
@@ -231,6 +235,8 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			leagueId={leagueContext.leagueId}
 			adminFranchiseIds={adminFranchiseIds}
 			hideLeaguePrefix={hideLeaguePrefix}
+			isCommissioner={isCommissioner}
+			isCommishMode={isCommishMode}
 		/>
 
 		<!-- Navigation progress bar trigger -->

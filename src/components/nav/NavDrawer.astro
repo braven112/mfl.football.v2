@@ -56,6 +56,10 @@ interface Props {
   initialOpen?: boolean;
   /** Strip /theleague prefix from links (true on theleague.us domain) */
   hideLeaguePrefix?: boolean;
+  /** Whether the user is a commissioner */
+  isCommissioner?: boolean;
+  /** Whether commish mode is currently active */
+  isCommishMode?: boolean;
 }
 
 const {
@@ -69,6 +73,8 @@ const {
   adminFranchiseIds = [],
   initialOpen = false,
   hideLeaguePrefix = false,
+  isCommissioner = false,
+  isCommishMode = false,
 } = Astro.props;
 
 
@@ -138,6 +144,8 @@ const footerLinks = [
       franchiseId={franchiseId}
       adminFranchiseIds={adminFranchiseIds}
       hideLeaguePrefix={hideLeaguePrefix}
+      isCommissioner={isCommissioner}
+      isCommishMode={isCommishMode}
     />
 
     <!-- Footer: Team info or verify prompt -->
@@ -148,6 +156,8 @@ const footerLinks = [
       year={year}
       leagueId={leagueId}
       league={league}
+      isCommissioner={isCommissioner}
+      isCommishMode={isCommishMode}
     />
   </div>
 
