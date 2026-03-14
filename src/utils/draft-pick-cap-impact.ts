@@ -66,6 +66,47 @@ export interface PositionalNeed {
 }
 
 /**
+ * Calculates the average rookie salary across all positions for a given draft slot.
+ * Used when we don't know which position will be drafted (e.g., for cap reserve estimates).
+ */
+export function calculateAveragePickSalary(round: number, pickInRound: number): number {
+  if (round >= 3) {
+    const vals = Object.values(ROUND_3_FLAT_RATE);
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
+  }
+
+  // Convert pick-in-round to overall pick number for salary table lookup
+  const overallPick = round === 2 ? 17 + pickInRound : pickInRound;
+
+  const roundSalaries = ROOKIE_SALARIES_2026[round];
+  if (!roundSalaries) {
+    const vals = Object.values(ROUND_3_FLAT_RATE);
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
+  }
+
+  const salaryRow = roundSalaries[overallPick];
+  if (!salaryRow) {
+    const vals = Object.values(ROUND_3_FLAT_RATE);
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
+  }
+
+  const vals = Object.values(salaryRow);
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+/**
+ * Calculates the total estimated rookie reserve for a team based on their actual draft picks,
+ * using position-averaged slotted salaries.
+ */
+export function calculateTeamRookieReserve(
+  picks: { round: number; pickInRound: number }[]
+): number {
+  return picks.reduce((total, pick) => {
+    return total + calculateAveragePickSalary(pick.round, pick.pickInRound);
+  }, 0);
+}
+
+/**
  * Calculates the salary for a specific draft pick slot and position
  */
 export function calculateDraftPickSalary(round: number, pick: number, position: string): number {

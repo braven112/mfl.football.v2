@@ -141,8 +141,8 @@ export function getDraftCapitalSummary(
  */
 export function getDraftCapitalFromDraftResults(
   data: any
-): Map<string, { total: number; byRound: Map<number, number> }> {
-  const summary = new Map<string, { total: number; byRound: Map<number, number> }>();
+): Map<string, { total: number; byRound: Map<number, number>; picks: { round: number; pickInRound: number }[] }> {
+  const summary = new Map<string, { total: number; byRound: Map<number, number>; picks: { round: number; pickInRound: number }[] }>();
 
   const picks = data?.draftResults?.draftUnit?.draftPick;
   if (!Array.isArray(picks)) return summary;
@@ -152,15 +152,17 @@ export function getDraftCapitalFromDraftResults(
     if (!franchiseId) continue;
 
     const round = parseInt(pick.round, 10);
+    const pickInRound = parseInt(pick.pick, 10);
 
     let entry = summary.get(franchiseId);
     if (!entry) {
-      entry = { total: 0, byRound: new Map() };
+      entry = { total: 0, byRound: new Map(), picks: [] };
       summary.set(franchiseId, entry);
     }
 
     entry.total++;
     entry.byRound.set(round, (entry.byRound.get(round) || 0) + 1);
+    entry.picks.push({ round, pickInRound });
   }
 
   return summary;

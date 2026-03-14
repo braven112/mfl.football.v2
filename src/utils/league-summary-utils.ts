@@ -17,8 +17,9 @@ import {
   type CapPlayer,
   type DeadMoneyAdjustment,
 } from './salary-calculations';
+import { calculateTeamRookieReserve } from './draft-pick-cap-impact';
 import { parseNumber } from './formatters';
-export type DraftCapitalMap = Map<string, { total: number; byRound: Map<number, number> }>;
+export type DraftCapitalMap = Map<string, { total: number; byRound: Map<number, number>; picks: { round: number; pickInRound: number }[] }>;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,7 +109,7 @@ export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: 'effectiveCapSpace',
     name: 'Effective Cap Space',
-    description: 'Cap space minus $5M rookie reserve',
+    description: 'Cap space minus estimated rookie salary obligations based on draft picks owned',
     milestone: 1,
     format: 'compactCurrency',
     direction: 'asc',
@@ -344,8 +345,12 @@ export function computeLeagueSummary(
       // 2. Dead money
       deadMoneyArr.push(deadMoney[i] ?? 0);
 
-      // 3. Effective cap space
-      effectiveCapSpaceArr.push(cs - RESERVE_FOR_ROOKIES);
+      // 3. Effective cap space — reserve based on team's actual draft picks
+      const teamDraftData = draftCapitalMap.get(team.franchiseId);
+      const rookieReserve = (i === 0 && teamDraftData?.picks?.length)
+        ? calculateTeamRookieReserve(teamDraftData.picks)
+        : RESERVE_FOR_ROOKIES;
+      effectiveCapSpaceArr.push(cs - rookieReserve);
 
       // 4. Average age of players still under contract
       const ages = underContract
