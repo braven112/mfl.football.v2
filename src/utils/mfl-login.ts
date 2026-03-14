@@ -9,6 +9,8 @@
  *    (The standalone /myleagues endpoint returns HTML from server-side fetch)
  */
 
+import { mflFetch } from './mfl-fetch';
+
 export interface MFLLoginResponse {
   success: boolean;
   userId?: string;
@@ -157,11 +159,10 @@ export async function authenticateWithMFL(
       console.log('[mfl-login] Step 2: calling export?TYPE=myleagues with cookie');
     }
 
-    const mlResponse = await fetch(mlUrl, {
+    const mlResponse = await mflFetch({
+      url: mlUrl,
       method: 'GET',
-      headers: {
-        Cookie: `MFL_USER_ID=${mflCookie}`,
-      },
+      mflUserCookie: mflCookie,
     });
     const mlText = await mlResponse.text();
     let mlData: any;
