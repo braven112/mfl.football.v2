@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     const responseText = await mflResponse.text();
-    console.log('[trades/pending] MFL raw response (first 500 chars):', responseText.substring(0, 500));
+    console.log('[trades/pending] MFL raw response (first 1000 chars):', responseText.substring(0, 1000));
 
     let data: any;
     try {
@@ -73,9 +73,18 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    // MFL returns empty string when no trades, or { pendingTrades: { trade: [...] } }
-    const rawTrades = data?.pendingTrades?.trade;
-    console.log('[trades/pending] pendingTrades type:', typeof data?.pendingTrades, '| trade type:', typeof rawTrades, '| rawTrades:', JSON.stringify(rawTrades)?.substring(0, 200));
+    // Log all keys from the first trade for field discovery
+    const firstTrade = data?.pendingTrades?.pendingTrade;
+    if (firstTrade) {
+      const sample = Array.isArray(firstTrade) ? firstTrade[0] : firstTrade;
+      console.log('[trades/pending] Trade keys:', Object.keys(sample).join(', '));
+      console.log('[trades/pending] Full trade object:', JSON.stringify(sample));
+    }
+
+    // MFL uses "pendingTrade" (singular) as the key, NOT "trade"
+    // Empty state: { pendingTrades: "" } — guard against empty string
+    const pendingTrades = data?.pendingTrades;
+    const rawTrades = pendingTrades?.pendingTrade ?? pendingTrades?.trade;
     if (!rawTrades) {
       return new Response(
         JSON.stringify({ success: true, trades: [] }),
@@ -86,12 +95,16 @@ export const GET: APIRoute = async ({ request }) => {
     // MFL returns single object (not array) when there's only one trade
     const tradeArray = Array.isArray(rawTrades) ? rawTrades : [rawTrades];
 
+    // MFL pending trade fields differ from completed trade fields:
+    //   Pending: trade_id, offeredto, will_give_up, will_receive
+    //   Completed: id, franchise, franchise2, franchise1_gave_up, franchise2_gave_up
+    // The proposing franchise is NOT in the response — it's the authenticated user.
     const trades: PendingTrade[] = tradeArray.map((t: any) => ({
-      tradeId: t.id || t.trade_id || '',
-      offeredBy: (t.franchise || '').padStart(4, '0'),
-      offeredTo: (t.franchise2 || '').padStart(4, '0'),
-      willGiveUp: (t.franchise1_gave_up || '').replace(/,\s*$/, ''),
-      willReceive: (t.franchise2_gave_up || '').replace(/,\s*$/, ''),
+      tradeId: t.trade_id || t.id || '',
+      offeredBy: user.franchiseId,
+      offeredTo: (t.offeredto || t.franchise2 || '').padStart(4, '0'),
+      willGiveUp: (t.will_give_up || t.franchise1_gave_up || '').replace(/,\s*$/, ''),
+      willReceive: (t.will_receive || t.franchise2_gave_up || '').replace(/,\s*$/, ''),
       timestamp: parseInt(t.timestamp || '0', 10),
       expires: parseInt(t.expires || '0', 10),
       comments: t.comments || '',
