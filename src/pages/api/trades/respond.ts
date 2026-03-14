@@ -20,16 +20,20 @@ type TradeResponse = (typeof VALID_RESPONSES)[number];
 async function mflPost(
   url: string,
   body: string,
-  cookie: string,
+  cookies: { userId: string; commish?: string },
   maxRedirects = 3
 ): Promise<Response> {
+  const cookieHeader = cookies.commish
+    ? `MFL_USER_ID=${cookies.userId}; MFL_IS_COMMISH=${cookies.commish}`
+    : `MFL_USER_ID=${cookies.userId}`;
+
   let currentUrl = url;
   for (let i = 0; i <= maxRedirects; i++) {
     const res = await fetch(currentUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: `MFL_USER_ID=${cookie}`,
+        Cookie: cookieHeader,
       },
       body,
       redirect: 'manual',
@@ -50,7 +54,7 @@ async function mflPost(
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      Cookie: `MFL_USER_ID=${cookie}`,
+      Cookie: cookieHeader,
     },
     body,
   });
@@ -109,7 +113,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     console.log(`[trades/respond] POST ${importUrl} tradeId=${tradeId} response=${response}`);
 
-    const mflResponse = await mflPost(importUrl, params.toString(), user.id);
+    const mflResponse = await mflPost(importUrl, params.toString(), {
+      userId: user.id,
+      commish: user.commishCookie,
+    });
     const responseText = await mflResponse.text();
     console.log('[trades/respond] MFL response:', mflResponse.status, responseText.substring(0, 500));
 

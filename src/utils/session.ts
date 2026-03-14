@@ -12,6 +12,7 @@ export interface SessionData {
   franchiseId: string;
   leagueId: string;
   role: 'owner' | 'commissioner' | 'admin';
+  commishCookie?: string;
   issuedAt: number;
   expiresAt: number;
 }
