@@ -35,6 +35,10 @@ interface Props extends NavLinksProps {
   adminFranchiseIds?: string[];
   /** Strip /theleague prefix from links (true on theleague.us domain) */
   hideLeaguePrefix?: boolean;
+  /** Whether the user is a commissioner (renders admin links hidden instead of omitting) */
+  isCommissioner?: boolean;
+  /** Whether commish mode is currently active */
+  isCommishMode?: boolean;
 }
 
 const {
@@ -44,6 +48,8 @@ const {
   franchiseId,
   adminFranchiseIds = [],
   hideLeaguePrefix = false,
+  isCommissioner = false,
+  isCommishMode = false,
 } = Astro.props;
 
 const aflPreference = league === 'afl' ? getAFLPreference(Astro.cookies) : null;
@@ -211,21 +217,37 @@ function isActive(link: NavLink, currentPath: string, league: LeagueSlug): boole
 }
 
 /**
- * Filter sections and links based on visibility rules
+ * Filter sections and links based on visibility rules.
+ * For commissioners, admin links are included but may be hidden (toggled client-side).
  */
-function getVisibleSections(): NavSection[] {
+function getVisibleSections(): Array<NavSection & { _adminOnly?: boolean }> {
   return sections
-    .filter((section) => isSectionVisible(section, league, franchiseId, adminFranchiseIds))
-    .map((section) => ({
-      ...section,
-      links: section.links.filter((link) => {
+    .filter((section) => {
+      // For commissioners, always include sections that have admin links
+      if (isCommissioner && section.links.some(l => l.visibility === 'admin')) {
+        return true;
+      }
+      return isSectionVisible(section, league, franchiseId, adminFranchiseIds);
+    })
+    .map((section) => {
+      const filteredLinks = section.links.filter((link) => {
         // Check link's league restriction
         if (link.leagueOnly && link.leagueOnly !== league) {
           return false;
         }
+        // Commissioners see admin links (rendered hidden if not in commish mode)
+        if (link.visibility === 'admin' && isCommissioner) {
+          return true;
+        }
         return isLinkVisible(link, franchiseId, adminFranchiseIds);
-      }),
-    }));
+      });
+
+      // Track if ALL links in this section are admin-only
+      const allAdmin = filteredLinks.length > 0 && filteredLinks.every(l => l.visibility === 'admin');
+
+      return { ...section, links: filteredLinks, _adminOnly: allAdmin };
+    })
+    .filter(s => s.links.length > 0);
 }
 
 const visibleSections = getVisibleSections();
@@ -236,8 +258,16 @@ const visibleSections = getVisibleSections();
   aria-label="Main navigation"
 >
   <ul class="nav-links__list" role="list">
-    {visibleSections.map((section, sectionIndex) => (
-      <li class="nav-links__section" key={section.id}>
+    {visibleSections.map((section, sectionIndex) => {
+      const isAdminSection = (section as any)._adminOnly;
+      const hideAdminSection = isAdminSection && isCommissioner && !isCommishMode;
+      return (
+      <li
+        class="nav-links__section"
+        key={section.id}
+        data-section-visibility={isAdminSection ? 'admin' : undefined}
+        style={hideAdminSection ? 'display: none;' : undefined}
+      >
         <h2
           class="nav-links__section-title"
           id={`nav-section-${section.id}`}
@@ -258,8 +288,15 @@ const visibleSections = getVisibleSections();
             const iconUrl = aflOverride?.iconUrl ?? null;
             const active = isActive(link, currentPath, league);
             const isExternal = link.external;
+            const isAdminLink = link.visibility === 'admin';
+            const hideAdmin = isAdminLink && isCommissioner && !isCommishMode;
             return (
-              <li class="nav-links__item" key={link.id}>
+              <li
+                class="nav-links__item"
+                key={link.id}
+                data-visibility={isAdminLink ? 'admin' : undefined}
+                style={hideAdmin ? 'display: none;' : undefined}
+              >
                 <a
                   href={href}
                   class:list={[
@@ -320,7 +357,8 @@ const visibleSections = getVisibleSections();
           <hr class="nav-links__separator" aria-hidden="true" />
         )}
       </li>
-    ))}
+    );
+    })}
   </ul>
 </nav>
 

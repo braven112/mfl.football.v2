@@ -277,6 +277,12 @@ export interface NavFooterProps {
 
   /** Verify team URL (when not authenticated) */
   verifyTeamUrl?: string;
+
+  /** Whether the user is a commissioner (can toggle commish mode) */
+  isCommissioner?: boolean;
+
+  /** Whether commish mode is currently active (from cookie) */
+  isCommishMode?: boolean;
 }
 
 /**
@@ -334,6 +340,9 @@ export const NAV_COOKIES = {
 
   /** Stores drawer open state (desktop only) */
   NAV_OPEN: 'nav-open',
+
+  /** Stores commissioner mode toggle state */
+  COMMISH_MODE: 'commish-mode',
 } as const;
 
 /**
