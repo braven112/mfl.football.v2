@@ -378,17 +378,27 @@ const showCommish = isCommissioner && isCommishMode;
       const verifyEl = footer.querySelector('.nav-footer__verify');
       if (!verifyEl) return; // Already authenticated — nothing to swap
 
+      // Copy Astro's scoping attribute from an existing element so scoped CSS applies
+      // to dynamically created elements. Astro adds data-astro-cid-xxxxx to all elements.
+      const scopeAttr = Array.from(footer.attributes).find(a => a.name.startsWith('data-astro-cid-'));
+      function applyScope(el: Element): void {
+        if (scopeAttr) el.setAttribute(scopeAttr.name, scopeAttr.value);
+      }
+
       // Build the authenticated team row
       const teamRow = document.createElement('div');
       teamRow.className = 'nav-footer__team-row';
+      applyScope(teamRow);
 
       const link = document.createElement('a');
       link.href = rosterUrl;
       link.className = 'nav-footer__team';
       link.setAttribute('aria-label', `View ${team.name} roster`);
+      applyScope(link);
 
       const logoDiv = document.createElement('div');
       logoDiv.className = 'nav-footer__team-logo';
+      applyScope(logoDiv);
       if (team.icon) {
         const img = document.createElement('img');
         img.src = team.icon;
@@ -397,13 +407,16 @@ const showCommish = isCommissioner && isCommishMode;
         img.width = 40;
         img.height = 40;
         img.loading = 'lazy';
+        applyScope(img);
         logoDiv.appendChild(img);
       } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'nav-footer__team-placeholder';
+        applyScope(placeholder);
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('class', 'nav-footer__icon');
         svg.setAttribute('aria-hidden', 'true');
+        applyScope(svg);
         const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
         use.setAttribute('href', `${spUrl}#icon-shield-2`);
         svg.appendChild(use);
@@ -413,9 +426,11 @@ const showCommish = isCommissioner && isCommishMode;
 
       const infoDiv = document.createElement('div');
       infoDiv.className = 'nav-footer__team-info';
+      applyScope(infoDiv);
       const nameSpan = document.createElement('span');
       nameSpan.className = 'nav-footer__team-name';
       nameSpan.textContent = team.name;
+      applyScope(nameSpan);
       infoDiv.appendChild(nameSpan);
 
       link.appendChild(logoDiv);
