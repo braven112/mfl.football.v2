@@ -53,14 +53,18 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response> {
 
     // Not a redirect — return the final response
     if (response.status < 300 || response.status >= 400) {
+      if (i > 0) console.log(`[mflFetch] Final response after ${i} redirect(s): ${response.status}`);
       return response;
     }
 
     // Handle redirect
     const location = response.headers.get('location');
     if (!location) {
+      console.warn(`[mflFetch] ${response.status} redirect but no Location header`);
       return response; // No Location header — return as-is
     }
+
+    console.log(`[mflFetch] ${response.status} redirect: ${url} → ${location}`);
 
     // Resolve relative Location URLs
     url = location.startsWith('http') ? location : new URL(location, url).href;

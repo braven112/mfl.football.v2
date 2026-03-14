@@ -144,9 +144,7 @@ export async function authenticateWithMFL(
       }
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ') commish:', !!commishCookie);
-    }
+    console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ') commish:', !!commishCookie);
 
     // ── Step 2: Call export?TYPE=myleagues to get franchise_id ────
     // Use the export endpoint (not standalone /myleagues which returns HTML).
@@ -155,9 +153,7 @@ export async function authenticateWithMFL(
     // with franchise_id when authenticated.
     const mlUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues&JSON=1`;
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Step 2: calling export?TYPE=myleagues with cookie');
-    }
+    console.log('[mfl-login] Step 2: calling export?TYPE=myleagues with cookie');
 
     const mlResponse = await mflFetch({
       url: mlUrl,
@@ -165,11 +161,13 @@ export async function authenticateWithMFL(
       mflUserCookie: mflCookie,
     });
     const mlText = await mlResponse.text();
+    console.log('[mfl-login] myleagues response status:', mlResponse.status, 'body length:', mlText.length);
     let mlData: any;
 
     try {
       mlData = JSON.parse(mlText);
     } catch {
+      console.error('[mfl-login] Failed to parse myleagues response:', mlText.substring(0, 500));
       return {
         success: true,
         userId: mflCookie,
@@ -181,9 +179,7 @@ export async function authenticateWithMFL(
       };
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] myleagues response:', JSON.stringify(mlData, null, 2).substring(0, 1000));
-    }
+    console.log('[mfl-login] myleagues response:', JSON.stringify(mlData, null, 2).substring(0, 1000));
 
     // Extract leagues array
     const leagues = (
@@ -196,6 +192,7 @@ export async function authenticateWithMFL(
     const leagueList = Array.isArray(leagues) ? leagues : leagues ? [leagues] : [];
 
     if (leagueList.length === 0) {
+      console.warn('[mfl-login] No leagues found — myleagues returned empty. Cookie may not have survived redirect.');
       return {
         success: true,
         userId: mflCookie,
@@ -207,9 +204,7 @@ export async function authenticateWithMFL(
       };
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Found', leagueList.length, 'leagues');
-    }
+    console.log('[mfl-login] Found', leagueList.length, 'leagues');
 
     // Find the target league (match by ID, or fall back to first league)
     const targetLeague = leagueId
@@ -246,9 +241,7 @@ export async function authenticateWithMFL(
     const resolvedLeagueId =
       `${targetLeague?.id ?? targetLeague?.league_id ?? targetLeague?.leagueId ?? targetLeague?.league ?? leagueId ?? ''}`;
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Resolved franchiseId:', franchiseId, 'leagueId:', resolvedLeagueId);
-    }
+    console.log('[mfl-login] Resolved franchiseId:', franchiseId, 'leagueId:', resolvedLeagueId);
 
     return {
       success: true,
