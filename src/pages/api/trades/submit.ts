@@ -4,6 +4,10 @@
  *
  * Requires authenticated user. The user's MFL cookie (stored as userId in session)
  * is forwarded to MFL to identify the proposing franchise.
+ *
+ * IMPORTANT: Write operations must target the league-specific host (www49)
+ * not the api.myfantasyleague.com load balancer, which 302-redirects POSTs
+ * and Node's fetch converts them to GETs (losing the request body).
  */
 
 import type { APIRoute } from 'astro';
@@ -22,7 +26,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const { offeredTo, willGiveUp, willReceive, comments } = body;
+    const { offeredTo, willGiveUp, willReceive, comments, franchiseId } = body;
 
     if (!offeredTo || !willGiveUp || !willReceive) {
       return new Response(
@@ -35,7 +39,9 @@ export const POST: APIRoute = async ({ request }) => {
     const leagueId = user.leagueId || '13522';
     const mflCookie = user.id; // MFL_USER_ID cookie stored as userId during login
 
-    const importUrl = `https://api.myfantasyleague.com/${year}/import`;
+    // Must use league-specific host for write operations — NOT api.myfantasyleague.com
+    const mflHost = `www${Number(leagueId) % 50}.myfantasyleague.com`;
+    const importUrl = `https://${mflHost}/${year}/import`;
     const params = new URLSearchParams({
       TYPE: 'tradeProposal',
       L: leagueId,
@@ -45,9 +51,17 @@ export const POST: APIRoute = async ({ request }) => {
       JSON: '1',
     });
 
+    // Commissioner accounts (franchiseId "0000") must specify which franchise
+    // they're acting as. The client sends the actual franchise ID.
+    if (franchiseId && franchiseId !== '0000') {
+      params.set('FRANCHISE_ID', franchiseId);
+    }
+
     if (comments?.trim()) {
       params.set('COMMENTS', comments.trim());
     }
+
+    console.log(`[trades/submit] POST ${importUrl} offeredTo=${offeredTo} franchiseId=${franchiseId || 'none'}`);
 
     const mflResponse = await fetch(importUrl, {
       method: 'POST',
@@ -56,9 +70,21 @@ export const POST: APIRoute = async ({ request }) => {
         Cookie: `MFL_USER_ID=${mflCookie}`,
       },
       body: params.toString(),
+      redirect: 'manual', // Never follow redirects on write operations
     });
 
+    // A redirect means we hit the wrong host or MFL is bouncing us
+    if (mflResponse.status >= 300 && mflResponse.status < 400) {
+      const location = mflResponse.headers.get('location');
+      console.error('[trades/submit] Unexpected redirect:', mflResponse.status, location);
+      return new Response(
+        JSON.stringify({ success: false, message: 'MFL redirected the request. Trade was not submitted.' }),
+        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      );
+    }
+
     const responseText = await mflResponse.text();
+    console.log('[trades/submit] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
     if (!mflResponse.ok) {
       console.error('[trades/submit] MFL error:', mflResponse.status, responseText);
