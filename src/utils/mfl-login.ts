@@ -16,6 +16,7 @@ export interface MFLLoginResponse {
   franchiseId?: string;
   leagueId?: string;
   role?: string;
+  commishCookie?: string;
   rawResponse?: any;
   error?: string;
 }
@@ -128,8 +129,21 @@ export async function authenticateWithMFL(
 
     const mflCookie = parsed.cookie;
 
+    // Capture MFL_IS_COMMISH cookie from Set-Cookie headers (commissioners only).
+    // MFL sets this alongside MFL_USER_ID for commissioner accounts.
+    // Without it, write operations (trades, etc.) fail with "API requires a logged in user".
+    let commishCookie: string | undefined;
+    const setCookieHeaders = loginResponse.headers.getSetCookie?.() ?? [];
+    for (const cookieStr of setCookieHeaders) {
+      const match = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
+      if (match) {
+        commishCookie = match[1];
+        break;
+      }
+    }
+
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ')');
+      console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ') commish:', !!commishCookie);
     }
 
     // ── Step 2: Call export?TYPE=myleagues to get franchise_id ────
@@ -241,7 +255,8 @@ export async function authenticateWithMFL(
       username,
       franchiseId,
       leagueId: resolvedLeagueId,
-      role: 'owner',
+      role: commishCookie ? 'commissioner' : 'owner',
+      commishCookie,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

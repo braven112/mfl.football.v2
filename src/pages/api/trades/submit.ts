@@ -18,7 +18,7 @@ const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-
 async function mflPost(
   url: string,
   body: string,
-  cookie: string,
+  cookies: { userId: string; commish?: string },
   maxRedirects = 3
 ): Promise<Response> {
   let currentUrl = url;
@@ -27,7 +27,9 @@ async function mflPost(
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: `MFL_USER_ID=${cookie}`,
+        Cookie: cookies.commish
+          ? `MFL_USER_ID=${cookies.userId}; MFL_IS_COMMISH=${cookies.commish}`
+          : `MFL_USER_ID=${cookies.userId}`,
       },
       body,
       redirect: 'manual',
@@ -102,7 +104,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     console.log(`[trades/submit] POST ${importUrl} offeredTo=${offeredTo} body=${params.toString()}`);
 
-    const mflResponse = await mflPost(importUrl, params.toString(), user.id);
+    const mflResponse = await mflPost(importUrl, params.toString(), {
+      userId: user.id,
+      commish: user.commishCookie,
+    });
     const responseText = await mflResponse.text();
     console.log('[trades/submit] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
