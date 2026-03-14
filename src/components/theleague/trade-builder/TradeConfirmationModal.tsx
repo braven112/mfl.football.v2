@@ -26,6 +26,7 @@ interface Props {
   userFranchiseId: string | null;
   onSubmit: (message: string) => void;
   onClose: () => void;
+  onViewMyTrades?: () => void;
 }
 
 export default function TradeConfirmationModal({
@@ -44,6 +45,7 @@ export default function TradeConfirmationModal({
   userFranchiseId,
   onSubmit,
   onClose,
+  onViewMyTrades,
 }: Props) {
   const [message, setMessage] = useState('');
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -96,13 +98,7 @@ export default function TradeConfirmationModal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, isSubmitting]);
 
-  // Auto-close on success
-  useEffect(() => {
-    if (submissionStatus.status === 'success') {
-      const timer = setTimeout(onClose, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [submissionStatus.status, onClose]);
+  // No auto-close — user clicks "Done" or "View My Trades" after success
 
   const formatPickLabel = (pick: DraftPickKey, teams: TradeBuilderTeam[]) => {
     const originalTeam = teams.find(t =>
@@ -262,21 +258,34 @@ export default function TradeConfirmationModal({
             </div>
           )}
           <div className="tcm-footer-actions">
-            <button
-              className="tcm-btn-cancel"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              className="tcm-btn-submit"
-              onClick={() => onSubmit(message)}
-              disabled={isSubmitting || isSuccess || !userIsPartOfTrade}
-              aria-describedby={!userIsPartOfTrade ? 'tcm-not-participant-error' : undefined}
-            >
-              {!userIsPartOfTrade ? 'Not Your Trade' : isSubmitting ? 'Sending...' : isSuccess ? 'Sent!' : submissionStatus.status === 'error' ? 'Retry' : 'Send Proposal'}
-            </button>
+            {isSuccess ? (
+              <>
+                <button className="tcm-btn-cancel" onClick={onClose}>Done</button>
+                {onViewMyTrades && (
+                  <button className="tcm-btn-submit" onClick={() => { onClose(); onViewMyTrades(); }}>
+                    View My Trades
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  className="tcm-btn-cancel"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="tcm-btn-submit"
+                  onClick={() => onSubmit(message)}
+                  disabled={isSubmitting || !userIsPartOfTrade}
+                  aria-describedby={!userIsPartOfTrade ? 'tcm-not-participant-error' : undefined}
+                >
+                  {!userIsPartOfTrade ? 'Not Your Trade' : isSubmitting ? 'Sending...' : submissionStatus.status === 'error' ? 'Retry' : 'Send Proposal'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

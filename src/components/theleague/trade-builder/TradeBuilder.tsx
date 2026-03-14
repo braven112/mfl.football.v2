@@ -651,6 +651,9 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
             // Return focus to the submit button
             submitBtnRef.current?.focus();
           }}
+          onViewMyTrades={() => {
+            setShowPendingPanel(true);
+          }}
         />
       )}
 
