@@ -415,3 +415,71 @@ Cookie: MFL_USER_ID=xxx; MFL_IS_COMMISH=yyy
 - `src/pages/api/trades/submit.ts` — uses mflFetch
 - `src/pages/api/trades/respond.ts` — uses mflFetch
 - `src/pages/api/trades/pending.ts` — uses mflFetch
+
+---
+
+## 2026-03-13 - Commissioner Can Impersonate Franchise Owners via FRANCHISE_ID Parameter
+
+**Context:** Researching how to let commissioners submit trade proposals through the trade builder when their session has `franchiseId: "0000"`
+
+**Insight:** MFL's API has a documented commissioner impersonation mechanism for write (import) endpoints. From the official MFL API docs:
+
+> "Requests that do not require commissioner access, when requested by a user who has commissioner access will be performed on the commissioner's franchise. Some requests (not all) can also be performed on behalf of another franchise by passing the FRANCHISE_ID parameter. If the commissioner does not have a franchise and no franchise id is given, it will return an error."
+
+This is the root cause of the error "Can not specify a FRANCHISE_ID (0001) other than the owner's ()". The empty `()` confirms the commissioner account has no franchise of its own (`franchiseId: "0000"` in our session), and MFL is rejecting the attempt because it sees a mismatch.
+
+**Resolution:** Pass `FRANCHISE_ID` as a parameter in the POST body (not the cookie). When the authenticated user is a commissioner and a `FRANCHISE_ID` is supplied, MFL performs the action on behalf of that franchise.
+
+**Endpoints that support FRANCHISE_ID for commissioner impersonation (confirmed from MFL API details page):**
+- `tradeProposal` — "Commissioner can impersonate owner using FRANCHISE_ID parameter"
+- `tradeResponse` — "indicate on which franchise behalf to do the request"
+- `lineup` — submit starting rosters for another team
+- `fcfsWaiver` — execute immediate add/drop for another team
+- `waiverRequest` — file waiver claims for another team
+- `blindBidWaiverRequest` — submit FAAB bids for another team
+- `ir` — manage IR activations for another team
+- `taxi_squad` — handle taxi squad moves for another team
+- `messageBoard` — post messages on behalf of another team
+- `poolPicks` — submit pool picks for another team
+- `survivorPoolPick` — make survivor picks for another team
+
+**What does NOT work:** The `APIKEY` authorization method cannot be used for commissioner-access endpoints — it only works for owner-level endpoints. Commissioner impersonation requires cookie-based auth (`MFL_USER_ID` + `MFL_IS_COMMISH`).
+
+**Critical distinction — two scenarios:**
+
+1. **Commissioner logging in as owner:** A user who is BOTH commissioner AND franchise owner can log in normally. Their `myleagues` response will return their actual `franchise_id` (not `0000`). They do NOT need to use `FRANCHISE_ID` impersonation at all — their `MFL_USER_ID` cookie already identifies them as an owner.
+
+2. **Pure commissioner (no franchise):** A user who is ONLY a commissioner (no franchise in the league) will get `franchiseId: "0000"` from `myleagues`. They MUST use `FRANCHISE_ID` impersonation to act on behalf of any franchise.
+
+**The actual bug in `submit.ts`:** The code at line 57 currently does:
+```typescript
+if (franchiseId && franchiseId !== '0000') {
+  params.set('FRANCHISE_ID', franchiseId);
+}
+```
+This looks correct — it sends `FRANCHISE_ID` when the client provides a non-`0000` franchise ID. The issue is likely that the commissioner's `MFL_USER_ID` cookie is being sent without the `MFL_IS_COMMISH` cookie. MFL needs BOTH cookies to grant commissioner privileges that allow the `FRANCHISE_ID` override.
+
+**The missing piece:** When a commissioner logs in via our login flow (`mfl-login.ts`), we only capture `MFL_USER_ID`. We do NOT capture `MFL_IS_COMMISH`. Without `MFL_IS_COMMISH`, MFL treats the user as a regular owner, but since the account has no franchise (`"owner's ()"`), it rejects any `FRANCHISE_ID` that doesn't match.
+
+**Two possible solutions:**
+
+**Option A — Capture `MFL_IS_COMMISH` during login (preferred for true commissioner accounts)**
+- After Step 1 login, read the `Set-Cookie` response headers for `MFL_IS_COMMISH`
+- Store it in the session JWT alongside `MFL_USER_ID`
+- Forward BOTH cookies in write operations: `Cookie: MFL_USER_ID=${userId}; MFL_IS_COMMISH=${commishCookie}`
+
+**Option B — Commissioner logs in as owner (preferred for dual-role users)**
+- If the commissioner IS also a franchise owner, the `myleagues` API returns their real `franchise_id`
+- Their `MFL_USER_ID` cookie alone is sufficient for owner-level write operations (no `FRANCHISE_ID` needed, no `MFL_IS_COMMISH` needed)
+- This is the simpler path — just ensure `franchise_id` from `myleagues` is correctly stored (not overridden with `0000`)
+
+**Investigating Option B failure mode:** The `mfl-login.ts` code searches `myleagues` for the `franchise_id`. For a commissioner-who-is-also-an-owner, this should return the correct franchise ID. If it's returning `0000`, that means either:
+- The `myleagues` API returns the commissioner's franchise_id as `0000` when they are a pure commissioner
+- OR the franchise_id field is being normalized to `0000` somewhere
+
+**Recommendation for trade builder:** Implement Option B first (it's free for dual-role users). For the minority case of pure commissioners with no franchise, implement Option A (capture `MFL_IS_COMMISH`).
+
+**Evidence:**
+- MFL API docs at `https://www49.myfantasyleague.com/2025/api_info?L=13522` — commissioner impersonation section
+- MFL API details at `https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522` — per-endpoint FRANCHISE_ID documentation
+- Error message from live API: "Can not specify a FRANCHISE_ID (0001) other than the owner's ()"
