@@ -5,6 +5,11 @@
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
  * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
  *
+ * Security:
+ * - Validates the user has a resolved franchise before allowing trade submission
+ * - Verifies the user owns every player they're offering (roster check)
+ * - Never uses commissioner credentials for owner-level operations
+ *
  * Uses mflFetch() to handle the cross-origin redirect from
  * api.myfantasyleague.com → www49, which would otherwise strip the
  * Cookie header and cause "API requires a logged in user" errors.
@@ -14,6 +19,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { mflFetch } from '../../../utils/mfl-fetch';
+import { createMFLApiClient } from '../../../utils/mfl-matchup-api';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -34,6 +40,13 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
+  if (!user.franchiseId) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'No franchise associated with your account.' }),
+      { status: 403, headers: JSON_HEADERS }
+    );
+  }
+
   try {
     const body = await request.json();
     const { offeredTo, willGiveUp, willReceive, comments } = body;
@@ -47,6 +60,28 @@ export const POST: APIRoute = async ({ request }) => {
 
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
+
+    // SECURITY: Verify the user owns every player they're offering
+    // willGiveUp is a comma-separated string of player IDs (and possibly draft pick tokens)
+    const offeredPlayerIds = willGiveUp.split(',').map((s: string) => s.trim()).filter((id: string) => id && /^\d+$/.test(id));
+
+    if (offeredPlayerIds.length > 0) {
+      const mflClient = createMFLApiClient({
+        leagueId,
+        year: String(year),
+        mflUserId: user.id,
+      });
+      const rosters = await mflClient.getRosters();
+      const userRoster = rosters[user.franchiseId] || [];
+
+      const notOwned = offeredPlayerIds.filter((pid: string) => !userRoster.includes(pid));
+      if (notOwned.length > 0) {
+        return new Response(
+          JSON.stringify({ success: false, message: 'You can only offer players from your own roster.' }),
+          { status: 403, headers: JSON_HEADERS }
+        );
+      }
+    }
 
     const params = new URLSearchParams({
       TYPE: 'tradeProposal',

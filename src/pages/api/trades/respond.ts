@@ -5,6 +5,11 @@
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
  * Always operates in OWNER mode — never sends MFL_IS_COMMISH.
  *
+ * Security:
+ * - Validates the user has a resolved franchise before allowing response
+ * - Verifies the user is a party to the trade (offeredBy or offeredTo)
+ * - Never uses commissioner credentials for owner-level operations
+ *
  * Uses mflFetch() to handle the cross-origin redirect from
  * api.myfantasyleague.com → www49, which would otherwise strip the
  * Cookie header and cause "API requires a logged in user" errors.
@@ -33,6 +38,13 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(
       JSON.stringify({ success: false, message: 'MFL session not found. Please sign in again.' }),
       { status: 401, headers: JSON_HEADERS }
+    );
+  }
+
+  if (!user.franchiseId) {
+    return new Response(
+      JSON.stringify({ success: false, message: 'No franchise associated with your account.' }),
+      { status: 403, headers: JSON_HEADERS }
     );
   }
 
