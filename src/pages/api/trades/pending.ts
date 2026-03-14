@@ -51,7 +51,6 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     const responseText = await mflResponse.text();
-    console.log('[trades/pending] MFL raw response (first 1000 chars):', responseText.substring(0, 1000));
 
     let data: any;
     try {
@@ -71,14 +70,6 @@ export const GET: APIRoute = async ({ request }) => {
         JSON.stringify({ success: false, message: 'MFL authentication error. Try logging out and back in.' }),
         { status: 403, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
       );
-    }
-
-    // Log all keys from the first trade for field discovery
-    const firstTrade = data?.pendingTrades?.pendingTrade;
-    if (firstTrade) {
-      const sample = Array.isArray(firstTrade) ? firstTrade[0] : firstTrade;
-      console.log('[trades/pending] Trade keys:', Object.keys(sample).join(', '));
-      console.log('[trades/pending] Full trade object:', JSON.stringify(sample));
     }
 
     // MFL uses "pendingTrade" (singular) as the key, NOT "trade"
