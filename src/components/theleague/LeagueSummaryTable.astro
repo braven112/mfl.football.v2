@@ -108,12 +108,17 @@ const serializedData = JSON.stringify({ teams, years, categories });
     let sortDirection = 'asc';
     let preferredTeamId: string | null = null;
 
-    // Read preferred team from cookie
+    // Read preferred team from URL param or cookie
     try {
-      const match = document.cookie.match(/theleague_team_pref=([^;]+)/);
-      if (match) {
-        const pref = JSON.parse(decodeURIComponent(match[1]));
-        preferredTeamId = pref?.franchiseId ?? null;
+      const myTeamParam = new URLSearchParams(window.location.search).get('myteam');
+      if (myTeamParam) {
+        preferredTeamId = myTeamParam.padStart(4, '0');
+      } else {
+        const cookie = document.cookie.split('; ').find(r => r.startsWith('theleague_team_pref='));
+        if (cookie) {
+          const pref = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+          preferredTeamId = pref?.franchiseId ?? null;
+        }
       }
     } catch {}
 
@@ -518,11 +523,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
     background: var(--color-gray-50, #f9fafb);
   }
 
-  .league-summary__row:global(.league-summary__row--preferred) {
-    border-left: 3px solid var(--color-primary, #1c497c);
-  }
-
   .league-summary__row:global(.league-summary__row--preferred) .league-summary__td--team {
+    border-left: 3px solid var(--color-primary, #1c497c);
     background: rgba(28, 73, 124, 0.05);
     font-weight: 600;
   }
