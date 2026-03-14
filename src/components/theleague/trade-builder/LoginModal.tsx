@@ -4,9 +4,10 @@ import type { TradeBuilderAuthUser } from '../../../types/trade-builder';
 interface Props {
   onClose: () => void;
   onLoginSuccess: (user: TradeBuilderAuthUser) => void;
+  leagueId?: string;
 }
 
-export default function LoginModal({ onClose, onLoginSuccess }: Props) {
+export default function LoginModal({ onClose, onLoginSuccess, leagueId = '13522' }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,7 @@ export default function LoginModal({ onClose, onLoginSuccess }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify({ username: username.trim(), password, leagueId }),
       });
 
       const data = await res.json();
