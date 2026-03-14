@@ -51,7 +51,7 @@ export const POST: APIRoute = async ({ request }) => {
     const mflCookie = user.id;
 
     // Must use league-specific host for write operations
-    const mflHost = `www${Number(leagueId) % 50}.myfantasyleague.com`;
+    const mflHost = 'www49.myfantasyleague.com';
     const importUrl = `https://${mflHost}/${year}/import`;
     const params = new URLSearchParams({
       TYPE: 'tradeResponse',
