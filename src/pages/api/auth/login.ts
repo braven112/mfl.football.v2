@@ -46,7 +46,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       franchiseId: mflResponse.franchiseId,
       leagueId: mflResponse.leagueId || leagueId || '',
       role: (mflResponse.role as 'owner' | 'commissioner' | 'admin') || 'owner',
-      commishCookie: mflResponse.commishCookie,
     });
 
     // Set session cookie
