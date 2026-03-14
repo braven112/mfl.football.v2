@@ -49,12 +49,20 @@ export default function PendingTradesPanel({
     }
   }, []);
 
-  // Lock body scroll + store trigger for focus return
+  // Lock body scroll + store trigger for focus return + close nav drawer to prevent overlap
   useEffect(() => {
     if (isOpen) {
       triggerRef.current = document.activeElement as HTMLElement;
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+      // Close the nav drawer if open to prevent z-index overlap
+      const navDrawer = document.querySelector('[data-nav-drawer]') as HTMLElement | null;
+      if (navDrawer?.classList.contains('nav-drawer--open')) {
+        navDrawer.classList.remove('nav-drawer--open');
+        navDrawer.setAttribute('aria-hidden', 'true');
+        const overlay = document.querySelector('[data-nav-overlay]') as HTMLElement | null;
+        if (overlay) overlay.style.display = 'none';
+      }
       fetchTrades();
       closeRef.current?.focus();
       return () => {
