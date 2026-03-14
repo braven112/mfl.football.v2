@@ -178,9 +178,9 @@ export default function PendingTradeCard({
 
       <style>{`
         .ptc {
-          background: var(--primary-content-bg-color, #fff);
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.5rem;
+          background: var(--content-bg, #fff);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-md, 0.5rem);
           padding: 0.875rem;
           display: flex;
           flex-direction: column;
@@ -205,7 +205,7 @@ export default function PendingTradeCard({
         .ptc-team-name {
           font-size: 0.875rem;
           font-weight: 600;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
         }
         .ptc-timestamp {
           font-size: 0.75rem;
@@ -242,7 +242,7 @@ export default function PendingTradeCard({
         .ptc-asset-item {
           font-size: 0.8125rem;
           font-weight: 500;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -272,7 +272,7 @@ export default function PendingTradeCard({
           padding: 0.375rem 0.75rem;
           font-size: 0.75rem;
           font-weight: 600;
-          border-radius: 0.375rem;
+          border-radius: var(--radius-sm, 0.25rem);
           cursor: pointer;
           border: 1px solid transparent;
           transition: all 0.1s ease;
@@ -292,7 +292,7 @@ export default function PendingTradeCard({
           border-color: var(--color-error, #dc2626);
           color: var(--color-error, #dc2626);
         }
-        .ptc-btn--reject:hover:not(:disabled) { background: var(--color-error-light, #fef2f2); }
+        .ptc-btn--reject:hover:not(:disabled) { background: var(--color-error-light, #fee2e2); }
         .ptc-btn--counter {
           background: var(--color-gray-100, #f3f4f6);
           color: var(--color-gray-700, #374151);
@@ -337,9 +337,9 @@ export default function PendingTradeCard({
           gap: 0.375rem;
           font-size: 0.75rem;
           color: var(--color-error, #dc2626);
-          background: var(--color-error-light, #fef2f2);
+          background: var(--color-error-light, #fee2e2);
           border: 1px solid var(--color-error-border, #fecaca);
-          border-radius: 0.25rem;
+          border-radius: var(--radius-sm, 0.25rem);
           padding: 0.375rem 0.5rem;
         }
         .ptc-error-dismiss {

@@ -152,17 +152,19 @@ export default function DraftPickSelector({
           align-items: center;
         }
         .draft-picks__title {
-          font-size: 0.8125rem;
+          font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0;
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .draft-picks__toggle {
           background: none;
           border: none;
-          color: var(--primary-color, #1c497c);
+          color: var(--color-primary, #1c497c);
           font-size: 0.8125rem;
           font-weight: 600;
           cursor: pointer;
@@ -182,9 +184,9 @@ export default function DraftPickSelector({
           align-items: center;
           gap: 0.375rem;
           padding: 0.25rem 0.5rem;
-          background: #ede9fe;
-          color: #5b21b6;
-          border-radius: 0.375rem;
+          background: var(--color-franchise-tag-light, #ede9fe);
+          color: var(--color-franchise-tag, #7c3aed);
+          border-radius: var(--radius-sm, 0.25rem);
           font-size: 0.75rem;
           font-weight: 600;
         }
@@ -195,22 +197,22 @@ export default function DraftPickSelector({
         .draft-picks__remove {
           background: none;
           border: none;
-          color: #5b21b6;
+          color: var(--color-franchise-tag, #7c3aed);
           font-size: 1rem;
           cursor: pointer;
           padding: 0;
           line-height: 1;
         }
         .draft-picks__remove:hover {
-          color: #dc2626;
+          color: var(--color-error, #dc2626);
         }
         .draft-picks__year-label {
           width: 100%;
           font-size: 0.6875rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-500, #6b7280);
           margin-top: 0.25rem;
         }
         .draft-picks__year-divider {
@@ -218,10 +220,10 @@ export default function DraftPickSelector({
           font-size: 0.6875rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-500, #6b7280);
           padding-bottom: 0.125rem;
-          border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+          border-bottom: 1px solid var(--content-border, #e2e8f0);
         }
         .draft-picks__available {
           display: flex;
@@ -231,22 +233,28 @@ export default function DraftPickSelector({
         }
         .draft-picks__option {
           padding: 0.25rem 0.625rem;
-          border: 1px dashed var(--primary-content-border-color, #d1d5db);
-          border-radius: 0.375rem;
+          border: 1px dashed var(--content-border, #d1d5db);
+          border-radius: var(--radius-sm, 0.25rem);
           background: transparent;
           font-size: 0.75rem;
           font-weight: 600;
           cursor: pointer;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
           transition: all 0.1s ease;
         }
         .draft-picks__option:hover {
-          border-color: var(--primary-color, #1c497c);
-          background: var(--primary-light-bg, #f0f4f8);
+          border-color: var(--color-primary, #1c497c);
+          background: var(--color-gray-50, #f9fafb);
+        }
+        .draft-picks__toggle:focus-visible,
+        .draft-picks__option:focus-visible,
+        .draft-picks__remove:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
         }
         .draft-picks__empty {
           font-size: 0.75rem;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           margin-top: 0.25rem;
         }
       `}</style>

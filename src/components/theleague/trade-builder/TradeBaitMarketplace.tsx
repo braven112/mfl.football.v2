@@ -77,13 +77,14 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
             Be the first to put players on the trade block and let the league know you're open for business.
           </p>
           <a
-            href={`https://www49.myfantasyleague.com/${leagueYear}/options?L=13522&O=133`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/theleague/rosters"
             className="marketplace__cta-btn"
           >
-            Manage Your Trade Bait on MFL
+            Manage Your Trade Bait
           </a>
+          <p className="marketplace__empty-hint">
+            On the Rosters page, click the <span className="marketplace__action-icon" aria-label="action menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></span> button next to any player to add them to the trade block.
+          </p>
         </div>
         <style>{marketplaceStyles}</style>
       </div>
@@ -192,15 +193,13 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
 
           <div className="marketplace__footer">
             <a
-              href={`https://www49.myfantasyleague.com/${leagueYear}/options?L=13522&O=133`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/theleague/rosters"
               className="marketplace__cta-btn"
             >
-              🏷️ Manage Your Trade Bait on MFL
+              Manage Your Trade Bait
             </a>
             <span className="marketplace__footer-hint">
-              Add your players to the trade block so other owners know you're open for business
+              Click the <span className="marketplace__action-icon" aria-label="action menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></span> button next to any player on the Rosters page to add them to the trade block
             </span>
           </div>
         </>
@@ -507,6 +506,26 @@ const marketplaceStyles = `
     color: var(--muted-text-color, #6b7280);
     margin: 0;
     max-width: 400px;
+  }
+  .marketplace__empty-hint {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+  .marketplace__action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-500, #6b7280);
+    margin: 0 0.125rem;
   }
   @media (max-width: 768px) {
     .marketplace__grid {

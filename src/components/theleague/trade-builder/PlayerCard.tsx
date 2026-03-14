@@ -125,17 +125,17 @@ export default function PlayerCard({
 
       <style>{`
         .player-card {
-          background: var(--primary-content-bg-color, #fff);
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.5rem;
+          background: var(--content-bg, #fff);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-md, 0.5rem);
           padding: 0.75rem;
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
         }
         .player-card--trade-bait {
-          border-left: 3px solid #f59e0b;
-          background: #fffbeb;
+          border-left: 3px solid var(--color-warning, #f59e0b);
+          background: var(--color-warning-light, #fef3c7);
         }
         .player-card__header {
           display: flex;
@@ -146,10 +146,10 @@ export default function PlayerCard({
           flex-shrink: 0;
           width: 40px;
           height: 40px;
-          border-radius: 50%;
+          border-radius: var(--radius-full, 9999px);
           overflow: hidden;
-          background: var(--avatar-bg-color, #f3f4f6);
-          border: 1px solid #e2e8f0;
+          background: var(--color-gray-100, #f3f4f6);
+          border: 1px solid var(--content-border, #e2e8f0);
         }
         .player-card__avatar img {
           width: 100%;
@@ -172,7 +172,7 @@ export default function PlayerCard({
           display: block;
           font-weight: 600;
           font-size: 0.9375rem;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -183,7 +183,7 @@ export default function PlayerCard({
           align-items: center;
           gap: 0.3rem;
           font-size: 0.8125rem;
-          color: var(--text-secondary-color, #64748b);
+          color: var(--color-gray-600, #4b5563);
         }
         .player-card__nfl-logo {
           width: 16px;
@@ -199,8 +199,8 @@ export default function PlayerCard({
         .player-card__status {
           margin-left: 0.25rem;
           padding: 0.0625rem 0.25rem;
-          background: #fef3c7;
-          color: #92400e;
+          background: var(--color-warning-light, #fef3c7);
+          color: var(--color-warning-dark, #d97706);
           font-size: 0.625rem;
           font-weight: 700;
           border-radius: 0.1875rem;
@@ -212,17 +212,17 @@ export default function PlayerCard({
         .player-card__remove {
           background: none;
           border: none;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           font-size: 1.25rem;
           cursor: pointer;
           padding: 0.125rem 0.375rem;
-          border-radius: 0.25rem;
+          border-radius: var(--radius-sm, 0.25rem);
           line-height: 1;
           flex-shrink: 0;
         }
         .player-card__remove:hover {
-          background: #fee2e2;
-          color: #dc2626;
+          background: var(--color-error-light, #fee2e2);
+          color: var(--color-error, #dc2626);
         }
         .player-card__details {
           display: flex;
@@ -238,17 +238,18 @@ export default function PlayerCard({
           font-size: 0.625rem;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-500, #6b7280);
         }
         .player-card__detail-value {
           font-size: 0.8125rem;
           font-weight: 600;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
+          font-variant-numeric: tabular-nums;
         }
         .player-card__detail-value--muted {
           font-size: 0.75rem;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           font-weight: 500;
         }
         .player-card__rookie-warning {
@@ -257,63 +258,68 @@ export default function PlayerCard({
           gap: 0.5rem;
           flex-wrap: wrap;
           padding: 0.375rem 0.5rem;
-          background: #fef3c7;
-          border-radius: 0.375rem;
+          background: var(--color-warning-light, #fef3c7);
+          border-radius: var(--radius-sm, 0.25rem);
         }
         .player-card__rookie-badge {
           font-size: 0.6875rem;
           font-weight: 700;
-          color: #92400e;
+          color: var(--color-warning-dark, #d97706);
         }
         .player-card__rookie-text {
           font-size: 0.6875rem;
-          color: #78350f;
+          color: var(--color-warning-dark, #d97706);
           flex: 1;
         }
         .player-card__ext-btn {
           padding: 0.25rem 0.5rem;
           font-size: 0.6875rem;
           font-weight: 600;
-          border: 1px solid #92400e;
-          border-radius: 0.25rem;
+          border: 1px solid var(--color-warning-dark, #d97706);
+          border-radius: var(--radius-sm, 0.25rem);
           background: transparent;
-          color: #92400e;
+          color: var(--color-warning-dark, #d97706);
           cursor: pointer;
           transition: all 0.1s ease;
         }
         .player-card__ext-btn:hover {
-          background: #92400e;
+          background: var(--color-warning-dark, #d97706);
           color: #fff;
         }
         .player-card__ext-btn--edit {
-          border-color: #166534;
-          color: #166534;
+          border-color: var(--color-success-dark, #059669);
+          color: var(--color-success-dark, #059669);
         }
         .player-card__ext-btn--edit:hover {
-          background: #166534;
+          background: var(--color-success-dark, #059669);
           color: #fff;
+        }
+        .player-card__ext-btn:focus-visible,
+        .player-card__remove:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
         }
         .player-card__extension-applied {
           display: flex;
           align-items: center;
           gap: 0.5rem;
           padding: 0.375rem 0.5rem;
-          background: #dcfce7;
-          border-radius: 0.375rem;
+          background: var(--color-success-light, #d1fae5);
+          border-radius: var(--radius-sm, 0.25rem);
         }
         .player-card__ext-badge {
           font-size: 0.6875rem;
           font-weight: 700;
-          color: #166534;
+          color: var(--color-success-dark, #059669);
           flex: 1;
         }
         .player-card__tag-badge {
           font-size: 0.6875rem;
           font-weight: 700;
-          color: #7c3aed;
-          background: #ede9fe;
+          color: var(--color-franchise-tag, #7c3aed);
+          background: var(--color-franchise-tag-light, #ede9fe);
           padding: 0.25rem 0.5rem;
-          border-radius: 0.25rem;
+          border-radius: var(--radius-sm, 0.25rem);
           text-align: center;
         }
       `}</style>

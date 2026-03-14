@@ -686,10 +686,11 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           margin-bottom: 1.5rem;
         }
         .trade-builder__header h1 {
-          font-size: 1.5rem;
+          font-size: 1.35rem;
           font-weight: 700;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
           margin: 0;
+          line-height: 1.2;
         }
         .trade-builder__actions {
           display: flex;
@@ -698,11 +699,11 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
         }
         .btn {
           padding: 0.5rem 1rem;
-          border-radius: 0.5rem;
+          border-radius: var(--radius-md, 0.5rem);
           font-size: 0.875rem;
           font-weight: 600;
           cursor: pointer;
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
+          border: 1px solid var(--content-border, #e2e8f0);
           transition: all 0.15s ease;
         }
         .btn:disabled {
@@ -714,16 +715,16 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           outline-offset: 2px;
         }
         .btn--secondary {
-          background: var(--primary-content-bg-color, #fff);
-          color: var(--text-color, #1f2937);
+          background: var(--content-bg, #fff);
+          color: var(--color-gray-900, #111827);
         }
         .btn--secondary:not(:disabled):hover {
-          border-color: var(--primary-color, #1c497c);
-          background: var(--primary-light-bg, #f0f4f8);
+          border-color: var(--color-primary, #1c497c);
+          background: var(--color-gray-50, #f9fafb);
         }
         .btn--primary {
           background: var(--btn-primary-bg, #1c497c);
-          color: #fff;
+          color: var(--btn-primary-text, #fff);
           border-color: var(--btn-primary-bg, #1c497c);
         }
         .btn--primary:not(:disabled):hover {
@@ -743,7 +744,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           padding-top: 2.5rem;
         }
         .trade-builder__swap {
-          background: var(--primary-color, #1c497c);
+          background: var(--btn-primary-bg, #1c497c);
           color: #fff;
           border: none;
           border-radius: 50%;
@@ -758,6 +759,10 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
         }
         .trade-builder__swap:hover {
           transform: scale(1.1);
+        }
+        .trade-builder__swap:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
         }
         .visually-hidden {
           position: absolute;

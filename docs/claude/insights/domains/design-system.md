@@ -872,3 +872,27 @@ The parallelogram shape (vs. a simple trapezoid) was chosen because it creates v
 **Source:** `src/pages/theleague/players.astro` (hero section, confirmed 2026-03-02)
 
 **Recommendation:** When a page needs flair beyond the editorial standard, reach for the broadcast diagonal cut. It pairs well with the editorial light background (gray-50) because the dark photo area creates natural contrast. Reserve it for one hero-level element per page to maintain impact.
+
+---
+
+## 2026-03-14 - Token Fallback Correctness in React Inline Styles
+
+**Context:** Trade Builder design system alignment revealed widespread incorrect CSS variable fallbacks in inline `<style>` blocks within React components.
+
+**Common mistakes found:**
+- `--color-warning-dark` fallback was `#92400e` (amber-900) but token is `#d97706` (amber-600)
+- `--color-error-light` fallback was `#fef2f2` (red-50) but token is `#fee2e2` (red-100)
+- `--color-success-light` fallback was inconsistent (`#ecfdf5`, `#f0fdf4`, `#dcfce7`) — token is `#d1fae5`
+- `--content-border` fallback was sometimes `#d1d5db` (gray-300) — token is `#e2e8f0` (slate-200)
+
+**Rule:** When adding `var(--token, #fallback)`, always verify the fallback against `src/styles/tokens.css`. Never guess from memory.
+
+**Focus-visible pattern:** Every interactive button in inline `<style>` blocks needs explicit `:focus-visible` — the global tokens.css rule may be overridden by inline specificity. Standard pattern:
+```css
+.my-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+}
+```
+
+**Contrast rule for small white-on-color text:** At `0.75rem` (12px), white text on `--color-error` (#dc2626) is borderline (~4.0:1). Use `--color-error-dark` (#b91c1c, ~4.87:1) for backgrounds with white text at small sizes.

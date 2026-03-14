@@ -96,14 +96,14 @@ const capStyles = (
       gap: 0.375rem;
     }
     .cap-impact__title {
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted-text-color, #6b7280);
+      letter-spacing: 0.06em;
+      color: var(--color-gray-900, #111827);
       margin: 0 0 0.25rem;
-      padding-bottom: 0.375rem;
-      border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+      padding-left: 0.625rem;
+      border-left: 2px solid var(--color-primary, #1c497c);
     }
     .cap-impact__row {
       display: flex;
@@ -113,26 +113,27 @@ const capStyles = (
     }
     .cap-impact__row--highlight {
       padding: 0.375rem 0.5rem;
-      border-radius: 0.375rem;
-      background: var(--primary-light-bg, #f0f4f8);
+      border-radius: var(--radius-sm, 0.25rem);
+      background: var(--color-gray-50, #f9fafb);
     }
     .cap-impact__row--danger {
-      background: #fef2f2;
+      background: var(--color-error-light, #fee2e2);
     }
     .cap-impact__label {
       font-size: 0.8125rem;
-      color: var(--muted-text-color, #6b7280);
+      color: var(--color-gray-500, #6b7280);
     }
     .cap-impact__value {
       font-size: 0.8125rem;
       font-weight: 600;
-      color: var(--text-color, #1f2937);
+      color: var(--color-gray-900, #111827);
+      font-variant-numeric: tabular-nums;
     }
     .cap-impact__value--positive {
-      color: #166534;
+      color: var(--color-success-dark, #059669);
     }
     .cap-impact__value--negative {
-      color: #dc2626;
+      color: var(--color-error, #dc2626);
     }
     .cap-impact__delta {
       font-size: 0.875rem;
@@ -140,24 +141,25 @@ const capStyles = (
       display: flex;
       align-items: center;
       gap: 0.25rem;
+      font-variant-numeric: tabular-nums;
     }
     .cap-impact__delta--gain {
-      color: #166534;
+      color: var(--color-success-dark, #059669);
     }
     .cap-impact__delta--loss {
-      color: #dc2626;
+      color: var(--color-error, #dc2626);
     }
     .cap-impact__arrow {
       font-size: 0.75rem;
     }
     .cap-impact__warning {
-      background: #dc2626;
+      background: var(--color-error-dark, #b91c1c);
       color: #fff;
       font-size: 0.75rem;
       font-weight: 700;
       text-align: center;
       padding: 0.375rem 0.5rem;
-      border-radius: 0.375rem;
+      border-radius: var(--radius-sm, 0.25rem);
     }
   `}</style>
 );

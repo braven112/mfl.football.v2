@@ -71,7 +71,7 @@ export default function TeamPanel({
                   value={team.franchiseId}
                   disabled={team.franchiseId === otherSideFranchiseId}
                 >
-                  {team.name}{baitCount > 0 ? ` (${baitCount} on trade block)` : ''}
+                  {team.name}{baitCount > 0 ? ` (${baitCount})` : ''}
                 </option>
               );
             })}
@@ -140,9 +140,9 @@ export default function TeamPanel({
 
       <style>{`
         .team-panel {
-          background: var(--primary-content-bg-color, #fff);
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.75rem;
+          background: var(--content-bg, #fff);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-lg, 1rem);
           padding: 1rem;
           display: flex;
           flex-direction: column;
@@ -157,8 +157,8 @@ export default function TeamPanel({
           font-size: 0.75rem;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-500, #6b7280);
         }
         .team-panel__select-row {
           display: flex;
@@ -174,39 +174,39 @@ export default function TeamPanel({
         .team-panel__select {
           width: 100%;
           padding: 0.625rem 0.75rem;
-          border: 2px solid var(--primary-content-border-color, #e5e7eb);
-          border-radius: 0.5rem;
+          border: 2px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-md, 0.5rem);
           font-size: 0.9375rem;
           font-weight: 600;
-          background: var(--primary-content-bg-color, #fff);
-          color: var(--text-color, #1f2937);
+          background: var(--content-bg, #fff);
+          color: var(--color-gray-900, #111827);
           cursor: pointer;
           transition: border-color 0.15s ease;
         }
-        .team-panel__select:focus {
+        .team-panel__select:focus-visible {
           outline: none;
-          border-color: var(--primary-color, #1c497c);
+          border-color: var(--color-primary, #1c497c);
           box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
         }
         .team-panel__trade-bait-hint {
           font-size: 0.75rem;
           font-weight: 600;
-          color: #92400e;
-          background: #fffbeb;
-          border: 1px solid #fde68a;
-          border-radius: 0.375rem;
+          color: var(--color-warning-dark, #d97706);
+          background: var(--color-warning-light, #fef3c7);
+          border: 1px solid var(--color-warning, #f59e0b);
+          border-radius: var(--radius-sm, 0.25rem);
           padding: 0.375rem 0.5rem;
           margin-top: 0.25rem;
         }
         .team-panel__section-title {
-          font-size: 0.8125rem;
+          font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0 0 0.5rem;
-          padding-bottom: 0.375rem;
-          border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .team-panel__selected {
           display: flex;

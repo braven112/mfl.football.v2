@@ -245,8 +245,8 @@ export default function PendingTradesPanel({
           position: fixed;
           inset: 0;
           z-index: 1001;
-          background: rgba(15, 23, 42, 0.3);
-          backdrop-filter: blur(1px);
+          background: rgba(15, 23, 42, 0.45);
+          backdrop-filter: blur(2px);
         }
         .ptp-panel {
           position: absolute;
@@ -343,7 +343,7 @@ export default function PendingTradesPanel({
         }
         .ptp-skeleton {
           background: var(--color-gray-100, #f3f4f6);
-          border-radius: 0.5rem;
+          border-radius: var(--radius-md, 0.5rem);
           height: 5rem;
           animation: ptp-pulse 1.5s ease-in-out infinite;
         }
@@ -364,7 +364,7 @@ export default function PendingTradesPanel({
           background: var(--btn-primary-bg, #1c497c);
           color: #fff;
           border: none;
-          border-radius: 0.375rem;
+          border-radius: var(--radius-sm, 0.25rem);
           padding: 0.5rem 1rem;
           font-size: 0.8125rem;
           font-weight: 600;

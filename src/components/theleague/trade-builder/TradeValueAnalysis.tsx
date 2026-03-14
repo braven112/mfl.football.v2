@@ -209,16 +209,20 @@ export default function TradeValueAnalysis({
       <style>{`
         .tva {
           margin-top: 1.5rem;
-          background: var(--primary-content-bg-color, #fff);
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.5rem;
+          background: var(--content-bg, #fff);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-md, 0.5rem);
           padding: 1rem;
         }
         .tva__title {
-          font-size: 1rem;
+          font-size: 0.75rem;
           font-weight: 700;
-          color: var(--text-color, #1f2937);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0 0 0.75rem;
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .tva__columns {
           display: grid;
@@ -233,12 +237,12 @@ export default function TradeValueAnalysis({
           display: flex;
           align-items: center;
           gap: 0.35rem;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           font-weight: 600;
-          color: var(--text-secondary-color, #64748b);
+          color: var(--color-gray-600, #4b5563);
           margin-bottom: 0.5rem;
           padding-bottom: 0.35rem;
-          border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+          border-bottom: 1px solid var(--content-border, #e2e8f0);
         }
         .tva__team-icon {
           width: 16px;
@@ -258,7 +262,7 @@ export default function TradeValueAnalysis({
           padding: 0.2rem 0;
         }
         .tva__player-name {
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -271,13 +275,13 @@ export default function TradeValueAnalysis({
           flex-shrink: 0;
         }
         .tva__player-value--positive {
-          color: #059669;
+          color: var(--color-success-dark, #059669);
         }
         .tva__player-value--negative {
-          color: #dc2626;
+          color: var(--color-error, #dc2626);
         }
         .tva__player-value--na {
-          color: var(--text-secondary-color, #64748b);
+          color: var(--color-gray-600, #4b5563);
           font-style: italic;
           font-weight: 400;
         }
@@ -289,7 +293,7 @@ export default function TradeValueAnalysis({
         }
         .tva__empty {
           font-size: 0.8rem;
-          color: var(--text-secondary-color, #64748b);
+          color: var(--color-gray-600, #4b5563);
           font-style: italic;
           padding: 0.25rem 0;
         }
@@ -301,23 +305,23 @@ export default function TradeValueAnalysis({
           font-weight: 600;
           padding-top: 0.35rem;
           margin-top: 0.35rem;
-          border-top: 1px solid var(--primary-content-border-color, #e2e8f0);
-          color: var(--text-color, #1f2937);
+          border-top: 1px solid var(--content-border, #e2e8f0);
+          color: var(--color-gray-900, #111827);
         }
         .tva__net {
           margin-top: 0.75rem;
           padding: 0.6rem 0.75rem;
-          border-radius: 6px;
+          border-radius: var(--radius-sm, 0.25rem);
           font-size: 0.85rem;
           text-align: center;
         }
         .tva__net--positive {
-          background: rgba(5, 150, 105, 0.08);
-          color: #059669;
+          background: var(--color-success-light, #d1fae5);
+          color: var(--color-success-dark, #059669);
         }
         .tva__net--negative {
-          background: rgba(220, 38, 38, 0.06);
-          color: #dc2626;
+          background: var(--color-error-light, #fee2e2);
+          color: var(--color-error, #dc2626);
         }
         @media (max-width: 640px) {
           .tva__columns {

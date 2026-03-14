@@ -192,19 +192,21 @@ export default function TradeAnalysisSummary({
 
       <style>{`
         .trade-analysis {
-          background: var(--primary-content-bg-color, #fff);
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.75rem;
+          background: var(--content-bg, #fff);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-lg, 1rem);
           padding: 1rem;
           margin-top: 1rem;
         }
         .trade-analysis__title {
-          font-size: 0.8125rem;
+          font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0 0 0.75rem;
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .trade-analysis__grid {
           display: grid;
@@ -213,17 +215,19 @@ export default function TradeAnalysisSummary({
         }
         .trade-analysis__card {
           padding: 0.75rem;
-          background: var(--primary-light-bg, #f8fafc);
-          border-radius: 0.5rem;
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
+          background: var(--color-gray-50, #f9fafb);
+          border-radius: var(--radius-md, 0.5rem);
+          border: 1px solid var(--content-border, #e2e8f0);
         }
         .trade-analysis__card-title {
           font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--text-color, #1f2937);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0 0 0.5rem;
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .trade-analysis__columns {
           display: grid;
@@ -239,8 +243,8 @@ export default function TradeAnalysisSummary({
           font-size: 0.6875rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-500, #6b7280);
           margin-bottom: 0.125rem;
           display: flex;
           align-items: center;
@@ -255,20 +259,21 @@ export default function TradeAnalysisSummary({
         .trade-analysis__change {
           font-size: 0.8125rem;
           font-weight: 600;
+          font-variant-numeric: tabular-nums;
         }
         .trade-analysis__change--gain {
-          color: #166534;
+          color: var(--color-success-dark, #059669);
         }
         .trade-analysis__change--loss {
-          color: #dc2626;
+          color: var(--color-error, #dc2626);
         }
         .trade-analysis__change--none {
           font-size: 0.75rem;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
         }
         .trade-analysis__expiry {
           font-size: 0.8125rem;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
         }
         .trade-analysis__dead-money {
           display: flex;
@@ -278,16 +283,18 @@ export default function TradeAnalysisSummary({
         .trade-analysis__dm-name {
           font-size: 0.8125rem;
           font-weight: 600;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
         }
         .trade-analysis__dm-value {
           font-size: 0.6875rem;
-          color: #dc2626;
+          color: var(--color-error, #dc2626);
+          font-variant-numeric: tabular-nums;
         }
         .trade-analysis__roster-delta {
           font-size: 0.875rem;
           font-weight: 600;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
+          font-variant-numeric: tabular-nums;
         }
       `}</style>
     </div>

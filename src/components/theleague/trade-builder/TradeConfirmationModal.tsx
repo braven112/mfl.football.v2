@@ -440,7 +440,7 @@ export default function TradeConfirmationModal({
           text-transform: uppercase;
           background: var(--color-gray-100, #f3f4f6);
           padding: 0.125rem 0.375rem;
-          border-radius: 9999px;
+          border-radius: var(--radius-full, 9999px);
           color: var(--color-gray-600, #4b5563);
           flex-shrink: 0;
         }
@@ -513,17 +513,17 @@ export default function TradeConfirmationModal({
           max-height: 6rem;
           resize: vertical;
           padding: 0.625rem;
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
+          border: 1px solid var(--content-border, #e2e8f0);
           border-radius: var(--radius-sm, 0.25rem);
           font-size: 0.875rem;
           font-family: inherit;
-          color: var(--text-color, #1f2937);
-          background: var(--primary-content-bg-color, #fff);
+          color: var(--color-gray-900, #111827);
+          background: var(--content-bg, #fff);
           box-sizing: border-box;
         }
         .tcm-textarea:focus-visible {
           outline: none;
-          border-color: var(--primary-color, #1c497c);
+          border-color: var(--color-primary, #1c497c);
           box-shadow: 0 0 0 3px rgba(28, 73, 124, 0.1);
         }
         .tcm-char-count {
@@ -543,7 +543,7 @@ export default function TradeConfirmationModal({
           align-items: center;
           gap: 0.375rem;
           padding: 0.5rem 0.75rem;
-          background: var(--color-error-light, #fef2f2);
+          background: var(--color-error-light, #fee2e2);
           border: 1px solid var(--color-error-border, #fecaca);
           border-radius: 0.375rem;
           color: var(--color-error, #dc2626);
@@ -555,7 +555,7 @@ export default function TradeConfirmationModal({
           align-items: center;
           gap: 0.375rem;
           padding: 0.5rem 0.75rem;
-          background: var(--color-success-light, #ecfdf5);
+          background: var(--color-success-light, #d1fae5);
           border: 1px solid var(--color-success-border, #a7f3d0);
           border-radius: 0.375rem;
           color: var(--color-success-dark, #059669);

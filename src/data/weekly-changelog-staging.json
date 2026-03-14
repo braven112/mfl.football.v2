@@ -7,6 +7,13 @@
       "summary": "Trade submissions now work for all league owners, not just the commissioner — the MFL authentication cookie was being silently stripped during cross-origin redirects, causing every trade proposal to fail",
       "impact": "user",
       "area": "trade-builder"
+    },
+    {
+      "date": "2026-03-14",
+      "type": "style-tweak",
+      "summary": "Trade Builder page and My Trades panel now use the site-wide editorial design system — consistent section titles, design tokens, typography scale, and focus states across all trade builder components",
+      "impact": "user",
+      "area": "trade-builder"
     }
   ]
 }

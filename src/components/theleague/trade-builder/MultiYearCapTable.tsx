@@ -64,19 +64,21 @@ export default function MultiYearCapTable({
 
       <style>{`
         .multiyear-cap {
-          background: var(--primary-content-bg-color, #fff);
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.75rem;
+          background: var(--content-bg, #fff);
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-lg, 1rem);
           padding: 1rem;
           margin-top: 1rem;
         }
         .multiyear-cap__title {
-          font-size: 0.8125rem;
+          font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0 0 0.75rem;
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .multiyear-cap__table-wrap {
           overflow-x: auto;
@@ -85,13 +87,17 @@ export default function MultiYearCapTable({
           width: 100%;
           border-collapse: collapse;
           font-size: 0.8125rem;
+          font-variant-numeric: tabular-nums;
         }
         .multiyear-cap__th {
           text-align: center;
           padding: 0.5rem 0.75rem;
+          font-size: 0.625rem;
           font-weight: 600;
-          color: var(--muted-text-color, #6b7280);
-          border-bottom: 2px solid var(--primary-content-border-color, #e2e8f0);
+          text-transform: uppercase;
+          color: var(--color-gray-500, #6b7280);
+          background: var(--color-gray-50, #f9fafb);
+          border-bottom: 2px solid var(--content-border, #e2e8f0);
           white-space: nowrap;
         }
         .multiyear-cap__th:first-child {
@@ -102,12 +108,12 @@ export default function MultiYearCapTable({
           text-align: center;
           font-weight: 600;
           white-space: nowrap;
-          border-bottom: 1px solid var(--primary-content-border-color, #e2e8f0);
+          border-bottom: 1px solid var(--content-border, #e2e8f0);
         }
         .multiyear-cap__td:first-child {
           text-align: left;
           font-weight: 700;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
         }
         .multiyear-cap__team-cell {
           display: flex;
@@ -121,16 +127,16 @@ export default function MultiYearCapTable({
           flex-shrink: 0;
         }
         .multiyear-cap__td--gain {
-          color: #166534;
-          background: #f0fdf4;
+          color: var(--color-success-dark, #059669);
+          background: var(--color-success-light, #d1fae5);
         }
         .multiyear-cap__td--loss {
-          color: #dc2626;
-          background: #fef2f2;
+          color: var(--color-error, #dc2626);
+          background: var(--color-error-light, #fee2e2);
         }
         .multiyear-cap__td--over-cap {
           color: #fff;
-          background: #dc2626;
+          background: var(--color-error, #dc2626);
           font-weight: 700;
         }
         .multiyear-cap__sub {

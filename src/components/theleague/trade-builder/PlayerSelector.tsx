@@ -121,12 +121,14 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
 
       <style>{`
         .player-selector__title {
-          font-size: 0.8125rem;
+          font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--muted-text-color, #6b7280);
+          letter-spacing: 0.06em;
+          color: var(--color-gray-900, #111827);
           margin: 0 0 0.5rem;
+          padding-left: 0.625rem;
+          border-left: 2px solid var(--color-primary, #1c497c);
         }
         .player-selector__filters {
           display: flex;
@@ -136,16 +138,16 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
         .player-selector__search {
           width: 100%;
           padding: 0.5rem 0.75rem;
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.375rem;
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-sm, 0.25rem);
           font-size: 0.875rem;
-          background: var(--primary-content-bg-color, #fff);
-          color: var(--text-color, #1f2937);
+          background: var(--content-bg, #fff);
+          color: var(--color-gray-900, #111827);
           box-sizing: border-box;
         }
-        .player-selector__search:focus {
+        .player-selector__search:focus-visible {
           outline: none;
-          border-color: var(--primary-color, #1c497c);
+          border-color: var(--color-primary, #1c497c);
           box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.1);
         }
         .player-selector__positions {
@@ -155,28 +157,28 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
         }
         .player-selector__pos-btn {
           padding: 0.25rem 0.5rem;
-          border: 1px solid var(--primary-content-border-color, #e2e8f0);
-          border-radius: 0.25rem;
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-sm, 0.25rem);
           background: transparent;
           font-size: 0.75rem;
           font-weight: 600;
           cursor: pointer;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           transition: all 0.1s ease;
         }
         .player-selector__pos-btn--active {
-          background: var(--primary-color, #1c497c);
+          background: var(--color-primary, #1c497c);
           color: #fff;
-          border-color: var(--primary-color, #1c497c);
+          border-color: var(--color-primary, #1c497c);
         }
         .player-selector__pos-btn--bait {
           margin-left: 0.25rem;
-          border-color: #f59e0b;
-          color: #92400e;
+          border-color: var(--color-warning, #f59e0b);
+          color: var(--color-warning-dark, #d97706);
         }
         .player-selector__pos-btn--bait.player-selector__pos-btn--active {
-          background: #f59e0b;
-          border-color: #f59e0b;
+          background: var(--color-warning, #f59e0b);
+          border-color: var(--color-warning, #f59e0b);
           color: #fff;
         }
         .player-selector__list {
@@ -189,14 +191,14 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
         }
         .player-selector__empty {
           text-align: center;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           font-size: 0.875rem;
           padding: 1rem 0;
         }
         .player-selector__toggle {
           background: none;
           border: none;
-          color: var(--primary-color, #1c497c);
+          color: var(--color-primary, #1c497c);
           font-size: 0.8125rem;
           font-weight: 600;
           cursor: pointer;
@@ -206,6 +208,11 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
         }
         .player-selector__toggle:hover {
           text-decoration: underline;
+        }
+        .player-selector__pos-btn:focus-visible,
+        .player-selector__toggle:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
         }
       `}</style>
     </div>
@@ -264,27 +271,27 @@ function PlayerRow({
           align-items: center;
           gap: 0.5rem;
           padding: 0.375rem 0.5rem;
-          border-radius: 0.375rem;
+          border-radius: var(--radius-sm, 0.25rem);
           transition: background 0.1s ease;
         }
         .player-row:hover {
-          background: var(--primary-light-bg, #f0f4f8);
+          background: var(--color-gray-50, #f9fafb);
         }
         .player-row--trade-bait {
-          background: #fffbeb;
-          border-left: 2px solid #f59e0b;
+          background: var(--color-warning-light, #fef3c7);
+          border-left: 2px solid var(--color-warning, #f59e0b);
         }
         .player-row--trade-bait:hover {
-          background: #fef3c7;
+          background: var(--color-warning-light, #fef3c7);
         }
         .player-row__avatar {
           flex-shrink: 0;
           width: 32px;
           height: 32px;
-          border-radius: 50%;
+          border-radius: var(--radius-full, 9999px);
           overflow: hidden;
-          background: var(--avatar-bg-color, #f3f4f6);
-          border: 1px solid #e2e8f0;
+          background: var(--color-gray-100, #f3f4f6);
+          border: 1px solid var(--content-border, #e2e8f0);
         }
         .player-row__avatar img {
           width: 100%;
@@ -306,7 +313,7 @@ function PlayerRow({
         .player-row__name {
           font-weight: 600;
           font-size: 0.8125rem;
-          color: var(--text-color, #1f2937);
+          color: var(--color-gray-900, #111827);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -317,7 +324,7 @@ function PlayerRow({
           align-items: center;
           gap: 0.25rem;
           font-size: 0.75rem;
-          color: var(--text-secondary-color, #64748b);
+          color: var(--color-gray-600, #4b5563);
         }
         .player-row__nfl-logo {
           width: 14px;
@@ -336,16 +343,17 @@ function PlayerRow({
           align-items: flex-end;
           gap: 0.0625rem;
           flex-shrink: 0;
+          font-variant-numeric: tabular-nums;
         }
         .player-row__salary {
           font-size: 0.75rem;
           font-weight: 600;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           white-space: nowrap;
         }
         .player-row__years {
           font-size: 0.625rem;
-          color: var(--muted-text-color, #6b7280);
+          color: var(--color-gray-500, #6b7280);
           white-space: nowrap;
         }
         .player-row__badge {
@@ -356,22 +364,22 @@ function PlayerRow({
           flex-shrink: 0;
         }
         .player-row__badge--rookie {
-          background: #dbeafe;
-          color: #1d4ed8;
+          background: var(--color-info-light, #dbeafe);
+          color: var(--color-info-dark, #2563eb);
         }
         .player-row__badge--tag {
-          background: #fef3c7;
-          color: #92400e;
+          background: var(--color-franchise-tag-light, #ede9fe);
+          color: var(--color-franchise-tag, #7c3aed);
         }
         .player-row__trade-bait {
           font-size: 0.75rem;
           cursor: default;
         }
         .player-row__add {
-          background: var(--secondary-color, #2e8743);
+          background: var(--btn-secondary-bg, #2e8743);
           color: #fff;
           border: none;
-          border-radius: 0.25rem;
+          border-radius: var(--radius-sm, 0.25rem);
           width: 1.5rem;
           height: 1.5rem;
           font-size: 1rem;
