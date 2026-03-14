@@ -4,8 +4,8 @@
  * Respond to a pending trade on MFL (accept, reject, or revoke/withdraw).
  * Uses the user's MFL cookie (authUser.id) for per-user authentication.
  *
- * Follows the same pattern as /api/trade-bait — uses api.myfantasyleague.com
- * with redirect: 'follow' and no FRANCHISE_ID override.
+ * IMPORTANT: Node's fetch converts POST→GET on 302 redirect, losing the body.
+ * We use redirect: 'manual' and re-POST to the redirect target to preserve it.
  */
 
 import type { APIRoute } from 'astro';
@@ -15,6 +15,46 @@ import { getCurrentLeagueYear } from '../../../utils/league-year';
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const VALID_RESPONSES = ['accept', 'reject', 'revoke'] as const;
 type TradeResponse = (typeof VALID_RESPONSES)[number];
+
+/** POST to MFL, following up to 3 redirects while preserving the POST body. */
+async function mflPost(
+  url: string,
+  body: string,
+  cookie: string,
+  maxRedirects = 3
+): Promise<Response> {
+  let currentUrl = url;
+  for (let i = 0; i <= maxRedirects; i++) {
+    const res = await fetch(currentUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: `MFL_USER_ID=${cookie}`,
+      },
+      body,
+      redirect: 'manual',
+    });
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) break;
+      console.log(`[trades/respond] Following redirect ${res.status} → ${location}`);
+      currentUrl = location;
+      continue;
+    }
+
+    return res;
+  }
+
+  return fetch(currentUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Cookie: `MFL_USER_ID=${cookie}`,
+    },
+    body,
+  });
+}
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -69,22 +109,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     console.log(`[trades/respond] POST ${importUrl} tradeId=${tradeId} response=${response}`);
 
-    const mflResponse = await fetch(importUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: `MFL_USER_ID=${user.id}`,
-      },
-      body: params.toString(),
-      redirect: 'follow',
-    });
-
+    const mflResponse = await mflPost(importUrl, params.toString(), user.id);
     const responseText = await mflResponse.text();
     console.log('[trades/respond] MFL response:', mflResponse.status, responseText.substring(0, 500));
 
     // MFL returns HTTP 200 even for errors — check response body
     if (responseText.includes('<error>') || responseText.includes('"error"')) {
-      console.error('[trades/respond] MFL returned error:', responseText);
       const errorMatch = responseText.match(/<error[^>]*>(.*?)<\/error>/s)
         || responseText.match(/"error"\s*:\s*"([^"]+)"/);
       const errorMsg = errorMatch?.[1] || 'MFL rejected the trade response';
@@ -95,9 +125,16 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     if (!mflResponse.ok) {
-      console.error('[trades/respond] MFL error:', mflResponse.status, responseText);
       return new Response(
         JSON.stringify({ success: false, message: `MFL API error: ${mflResponse.status}` }),
+        { status: 502, headers: JSON_HEADERS }
+      );
+    }
+
+    // Detect when POST body was lost (MFL returns HTML page instead of API response)
+    if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'MFL did not process the request. Please try again.' }),
         { status: 502, headers: JSON_HEADERS }
       );
     }
