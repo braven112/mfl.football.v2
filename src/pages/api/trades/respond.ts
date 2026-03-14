@@ -65,26 +65,33 @@ export const POST: APIRoute = async ({ request }) => {
       params.set('COMMENTS', comments.trim());
     }
 
+    const fetchBody = params.toString();
+    const fetchHeaders = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Cookie: `MFL_USER_ID=${mflCookie}`,
+    };
+
     console.log(`[trades/respond] POST ${importUrl} tradeId=${tradeId} response=${response}`);
 
-    const mflResponse = await fetch(importUrl, {
+    let mflResponse = await fetch(importUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: `MFL_USER_ID=${mflCookie}`,
-      },
-      body: params.toString(),
+      headers: fetchHeaders,
+      body: fetchBody,
       redirect: 'manual',
     });
 
-    // Redirect = wrong host or MFL bouncing
+    // Follow redirect manually — re-POST to the new location
     if (mflResponse.status >= 300 && mflResponse.status < 400) {
       const location = mflResponse.headers.get('location');
-      console.error('[trades/respond] Unexpected redirect:', mflResponse.status, location);
-      return new Response(
-        JSON.stringify({ success: false, message: 'MFL redirected the request. Action was not completed.' }),
-        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-      );
+      console.log('[trades/respond] Following redirect to:', location);
+      if (location) {
+        mflResponse = await fetch(location, {
+          method: 'POST',
+          headers: fetchHeaders,
+          body: fetchBody,
+          redirect: 'manual',
+        });
+      }
     }
 
     const responseText = await mflResponse.text();
