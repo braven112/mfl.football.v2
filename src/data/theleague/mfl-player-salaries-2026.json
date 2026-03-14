@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-14T07:29:11.253Z"
+    "fetchedAt": "2026-03-14T08:01:39.587Z"
   },
   "players": [
     {
@@ -2956,7 +2956,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15788",
+          "name": "Tolbert, Jalen"
+        }
+      ]
     },
     {
       "id": "14071",
@@ -3013,20 +3018,47 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "LAC",
+      "team": "DET",
       "draftYear": 2018,
       "draftTeam": "MIN",
       "birthdate": 807080400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13675_thumb.jpg",
       "externalIds": {
         "mfl": "13675",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5133",
+        "gsis": "00-0034439"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5133",
+        "fullName": "Tyler Conklin",
+        "team": "DET",
+        "age": 30,
+        "height": "75",
+        "weight": "248",
+        "number": 83,
+        "college": "Central Michigan",
+        "birthDate": "1995-07-30",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034439"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16214",
+          "name": "LaPorta, Sam"
+        }
+      ]
     },
     {
       "id": "17070",
@@ -11623,17 +11655,39 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "DAL",
+      "team": "MIA",
       "draftYear": 2022,
       "draftTeam": "DAL",
       "birthdate": 920091600,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15788_thumb.jpg",
       "externalIds": {
         "mfl": "15788",
-        "sleeper": null,
+        "sleeper": "8117",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "8117",
+        "fullName": "Jalen Tolbert",
+        "team": "MIA",
+        "age": 27,
+        "height": "73",
+        "weight": "195",
+        "number": 1,
+        "college": "South Alabama",
+        "birthDate": "1999-02-27",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
