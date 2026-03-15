@@ -65,13 +65,16 @@ export interface PositionalNeed {
   targetAcquisitions: number;
 }
 
+// Positions to include in average salary calculations (exclude PK/DEF — rarely drafted)
+const DRAFTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
 /**
- * Calculates the average rookie salary across all positions for a given draft slot.
- * Used when we don't know which position will be drafted (e.g., for cap reserve estimates).
+ * Calculates the average rookie salary across draftable positions (QB/RB/WR/TE) for a given slot.
+ * Excludes PK and DEF since they are almost never drafted.
  */
 export function calculateAveragePickSalary(round: number, pickInRound: number): number {
   if (round >= 3) {
-    const vals = Object.values(ROUND_3_FLAT_RATE);
+    const vals = DRAFTABLE_POSITIONS.map((p) => ROUND_3_FLAT_RATE[p]);
     return vals.reduce((s, v) => s + v, 0) / vals.length;
   }
 
@@ -80,17 +83,17 @@ export function calculateAveragePickSalary(round: number, pickInRound: number): 
 
   const roundSalaries = ROOKIE_SALARIES_2026[round];
   if (!roundSalaries) {
-    const vals = Object.values(ROUND_3_FLAT_RATE);
+    const vals = DRAFTABLE_POSITIONS.map((p) => ROUND_3_FLAT_RATE[p]);
     return vals.reduce((s, v) => s + v, 0) / vals.length;
   }
 
   const salaryRow = roundSalaries[overallPick];
   if (!salaryRow) {
-    const vals = Object.values(ROUND_3_FLAT_RATE);
+    const vals = DRAFTABLE_POSITIONS.map((p) => ROUND_3_FLAT_RATE[p]);
     return vals.reduce((s, v) => s + v, 0) / vals.length;
   }
 
-  const vals = Object.values(salaryRow);
+  const vals = DRAFTABLE_POSITIONS.map((p) => salaryRow[p]);
   return vals.reduce((s, v) => s + v, 0) / vals.length;
 }
 
