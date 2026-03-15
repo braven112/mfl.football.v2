@@ -11,7 +11,7 @@
  * 2. Urgent league event (within urgencyDays)
  * 3. Active league event (happening now)
  * 4. Upcoming league event (within 7 days)
- * 5. Default fallback: "What's New" page promo
+ * 5. Default fallback: newest What's New article (any age)
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
@@ -90,13 +90,13 @@ const AUCTION_HERO_TOTAL_DAYS = 30;
 
 /**
  * Get the Monday before the 3rd Thursday of March (auction hero start).
- * The hero appears at 9am PT on this Monday, 3 days before auction opens.
+ * The hero appears at midnight on this Monday, 3 days before auction opens.
  */
 function getAuctionHeroStart(year: number): Date {
   const faOpens = getNthDayOfMonth(year, 2, 4, 3); // 3rd Thursday of March
   const monday = new Date(faOpens);
   monday.setDate(monday.getDate() - 3); // Monday before Thursday
-  monday.setHours(9, 0, 0, 0); // 9am PT
+  monday.setHours(0, 0, 0, 0); // Start of day
   return monday;
 }
 
@@ -104,7 +104,7 @@ function getAuctionHeroStart(year: number): Date {
  * Check whether the reference date falls within the full Auction Hero window.
  *
  * The Auction Hero lifecycle:
- * - Starts: Monday 9am PT (3 days before auction opens)
+ * - Starts: Monday midnight (3 days before auction opens)
  * - "Auction Opens Soon" until Thursday 7am PT
  * - "Auction Under Way" from Thursday 7am PT onward
  * - Ends: 30 days after Monday start
@@ -244,8 +244,16 @@ function getDraftHero(live: boolean): HeroContent {
   };
 }
 
-/** The default fallback hero content */
-function getDefaultHero(): HeroContent {
+/** Default fallback: show the newest What's New article (any age) */
+function getDefaultHero(heroEligible: WhatsNewEntry[]): HeroContent {
+  // Pick the newest hero-eligible article regardless of age
+  const sorted = [...heroEligible].sort(
+    (a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime(),
+  );
+  if (sorted.length > 0) {
+    return featureToHero(sorted[0]);
+  }
+  // Ultimate fallback if there are zero What's New entries
   return {
     source: 'default',
     title: "What's New",
@@ -320,8 +328,8 @@ export function resolveHeroContent(
     return eventToHero(upcomingEvent);
   }
 
-  // --- Priority 5: Default fallback ---
-  return getDefaultHero();
+  // --- Priority 5: Default fallback (newest article, any age) ---
+  return getDefaultHero(heroEligible);
 }
 
 /** Find an urgent event from the timeline (isUrgent = within urgencyDays) */

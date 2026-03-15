@@ -21,7 +21,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 // Support ?testDate=YYYY-MM-DD for testing different hero/timeline states
 const testDateParam = Astro.url.searchParams.get('testDate');
-const referenceDate = testDateParam ? new Date(testDateParam) : undefined;
+const referenceDate = testDateParam ? new Date(testDateParam + 'T00:00:00') : undefined;
 const isValidTestDate = referenceDate && !isNaN(referenceDate.getTime());
 const effectiveDate = isValidTestDate ? referenceDate : undefined;
 
@@ -29,7 +29,7 @@ const timeline = getWhatsNextTimeline(effectiveDate);
 const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effectiveDate);
 const isAuction = hero.source === 'auction';
 const isDraft = hero.source === 'draft';
-const showAuctionStrip = !isAuction && !isDraft && isAuctionStripPeriod(effectiveDate ?? new Date());
+const showAuctionStrip = !isAuction && isAuctionStripPeriod(effectiveDate ?? new Date());
 const needsLeagueYear = isAuction || isDraft || showAuctionStrip;
 const leagueYear = needsLeagueYear ? getCurrentLeagueYear(effectiveDate) : 0;
 const auctionLive = isAuction ? isAuctionLive(effectiveDate ?? new Date()) : false;

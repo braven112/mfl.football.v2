@@ -83,7 +83,7 @@ const quickLinks: DraftLink[] = [
   {
     label: 'Last Year\'s Draft',
     href: r('/theleague/draft-predictor?view=history&year=' + (leagueYear - 1) + '&team=all'),
-    icon: 'standings-2',
+    icon: 'history',
     external: false,
   },
   {
@@ -239,9 +239,9 @@ const rulesLink = r('/theleague/rules#draft-rules');
     align-self: flex-start;
     padding: 0.625rem 1.25rem;
     border-radius: var(--radius-md, 0.5rem);
-    background: var(--cat-draft, #7c3aed);
+    background: var(--color-primary, #1c497c);
     color: #fff;
-    border: 1px solid var(--cat-draft, #7c3aed);
+    border: 1px solid var(--color-primary, #1c497c);
     text-decoration: none;
     font-size: 0.9375rem;
     font-weight: 700;
@@ -250,11 +250,11 @@ const rulesLink = r('/theleague/rules#draft-rules');
 
   .draft-hero__cta:hover {
     filter: brightness(0.92);
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--cat-draft, #7c3aed) 35%, transparent);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
   }
 
   .draft-hero__cta:focus-visible {
-    outline: 2px solid var(--cat-draft, #7c3aed);
+    outline: 2px solid var(--color-primary, #1c497c);
     outline-offset: 2px;
   }
 
@@ -279,7 +279,7 @@ const rulesLink = r('/theleague/rules#draft-rules');
     letter-spacing: 0.06em;
     color: var(--color-gray-500, #6b7280);
     padding-left: 0.625rem;
-    border-left: 2px solid var(--cat-draft, #7c3aed);
+    border-left: 2px solid var(--color-primary, #1c497c);
     margin: 0;
   }
 
@@ -302,7 +302,7 @@ const rulesLink = r('/theleague/rules#draft-rules');
   }
 
   .draft-hero__rules-link {
-    color: var(--cat-draft, #7c3aed);
+    color: var(--color-primary, #1c497c);
     font-weight: 600;
     text-decoration: none;
   }
@@ -312,7 +312,7 @@ const rulesLink = r('/theleague/rules#draft-rules');
   }
 
   .draft-hero__rules-link:focus-visible {
-    outline: 2px solid var(--cat-draft, #7c3aed);
+    outline: 2px solid var(--color-primary, #1c497c);
     outline-offset: 2px;
   }
 

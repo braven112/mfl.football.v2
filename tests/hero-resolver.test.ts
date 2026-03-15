@@ -58,16 +58,16 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
 
 describe('isAuctionHeroPeriod', () => {
   // 2026: 3rd Thursday of March = March 19
-  // Monday before = March 16, hero starts at 9am
+  // Monday before = March 16, hero starts at midnight
   // 30 days from March 16 = April 15
-  // Window: March 16 9am → April 15 end of day
+  // Window: March 16 midnight → April 15 end of day
 
-  it('should return false before Monday 9am (hero start)', () => {
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 16, 8, 59))).toBe(false);
+  it('should return false just before Monday (hero start)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 15, 23, 59))).toBe(false);
   });
 
-  it('should return true at Monday 9am (hero start)', () => {
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 16, 9, 0))).toBe(true);
+  it('should return true at Monday midnight (hero start)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 16, 0, 0))).toBe(true);
   });
 
   it('should return true on auction opening day (March 19)', () => {
@@ -201,8 +201,8 @@ describe('getDraftStartFormatted', () => {
 describe('resolveHeroContent', () => {
   describe('Priority 0: Auction hero window always wins', () => {
     // 2026: 3rd Thursday of March = March 19
-    // Monday before = March 16, hero starts at 9am
-    // Hero window: March 16 9am → April 15
+    // Monday before = March 16, hero starts at midnight
+    // Hero window: March 16 → April 15
 
     it('should return auction hero during the hero window (live)', () => {
       const entries: WhatsNewEntry[] = [];
@@ -301,7 +301,7 @@ describe('resolveHeroContent', () => {
       expect(result.title).toBe('7 Day Feature');
     });
 
-    it('should NOT show a feature that is 8 days old', () => {
+    it('should NOT show a feature at Priority 1 when 8 days old, but still show it as fallback', () => {
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'eight-days', title: '8 Day Feature', date: '2026-02-08' }),
       ];
@@ -310,8 +310,9 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      // Should fall through to default (no events in timeline)
-      expect(result.source).toBe('default');
+      // Falls through Priority 1 (too old) but picked up by fallback as newest article
+      expect(result.source).toBe('feature');
+      expect(result.title).toBe('8 Day Feature');
     });
 
     it('should prefer features over urgent events', () => {
@@ -376,7 +377,7 @@ describe('resolveHeroContent', () => {
       }
     });
 
-    it('should NOT show future-dated features', () => {
+    it('should NOT show future-dated features at Priority 1, but still show as fallback', () => {
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'future', title: 'Future Feature', date: '2026-02-20' }),
       ];
@@ -385,8 +386,9 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      // Future date = negative age, should not match
-      expect(result.source).toBe('default');
+      // Future date skips Priority 1 but picked up by fallback as newest article
+      expect(result.source).toBe('feature');
+      expect(result.title).toBe('Future Feature');
     });
   });
 
@@ -465,12 +467,14 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      expect(result.source).toBe('default');
+      // Falls through to fallback — shows newest article
+      expect(result.source).toBe('feature');
+      expect(result.title).toBe('Old Feature');
     });
   });
 
   describe('Priority 5: Default fallback', () => {
-    it('should show the default when no entries or events qualify', () => {
+    it('should show the newest article as fallback when no entries or events qualify for higher priority', () => {
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'ancient', title: 'Ancient Feature', date: '2025-01-01' }),
       ];
@@ -479,20 +483,21 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
-      expect(result.source).toBe('default');
-      expect(result.title).toBe("What's New");
-      expect(result.link).toBe('/theleague/whats-new');
+      // Falls through to fallback — shows newest article regardless of age
+      expect(result.source).toBe('feature');
+      expect(result.title).toBe('Ancient Feature');
     });
 
-    it('should show the default with empty entries and empty timeline', () => {
+    it('should show the generic default only with empty entries', () => {
       const result = resolveHeroContent([], makeTimeline(), new Date(2026, 1, 16));
 
       expect(result.source).toBe('default');
+      expect(result.title).toBe("What's New");
     });
   });
 
   describe('excludeFromHero filtering', () => {
-    it('should exclude entries with excludeFromHero: true', () => {
+    it('should exclude entries with excludeFromHero: true from both Priority 1 and fallback', () => {
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'excluded', title: 'Excluded Feature', date: '2026-02-16', excludeFromHero: true }),
       ];
@@ -501,6 +506,7 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, now);
 
+      // Excluded from hero-eligible pool entirely — falls to generic default
       expect(result.source).toBe('default');
     });
   });
@@ -681,13 +687,13 @@ describe('resolveHeroContent', () => {
       );
       expect(result.title).toBe('Upcoming');
 
-      // Priority 5: Remove upcoming — default wins
+      // Priority 5: Remove upcoming — fallback shows newest article
       result = resolveHeroContent(
         [old],
         makeTimeline(),
         now,
       );
-      expect(result.title).toBe("What's New");
+      expect(result.title).toBe('Old');
     });
   });
 
@@ -782,7 +788,7 @@ describe('resolveHeroContent', () => {
       expect(result.title).toBe('January Feature');
     });
 
-    it('should NOT show a feature when testDate makes it too old', () => {
+    it('should NOT show a feature at Priority 1 when testDate makes it too old, but show as fallback', () => {
       // Feature shipped Jan 20, testing as if it were Jan 30 (10 days old, > 7)
       const entries: WhatsNewEntry[] = [
         makeEntry({ id: 'jan-feature', title: 'January Feature', date: '2026-01-20' }),
@@ -792,7 +798,9 @@ describe('resolveHeroContent', () => {
 
       const result = resolveHeroContent(entries, timeline, testDate);
 
-      expect(result.source).toBe('default');
+      // Too old for Priority 1 but picked up by fallback as newest article
+      expect(result.source).toBe('feature');
+      expect(result.title).toBe('January Feature');
     });
 
     it('should show features from the right time window when multiple exist', () => {
