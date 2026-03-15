@@ -626,3 +626,61 @@ MFL does NOT provide WebSocket or push notifications. Polling is the only option
 - Confirmed league.json fields: `auction_kind: email`, `minBid: 425000`, `bidIncrement: 25000`
 - `docs/mfl-auction-api-research.md` (dated 2026-01-04): Pre-existing research largely confirmed
 - `docs/MFL_AUCTION_API.md`: Contains mock data with `timeToLive` field — NOT present in real production data
+
+---
+
+## 2026-03-15 - Auction Bid Write Endpoint: Research Status and Best Candidate
+
+**Context:** Confirming the correct `TYPE` parameter for `POST /import` to place a bid in MFL's email slow auction.
+
+**Finding: The exact endpoint is NOT publicly documented on the web.** Neither the MFL API info pages (blocked by sandbox) nor any public GitHub MFL API clients or developer forums index the specific parameter for auction bid submission. The MFL API docs are only accessible when logged in to the MFL host directly.
+
+### Best Candidate: `TYPE=auctionBid`
+
+Based on all available evidence, `TYPE=auctionBid` is more likely correct than `TYPE=fcfsAuction`. Reasoning:
+
+1. **Naming convention:** `fcfsAuction` is a waiver-wire pattern (First Come First Served) — appropriate for immediate free agent claims, not for email auctions where bids compete. `auctionBid` follows MFL's naming style for the email auction context.
+
+2. **Existing codebase research:** `docs/claude/stories/auction-tracker.md` (line 115) and `docs/claude/insights/features/auction-tracker.md` (line 205) both list `POST /import?TYPE=auctionBid` as the primary candidate, not `fcfsAuction`.
+
+3. **Web search AI summary** (no definitive source, treat as approximate): One search result suggested the auction bid import might use parameters `PLAYER` (or `PLAYER_ID`), `BID`, and possibly `AUCTION_ID`. Another suggested `FRANCHISE_ID` may be needed.
+
+### Likely Parameters (Unconfirmed)
+
+```
+POST https://www49.myfantasyleague.com/{YEAR}/import?TYPE=auctionBid&L={LEAGUE_ID}
+Cookie: MFL_USER_ID={cookie}
+Content-Type: application/x-www-form-urlencoded
+
+PLAYER_ID={mflPlayerId}&BID={amountInDollars}&L={leagueId}
+```
+
+**Amount format:** Based on all observed MFL auction data (`winningBid`, `AUCTION_BID` transaction strings), amounts are in whole dollars with NO decimal point. Example: `6000000` = $6,000,000. The existing `auction-bid.ts` correctly passes `String(bidAmount)` where `bidAmount` is already an integer.
+
+**Alternative parameter names to test if `BID` fails:**
+- `AMOUNT` (used in `auction-bid.ts` currently)
+- `BID_AMOUNT`
+- The player param might be `PLAYER` instead of `PLAYER_ID`
+
+### What `fcfsAuction` Actually Is
+
+`fcfsAuction` is the waiver system for leagues using FCFS (First Come First Served) free agency, not email auctions. These are two separate league configurations in MFL. TheLeague uses `auction_kind: "email"` so `fcfsAuction` is almost certainly wrong for our use case.
+
+### Test League
+
+**Test league ID: `36189`** — used in `tests/mfl-write-integration.test.ts` for contract write testing. Same MFL host (`www49`). Run with: `MFL_USER_ID=xxx MFL_IS_COMMISH=xxx MFL_LEAGUE_ID=36189 pnpm test:mfl-integration`.
+
+Note: Test league 36189 may not have an active email auction configured, making it difficult to test `auctionBid` writes without a live nomination. The only reliable way to confirm the exact parameters is to inspect MFL's `options?O=52` HTML form (the "Place Bid" page) in a browser while authenticated, and note the `<form action>`, `<input name>` values.
+
+### Recommended Debugging Approach
+
+When the 2026 auction is live and authentication is available:
+1. Open browser dev tools on `https://www49.myfantasyleague.com/2026/options?L=13522&O=52`
+2. Network tab → place a test bid → capture the POST request URL, body, and response
+3. That reveals the exact `TYPE`, parameter names, and response format
+4. Update `src/pages/api/auction-bid.ts` accordingly
+
+**Key files:**
+- `src/pages/api/auction-bid.ts` — current implementation (uses `TYPE=fcfsAuction`, likely wrong)
+- `docs/claude/insights/features/auction-tracker.md` — feature notes on bid placement research
+- `tests/mfl-write-integration.test.ts` — test league 36189 integration test pattern
