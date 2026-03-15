@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-15T07:46:21.610Z"
+    "fetchedAt": "2026-03-15T09:16:00.517Z"
   },
   "players": [
     {
@@ -269,20 +269,47 @@
       "status": "ROSTER",
       "contractYear": "4",
       "points": 0,
-      "team": "FA",
+      "team": "NYG",
       "draftYear": 2020,
       "draftTeam": "CHI",
       "birthdate": 878101200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14974_thumb.jpg",
       "externalIds": {
         "mfl": "14974",
-        "sleeper": null,
+        "sleeper": "7090",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "7090",
+        "fullName": "Darnell Mooney",
+        "team": "NYG",
+        "age": 28,
+        "height": "71",
+        "weight": "180",
+        "number": 1,
+        "college": "Tulane",
+        "birthDate": "1997-10-29",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 6,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16615",
+          "name": "Nabers, Malik"
+        }
+      ]
     },
     {
       "id": "17104",
@@ -4128,6 +4155,10 @@
         {
           "id": "17256",
           "name": "Croskey-Merritt, Jacory"
+        },
+        {
+          "id": "15713",
+          "name": "Ford, Jerome"
         }
       ]
     },
@@ -8024,20 +8055,47 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "CLE",
+      "team": "WAS",
       "draftYear": 2022,
       "draftTeam": "CLE",
       "birthdate": 937112400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15713_thumb.jpg",
       "externalIds": {
         "mfl": "15713",
-        "sleeper": null,
+        "sleeper": "8143",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "8143",
+        "fullName": "Jerome Ford",
+        "team": "WAS",
+        "age": 26,
+        "height": "70",
+        "weight": "210",
+        "number": 34,
+        "college": "Cincinnati",
+        "birthDate": "1999-09-12",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17256",
+          "name": "Croskey-Merritt, Jacory"
+        }
+      ]
     },
     {
       "id": "0524",
