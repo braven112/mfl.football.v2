@@ -8,13 +8,13 @@
  *   - playerId: string — MFL player ID to bid on
  *   - amount: number — Bid amount in whole dollars (e.g., 500000 = $500k)
  *
- * MFL endpoint: POST /import?TYPE=fcfsAuction
+ * MFL endpoint: POST /import?TYPE=auctionBid
  *   Params: PLAYER_ID, AMOUNT, L (league ID)
  *
- * NOTE: The exact MFL endpoint for email auction bids needs live testing
- * to confirm. The endpoint name and params below are based on MFL API
- * documentation patterns. If "fcfsAuction" doesn't work, alternatives
- * to try: "auctionBid", "auction", or inspect MFL's options?O=52 form.
+ * NOTE: TYPE=auctionBid is the best candidate for email auction leagues.
+ * Needs live validation by inspecting MFL's options?O=52 form submission
+ * in browser DevTools. If auctionBid fails, try BID instead of AMOUNT.
+ * Test league ID for safe testing: 36189
  */
 
 import type { APIRoute } from 'astro';
@@ -73,11 +73,12 @@ export const POST: APIRoute = async ({ request }) => {
     const leagueId = user.leagueId || '13522';
 
     // Build MFL import request
-    // NOTE: This endpoint may need adjustment after live testing.
-    // MFL's email auction bid submission likely uses one of:
-    //   TYPE=fcfsAuction, TYPE=auctionBid, or TYPE=auction
+    // NOTE: TYPE=auctionBid is the best candidate for email auction leagues.
+    // Needs live validation by inspecting MFL's O=52 form submission in DevTools.
+    // If auctionBid fails, also try parameter name BID instead of AMOUNT.
+    // Amount is in whole dollars (e.g., 6000000 = $6M) — no conversion needed.
     const params = new URLSearchParams({
-      TYPE: 'fcfsAuction',
+      TYPE: 'auctionBid',
       L: leagueId,
       PLAYER_ID: playerId,
       AMOUNT: String(bidAmount),
