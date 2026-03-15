@@ -70,7 +70,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const year = getCurrentLeagueYear();
-    const leagueId = user.leagueId || '13522';
+    // TODO: Switch back to '13522' after test auction is complete
+    const leagueId = user.leagueId || '36189';
 
     // Build MFL import request
     // NOTE: TYPE=auctionBid is the best candidate for email auction leagues.

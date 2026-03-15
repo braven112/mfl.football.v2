@@ -23,7 +23,8 @@ import {
 export const prerender = false;
 
 const MFL_HOST = 'https://api.myfantasyleague.com';
-const DEFAULT_LEAGUE_ID = '13522';
+// TODO: Switch back to '13522' after test auction is complete
+const DEFAULT_LEAGUE_ID = '36189';
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
   'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20',
