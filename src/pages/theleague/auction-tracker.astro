@@ -112,7 +112,7 @@ const pageTitle = 'Auction Tracker';
 <TheLeagueLayout title={pageTitle}>
   <div class="auction-page">
     <!-- Notification banner area (populated by JS) -->
-    <div id="auction-notifications" class="auction-notifications" role="alert" aria-live="assertive"></div>
+    <div id="auction-notifications" class="auction-notifications" role="alert" aria-live="polite"></div>
 
     <!-- Key Metrics Strip -->
     <div class="metrics-grid" id="metrics-grid">
@@ -142,10 +142,10 @@ const pageTitle = 'Auction Tracker';
       </div>
       <div class="toolbar-center">
         <div class="view-toggle" role="tablist" aria-label="Auction views">
-          <button role="tab" class="view-tab view-tab--active" data-tab="active" aria-selected="true">Active</button>
-          <button role="tab" class="view-tab" data-tab="completed" aria-selected="false">Completed</button>
+          <button role="tab" id="tab-btn-active" class="view-tab view-tab--active" data-tab="active" aria-selected="true" aria-controls="tab-active">Active</button>
+          <button role="tab" id="tab-btn-completed" class="view-tab" data-tab="completed" aria-selected="false" aria-controls="tab-completed">Completed</button>
           {myFranchiseId && (
-            <button role="tab" class="view-tab" data-tab="my-activity" aria-selected="false">My Activity</button>
+            <button role="tab" id="tab-btn-my-activity" class="view-tab" data-tab="my-activity" aria-selected="false" aria-controls="tab-my-activity">My Activity</button>
           )}
         </div>
       </div>
@@ -172,17 +172,17 @@ const pageTitle = 'Auction Tracker';
       <!-- Left: Auction Data -->
       <div class="auction-panel auction-panel--main">
         <!-- Active Auctions Tab -->
-        <div class="tab-content tab-content--active" id="tab-active">
+        <div class="tab-content tab-content--active" id="tab-active" role="tabpanel" aria-labelledby="tab-btn-active">
           <div class="auction-table-wrap">
             <table class="auction-table" id="active-table">
               <thead>
                 <tr>
-                  <th class="col-player">Player</th>
-                  <th class="col-bid">Current Bid</th>
-                  <th class="col-bidder">High Bidder</th>
-                  <th class="col-time">Time Left</th>
-                  <th class="col-bids">Bids</th>
-                  <th class="col-action">Action</th>
+                  <th scope="col" class="col-player">Player</th>
+                  <th scope="col" class="col-bid">Current Bid</th>
+                  <th scope="col" class="col-bidder">High Bidder</th>
+                  <th scope="col" class="col-time">Time Left</th>
+                  <th scope="col" class="col-bids">Bids</th>
+                  <th scope="col" class="col-action">Action</th>
                 </tr>
               </thead>
               <tbody id="active-tbody">
@@ -197,16 +197,16 @@ const pageTitle = 'Auction Tracker';
         </div>
 
         <!-- Completed Auctions Tab -->
-        <div class="tab-content" id="tab-completed" style="display:none">
+        <div class="tab-content" id="tab-completed" role="tabpanel" aria-labelledby="tab-btn-completed" style="display:none">
           <div class="auction-table-wrap">
             <table class="auction-table" id="completed-table">
               <thead>
                 <tr>
-                  <th class="col-player">Player</th>
-                  <th class="col-bid">Winning Bid</th>
-                  <th class="col-bidder">Winner</th>
-                  <th class="col-time">Completed</th>
-                  <th class="col-bids">Bids</th>
+                  <th scope="col" class="col-player">Player</th>
+                  <th scope="col" class="col-bid">Winning Bid</th>
+                  <th scope="col" class="col-bidder">Winner</th>
+                  <th scope="col" class="col-time">Completed</th>
+                  <th scope="col" class="col-bids">Bids</th>
                 </tr>
               </thead>
               <tbody id="completed-tbody"></tbody>
@@ -216,15 +216,15 @@ const pageTitle = 'Auction Tracker';
 
         <!-- My Activity Tab -->
         {myFranchiseId && (
-          <div class="tab-content" id="tab-my-activity" style="display:none">
+          <div class="tab-content" id="tab-my-activity" role="tabpanel" aria-labelledby="tab-btn-my-activity" style="display:none">
             <div class="auction-table-wrap">
               <table class="auction-table" id="my-activity-table">
                 <thead>
                   <tr>
-                    <th class="col-player">Player</th>
-                    <th class="col-bid">Bid</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-time">Time</th>
+                    <th scope="col" class="col-player">Player</th>
+                    <th scope="col" class="col-bid">Bid</th>
+                    <th scope="col" class="col-status">Status</th>
+                    <th scope="col" class="col-time">Time</th>
                   </tr>
                 </thead>
                 <tbody id="my-activity-tbody"></tbody>
@@ -418,10 +418,16 @@ const pageTitle = 'Auction Tracker';
         return h > 0 ? `${d}d ${h}h` : `${d}d left`;
       }
 
+      // HTML-escape to prevent XSS in innerHTML templates
+      function esc(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
       function teamName(franchiseId) {
         const t = teamLookup[franchiseId];
-        if (!t) return franchiseId;
-        return t.nameShort || t.nameMedium || t.name || franchiseId;
+        if (!t) return esc(franchiseId);
+        return esc(t.nameShort || t.nameMedium || t.name || franchiseId);
       }
 
       function teamIcon(franchiseId) {
@@ -447,7 +453,7 @@ const pageTitle = 'Auction Tracker';
             <img class="player-lockup__avatar" src="${headshot}" alt="" width="36" height="36"
               onerror="this.onerror=null;this.src='/assets/default-headshot.png'" loading="lazy" />
             <div class="player-lockup__info">
-              <span class="player-lockup__name">${p.name}</span>
+              <span class="player-lockup__name">${esc(p.name)}</span>
               <span class="player-lockup__meta">
                 <span class="player-lockup__pos">${p.position}</span>
                 ${!isDef ? `<img class="player-lockup__nfl-logo" src="${nflLogo}" alt="${p.team}" width="14" height="14" />` : ''}
@@ -493,7 +499,7 @@ const pageTitle = 'Auction Tracker';
             <td class="col-time" title="${formatFull(a.lastBidTime)}">${formatTimeRemaining(exp)}</td>
             <td class="col-bids">${a.bidCount}</td>
             <td class="col-action">
-              ${config.isAuthenticated ? `<button class="btn-bid" data-player="${a.playerId}" data-current="${a.currentBid}" type="button">Bid</button>` : ''}
+              ${config.isAuthenticated ? `<button class="btn-bid" data-player="${a.playerId}" data-current="${a.currentBid}" type="button" aria-label="Bid on ${esc(p.name)}">Bid</button>` : ''}
             </td>
           </tr>`;
         }).join('');
@@ -715,7 +721,7 @@ const pageTitle = 'Auction Tracker';
         if (alerts.length > 0 && notificationsEl) {
           const html = alerts.map(a =>
             `<div class="notification notification--outbid">
-              <span class="notification__text">You've been outbid on <strong>${a.player}</strong> — ${a.team} bid ${formatBid(a.amount)}</span>
+              <span class="notification__text">You've been outbid on <strong>${esc(a.player)}</strong> — ${esc(a.team)} bid ${formatBid(a.amount)}</span>
               <button class="notification__close" aria-label="Dismiss" type="button">&times;</button>
             </div>`
           ).join('');
@@ -747,8 +753,11 @@ const pageTitle = 'Auction Tracker';
       const bidStatus = document.getElementById('bid-status');
       let bidPlayerId = '';
 
+      let previousActiveElement = null;
+
       function openBidModal(playerId, currentBid) {
         bidPlayerId = playerId;
+        previousActiveElement = document.activeElement;
         const p = playerInfo(playerId);
         const minBid = currentBid + 25000; // Minimum increment assumption
         document.getElementById('bid-modal-player').innerHTML = buildPlayerHTML(p);
@@ -763,7 +772,32 @@ const pageTitle = 'Auction Tracker';
       function closeBidModal() {
         bidModal.style.display = 'none';
         bidPlayerId = '';
+        if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+          previousActiveElement.focus();
+          previousActiveElement = null;
+        }
       }
+
+      // Focus trap within the modal
+      function trapFocus(e) {
+        if (bidModal.style.display === 'none') return;
+        const focusable = bidModal.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && bidModal.style.display !== 'none') closeBidModal();
+        if (e.key === 'Tab' && bidModal.style.display !== 'none') trapFocus(e);
+      });
 
       document.getElementById('bid-modal-close')?.addEventListener('click', closeBidModal);
       document.getElementById('bid-cancel')?.addEventListener('click', closeBidModal);
@@ -978,6 +1012,11 @@ const pageTitle = 'Auction Tracker';
     cursor: pointer;
     padding: 0.25rem;
     line-height: 1;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .notification__close:hover { color: var(--color-gray-900, #111827); }
   .notification__close:focus-visible {
@@ -1057,7 +1096,7 @@ const pageTitle = 'Auction Tracker';
     white-space: nowrap;
   }
   .section-title--board {
-    border-left-color: var(--cat-free-agency, #2e8743);
+    border-left-color: var(--color-secondary, #2e8743);
   }
   .count-display {
     font-size: 0.75rem;
@@ -1092,9 +1131,9 @@ const pageTitle = 'Auction Tracker';
   }
   .view-tab:hover { color: var(--color-gray-700, #374151); }
   .view-tab--active {
-    background: #fff;
+    background: var(--content-bg, #fff);
     color: var(--color-gray-900, #111827);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.06));
   }
   .view-tab:focus-visible {
     outline: 2px solid var(--color-primary, #1c497c);
@@ -1110,7 +1149,7 @@ const pageTitle = 'Auction Tracker';
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--color-gray-700, #374151);
-    background: #fff;
+    background: var(--content-bg, #fff);
     cursor: pointer;
   }
   .team-filter select:focus-visible,
@@ -1131,7 +1170,7 @@ const pageTitle = 'Auction Tracker';
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--cat-free-agency, #2e8743);
+    background: var(--color-secondary, #2e8743);
     animation: pulse 2s ease-in-out infinite;
   }
   @keyframes pulse {
@@ -1152,7 +1191,7 @@ const pageTitle = 'Auction Tracker';
   .auction-panel--board {
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
-    background: #fff;
+    background: var(--content-bg, #fff);
     max-height: 70vh;
     overflow-y: auto;
     position: sticky;
@@ -1166,7 +1205,7 @@ const pageTitle = 'Auction Tracker';
     border-bottom: 1px solid var(--color-gray-50, #f9fafb);
     position: sticky;
     top: 0;
-    background: #fff;
+    background: var(--content-bg, #fff);
     z-index: 5;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -1198,7 +1237,7 @@ const pageTitle = 'Auction Tracker';
   .board-rank {
     font-size: 0.6875rem;
     font-weight: 700;
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-500, #6b7280);
     width: 2rem;
     text-align: right;
     flex-shrink: 0;
@@ -1244,7 +1283,7 @@ const pageTitle = 'Auction Tracker';
 
   /* Row highlight variants */
   .auction-row--my-bid td:first-child {
-    box-shadow: inset 3px 0 0 var(--cat-free-agency, #2e8743);
+    box-shadow: inset 3px 0 0 var(--color-secondary, #2e8743);
   }
   .auction-row--outbid td:first-child {
     box-shadow: inset 3px 0 0 var(--color-error, #dc2626);
@@ -1292,8 +1331,8 @@ const pageTitle = 'Auction Tracker';
     white-space: nowrap;
   }
   .badge--high-bidder {
-    background: color-mix(in srgb, var(--cat-free-agency, #2e8743) 12%, transparent);
-    color: var(--cat-free-agency, #2e8743);
+    background: color-mix(in srgb, var(--color-secondary, #2e8743) 12%, transparent);
+    color: var(--color-secondary, #2e8743);
   }
   .badge--outbid {
     background: var(--color-error-light, #fee2e2);
@@ -1305,7 +1344,7 @@ const pageTitle = 'Auction Tracker';
   }
   .badge--higher {
     background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
-    color: #92400e;
+    color: var(--color-warning-dark, #d97706);
     font-size: 0.5625rem;
   }
 
@@ -1323,7 +1362,7 @@ const pageTitle = 'Auction Tracker';
   }
   .btn-bid:hover {
     background: var(--color-primary, #1c497c);
-    color: #fff;
+    color: var(--color-white, #fff);
   }
   .btn-bid:focus-visible {
     outline: 2px solid var(--color-primary, #1c497c);
@@ -1334,7 +1373,7 @@ const pageTitle = 'Auction Tracker';
   .bid-modal-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--z-modal-backdrop, 400);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1342,7 +1381,7 @@ const pageTitle = 'Auction Tracker';
     backdrop-filter: blur(2px);
   }
   .bid-modal {
-    background: #fff;
+    background: var(--content-bg, #fff);
     border-radius: var(--radius-lg, 0.75rem);
     box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1));
     padding: 1.5rem;
@@ -1439,7 +1478,7 @@ const pageTitle = 'Auction Tracker';
   .btn--ghost:hover { background: var(--color-gray-100, #f3f4f6); }
   .btn--secondary {
     background: var(--btn-secondary-bg, #2e8743);
-    color: #fff;
+    color: var(--color-white, #fff);
   }
   .btn--secondary:hover { filter: brightness(0.92); }
   .btn--secondary:disabled {
@@ -1447,7 +1486,7 @@ const pageTitle = 'Auction Tracker';
     cursor: not-allowed;
   }
 
-  :global(.bid-success) { color: var(--cat-free-agency, #2e8743); font-weight: 600; }
+  :global(.bid-success) { color: var(--color-secondary, #2e8743); font-weight: 600; }
   :global(.bid-error) { color: var(--color-error, #dc2626); font-weight: 600; }
 
   /* ── Player Lockup (client-rendered) ── */
@@ -1556,9 +1595,12 @@ const pageTitle = 'Auction Tracker';
       width: 100%;
       justify-content: space-between;
     }
-    .col-bids,
-    .col-action {
+    .col-bids {
       display: none;
+    }
+    .col-action .btn-bid {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.625rem;
     }
     .auction-table th,
     .auction-table td {

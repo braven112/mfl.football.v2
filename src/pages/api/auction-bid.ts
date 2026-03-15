@@ -80,6 +80,7 @@ export const POST: APIRoute = async ({ request }) => {
     const params = new URLSearchParams({
       TYPE: 'auctionBid',
       L: leagueId,
+      FRANCHISE: user.franchiseId,
       PLAYER_ID: playerId,
       AMOUNT: String(bidAmount),
     });

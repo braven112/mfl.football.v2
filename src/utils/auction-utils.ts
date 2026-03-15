@@ -356,9 +356,11 @@ export function estimateExpiration(
 
   let remaining = limitSeconds;
   let cursor = lastBidTimestamp;
+  let iterations = 0;
 
   // Walk forward in time, subtracting active hours until remaining is 0
-  while (remaining > 0) {
+  while (remaining > 0 && iterations < 100) {
+    iterations++;
     const cursorDate = new Date(cursor * 1000);
     const hour = cursorDate.getHours();
 

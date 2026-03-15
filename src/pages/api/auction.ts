@@ -22,7 +22,7 @@ import {
 
 export const prerender = false;
 
-const DEFAULT_HOST = 'https://api.myfantasyleague.com';
+const MFL_HOST = 'https://api.myfantasyleague.com';
 const DEFAULT_LEAGUE_ID = '13522';
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -32,15 +32,14 @@ const JSON_HEADERS = {
 export const GET: APIRoute = async ({ url }) => {
   const year = url.searchParams.get('year') || getCurrentLeagueYear().toString();
   const leagueId = url.searchParams.get('L') || DEFAULT_LEAGUE_ID;
-  const host = url.searchParams.get('host') || DEFAULT_HOST;
 
   try {
     const mflHeaders = { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' };
 
     // Fetch transactions AND rosters in parallel for live data
     const [transactionsRes, rostersRes] = await Promise.all([
-      fetch(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`, { headers: mflHeaders }),
-      fetch(`${host}/${year}/export?TYPE=rosters&L=${leagueId}&JSON=1`, { headers: mflHeaders }),
+      fetch(`${MFL_HOST}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`, { headers: mflHeaders }),
+      fetch(`${MFL_HOST}/${year}/export?TYPE=rosters&L=${leagueId}&JSON=1`, { headers: mflHeaders }),
     ]);
 
     if (!transactionsRes.ok) {
