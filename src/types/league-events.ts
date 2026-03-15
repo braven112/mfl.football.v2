@@ -34,6 +34,10 @@ export interface LeagueEventDefinition {
   resultLinks?: EventLink[];
   /** Days before the event to show urgency styling */
   urgencyDays?: number;
+  /** Optional hero image filename relative to /assets/whats-new/ */
+  image?: string;
+  /** Alt text for the hero image */
+  imageAlt?: string;
   sortOrder: number;
 }
 

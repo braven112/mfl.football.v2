@@ -141,6 +141,8 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     icon: 'nfl',
     category: 'draft',
     startDate: { type: 'configured', configKey: 'nflDraftDate' },
+    image: 'nfl-draft-2026.webp',
+    imageAlt: 'NFL Draft 2026 promotional graphic',
     sortOrder: 8,
   },
   {

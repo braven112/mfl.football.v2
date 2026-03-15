@@ -75,6 +75,8 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
     icon: event.definition.icon,
     accentColor: EVENT_CATEGORY_COLORS[category] ?? 'var(--color-primary, #1c497c)',
     heroEventId: event.definition.id,
+    image: event.definition.image,
+    imageAlt: event.definition.imageAlt,
     dateDisplay,
     statusText,
     isActive: event.isActive,
