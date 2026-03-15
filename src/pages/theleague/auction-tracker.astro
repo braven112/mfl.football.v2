@@ -27,26 +27,20 @@ const myFranchiseId = user?.franchiseId || '';
 // ---------------------------------------------------------------------------
 // Build-time data: Players + Rosters (serialized to client)
 // ---------------------------------------------------------------------------
-const playerModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
-  { eager: true }
-);
-// Rosters are fetched LIVE from /api/auction (not build-time) to ensure data is never stale
-const leagueModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/league.json',
-  { eager: true }
-);
-
+// Direct dynamic imports for current year only — avoids loading all 20 years
+// of historical data (~23MB) that import.meta.glob({ eager: true }) would pull in.
+// Rosters are fetched LIVE from /api/auction (not build-time) to ensure data is never stale.
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
-const findForYear = (modules: Record<string, any>, yr: number) => {
-  const key = Object.keys(modules).find(k => k.includes(`/${yr}/`));
-  return key ? getModuleData(modules[key]) : null;
-};
-
-const playersData = findForYear(playerModules, currentYear);
-const leagueData = findForYear(leagueModules, currentYear);
+let playersData: any = null;
+let leagueData: any = null;
+try {
+  playersData = getModuleData(await import(`../../../data/theleague/mfl-feeds/${currentYear}/players.json`));
+} catch { /* Player data unavailable for this year */ }
+try {
+  leagueData = getModuleData(await import(`../../../data/theleague/mfl-feeds/${currentYear}/league.json`));
+} catch { /* League data unavailable for this year */ }
 
 // MFL team code normalization
 const MFL_TEAM_CODE_MAP: Record<string, string> = {
@@ -326,7 +320,9 @@ const pageTitle = 'Auction Tracker';
       let rosteredIds = new Set();
       let pollInterval: ReturnType<typeof setInterval> | null = null;
       let customRankings: string[] | null = null;
+      let rankMap: Map<string, number> | null = null;
       let isPageVisible = true;
+      let lastFetchTime = 0;
       let notificationSound = localStorage.getItem('auction-notification-sound') !== 'off';
       let selectedTeamFilter = config.myFranchiseId || '';
       let selectedPosition = 'ALL';
@@ -639,12 +635,10 @@ const pageTitle = 'Auction Tracker';
         }
 
         // Rank: by custom rankings if available, otherwise alphabetical
-        if (rankingSource === 'custom' && customRankings && customRankings.length > 0) {
-          const rankMap = new Map();
-          customRankings.forEach((id, i) => rankMap.set(id, i));
+        if (rankingSource === 'custom' && rankMap && rankMap.size > 0) {
           available.sort((a, b) => {
-            const ra = rankMap.has(a.id) ? rankMap.get(a.id) : 999999;
-            const rb = rankMap.has(b.id) ? rankMap.get(b.id) : 999999;
+            const ra = rankMap.get(a.id) ?? 999999;
+            const rb = rankMap.get(b.id) ?? 999999;
             return ra - rb;
           });
         } else {
@@ -654,9 +648,7 @@ const pageTitle = 'Auction Tracker';
 
         // Determine highest-ranked active auction player
         let highestActiveRank = 999999;
-        if (customRankings) {
-          const rankMap = new Map();
-          customRankings.forEach((id, i) => rankMap.set(id, i));
+        if (rankMap) {
           for (const a of state.active) {
             const rank = rankMap.get(a.playerId);
             if (rank !== undefined && rank < highestActiveRank) highestActiveRank = rank;
@@ -671,7 +663,7 @@ const pageTitle = 'Auction Tracker';
         }
 
         boardList.innerHTML = top50.map((p, i) => {
-          const rank = customRankings ? customRankings.indexOf(p.id) : -1;
+          const rank = rankMap ? (rankMap.get(p.id) ?? -1) : -1;
           const isHigher = rank !== -1 && rank < highestActiveRank;
           return `<div class="board-player ${isHigher ? 'board-player--higher' : ''}">
             <span class="board-rank">${rank !== -1 ? rank + 1 : '--'}</span>
@@ -725,9 +717,11 @@ const pageTitle = 'Auction Tracker';
               <button class="notification__close" aria-label="Dismiss" type="button">&times;</button>
             </div>`
           ).join('');
-          notificationsEl.innerHTML += html;
-          notificationsEl.querySelectorAll('.notification__close').forEach(btn => {
-            btn.addEventListener('click', () => btn.parentElement.remove());
+          notificationsEl.insertAdjacentHTML('beforeend', html);
+          // Only bind listeners to newly added notifications (avoid orphaning existing ones)
+          notificationsEl.querySelectorAll('.notification:not([data-bound]) .notification__close').forEach(btn => {
+            btn.closest('.notification').dataset.bound = '1';
+            btn.addEventListener('click', () => btn.closest('.notification').remove());
           });
 
           // Play notification sound
@@ -794,10 +788,11 @@ const pageTitle = 'Auction Tracker';
         }
       }
 
-      document.addEventListener('keydown', (e) => {
+      function handleKeyDown(e) {
         if (e.key === 'Escape' && bidModal.style.display !== 'none') closeBidModal();
         if (e.key === 'Tab' && bidModal.style.display !== 'none') trapFocus(e);
-      });
+      }
+      document.addEventListener('keydown', handleKeyDown);
 
       document.getElementById('bid-modal-close')?.addEventListener('click', closeBidModal);
       document.getElementById('bid-cancel')?.addEventListener('click', closeBidModal);
@@ -896,6 +891,7 @@ const pageTitle = 'Auction Tracker';
       // Polling
       // ---------------------------------------------------------------------------
       async function fetchAuctionData() {
+        lastFetchTime = Date.now();
         try {
           const res = await fetch('/api/auction');
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -935,13 +931,20 @@ const pageTitle = 'Auction Tracker';
           clearInterval(pollInterval);
           pollInterval = null;
         }
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
 
       // Page Visibility API — pause polling when tab is hidden
-      document.addEventListener('visibilitychange', () => {
+      function handleVisibilityChange() {
         isPageVisible = !document.hidden;
-        if (isPageVisible) fetchAuctionData(); // Immediate refresh on focus
-      });
+        if (isPageVisible) {
+          // Only refetch if stale (>20s since last fetch) to avoid redundant calls
+          const staleness = Date.now() - lastFetchTime;
+          if (staleness > 20_000) fetchAuctionData();
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange);
 
       // ---------------------------------------------------------------------------
       // Load Custom Rankings
@@ -953,6 +956,7 @@ const pageTitle = 'Auction Tracker';
             const { data } = await res.json();
             if (data?.rankings) {
               customRankings = data.rankings;
+              rankMap = new Map(customRankings.map((id, i) => [id, i]));
               renderBoard(currentState);
             }
           }
