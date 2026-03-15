@@ -31,8 +31,7 @@ const JSON_HEADERS = {
 };
 
 export const GET: APIRoute = async ({ url }) => {
-  // TODO: Remove year override after test auction is complete
-  const year = url.searchParams.get('year') || '2025';
+  const year = url.searchParams.get('year') || getCurrentLeagueYear().toString();
   const leagueId = url.searchParams.get('L') || DEFAULT_LEAGUE_ID;
 
   try {
