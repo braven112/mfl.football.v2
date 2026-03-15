@@ -916,10 +916,13 @@ const pageTitle = 'Auction Tracker';
         } catch (err) {
           console.error('[auction-tracker] Fetch error:', err);
           if (refreshText) refreshText.textContent = 'Update failed — retrying...';
-          // Clear the loading shimmer so the page doesn't appear stuck
+          // Clear all loading shimmers so the page doesn't appear stuck
           const loadingRow = activeTbody?.querySelector('.loading-row');
           if (loadingRow) {
             activeTbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Failed to load auction data — retrying...</td></tr>';
+          }
+          if (boardList?.querySelector('.loading-shimmer')) {
+            renderBoard(currentState);
           }
         }
       }
@@ -965,7 +968,12 @@ const pageTitle = 'Auction Tracker';
               renderBoard(currentState);
             }
           }
-        } catch { /* Rankings unavailable — fallback to alphabetical */ }
+        } catch {
+          // Rankings unavailable — clear shimmer and fall back to alphabetical
+          if (boardList?.querySelector('.loading-shimmer')) {
+            renderBoard(currentState);
+          }
+        }
       }
 
       // ---------------------------------------------------------------------------
