@@ -175,7 +175,7 @@
         {
           "id": "league-summary",
           "label": "League Summary",
-          "icon": "standings-2",
+          "icon": "spreadsheet",
           "path": "/league-summary",
           "external": false,
           "description": "Compare all teams across cap, roster, and contract metrics over 5 years"
@@ -190,8 +190,8 @@
         },
         {
           "id": "salary-history",
-          "label": "Salary History",
-          "icon": "history",
+          "label": "Historical Salary Trends",
+          "icon": "standings-2",
           "path": "/salary-history",
           "external": false,
           "description": "Historical salary cap trends"
@@ -199,7 +199,7 @@
         {
           "id": "salary-archive",
           "label": "Salary Archive",
-          "icon": "file-text",
+          "icon": "vault",
           "path": "/salary-archive",
           "external": false,
           "description": "Historical salary spreadsheets (2009–2025)"
