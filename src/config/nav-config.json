@@ -125,6 +125,14 @@
           "description": "Simulate trades and see cap impact"
         },
         {
+          "id": "auction-tracker",
+          "label": "Auction Tracker",
+          "icon": "bar-chart",
+          "path": "/auction-tracker",
+          "external": false,
+          "description": "Track live auction bids, available players, and team spending"
+        },
+        {
           "id": "import-rankings",
           "label": "Import Rankings",
           "icon": "clipboard",
@@ -276,7 +284,8 @@
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
     "/about": "/about",
-    "/rules": "/rules"
+    "/rules": "/rules",
+    "/auction-tracker": "/auction-tracker"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

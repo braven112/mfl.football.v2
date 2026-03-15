@@ -1,0 +1,1607 @@
+---
+/**
+ * Auction Tracker Page
+ *
+ * Real-time auction tracker for TheLeague's slow email auction.
+ * Polls MFL transactions every 30s to show active bids, completed auctions,
+ * available players ranked by custom rankings, and per-team cap tracking.
+ *
+ * SSR (prerender = false) — needs auth for "my team" context and bid placement.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getAuthUser } from '../../utils/auth';
+import { SALARY_CAP } from '../../utils/salary-calculations';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { chooseTeamName } from '../../utils/team-names';
+import leagueConfig from '../../data/theleague.config.json';
+import '../../styles/player-cell.css';
+
+export const prerender = false;
+
+const currentYear = getCurrentLeagueYear();
+const user = getAuthUser(Astro.request);
+const myFranchiseId = user?.franchiseId || '';
+
+// ---------------------------------------------------------------------------
+// Build-time data: Players + Rosters (serialized to client)
+// ---------------------------------------------------------------------------
+const playerModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true }
+);
+const rostersModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/rosters.json',
+  { eager: true }
+);
+const leagueModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/league.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const findForYear = (modules: Record<string, any>, yr: number) => {
+  const key = Object.keys(modules).find(k => k.includes(`/${yr}/`));
+  return key ? getModuleData(modules[key]) : null;
+};
+
+const playersData = findForYear(playerModules, currentYear);
+const rostersData = findForYear(rostersModules, currentYear);
+const leagueData = findForYear(leagueModules, currentYear);
+
+// MFL team code normalization
+const MFL_TEAM_CODE_MAP: Record<string, string> = {
+  GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO',
+  SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
+  BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
+};
+function normalizeMflTeam(code: string): string {
+  if (!code) return 'FA';
+  return MFL_TEAM_CODE_MAP[code] || code;
+}
+
+// Build compact player lookup (only relevant fields)
+interface PlayerInfo {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+}
+
+const playerLookup: Record<string, PlayerInfo> = {};
+if (playersData?.players?.player) {
+  const players = Array.isArray(playersData.players.player)
+    ? playersData.players.player
+    : [playersData.players.player];
+  for (const p of players) {
+    if (p?.id && p?.name) {
+      const pos = (p.position || 'Unknown').split(',')[0];
+      // Filter to fantasy-relevant positions only
+      if (['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF'].includes(pos)) {
+        playerLookup[p.id] = {
+          id: p.id,
+          name: p.name.includes(',') ? `${p.name.split(', ')[1]} ${p.name.split(', ')[0]}` : p.name,
+          position: pos === 'Def' ? 'DEF' : pos,
+          team: normalizeMflTeam(p.team || ''),
+        };
+      }
+    }
+  }
+}
+
+// Build rostered player set
+const rosteredPlayerIds: string[] = [];
+if (rostersData?.rosters?.franchise) {
+  const franchises = Array.isArray(rostersData.rosters.franchise)
+    ? rostersData.rosters.franchise
+    : [rostersData.rosters.franchise];
+  for (const f of franchises) {
+    if (f?.player) {
+      const players = Array.isArray(f.player) ? f.player : [f.player];
+      for (const p of players) {
+        if (p?.id) rosteredPlayerIds.push(p.id);
+      }
+    }
+  }
+}
+
+// League auction config
+const auctionBudget = parseInt(leagueData?.league?.auctionStartAmount || '45000000', 10);
+const draftLimitHours = parseFloat(leagueData?.league?.draftLimitHours || '12');
+const draftTimerSusp = leagueData?.league?.draftTimerSusp || '03 07';
+const [suspStart, suspEnd] = draftTimerSusp.split(' ').map(Number);
+
+// Team config for display
+const teamLookup: Record<string, { name: string; nameMedium: string; nameShort: string; abbrev: string; icon: string }> = {};
+for (const team of (leagueConfig as any).teams || []) {
+  teamLookup[team.franchiseId] = {
+    name: team.name,
+    nameMedium: team.nameMedium || team.name,
+    nameShort: team.nameShort || team.name,
+    abbrev: team.abbrev || '',
+    icon: team.icon || '',
+  };
+}
+
+const pageTitle = 'Auction Tracker';
+---
+
+<TheLeagueLayout title={pageTitle}>
+  <div class="auction-page">
+    <!-- Notification banner area (populated by JS) -->
+    <div id="auction-notifications" class="auction-notifications" role="alert" aria-live="assertive"></div>
+
+    <!-- Key Metrics Strip -->
+    <div class="metrics-grid" id="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value" id="metric-budget">--</div>
+        <div class="metric-label">Budget Remaining</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metric-won">--</div>
+        <div class="metric-label">Players Won</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metric-active">--</div>
+        <div class="metric-label">Active Bids</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metric-spent">--</div>
+        <div class="metric-label">Total Spent</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="auction-toolbar">
+      <div class="toolbar-left">
+        <h1 class="section-title">Auction Tracker</h1>
+        <span class="count-display" id="auction-count" aria-live="polite"></span>
+      </div>
+      <div class="toolbar-center">
+        <div class="view-toggle" role="tablist" aria-label="Auction views">
+          <button role="tab" class="view-tab view-tab--active" data-tab="active" aria-selected="true">Active</button>
+          <button role="tab" class="view-tab" data-tab="completed" aria-selected="false">Completed</button>
+          {myFranchiseId && (
+            <button role="tab" class="view-tab" data-tab="my-activity" aria-selected="false">My Activity</button>
+          )}
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <label class="team-filter">
+          <select id="team-filter-select" aria-label="Filter by team">
+            <option value="">All Teams</option>
+            {(leagueConfig as any).teams.map((t: any) => (
+              <option value={t.franchiseId} selected={t.franchiseId === myFranchiseId}>
+                {chooseTeamName({ fullName: t.name, nameMedium: t.nameMedium, nameShort: t.nameShort, abbrev: t.abbrev }, 'short')}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div class="refresh-indicator" id="refresh-indicator">
+          <span class="refresh-dot"></span>
+          <span class="refresh-text" id="refresh-text">Loading...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Split View Container -->
+    <div class="auction-split" id="auction-split">
+      <!-- Left: Auction Data -->
+      <div class="auction-panel auction-panel--main">
+        <!-- Active Auctions Tab -->
+        <div class="tab-content tab-content--active" id="tab-active">
+          <div class="auction-table-wrap">
+            <table class="auction-table" id="active-table">
+              <thead>
+                <tr>
+                  <th class="col-player">Player</th>
+                  <th class="col-bid">Current Bid</th>
+                  <th class="col-bidder">High Bidder</th>
+                  <th class="col-time">Time Left</th>
+                  <th class="col-bids">Bids</th>
+                  <th class="col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="active-tbody">
+                <tr class="loading-row">
+                  <td colspan="6">
+                    <div class="loading-shimmer">Loading auction data...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Completed Auctions Tab -->
+        <div class="tab-content" id="tab-completed" style="display:none">
+          <div class="auction-table-wrap">
+            <table class="auction-table" id="completed-table">
+              <thead>
+                <tr>
+                  <th class="col-player">Player</th>
+                  <th class="col-bid">Winning Bid</th>
+                  <th class="col-bidder">Winner</th>
+                  <th class="col-time">Completed</th>
+                  <th class="col-bids">Bids</th>
+                </tr>
+              </thead>
+              <tbody id="completed-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- My Activity Tab -->
+        {myFranchiseId && (
+          <div class="tab-content" id="tab-my-activity" style="display:none">
+            <div class="auction-table-wrap">
+              <table class="auction-table" id="my-activity-table">
+                <thead>
+                  <tr>
+                    <th class="col-player">Player</th>
+                    <th class="col-bid">Bid</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-time">Time</th>
+                  </tr>
+                </thead>
+                <tbody id="my-activity-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <!-- Right: Available Players Board -->
+      <div class="auction-panel auction-panel--board">
+        <div class="board-header">
+          <h2 class="section-title section-title--board">Available Players</h2>
+          <div class="board-controls">
+            <select id="position-filter" class="board-select" aria-label="Filter by position">
+              <option value="ALL">All Pos</option>
+              <option value="QB">QB</option>
+              <option value="RB">RB</option>
+              <option value="WR">WR</option>
+              <option value="TE">TE</option>
+              <option value="DEF">DEF</option>
+            </select>
+            <select id="ranking-source" class="board-select" aria-label="Ranking source">
+              <option value="custom">My Rankings</option>
+              <option value="average">Avg Rankings</option>
+            </select>
+          </div>
+        </div>
+        <div class="board-list" id="board-list">
+          <div class="loading-shimmer">Loading rankings...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="auction-empty" id="auction-empty" style="display:none">
+      <div class="empty-icon">&#9878;</div>
+      <h2 class="empty-title">No Auction Activity</h2>
+      <p class="empty-text">The auction has not started yet, or all auctions are complete.</p>
+    </div>
+
+    <!-- Bid Modal -->
+    <div class="bid-modal-overlay" id="bid-modal" style="display:none" role="dialog" aria-modal="true" aria-label="Place Bid">
+      <div class="bid-modal">
+        <button class="bid-modal__close" id="bid-modal-close" aria-label="Close bid dialog" type="button">&times;</button>
+        <h3 class="section-title">Place Bid</h3>
+        <div class="bid-modal__player" id="bid-modal-player"></div>
+        <div class="bid-modal__current" id="bid-modal-current"></div>
+        <label class="bid-modal__label">
+          Your Bid ($)
+          <input type="number" id="bid-amount-input" class="bid-modal__input" min="0" step="25000" />
+        </label>
+        <div class="bid-modal__actions">
+          <button class="btn btn--ghost" id="bid-cancel" type="button">Cancel</button>
+          <button class="btn btn--secondary" id="bid-submit" type="button">Submit Bid</button>
+        </div>
+        <div class="bid-modal__status" id="bid-status" role="status"></div>
+      </div>
+    </div>
+
+    <!-- Screen reader live region for auction updates -->
+    <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="auction-announcer"></div>
+  </div>
+
+  <!-- Serialized data for client-side use -->
+  <script type="application/json" id="player-data">{JSON.stringify(playerLookup)}</script>
+  <script type="application/json" id="roster-data">{JSON.stringify(rosteredPlayerIds)}</script>
+  <script type="application/json" id="team-data">{JSON.stringify(teamLookup)}</script>
+  <script type="application/json" id="auction-config">{JSON.stringify({
+    myFranchiseId,
+    auctionBudget,
+    draftLimitHours,
+    suspStart,
+    suspEnd,
+    isAuthenticated: !!user,
+    currentYear,
+  })}</script>
+
+  <script>
+    /**
+     * Auction Tracker Client Script
+     *
+     * Handles: polling, DOM updates, tab switching, notifications, bid placement.
+     * Uses vanilla JS — no React hydration needed.
+     */
+    function initAuctionTracker() {
+      // ---------------------------------------------------------------------------
+      // Parse serialized data
+      // ---------------------------------------------------------------------------
+      const playerLookup = JSON.parse(document.getElementById('player-data')?.textContent || '{}');
+      const rosteredIds = new Set(JSON.parse(document.getElementById('roster-data')?.textContent || '[]'));
+      const teamLookup = JSON.parse(document.getElementById('team-data')?.textContent || '{}');
+      const config = JSON.parse(document.getElementById('auction-config')?.textContent || '{}');
+
+      // ---------------------------------------------------------------------------
+      // State
+      // ---------------------------------------------------------------------------
+      let currentTab = 'active';
+      let previousActive: any[] = [];
+      let currentState: any = { active: [], completed: [], teamSummaries: {} };
+      let pollInterval: ReturnType<typeof setInterval> | null = null;
+      let customRankings: string[] | null = null;
+      let isPageVisible = true;
+      let notificationSound = localStorage.getItem('auction-notification-sound') !== 'off';
+      let selectedTeamFilter = config.myFranchiseId || '';
+      let selectedPosition = 'ALL';
+      let rankingSource = 'custom';
+
+      // DOM references
+      const activeTbody = document.getElementById('active-tbody');
+      const completedTbody = document.getElementById('completed-tbody');
+      const myActivityTbody = document.getElementById('my-activity-tbody');
+      const metricsGrid = document.getElementById('metrics-grid');
+      const boardList = document.getElementById('board-list');
+      const notificationsEl = document.getElementById('auction-notifications');
+      const announcer = document.getElementById('auction-announcer');
+      const refreshText = document.getElementById('refresh-text');
+      const auctionCount = document.getElementById('auction-count');
+      const emptyState = document.getElementById('auction-empty');
+      const splitView = document.getElementById('auction-split');
+
+      // ---------------------------------------------------------------------------
+      // Formatting helpers (duplicated from server utils for client use)
+      // ---------------------------------------------------------------------------
+      function formatBid(amount) {
+        if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(2)}M`;
+        if (amount >= 1_000) {
+          const k = amount / 1_000;
+          return k === Math.floor(k) ? `$${k}k` : `$${Math.round(k)}k`;
+        }
+        return `$${amount.toLocaleString()}`;
+      }
+
+      function formatRelative(unixSec) {
+        const diff = Math.floor(Date.now() / 1000) - unixSec;
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+        return new Date(unixSec * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      function formatFull(unixSec) {
+        return new Date(unixSec * 1000).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
+        });
+      }
+
+      function estimateExpiration(lastBidTime) {
+        const suspDuration = (config.suspEnd - config.suspStart) * 3600;
+        const limit = config.draftLimitHours * 3600;
+        let remaining = limit;
+        let cursor = lastBidTime;
+        let iterations = 0;
+        while (remaining > 0 && iterations < 100) {
+          iterations++;
+          const d = new Date(cursor * 1000);
+          const hour = d.getHours();
+          if (hour >= config.suspStart && hour < config.suspEnd) {
+            const end = new Date(d);
+            end.setHours(config.suspEnd, 0, 0, 0);
+            cursor = Math.floor(end.getTime() / 1000);
+          } else {
+            const next = new Date(d);
+            if (hour >= config.suspEnd) next.setDate(next.getDate() + 1);
+            next.setHours(config.suspStart, 0, 0, 0);
+            const secUntil = Math.floor(next.getTime() / 1000) - cursor;
+            if (remaining <= secUntil) {
+              cursor += remaining;
+              remaining = 0;
+            } else {
+              remaining -= secUntil;
+              cursor += secUntil + suspDuration;
+            }
+          }
+        }
+        return cursor;
+      }
+
+      function formatTimeRemaining(expTs) {
+        const diff = expTs - Math.floor(Date.now() / 1000);
+        if (diff <= 0) return '<span class="time-expired">Expired</span>';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m left`;
+        if (diff < 86400) {
+          const h = Math.floor(diff / 3600);
+          const m = Math.floor((diff % 3600) / 60);
+          return m > 0 ? `${h}h ${m}m` : `${h}h left`;
+        }
+        const d = Math.floor(diff / 86400);
+        const h = Math.floor((diff % 86400) / 3600);
+        return h > 0 ? `${d}d ${h}h` : `${d}d left`;
+      }
+
+      function teamName(franchiseId) {
+        const t = teamLookup[franchiseId];
+        if (!t) return franchiseId;
+        return t.nameShort || t.nameMedium || t.name || franchiseId;
+      }
+
+      function teamIcon(franchiseId) {
+        const t = teamLookup[franchiseId];
+        return t?.icon || '';
+      }
+
+      function playerInfo(playerId) {
+        return playerLookup[playerId] || { id: playerId, name: `Player ${playerId}`, position: '??', team: 'FA' };
+      }
+
+      // ---------------------------------------------------------------------------
+      // Rendering: Player cell HTML (client-side equivalent of PlayerCell.astro)
+      // ---------------------------------------------------------------------------
+      function buildPlayerHTML(p) {
+        const isDef = p.position === 'DEF';
+        const headshot = isDef
+          ? `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/${p.team}.png&h=80&w=80`
+          : `https://a.espncdn.com/i/headshots/nfl/players/full/${p.id}.png`;
+        const nflLogo = `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/${p.team}.png&h=28&w=28`;
+        return `
+          <div class="player-lockup">
+            <img class="player-lockup__avatar" src="${headshot}" alt="" width="36" height="36"
+              onerror="this.onerror=null;this.src='/assets/default-headshot.png'" loading="lazy" />
+            <div class="player-lockup__info">
+              <span class="player-lockup__name">${p.name}</span>
+              <span class="player-lockup__meta">
+                <span class="player-lockup__pos">${p.position}</span>
+                ${!isDef ? `<img class="player-lockup__nfl-logo" src="${nflLogo}" alt="${p.team}" width="14" height="14" />` : ''}
+              </span>
+            </div>
+          </div>`;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Rendering: Active Auctions
+      // ---------------------------------------------------------------------------
+      function renderActive(auctions) {
+        if (!activeTbody) return;
+        const filtered = selectedTeamFilter
+          ? auctions.filter(a => a.highBidder === selectedTeamFilter || a.nominatedBy === selectedTeamFilter ||
+              a.bidHistory?.some(b => b.franchise === selectedTeamFilter))
+          : auctions;
+
+        if (filtered.length === 0) {
+          activeTbody.innerHTML = `<tr><td colspan="6" class="empty-cell">No active auctions</td></tr>`;
+          return;
+        }
+
+        activeTbody.innerHTML = filtered.map(a => {
+          const p = playerInfo(a.playerId);
+          const exp = estimateExpiration(a.lastBidTime);
+          const isMyBid = a.highBidder === config.myFranchiseId;
+          const iOutbid = !isMyBid && a.bidHistory?.some(b => b.franchise === config.myFranchiseId);
+          const icon = teamIcon(a.highBidder);
+          const rowClass = isMyBid ? 'auction-row auction-row--my-bid' : iOutbid ? 'auction-row auction-row--outbid' : 'auction-row';
+
+          return `<tr class="${rowClass}" data-player="${a.playerId}">
+            <td class="col-player">${buildPlayerHTML(p)}</td>
+            <td class="col-bid"><span class="bid-amount">${formatBid(a.currentBid)}</span></td>
+            <td class="col-bidder">
+              <span class="bidder-cell">
+                ${icon ? `<img class="bidder-icon" src="${icon}" alt="" width="20" height="20" />` : ''}
+                <span>${teamName(a.highBidder)}</span>
+                ${isMyBid ? '<span class="badge badge--high-bidder">You</span>' : ''}
+                ${iOutbid ? '<span class="badge badge--outbid">Outbid</span>' : ''}
+              </span>
+            </td>
+            <td class="col-time" title="${formatFull(a.lastBidTime)}">${formatTimeRemaining(exp)}</td>
+            <td class="col-bids">${a.bidCount}</td>
+            <td class="col-action">
+              ${config.isAuthenticated ? `<button class="btn-bid" data-player="${a.playerId}" data-current="${a.currentBid}" type="button">Bid</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('');
+
+        // Attach bid button listeners
+        activeTbody.querySelectorAll('.btn-bid').forEach(btn => {
+          btn.addEventListener('click', () => openBidModal(btn.dataset.player, parseInt(btn.dataset.current, 10)));
+        });
+      }
+
+      // ---------------------------------------------------------------------------
+      // Rendering: Completed Auctions
+      // ---------------------------------------------------------------------------
+      function renderCompleted(auctions) {
+        if (!completedTbody) return;
+        const filtered = selectedTeamFilter
+          ? auctions.filter(a => a.winner === selectedTeamFilter)
+          : auctions;
+
+        if (filtered.length === 0) {
+          completedTbody.innerHTML = `<tr><td colspan="5" class="empty-cell">No completed auctions</td></tr>`;
+          return;
+        }
+
+        completedTbody.innerHTML = filtered.map(a => {
+          const p = playerInfo(a.playerId);
+          const icon = teamIcon(a.winner);
+          const isMyWin = a.winner === config.myFranchiseId;
+          return `<tr class="${isMyWin ? 'auction-row auction-row--my-bid' : 'auction-row'}">
+            <td class="col-player">${buildPlayerHTML(p)}</td>
+            <td class="col-bid"><span class="bid-amount">${formatBid(a.winningBid)}</span></td>
+            <td class="col-bidder">
+              <span class="bidder-cell">
+                ${icon ? `<img class="bidder-icon" src="${icon}" alt="" width="20" height="20" />` : ''}
+                <span>${teamName(a.winner)}</span>
+                ${isMyWin ? '<span class="badge badge--won">Won</span>' : ''}
+              </span>
+            </td>
+            <td class="col-time" title="${formatFull(a.lastBidTime)}">${formatRelative(a.lastBidTime)}</td>
+            <td class="col-bids">${a.bidCount}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      // ---------------------------------------------------------------------------
+      // Rendering: My Activity
+      // ---------------------------------------------------------------------------
+      function renderMyActivity(state) {
+        if (!myActivityTbody || !config.myFranchiseId) return;
+
+        const rows = [];
+
+        // Active where I'm high bidder
+        for (const a of state.active) {
+          if (a.highBidder === config.myFranchiseId) {
+            const p = playerInfo(a.playerId);
+            const exp = estimateExpiration(a.lastBidTime);
+            rows.push(`<tr class="auction-row auction-row--my-bid">
+              <td class="col-player">${buildPlayerHTML(p)}</td>
+              <td class="col-bid">${formatBid(a.currentBid)}</td>
+              <td class="col-status"><span class="badge badge--high-bidder">High Bidder</span></td>
+              <td class="col-time">${formatTimeRemaining(exp)}</td>
+            </tr>`);
+          }
+        }
+
+        // Active where I've been outbid
+        for (const a of state.active) {
+          if (a.highBidder !== config.myFranchiseId && a.bidHistory?.some(b => b.franchise === config.myFranchiseId)) {
+            const p = playerInfo(a.playerId);
+            rows.push(`<tr class="auction-row auction-row--outbid">
+              <td class="col-player">${buildPlayerHTML(p)}</td>
+              <td class="col-bid">${formatBid(a.currentBid)}</td>
+              <td class="col-status"><span class="badge badge--outbid">Outbid</span></td>
+              <td class="col-time">${formatRelative(a.lastBidTime)}</td>
+            </tr>`);
+          }
+        }
+
+        // Won
+        for (const a of state.completed) {
+          if (a.winner === config.myFranchiseId) {
+            const p = playerInfo(a.playerId);
+            rows.push(`<tr class="auction-row">
+              <td class="col-player">${buildPlayerHTML(p)}</td>
+              <td class="col-bid">${formatBid(a.winningBid)}</td>
+              <td class="col-status"><span class="badge badge--won">Won</span></td>
+              <td class="col-time">${formatRelative(a.lastBidTime)}</td>
+            </tr>`);
+          }
+        }
+
+        myActivityTbody.innerHTML = rows.length > 0 ? rows.join('')
+          : `<tr><td colspan="4" class="empty-cell">No auction activity for your team yet</td></tr>`;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Rendering: Metrics
+      // ---------------------------------------------------------------------------
+      function renderMetrics(state) {
+        const fid = selectedTeamFilter || config.myFranchiseId;
+        const summary = fid ? state.teamSummaries[fid] : null;
+
+        document.getElementById('metric-spent').textContent = summary
+          ? formatBid(summary.totalSpent)
+          : formatBid(Object.values(state.teamSummaries).reduce((s, t) => s + (t.totalSpent || 0), 0));
+
+        document.getElementById('metric-won').textContent = summary
+          ? String(summary.playersWon)
+          : String(state.completed.length);
+
+        document.getElementById('metric-active').textContent = summary
+          ? String(summary.activeBidsAsHighBidder)
+          : String(state.active.length);
+
+        const spent = summary ? summary.totalSpent : 0;
+        document.getElementById('metric-budget').textContent = fid
+          ? formatBid(config.auctionBudget - spent)
+          : '--';
+      }
+
+      // ---------------------------------------------------------------------------
+      // Rendering: Available Players Board
+      // ---------------------------------------------------------------------------
+      function renderBoard(state) {
+        if (!boardList) return;
+
+        const activePlayerIds = new Set(state.active.map(a => a.playerId));
+        const completedPlayerIds = new Set(state.completed.map(a => a.playerId));
+
+        // Find available players
+        const available = [];
+        for (const [id, p] of Object.entries(playerLookup)) {
+          if (rosteredIds.has(id) || activePlayerIds.has(id) || completedPlayerIds.has(id)) continue;
+          if (selectedPosition !== 'ALL' && p.position !== selectedPosition) continue;
+          available.push(p);
+        }
+
+        // Rank: by custom rankings if available, otherwise alphabetical
+        if (rankingSource === 'custom' && customRankings && customRankings.length > 0) {
+          const rankMap = new Map();
+          customRankings.forEach((id, i) => rankMap.set(id, i));
+          available.sort((a, b) => {
+            const ra = rankMap.has(a.id) ? rankMap.get(a.id) : 999999;
+            const rb = rankMap.has(b.id) ? rankMap.get(b.id) : 999999;
+            return ra - rb;
+          });
+        } else {
+          // Alphabetical fallback
+          available.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Determine highest-ranked active auction player
+        let highestActiveRank = 999999;
+        if (customRankings) {
+          const rankMap = new Map();
+          customRankings.forEach((id, i) => rankMap.set(id, i));
+          for (const a of state.active) {
+            const rank = rankMap.get(a.playerId);
+            if (rank !== undefined && rank < highestActiveRank) highestActiveRank = rank;
+          }
+        }
+
+        const top50 = available.slice(0, 50);
+
+        if (top50.length === 0) {
+          boardList.innerHTML = '<div class="empty-cell">No available players matching filters</div>';
+          return;
+        }
+
+        boardList.innerHTML = top50.map((p, i) => {
+          const rank = customRankings ? customRankings.indexOf(p.id) : -1;
+          const isHigher = rank !== -1 && rank < highestActiveRank;
+          return `<div class="board-player ${isHigher ? 'board-player--higher' : ''}">
+            <span class="board-rank">${rank !== -1 ? rank + 1 : '--'}</span>
+            ${buildPlayerHTML(p)}
+            ${isHigher ? '<span class="badge badge--higher">Higher on Board</span>' : ''}
+          </div>`;
+        }).join('');
+      }
+
+      // ---------------------------------------------------------------------------
+      // Notifications
+      // ---------------------------------------------------------------------------
+      function checkOutbids(newActive) {
+        if (!config.myFranchiseId || previousActive.length === 0) return;
+
+        const prevByPlayer = new Map(previousActive.map(a => [a.playerId, a]));
+        const alerts = [];
+
+        for (const curr of newActive) {
+          const prev = prevByPlayer.get(curr.playerId);
+          if (!prev) continue;
+          if (prev.highBidder === config.myFranchiseId && curr.highBidder !== config.myFranchiseId) {
+            const p = playerInfo(curr.playerId);
+            alerts.push({ player: p.name, team: teamName(curr.highBidder), amount: curr.currentBid });
+          }
+        }
+
+        if (alerts.length > 0 && notificationsEl) {
+          const html = alerts.map(a =>
+            `<div class="notification notification--outbid">
+              <span class="notification__text">You've been outbid on <strong>${a.player}</strong> — ${a.team} bid ${formatBid(a.amount)}</span>
+              <button class="notification__close" aria-label="Dismiss" type="button">&times;</button>
+            </div>`
+          ).join('');
+          notificationsEl.innerHTML += html;
+          notificationsEl.querySelectorAll('.notification__close').forEach(btn => {
+            btn.addEventListener('click', () => btn.parentElement.remove());
+          });
+
+          // Announce to screen readers
+          announce(alerts.map(a => `Outbid on ${a.player} by ${a.team} at ${formatBid(a.amount)}`).join('. '));
+        }
+      }
+
+      function announce(msg) {
+        if (announcer) {
+          announcer.textContent = msg;
+          setTimeout(() => { announcer.textContent = ''; }, 1500);
+        }
+      }
+
+      // ---------------------------------------------------------------------------
+      // Bid Modal
+      // ---------------------------------------------------------------------------
+      const bidModal = document.getElementById('bid-modal');
+      const bidInput = document.getElementById('bid-amount-input');
+      const bidStatus = document.getElementById('bid-status');
+      let bidPlayerId = '';
+
+      function openBidModal(playerId, currentBid) {
+        bidPlayerId = playerId;
+        const p = playerInfo(playerId);
+        const minBid = currentBid + 25000; // Minimum increment assumption
+        document.getElementById('bid-modal-player').innerHTML = buildPlayerHTML(p);
+        document.getElementById('bid-modal-current').innerHTML = `Current bid: <strong>${formatBid(currentBid)}</strong>`;
+        bidInput.value = minBid;
+        bidInput.min = minBid;
+        bidStatus.textContent = '';
+        bidModal.style.display = 'flex';
+        bidInput.focus();
+      }
+
+      function closeBidModal() {
+        bidModal.style.display = 'none';
+        bidPlayerId = '';
+      }
+
+      document.getElementById('bid-modal-close')?.addEventListener('click', closeBidModal);
+      document.getElementById('bid-cancel')?.addEventListener('click', closeBidModal);
+      bidModal?.addEventListener('click', (e) => { if (e.target === bidModal) closeBidModal(); });
+
+      document.getElementById('bid-submit')?.addEventListener('click', async () => {
+        const amount = parseInt(bidInput.value, 10);
+        if (!amount || amount <= 0 || !bidPlayerId) return;
+
+        const submitBtn = document.getElementById('bid-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        bidStatus.textContent = '';
+
+        try {
+          const res = await fetch('/api/auction-bid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: bidPlayerId, amount }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            bidStatus.innerHTML = '<span class="bid-success">Bid placed! Refreshing...</span>';
+            setTimeout(() => { closeBidModal(); fetchAuctionData(); }, 1500);
+          } else {
+            bidStatus.innerHTML = `<span class="bid-error">${data.message || 'Bid failed'}</span>`;
+          }
+        } catch {
+          bidStatus.innerHTML = '<span class="bid-error">Network error. Please try again.</span>';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Bid';
+        }
+      });
+
+      // ---------------------------------------------------------------------------
+      // Tab Switching
+      // ---------------------------------------------------------------------------
+      document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabId = tab.dataset.tab;
+          currentTab = tabId;
+          document.querySelectorAll('.view-tab').forEach(t => {
+            t.classList.toggle('view-tab--active', t.dataset.tab === tabId);
+            t.setAttribute('aria-selected', t.dataset.tab === tabId ? 'true' : 'false');
+          });
+          document.querySelectorAll('.tab-content').forEach(c => {
+            c.style.display = c.id === `tab-${tabId}` ? '' : 'none';
+          });
+        });
+      });
+
+      // ---------------------------------------------------------------------------
+      // Team Filter
+      // ---------------------------------------------------------------------------
+      document.getElementById('team-filter-select')?.addEventListener('change', (e) => {
+        selectedTeamFilter = e.target.value;
+        renderAll();
+      });
+
+      // ---------------------------------------------------------------------------
+      // Position Filter & Ranking Source
+      // ---------------------------------------------------------------------------
+      document.getElementById('position-filter')?.addEventListener('change', (e) => {
+        selectedPosition = e.target.value;
+        renderBoard(currentState);
+      });
+
+      document.getElementById('ranking-source')?.addEventListener('change', (e) => {
+        rankingSource = e.target.value;
+        renderBoard(currentState);
+      });
+
+      // ---------------------------------------------------------------------------
+      // Render All
+      // ---------------------------------------------------------------------------
+      function renderAll() {
+        renderActive(currentState.active);
+        renderCompleted(currentState.completed);
+        renderMyActivity(currentState);
+        renderMetrics(currentState);
+        renderBoard(currentState);
+
+        // Count display
+        if (auctionCount) {
+          auctionCount.innerHTML = `<strong>${currentState.active.length}</strong> active · <strong>${currentState.completed.length}</strong> completed`;
+        }
+
+        // Empty state
+        const hasData = currentState.active.length > 0 || currentState.completed.length > 0;
+        if (emptyState) emptyState.style.display = hasData ? 'none' : '';
+        if (splitView) splitView.style.display = hasData ? '' : 'none';
+      }
+
+      // ---------------------------------------------------------------------------
+      // Polling
+      // ---------------------------------------------------------------------------
+      async function fetchAuctionData() {
+        try {
+          const res = await fetch('/api/auction');
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          previousActive = currentState.active;
+          currentState = data;
+
+          // Check for outbids
+          checkOutbids(data.active);
+
+          renderAll();
+
+          if (refreshText) {
+            refreshText.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+          }
+        } catch (err) {
+          console.error('[auction-tracker] Fetch error:', err);
+          if (refreshText) refreshText.textContent = 'Update failed — retrying...';
+        }
+      }
+
+      function startPolling() {
+        fetchAuctionData();
+        pollInterval = setInterval(() => {
+          if (isPageVisible) fetchAuctionData();
+        }, 30000);
+      }
+
+      function stopPolling() {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+      }
+
+      // Page Visibility API — pause polling when tab is hidden
+      document.addEventListener('visibilitychange', () => {
+        isPageVisible = !document.hidden;
+        if (isPageVisible) fetchAuctionData(); // Immediate refresh on focus
+      });
+
+      // ---------------------------------------------------------------------------
+      // Load Custom Rankings
+      // ---------------------------------------------------------------------------
+      async function loadRankings() {
+        try {
+          const res = await fetch('/api/cr');
+          if (res.ok) {
+            const { data } = await res.json();
+            if (data?.rankings) {
+              customRankings = data.rankings;
+              renderBoard(currentState);
+            }
+          }
+        } catch { /* Rankings unavailable — fallback to alphabetical */ }
+      }
+
+      // ---------------------------------------------------------------------------
+      // Init
+      // ---------------------------------------------------------------------------
+      startPolling();
+      loadRankings();
+
+      // Cleanup on View Transitions navigation
+      document.addEventListener('astro:before-swap', stopPolling, { once: true });
+    }
+
+    // Initialize on page load and on View Transitions
+    document.addEventListener('astro:page-load', initAuctionTracker);
+  </script>
+</TheLeagueLayout>
+
+<style>
+  /* ── Page Layout ── */
+  .auction-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 1rem 2rem;
+  }
+
+  /* ── Notifications ── */
+  .auction-notifications {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .notification {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    animation: slideIn 0.3s ease-out;
+  }
+  .notification--outbid {
+    background: var(--color-error-light, #fee2e2);
+    border-left: 3px solid var(--color-error, #dc2626);
+    color: var(--color-gray-900, #111827);
+  }
+  .notification__close {
+    background: none;
+    border: none;
+    font-size: 1.125rem;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+  }
+  .notification__close:hover { color: var(--color-gray-900, #111827); }
+  .notification__close:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+  @keyframes slideIn {
+    from { transform: translateY(-8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* ── Metrics Strip ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+  }
+  .metric-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.625rem 0.5rem;
+    text-align: center;
+  }
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.3;
+  }
+  .metric-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.125rem;
+  }
+
+  /* ── Toolbar ── */
+  .auction-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0 0.625rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+  .toolbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .toolbar-center {
+    display: flex;
+    align-items: center;
+  }
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .section-title--board {
+    border-left-color: var(--cat-free-agency, #2e8743);
+  }
+  .count-display {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .count-display :global(strong) {
+    color: var(--color-gray-700, #374151);
+    font-weight: 600;
+  }
+
+  /* ── View Tabs ── */
+  .view-toggle {
+    display: flex;
+    gap: 0.125rem;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.1875rem;
+  }
+  .view-tab {
+    padding: 0.375rem 0.75rem;
+    border: none;
+    border-radius: var(--radius-sm, 0.25rem);
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+  }
+  .view-tab:hover { color: var(--color-gray-700, #374151); }
+  .view-tab--active {
+    background: #fff;
+    color: var(--color-gray-900, #111827);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .view-tab:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* ── Team Filter & Board Controls ── */
+  .team-filter select,
+  .board-select {
+    padding: 0.375rem 0.625rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-gray-700, #374151);
+    background: #fff;
+    cursor: pointer;
+  }
+  .team-filter select:focus-visible,
+  .board-select:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* ── Refresh Indicator ── */
+  .refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .refresh-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cat-free-agency, #2e8743);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── Split View ── */
+  .auction-split {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1rem;
+    align-items: start;
+  }
+  .auction-panel--main {
+    min-width: 0;
+  }
+  .auction-panel--board {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    background: #fff;
+    max-height: 70vh;
+    overflow-y: auto;
+    position: sticky;
+    top: 1rem;
+  }
+  .board-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 5;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .board-controls {
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  /* ── Board List ── */
+  .board-list {
+    padding: 0.375rem;
+  }
+  .board-player {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    transition: background 0.15s ease;
+  }
+  .board-player:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+  .board-player--higher {
+    border-left: 2px solid var(--color-warning, #f59e0b);
+    background: rgba(245, 158, 11, 0.04);
+  }
+  .board-rank {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-gray-400, #9ca3af);
+    width: 2rem;
+    text-align: right;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Auction Table ── */
+  .auction-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .auction-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+  .auction-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .auction-table th {
+    background: var(--color-gray-50, #f9fafb);
+    padding: 0.5rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .auction-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-700, #374151);
+    vertical-align: middle;
+  }
+  .auction-table tbody tr:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  /* Row highlight variants */
+  .auction-row--my-bid td:first-child {
+    box-shadow: inset 3px 0 0 var(--cat-free-agency, #2e8743);
+  }
+  .auction-row--outbid td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-error, #dc2626);
+  }
+
+  /* ── Cell types ── */
+  .col-bid { white-space: nowrap; }
+  .col-time { white-space: nowrap; font-size: 0.75rem; }
+  .col-bids { text-align: center; font-variant-numeric: tabular-nums; }
+  .col-action { text-align: center; }
+  .bid-amount {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+  }
+  .bidder-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .bidder-icon {
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .empty-cell {
+    text-align: center;
+    color: var(--color-gray-500, #6b7280);
+    padding: 2rem 1rem;
+    font-style: italic;
+  }
+  :global(.time-expired) {
+    color: var(--color-error, #dc2626);
+    font-weight: 600;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .badge--high-bidder {
+    background: color-mix(in srgb, var(--cat-free-agency, #2e8743) 12%, transparent);
+    color: var(--cat-free-agency, #2e8743);
+  }
+  .badge--outbid {
+    background: var(--color-error-light, #fee2e2);
+    color: var(--color-error-dark, #b91c1c);
+  }
+  .badge--won {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    color: var(--color-primary, #1c497c);
+  }
+  .badge--higher {
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+    color: #92400e;
+    font-size: 0.5625rem;
+  }
+
+  /* ── Bid Button ── */
+  .btn-bid {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: transparent;
+    color: var(--color-primary, #1c497c);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .btn-bid:hover {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+  }
+  .btn-bid:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* ── Bid Modal ── */
+  .bid-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+  }
+  .bid-modal {
+    background: #fff;
+    border-radius: var(--radius-lg, 0.75rem);
+    box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1));
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+  }
+  .bid-modal__close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bid-modal__close:hover { background: var(--color-gray-200, #e5e7eb); }
+  .bid-modal__close:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+  .bid-modal__player { margin: 0.75rem 0; }
+  .bid-modal__current {
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
+    margin-bottom: 1rem;
+  }
+  .bid-modal__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 1rem;
+  }
+  .bid-modal__input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .bid-modal__input:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+    border-color: var(--color-primary, #1c497c);
+  }
+  .bid-modal__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  .bid-modal__status {
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+    text-align: center;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-decoration: none;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+  .btn--ghost {
+    background: transparent;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .btn--ghost:hover { background: var(--color-gray-100, #f3f4f6); }
+  .btn--secondary {
+    background: var(--btn-secondary-bg, #2e8743);
+    color: #fff;
+  }
+  .btn--secondary:hover { filter: brightness(0.92); }
+  .btn--secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  :global(.bid-success) { color: var(--cat-free-agency, #2e8743); font-weight: 600; }
+  :global(.bid-error) { color: var(--color-error, #dc2626); font-weight: 600; }
+
+  /* ── Player Lockup (client-rendered) ── */
+  :global(.player-lockup) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  :global(.player-lockup__avatar) {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-gray-100, #f3f4f6);
+    flex-shrink: 0;
+  }
+  :global(.player-lockup__info) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  :global(.player-lockup__name) {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  :global(.player-lockup__meta) {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+  :global(.player-lockup__pos) {
+    font-weight: 600;
+  }
+  :global(.player-lockup__nfl-logo) {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ── Empty State ── */
+  .auction-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+  .empty-icon {
+    font-size: 3rem;
+    opacity: 0.3;
+    margin-bottom: 0.75rem;
+  }
+  .empty-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.5rem;
+  }
+  .empty-text {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  /* ── Loading ── */
+  .loading-shimmer {
+    text-align: center;
+    color: var(--color-gray-500, #6b7280);
+    padding: 2rem;
+    font-size: 0.875rem;
+  }
+
+  /* ── Visually Hidden ── */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* ── Mobile Responsive ── */
+  @media (max-width: 768px) {
+    .auction-split {
+      grid-template-columns: 1fr;
+    }
+    .auction-panel--board {
+      max-height: 50vh;
+      position: static;
+    }
+    .metrics-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .auction-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .toolbar-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .col-bids,
+    .col-action {
+      display: none;
+    }
+    .auction-table th,
+    .auction-table td {
+      padding: 0.375rem;
+      font-size: 0.75rem;
+    }
+    :global(.player-lockup__avatar) {
+      width: 28px;
+      height: 28px;
+    }
+    :global(.player-lockup__name) {
+      font-size: 0.75rem;
+    }
+    .bid-modal {
+      align-self: flex-end;
+      border-radius: var(--radius-lg, 0.75rem) var(--radius-lg, 0.75rem) 0 0;
+      max-width: 100%;
+      width: 100%;
+    }
+    .bid-modal-overlay {
+      align-items: flex-end;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .view-toggle {
+      width: 100%;
+    }
+    .view-tab {
+      flex: 1;
+      text-align: center;
+    }
+    .toolbar-center {
+      width: 100%;
+    }
+    .board-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notification,
+    .refresh-dot,
+    .view-tab,
+    .btn-bid,
+    .board-player {
+      animation: none;
+      transition: none;
+    }
+  }
+</style>
