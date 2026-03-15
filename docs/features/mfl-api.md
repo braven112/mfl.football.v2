@@ -78,17 +78,123 @@ https://api.myfantasyleague.com/2025/export?TYPE=draftResults&L=13522&JSON=1
 
 ---
 
-#### `auctionResults`
-**Purpose:** Auction picks and prices
+#### `auctionResults` ✅ Currently Used
+**Purpose:** Completed auction results — winner and final price for each player sold.
 
 **Parameters:**
 - Required: `L` (league ID)
-- Auth: Owner
+- Auth: Public (no authentication required)
 
 **Example:**
 ```
 https://api.myfantasyleague.com/2025/export?TYPE=auctionResults&L=13522&JSON=1
 ```
+
+**Response Structure:**
+```json
+{
+  "version": "1.0",
+  "encoding": "utf-8",
+  "auctionResults": {
+    "auctionUnit": {
+      "unit": "LEAGUE",
+      "auction": [
+        {
+          "player": "13592",
+          "franchise": "0001",
+          "winningBid": "7525000",
+          "timeStarted": "1742479224",
+          "lastBidTime": "1742610735"
+        }
+      ]
+    }
+  }
+}
+```
+
+When no auctions have occurred yet, `auctionUnit` contains only `"unit": "LEAGUE"` with no `auction` array.
+
+**Key Fields:**
+- `player` — MFL player ID (join with `players.json`)
+- `franchise` — Winning franchise ID
+- `winningBid` — Final sale price in dollars as string (e.g., `"7525000"` = $7.525M)
+- `timeStarted` — Unix timestamp when player was nominated
+- `lastBidTime` — Unix timestamp of the winning bid
+
+**Important Notes (verified from 2025 production data, updated 2026-03-15):**
+- Returns ONLY completed auctions. Active/in-progress auctions do NOT appear here.
+- The `timeToLive` field described in some documentation does NOT exist in real production responses. It was mock/conceptual data only.
+- All monetary values are strings, not numbers. Always `parseInt()` or `parseFloat()` before math.
+- The `auction` field is absent (not an empty array) when no auctions have completed yet.
+
+**Used In:**
+- `scripts/fetch-mfl-feeds.mjs` — cached daily to `data/theleague/mfl-feeds/{YEAR}/auctionResults.json`
+
+---
+
+#### `transactions` (auction event types) ✅ Currently Used
+**Purpose:** Stream of all league transactions including real-time auction events.
+
+**Parameters:**
+- Required: `L` (league ID)
+- Optional: `TRANS_TYPE` (filter by type), `FRANCHISE` (filter by team), `DAYS`, `COUNT`
+- Auth: Public (no authentication required)
+
+**Example:**
+```
+https://api.myfantasyleague.com/2025/export?TYPE=transactions&L=13522&JSON=1
+```
+
+**Auction Transaction Types (all confirmed from 2025 production data):**
+
+| `type` | Meaning | `franchise` field | `transaction` field |
+|--------|---------|-------------------|---------------------|
+| `AUCTION_INIT` | Player nominated | Nominating team | `{playerId}\|{startingBid}\|` |
+| `AUCTION_BID` | Bid placed | Bidding team | `{playerId}\|{bidAmount}\|` |
+| `AUCTION_WON` | Auction closed | Winning team | `{playerId}\|{winningBid}\|` |
+
+**Transaction String Format:**
+```
+"12263|425000|"
+ ^      ^      ^
+ playerId  amount  trailing pipe (always present)
+```
+
+**All three types share this exact 4-field structure:**
+```json
+{
+  "type": "AUCTION_BID",
+  "franchise": "0006",
+  "transaction": "12263|475000|",
+  "timestamp": "1756748673"
+}
+```
+
+**2025 Season Stats (confirmed):**
+- 125 AUCTION_INIT events
+- 416 AUCTION_BID events
+- 122 AUCTION_WON events
+- Average auction duration: ~53 hours (range: 36–263 hours)
+
+**Finding Active Auctions:**
+There is no direct "active auctions" endpoint. Derive active state by:
+1. Collect all `AUCTION_WON` player IDs (or all IDs from `auctionResults`)
+2. Collect all `AUCTION_INIT` player IDs
+3. Active = INIT player IDs not in WON set
+4. Current highest bid = latest `AUCTION_BID` for that player ID
+
+**Per-Team Activity:**
+Filter `transactions` where `franchise === targetId` and `type` starts with `AUCTION_`. No dedicated per-franchise auction endpoint exists.
+
+**Important Notes:**
+- The `transactions` endpoint by default returns transactions from the current league year
+- Use `DAYS=N` to limit to recent N days, or `COUNT=N` for last N transactions
+- Recommended polling interval during active auction: 15–30 seconds
+- MFL does not offer push/WebSocket — polling only
+
+**Used In:**
+- `scripts/fetch-mfl-feeds.mjs` — cached daily to `data/theleague/mfl-feeds/{YEAR}/transactions.json`
+- Referenced in `docs/mfl-auction-api-research.md` and `docs/live-auction-integration-guide.md`
 
 ---
 

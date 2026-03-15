@@ -483,3 +483,146 @@ This looks correct — it sends `FRANCHISE_ID` when the client provides a non-`0
 - MFL API docs at `https://www49.myfantasyleague.com/2025/api_info?L=13522` — commissioner impersonation section
 - MFL API details at `https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522` — per-endpoint FRANCHISE_ID documentation
 - Error message from live API: "Can not specify a FRANCHISE_ID (0001) other than the owner's ()"
+
+---
+
+## 2026-03-15 - Slow Email Auction API: Complete Endpoint Map
+
+**Context:** Researching all MFL API endpoints for slow email auction tracking (TheLeague 2026 auction, starting March 15).
+
+### The Two Core Endpoints
+
+**1. `auctionResults` — Completed Auctions Only**
+
+```
+GET https://api.myfantasyleague.com/{YEAR}/export?TYPE=auctionResults&L=13522&JSON=1
+Auth: Public (no auth required)
+```
+
+Response structure:
+```json
+{
+  "version": "1.0",
+  "encoding": "utf-8",
+  "auctionResults": {
+    "auctionUnit": {
+      "unit": "LEAGUE",
+      "auction": [
+        {
+          "player": "13592",
+          "franchise": "0001",
+          "winningBid": "7525000",
+          "timeStarted": "1742479224",
+          "lastBidTime": "1742610735"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Critical finding:** The `timeToLive` field described in `docs/MFL_AUCTION_API.md` (mock data) does NOT appear in actual live data from the 2025 season. The real 2025 `auctionResults.json` contains only: `player`, `franchise`, `winningBid`, `timeStarted`, `lastBidTime`. There is NO `timeToLive` field in production data. The endpoint returns ONLY completed auctions.
+
+**2. `transactions` — Live Auction Event Stream (RECOMMENDED for tracking)**
+
+```
+GET https://api.myfantasyleague.com/{YEAR}/export?TYPE=transactions&L=13522&JSON=1
+Auth: Public (no auth required)
+```
+
+Three auction transaction types confirmed from real 2025 data (663 auction transactions, 1152 total):
+
+| Type | Count (2025) | Meaning |
+|------|-------------|---------|
+| `AUCTION_INIT` | 125 | Player nominated for auction |
+| `AUCTION_BID` | 416 | Bid placed on player |
+| `AUCTION_WON` | 122 | Auction completed, winner set |
+
+All three types have identical field structure:
+```json
+{
+  "type": "AUCTION_INIT",
+  "franchise": "0006",
+  "transaction": "12263|425000|",
+  "timestamp": "1756748673"
+}
+```
+
+**Transaction string format:** `{playerId}|{bidAmount}|` — always pipe-delimited, always trailing pipe, always exactly 2 values.
+
+**No extra fields** — all three transaction types have exactly 4 keys: `type`, `franchise`, `transaction`, `timestamp`. No `timeToLive`, `status`, or other metadata in the transactions endpoint.
+
+### Auction Behavior in This League (TheLeague)
+
+**Auction type confirmed:** `auction_kind: email` in `league.json`. This is a slow email auction where bids are placed asynchronously over hours/days.
+
+**Key league auction config fields (from `league.json`):**
+- `auction_kind`: `"email"` — confirms slow email auction (not live draft room)
+- `draft_kind`: `"email"` — same for rookie draft
+- `auctionStartAmount`: `45000000` — total cap budget per team
+- `minBid`: `425000` — minimum bid ($425k)
+- `bidIncrement`: `25000` — minimum bid increment ($25k)
+- `bbidMinimum`: `425000` — FAAB minimum (same as minBid here)
+- `bbidIncrement`: `25000` — FAAB increment
+- `bbidConditional`: `"Yes"` — conditional FAAB bids allowed
+- `bbidTiebreaker`: `"SORT"` — tiebreaker method
+- `draftLimitHours`: `"12:00"` — 12 hours to respond to bids/nominations
+- `draftTimerSusp`: `"03 07"` — timer suspended between 3am-7am
+
+**Auction duration analysis from 2025 data:**
+- Min duration: 36 hours
+- Max duration: ~263 hours (~11 days)
+- Average duration: ~53 hours (~2.2 days)
+- This confirms "slow" — players stay on the block for days, not minutes.
+
+### Deriving "Active" vs "Completed" Auction State
+
+Since there is NO `timeToLive` field in real data, active vs completed state must be inferred differently:
+
+**Method 1: AUCTION_INIT without matching AUCTION_WON** — If you see an `AUCTION_INIT` for a player ID that has no subsequent `AUCTION_WON`, that player is still active.
+
+**Method 2: Time-based heuristic** — Given `draftLimitHours: 12:00`, if `lastBidTime + 12 hours > now`, the auction may still be active. But this is unreliable because MFL timers can be suspended.
+
+**Method 3: auctionResults cross-reference** — Any player in `transactions` with `AUCTION_INIT` but NOT in `auctionResults` is still active.
+
+**Best approach:** Combine transactions + auctionResults:
+1. Build a Set of completed player IDs from `auctionResults`
+2. Find `AUCTION_INIT` transactions with player IDs NOT in that set = active auctions
+3. The highest-amount `AUCTION_BID` for those active players = current bid state
+
+### Per-Team Auction Activity
+
+There is NO dedicated "per-franchise auction" endpoint. To get a specific team's activity:
+- Filter `transactions` where `franchise === targetFranchiseId` AND `type` starts with `AUCTION_`
+- This shows all bids placed AND auctions won by that team
+- To see auctions won: filter by `type === 'AUCTION_WON'` for that franchise
+- To see current active bids held by a team: find `AUCTION_BID` events for that franchise on players still active
+
+### Real-Time / Near-Real-Time Updates
+
+MFL does NOT provide WebSocket or push notifications. Polling is the only option:
+- The `transactions` endpoint updates in near-real-time as bids are placed
+- The `auctionResults` endpoint updates when auctions complete
+- Recommended polling interval: 15-30 seconds during active auction periods
+- Rate limiting: MFL doesn't publish limits; use exponential backoff on errors
+
+### What Does NOT Exist
+
+- No dedicated "currentAuctions" or "activeBids" endpoint — must derive from transactions
+- No `timeToLive` field in production API data (only appears in mock/documentation)
+- No WebSocket or server-sent events for real-time push
+- No per-franchise filtered auction endpoint (filter client-side)
+- No auction history endpoint beyond what `transactions` provides
+
+### Cached Data Status (as of 2026-03-15)
+
+- `data/theleague/mfl-feeds/2026/auctionResults.json`: Empty `auctionUnit` (no auctions started yet for 2026 at cache time)
+- `data/theleague/mfl-feeds/2026/transactions.json`: Only 1 trade transaction — auction hasn't started yet or hasn't been fetched since it started
+- `data/theleague/mfl-feeds/2025/auctionResults.json`: Full 2025 auction data — 83 completed auctions, good for historical analysis
+
+**Evidence:**
+- Analyzed real 2025 transactions.json: 663 auction transactions (125 INIT, 416 BID, 122 WON)
+- Analyzed real 2025 auctionResults.json: 83+ completed auction entries
+- Confirmed league.json fields: `auction_kind: email`, `minBid: 425000`, `bidIncrement: 25000`
+- `docs/mfl-auction-api-research.md` (dated 2026-01-04): Pre-existing research largely confirmed
+- `docs/MFL_AUCTION_API.md`: Contains mock data with `timeToLive` field — NOT present in real production data
