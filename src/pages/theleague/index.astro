@@ -1,10 +1,12 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import HeroBanner from '../../components/theleague/HeroBanner.astro';
+import AuctionHero from '../../components/theleague/AuctionHero.astro';
 import WhatsNext from '../../components/theleague/WhatsNext.astro';
-import { resolveHeroContent } from '../../utils/hero-resolver';
+import { resolveHeroContent, isAuctionLive } from '../../utils/hero-resolver';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import whatsNewData from '../../data/whats-new.json';
 import { spriteUrl } from '../../utils/sprite-url';
@@ -22,6 +24,9 @@ const effectiveDate = isValidTestDate ? referenceDate : undefined;
 
 const timeline = getWhatsNextTimeline(effectiveDate);
 const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effectiveDate);
+const isAuction = hero.source === 'auction';
+const leagueYear = isAuction ? getCurrentLeagueYear(effectiveDate) : 0;
+const auctionLive = isAuction ? isAuctionLive(effectiveDate ?? new Date()) : false;
 
 const pages = {
   'Team Management': [
@@ -55,26 +60,35 @@ const pages = {
 <TheLeagueLayout title="The League - Home">
   <main class="league-home">
     <section class="featured-news">
-      <HeroBanner
-        title={hero.title}
-        summary={hero.summary}
-        link={hero.link ? r(hero.link) : undefined}
-        linkLabel={hero.linkLabel}
-        icon={hero.icon}
-        accentColor={hero.accentColor}
-        variant="editorial"
-        dateDisplay={hero.dateDisplay}
-        statusText={hero.statusText}
-        isActive={hero.isActive}
-        isUrgent={hero.isUrgent}
-        isExternal={hero.isExternal}
-        image={hero.image}
-        imageAlt={hero.imageAlt}
-        kicker={hero.kicker}
-        kickerDate={hero.kickerDate}
-        allNewsLink={r("/theleague/whats-new")}
-        allNewsLabel="All releases"
-      />
+      {isAuction ? (
+        <AuctionHero
+          leagueYear={leagueYear}
+          resolveLeaguePath={r}
+          spriteUrl={spriteUrl}
+          live={auctionLive}
+        />
+      ) : (
+        <HeroBanner
+          title={hero.title}
+          summary={hero.summary}
+          link={hero.link ? r(hero.link) : undefined}
+          linkLabel={hero.linkLabel}
+          icon={hero.icon}
+          accentColor={hero.accentColor}
+          variant="editorial"
+          dateDisplay={hero.dateDisplay}
+          statusText={hero.statusText}
+          isActive={hero.isActive}
+          isUrgent={hero.isUrgent}
+          isExternal={hero.isExternal}
+          image={hero.image}
+          imageAlt={hero.imageAlt}
+          kicker={hero.kicker}
+          kickerDate={hero.kickerDate}
+          allNewsLink={r("/theleague/whats-new")}
+          allNewsLabel="All releases"
+        />
+      )}
     </section>
 
     <WhatsNext demoDate={effectiveDate} />

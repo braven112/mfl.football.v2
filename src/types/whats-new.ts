@@ -54,7 +54,7 @@ export interface WhatsNewEntry {
 }
 
 /** Hero content source type */
-export type HeroSource = 'feature' | 'event' | 'default';
+export type HeroSource = 'feature' | 'event' | 'auction' | 'default';
 
 /** What the hero resolver returns */
 export interface HeroContent {
