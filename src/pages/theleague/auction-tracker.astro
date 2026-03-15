@@ -916,6 +916,11 @@ const pageTitle = 'Auction Tracker';
         } catch (err) {
           console.error('[auction-tracker] Fetch error:', err);
           if (refreshText) refreshText.textContent = 'Update failed — retrying...';
+          // Clear the loading shimmer so the page doesn't appear stuck
+          const loadingRow = activeTbody?.querySelector('.loading-row');
+          if (loadingRow) {
+            activeTbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Failed to load auction data — retrying...</td></tr>';
+          }
         }
       }
 
