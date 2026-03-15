@@ -36,7 +36,7 @@ export default function WhatsNewCard({ entry, featured, basePath = '/theleague',
               <span className="browser-frame__dot browser-frame__dot--red" />
               <span className="browser-frame__dot browser-frame__dot--yellow" />
               <span className="browser-frame__dot browser-frame__dot--green" />
-              <span className="browser-frame__url">{entry.link ? `theleague.us${entry.link}` : 'theleague.us'}</span>
+              <span className="browser-frame__url">{entry.link ? `theleague.us${entry.link.replace('/theleague', '')}` : 'theleague.us'}</span>
             </div>
             <img
               src={imagePath}

@@ -1,0 +1,325 @@
+---
+/**
+ * AuctionStrip - Compact auction navigation bar for mid/late auction season.
+ *
+ * Displays after the 30-day full AuctionHero window ends, persisting until
+ * the 3rd Sunday of August (FA close). Sits above the normal hero banner
+ * with 5 key auction links in a single horizontal row.
+ */
+export interface Props {
+  /** League year for constructing MFL external URLs */
+  leagueYear: number;
+  /** MFL host for external links */
+  mflHost?: string;
+  /** MFL league ID */
+  leagueId?: string;
+  /** Path resolver function from layout */
+  resolveLeaguePath: (path: string) => string;
+  /** Cache-busted sprite URL */
+  spriteUrl: string;
+}
+
+const {
+  leagueYear,
+  mflHost = 'www49.myfantasyleague.com',
+  leagueId = '13522',
+  resolveLeaguePath: r,
+  spriteUrl,
+} = Astro.props;
+
+const mflBase = `https://${mflHost}/${leagueYear}/options?L=${leagueId}`;
+
+interface StripLink {
+  label: string;
+  href: string;
+  icon: string;
+  external: boolean;
+}
+
+const primaryLink: StripLink = {
+  label: 'Place Bid',
+  href: `${mflBase}&O=52`,
+  icon: 'gavel',
+  external: true,
+};
+
+const secondaryLinks: StripLink[] = [
+  { label: 'Auction Summary', href: `${mflBase}&O=44`, icon: 'bar-chart', external: true },
+  { label: 'Completed Auctions', href: `${mflBase}&O=43`, icon: 'check', external: true },
+  { label: 'Free Agents', href: r('/theleague/players'), icon: 'binoculars', external: false },
+  { label: 'Rosters', href: r('/theleague/rosters'), icon: 'banknote', external: false },
+];
+---
+
+<div class="auction-strip" role="region" aria-label="Free Agent Auction quick links">
+  <div class="auction-strip__inner">
+    <span class="auction-strip__title">Free Agent Auction</span>
+
+    <nav class="auction-strip__nav" aria-label="Auction tools">
+      <a
+        href={primaryLink.href}
+        class="auction-strip__cta"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Place Auction Bid (opens in new tab)"
+      >
+        <svg class="auction-strip__icon auction-strip__icon--cta" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-${primaryLink.icon}`}></use>
+        </svg>
+        <span>{primaryLink.label}</span>
+        <span class="auction-strip__ext" aria-hidden="true">&#8599;</span>
+      </a>
+
+      <ul class="auction-strip__links" id="auction-strip-links">
+        {secondaryLinks.map(link => (
+          <li>
+            <a
+              href={link.href}
+              class="auction-strip__link"
+              target={link.external ? '_blank' : undefined}
+              rel={link.external ? 'noopener noreferrer' : undefined}
+              aria-label={link.external ? `${link.label} (opens in new tab)` : undefined}
+            >
+              <svg class="auction-strip__icon" aria-hidden="true">
+                <use href={`${spriteUrl}#icon-${link.icon}`}></use>
+              </svg>
+              <span>{link.label}</span>
+              {link.external && <span class="auction-strip__ext" aria-hidden="true">&#8599;</span>}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        class="auction-strip__toggle"
+        aria-expanded="false"
+        aria-controls="auction-strip-links"
+        aria-label="Show more auction links"
+        type="button"
+      >
+        <span>More</span>
+        <svg class="auction-strip__icon auction-strip__icon--chevron" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-chevron-down`}></use>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<script>
+  function initAuctionStrip() {
+    const toggle = document.querySelector('.auction-strip__toggle');
+    const links = document.getElementById('auction-strip-links');
+    if (!toggle || !links) return;
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      links.setAttribute('data-expanded', String(!expanded));
+      const label = toggle.querySelector('span');
+      if (label) label.textContent = expanded ? 'More' : 'Less';
+      toggle.setAttribute('aria-label', expanded ? 'Show more auction links' : 'Hide auction links');
+    });
+  }
+  document.addEventListener('astro:page-load', initAuctionStrip);
+</script>
+
+<style>
+  /* ── Container ── */
+  .auction-strip {
+    background: color-mix(in srgb, var(--cat-free-agency, #2e8743) 6%, var(--content-bg, #fff));
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 9999px;
+    padding: 0.5rem 1.25rem;
+  }
+
+  .auction-strip__inner {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  /* ── Title (editorial section-title variant) ── */
+  .auction-strip__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-700, #374151);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--cat-free-agency, #2e8743);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Nav area ── */
+  .auction-strip__nav {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ── Primary CTA (green button) ── */
+  .auction-strip__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--cat-free-agency, #2e8743);
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .auction-strip__cta:hover {
+    filter: brightness(0.92);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--cat-free-agency, #2e8743) 30%, transparent);
+  }
+
+  .auction-strip__cta:focus-visible {
+    outline: 2px solid var(--cat-free-agency, #2e8743);
+    outline-offset: 2px;
+  }
+
+  /* ── Secondary links ── */
+  .auction-strip__links {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .auction-strip__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    text-decoration: none;
+    color: var(--color-gray-700, #374151);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .auction-strip__link:hover {
+    background: color-mix(in srgb, var(--cat-free-agency, #2e8743) 8%, transparent);
+    color: var(--cat-free-agency, #2e8743);
+  }
+
+  .auction-strip__link:focus-visible {
+    outline: 2px solid var(--cat-free-agency, #2e8743);
+    outline-offset: 2px;
+  }
+
+  /* ── Icons ── */
+  .auction-strip__icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  .auction-strip__icon--cta {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+
+  .auction-strip__ext {
+    font-size: 0.6875rem;
+    opacity: 0.6;
+  }
+
+  .auction-strip__cta .auction-strip__ext {
+    opacity: 0.8;
+  }
+
+  /* ── Mobile toggle (hidden on desktop) ── */
+  .auction-strip__toggle {
+    display: none;
+  }
+
+  .auction-strip__icon--chevron {
+    transition: transform 0.15s ease;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 767px) {
+    .auction-strip {
+      border-radius: var(--radius-lg, 0.75rem);
+      padding: 0.5rem 1rem;
+    }
+
+    .auction-strip__inner {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .auction-strip__title {
+      flex: 1;
+    }
+
+    .auction-strip__links {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      gap: 0.25rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--content-border, #e2e8f0);
+    }
+
+    .auction-strip__links[data-expanded="true"] {
+      display: flex;
+    }
+
+    .auction-strip__links li {
+      width: 100%;
+    }
+
+    .auction-strip__link {
+      width: 100%;
+      padding: 0.5rem 0.625rem;
+    }
+
+    .auction-strip__toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.375rem 0.625rem;
+      border: 1px solid var(--content-border, #e2e8f0);
+      border-radius: var(--radius-sm, 0.25rem);
+      background: transparent;
+      color: var(--color-gray-600, #4b5563);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .auction-strip__toggle:focus-visible {
+      outline: 2px solid var(--cat-free-agency, #2e8743);
+      outline-offset: 2px;
+    }
+
+    .auction-strip__toggle[aria-expanded="true"] .auction-strip__icon--chevron {
+      transform: rotate(180deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auction-strip__cta,
+    .auction-strip__link,
+    .auction-strip__icon--chevron {
+      transition: none;
+    }
+  }
+</style>
