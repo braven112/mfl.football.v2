@@ -5,6 +5,7 @@
  * Walks a priority table top-to-bottom and returns the first match.
  *
  * Priority (highest to lowest):
+ * 0. Auction hero window (5 days before → 10 days after auction opens) — always wins
  * 1. New feature announcement (≤7 days old, random pick if multiple)
  * 2. Urgent league event (within urgencyDays)
  * 3. Active league event (happening now)
@@ -16,6 +17,7 @@ import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
+import { getNthDayOfMonth } from './league-event-resolver';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
 function formatKickerDate(dateStr: string): string {
@@ -82,6 +84,60 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
+/** Days before auction opens that the Auction Hero appears */
+const AUCTION_HERO_LEAD_DAYS = 5;
+/** Days after auction opens that the Auction Hero remains (then becomes a regular event) */
+const AUCTION_HERO_TRAIL_DAYS = 10;
+
+/**
+ * Check whether the reference date falls within the Auction Hero display window.
+ *
+ * The Auction Hero shows for a narrow ~15-day window around auction opening:
+ * - 5 days before the 3rd Thursday of March (auction opens)
+ * - 10 days after the 3rd Thursday of March
+ *
+ * After this window, the auction appears as a regular league event in the
+ * normal hero/What's Next system until the rookie draft.
+ */
+export function isAuctionHeroPeriod(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const faOpens = getNthDayOfMonth(year, 2, 4, 3); // 3rd Thursday of March
+
+  const windowStart = new Date(faOpens);
+  windowStart.setDate(windowStart.getDate() - AUCTION_HERO_LEAD_DAYS);
+
+  const windowEnd = new Date(faOpens);
+  windowEnd.setDate(windowEnd.getDate() + AUCTION_HERO_TRAIL_DAYS);
+  windowEnd.setHours(23, 59, 59, 999);
+
+  return referenceDate >= windowStart && referenceDate <= windowEnd;
+}
+
+/**
+ * Check whether the auction has actually started (on or after 3rd Thursday of March).
+ * Used to vary the hero messaging (pre-auction vs live).
+ */
+export function isAuctionLive(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const faOpens = getNthDayOfMonth(year, 2, 4, 3); // 3rd Thursday of March
+  return referenceDate >= faOpens;
+}
+
+/** Build the auction hero content */
+function getAuctionHero(live: boolean): HeroContent {
+  return {
+    source: 'auction',
+    title: 'Free Agent Auction',
+    summary: live
+      ? 'Auction season is live. Place bids, track results, and build your roster.'
+      : 'Auction season is almost here. Get your roster ready and plan your bids.',
+    icon: 'banknote',
+    accentColor: 'var(--cat-free-agency, #2e8743)',
+    kicker: live ? 'Auction Season' : 'Auction Opens Soon',
+    isActive: live,
+  };
+}
+
 /** The default fallback hero content */
 function getDefaultHero(): HeroContent {
   return {
@@ -116,6 +172,11 @@ export function resolveHeroContent(
   referenceDate?: Date,
 ): HeroContent {
   const now = referenceDate ?? new Date();
+
+  // --- Priority 0: Auction hero window (5 days before → 10 days after opening) ---
+  if (isAuctionHeroPeriod(now)) {
+    return getAuctionHero(isAuctionLive(now));
+  }
 
   // Filter entries that are eligible for hero promotion
   const heroEligible = entries.filter((e) => !e.excludeFromHero);

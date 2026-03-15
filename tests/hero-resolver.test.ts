@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveHeroContent } from '../src/utils/hero-resolver';
+import { resolveHeroContent, isAuctionHeroPeriod, isAuctionLive } from '../src/utils/hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent, LeagueEventDefinition } from '../src/types/league-events';
 
@@ -56,7 +56,136 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
   };
 }
 
+describe('isAuctionHeroPeriod', () => {
+  // 2026: March 1 is Sunday. Thursdays: 5, 12, 19. 3rd Thursday = March 19
+  // Window: March 14 (5 days before) through March 29 (10 days after)
+
+  it('should return true on the first day of the window (5 days before auction opens)', () => {
+    // March 19 - 5 = March 14
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 14))).toBe(true);
+  });
+
+  it('should return false the day before the window opens', () => {
+    // March 13 — one day before the 5-day lead
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 13))).toBe(false);
+  });
+
+  it('should return true on auction opening day (3rd Thursday of March 2026 = March 19)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 19))).toBe(true);
+  });
+
+  it('should return true on the last day of the window (10 days after auction opens)', () => {
+    // March 19 + 10 = March 29
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 29))).toBe(true);
+  });
+
+  it('should return false the day after the window closes', () => {
+    // March 30 — one day after the 10-day trail
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 30))).toBe(false);
+  });
+
+  it('should return false in January (well outside window)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 0, 15))).toBe(false);
+  });
+
+  it('should return false in July (auction season but outside hero window)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 6, 4))).toBe(false);
+  });
+
+  it('should return false in April (after hero window ends)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 3, 15))).toBe(false);
+  });
+});
+
+describe('isAuctionLive', () => {
+  it('should return false before auction opens', () => {
+    expect(isAuctionLive(new Date(2026, 2, 18))).toBe(false);
+  });
+
+  it('should return true on auction opening day', () => {
+    expect(isAuctionLive(new Date(2026, 2, 19))).toBe(true);
+  });
+
+  it('should return true after auction opens', () => {
+    expect(isAuctionLive(new Date(2026, 3, 15))).toBe(true);
+  });
+});
+
 describe('resolveHeroContent', () => {
+  describe('Priority 0: Auction hero window always wins', () => {
+    // 2026: 3rd Thursday of March = March 19
+    // Hero window: March 14 → March 29
+
+    it('should return auction hero during the hero window (live)', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 2, 22); // March 22 — 3 days after auction opens
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('auction');
+      expect(result.title).toBe('Free Agent Auction');
+      expect(result.accentColor).toContain('--cat-free-agency');
+      expect(result.isActive).toBe(true);
+      expect(result.kicker).toBe('Auction Season');
+    });
+
+    it('should return pre-auction hero before auction opens', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 2, 15); // March 15 — 4 days before auction opens
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('auction');
+      expect(result.isActive).toBe(false);
+      expect(result.kicker).toBe('Auction Opens Soon');
+    });
+
+    it('should beat fresh features during hero window', () => {
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: '2026-03-21' }),
+      ];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 2, 22); // March 22
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('auction');
+    });
+
+    it('should beat urgent events during hero window', () => {
+      const entries: WhatsNewEntry[] = [];
+      const urgentEvent = makeEvent({ name: 'Urgent Event', isUrgent: true, daysUntilStart: 1 });
+      const timeline = makeTimeline({ next: urgentEvent });
+      const now = new Date(2026, 2, 22); // March 22
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('auction');
+    });
+
+    it('should NOT return auction hero outside the window', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 1, 16); // Feb 16
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).not.toBe('auction');
+    });
+
+    it('should NOT return auction hero after the 10-day trail (April)', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 3, 15); // April 15 — outside hero window
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).not.toBe('auction');
+    });
+  });
+
   describe('Priority 1: New features (≤7 days old)', () => {
     it('should show a feature that is 0 days old', () => {
       const entries: WhatsNewEntry[] = [
@@ -412,7 +541,8 @@ describe('resolveHeroContent', () => {
   });
 
   describe('priority ordering — full cascade', () => {
-    it('should correctly cascade through all 5 priorities', () => {
+    it('should correctly cascade through all 6 priorities', () => {
+      // Use February date (outside auction season) for priorities 1-5
       const now = new Date(2026, 1, 16);
 
       const fresh = makeEntry({ id: 'fresh', title: 'Fresh', date: '2026-02-15' });
@@ -422,8 +552,17 @@ describe('resolveHeroContent', () => {
       const activeEvent = makeEvent({ name: 'Active', isActive: true });
       const upcomingEvent = makeEvent({ name: 'Upcoming', daysUntilStart: 5 });
 
-      // Priority 1: Fresh feature wins over everything
+      // Priority 0: Auction hero window wins over everything
+      const auctionDate = new Date(2026, 2, 22); // March 22 — within hero window
       let result = resolveHeroContent(
+        [makeEntry({ id: 'fresh-mar', title: 'Fresh March', date: '2026-03-21' })],
+        makeTimeline({ next: urgentEvent, current: activeEvent }),
+        auctionDate,
+      );
+      expect(result.source).toBe('auction');
+
+      // Priority 1: Fresh feature wins over everything (outside auction season)
+      result = resolveHeroContent(
         [fresh, old],
         makeTimeline({ next: urgentEvent, current: activeEvent, upcoming: upcomingEvent }),
         now,
