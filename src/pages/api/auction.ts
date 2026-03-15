@@ -35,20 +35,41 @@ export const GET: APIRoute = async ({ url }) => {
   const host = url.searchParams.get('host') || DEFAULT_HOST;
 
   try {
-    // Fetch transactions from MFL
-    const mflUrl = `${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`;
-    const response = await fetch(mflUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-    });
+    const mflHeaders = { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' };
 
-    if (!response.ok) {
+    // Fetch transactions AND rosters in parallel for live data
+    const [transactionsRes, rostersRes] = await Promise.all([
+      fetch(`${host}/${year}/export?TYPE=transactions&L=${leagueId}&JSON=1`, { headers: mflHeaders }),
+      fetch(`${host}/${year}/export?TYPE=rosters&L=${leagueId}&JSON=1`, { headers: mflHeaders }),
+    ]);
+
+    if (!transactionsRes.ok) {
       return new Response(
-        JSON.stringify({ error: `MFL API error: ${response.status}`, active: [], completed: [], teamSummaries: {} }),
+        JSON.stringify({ error: `MFL API error: ${transactionsRes.status}`, active: [], completed: [], teamSummaries: {}, rosteredPlayerIds: [] }),
         { status: 502, headers: JSON_HEADERS }
       );
     }
 
-    const data = await response.json();
+    const [data, rostersData] = await Promise.all([
+      transactionsRes.json(),
+      rostersRes.ok ? rostersRes.json() : null,
+    ]);
+
+    // Extract live rostered player IDs
+    const rosteredPlayerIds: string[] = [];
+    if (rostersData?.rosters?.franchise) {
+      const franchises = Array.isArray(rostersData.rosters.franchise)
+        ? rostersData.rosters.franchise
+        : [rostersData.rosters.franchise];
+      for (const f of franchises) {
+        if (f?.player) {
+          const players = Array.isArray(f.player) ? f.player : [f.player];
+          for (const p of players) {
+            if (p?.id) rosteredPlayerIds.push(p.id);
+          }
+        }
+      }
+    }
 
     // Extract transactions array (MFL returns single object or array)
     let transactions: any[] = [];
@@ -82,6 +103,7 @@ export const GET: APIRoute = async ({ url }) => {
         teamSummaries: teamSummariesObj,
         lastEventTime: state.lastEventTime,
         eventCount: state.allEvents.length,
+        rosteredPlayerIds,
       }),
       { status: 200, headers: JSON_HEADERS }
     );
@@ -93,6 +115,7 @@ export const GET: APIRoute = async ({ url }) => {
         active: [],
         completed: [],
         teamSummaries: {},
+        rosteredPlayerIds: [],
       }),
       { status: 500, headers: JSON_HEADERS }
     );

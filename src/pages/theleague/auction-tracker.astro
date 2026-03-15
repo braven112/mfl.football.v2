@@ -31,10 +31,7 @@ const playerModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/players.json',
   { eager: true }
 );
-const rostersModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/rosters.json',
-  { eager: true }
-);
+// Rosters are fetched LIVE from /api/auction (not build-time) to ensure data is never stale
 const leagueModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/league.json',
   { eager: true }
@@ -49,7 +46,6 @@ const findForYear = (modules: Record<string, any>, yr: number) => {
 };
 
 const playersData = findForYear(playerModules, currentYear);
-const rostersData = findForYear(rostersModules, currentYear);
 const leagueData = findForYear(leagueModules, currentYear);
 
 // MFL team code normalization
@@ -87,22 +83,6 @@ if (playersData?.players?.player) {
           position: pos === 'Def' ? 'DEF' : pos,
           team: normalizeMflTeam(p.team || ''),
         };
-      }
-    }
-  }
-}
-
-// Build rostered player set
-const rosteredPlayerIds: string[] = [];
-if (rostersData?.rosters?.franchise) {
-  const franchises = Array.isArray(rostersData.rosters.franchise)
-    ? rostersData.rosters.franchise
-    : [rostersData.rosters.franchise];
-  for (const f of franchises) {
-    if (f?.player) {
-      const players = Array.isArray(f.player) ? f.player : [f.player];
-      for (const p of players) {
-        if (p?.id) rosteredPlayerIds.push(p.id);
       }
     }
   }
@@ -311,7 +291,6 @@ const pageTitle = 'Auction Tracker';
 
   <!-- Serialized data for client-side use -->
   <script type="application/json" id="player-data">{JSON.stringify(playerLookup)}</script>
-  <script type="application/json" id="roster-data">{JSON.stringify(rosteredPlayerIds)}</script>
   <script type="application/json" id="team-data">{JSON.stringify(teamLookup)}</script>
   <script type="application/json" id="auction-config">{JSON.stringify({
     myFranchiseId,
@@ -335,7 +314,6 @@ const pageTitle = 'Auction Tracker';
       // Parse serialized data
       // ---------------------------------------------------------------------------
       const playerLookup = JSON.parse(document.getElementById('player-data')?.textContent || '{}');
-      const rosteredIds = new Set(JSON.parse(document.getElementById('roster-data')?.textContent || '[]'));
       const teamLookup = JSON.parse(document.getElementById('team-data')?.textContent || '{}');
       const config = JSON.parse(document.getElementById('auction-config')?.textContent || '{}');
 
@@ -345,6 +323,7 @@ const pageTitle = 'Auction Tracker';
       let currentTab = 'active';
       let previousActive: any[] = [];
       let currentState: any = { active: [], completed: [], teamSummaries: {} };
+      let rosteredIds = new Set();
       let pollInterval: ReturnType<typeof setInterval> | null = null;
       let customRankings: string[] | null = null;
       let isPageVisible = true;
@@ -699,6 +678,25 @@ const pageTitle = 'Auction Tracker';
       // ---------------------------------------------------------------------------
       // Notifications
       // ---------------------------------------------------------------------------
+      function playNotificationSound() {
+        if (!notificationSound) return;
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          // Two-tone alert: ascending notes (C5 → E5)
+          [523.25, 659.25].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.25);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(ctx.currentTime + i * 0.15);
+            osc.stop(ctx.currentTime + i * 0.15 + 0.25);
+          });
+        } catch { /* AudioContext unavailable */ }
+      }
+
       function checkOutbids(newActive) {
         if (!config.myFranchiseId || previousActive.length === 0) return;
 
@@ -725,6 +723,9 @@ const pageTitle = 'Auction Tracker';
           notificationsEl.querySelectorAll('.notification__close').forEach(btn => {
             btn.addEventListener('click', () => btn.parentElement.remove());
           });
+
+          // Play notification sound
+          playNotificationSound();
 
           // Announce to screen readers
           announce(alerts.map(a => `Outbid on ${a.player} by ${a.team} at ${formatBid(a.amount)}`).join('. '));
@@ -868,6 +869,11 @@ const pageTitle = 'Auction Tracker';
 
           previousActive = currentState.active;
           currentState = data;
+
+          // Update live roster data from API
+          if (data.rosteredPlayerIds) {
+            rosteredIds = new Set(data.rosteredPlayerIds);
+          }
 
           // Check for outbids
           checkOutbids(data.active);
