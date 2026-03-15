@@ -58,7 +58,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
               <span class="browser-frame__dot browser-frame__dot--red"></span>
               <span class="browser-frame__dot browser-frame__dot--yellow"></span>
               <span class="browser-frame__dot browser-frame__dot--green"></span>
-              <span class="browser-frame__url">{entry.link ? `theleague.us${entry.link}` : 'theleague.us'}</span>
+              <span class="browser-frame__url">{entry.link ? `theleague.us${entry.link.replace('/theleague', '')}` : 'theleague.us'}</span>
             </div>
             <img
               src={imagePath}

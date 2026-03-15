@@ -114,6 +114,29 @@ function resolveComputedDate(rule: string, year: number): Date {
 }
 
 /**
+ * Get the NFL Draft date for a given year.
+ * Uses the configured override if available, otherwise estimates as 4th Thursday of April.
+ */
+export function getNflDraftDate(year: number): Date {
+  const overrides = LEAGUE_YEAR_OVERRIDES[year];
+  const value = overrides?.nflDraftDate;
+  if (value) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return getNthDayOfMonth(year, 3, 4, 4); // 4th Thursday of April
+}
+
+/**
+ * Get the Rookie Draft start date for a given year.
+ * The rookie draft starts on the Saturday after the next full week following the NFL Draft.
+ */
+export function getRookieDraftDate(year: number): Date {
+  const nflDraft = getNflDraftDate(year);
+  return applyRelativeRule('saturday-after-next-week', nflDraft);
+}
+
+/**
  * Estimate a configured date when no override exists.
  */
 function estimateConfiguredDate(configKey: string, year: number): Date {

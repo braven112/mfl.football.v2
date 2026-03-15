@@ -119,7 +119,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
               <span class="browser-frame__dot browser-frame__dot--red"></span>
               <span class="browser-frame__dot browser-frame__dot--yellow"></span>
               <span class="browser-frame__dot browser-frame__dot--green"></span>
-              <span class="browser-frame__url">{link ? `theleague.us${link}` : 'theleague.us'}</span>
+              <span class="browser-frame__url">{link ? `theleague.us${link.replace('/theleague', '')}` : 'theleague.us'}</span>
             </div>
             <img
               src={imagePath}
@@ -148,7 +148,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
             <span class="browser-frame__dot browser-frame__dot--red"></span>
             <span class="browser-frame__dot browser-frame__dot--yellow"></span>
             <span class="browser-frame__dot browser-frame__dot--green"></span>
-            <span class="browser-frame__url">{link ? `theleague.us${link}` : 'theleague.us'}</span>
+            <span class="browser-frame__url">{link ? `theleague.us${link.replace('/theleague', '')}` : 'theleague.us'}</span>
           </div>
           <img
             src={imagePath}

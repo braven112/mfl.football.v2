@@ -1,0 +1,416 @@
+---
+/**
+ * AuctionHero - Auction Command Center hero for the homepage.
+ *
+ * Replaces the normal HeroBanner during the auction hero window (Monday 9am
+ * before the 3rd Thursday of March through 30 days). Two-column layout: left side
+ * has the title, primary CTA, and key rules; right side has all quick links.
+ *
+ * The What's New card row is rendered separately by the homepage — this component
+ * only handles the auction command center portion.
+ */
+export interface Props {
+  /** League year for constructing MFL external URLs */
+  leagueYear: number;
+  /** MFL host for external links */
+  mflHost?: string;
+  /** MFL league ID */
+  leagueId?: string;
+  /** Path resolver function from layout */
+  resolveLeaguePath: (path: string) => string;
+  /** Cache-busted sprite URL */
+  spriteUrl: string;
+  /** Whether the auction is live (true) or upcoming (false) */
+  live?: boolean;
+}
+
+const {
+  leagueYear,
+  mflHost = 'www49.myfantasyleague.com',
+  leagueId = '13522',
+  resolveLeaguePath: r,
+  spriteUrl,
+  live = true,
+} = Astro.props;
+
+import { getNthDayOfMonth } from '../../utils/league-event-resolver';
+
+const mflBase = `https://${mflHost}/${leagueYear}/options?L=${leagueId}`;
+
+const auctionStartDate = getNthDayOfMonth(leagueYear, 2, 4, 3); // 3rd Thursday of March
+const formattedStart = auctionStartDate.toLocaleDateString('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+});
+
+interface AuctionLink {
+  label: string;
+  href: string;
+  icon: string;
+  external: boolean;
+}
+
+const quickLinks: AuctionLink[] = [
+  {
+    label: 'Auction Summary',
+    href: `${mflBase}&O=44`,
+    icon: 'bar-chart',
+    external: true,
+  },
+  {
+    label: 'Auction Details',
+    href: `${mflBase}&O=45`,
+    icon: 'clipboard',
+    external: true,
+  },
+  {
+    label: 'Completed Auctions',
+    href: `${mflBase}&O=43`,
+    icon: 'check',
+    external: true,
+  },
+  {
+    label: 'Free Agents',
+    href: r('/theleague/players'),
+    icon: 'binoculars',
+    external: false,
+  },
+  {
+    label: 'Trade Builder',
+    href: r('/theleague/trade-builder'),
+    icon: 'transactions-2',
+    external: false,
+  },
+  {
+    label: 'Rosters',
+    href: r('/theleague/rosters'),
+    icon: 'banknote',
+    external: false,
+  },
+  {
+    label: 'Historical Salary Trends',
+    href: r('/theleague/salary-history'),
+    icon: 'standings-2',
+    external: false,
+  },
+  {
+    label: 'Calendar',
+    href: r('/theleague/calendar'),
+    icon: 'calendar',
+    external: false,
+  },
+];
+
+const rules = [
+  { label: 'Bid Timer', value: '36 hours without a new bid wins' },
+  { label: 'Start', value: `${formattedStart} at 7am PT` },
+  { label: 'Min Bid', value: '$425K start · $25K increments' },
+  { label: 'Contracts', value: '48 hours to declare (default 1 yr)' },
+];
+
+const rulesLink = r('/theleague/rules#free-agent-bidding');
+---
+
+<section class="auction-hero" aria-label="Free Agent Auction command center">
+  <div class="auction-hero__columns">
+    <!-- Left: Title, CTA, Rules -->
+    <div class="auction-hero__left">
+      <div class="auction-hero__text">
+        <div class="auction-hero__eyebrow">
+          <span class="auction-hero__badge">{live ? 'Auction Under Way' : 'Auction Opens Soon'}</span>
+        </div>
+        <h2 class="auction-hero__title">Free Agent Auction</h2>
+        <p class="auction-hero__summary">
+          {live
+            ? 'The auction is under way. Place bids, track results, and build your roster.'
+            : 'Auction season is almost here. Get your roster ready and plan your bids.'}
+        </p>
+      </div>
+
+      <a
+        href={`${mflBase}&O=52`}
+        class="auction-hero__cta"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Place Auction Bid (opens in new tab)"
+      >
+        <svg class="auction-hero__cta-icon" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-gavel`}></use>
+        </svg>
+        <span>Place Auction Bid</span>
+        <span class="auction-hero__external" aria-hidden="true">&#8599;</span>
+      </a>
+
+      <div class="auction-hero__rules">
+        <h3 class="auction-hero__rules-title">Quick Rules</h3>
+        <ul class="auction-hero__rules-list">
+          {rules.map(rule => (
+            <li><strong>{rule.label}:</strong> {rule.value}</li>
+          ))}
+          <li><a href={rulesLink} class="auction-hero__rules-link">Full auction rules →</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right: Quick Links -->
+    <nav class="auction-hero__links" aria-label="Auction quick links">
+      <h3 class="auction-hero__links-title">Quick Links</h3>
+      <ul class="auction-hero__link-list">
+        {quickLinks.map(link => (
+          <li>
+            <a
+              href={link.href}
+              class="auction-hero__link"
+              target={link.external ? '_blank' : undefined}
+              rel={link.external ? 'noopener noreferrer' : undefined}
+              aria-label={link.external ? `${link.label} (opens in new tab)` : undefined}
+            >
+              <svg class="auction-hero__link-icon" aria-hidden="true">
+                <use href={`${spriteUrl}#icon-${link.icon}`}></use>
+              </svg>
+              <span>{link.label}</span>
+              {link.external && <span class="auction-hero__external" aria-hidden="true">&#8599;</span>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</section>
+
+<style>
+  .auction-hero {
+    padding: 0.5rem 0 1rem;
+  }
+
+  /* ── Two-column layout ── */
+  .auction-hero__columns {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* ── Left column ── */
+  .auction-hero__left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .auction-hero__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .auction-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .auction-hero__badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--cat-free-agency, #2e8743) 15%, var(--color-gray-100, #f3f4f6));
+    color: var(--cat-free-agency, #2e8743);
+  }
+
+  .auction-hero__title {
+    font-size: clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem);
+    font-weight: 800;
+    color: var(--color-dark, #0f1e2e);
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .auction-hero__summary {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 54ch;
+    margin: 0;
+  }
+
+  /* ── Primary CTA ── */
+  .auction-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--cat-free-agency, #2e8743);
+    color: #fff;
+    border: 1px solid var(--cat-free-agency, #2e8743);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .auction-hero__cta:hover {
+    filter: brightness(0.92);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--cat-free-agency, #2e8743) 35%, transparent);
+  }
+
+  .auction-hero__cta:focus-visible {
+    outline: 2px solid var(--cat-free-agency, #2e8743);
+    outline-offset: 2px;
+  }
+
+  .auction-hero__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  /* ── Rules section ── */
+  .auction-hero__rules {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .auction-hero__rules-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--cat-free-agency, #2e8743);
+    margin: 0;
+  }
+
+  .auction-hero__rules-list {
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .auction-hero__rules-list li {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.5;
+  }
+
+  .auction-hero__rules-list li strong {
+    color: var(--color-gray-700, #374151);
+  }
+
+  .auction-hero__rules-link {
+    color: var(--cat-free-agency, #2e8743);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .auction-hero__rules-link:hover {
+    text-decoration: underline;
+  }
+
+  .auction-hero__rules-link:focus-visible {
+    outline: 2px solid var(--cat-free-agency, #2e8743);
+    outline-offset: 2px;
+  }
+
+  /* ── Right column: Quick Links ── */
+  .auction-hero__links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .auction-hero__links-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0;
+  }
+
+  .auction-hero__link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .auction-hero__link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    text-decoration: none;
+    color: var(--color-gray-700, #374151);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .auction-hero__link:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    border-color: var(--color-gray-300, #d1d5db);
+  }
+
+  .auction-hero__link:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .auction-hero__link-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: var(--color-primary, #1c497c);
+  }
+
+  .auction-hero__external {
+    margin-left: auto;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  .auction-hero__cta .auction-hero__external {
+    opacity: 0.7;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .auction-hero__columns {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .auction-hero__title {
+      font-size: clamp(1.5rem, 5vw + 0.5rem, 2rem);
+    }
+
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auction-hero__cta,
+    .auction-hero__link {
+      transition: none;
+    }
+  }
+</style>

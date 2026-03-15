@@ -5,7 +5,8 @@
  * Walks a priority table top-to-bottom and returns the first match.
  *
  * Priority (highest to lowest):
- * 0. Auction hero window (5 days before → 10 days after auction opens) — always wins
+ * 0a. Auction hero window (Monday before auction → 30 days) — always wins
+ * 0b. Draft hero window (Monday after NFL Draft → 30 days) — always wins
  * 1. New feature announcement (≤7 days old, random pick if multiple)
  * 2. Urgent league event (within urgencyDays)
  * 3. Active league event (happening now)
@@ -17,7 +18,7 @@ import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
-import { getNthDayOfMonth } from './league-event-resolver';
+import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
 function formatKickerDate(dateStr: string): string {
@@ -84,43 +85,73 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-/** Days before auction opens that the Auction Hero appears */
-const AUCTION_HERO_LEAD_DAYS = 5;
-/** Days after auction opens that the Auction Hero remains (then becomes a regular event) */
-const AUCTION_HERO_TRAIL_DAYS = 10;
+/** Total days the full Auction Hero is displayed */
+const AUCTION_HERO_TOTAL_DAYS = 30;
 
 /**
- * Check whether the reference date falls within the Auction Hero display window.
+ * Get the Monday before the 3rd Thursday of March (auction hero start).
+ * The hero appears at 9am PT on this Monday, 3 days before auction opens.
+ */
+function getAuctionHeroStart(year: number): Date {
+  const faOpens = getNthDayOfMonth(year, 2, 4, 3); // 3rd Thursday of March
+  const monday = new Date(faOpens);
+  monday.setDate(monday.getDate() - 3); // Monday before Thursday
+  monday.setHours(9, 0, 0, 0); // 9am PT
+  return monday;
+}
+
+/**
+ * Check whether the reference date falls within the full Auction Hero window.
  *
- * The Auction Hero shows for a narrow ~15-day window around auction opening:
- * - 5 days before the 3rd Thursday of March (auction opens)
- * - 10 days after the 3rd Thursday of March
- *
- * After this window, the auction appears as a regular league event in the
- * normal hero/What's Next system until the rookie draft.
+ * The Auction Hero lifecycle:
+ * - Starts: Monday 9am PT (3 days before auction opens)
+ * - "Auction Opens Soon" until Thursday 7am PT
+ * - "Auction Under Way" from Thursday 7am PT onward
+ * - Ends: 30 days after Monday start
+ * - Then: compact auction strip until 3rd Sunday of August (FA close)
+ * - Then: normal hero
  */
 export function isAuctionHeroPeriod(referenceDate: Date): boolean {
   const year = referenceDate.getFullYear();
-  const faOpens = getNthDayOfMonth(year, 2, 4, 3); // 3rd Thursday of March
+  const windowStart = getAuctionHeroStart(year);
 
-  const windowStart = new Date(faOpens);
-  windowStart.setDate(windowStart.getDate() - AUCTION_HERO_LEAD_DAYS);
-
-  const windowEnd = new Date(faOpens);
-  windowEnd.setDate(windowEnd.getDate() + AUCTION_HERO_TRAIL_DAYS);
+  const windowEnd = new Date(windowStart);
+  windowEnd.setDate(windowEnd.getDate() + AUCTION_HERO_TOTAL_DAYS);
   windowEnd.setHours(23, 59, 59, 999);
 
   return referenceDate >= windowStart && referenceDate <= windowEnd;
 }
 
 /**
- * Check whether the auction has actually started (on or after 3rd Thursday of March).
- * Used to vary the hero messaging (pre-auction vs live).
+ * Check whether the compact auction strip should show.
+ *
+ * Shows after the 30-day full hero window ends, until the 3rd Sunday
+ * of August (offseason FA close date).
+ */
+export function isAuctionStripPeriod(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const windowStart = getAuctionHeroStart(year);
+
+  const heroEnd = new Date(windowStart);
+  heroEnd.setDate(heroEnd.getDate() + AUCTION_HERO_TOTAL_DAYS);
+  heroEnd.setHours(23, 59, 59, 999);
+
+  const faCloses = getNthDayOfMonth(year, 7, 0, 3); // 3rd Sunday of August
+  faCloses.setHours(23, 59, 59, 999);
+
+  return referenceDate > heroEnd && referenceDate <= faCloses;
+}
+
+/**
+ * Check whether the auction has actually started (Thursday 7am PT).
+ * Used to vary the hero messaging (pre-auction vs under way).
  */
 export function isAuctionLive(referenceDate: Date): boolean {
   const year = referenceDate.getFullYear();
   const faOpens = getNthDayOfMonth(year, 2, 4, 3); // 3rd Thursday of March
-  return referenceDate >= faOpens;
+  const auctionStart = new Date(faOpens);
+  auctionStart.setHours(7, 0, 0, 0); // 7am PT
+  return referenceDate >= auctionStart;
 }
 
 /** Build the auction hero content */
@@ -129,11 +160,86 @@ function getAuctionHero(live: boolean): HeroContent {
     source: 'auction',
     title: 'Free Agent Auction',
     summary: live
-      ? 'Auction season is live. Place bids, track results, and build your roster.'
+      ? 'The auction is under way. Place bids, track results, and build your roster.'
       : 'Auction season is almost here. Get your roster ready and plan your bids.',
     icon: 'banknote',
     accentColor: 'var(--cat-free-agency, #2e8743)',
-    kicker: live ? 'Auction Season' : 'Auction Opens Soon',
+    kicker: live ? 'Auction Under Way' : 'Auction Opens Soon',
+    isActive: live,
+  };
+}
+
+// ── Draft Hero ──
+
+/** Total days the Draft Hero is displayed (fallback if draft not yet complete) */
+const DRAFT_HERO_TOTAL_DAYS = 30;
+
+/**
+ * Get the Monday after the NFL Draft (draft hero start).
+ * The hero appears at 9am PT on this Monday.
+ */
+function getDraftHeroStart(year: number): Date {
+  const nflDraft = getNflDraftDate(year);
+  const monday = new Date(nflDraft);
+  // NFL Draft is Thursday; Monday after = +4 days
+  const daysUntilMonday = (1 - nflDraft.getDay() + 7) % 7 || 7;
+  monday.setDate(monday.getDate() + daysUntilMonday);
+  monday.setHours(9, 0, 0, 0);
+  return monday;
+}
+
+/**
+ * Check whether the reference date falls within the Draft Hero window.
+ *
+ * The Draft Hero lifecycle:
+ * - Starts: Monday 9am PT after the NFL Draft
+ * - "Draft Day Is Coming" until the rookie draft starts
+ * - "Draft Under Way" from the rookie draft start onward
+ * - Ends: 30 days after Monday start (or when draft completes)
+ * - Then: normal hero (no strip phase)
+ */
+export function isDraftHeroPeriod(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const windowStart = getDraftHeroStart(year);
+
+  const windowEnd = new Date(windowStart);
+  windowEnd.setDate(windowEnd.getDate() + DRAFT_HERO_TOTAL_DAYS);
+  windowEnd.setHours(23, 59, 59, 999);
+
+  return referenceDate >= windowStart && referenceDate <= windowEnd;
+}
+
+/**
+ * Check whether the rookie draft has actually started.
+ * Used to vary the hero messaging (pre-draft vs under way).
+ */
+export function isDraftLive(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const draftStart = getRookieDraftDate(year);
+  return referenceDate >= draftStart;
+}
+
+/**
+ * Get the formatted rookie draft start date for display.
+ */
+export function getDraftStartFormatted(year: number): string {
+  const draftStart = getRookieDraftDate(year);
+  return draftStart.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  });
+}
+
+/** Build the draft hero content */
+function getDraftHero(live: boolean): HeroContent {
+  return {
+    source: 'draft',
+    title: 'Rookie Draft',
+    summary: live
+      ? 'The rookie draft is under way. Make your picks, trade up, and build your dynasty.'
+      : 'Draft day is almost here. Scout the class, check your picks, and plan your strategy.',
+    icon: 'draft-podium',
+    accentColor: 'var(--cat-draft, #7c3aed)',
+    kicker: live ? 'Draft Under Way' : 'Draft Day Is Coming',
     isActive: live,
   };
 }
@@ -173,9 +279,14 @@ export function resolveHeroContent(
 ): HeroContent {
   const now = referenceDate ?? new Date();
 
-  // --- Priority 0: Auction hero window (5 days before → 10 days after opening) ---
+  // --- Priority 0a: Auction hero window ---
   if (isAuctionHeroPeriod(now)) {
     return getAuctionHero(isAuctionLive(now));
+  }
+
+  // --- Priority 0b: Draft hero window ---
+  if (isDraftHeroPeriod(now)) {
+    return getDraftHero(isDraftLive(now));
   }
 
   // Filter entries that are eligible for hero promotion

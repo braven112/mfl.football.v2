@@ -1,0 +1,410 @@
+---
+/**
+ * WhatsNewRow - Displays the 3 newest What's New articles in a card row.
+ *
+ * Server-rendered Astro component that mirrors the WhatsNext layout pattern:
+ * a section header ("What's New" + "All releases →") above a 3-column card grid.
+ *
+ * Used on the homepage below the AuctionHero (and optionally below HeroBanner)
+ * to surface recent feature announcements.
+ */
+import type { WhatsNewEntry } from '../../types/whats-new';
+import { WHATS_NEW_CATEGORY_LABELS } from '../../types/whats-new';
+import { sortEntriesNewestFirst, enrichEntries } from '../../utils/whats-new-helpers';
+
+interface Props {
+  /** Raw What's New entries from whats-new.json */
+  entries: WhatsNewEntry[];
+  /** How many cards to show (default 3) */
+  count?: number;
+  /** Base path for detail links (empty string on theleague.us, '/theleague' otherwise) */
+  basePath?: string;
+  /** Link to the full What's New listing page */
+  allReleasesLink?: string;
+  /** Cache-busted sprite URL */
+  spriteUrl?: string;
+  /** Last visit date for "NEW" badges (from cookie) */
+  lastVisitDate?: string | null;
+}
+
+const {
+  entries,
+  count = 3,
+  basePath = '/theleague',
+  allReleasesLink = `${basePath}/whats-new`,
+  spriteUrl: sprite = '/assets/icons/sprite.svg',
+  lastVisitDate = null,
+} = Astro.props;
+
+const MULTICOLOR_ICONS = ['nfl'];
+
+const sorted = sortEntriesNewestFirst(entries);
+const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
+---
+
+{enriched.length > 0 && (
+  <section class="whats-new-row" aria-label="Recent feature updates">
+    <div class="whats-new-row__header">
+      <h2 class="whats-new-row__heading">What's New</h2>
+      <a href={allReleasesLink} class="whats-new-row__link">All releases &rarr;</a>
+    </div>
+    <div class="whats-new-row__grid">
+      {enriched.map(entry => {
+        const iconId = entry.icon ? `icon-${entry.icon}` : null;
+        const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
+        const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
+
+        return (
+          <a
+            href={`${basePath}/whats-new/${entry.id}`}
+            class={`wnr-card wnr-card--${entry.category}`}
+          >
+            {imagePath && (
+              <div class="wnr-card__thumbnail">
+                <div class="wnr-card__browser-frame">
+                  <div class="wnr-card__browser-bar">
+                    <span class="wnr-card__dot wnr-card__dot--red" />
+                    <span class="wnr-card__dot wnr-card__dot--yellow" />
+                    <span class="wnr-card__dot wnr-card__dot--green" />
+                    <span class="wnr-card__url">{entry.link ? `theleague.us${entry.link.replace('/theleague', '')}` : 'theleague.us'}</span>
+                  </div>
+                  <img
+                    src={imagePath}
+                    alt={entry.imageAlt || entry.title}
+                    class="wnr-card__img"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div class="wnr-card__content">
+              <div class="wnr-card__meta">
+                <span class={`wnr-card__badge wnr-card__badge--${entry.category}`}>
+                  {WHATS_NEW_CATEGORY_LABELS[entry.category]}
+                </span>
+                {entry.isNew && (
+                  <span class="wnr-card__new-badge" title="New since your last visit">
+                    <span class="wnr-card__new-dot" aria-hidden="true" />
+                    NEW
+                  </span>
+                )}
+              </div>
+
+              <div class="wnr-card__header">
+                {iconId && (
+                  <svg
+                    class={`wnr-card__icon${isMulticolor ? ' wnr-card__icon--multicolor' : ''}`}
+                    aria-hidden="true"
+                  >
+                    <use href={`${sprite}#${iconId}`} />
+                  </svg>
+                )}
+                <h3 class="wnr-card__title">{entry.title}</h3>
+              </div>
+
+              <span class="wnr-card__date">{entry.formattedDate}</span>
+
+              <p class="wnr-card__summary">{entry.summary}</p>
+
+              <span class="wnr-card__read-more" aria-hidden="true">
+                Read more &rarr;
+              </span>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+)}
+
+<style>
+  /* ── Section layout (mirrors WhatsNext.astro) ── */
+  /* Category color tokens scoped here (defined globally only in whats-new pages) */
+  .whats-new-row {
+    --cat-new-page: #6d28d9;
+    --cat-new-feature: #166534;
+    --cat-enhancement: #1d4ed8;
+    --cat-bug-fix: #b91c1c;
+    --cat-league-event: #1c497c;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .whats-new-row__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .whats-new-row__heading {
+    font-size: 1.5rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .whats-new-row__link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .whats-new-row__link:hover {
+    text-decoration: underline;
+  }
+
+  .whats-new-row__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* ── Card ── */
+  .wnr-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    border-left: 4px solid var(--wnr-category-color, var(--cat-new-feature));
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  a.wnr-card,
+  a.wnr-card:hover,
+  a.wnr-card:visited,
+  a.wnr-card:active {
+    text-decoration: none !important;
+  }
+
+  .wnr-card:hover {
+    box-shadow: var(--box-shadow-hover, 0 4px 12px rgba(0, 0, 0, 0.08));
+    transform: translateY(-2px);
+  }
+
+  .wnr-card--new-page { --wnr-category-color: var(--cat-new-page); }
+  .wnr-card--new-feature { --wnr-category-color: var(--cat-new-feature); }
+  .wnr-card--enhancement { --wnr-category-color: var(--cat-enhancement); }
+  .wnr-card--bug-fix { --wnr-category-color: var(--cat-bug-fix); }
+  .wnr-card--league-event { --wnr-category-color: var(--cat-league-event); }
+
+  /* When card has a thumbnail, move border to bottom of thumbnail */
+  .wnr-card:has(.wnr-card__thumbnail) {
+    border-left: none;
+  }
+
+  .wnr-card:has(.wnr-card__thumbnail) .wnr-card__thumbnail {
+    border-bottom: 4px solid var(--wnr-category-color, var(--cat-new-feature));
+  }
+
+  /* ── Thumbnail ── */
+  .wnr-card__thumbnail {
+    width: 100%;
+    overflow: hidden;
+    padding: var(--spacing-md, 1rem);
+    background: color-mix(in srgb, var(--wnr-category-color, #1c497c) 80%, var(--content-bg, #fff));
+    box-sizing: border-box;
+  }
+
+  .wnr-card__browser-frame {
+    background: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .wnr-card__browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #e5e7eb;
+  }
+
+  .wnr-card__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .wnr-card__dot--red { background: #ff5f57; }
+  .wnr-card__dot--yellow { background: #ffbd2e; }
+  .wnr-card__dot--green { background: #28c840; }
+
+  .wnr-card__url {
+    flex: 1;
+    margin-left: 6px;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #6b7280;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wnr-card__img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ── Content ── */
+  .wnr-card__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
+  }
+
+  .wnr-card:has(.wnr-card__thumbnail) .wnr-card__content {
+    position: relative;
+    padding-top: var(--spacing-lg, 1.5rem);
+  }
+
+  .wnr-card:has(.wnr-card__thumbnail) .wnr-card__meta {
+    position: absolute;
+    top: 0;
+    left: var(--spacing-lg, 1.5rem);
+    transform: translateY(-60%);
+  }
+
+  /* ── Meta row ── */
+  .wnr-card__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+    margin-bottom: 0.25rem;
+  }
+
+  .wnr-card__badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    color: #fff;
+  }
+
+  .wnr-card__badge--new-page { background: var(--cat-new-page); }
+  .wnr-card__badge--new-feature { background: var(--cat-new-feature); }
+  .wnr-card__badge--enhancement { background: var(--cat-enhancement); }
+  .wnr-card__badge--bug-fix { background: var(--cat-bug-fix); }
+  .wnr-card__badge--league-event { background: var(--cat-league-event); }
+
+  .wnr-card__new-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cat-new-feature, #2e8743);
+  }
+
+  .wnr-card__new-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cat-new-feature, #2e8743);
+    animation: wnr-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes wnr-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Header (icon + title) ── */
+  .wnr-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 0.25rem);
+  }
+
+  .wnr-card__icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: var(--wnr-category-color);
+  }
+
+  .wnr-card__icon--multicolor {
+    fill: none;
+    color: unset;
+  }
+
+  .wnr-card__title {
+    font-size: 1rem;
+    font-weight: var(--font-weight-bold, 700);
+    margin: 0;
+    color: var(--primary-link-default-text-color, #1c497c);
+    line-height: 1.3;
+  }
+
+  .wnr-card__date {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--muted-text-color, #6b7280);
+  }
+
+  .wnr-card__summary {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--muted-text-color, #6b7280);
+    margin: var(--spacing-xs, 0.25rem) 0 0;
+    line-height: var(--line-height-base, 1.5);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .wnr-card__read-more {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--color-primary, #1c497c);
+    margin-top: var(--spacing-xs, 0.25rem);
+    transition: color 0.15s ease;
+  }
+
+  .wnr-card:hover .wnr-card__read-more {
+    color: var(--accent-link-hover-text-color, #3c9950);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .whats-new-row__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .wnr-card__content {
+      padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem);
+    }
+
+    .wnr-card:has(.wnr-card__thumbnail) .wnr-card__content {
+      padding-top: var(--spacing-md, 1rem);
+    }
+
+    .wnr-card:has(.wnr-card__thumbnail) .wnr-card__meta {
+      left: var(--spacing-md, 1rem);
+    }
+  }
+</style>

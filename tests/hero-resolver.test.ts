@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveHeroContent, isAuctionHeroPeriod, isAuctionLive } from '../src/utils/hero-resolver';
+import { resolveHeroContent, isAuctionHeroPeriod, isAuctionLive, isAuctionStripPeriod, isDraftHeroPeriod, isDraftLive, getDraftStartFormatted } from '../src/utils/hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent, LeagueEventDefinition } from '../src/types/league-events';
 
@@ -57,43 +57,65 @@ function makeEntry(overrides?: Partial<WhatsNewEntry>): WhatsNewEntry {
 }
 
 describe('isAuctionHeroPeriod', () => {
-  // 2026: March 1 is Sunday. Thursdays: 5, 12, 19. 3rd Thursday = March 19
-  // Window: March 14 (5 days before) through March 29 (10 days after)
+  // 2026: 3rd Thursday of March = March 19
+  // Monday before = March 16, hero starts at 9am
+  // 30 days from March 16 = April 15
+  // Window: March 16 9am → April 15 end of day
 
-  it('should return true on the first day of the window (5 days before auction opens)', () => {
-    // March 19 - 5 = March 14
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 14))).toBe(true);
+  it('should return false before Monday 9am (hero start)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 16, 8, 59))).toBe(false);
   });
 
-  it('should return false the day before the window opens', () => {
-    // March 13 — one day before the 5-day lead
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 13))).toBe(false);
+  it('should return true at Monday 9am (hero start)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 16, 9, 0))).toBe(true);
   });
 
-  it('should return true on auction opening day (3rd Thursday of March 2026 = March 19)', () => {
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 19))).toBe(true);
+  it('should return true on auction opening day (March 19)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 19, 12, 0))).toBe(true);
   });
 
-  it('should return true on the last day of the window (10 days after auction opens)', () => {
-    // March 19 + 10 = March 29
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 29))).toBe(true);
+  it('should return true on day 30 (April 15)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 3, 15, 12, 0))).toBe(true);
   });
 
-  it('should return false the day after the window closes', () => {
-    // March 30 — one day after the 10-day trail
-    expect(isAuctionHeroPeriod(new Date(2026, 2, 30))).toBe(false);
+  it('should return false on day 31 (April 16)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 3, 16))).toBe(false);
   });
 
   it('should return false in January (well outside window)', () => {
     expect(isAuctionHeroPeriod(new Date(2026, 0, 15))).toBe(false);
   });
 
-  it('should return false in July (auction season but outside hero window)', () => {
+  it('should return false in July (auction strip period, not hero)', () => {
     expect(isAuctionHeroPeriod(new Date(2026, 6, 4))).toBe(false);
   });
+});
 
-  it('should return false in April (after hero window ends)', () => {
-    expect(isAuctionHeroPeriod(new Date(2026, 3, 15))).toBe(false);
+describe('isAuctionStripPeriod', () => {
+  // Strip: day 31 (April 16) → 3rd Sunday of August (Aug 16, 2026)
+
+  it('should return false during the full hero window', () => {
+    expect(isAuctionStripPeriod(new Date(2026, 2, 22))).toBe(false);
+  });
+
+  it('should return true on day 31 (April 16)', () => {
+    expect(isAuctionStripPeriod(new Date(2026, 3, 16))).toBe(true);
+  });
+
+  it('should return true in July (mid-auction strip period)', () => {
+    expect(isAuctionStripPeriod(new Date(2026, 6, 4))).toBe(true);
+  });
+
+  it('should return true on 3rd Sunday of August (FA close)', () => {
+    expect(isAuctionStripPeriod(new Date(2026, 7, 16))).toBe(true);
+  });
+
+  it('should return false after 3rd Sunday of August', () => {
+    expect(isAuctionStripPeriod(new Date(2026, 7, 17))).toBe(false);
+  });
+
+  it('should return false in January', () => {
+    expect(isAuctionStripPeriod(new Date(2026, 0, 15))).toBe(false);
   });
 });
 
@@ -102,8 +124,12 @@ describe('isAuctionLive', () => {
     expect(isAuctionLive(new Date(2026, 2, 18))).toBe(false);
   });
 
-  it('should return true on auction opening day', () => {
-    expect(isAuctionLive(new Date(2026, 2, 19))).toBe(true);
+  it('should return false on opening day before 7am', () => {
+    expect(isAuctionLive(new Date(2026, 2, 19, 6, 59))).toBe(false);
+  });
+
+  it('should return true on opening day at 7am', () => {
+    expect(isAuctionLive(new Date(2026, 2, 19, 7, 0))).toBe(true);
   });
 
   it('should return true after auction opens', () => {
@@ -111,10 +137,72 @@ describe('isAuctionLive', () => {
   });
 });
 
+describe('isDraftHeroPeriod', () => {
+  // 2026: NFL Draft = April 23 (Thursday)
+  // Monday after = April 27, hero starts at 9am
+  // 30 days from April 27 = May 27
+
+  it('should return false before Monday 9am (hero start)', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 3, 27, 8, 59))).toBe(false);
+  });
+
+  it('should return true at Monday 9am (hero start)', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 3, 27, 9, 0))).toBe(true);
+  });
+
+  it('should return true mid-window (May 10)', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 4, 10))).toBe(true);
+  });
+
+  it('should return true on day 30 (May 27)', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 4, 27, 12, 0))).toBe(true);
+  });
+
+  it('should return false on day 31 (May 28)', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 4, 28))).toBe(false);
+  });
+
+  it('should return false in January', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 0, 15))).toBe(false);
+  });
+
+  it('should return false during auction hero window (March 22)', () => {
+    expect(isDraftHeroPeriod(new Date(2026, 2, 22))).toBe(false);
+  });
+});
+
+describe('isDraftLive', () => {
+  // 2026: NFL Draft = April 23 (Thursday)
+  // Rookie draft = Saturday after next week = May 2
+
+  it('should return false before rookie draft starts', () => {
+    expect(isDraftLive(new Date(2026, 4, 1))).toBe(false);
+  });
+
+  it('should return true at rookie draft start (May 2)', () => {
+    expect(isDraftLive(new Date(2026, 4, 2))).toBe(true);
+  });
+
+  it('should return true after rookie draft starts', () => {
+    expect(isDraftLive(new Date(2026, 4, 10))).toBe(true);
+  });
+});
+
+describe('getDraftStartFormatted', () => {
+  it('should return a formatted date string for 2026', () => {
+    const formatted = getDraftStartFormatted(2026);
+    // Rookie draft for 2026: May 2 (Saturday after next week from April 23)
+    expect(formatted).toContain('May');
+    expect(formatted).toContain('2');
+    expect(formatted).toContain('2026');
+  });
+});
+
 describe('resolveHeroContent', () => {
   describe('Priority 0: Auction hero window always wins', () => {
     // 2026: 3rd Thursday of March = March 19
-    // Hero window: March 14 → March 29
+    // Monday before = March 16, hero starts at 9am
+    // Hero window: March 16 9am → April 15
 
     it('should return auction hero during the hero window (live)', () => {
       const entries: WhatsNewEntry[] = [];
@@ -127,13 +215,13 @@ describe('resolveHeroContent', () => {
       expect(result.title).toBe('Free Agent Auction');
       expect(result.accentColor).toContain('--cat-free-agency');
       expect(result.isActive).toBe(true);
-      expect(result.kicker).toBe('Auction Season');
+      expect(result.kicker).toBe('Auction Under Way');
     });
 
     it('should return pre-auction hero before auction opens', () => {
       const entries: WhatsNewEntry[] = [];
       const timeline = makeTimeline();
-      const now = new Date(2026, 2, 15); // March 15 — 4 days before auction opens
+      const now = new Date(2026, 2, 16, 12); // March 16 noon — Monday before auction
 
       const result = resolveHeroContent(entries, timeline, now);
 
@@ -175,10 +263,10 @@ describe('resolveHeroContent', () => {
       expect(result.source).not.toBe('auction');
     });
 
-    it('should NOT return auction hero after the 10-day trail (April)', () => {
+    it('should NOT return auction hero after the 30-day window', () => {
       const entries: WhatsNewEntry[] = [];
       const timeline = makeTimeline();
-      const now = new Date(2026, 3, 15); // April 15 — outside hero window
+      const now = new Date(2026, 3, 16); // April 16 — day 31, outside hero window
 
       const result = resolveHeroContent(entries, timeline, now);
 
@@ -600,6 +688,82 @@ describe('resolveHeroContent', () => {
         now,
       );
       expect(result.title).toBe("What's New");
+    });
+  });
+
+  describe('Priority 0b: Draft hero window always wins', () => {
+    // 2026: NFL Draft = April 23 (Thursday)
+    // Monday after = April 27, hero starts at 9am
+    // 30 days from April 27 = May 27
+    // Rookie draft = May 2 (Saturday after next week from NFL Draft)
+
+    it('should return draft hero during the hero window (live)', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 4, 5); // May 5 — after rookie draft starts
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('draft');
+      expect(result.title).toBe('Rookie Draft');
+      expect(result.accentColor).toContain('--cat-draft');
+      expect(result.isActive).toBe(true);
+      expect(result.kicker).toBe('Draft Under Way');
+    });
+
+    it('should return pre-draft hero before rookie draft starts', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 3, 28); // April 28 — Monday after NFL Draft +1 day
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('draft');
+      expect(result.isActive).toBe(false);
+      expect(result.kicker).toBe('Draft Day Is Coming');
+    });
+
+    it('should beat fresh features during hero window', () => {
+      const entries: WhatsNewEntry[] = [
+        makeEntry({ id: 'fresh', title: 'Fresh Feature', date: '2026-04-27' }),
+      ];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 3, 28); // April 28
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('draft');
+    });
+
+    it('should beat urgent events during hero window', () => {
+      const entries: WhatsNewEntry[] = [];
+      const urgentEvent = makeEvent({ name: 'Urgent Event', isUrgent: true, daysUntilStart: 1 });
+      const timeline = makeTimeline({ next: urgentEvent });
+      const now = new Date(2026, 4, 5); // May 5
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).toBe('draft');
+    });
+
+    it('should NOT return draft hero outside the window', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 1, 16); // Feb 16
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).not.toBe('draft');
+    });
+
+    it('should NOT return draft hero after the 30-day window', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 4, 28); // May 28 — day 31
+
+      const result = resolveHeroContent(entries, timeline, now);
+
+      expect(result.source).not.toBe('draft');
     });
   });
 

@@ -2,8 +2,11 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import HeroBanner from '../../components/theleague/HeroBanner.astro';
 import AuctionHero from '../../components/theleague/AuctionHero.astro';
+import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
+import DraftHero from '../../components/theleague/DraftHero.astro';
 import WhatsNext from '../../components/theleague/WhatsNext.astro';
-import { resolveHeroContent, isAuctionLive } from '../../utils/hero-resolver';
+import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
+import { resolveHeroContent, isAuctionLive, isAuctionStripPeriod, isDraftLive, getDraftStartFormatted } from '../../utils/hero-resolver';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear } from '../../utils/league-year';
@@ -25,13 +28,22 @@ const effectiveDate = isValidTestDate ? referenceDate : undefined;
 const timeline = getWhatsNextTimeline(effectiveDate);
 const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effectiveDate);
 const isAuction = hero.source === 'auction';
-const leagueYear = isAuction ? getCurrentLeagueYear(effectiveDate) : 0;
+const isDraft = hero.source === 'draft';
+const showAuctionStrip = !isAuction && !isDraft && isAuctionStripPeriod(effectiveDate ?? new Date());
+const needsLeagueYear = isAuction || isDraft || showAuctionStrip;
+const leagueYear = needsLeagueYear ? getCurrentLeagueYear(effectiveDate) : 0;
 const auctionLive = isAuction ? isAuctionLive(effectiveDate ?? new Date()) : false;
+const draftLive = isDraft ? isDraftLive(effectiveDate ?? new Date()) : false;
+const draftStartFormatted = isDraft ? getDraftStartFormatted(leagueYear) : '';
+
+// What's New card row data (for auction hero)
+const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
+const lastVisitDate = lastVisitCookie?.value ?? null;
 
 const pages = {
   'Team Management': [
     { title: 'Coach Tab', href: r('/theleague/rosters?view=coach'), description: 'Coach mode with matchups and odds', icon: 'submit' },
-    { title: 'Next Year Summary', href: r('/theleague/rosters?view=nextyear'), description: "Preview next year's roster and salary commitments", icon: 'chalkboard' },
+    { title: 'League Planner', href: r('/theleague/rosters?view=nextyear'), description: "Preview next year's roster and salary commitments", icon: 'chalkboard' },
   ],
   'League Management': [
     { title: 'Standings', href: r('/theleague/standings'), description: 'View current season standings and rankings', icon: 'shield' },
@@ -67,6 +79,14 @@ const pages = {
           spriteUrl={spriteUrl}
           live={auctionLive}
         />
+      ) : isDraft ? (
+        <DraftHero
+          leagueYear={leagueYear}
+          resolveLeaguePath={r}
+          spriteUrl={spriteUrl}
+          live={draftLive}
+          draftStartFormatted={draftStartFormatted}
+        />
       ) : (
         <HeroBanner
           title={hero.title}
@@ -90,6 +110,24 @@ const pages = {
         />
       )}
     </section>
+
+    {showAuctionStrip && (
+      <AuctionStrip
+        leagueYear={leagueYear}
+        resolveLeaguePath={r}
+        spriteUrl={spriteUrl}
+      />
+    )}
+
+    {(isAuction || isDraft) && (
+      <WhatsNewRow
+        entries={whatsNewData as WhatsNewEntry[]}
+        basePath={hideLeaguePrefix ? '' : '/theleague'}
+        allReleasesLink={r('/theleague/whats-new')}
+        spriteUrl={spriteUrl}
+        lastVisitDate={lastVisitDate}
+      />
+    )}
 
     <WhatsNext demoDate={effectiveDate} />
 
