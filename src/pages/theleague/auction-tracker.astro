@@ -286,9 +286,9 @@ const pageTitle = 'Auction Tracker';
   </div>
 
   <!-- Serialized data for client-side use -->
-  <script type="application/json" id="player-data">{JSON.stringify(playerLookup)}</script>
-  <script type="application/json" id="team-data">{JSON.stringify(teamLookup)}</script>
-  <script type="application/json" id="auction-config">{JSON.stringify({
+  <script type="application/json" id="player-data" set:html={JSON.stringify(playerLookup)}></script>
+  <script type="application/json" id="team-data" set:html={JSON.stringify(teamLookup)}></script>
+  <script type="application/json" id="auction-config" set:html={JSON.stringify({
     myFranchiseId,
     auctionBudget,
     draftLimitHours,
@@ -296,7 +296,7 @@ const pageTitle = 'Auction Tracker';
     suspEnd,
     isAuthenticated: !!user,
     currentYear,
-  })}</script>
+  })}></script>
 
   <script>
     /**
