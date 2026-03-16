@@ -226,6 +226,13 @@ const pageTitle = 'Auction Tracker';
             </div>
           </div>
         )}
+
+        <!-- Empty State (inside left panel, not replacing split view) -->
+        <div class="auction-empty" id="auction-empty" style="display:none">
+          <div class="empty-icon">&#9878;</div>
+          <h2 class="empty-title">No Auction Activity</h2>
+          <p class="empty-text">The auction has not started yet, or all auctions are complete.<br/>Browse available players on the right to plan your strategy.</p>
+        </div>
       </div>
 
       <!-- Right: Available Players Board -->
@@ -253,12 +260,7 @@ const pageTitle = 'Auction Tracker';
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div class="auction-empty" id="auction-empty" style="display:none">
-      <div class="empty-icon">&#9878;</div>
-      <h2 class="empty-title">No Auction Activity</h2>
-      <p class="empty-text">The auction has not started yet, or all auctions are complete.</p>
-    </div>
+    <!-- Empty state is now inside the left auction panel (auction-panel--main) -->
 
     <!-- Bid Modal -->
     <div class="bid-modal-overlay" id="bid-modal" style="display:none" role="dialog" aria-modal="true" aria-label="Place Bid">
@@ -339,7 +341,8 @@ const pageTitle = 'Auction Tracker';
       const refreshText = document.getElementById('refresh-text');
       const auctionCount = document.getElementById('auction-count');
       const emptyState = document.getElementById('auction-empty');
-      const splitView = document.getElementById('auction-split');
+      const tabBar = document.querySelector('.auction-toolbar');
+      const tabContents = document.querySelectorAll('.tab-content');
 
       // ---------------------------------------------------------------------------
       // Formatting helpers (duplicated from server utils for client use)
@@ -839,7 +842,7 @@ const pageTitle = 'Auction Tracker';
             t.classList.toggle('view-tab--active', t.dataset.tab === tabId);
             t.setAttribute('aria-selected', t.dataset.tab === tabId ? 'true' : 'false');
           });
-          document.querySelectorAll('.tab-content').forEach(c => {
+          tabContents.forEach(c => {
             c.style.display = c.id === `tab-${tabId}` ? '' : 'none';
           });
         });
@@ -881,10 +884,14 @@ const pageTitle = 'Auction Tracker';
           auctionCount.innerHTML = `<strong>${currentState.active.length}</strong> active · <strong>${currentState.completed.length}</strong> completed`;
         }
 
-        // Empty state
+        // Empty state — show inside left panel only; available players board stays visible
         const hasData = currentState.active.length > 0 || currentState.completed.length > 0;
         if (emptyState) emptyState.style.display = hasData ? 'none' : '';
-        if (splitView) splitView.style.display = hasData ? '' : 'none';
+        // Hide auction tabs/toolbar when no data, but keep split view visible for the board
+        if (tabBar) tabBar.style.display = hasData ? '' : 'none';
+        tabContents.forEach(c => {
+          c.style.display = hasData ? '' : 'none';
+        });
       }
 
       // ---------------------------------------------------------------------------
