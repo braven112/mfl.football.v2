@@ -443,19 +443,21 @@ const pageTitle = 'Auction Tracker';
       // ---------------------------------------------------------------------------
       function buildPlayerHTML(p) {
         const isDef = p.position === 'DEF';
-        const headshot = isDef
-          ? `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/${p.team}.png&h=80&w=80`
+        const hasTeam = p.team && p.team !== 'FA';
+        const teamLogo = hasTeam ? `/assets/nfl-logos/${p.team}.svg` : '';
+        const headshot = isDef && teamLogo
+          ? teamLogo
           : `https://a.espncdn.com/i/headshots/nfl/players/full/${p.id}.png`;
-        const nflLogo = `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nfl/500/${p.team}.png&h=28&w=28`;
+        const avatarClass = isDef ? 'player-lockup__avatar player-lockup__avatar--def' : 'player-lockup__avatar';
         return `
           <div class="player-lockup">
-            <img class="player-lockup__avatar" src="${headshot}" alt="" width="36" height="36"
+            <img class="${avatarClass}" src="${headshot}" alt="" width="36" height="36"
               onerror="this.onerror=null;this.src='/assets/default-headshot.png'" loading="lazy" />
             <div class="player-lockup__info">
               <span class="player-lockup__name">${esc(p.name)}</span>
               <span class="player-lockup__meta">
                 <span class="player-lockup__pos">${p.position}</span>
-                ${!isDef ? `<img class="player-lockup__nfl-logo" src="${nflLogo}" alt="${p.team}" width="14" height="14" />` : ''}
+                ${!isDef && teamLogo ? `<img class="player-lockup__nfl-logo" src="${teamLogo}" alt="${p.team}" width="14" height="14" />` : ''}
               </span>
             </div>
           </div>`;
