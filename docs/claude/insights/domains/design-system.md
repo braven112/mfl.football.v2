@@ -945,3 +945,67 @@ The parallelogram shape (vs. a simple trapezoid) was chosen because it creates v
 
 **Pages where border-left is fine (not table rows):**
 - Section titles, cards, chips, buttons — these are block/inline elements where border-left works correctly.
+
+---
+
+## 2026-03-15 - Chart.js Editorial Design Pattern (Canonical)
+
+**Context:** First chart in the editorial design system — salary history page with multi-dataset line charts.
+
+**Insight:** Chart.js renders on `<canvas>`, which cannot read CSS custom properties. Chart colors, grid colors, and font sizes must be passed as hex/rgba values directly in the JS config. CSS tokens exist for HTML elements (legend, tooltip) but JS must mirror them for canvas rendering.
+
+**Canonical file:** `src/pages/theleague/salary-history.astro`
+
+**Chart palette tokens** (added to `src/styles/tokens.css`):
+```css
+--chart-color-1: #3b6b9a;   /* Steel Blue */
+--chart-color-2: #c0623a;   /* Burnt Sienna */
+--chart-color-3: #1a7a6d;   /* Dark Teal */
+--chart-color-4: #7b5ea7;   /* Slate Purple */
+--chart-color-5: #b8860b;   /* Goldenrod */
+--chart-color-6: #5a6672;   /* Graphite */
+--chart-grid-color: rgba(0, 0, 0, 0.06);
+--chart-tick-color: var(--color-gray-500);
+--chart-border: var(--content-border);
+```
+
+**Key patterns:**
+1. **Muted palette** — 6 colors chosen for distinguishability and editorial feel (no Chart.js defaults)
+2. **Hidden points** — `pointRadius: 0, pointHoverRadius: 5` for clean lines with hover reveal
+3. **Custom external tooltip** — `tooltip.enabled: false` + `external: handler` for DOM-based tooltip matching site typography
+4. **Custom legend** — `legend.display: false` + JS-built legend with `role="toolbar"` for keyboard access
+5. **No axis titles** — Context provided by section header, not chart chrome
+6. **Compact currency** — `$14M` not `$14,000,000` via custom tick callback
+7. **Segmented control tabs** — ARIA tablist pattern for switching datasets
+8. **Collapsible data table** — `<details>` element with full tabular data for a11y
+
+**ViewTransitions lifecycle:**
+```js
+// Dynamic Chart.js loading (replaces CDN <script> tag)
+function ensureChartJS() {
+  if (window.Chart) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// Cleanup on navigation
+const ac = new AbortController();
+document.addEventListener('astro:before-swap', () => {
+  chart.destroy();  // Prevent canvas memory leak
+  ac.abort();       // Remove resize listener
+}, { once: true });
+window.addEventListener('resize', handler, { signal: ac.signal });
+```
+
+**Gotchas:**
+- CDN `<script is:inline src>` causes race condition with `astro:page-load` — use dynamic loading with `ensureChartJS()` instead
+- Chart.js CDN `<script>` tags don't re-execute on ViewTransitions navigation — must use `astro:page-load` listener
+- `chart.destroy()` on `astro:before-swap` prevents canvas memory leaks across navigations
+- AbortController pattern prevents resize listener accumulation
+- `aspectRatio` (not fixed height) for responsive charts: `isMobile ? 1.4 : 2.2`
+
+**Recommendation:** All future charts should follow this file as the canonical reference. Reuse the palette tokens, the tooltip pattern, the legend pattern, and the ViewTransitions cleanup.

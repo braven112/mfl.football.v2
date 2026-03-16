@@ -411,6 +411,23 @@
   --alert-info-border: #bcdff1;
 
   /* ========================================
+     Component Tokens - Charts
+     ======================================== */
+
+  /* Chart line palette: 6-color editorial sequence */
+  --chart-color-1: #3b6b9a;   /* Steel Blue */
+  --chart-color-2: #c0623a;   /* Burnt Sienna */
+  --chart-color-3: #1a7a6d;   /* Dark Teal */
+  --chart-color-4: #7b5ea7;   /* Slate Purple */
+  --chart-color-5: #b8860b;   /* Goldenrod */
+  --chart-color-6: #5a6672;   /* Graphite */
+
+  /* Chart chrome */
+  --chart-grid-color: rgba(0, 0, 0, 0.06);
+  --chart-tick-color: var(--color-gray-500);
+  --chart-border: var(--content-border);
+
+  /* ========================================
      Legacy Color Aliases
      ======================================== */
   --primary-color: var(--color-primary);

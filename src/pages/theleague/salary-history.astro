@@ -15,12 +15,17 @@ const extractSeason = (filepath) => {
 };
 
 const positionLabels = [
-  { key: 'QB', label: 'Quarterback' },
-  { key: 'RB', label: 'Running Back' },
-  { key: 'WR', label: 'Wide Receiver' },
-  { key: 'TE', label: 'Tight End' },
-  { key: 'PK', label: 'Kicker' },
-  { key: 'Def', label: 'Defense/ST' },
+  { key: 'QB', label: 'Quarterback', shortLabel: 'QB' },
+  { key: 'RB', label: 'Running Back', shortLabel: 'RB' },
+  { key: 'WR', label: 'Wide Receiver', shortLabel: 'WR' },
+  { key: 'TE', label: 'Tight End', shortLabel: 'TE' },
+  { key: 'PK', label: 'Kicker', shortLabel: 'K' },
+  { key: 'Def', label: 'Defense/ST', shortLabel: 'DEF' },
+];
+
+const CHART_PALETTE = [
+  '#3b6b9a', '#c0623a', '#1a7a6d',
+  '#7b5ea7', '#b8860b', '#5a6672',
 ];
 
 const summariesBySeason = {};
@@ -34,119 +39,167 @@ const seasons = Object.keys(summariesBySeason).sort(
   (a, b) => Number(a) - Number(b)
 );
 
-const franchiseChartData = {
-  labels: seasons,
-  datasets: positionLabels.map(({ key, label }, index) => ({
-    label,
-    borderWidth: 2,
-    tension: 0.3,
-    data: seasons.map((season) => {
-      const summary = summariesBySeason[season];
-      return summary?.positions?.[key]?.top3Average ?? null;
-    }),
-    borderColor: [
-      '#ff595e',
-      '#1982c4',
-      '#6a4c93',
-      '#ffca3a',
-      '#8ac926',
-      '#1982c4',
-    ][index % 6],
-    backgroundColor: 'transparent',
-  })),
-};
+function buildChartData(topKey: string) {
+  return {
+    labels: seasons,
+    datasets: positionLabels.map(({ key, label }, index) => ({
+      label,
+      borderWidth: 2.5,
+      tension: 0.35,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      pointHoverBorderWidth: 2,
+      pointHoverBorderColor: '#ffffff',
+      pointHoverBackgroundColor: CHART_PALETTE[index % 6],
+      pointHitRadius: 20,
+      data: seasons.map((season) => {
+        const summary = summariesBySeason[season];
+        return summary?.positions?.[key]?.[topKey] ?? null;
+      }),
+      borderColor: CHART_PALETTE[index % 6],
+      backgroundColor: 'transparent',
+    })),
+  };
+}
 
-const extensionChartData = {
-  labels: seasons,
-  datasets: positionLabels.map(({ key, label }, index) => ({
-    label,
-    borderWidth: 2,
-    tension: 0.3,
-    data: seasons.map((season) => {
-      const summary = summariesBySeason[season];
-      return summary?.positions?.[key]?.top5Average ?? null;
-    }),
-    borderColor: [
-      '#ff595e',
-      '#1982c4',
-      '#6a4c93',
-      '#ffca3a',
-      '#8ac926',
-      '#1982c4',
-    ][index % 6],
-    backgroundColor: 'transparent',
-  })),
-};
-
-const teamOptionChartData = {
-  labels: seasons,
-  datasets: positionLabels.map(({ key, label }, index) => ({
-    label,
-    borderWidth: 2,
-    tension: 0.3,
-    data: seasons.map((season) => {
-      const summary = summariesBySeason[season];
-      return summary?.positions?.[key]?.top10Average ?? null;
-    }),
-    borderColor: [
-      '#ff595e',
-      '#1982c4',
-      '#6a4c93',
-      '#ffca3a',
-      '#8ac926',
-      '#1982c4',
-    ][index % 6],
-    backgroundColor: 'transparent',
-  })),
-};
+const franchiseChartData = buildChartData('top3Average');
+const extensionChartData = buildChartData('top5Average');
+const teamOptionChartData = buildChartData('top10Average');
 
 const serializedFranchiseChart = JSON.stringify(franchiseChartData);
 const serializedExtensionChart = JSON.stringify(extensionChartData);
 const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
+
+const tableViews = [
+  { key: 'franchise', topKey: 'top3Average', label: 'Franchise Tag (Top 3)' },
+  { key: 'extension', topKey: 'top5Average', label: 'Extension (Top 5)' },
+  { key: 'team-option', topKey: 'top10Average', label: 'Team Option (Top 10)' },
+];
+
+function formatCurrency(val: number | null): string {
+  if (val == null) return '\u2014';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(val);
+}
 ---
 
-<TheLeagueLayout title="Franchise Tag History">
+<TheLeagueLayout title="Salary Trends">
   <section class="salary-history">
-    <header>
-      <h1>Salary Trends Over Time</h1>
-      <p>
+    <header class="page-hero">
+      <h1 class="page-hero__title">Salary Trends Over Time</h1>
+      <p class="page-hero__desc">
         Tracking the average of the top three (franchise tag), top five
-        (extension), and top ten (team option) salaries at each position across
-        available seasons. These numbers reflect the data captured for the
-        contract tools and salary benchmarks.
+        (extension), and top ten (team option) salaries at each position
+        across available seasons.
       </p>
     </header>
+
     {seasons.length ? (
       <>
-        <div class="chart-toggle">
+        <div class="chart-controls" role="tablist" aria-label="Salary average view">
           <button
             type="button"
-            class="chart-toggle__btn active"
+            role="tab"
+            class="chart-tab"
+            aria-selected="true"
             data-chart="franchise"
+            id="tab-franchise"
+            aria-controls="chart-panel"
+            tabindex="0"
           >
-            Franchise Tag (Top 3)
+            Franchise Tag
           </button>
           <button
             type="button"
-            class="chart-toggle__btn"
+            role="tab"
+            class="chart-tab"
+            aria-selected="false"
             data-chart="extension"
+            id="tab-extension"
+            aria-controls="chart-panel"
+            tabindex="-1"
           >
-            Extension (Top 5)
+            Extension
           </button>
           <button
             type="button"
-            class="chart-toggle__btn"
+            role="tab"
+            class="chart-tab"
+            aria-selected="false"
             data-chart="team-option"
+            id="tab-team-option"
+            aria-controls="chart-panel"
+            tabindex="-1"
           >
-            Team Option (Top 10)
+            Team Option
           </button>
         </div>
-        <div class="chart-card">
-          <canvas id="salaryHistoryChart" width="800" height="400"></canvas>
+
+        <div role="tabpanel" id="chart-panel" aria-labelledby="tab-franchise" tabindex="0">
+          <div class="chart-card">
+            <div class="section-header" id="chart-section-header">
+              <h2 class="section-header__title" id="chart-title">Franchise Tag</h2>
+              <p class="section-header__sub" id="chart-subtitle">Average of top 3 salaries per position</p>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas
+                id="salaryHistoryChart"
+                role="img"
+                aria-label="Line chart showing average salary trends by position across seasons. Expand 'View data as table' below for exact values."
+              ></canvas>
+            </div>
+            <div class="chart-legend" id="chart-legend" role="toolbar" aria-label="Toggle position visibility"></div>
+          </div>
         </div>
+
+        <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="chart-announcer"></div>
+
+        <details class="sr-data-table">
+          <summary class="sr-data-table__toggle">View data as table</summary>
+          <div class="sr-data-table__wrapper">
+            {tableViews.map((view) => (
+              <div class="sr-data-table__section" data-table-view={view.key} hidden={view.key !== 'franchise'}>
+                <h3 class="sr-data-table__heading">{view.label}</h3>
+                <table>
+                  <caption class="visually-hidden">{`Average ${view.label} salary by position`}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Season</th>
+                      {positionLabels.map((p) => (
+                        <th scope="col">{p.shortLabel}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seasons.map((season) => (
+                      <tr>
+                        <td>{season}</td>
+                        {positionLabels.map((p) => (
+                          <td>{formatCurrency(summariesBySeason[season]?.positions?.[p.key]?.[view.topKey] ?? null)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </details>
       </>
     ) : (
-      <p>No salary history data found.</p>
+      <div class="empty-state">
+        <svg class="empty-state__icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M7 16l4-8 4 4 5-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <p class="empty-state__title">No salary data available</p>
+        <p class="empty-state__desc">
+          Salary history data hasn't been imported yet. Run the data sync to populate position averages.
+        </p>
+      </div>
     )}
   </section>
 </TheLeagueLayout>
@@ -155,44 +208,380 @@ const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
   .salary-history {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .salary-history header h1 {
-    margin-bottom: 0.25rem;
-  }
-
-  .chart-toggle {
-    display: inline-flex;
     gap: 0.75rem;
   }
 
-  .chart-toggle__btn {
-    border: 1px solid #d7dce3;
-    background: #f8fafc;
-    border-radius: 999px;
-    padding: 0.4rem 1.25rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  .page-hero {
+    margin-bottom: 0.5rem;
   }
 
-  .chart-toggle__btn.active {
-    background: #111;
-    color: #fff;
-    border-color: #111;
+  .page-hero__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
+  }
+
+  .page-hero__desc {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 64ch;
+    margin: 0;
+  }
+
+  .chart-controls {
+    display: inline-flex;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .chart-tab {
+    padding: 0.4375rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--radius-md, 0.5rem) - 2px);
+    cursor: pointer;
+    transition: all 150ms ease;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  .chart-tab:hover {
+    color: var(--color-gray-900, #111827);
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .chart-tab[aria-selected="true"] {
+    background: var(--color-white, #ffffff);
+    color: var(--color-gray-900, #111827);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .chart-tab:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
   }
 
   .chart-card {
-    background: #fff;
-    border: 1px solid #d7dce3;
-    border-radius: 0.85rem;
-    padding: 1rem;
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem 1.5rem 1.25rem;
+    position: relative;
+  }
+
+  .chart-card .section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 1rem;
+  }
+
+  .chart-card .section-header__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    line-height: 1;
+  }
+
+  .chart-card .section-header__sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.3;
+  }
+
+  .chart-canvas-wrap {
+    position: relative;
   }
 
   canvas {
     max-width: 100%;
+  }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem 1rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--color-gray-50, #f9fafb);
+    margin-top: 0.5rem;
+  }
+
+  :global(.chart-legend__item) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.375rem;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm, 0.25rem);
+    cursor: pointer;
+    transition: opacity 150ms ease;
+  }
+
+  :global(.chart-legend__item:hover) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  :global(.chart-legend__item:focus-visible) {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  :global(.chart-legend__item--hidden) {
+    opacity: 0.35;
+  }
+
+  :global(.chart-legend__swatch) {
+    width: 12px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  :global(.chart-legend__item--hidden .chart-legend__swatch) {
+    background: var(--color-gray-300, #d1d5db) !important;
+  }
+
+  :global(.chart-legend__label) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  :global(.chart-legend__item--hidden .chart-legend__label) {
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  :global(.chart-tooltip) {
+    position: absolute;
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-lg);
+    padding: 0.625rem 0.75rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 150ms ease;
+    z-index: var(--z-tooltip, 700);
+    min-width: 160px;
+  }
+
+  :global(.chart-tooltip__title) {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+    margin-bottom: 0.375rem;
+    padding-bottom: 0.375rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  :global(.chart-tooltip__row) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.125rem 0;
+  }
+
+  :global(.chart-tooltip__swatch) {
+    width: 8px;
+    height: 3px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  :global(.chart-tooltip__name) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-gray-700, #374151);
+    flex: 1;
+  }
+
+  :global(.chart-tooltip__value) {
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .sr-data-table {
+    margin-top: 0.25rem;
+  }
+
+  .sr-data-table__toggle {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    padding: 0.75rem 0;
+  }
+
+  .sr-data-table__toggle:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .sr-data-table__wrapper {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .sr-data-table__heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.5rem;
+  }
+
+  .sr-data-table__section {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sr-data-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sr-data-table th,
+  .sr-data-table td {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .sr-data-table th {
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    position: sticky;
+    top: 0;
+  }
+
+  .sr-data-table th:first-child {
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    left: 0;
+    background: var(--color-gray-50, #f9fafb);
+    z-index: 2;
+  }
+
+  .sr-data-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    left: 0;
+    background: var(--color-white, #ffffff);
+    z-index: 1;
+  }
+
+  .sr-data-table td {
+    color: var(--color-gray-700, #374151);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--spacing-3xl, 4rem) var(--spacing-lg, 1.5rem);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px dashed var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .empty-state__icon {
+    color: var(--color-gray-300, #d1d5db);
+    margin-bottom: var(--spacing-md, 1rem);
+  }
+
+  .empty-state__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.25rem;
+  }
+
+  .empty-state__desc {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+    max-width: 36ch;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 640px) {
+    .chart-card {
+      padding: 0.875rem;
+    }
+
+    .chart-controls {
+      width: 100%;
+    }
+
+    .chart-tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .chart-legend {
+      gap: 0.125rem 0.625rem;
+    }
+
+    :global(.chart-legend__label) {
+      font-size: 0.625rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chart-tab,
+    :global(.chart-legend__item),
+    :global(.chart-tooltip) {
+      transition: none;
+    }
   }
 </style>
 
@@ -222,9 +611,25 @@ const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
 
 {seasons.length ? (
   <>
-    <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      document.addEventListener('astro:page-load', () => {
+      function ensureChartJS() {
+        if (window.Chart) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+
+      const VIEW_META = {
+        franchise: { title: 'Franchise Tag', sub: 'Average of top 3 salaries per position' },
+        extension: { title: 'Extension', sub: 'Average of top 5 salaries per position' },
+        'team-option': { title: 'Team Option', sub: 'Average of top 10 salaries per position' },
+      };
+
+      function initSalaryHistoryChart() {
         const franchiseDataEl = document.getElementById('history-chart-franchise');
         if (!franchiseDataEl) return;
 
@@ -235,64 +640,280 @@ const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
           extension: extensionDataEl ? JSON.parse(extensionDataEl.textContent) : null,
           'team-option': teamOptionDataEl ? JSON.parse(teamOptionDataEl.textContent) : null,
         };
+
         const ctx = document.getElementById('salaryHistoryChart');
         if (!ctx || !window.Chart || !chartConfigs.franchise) return;
 
         const existing = Chart.getChart(ctx);
         if (existing) existing.destroy();
 
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
+
+        const tickFont = {
+          family: "'Vend Sans', system-ui, -apple-system, sans-serif",
+          size: 11,
+          weight: '500',
+        };
+
+        const currencyCompact = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          notation: 'compact',
+          maximumFractionDigits: 1,
+        });
+
+        const currencyFull = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0,
+        });
+
+        function externalTooltipHandler(context) {
+          const { chart, tooltip } = context;
+          let el = chart.canvas.parentNode.querySelector('.chart-tooltip');
+
+          if (!el) {
+            el = document.createElement('div');
+            el.classList.add('chart-tooltip');
+            el.setAttribute('role', 'tooltip');
+            chart.canvas.parentNode.appendChild(el);
+          }
+
+          if (tooltip.opacity === 0) {
+            el.style.opacity = '0';
+            return;
+          }
+
+          const title = tooltip.title?.[0] || '';
+          const rows = (tooltip.dataPoints || [])
+            .filter((dp) => dp.raw != null)
+            .sort((a, b) => (b.raw || 0) - (a.raw || 0));
+
+          const titleHtml = document.createElement('div');
+          titleHtml.className = 'chart-tooltip__title';
+          titleHtml.textContent = title + ' Season';
+
+          el.replaceChildren(titleHtml);
+
+          rows.forEach((dp) => {
+            const row = document.createElement('div');
+            row.className = 'chart-tooltip__row';
+
+            const swatch = document.createElement('span');
+            swatch.className = 'chart-tooltip__swatch';
+            swatch.style.background = dp.dataset.borderColor;
+
+            const name = document.createElement('span');
+            name.className = 'chart-tooltip__name';
+            name.textContent = dp.dataset.label;
+
+            const value = document.createElement('span');
+            value.className = 'chart-tooltip__value';
+            value.textContent = currencyFull.format(dp.raw);
+
+            row.append(swatch, name, value);
+            el.appendChild(row);
+          });
+
+          el.style.opacity = '1';
+
+          const { offsetLeft, offsetTop } = chart.canvas;
+          const left = offsetLeft + tooltip.caretX;
+          const top = offsetTop + tooltip.caretY;
+          el.style.left = left + 'px';
+          el.style.top = top + 'px';
+          el.style.transform = 'translate(-50%, calc(-100% - 12px))';
+        }
+
         const chart = new Chart(ctx, {
           type: 'line',
           data: chartConfigs.franchise,
           options: {
             responsive: true,
-            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            maintainAspectRatio: true,
+            aspectRatio: isMobile ? 1.4 : 2.2,
+            interaction: { mode: 'index', intersect: false },
+            layout: { padding: { top: 4, right: 8, bottom: 0, left: 0 } },
+            animation: prefersReducedMotion
+              ? false
+              : { duration: 400, easing: 'easeOutQuart' },
+            transitions: {
+              active: { animation: { duration: prefersReducedMotion ? 0 : 200 } },
+            },
             plugins: {
-              legend: { position: 'bottom' },
+              legend: { display: false },
               tooltip: {
-                callbacks: {
-                  label: (context) =>
-                    `${context.dataset.label}: ${context.formattedValue}`,
-                },
+                enabled: false,
+                external: externalTooltipHandler,
+                mode: 'index',
+                intersect: false,
               },
             },
             scales: {
               y: {
-                ticks: {
-                  callback: (value) =>
-                    new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                      maximumFractionDigits: 0,
-                    }).format(value),
+                beginAtZero: false,
+                grid: {
+                  color: 'rgba(0, 0, 0, 0.06)',
+                  lineWidth: 1,
+                  drawTicks: false,
                 },
-                title: { display: true, text: 'Average Salary (Top 3)' },
+                border: { display: false },
+                ticks: {
+                  font: tickFont,
+                  color: '#6b7280',
+                  padding: 8,
+                  callback: (value) => currencyCompact.format(value),
+                },
+                title: { display: false },
               },
               x: {
-                title: { display: true, text: 'Season' },
+                grid: { display: false },
+                border: { display: false },
+                ticks: {
+                  font: tickFont,
+                  color: '#6b7280',
+                  padding: 4,
+                  maxRotation: 0,
+                  autoSkip: true,
+                  autoSkipPadding: 12,
+                },
+                title: { display: false },
               },
             },
           },
         });
 
-        const toggleButtons = document.querySelectorAll('.chart-toggle__btn');
-        toggleButtons.forEach((button) => {
-          button.addEventListener('click', () => {
-            const key = button.dataset.chart;
-            if (!key || !chartConfigs[key]) return;
-            toggleButtons.forEach((btn) =>
-              btn.classList.toggle('active', btn === button)
-            );
-            chart.data = chartConfigs[key];
-            chart.options.scales.y.title.text =
-              key === 'franchise'
-                ? 'Average Salary (Top 3)'
-                : key === 'extension'
-                  ? 'Average Salary (Top 5)'
-                  : 'Average Salary (Top 10)';
-            chart.update();
+        buildLegend(chart);
+
+        const ac = new AbortController();
+        document.addEventListener('astro:before-swap', () => {
+          chart.destroy();
+          ac.abort();
+        }, { once: true });
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            const mobile = window.matchMedia('(max-width: 640px)').matches;
+            chart.options.aspectRatio = mobile ? 1.4 : 2.2;
+            chart.update('none');
+          }, 250);
+        }, { signal: ac.signal });
+
+        const tabs = document.querySelectorAll('.chart-tab');
+        const titleEl = document.getElementById('chart-title');
+        const subtitleEl = document.getElementById('chart-subtitle');
+        const panelEl = document.getElementById('chart-panel');
+        const announcer = document.getElementById('chart-announcer');
+
+        function activateTab(tab) {
+          const key = tab.dataset.chart;
+          if (!key || !chartConfigs[key]) return;
+
+          tabs.forEach((t) => {
+            t.setAttribute('aria-selected', 'false');
+            t.setAttribute('tabindex', '-1');
+          });
+          tab.setAttribute('aria-selected', 'true');
+          tab.removeAttribute('tabindex');
+
+          chart.data = chartConfigs[key];
+          chart.update();
+
+          const meta = VIEW_META[key];
+          if (meta && titleEl) titleEl.textContent = meta.title;
+          if (meta && subtitleEl) subtitleEl.textContent = meta.sub;
+          if (panelEl) panelEl.setAttribute('aria-labelledby', tab.id);
+
+          buildLegend(chart);
+
+          document.querySelectorAll('[data-table-view]').forEach((section) => {
+            section.hidden = section.dataset.tableView !== key;
+          });
+
+          if (announcer && meta) {
+            announcer.textContent = 'Now showing ' + meta.title + ' salary averages';
+            setTimeout(() => { announcer.textContent = ''; }, 3000);
+          }
+        }
+
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            activateTab(tab);
+            tab.focus();
           });
         });
+
+        const controlsEl = document.querySelector('.chart-controls');
+        if (controlsEl) {
+          controlsEl.addEventListener('keydown', (e) => {
+            const tabArr = Array.from(tabs);
+            const currentIndex = tabArr.indexOf(e.target);
+            let nextIndex;
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              nextIndex = (currentIndex + 1) % tabArr.length;
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              nextIndex = (currentIndex - 1 + tabArr.length) % tabArr.length;
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              nextIndex = 0;
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              nextIndex = tabArr.length - 1;
+            }
+
+            if (nextIndex !== undefined) {
+              activateTab(tabArr[nextIndex]);
+              tabArr[nextIndex].focus();
+            }
+          });
+        }
+      }
+
+      function buildLegend(chart) {
+        const container = document.getElementById('chart-legend');
+        if (!container) return;
+
+        container.replaceChildren();
+
+        chart.data.datasets.forEach((ds, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'chart-legend__item' + (chart.isDatasetVisible(i) ? '' : ' chart-legend__item--hidden');
+          btn.dataset.index = String(i);
+          btn.setAttribute('aria-pressed', String(chart.isDatasetVisible(i)));
+
+          const swatch = document.createElement('span');
+          swatch.className = 'chart-legend__swatch';
+          swatch.style.background = ds.borderColor;
+
+          const label = document.createElement('span');
+          label.className = 'chart-legend__label';
+          label.textContent = ds.label;
+
+          btn.append(swatch, label);
+
+          btn.addEventListener('click', () => {
+            const isVisible = chart.isDatasetVisible(i);
+            chart.setDatasetVisibility(i, !isVisible);
+            chart.update();
+            btn.classList.toggle('chart-legend__item--hidden', isVisible);
+            btn.setAttribute('aria-pressed', String(!isVisible));
+          });
+
+          container.appendChild(btn);
+        });
+      }
+
+      document.addEventListener('astro:page-load', async () => {
+        const franchiseDataEl = document.getElementById('history-chart-franchise');
+        if (!franchiseDataEl) return;
+        await ensureChartJS();
+        initSalaryHistoryChart();
       });
     </script>
   </>

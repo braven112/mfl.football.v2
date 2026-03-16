@@ -1,5 +1,22 @@
 [
   {
+    "id": "salary-history-redesign",
+    "date": "2026-03-15",
+    "title": "Salary History Gets the Editorial Treatment",
+    "summary": "The historical salary trends chart went from bare-bones to best-in-class — tabbed views, accessible data tables, and a design that actually belongs on this site.",
+    "description": [
+      "The salary history chart used to look like it wandered in from a different website. A basic Chart.js line graph with default styling, a legend that did the bare minimum, and zero personality. It got the job done the way a gas station sandwich gets the job done — technically, but you wouldn't brag about it.",
+      "Now it's a proper editorial feature. A segmented control lets you toggle between Franchise Tag, Extension, and Team Option trends with smooth data transitions. The custom legend and tooltip follow the site's design language — muted steel-and-sienna palette, uppercase micro labels, tabular numbers that actually align. Every chart type has a collapsible data table underneath for accessibility and for the spreadsheet people who want the raw numbers. The whole thing is keyboard-navigable, screen-reader-friendly, and responsive down to mobile without losing readability.",
+      "It's also the first chart in the editorial design system, which means every future chart starts from this foundation. The palette tokens, the tooltip pattern, the legend style — all reusable. Think of it less as a page redesign and more as the chart department finally opening for business."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/salary-history",
+    "linkLabel": "View salary trends",
+    "icon": "bar-chart",
+    "image": "salary-history-redesign.webp",
+    "imageAlt": "Salary history page showing a styled line chart with Franchise Tag trends, segmented control tabs, custom legend, and collapsible data table"
+  },
+  {
     "id": "auction-command-center",
     "date": "2026-03-15",
     "title": "Auction Command Center",
