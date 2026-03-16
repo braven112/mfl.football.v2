@@ -220,3 +220,25 @@ Future franchise rebrandings just need a new history entry added to the config.
 ```
 
 **Evidence:** `src/components/theleague/LeagueSummaryTable.astro` — sorted column headers and preferred team row both needed this fix.
+
+---
+
+## 2026-03-15 - Editorial Table Pattern for JS-Populated Tables
+
+**Context:** Salary Analytics redesign — tables with server-rendered `<thead>` but client-populated `<tbody>`.
+
+**Insight:** When `<tbody>` rows are created by JavaScript, the editorial table CSS pattern requires:
+1. `border-collapse: separate` (not `collapse`) to support rounded corners on `<th>` elements
+2. `:global()` wrapper on tbody selectors for Astro scoped style compatibility
+3. Explicit `background` on `<th>` (not just `<thead>`) since `border-collapse: separate` isolates cell backgrounds
+
+**Key CSS:**
+```css
+.editorial-table { border-collapse: separate; border-spacing: 0; }
+.editorial-table th { background: var(--color-gray-50, #f9fafb); }
+.editorial-table th:first-child { border-radius: var(--radius-sm, 0.25rem) 0 0 0; }
+.editorial-table th:last-child { border-radius: 0 var(--radius-sm, 0.25rem) 0 0; }
+.editorial-table :global(tbody tr:first-child td) { padding-top: 0.625rem; }
+```
+
+**Evidence:** `src/pages/theleague/salary.astro` — editorial table with JS-injected player rows.

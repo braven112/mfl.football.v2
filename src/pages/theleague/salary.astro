@@ -146,13 +146,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title="Salary Analytics">
-  <section class="salary-report">
-    <header class="salary-report__intro">
-      <h1>Salary Analytics</h1>
-      <div class="salary-report__filters">
+  <section class="salary-analytics" aria-labelledby="salary-title">
+    <header class="page-hero">
+      <h1 class="page-hero__title" id="salary-title">Salary Analytics</h1>
+      <p class="page-hero__desc">
+        Franchise tag figures use the average of the top three salaries at a
+        position, while contract extensions use the average of the top five.
+        Season <span id="salarySeasonLabel">{currentSummary?.metadata?.season ?? defaultSeason}</span><span id="salaryWeekLabel">{currentSummary?.metadata?.week ? ` · Week ${currentSummary.metadata.week}` : ''}</span>
+        · <span id="salarySnapshotLabel">Snapshot: {generatedLabel}</span>
+      </p>
+    </header>
+
+    <div class="salary-toolbar">
+      <div class="toolbar-left">
+        <h2 class="section-title">Position Breakdown</h2>
+      </div>
+      <div class="toolbar-right">
         {seasonOptions.length > 1 && (
-          <label class="season-toggle">
-            <span>Season:</span>
+          <label class="toolbar-select">
+            <span class="toolbar-select__label">Season</span>
             <select id="salarySeasonSelect">
               {seasonOptions.map((season) => (
                 <option value={season} selected={season === defaultSeason}>
@@ -162,123 +174,121 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </select>
           </label>
         )}
-        <label class="week-toggle" id="weekToggleContainer" style="display: none;">
-          <span>Week:</span>
+        <label class="toolbar-select" id="weekToggleContainer" style="display: none;">
+          <span class="toolbar-select__label">Week</span>
           <select id="salaryWeekSelect">
             <option value="season">Season Total</option>
           </select>
         </label>
-        <button type="button" id="exportXlsxBtn" class="salary-export-btn">
+        <button type="button" id="exportXlsxBtn" class="toolbar-btn toolbar-btn--primary">
           Export to Excel
         </button>
-        <a id="archiveSheetLink" class="salary-archive-link" href="#" target="_blank" rel="noopener" style="display: none;">
-          View Original Spreadsheet
+        <a id="archiveSheetLink" class="toolbar-btn toolbar-btn--ghost" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
+          Original Spreadsheet
         </a>
       </div>
-      <p>
-        League {currentSummary?.metadata?.leagueId ?? 'Unknown'} &middot; Season{' '}
-        <span id="salarySeasonLabel">
-          {currentSummary?.metadata?.season ?? defaultSeason}
-        </span>
-        <span id="salaryWeekLabel">
-          {currentSummary?.metadata?.week
-            ? ` · Week ${currentSummary.metadata.week}`
-            : ''}
-        </span>
-      </p>
-      <p class="salary-report__timestamp" id="salarySnapshotLabel">
-        Last Snapshot: {generatedLabel}
-      </p>
-      <p>
-        Franchise tag figures use the average of the top three salaries at a
-        position, while contract extensions use the average of the top five.
-      </p>
-      <p class="salary-report__archive-link">
-        <a href={r("/theleague/salary-archive")}>View Historical Spreadsheets (2009&ndash;2025) &rarr;</a>
-      </p>
-    </header>
+    </div>
 
-    <div class="salary-report__grid">
+    <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="salary-announcer"></div>
+
+    <div class="salary-grid">
       {positionLabels.map(({ key, label }) => {
         const data = summary[key];
         return (
-          <article class="salary-card" data-position={key}>
-            <h2>{label}</h2>
+          <article class="position-card" data-position={key} aria-labelledby={`position-${key}`}>
+            <div class="position-card__header">
+              <h3 class="section-title" id={`position-${key}`}>{label}</h3>
+              <span class="position-card__badge" data-total={key}>
+                {data?.totalPlayers ?? 0} tracked
+              </span>
+            </div>
+
             {data ? (
               <>
-                <dl class="salary-card__figures">
-                  <div>
-                    <dt>Franchise Tag (Top 3)</dt>
-                    <dd data-franchise-average={key}>{formatValue(data.top3Average)}</dd>
+                <div class="metrics-grid" role="list" aria-label={`Key salary thresholds for ${label}`}>
+                  <div class="metric-card" role="listitem">
+                    <span class="metric-value" data-franchise-average={key}>{formatValue(data.top3Average)}</span>
+                    <span class="metric-label">Franchise Tag</span>
+                    <span class="metric-sub">Top 3 Avg</span>
                   </div>
-                  <div>
-                    <dt>Extension (Top 5)</dt>
-                    <dd data-extension-average={key}>{formatValue(data.top5Average)}</dd>
+                  <div class="metric-card" role="listitem">
+                    <span class="metric-value" data-extension-average={key}>{formatValue(data.top5Average)}</span>
+                    <span class="metric-label">Extension</span>
+                    <span class="metric-sub">Top 5 Avg</span>
                   </div>
-                  <div>
-                    <dt>Team Option (Top 10)</dt>
-                    <dd data-team-option-average={key}>{formatValue(data.top10Average)}</dd>
+                  <div class="metric-card" role="listitem">
+                    <span class="metric-value" data-team-option-average={key}>{formatValue(data.top10Average)}</span>
+                    <span class="metric-label">Team Option</span>
+                    <span class="metric-sub">Top 10 Avg</span>
                   </div>
-                  <div>
-                    <dt data-starter-label={key}>Starter Avg (Top {data.starterCount ?? STARTER_COUNTS[key] ?? '?'})</dt>
-                    <dd data-starter-average={key}>{formatValue(data.starterAverage)}</dd>
+                </div>
+
+                <dl class="detail-grid">
+                  <div class="detail-cell">
+                    <dt class="detail-label" data-starter-label={key}>Starter Avg</dt>
+                    <dd class="detail-value" data-starter-average={key}>{formatValue(data.starterAverage)}</dd>
                   </div>
-                  <div>
-                    <dt>Starter Median (Top {data.starterCount ?? STARTER_COUNTS[key] ?? '?'})</dt>
-                    <dd data-starter-median={key}>{formatValue(data.starterMedian)}</dd>
+                  <div class="detail-cell">
+                    <dt class="detail-label">Starter Med</dt>
+                    <dd class="detail-value" data-starter-median={key}>{formatValue(data.starterMedian)}</dd>
                   </div>
-                  <div>
-                    <dt>Average Salary</dt>
-                    <dd data-average-salary={key}>{formatValue(data.averageSalary)}</dd>
+                  <div class="detail-cell">
+                    <dt class="detail-label">Avg Salary</dt>
+                    <dd class="detail-value" data-average-salary={key}>{formatValue(data.averageSalary)}</dd>
                   </div>
-                  <div>
-                    <dt>Median Salary</dt>
-                    <dd data-median-salary={key}>{formatValue(data.medianSalary)}</dd>
+                  <div class="detail-cell">
+                    <dt class="detail-label">Med Salary</dt>
+                    <dd class="detail-value" data-median-salary={key}>{formatValue(data.medianSalary)}</dd>
                   </div>
                 </dl>
-                <p class="salary-card__total" data-total={key}>
-                  Tracked Players: {data.totalPlayers ?? 0}
-                </p>
 
-                <table class="salary-card__table">
-                  <caption>Top Earners</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Player</th>
-                      <th scope="col">Salary</th>
-                    </tr>
-                  </thead>
-                  <tbody data-top-players={key}>
-                    {(data.topPlayers ?? []).slice(0, 5).map((player) => {
-                      const franchise = player?.franchiseId
-                        ? franchiseMeta.get(player.franchiseId)
-                        : null;
-                      return (
-                        <tr>
-                          <td class="player-cell">
-                            {franchise?.icon && (
-                              <img
-                                src={franchise.icon}
-                                alt={`${franchise.name ?? 'Franchise'} icon`}
-                                loading="lazy"
-                              />
-                            )}
-                            <span>{player.name}</span>
-                          </td>
-                          <td>{formatValue(player.salary)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <div class="section-header">
+                  <h4 class="section-header__title">Top Earners</h4>
+                  <p class="section-header__sub">Highest-paid at this position</p>
+                </div>
+
+                <div class="position-card__table-wrap">
+                  <table class="editorial-table">
+                    <caption class="visually-hidden">Top earning {label}s by salary</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Player</th>
+                        <th scope="col" class="col-salary">Salary</th>
+                      </tr>
+                    </thead>
+                    <tbody data-top-players={key}>
+                      {(data.topPlayers ?? []).slice(0, 5).map((player) => {
+                        const franchise = player?.franchiseId
+                          ? franchiseMeta.get(player.franchiseId)
+                          : null;
+                        return (
+                          <tr>
+                            <td class="player-cell">
+                              {franchise?.icon && (
+                                <img
+                                  src={franchise.icon}
+                                  alt={`${franchise.name ?? 'Franchise'} icon`}
+                                  loading="lazy"
+                                />
+                              )}
+                              <span>{player.name}</span>
+                            </td>
+                            <td class="col-salary">{formatValue(player.salary)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
                 {(data.topPlayers ?? []).length > 5 && (
-                  <button class="salary-card__show-more" data-show-more={key} type="button">
+                  <button class="show-more-btn" data-show-more={key} type="button" aria-label={`Show more ${label} players`}>
                     Show More
                   </button>
                 )}
               </>
             ) : (
-              <p class="salary-card__empty">
+              <p class="position-card__empty">
                 No salary data found for this position.
               </p>
             )}
@@ -286,182 +296,352 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         );
       })}
     </div>
+
+    <nav class="salary-footer" aria-label="Related pages">
+      <a href={r("/theleague/salary-archive")} class="salary-footer__link">
+        View Historical Spreadsheets (2009&ndash;2025) &rarr;
+      </a>
+      <a href={r("/theleague/salary-history")} class="salary-footer__link">
+        View Salary Trends Over Time &rarr;
+      </a>
+    </nav>
   </section>
 </TheLeagueLayout>
 
 <style>
-  .salary-report {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-  }
-
-  .salary-report__intro h1 {
-    margin-bottom: 0.25rem;
-  }
-
-  .salary-report__intro p {
-    margin: 0.25rem 0;
-  }
-
-  .salary-report__timestamp {
-    font-size: 0.95rem;
-    color: #555;
-  }
-
-  .salary-report__archive-link {
-    margin-top: 0.5rem;
-  }
-
-  .salary-report__archive-link a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-size: 0.95rem;
-  }
-
-  .salary-report__archive-link a:hover {
-    text-decoration: underline;
-  }
-
-  .salary-report__filters {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .season-toggle,
-  .week-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-  }
-
-  .season-toggle select,
-  .week-toggle select {
-    padding: 0.3rem 0.75rem;
-    border: 1px solid #ccd3df;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-  }
-
-  .salary-export-btn {
-    padding: 0.3rem 0.75rem;
-    border: 1px solid #ccd3df;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    background: var(--primary-color, #1c497c);
-    color: #fff;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .salary-export-btn:hover {
-    opacity: 0.85;
-  }
-
-  .salary-archive-link {
-    padding: 0.3rem 0.75rem;
-    border: 1px solid #ccd3df;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--primary-color, #1c497c);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .salary-archive-link:hover {
-    background: #f0f4f8;
-  }
-
-  .salary-report__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .salary-card {
-    background: var(--primary-content-bg-color);
-    border: 1px solid var(--primary-content-border-color);
-    box-shadow: var(--primary-content-boxshadow-size)
-      var(--primary-content-boxshadow-color);
-    border-radius: 0.75rem;
-    padding: 1.25rem;
+  .salary-analytics {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
 
-  .salary-card h2 {
-    margin: 0;
-    font-size: 1.2rem;
+  /* ── Page Hero ── */
+  .page-hero {
+    margin-bottom: 0.5rem;
   }
 
-  .salary-card__figures {
+  .page-hero__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
+  }
+
+  .page-hero__desc {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 64ch;
+    margin: 0;
+  }
+
+  /* ── Toolbar ── */
+  .salary-toolbar {
     display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 0 0.625rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    flex-wrap: wrap;
   }
 
-  .salary-card__figures div {
+  .toolbar-left {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
+    gap: 0.75rem;
   }
 
-  .salary-card__figures dt {
-    font-size: 0.9rem;
-    color: #555;
-    margin-bottom: 0.2rem;
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
-  .salary-card__figures dd {
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
     margin: 0;
-    font-size: 1.4rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .toolbar-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .toolbar-select__label {
+    font-size: 0.625rem;
     font-weight: 600;
-    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
   }
 
-  .salary-card__total {
-    font-size: 0.85rem;
-    color: #666;
+  .toolbar-select select {
+    padding: 0.3rem 0.625rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-700, #374151);
+    background: var(--color-white, #ffffff);
+  }
+
+  .toolbar-select select:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm, 0.25rem);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+    text-decoration: none;
+    border: none;
+  }
+
+  .toolbar-btn:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .toolbar-btn--primary {
+    background: var(--btn-primary-bg, #1c497c);
+    color: var(--btn-primary-text, #ffffff);
+  }
+
+  .toolbar-btn--primary:hover {
+    background: var(--btn-primary-bg-hover, #164066);
+  }
+
+  .toolbar-btn--ghost {
+    background: transparent;
+    color: var(--color-gray-600, #4b5563);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .toolbar-btn--ghost:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  /* ── Position Card Grid ── */
+  .salary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+    gap: 1rem;
+  }
+
+  .position-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    container-type: inline-size;
+  }
+
+  .position-card__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .position-card__badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ── Metrics Grid (3-col hero stats) ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+    list-style: none;
+    padding: 0;
     margin: 0;
   }
 
-  .salary-card__table {
+  .metric-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    padding: 0.625rem 0.375rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .metric-value {
+    font-size: clamp(0.875rem, 1.8cqi, 1.125rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .metric-label {
+    font-size: clamp(0.5625rem, 1.2cqi, 0.6875rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .metric-sub {
+    font-size: clamp(0.5rem, 1cqi, 0.625rem);
+    font-weight: 500;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  /* ── Detail Grid (2×2) ── */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 0.75rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .detail-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.0625rem;
+  }
+
+  .detail-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    line-height: 1.2;
+  }
+
+  .detail-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  /* ── Section Header (Top Earners) ── */
+  .section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+  }
+
+  .section-header__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    line-height: 1;
+  }
+
+  .section-header__sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.3;
+  }
+
+  /* ── Editorial Table ── */
+  .position-card__table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .editorial-table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .salary-card__table caption {
-    text-align: left;
-    font-weight: 600;
-    margin-bottom: 0.35rem;
-  }
-
-  .salary-card__table th,
-  .salary-card__table td {
-    padding: 0.35rem 0;
-    border-bottom: 1px solid #eee;
-  }
-
-  .salary-card__table th {
-    text-align: left;
-    font-size: 0.85rem;
-    color: #555;
-  }
-
-  .salary-card__table td:last-child {
-    text-align: right;
+    border-collapse: separate;
+    border-spacing: 0;
     font-variant-numeric: tabular-nums;
   }
 
-  .salary-card__table tr:last-child td {
+  .editorial-table thead {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .editorial-table th {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .editorial-table th:first-child {
+    border-radius: var(--radius-sm, 0.25rem) 0 0 0;
+  }
+
+  .editorial-table th:last-child {
+    border-radius: 0 var(--radius-sm, 0.25rem) 0 0;
+  }
+
+  .editorial-table :global(tbody tr:first-child td) {
+    padding-top: 0.625rem;
+  }
+
+  .editorial-table td {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .editorial-table :global(tbody tr:hover) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .editorial-table :global(tbody tr:last-child td) {
     border-bottom: none;
+  }
+
+  .col-salary {
+    text-align: right;
+    font-weight: 600;
   }
 
   :global(.player-cell) {
@@ -471,29 +651,134 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   :global(.player-cell img) {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     object-fit: cover;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
 
-  :global(.salary-card__show-more) {
+  :global(.player-cell span) {
+    font-weight: 500;
+  }
+
+  /* ── Show More Button ── */
+  :global(.show-more-btn) {
     width: 100%;
-    border: 1px solid #ccc;
     padding: 0.5rem;
-    border-radius: 1rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-full, 9999px);
     background: transparent;
     cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+    transition: background 0.15s ease, color 0.15s ease;
   }
 
-  .salary-card__empty {
+  :global(.show-more-btn:hover) {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-700, #374151);
+  }
+
+  :global(.show-more-btn:focus-visible) {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* ── Empty State ── */
+  .position-card__empty {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
     margin: 0;
-    font-size: 0.95rem;
-    color: #777;
+    text-align: center;
+    padding: 1.5rem 0;
   }
 
-  @media (max-width: 767px) {
-    .salary-card__figures {
+  /* ── Footer Links ── */
+  .salary-footer {
+    display: flex;
+    gap: 1.5rem;
+    padding-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .salary-footer__link {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+  }
+
+  .salary-footer__link:hover {
+    text-decoration: underline;
+  }
+
+  .salary-footer__link:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  /* ── Visually Hidden ── */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .salary-toolbar {
       flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+
+    .toolbar-right {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .toolbar-select {
+      flex: 1 1 auto;
+      min-width: 120px;
+    }
+
+    .toolbar-select select {
+      width: 100%;
+    }
+
+    .toolbar-btn {
+      flex: 1 1 100%;
+      text-align: center;
+    }
+
+    .position-card {
+      padding: 1rem;
+    }
+
+    .metric-card {
+      padding: 0.5rem 0.25rem;
+    }
+
+    :global(.player-cell img) {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toolbar-btn,
+    :global(.show-more-btn) {
+      transition: none;
     }
   }
 </style>
@@ -523,6 +808,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const weekLabel = document.getElementById('salaryWeekLabel');
     const snapshotLabel = document.getElementById('salarySnapshotLabel');
     const archiveLink = document.getElementById('archiveSheetLink');
+    const announcer = document.getElementById('salary-announcer');
 
     const STARTER_COUNTS = { QB: 16, RB: 30, WR: 48, TE: 18, PK: 16, Def: 16 };
 
@@ -543,25 +829,33 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       return currencyFormatter.format(Math.round(value));
     };
 
-    const buildPlayerRows = (players, franchiseMeta) =>
-      players
-        .map((player) => {
-          const franchise = player?.franchiseId
-            ? franchiseMeta[player.franchiseId]
-            : null;
-          const iconMarkup = franchise?.icon
-            ? `<img src="${franchise.icon}" alt="${franchise.name ?? 'Franchise'} icon" loading="lazy" />`
-            : '';
-          return `
-            <tr>
-              <td class="player-cell">
-                ${iconMarkup}
-                <span>${player.name ?? ''}</span>
-              </td>
-              <td>${formatCurrency(player.salary)}</td>
-            </tr>`;
-        })
-        .join('');
+    const buildPlayerRow = (player, franchiseMeta) => {
+      const franchise = player?.franchiseId
+        ? franchiseMeta[player.franchiseId]
+        : null;
+      const tr = document.createElement('tr');
+
+      const tdPlayer = document.createElement('td');
+      tdPlayer.className = 'player-cell';
+      if (franchise?.icon) {
+        const img = document.createElement('img');
+        img.src = franchise.icon;
+        img.alt = (franchise.name ?? 'Franchise') + ' icon';
+        img.loading = 'lazy';
+        tdPlayer.appendChild(img);
+      }
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = player.name ?? '';
+      tdPlayer.appendChild(nameSpan);
+
+      const tdSalary = document.createElement('td');
+      tdSalary.className = 'col-salary';
+      tdSalary.textContent = formatCurrency(player.salary);
+
+      tr.appendChild(tdPlayer);
+      tr.appendChild(tdSalary);
+      return tr;
+    };
 
     const renderPlayersForPosition = (position, allPlayers, count) => {
       const playersBody = document.querySelector(
@@ -573,26 +867,37 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (!playersBody) return;
 
       const visible = allPlayers.slice(0, count);
-      const rows = buildPlayerRows(visible, franchiseMeta);
-      playersBody.innerHTML =
-        rows || '<tr><td colspan="2" class="player-cell">No players tracked.</td></tr>';
+      playersBody.replaceChildren();
+      if (visible.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 2;
+        td.className = 'player-cell';
+        td.textContent = 'No players tracked.';
+        tr.appendChild(td);
+        playersBody.appendChild(tr);
+      } else {
+        visible.forEach((player) => {
+          playersBody.appendChild(buildPlayerRow(player, franchiseMeta));
+        });
+      }
 
       if (showMoreBtn) {
         if (count >= allPlayers.length) {
           showMoreBtn.style.display = 'none';
         } else {
           showMoreBtn.style.display = '';
-          showMoreBtn.textContent = `Show More (${Math.min(allPlayers.length - count, PAGE_SIZE)} more)`;
+          showMoreBtn.textContent = 'Show More (' + Math.min(allPlayers.length - count, PAGE_SIZE) + ' more)';
         }
       } else if (count < allPlayers.length) {
-        // Create the button if it doesn't exist yet (e.g. switching to a dataset with more players)
         const card = document.querySelector(`[data-position="${position}"]`);
         if (card) {
           const btn = document.createElement('button');
-          btn.className = 'salary-card__show-more';
+          btn.className = 'show-more-btn';
           btn.dataset.showMore = position;
           btn.type = 'button';
-          btn.textContent = `Show More (${Math.min(allPlayers.length - count, PAGE_SIZE)} more)`;
+          btn.textContent = 'Show More (' + Math.min(allPlayers.length - count, PAGE_SIZE) + ' more)';
+          btn.setAttribute('aria-label', 'Show more ' + position + ' players');
           card.appendChild(btn);
         }
       }
@@ -601,9 +906,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const formatWeekLabel = (week) => {
       if (typeof week === 'string' && week.startsWith('off-')) {
         const num = week.slice(4);
-        return `Off Season Week ${num}`;
+        return 'Off Season Week ' + num;
       }
-      return `Week ${week}`;
+      return 'Week ' + week;
     };
 
     const updateArchiveLink = (seasonKey) => {
@@ -619,7 +924,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     const populateWeekDropdown = (seasonKey) => {
       const weeks = weekOptions[seasonKey] || [];
-      weekSelectEl.innerHTML = '<option value="season">Season Total</option>';
+      weekSelectEl.replaceChildren();
+      const seasonOpt = document.createElement('option');
+      seasonOpt.value = 'season';
+      seasonOpt.textContent = 'Season Total';
+      weekSelectEl.appendChild(seasonOpt);
 
       if (weeks.length > 0) {
         weeks.forEach((week) => {
@@ -633,7 +942,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         weekToggleContainer.style.display = 'none';
       }
 
-      // Reset to season total when changing seasons
       weekSelectEl.value = 'season';
       currentWeek = 'season';
     };
@@ -653,72 +961,78 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       if (weekKey === 'season') {
         weekLabel.textContent = summary?.metadata?.week
-          ? ` · Week ${summary.metadata.week}`
+          ? ' \u00b7 Week ' + summary.metadata.week
           : '';
       } else {
-        weekLabel.textContent = ` · ${formatWeekLabel(weekKey)}`;
+        weekLabel.textContent = ' \u00b7 ' + formatWeekLabel(weekKey);
       }
 
       const generatedAt = summary?.metadata?.generatedAt
         ? new Date(summary.metadata.generatedAt)
         : null;
-      snapshotLabel.textContent = `Last Snapshot: ${
+      snapshotLabel.textContent = 'Snapshot: ' + (
         generatedAt && !Number.isNaN(generatedAt.getTime())
           ? generatedAt.toLocaleString('en-US', {
               dateStyle: 'medium',
               timeStyle: 'short',
             })
           : 'Unknown'
-      }`;
+      );
 
       (summary?.positions
         ? Object.entries(summary.positions)
         : []
       ).forEach(([position, data]) => {
         const franCell = document.querySelector(
-          `[data-franchise-average="${position}"]`
+          '[data-franchise-average="' + position + '"]'
         );
         const extCell = document.querySelector(
-          `[data-extension-average="${position}"]`
+          '[data-extension-average="' + position + '"]'
         );
         const starterCell = document.querySelector(
-          `[data-starter-average="${position}"]`
+          '[data-starter-average="' + position + '"]'
         );
-        const starterLabel = document.querySelector(
-          `[data-starter-label="${position}"]`
+        const starterLabelEl = document.querySelector(
+          '[data-starter-label="' + position + '"]'
         );
         const avgCell = document.querySelector(
-          `[data-average-salary="${position}"]`
+          '[data-average-salary="' + position + '"]'
         );
         const medCell = document.querySelector(
-          `[data-median-salary="${position}"]`
+          '[data-median-salary="' + position + '"]'
         );
-        const totalEl = document.querySelector(`[data-total="${position}"]`);
+        const totalEl = document.querySelector('[data-total="' + position + '"]');
 
         const teamOptCell = document.querySelector(
-          `[data-team-option-average="${position}"]`
+          '[data-team-option-average="' + position + '"]'
         );
 
         if (franCell) franCell.textContent = formatCurrency(data?.top3Average ?? 0);
         if (extCell) extCell.textContent = formatCurrency(data?.top5Average ?? 0);
         if (teamOptCell) teamOptCell.textContent = formatCurrency(data?.top10Average ?? 0);
-        if (starterLabel) {
-          const count = data?.starterCount ?? STARTER_COUNTS[position] ?? '?';
-          starterLabel.textContent = `Starter Avg (Top ${count})`;
+        if (starterLabelEl) {
+          starterLabelEl.textContent = 'Starter Avg';
         }
         if (starterCell) starterCell.textContent = data?.starterAverage != null ? formatCurrency(data.starterAverage) : 'N/A';
         const starterMedCell = document.querySelector(
-          `[data-starter-median="${position}"]`
+          '[data-starter-median="' + position + '"]'
         );
         if (starterMedCell) starterMedCell.textContent = data?.starterMedian != null ? formatCurrency(data.starterMedian) : 'N/A';
         if (avgCell) avgCell.textContent = data?.averageSalary != null ? formatCurrency(data.averageSalary) : 'N/A';
         if (medCell) medCell.textContent = data?.medianSalary != null ? formatCurrency(data.medianSalary) : 'N/A';
-        if (totalEl) totalEl.textContent = `Tracked Players: ${data?.totalPlayers ?? 0}`;
+        if (totalEl) totalEl.textContent = (data?.totalPlayers ?? 0) + ' tracked';
 
-        // Reset pagination on data change
         visibleCounts[position] = INITIAL_COUNT;
         renderPlayersForPosition(position, data?.topPlayers ?? [], INITIAL_COUNT);
       });
+
+      if (announcer) {
+        const label = weekKey === 'season'
+          ? 'Showing ' + seasonKey + ' Season Total'
+          : 'Showing ' + seasonKey + ' ' + formatWeekLabel(weekKey);
+        announcer.textContent = label;
+        setTimeout(() => { announcer.textContent = ''; }, 1000);
+      }
     };
 
     // Initialize

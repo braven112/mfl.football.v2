@@ -1,5 +1,22 @@
 [
   {
+    "id": "salary-analytics-redesign",
+    "date": "2026-03-15",
+    "title": "Salary Analytics Goes Editorial",
+    "summary": "The position salary breakdown page traded its spreadsheet energy for proper editorial design — metric cards, detail rows, and tables that actually look like they belong here.",
+    "description": [
+      "The Salary Analytics page used to have the visual sophistication of a mid-2000s fantasy football message board. Six cards with numbers, some inline styles that fought each other, and a layout that treated mobile users like an afterthought. It worked, technically, in the same way that duct-taping your bumper works — functional, but you wouldn't invite anyone to look at it.",
+      "Now it's built on the editorial design system. Each position gets a proper card with a 3-column metrics grid showing franchise tag, extension, and team option thresholds at a glance. Detail rows break out starter averages and medians with the uppercase-label-plus-value pattern. The Top Earners tables use the standard editorial header style — rounded corners, gray-50 backgrounds, proper spacing between the header and the first row. Everything scales cleanly on mobile thanks to container query units, so those seven-figure salary numbers don't overflow their cards on a phone screen.",
+      "It's also fully accessible now — ARIA live regions announce data changes when you switch seasons or weeks, the tables have proper column headers, and keyboard navigation works throughout. The Export to Excel button and archive link are still right where you'd expect them. Same data, same functionality, dramatically better presentation."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/salary",
+    "linkLabel": "Check salary thresholds",
+    "icon": "dollar-sign",
+    "image": "salary-analytics-redesign.webp",
+    "imageAlt": "Salary Analytics page showing editorial-styled position cards with metric grids, detail rows, and top earner tables"
+  },
+  {
     "id": "salary-history-redesign",
     "date": "2026-03-15",
     "title": "Salary History Gets the Editorial Treatment",

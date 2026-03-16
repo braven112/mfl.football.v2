@@ -1009,3 +1009,47 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 - `aspectRatio` (not fixed height) for responsive charts: `isMobile ? 1.4 : 2.2`
 
 **Recommendation:** All future charts should follow this file as the canonical reference. Reuse the palette tokens, the tooltip pattern, the legend pattern, and the ViewTransitions cleanup.
+
+---
+
+## 2026-03-15 - Container Query Units for Responsive Metric Cards
+
+**Context:** Salary Analytics editorial redesign — 3-column metric grids showing dollar values ($4,209,425) overflowed on both mobile and desktop when position cards were narrow.
+
+**Insight:** Fixed font sizes (even with mobile media queries) can't adapt to the actual card width. Using `container-type: inline-size` on the card and `clamp()` with `cqi` units makes text scale with the container, not the viewport.
+
+**Pattern:**
+```css
+.position-card {
+  container-type: inline-size;
+}
+.metric-value {
+  font-size: clamp(0.875rem, 1.8cqi, 1.125rem);
+}
+.metric-label {
+  font-size: clamp(0.5625rem, 1.2cqi, 0.6875rem);
+}
+```
+
+**Why this works:** On desktop with 3 position cards per row, each card is ~400px so `cqi` maps to a comfortable size. On mobile at 375px full-width, the same units produce a slightly smaller but readable size. No separate media query needed.
+
+**Also:** Use `min()` in grid templates to prevent cards from forcing horizontal scroll: `grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr))`.
+
+---
+
+## 2026-03-15 - JS-Created Rows Need :global() for Astro Scoped Styles
+
+**Context:** Salary Analytics tables — `<tbody>` is empty at SSR and rows are injected by client-side JS (`buildPlayerRow()`).
+
+**Insight:** Astro scoped styles add `[data-astro-cid-xxx]` attributes only to elements rendered at build time. JS-created elements don't have these attributes, so scoped selectors like `.editorial-table tbody tr:first-child td` won't match them.
+
+**Fix:** Wrap the dynamic-element portion of the selector in `:global()`:
+```css
+/* ❌ Won't match JS-created rows */
+.editorial-table tbody tr:first-child td { padding-top: 0.625rem; }
+
+/* ✅ Scoped to the table (SSR), global for the rows (JS) */
+.editorial-table :global(tbody tr:first-child td) { padding-top: 0.625rem; }
+```
+
+**Recommendation:** Any page with JS-populated table bodies, lists, or containers must use this pattern. The parent element (`.editorial-table`) stays scoped for isolation, but child selectors for dynamic content use `:global()`.
