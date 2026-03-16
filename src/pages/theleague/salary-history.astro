@@ -222,18 +222,25 @@ const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
 
 {seasons.length ? (
   <>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module">
-      const franchiseDataEl = document.getElementById('history-chart-franchise');
-      const extensionDataEl = document.getElementById('history-chart-extension');
-      const teamOptionDataEl = document.getElementById('history-chart-team-option');
-      const chartConfigs = {
-        franchise: franchiseDataEl ? JSON.parse(franchiseDataEl.textContent) : null,
-        extension: extensionDataEl ? JSON.parse(extensionDataEl.textContent) : null,
-        'team-option': teamOptionDataEl ? JSON.parse(teamOptionDataEl.textContent) : null,
-      };
-      const ctx = document.getElementById('salaryHistoryChart');
-      if (ctx && window.Chart && chartConfigs.franchise) {
+    <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      document.addEventListener('astro:page-load', () => {
+        const franchiseDataEl = document.getElementById('history-chart-franchise');
+        if (!franchiseDataEl) return;
+
+        const extensionDataEl = document.getElementById('history-chart-extension');
+        const teamOptionDataEl = document.getElementById('history-chart-team-option');
+        const chartConfigs = {
+          franchise: JSON.parse(franchiseDataEl.textContent),
+          extension: extensionDataEl ? JSON.parse(extensionDataEl.textContent) : null,
+          'team-option': teamOptionDataEl ? JSON.parse(teamOptionDataEl.textContent) : null,
+        };
+        const ctx = document.getElementById('salaryHistoryChart');
+        if (!ctx || !window.Chart || !chartConfigs.franchise) return;
+
+        const existing = Chart.getChart(ctx);
+        if (existing) existing.destroy();
+
         const chart = new Chart(ctx, {
           type: 'line',
           data: chartConfigs.franchise,
@@ -286,7 +293,7 @@ const serializedTeamOptionChart = JSON.stringify(teamOptionChartData);
             chart.update();
           });
         });
-      }
+      });
     </script>
   </>
 ) : null}
