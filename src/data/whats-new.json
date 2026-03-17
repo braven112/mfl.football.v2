@@ -1,5 +1,21 @@
 [
   {
+    "id": "weekly-rollup-2026-03-16",
+    "date": "2026-03-16",
+    "title": "Weekly Fixes & Polish (Mar 13-14)",
+    "summary": "3 bug fixes and style improvements across trade builder, league summary.",
+    "description": [
+      "This week's 3 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Trade Builder</strong> — Trade submissions now work for all league owners, not just the commissioner — the MFL authentication cookie was being silently stripped during cross-origin redirects, causing every trade proposal to fail. Trade Builder page and My Trades panel now use the site-wide editorial design system — consistent section titles, design tokens, typography scale, and focus states across all trade builder components.",
+      "<strong>League Summary</strong> — League Summary page now uses the site-wide design token system — consistent colors, typography, spacing, and improved accessibility with keyboard-navigable sorting and screen reader announcements."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
     "id": "salary-analytics-redesign",
     "date": "2026-03-15",
     "title": "Salary Analytics Goes Editorial",
