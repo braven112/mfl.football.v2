@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-18T08:07:13.135Z"
+    "fetchedAt": "2026-03-18T08:30:20.785Z"
   },
   "players": [
     {
@@ -3845,20 +3845,47 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "KC",
+      "team": "PHI",
       "draftYear": 2019,
       "draftTeam": "BAL",
       "birthdate": 865400400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14105_thumb.jpg",
       "externalIds": {
         "mfl": "14105",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5848",
+        "gsis": " 00-0035662"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5848",
+        "fullName": "Marquise Brown",
+        "team": "PHI",
+        "age": 28,
+        "height": "69",
+        "weight": "180",
+        "number": 5,
+        "college": "Oklahoma",
+        "birthDate": "1997-06-04",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035662"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        }
+      ]
     },
     {
       "id": "16165",
@@ -4887,6 +4914,10 @@
         {
           "id": "14104",
           "name": "Brown, A.J."
+        },
+        {
+          "id": "14105",
+          "name": "Brown, Marquise"
         }
       ]
     },
