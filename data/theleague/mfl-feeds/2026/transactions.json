@@ -1,17 +1,61 @@
 {
-  "version": "1.0",
   "transactions": {
-    "transaction": {
-      "franchise2_gave_up": "15749,",
-      "franchise": "0008",
-      "by_commish": "1",
-      "comments": "",
-      "franchise1_gave_up": "DP_2_10,",
-      "timestamp": "1773270789",
-      "expires": "1774544400",
-      "type": "TRADE",
-      "franchise2": "0010"
-    }
+    "transaction": [
+      {
+        "franchise": "0009",
+        "type": "AUCTION_INIT",
+        "transaction": "15290|425000|",
+        "timestamp": "1773928880"
+      },
+      {
+        "timestamp": "1773928875",
+        "transaction": "15281|3000000|",
+        "type": "AUCTION_BID",
+        "franchise": "0009"
+      },
+      {
+        "timestamp": "1773928848",
+        "transaction": "16846|425000|",
+        "franchise": "0011",
+        "type": "AUCTION_INIT"
+      },
+      {
+        "transaction": "14777|425000|",
+        "timestamp": "1773928842",
+        "franchise": "0001",
+        "type": "AUCTION_INIT"
+      },
+      {
+        "franchise": "0009",
+        "type": "AUCTION_INIT",
+        "transaction": "15281|425000|",
+        "timestamp": "1773928839"
+      },
+      {
+        "franchise": "0011",
+        "type": "AUCTION_INIT",
+        "transaction": "14779|425000|",
+        "timestamp": "1773928828"
+      },
+      {
+        "timestamp": "1773928818",
+        "transaction": "15287|425000|",
+        "type": "AUCTION_INIT",
+        "franchise": "0011"
+      },
+      {
+        "type": "TRADE",
+        "franchise2": "0010",
+        "comments": "",
+        "franchise1_gave_up": "DP_2_10,",
+        "timestamp": "1773270789",
+        "expires": "1774544400",
+        "franchise": "0008",
+        "by_commish": "1",
+        "franchise2_gave_up": "15749,"
+      }
+    ]
   },
+  "version": "1.0",
   "encoding": "utf-8"
 }
