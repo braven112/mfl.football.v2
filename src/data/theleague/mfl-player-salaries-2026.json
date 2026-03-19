@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-19T07:35:19.177Z"
+    "fetchedAt": "2026-03-19T07:58:30.327Z"
   },
   "players": [
     {
@@ -4319,20 +4319,51 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "ARI",
+      "team": "DET",
       "draftYear": 2019,
       "draftTeam": "FA",
       "birthdate": 896418000,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14108_thumb.jpg",
       "externalIds": {
         "mfl": "14108",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5970",
+        "gsis": " 00-0035500"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5970",
+        "fullName": "Greg Dortch",
+        "team": "DET",
+        "age": 27,
+        "height": "67",
+        "weight": "180",
+        "number": 4,
+        "college": "Wake Forest",
+        "birthDate": "1998-05-29",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035500"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15756",
+          "name": "Williams, Jameson"
+        },
+        {
+          "id": "17157",
+          "name": "TeSlaa, Isaac"
+        }
+      ]
     },
     {
       "id": "16648",
@@ -4389,20 +4420,51 @@
       "status": "ROSTER",
       "contractYear": "4",
       "points": 0,
-      "team": "FA",
+      "team": "IND",
       "draftYear": 2020,
       "draftTeam": "FA",
       "birthdate": 858920400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15109_thumb.jpg",
       "externalIds": {
         "mfl": "15109",
-        "sleeper": null,
+        "sleeper": "7496",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "7496",
+        "fullName": "Nick Westbrook-Ikhine",
+        "team": "IND",
+        "age": 28,
+        "height": "74",
+        "weight": "211",
+        "number": 18,
+        "college": "Indiana",
+        "birthDate": "1997-03-21",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 6,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        },
+        {
+          "id": "15768",
+          "name": "Pierce, Alec"
+        }
+      ]
     },
     {
       "id": "16680",
