@@ -967,11 +967,13 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
         el.style.display = 'none';
       });
       const keepSelectors = [
+        '.players-table th.col-rank',
         '.players-table th[data-sort="name"]',
         '.players-table th[data-sort="age"]',
         '.players-table th.col-my-rank',
         '.players-table th.col-value-money',
         '.players-table th.col-ranking-avg',
+        '.players-table td.cell-rank',
         '.players-table td.cell-player',
         '.players-table td.cell-age',
         '.players-table td.col-my-rank',
