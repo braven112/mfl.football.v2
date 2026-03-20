@@ -19,6 +19,14 @@ import { isAdminFranchise } from '../../config/nav-config';
 import '../../styles/player-cell.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+import leagueConfig from '../../data/theleague.config.json';
+
+// Build franchise ID → short name map for auction high-bidder display
+const franchiseNameEntries: [string, string][] = ((leagueConfig as any).teams ?? []).map((t: any) => [
+  t.franchiseId,
+  t.nameShort || t.nameMedium || t.name || t.franchiseId,
+]);
+const franchiseNamesJson = JSON.stringify(franchiseNameEntries);
 
 // College logo lookup (case-insensitive)
 const collegeLogosNormalized = Object.fromEntries(
@@ -396,6 +404,8 @@ interface PlayerRow {
   auctionBid: number | null;
   auctionStatus: string | null;
   auctionBidTime: number | null;
+  auctionFranchise: string | null;
+  auctionInitTime: number | null;
 }
 
 const allPlayers = playersData?.players?.player;
@@ -497,6 +507,8 @@ if (Array.isArray(allPlayers)) {
       auctionBid: auctionMap.get(p.id)?.bid ?? null,
       auctionStatus: auctionMap.get(p.id)?.status ?? null,
       auctionBidTime: null,
+      auctionFranchise: auctionMap.get(p.id)?.franchise ?? null,
+      auctionInitTime: null,
     });
   }
 }
@@ -615,6 +627,13 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         <span class="showing-count" aria-live="polite">
           <strong id="showing-count">50</strong> of <strong id="total-players">0</strong>
         </span>
+        <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
+          <span class="col-group-toggles__label">View:</span>
+          <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
+          <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+          <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
+          {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
+        </div>
         <button class="auction-freshness" id="auction-freshness" type="button" role="status" aria-live="polite" aria-atomic="true" title="Click to refresh auction data" style="display: none;">
           <span class="freshness__dot" aria-hidden="true"></span>
           Updated <span id="auction-freshness-time">&mdash;</span>
@@ -624,14 +643,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           <span class="countdown__value" id="countdown-value">&mdash;</span>
         </span>
       </div>
-      <div class="toolbar-center">
-        <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
-          <span class="col-group-toggles__label">View:</span>
-          <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
-          <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
-          {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
-        </div>
-      </div>
+      <div class="toolbar-center"></div>
       <div class="toolbar-right">
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -829,6 +841,28 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
             <th class="col-group--value col-value-money col-place-bid" aria-label="Place a bid on this player">
               <div class="th-content"></div>
             </th>
+            <!-- Auction view columns -->
+            <th class="sortable col-num col-group--auction col-auction-rank" data-sort="auctionRank" style="display: none;">
+              <div class="th-content">Rank</div>
+            </th>
+            <th class="sortable col-num col-group--auction col-auction-bid" data-sort="auctionBid" style="display: none;">
+              <div class="th-content">Bid</div>
+            </th>
+            <th class="sortable col-text col-group--auction col-auction-bidder" data-sort="auctionFranchise" style="display: none;">
+              <div class="th-content">Bidder</div>
+            </th>
+            <th class="sortable col-text col-group--auction col-auction-started" data-sort="auctionInitTime" style="display: none;">
+              <div class="th-content">Started</div>
+            </th>
+            <th class="sortable col-text col-group--auction col-auction-lastbid" data-sort="auctionBidTime" style="display: none;">
+              <div class="th-content">Last Bid</div>
+            </th>
+            <th class="sortable col-num col-group--auction col-auction-timeleft" data-sort="auctionTimeLeft" style="display: none;">
+              <div class="th-content">Time Left</div>
+            </th>
+            <th class="col-group--auction col-auction-placebid" style="display: none;" aria-label="Place a bid on this player">
+              <div class="th-content"></div>
+            </th>
             <th class="sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
               <div class="th-content">Yrs</div>
             </th>
@@ -866,10 +900,11 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAdmin, currentYear }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAdmin, currentYear, franchiseNamesJson }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
+  const franchiseNameMap = new Map(JSON.parse(franchiseNamesJson));
 
   // State — default to free agents only
   let filteredPlayers = [];
@@ -887,6 +922,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   let countdownTimer = null;
   const changedPlayerIds = new Set();
   const AUCTION_END = new Date('2026-03-28T20:00:00-07:00').getTime();
+  const BID_WINDOW_MS = 36 * 60 * 60 * 1000; // 36-hour bid timer, resets on each new bid
+  let auctionTimerInterval = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Advanced filter state
@@ -916,7 +953,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   function loadViewPref() {
     try {
       const saved = localStorage.getItem('playersViewMode');
-      if (saved === 'rankings' || saved === 'stats' || saved === 'value') {
+      if (saved === 'rankings' || saved === 'stats' || saved === 'value' || saved === 'auction') {
         activeView = saved;
         hasExplicitViewPref = true;
       }
@@ -932,17 +969,22 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   function applyGroupVisibility() {
     const canShowRankingsView = hasRankingColumns;
     const canShowValueView = isAdmin && (hasSurplusData || _hasAuctionData);
+    const canShowAuctionView = _hasAuctionData;
 
     if (activeView === 'rankings' && !canShowRankingsView) {
-      activeView = canShowValueView ? 'value' : 'stats';
+      activeView = canShowAuctionView ? 'auction' : (canShowValueView ? 'value' : 'stats');
     }
     if (activeView === 'value' && !canShowValueView) {
+      activeView = canShowRankingsView ? 'rankings' : 'stats';
+    }
+    if (activeView === 'auction' && !canShowAuctionView) {
       activeView = canShowRankingsView ? 'rankings' : 'stats';
     }
 
     const showStats = activeView === 'stats';
     const showRankings = activeView === 'rankings' && canShowRankingsView;
     const showValue = activeView === 'value' && canShowValueView;
+    const showAuctionView = activeView === 'auction' && canShowAuctionView;
 
     // First reset all cell/header display styles.
     document.querySelectorAll('.players-table th, .players-table td').forEach(el => {
@@ -975,6 +1017,21 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           el.style.display = '';
         });
       }
+    } else if (showAuctionView) {
+      // Auction view: Player + auction-specific columns only
+      document.querySelectorAll('.players-table th, .players-table td').forEach(el => {
+        el.style.display = 'none';
+      });
+      const keepSelectors = [
+        '.players-table th.col-rank',           '.players-table td.cell-rank',
+        '.players-table th[data-sort="name"]',  '.players-table td.cell-player',
+        '.players-table th.col-group--auction',  '.players-table td.col-group--auction',
+      ];
+      for (const selector of keepSelectors) {
+        document.querySelectorAll(selector).forEach(el => {
+          el.style.display = '';
+        });
+      }
     } else {
       document.querySelectorAll('.col-group--stats').forEach(el => {
         el.style.display = showStats ? '' : 'none';
@@ -990,10 +1047,14 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       document.querySelectorAll('.col-group--value:not(.col-group--rankings)').forEach(el => {
         el.style.display = 'none';
       });
+      // Hide auction columns outside auction view
+      document.querySelectorAll('.col-group--auction').forEach(el => {
+        el.style.display = 'none';
+      });
     }
 
     // Update button active states
-    for (const group of ['stats', 'rankings', 'value']) {
+    for (const group of ['stats', 'rankings', 'auction', 'value']) {
       const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
       if (btn) {
         const isActive = group === activeView;
@@ -1005,29 +1066,34 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     // Hide unavailable toggle buttons
     const rankingsBtn = document.getElementById('col-group-btn-rankings');
     if (rankingsBtn) rankingsBtn.style.display = canShowRankingsView ? '' : 'none';
+    const auctionBtn = document.getElementById('col-group-btn-auction');
+    if (auctionBtn) auctionBtn.style.display = canShowAuctionView ? '' : 'none';
     const valueBtn = document.getElementById('col-group-btn-value');
     if (valueBtn) valueBtn.style.display = canShowValueView ? '' : 'none';
 
     // Show/hide the toggle bar when at least one alternate view is available
     const toggleBar = document.getElementById('col-group-toggles');
     if (toggleBar) {
-      toggleBar.style.display = (canShowRankingsView || canShowValueView) ? '' : 'none';
+      toggleBar.style.display = (canShowRankingsView || canShowAuctionView || canShowValueView) ? '' : 'none';
     }
 
-    // Show/hide auction indicators in Value/Stats views
-    const showAuction = showValue || activeView === 'stats';
+    // Show/hide auction indicators in Value/Stats/Auction views
+    const showAuctionIndicators = showValue || showAuctionView || activeView === 'stats';
     const freshnessEl = document.getElementById('auction-freshness');
     if (freshnessEl) {
-      freshnessEl.style.display = (showAuction && lastAuctionFetchTime > 0) ? '' : 'none';
+      freshnessEl.style.display = (showAuctionIndicators && lastAuctionFetchTime > 0) ? '' : 'none';
     }
     const countdownEl = document.getElementById('auction-countdown');
     if (countdownEl) {
-      countdownEl.style.display = (showAuction && AUCTION_END > Date.now()) ? '' : 'none';
+      countdownEl.style.display = (showAuctionIndicators && AUCTION_END > Date.now()) ? '' : 'none';
     }
     const legendEl = document.getElementById('bid-legend');
     if (legendEl) {
-      legendEl.style.display = showAuction ? '' : 'none';
+      legendEl.style.display = (showAuctionIndicators && !showAuctionView) ? '' : 'none';
     }
+
+    // Start/stop per-player auction timer tick
+    manageAuctionTimerInterval(showAuctionView);
 
     updateLastVisibleCol();
   }
@@ -1035,7 +1101,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   function applyContractVisibility() {
     // Show contract columns (Yrs, Sal/Bid) when viewing rostered players
     // OR when auction data exists (free agents have bids in the Sal/Bid column)
-    const showContract = (showRostered || _hasAuctionData) && activeView !== 'value';
+    const showContract = (showRostered || _hasAuctionData) && activeView !== 'value' && activeView !== 'auction';
     document.querySelectorAll('.col-contract').forEach(el => {
       el.style.display = showContract ? '' : 'none';
     });
@@ -1084,6 +1150,13 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       sortDirection = 'desc';
       sortPlayers();
     }
+    // Default sort Auction view by Time Left ascending (soonest to expire first)
+    if (view === 'auction') {
+      currentSort = 'auctionTimeLeft';
+      sortDirection = 'asc';
+      sortPlayers();
+      render();
+    }
     applyGroupVisibility();
     applyContractVisibility();
   }
@@ -1121,6 +1194,68 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
   function escapeAttr(s) {
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ── Auction view helpers ──
+  function getTimeLeftMs(lastBidTime) {
+    if (lastBidTime == null) return null;
+    // lastBidTime from API is Unix seconds — convert to ms
+    const bidMs = lastBidTime > 1e12 ? lastBidTime : lastBidTime * 1000;
+    const deadline = bidMs + BID_WINDOW_MS;
+    const remaining = deadline - Date.now();
+    return remaining > 0 ? remaining : 0;
+  }
+
+  function getTimeLeftTier(ms) {
+    if (ms == null) return 'none';
+    if (ms <= 0) return 'ended';
+    if (ms < 60 * 60 * 1000) return 'critical';
+    if (ms < 6 * 60 * 60 * 1000) return 'urgent';
+    if (ms < 24 * 60 * 60 * 1000) return 'closing';
+    return 'normal';
+  }
+
+  function formatTimeLeft(ms, tier) {
+    if (ms == null || ms <= 0) return 'Ended';
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    if (tier === 'critical') {
+      const s = Math.floor((ms % 60_000) / 1000);
+      return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s).padStart(2, '0')}s`;
+    }
+    return `${h}h ${String(m).padStart(2, '0')}m`;
+  }
+
+  function formatRelativeTime(timestamp) {
+    if (timestamp == null) return null;
+    const tsMs = timestamp > 1e12 ? timestamp : timestamp * 1000;
+    const diff = Date.now() - tsMs;
+    if (diff < 0) return 'just now';
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ${mins % 60}m ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ${hrs % 24}h ago`;
+  }
+
+  function getAuctionRank(player) {
+    // Use composite rank if available, else average rank, else first ranking source
+    const compositeMap = rankingLookup.byImport.get('__composite__');
+    if (compositeMap) {
+      const v = compositeMap.get(player.id);
+      if (v != null) return v;
+    }
+    // Fall back to average across all ranking sources
+    let sum = 0, count = 0;
+    for (const col of rankingLookup.columns) {
+      if (col.isComposite || col.isAverage) continue;
+      const v = rankingLookup.byImport.get(col.importId)?.get(player.id);
+      if (v != null) { sum += v; count++; }
+    }
+    if (count > 0) return Math.round(sum / count);
+    return null;
   }
 
   function sortPlayers() {
@@ -1227,6 +1362,32 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           aVal = a.auctionBid ?? -1;
           bVal = b.auctionBid ?? -1;
           break;
+        case 'auctionFranchise':
+          return sortDirection === 'asc'
+            ? (franchiseNameMap.get(a.auctionFranchise || '') || 'zzz').localeCompare(franchiseNameMap.get(b.auctionFranchise || '') || 'zzz')
+            : (franchiseNameMap.get(b.auctionFranchise || '') || 'zzz').localeCompare(franchiseNameMap.get(a.auctionFranchise || '') || 'zzz');
+        case 'auctionInitTime':
+          aVal = a.auctionInitTime ?? -1;
+          bVal = b.auctionInitTime ?? -1;
+          break;
+        case 'auctionRank': {
+          // Composite rank if available, else average, else single ranking
+          const aRank = getAuctionRank(a);
+          const bRank = getAuctionRank(b);
+          aVal = aRank ?? 9999;
+          bVal = bRank ?? 9999;
+          break;
+        }
+        case 'auctionTimeLeft': {
+          // Active bids first (sorted by time remaining asc), won second, no bid last
+          const aTime = getTimeLeftMs(a.auctionBidTime);
+          const bTime = getTimeLeftMs(b.auctionBidTime);
+          if (a.auctionStatus === 'won' && b.auctionStatus !== 'won') return 1;
+          if (b.auctionStatus === 'won' && a.auctionStatus !== 'won') return -1;
+          aVal = aTime != null ? aTime : (a.auctionStatus === 'won' ? Infinity - 1 : Infinity);
+          bVal = bTime != null ? bTime : (b.auctionStatus === 'won' ? Infinity - 1 : Infinity);
+          break;
+        }
         default:
           // Dynamic ranking columns: sort key is "ranking_{importId}"
           if (currentSort.startsWith('ranking_')) {
@@ -1509,6 +1670,60 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         html += `<td class="col-group--value col-value-money col-place-bid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" title="Place bid on ${p.name}">Bid &#8599;</a></td>`;
       }
 
+      // ── Auction view cells ──
+      {
+        // Ranking
+        const rnk = getAuctionRank(p);
+        html += `<td class="cell-num col-group--auction col-auction-rank">${rnk != null ? rnk : '<span class="na">&mdash;</span>'}</td>`;
+
+        // Current Bid
+        if (p.auctionBid != null && p.auctionBid > 0) {
+          const bidFmt = p.auctionBid >= 1000000
+            ? '$' + (p.auctionBid / 1000000).toFixed(2) + 'M'
+            : '$' + (p.auctionBid / 1000).toFixed(0) + 'K';
+          html += `<td class="cell-num col-group--auction col-auction-bid">${bidFmt}</td>`;
+        } else {
+          html += `<td class="cell-num col-group--auction col-auction-bid"><span class="na">&mdash;</span></td>`;
+        }
+
+        // High Bidder
+        const bidderName = p.auctionFranchise ? (franchiseNameMap.get(p.auctionFranchise) || p.auctionFranchise) : null;
+        if (bidderName) {
+          html += `<td class="col-text col-group--auction col-auction-bidder" title="${escapeAttr(bidderName)}">${escapeAttr(bidderName)}</td>`;
+        } else {
+          html += `<td class="col-text col-group--auction col-auction-bidder"><span class="na">&mdash;</span></td>`;
+        }
+
+        // Started
+        const startedText = formatRelativeTime(p.auctionInitTime);
+        html += `<td class="col-text col-group--auction col-auction-started">${startedText || '<span class="na">&mdash;</span>'}</td>`;
+
+        // Last Bid
+        const lastBidText = formatRelativeTime(p.auctionBidTime);
+        html += `<td class="col-text col-group--auction col-auction-lastbid">${lastBidText || '<span class="na">&mdash;</span>'}</td>`;
+
+        // Time Left
+        if (p.auctionStatus === 'won') {
+          html += `<td class="cell-num col-group--auction col-auction-timeleft col-auction-timeleft--won">Won</td>`;
+        } else if (p.auctionBidTime != null) {
+          const tlMs = getTimeLeftMs(p.auctionBidTime);
+          const tier = getTimeLeftTier(tlMs);
+          const tlText = tlMs != null && tlMs > 0 ? formatTimeLeft(tlMs, tier) : 'Ended';
+          const tierCls = tier === 'none' ? '' : ` col-auction-timeleft--${tier}`;
+          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" role="timer" aria-label="Time left: ${tlText}" data-bid-time="${p.auctionBidTime}">${tlText}</td>`;
+        } else {
+          html += `<td class="cell-num col-group--auction col-auction-timeleft"><span class="na">&mdash;</span></td>`;
+        }
+
+        // Place Bid (auction view)
+        const bidUrl = `https://www49.myfantasyleague.com/${currentYear}/options?L=13522&O=43&P=${p.id}`;
+        if (p.auctionStatus === 'won') {
+          html += `<td class="col-group--auction col-auction-placebid"></td>`;
+        } else {
+          html += `<td class="col-group--auction col-auction-placebid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
+        }
+      }
+
       html += `<td class="cell-sm col-contract col-contract-yrs">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
       // Salary cell — show auction bid for free agents without a salary
       if (p.salary != null && p.salary > 0) {
@@ -1562,7 +1777,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid', 'auctionInitTime', 'auctionBidTime']);
 
   // CustomEvent-based API for the rankings module script to interact with this page.
   // All events use the document as the event bus — no global window properties needed.
@@ -1859,6 +2074,40 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     return `Last bid: ${ageHr}h ago`;
   }
 
+  // ── Per-player auction countdown tick ──
+  function manageAuctionTimerInterval(isAuctionView) {
+    if (isAuctionView && !auctionTimerInterval) {
+      tickAuctionTimers(); // immediate tick
+      auctionTimerInterval = setInterval(tickAuctionTimers, 15000); // tick every 15s
+    } else if (!isAuctionView && auctionTimerInterval) {
+      clearInterval(auctionTimerInterval);
+      auctionTimerInterval = null;
+    }
+  }
+
+  function tickAuctionTimers() {
+    const cells = document.querySelectorAll('.col-auction-timeleft[data-bid-time]');
+    let hasCritical = false;
+    cells.forEach(cell => {
+      const bidTime = parseInt(cell.getAttribute('data-bid-time'), 10);
+      if (!bidTime) return;
+      const ms = getTimeLeftMs(bidTime);
+      const tier = getTimeLeftTier(ms);
+      const text = ms != null && ms > 0 ? formatTimeLeft(ms, tier) : 'Ended';
+      cell.textContent = text;
+      cell.setAttribute('aria-label', `Time left: ${text}`);
+      // Update tier class
+      cell.className = cell.className.replace(/col-auction-timeleft--\w+/g, '').trim();
+      if (tier !== 'none') cell.classList.add(`col-auction-timeleft--${tier}`);
+      if (tier === 'critical') hasCritical = true;
+    });
+    // Switch to faster ticks when any player is critical
+    if (hasCritical && auctionTimerInterval) {
+      clearInterval(auctionTimerInterval);
+      auctionTimerInterval = setInterval(tickAuctionTimers, 5000);
+    }
+  }
+
   function startAuctionPolling() {
     if (auctionPollTimer) clearInterval(auctionPollTimer);
     fetchAuctionData();
@@ -1909,6 +2158,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         const newBid = auction?.bid ?? null;
         const newStatus = auction?.status ?? null;
         const newBidTime = auction?.lastBidTime ?? null;
+        const newFranchise = auction?.franchise ?? null;
+        const newInitTime = auction?.initTime ?? null;
 
         if (p.auctionBid !== newBid || p.auctionStatus !== newStatus) {
           // Track bid amount changes for flash animation
@@ -1918,10 +2169,15 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           p.auctionBid = newBid;
           p.auctionStatus = newStatus;
           p.auctionBidTime = newBidTime;
+          p.auctionFranchise = newFranchise;
+          p.auctionInitTime = newInitTime;
           changed = true;
         } else if (p.auctionBidTime !== newBidTime) {
           p.auctionBidTime = newBidTime;
         }
+        // Always update franchise and init time from latest poll
+        p.auctionFranchise = newFranchise;
+        p.auctionInitTime = newInitTime;
       }
 
       updateAuctionFreshness();
@@ -2075,6 +2331,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     if (auctionPollTimer) { clearInterval(auctionPollTimer); auctionPollTimer = null; }
     if (auctionFreshnessTimer) { clearInterval(auctionFreshnessTimer); auctionFreshnessTimer = null; }
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    if (auctionTimerInterval) { clearInterval(auctionTimerInterval); auctionTimerInterval = null; }
   }, { once: true });
 
   if (document.readyState === 'loading') {
@@ -2473,13 +2730,20 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
   .toolbar-left {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
   }
-  .toolbar-center, .toolbar-right {
+  .toolbar-center {
+    display: none; /* toggles moved to toolbar-left */
+  }
+  .toolbar-right {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-shrink: 0;
   }
 
   /* ── Section Title (editorial signature) ── */
@@ -3055,7 +3319,6 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-    .toolbar-center { order: 1; }
     .toolbar-right { order: 3; justify-content: flex-end; }
     .filters-grid {
       grid-template-columns: 1fr 1fr;
@@ -3390,6 +3653,90 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       gap: 0.375rem;
       padding: 0.25rem 0.375rem;
       font-size: 0.625rem;
+    }
+  }
+
+  /* ── Auction View Columns ── */
+
+  :global(td.col-auction-bid) {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--color-gray-900, #111827);
+  }
+
+  :global(td.col-auction-rank) {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  :global(td.col-auction-bidder) {
+    font-size: 0.75rem;
+    color: var(--color-gray-700, #374151);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  :global(td.col-auction-started),
+  :global(td.col-auction-lastbid) {
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-500, #6b7280);
+    white-space: nowrap;
+  }
+
+  :global(td.col-auction-timeleft) {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    transition: color 0.3s ease;
+  }
+
+  :global(td.col-auction-timeleft--normal) {
+    color: var(--color-gray-700, #374151);
+  }
+  :global(td.col-auction-timeleft--closing) {
+    color: #92400e; /* amber-800, 7.26:1 contrast */
+  }
+  :global(td.col-auction-timeleft--urgent) {
+    color: #b91c1c; /* red-700, 5.74:1 */
+  }
+  :global(td.col-auction-timeleft--critical) {
+    color: #b91c1c;
+    animation: countdown-pulse 2s ease-in-out infinite;
+  }
+  :global(td.col-auction-timeleft--won) {
+    color: var(--color-gray-900, #111827);
+  }
+  :global(td.col-auction-timeleft--ended) {
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(td.col-auction-timeleft--critical) {
+      animation: none;
+    }
+  }
+
+  :global(td.col-auction-placebid) {
+    padding: 0.25rem 0.375rem;
+  }
+
+  @media (max-width: 767px) {
+    :global(th.col-auction-rank),
+    :global(td.col-auction-rank),
+    :global(th.col-auction-bidder),
+    :global(td.col-auction-bidder),
+    :global(th.col-auction-started),
+    :global(td.col-auction-started),
+    :global(th.col-auction-lastbid),
+    :global(td.col-auction-lastbid) {
+      display: none !important;
     }
   }
 </style>

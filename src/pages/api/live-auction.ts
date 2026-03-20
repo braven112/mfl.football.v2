@@ -32,7 +32,9 @@ export const GET: APIRoute = async ({ url }) => {
       }),
     ]);
 
-    const auctions: Record<string, { bid: number; franchise: string; status: 'won' | 'active'; lastBidTime: number | null }> = {};
+    const auctions: Record<string, { bid: number; franchise: string; status: 'won' | 'active'; lastBidTime: number | null; initTime: number | null }> = {};
+    // Track AUCTION_INIT timestamps separately (first nomination time per player)
+    const initTimes: Record<string, number> = {};
 
     // 1. Parse completed auction results (highest priority — these are final)
     if (resultsResponse.ok) {
@@ -49,6 +51,7 @@ export const GET: APIRoute = async ({ url }) => {
               franchise: a.franchise || '',
               status: 'won',
               lastBidTime: parseInt(a.lastBidTime, 10) || null,
+              initTime: parseInt(a.timeStarted, 10) || null,
             };
           }
         }
@@ -62,6 +65,21 @@ export const GET: APIRoute = async ({ url }) => {
       if (transactions && !Array.isArray(transactions)) transactions = [transactions];
 
       if (Array.isArray(transactions)) {
+        // First pass: collect all AUCTION_INIT timestamps
+        for (const txn of transactions) {
+          if (txn?.type === 'AUCTION_INIT' && txn?.transaction) {
+            const parsed = parseAuctionTransaction(txn.transaction);
+            if (parsed) {
+              const ts = parseInt(txn.timestamp, 10) || 0;
+              // Keep the earliest init time per player
+              if (!initTimes[parsed.playerId] || ts < initTimes[parsed.playerId]) {
+                initTimes[parsed.playerId] = ts;
+              }
+            }
+          }
+        }
+
+        // Second pass: process bids and wins
         for (const txn of transactions) {
           if (!txn?.type || !txn?.transaction) continue;
           const parsed = parseAuctionTransaction(txn.transaction);
@@ -74,6 +92,7 @@ export const GET: APIRoute = async ({ url }) => {
               franchise: txn.franchise || '',
               status: 'won',
               lastBidTime: parseInt(txn.timestamp, 10) || null,
+              initTime: initTimes[parsed.playerId] || null,
             };
           } else if (txn.type === 'AUCTION_BID' || txn.type === 'AUCTION_INIT') {
             // Only set if we don't already have a won result or a higher bid
@@ -84,6 +103,7 @@ export const GET: APIRoute = async ({ url }) => {
                 franchise: txn.franchise || '',
                 status: 'active',
                 lastBidTime: parseInt(txn.timestamp, 10) || null,
+                initTime: initTimes[parsed.playerId] || null,
               };
             }
           }
