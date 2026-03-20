@@ -21,7 +21,7 @@ const keepSelectors = [
 
 **Context:** MFL's email-based auction system does not expose per-player bid timers via API. Needed to show "Time Left" countdown per player.
 
-**Insight:** Derive the deadline from `lastBidTime + 36h` (the league's bid window). The `lastBidTime` comes from AUCTION_BID transaction timestamps. The API endpoint (`/api/live-auction`) does a two-pass parse: first pass collects earliest AUCTION_INIT per player, second pass processes bids/wins with both initTime and lastBidTime.
+**Insight:** Derive the deadline from `lastBidTime + 36h` (the league's bid window). The 36-hour timer resets only when the proxy bid is exceeded — not on every bid. The `lastBidTime` comes from AUCTION_BID transaction timestamps. The API endpoint (`/api/live-auction`) does a two-pass parse: first pass collects earliest AUCTION_INIT per player, second pass processes bids/wins with both initTime and lastBidTime.
 
 **Evidence:** `src/pages/api/live-auction.ts` — two-pass transaction parsing. `src/pages/theleague/players.astro` — `getTimeLeftMs()` converts Unix seconds to ms and computes `deadline - Date.now()`.
 

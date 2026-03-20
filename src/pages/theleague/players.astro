@@ -929,7 +929,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   let countdownTimer = null;
   const changedPlayerIds = new Set();
   const AUCTION_END = new Date('2026-08-16T20:45:00-07:00').getTime(); // 3rd Sunday of August — offseason FA closes
-  const BID_WINDOW_MS = 36 * 60 * 60 * 1000; // 36-hour bid timer, resets on each new bid
+  const BID_WINDOW_MS = 36 * 60 * 60 * 1000; // 36-hour bid timer, resets only when proxy bid is exceeded
   let auctionTimerInterval = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
