@@ -98,11 +98,17 @@ export const GET: APIRoute = async ({ url }) => {
             // Only set if we don't already have a won result or a higher bid
             const existing = auctions[parsed.playerId];
             if (!existing || (existing.status !== 'won' && parsed.amount > existing.bid)) {
+              const newFranchise = txn.franchise || '';
+              // 36h timer resets only when the high bidder changes (proxy exceeded),
+              // not when the same franchise's proxy auto-responds to a lower bid
+              const franchiseChanged = !existing || existing.franchise !== newFranchise;
               auctions[parsed.playerId] = {
                 bid: parsed.amount,
-                franchise: txn.franchise || '',
+                franchise: newFranchise,
                 status: 'active',
-                lastBidTime: parseInt(txn.timestamp, 10) || null,
+                lastBidTime: franchiseChanged
+                  ? (parseInt(txn.timestamp, 10) || null)
+                  : (existing?.lastBidTime ?? null),
                 initTime: initTimes[parsed.playerId] || null,
               };
             }
