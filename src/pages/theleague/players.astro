@@ -767,8 +767,8 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
             <th class="sortable col-sm col-always-profile" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
-            <th class="sortable col-text col-group--stats" data-sort="college">
-              <div class="th-content">College</div>
+            <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College">
+              <div class="th-content">C</div>
             </th>
             <th class="sortable col-sm col-always-profile" data-sort="height">
               <div class="th-content">Ht</div>
@@ -841,7 +841,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
                 <div class="th-content">Surplus</div>
               </th>
             )}
-            <th class="sortable col-sm col-contract" data-sort="contractYrs" style="display: none;">
+            <th class="sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
               <div class="th-content">Yrs</div>
             </th>
             <th class="sortable col-num col-contract" data-sort="salary" style="display: none;">
@@ -1045,6 +1045,12 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
     document.querySelectorAll('.col-contract').forEach(el => {
       el.style.display = showContract ? '' : 'none';
     });
+    // Hide Yrs column when viewing free agents (only relevant for rostered players)
+    if (!showRostered) {
+      document.querySelectorAll('.col-contract-yrs').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
     updateLastVisibleCol();
   }
 
@@ -1079,6 +1085,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
     hasExplicitViewPref = true;
     saveViewPref();
     applyGroupVisibility();
+    applyContractVisibility();
   }
 
   loadViewPref();
@@ -1483,7 +1490,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
         }
       }
 
-      html += `<td class="cell-sm col-contract">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
+      html += `<td class="cell-sm col-contract col-contract-yrs">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
       // Salary cell — show auction bid for free agents without a salary
       if (p.salary != null && p.salary > 0) {
         html += `<td class="cell-num col-contract">$${p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K'}</td>`;
@@ -1557,6 +1564,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
       sortDirection = 'asc';
     }
     applyGroupVisibility();
+    applyContractVisibility();
   });
 
   document.addEventListener('rankings:set-sort', function (e) {
@@ -1907,6 +1915,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
         }
         render();
         applyGroupVisibility();
+        applyContractVisibility();
 
         // For reduced-motion users, remove flash class after 2s
         if (prefersReducedMotion && changedPlayerIds.size > 0) {
