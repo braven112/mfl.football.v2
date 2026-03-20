@@ -28,6 +28,12 @@ const franchiseNameEntries: [string, string][] = ((leagueConfig as any).teams ??
 ]);
 const franchiseNamesJson = JSON.stringify(franchiseNameEntries);
 
+// Build franchise ID → banner URL map for auction bidder column
+const franchiseBannerEntries: [string, string][] = ((leagueConfig as any).teams ?? [])
+  .filter((t: any) => t.banner)
+  .map((t: any) => [t.franchiseId, t.banner]);
+const franchiseBannersJson = JSON.stringify(franchiseBannerEntries);
+
 // College logo lookup (case-insensitive)
 const collegeLogosNormalized = Object.fromEntries(
   Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
@@ -900,11 +906,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAdmin, currentYear, franchiseNamesJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAdmin, currentYear, franchiseNamesJson, franchiseBannersJson }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
   const franchiseNameMap = new Map(JSON.parse(franchiseNamesJson));
+  const franchiseBannerMap = new Map(JSON.parse(franchiseBannersJson));
 
   // State — default to free agents only
   let filteredPlayers = [];
@@ -1031,6 +1038,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       for (const selector of keepSelectors) {
         document.querySelectorAll(selector).forEach(el => {
           el.style.display = '';
+        });
+      }
+      // Hide auction Rank column if no rankings are loaded
+      if (!hasRankingColumns) {
+        document.querySelectorAll('.col-auction-rank').forEach(el => {
+          el.style.display = 'none';
         });
       }
     } else {
@@ -1685,19 +1698,25 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         const rnk = getAuctionRank(p);
         html += `<td class="cell-num col-group--auction col-auction-rank">${rnk != null ? rnk : '<span class="na">&mdash;</span>'}</td>`;
 
-        // Current Bid
+        // Current Bid (matches salary/bid column styling)
         if (p.auctionBid != null && p.auctionBid > 0) {
+          const tierCls = getBidTierClass(p.auctionStatus, p.auctionBidTime);
+          const changedCls = changedPlayerIds.has(p.id) ? ' col-value-bid--changed' : '';
           const bidFmt = p.auctionBid >= 1000000
-            ? '$' + (p.auctionBid / 1000000).toFixed(2) + 'M'
+            ? '$' + (p.auctionBid / 1000000).toFixed(1) + 'M'
             : '$' + (p.auctionBid / 1000).toFixed(0) + 'K';
-          html += `<td class="cell-num col-group--auction col-auction-bid">${bidFmt}</td>`;
+          const titleText = getBidTitleText(p.auctionStatus, p.auctionBidTime);
+          html += `<td class="cell-num col-group--auction col-auction-bid col-value-bid ${tierCls}${changedCls}" title="${titleText}">${bidFmt}</td>`;
         } else {
           html += `<td class="cell-num col-group--auction col-auction-bid"><span class="na">&mdash;</span></td>`;
         }
 
-        // High Bidder
+        // High Bidder (team banner image)
         const bidderName = p.auctionFranchise ? (franchiseNameMap.get(p.auctionFranchise) || p.auctionFranchise) : null;
-        if (bidderName) {
+        const bidderBanner = p.auctionFranchise ? franchiseBannerMap.get(p.auctionFranchise) : null;
+        if (bidderBanner) {
+          html += `<td class="col-group--auction col-auction-bidder" title="${escapeAttr(bidderName || '')}"><img src="${escapeAttr(bidderBanner)}" alt="${escapeAttr(bidderName || '')}" class="bidder-banner" width="100" loading="lazy"></td>`;
+        } else if (bidderName) {
           html += `<td class="col-text col-group--auction col-auction-bidder" title="${escapeAttr(bidderName)}">${escapeAttr(bidderName)}</td>`;
         } else {
           html += `<td class="col-text col-group--auction col-auction-bidder"><span class="na">&mdash;</span></td>`;
@@ -3688,6 +3707,13 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 120px;
+    padding: 0.125rem 0.25rem;
+  }
+  :global(.bidder-banner) {
+    width: 100px;
+    height: auto;
+    display: block;
+    object-fit: contain;
   }
 
   :global(td.col-auction-started),
