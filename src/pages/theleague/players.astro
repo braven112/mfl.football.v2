@@ -1881,6 +1881,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
 
       consecutiveFailures = 0;
       lastAuctionFetchTime = data.timestamp || Date.now();
+      if (data.count > 0) hasAuctionData = true;
       let changed = false;
       changedPlayerIds.clear();
 
