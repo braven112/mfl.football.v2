@@ -1184,6 +1184,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
   loadViewPref();
 
+  // Query string override: ?view=stats|rankings|value|auction
+  const viewParam = new URLSearchParams(window.location.search).get('view');
+  if (viewParam && ['stats', 'rankings', 'value', 'auction'].includes(viewParam)) {
+    activeView = viewParam;
+  }
+
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
 
