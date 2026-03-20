@@ -87,10 +87,84 @@
 }
 
 /* ===========================
+   Stale Warning Banner
+=========================== */
+.intel-stale-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: color-mix(in srgb, #d97706 8%, transparent);
+  border: 1px solid color-mix(in srgb, #d97706 25%, transparent);
+  border-left: 3px solid #d97706;
+  border-radius: var(--radius-md, 0.5rem);
+  margin-bottom: 1.5rem;
+}
+
+.intel-stale-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: #d97706;
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.intel-stale-banner__title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-gray-900, #111827);
+  line-height: 1.3;
+}
+
+.intel-stale-banner__text {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-gray-600, #4b5563);
+  line-height: 1.5;
+}
+
+/* ===========================
+   Freshness Badge
+=========================== */
+.intel-freshness-badge {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #2e8743;
+  background: color-mix(in srgb, #2e8743 10%, transparent);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.intel-freshness-badge--stale {
+  color: #d97706;
+  background: color-mix(in srgb, #d97706 10%, transparent);
+}
+
+/* ===========================
    Date Sections (digest days)
 =========================== */
 .intel-digest {
   margin-bottom: 3rem;
+}
+
+.intel-digest__date-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .intel-digest__date {
@@ -101,7 +175,7 @@
   color: var(--color-gray-900, #111827);
   padding-left: 0.625rem;
   border-left: 2px solid var(--color-primary, #1c497c);
-  margin: 0 0 1.25rem;
+  margin: 0;
   line-height: 1;
 }
 

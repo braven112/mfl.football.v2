@@ -113,6 +113,48 @@ export function formatShortDate(dateStr: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Freshness helpers (24-hour news requirement)
+// ---------------------------------------------------------------------------
+
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Returns how long ago the digest was scanned, as a human-readable string.
+ * Falls back to comparing the digest date if no scannedAt timestamp.
+ */
+export function getDigestAge(digest: IntelDigest): string {
+  const now = Date.now();
+  const scannedMs = digest.scannedAt
+    ? new Date(digest.scannedAt).getTime()
+    : new Date(digest.date + 'T07:00:00-07:00').getTime(); // assume 7 AM PT scan
+
+  const diffMs = now - scannedMs;
+  if (diffMs < 0) return 'Just now';
+
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+/**
+ * Returns true if the digest is older than 24 hours (stale).
+ */
+export function isDigestStale(digest: IntelDigest): boolean {
+  const now = Date.now();
+  const scannedMs = digest.scannedAt
+    ? new Date(digest.scannedAt).getTime()
+    : new Date(digest.date + 'T07:00:00-07:00').getTime();
+
+  return (now - scannedMs) > STALE_THRESHOLD_MS;
+}
+
+// ---------------------------------------------------------------------------
 // Action badge colors
 // ---------------------------------------------------------------------------
 

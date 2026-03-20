@@ -15,6 +15,8 @@ import {
   getTierColor,
   getImpactColor,
   normalizeStrategicNote,
+  getDigestAge,
+  isDigestStale,
 } from '../../../utils/intel-helpers';
 import type { IntelDigest, IntelAlert, IntelSleeper } from '../../../types/intel';
 import '../../../styles/intel.css';
@@ -31,6 +33,8 @@ export const prerender = false;
 const digests = loadAllDigests();
 const latestDigest = digests[0] ?? null;
 const olderDigests = digests.slice(1);
+const stale = latestDigest ? isDigestStale(latestDigest) : false;
+const age = latestDigest ? getDigestAge(latestDigest) : '';
 
 // Fallback headshot
 const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nophoto.png&w=350&h=254';
@@ -60,9 +64,25 @@ const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nop
       </div>
     ) : (
       <div class="intel-digests">
+        {/* Stale data warning */}
+        {stale && (
+          <div class="intel-stale-banner">
+            <span class="intel-stale-banner__icon">!</span>
+            <div>
+              <p class="intel-stale-banner__title">Stale intel — last scan was {age}</p>
+              <p class="intel-stale-banner__text">News shown may be older than 24 hours. The scanner runs daily at 7 AM PT.</p>
+            </div>
+          </div>
+        )}
+
         <!-- ===== LATEST DIGEST (expanded) ===== -->
         <div class="intel-digest">
-          <h2 class="intel-digest__date">{formatDigestDate(latestDigest.date)}</h2>
+          <div class="intel-digest__date-row">
+            <h2 class="intel-digest__date">{formatDigestDate(latestDigest.date)}</h2>
+            <span class={`intel-freshness-badge${stale ? ' intel-freshness-badge--stale' : ''}`}>
+              {age}
+            </span>
+          </div>
           <div class="intel-digest__sections">
 
             {/* Actionable Alerts */}

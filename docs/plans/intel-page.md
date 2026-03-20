@@ -43,6 +43,7 @@ Page Load (/theleague/intel) → auth gate → fs.readdir + JSON.parse → rende
 // src/types/intel.ts
 export interface IntelDigest {
   date: string;                          // YYYY-MM-DD
+  scannedAt?: string;                    // ISO 8601 timestamp of when news was scanned
   alerts: IntelAlert[];                  // Actionable player alerts
   sleeperWatch: Record<string, IntelSleeper[]>;  // Keyed by draft year
   generalNews: IntelNewsItem[];          // Broader NFL news
@@ -82,6 +83,15 @@ export interface IntelNewsItem {
   impact: 'low' | 'medium' | 'high';
 }
 ```
+
+## 24-Hour Freshness Requirement
+
+All news surfaced on the Intel page must be from the last 24 hours. This is enforced at multiple levels:
+
+1. **Scanner side:** The fantasy-news-scanner agent only surfaces news from the last 24 hours (uses `tbs=qdr:d` for Google, date filters for APIs). Older results are discarded.
+2. **Data side:** Each digest includes a `scannedAt` ISO 8601 timestamp recording when the scan ran.
+3. **Display side:** The Intel page shows a freshness badge ("3h ago", "18h ago") next to the date header. If the latest digest is older than 24 hours, a stale warning banner appears: "Stale intel — last scan was Xd ago."
+4. **Helpers:** `getDigestAge(digest)` returns a human-readable age string. `isDigestStale(digest)` returns true if older than 24 hours. Both fall back to assuming a 7 AM PT scan time if `scannedAt` is missing.
 
 ## Page Design
 

@@ -13,6 +13,7 @@ export interface IntelStrategicNote {
 
 export interface IntelDigest {
   date: string;                                     // YYYY-MM-DD
+  scannedAt?: string;                               // ISO 8601 timestamp of when news was scanned
   alerts: IntelAlert[];                             // Actionable player alerts
   sleeperWatch: Record<string, IntelSleeper[]>;     // Keyed by draft year
   generalNews: IntelNewsItem[];                     // Broader NFL news
