@@ -127,10 +127,11 @@ function buildAdpMap(modules: Record<string, any>): Map<string, number> {
 const adpDynMap = buildAdpMap(adpDynastyModules);
 const adpRdfMap = buildAdpMap(adpRedraftModules);
 
-// Last year total points (from weekly results)
+// Last year total points + games played (from weekly results)
 const lastSeasonYear = getCurrentSeasonYear();
 const lastYearData = findForYear(lastYearWeeklyModules, lastSeasonYear);
 const lastYrPtsMap = new Map<string, number>();
+const lastYrGamesMap = new Map<string, number>();
 if (Array.isArray(lastYearData)) {
   for (const weekPayload of lastYearData) {
     const matchups = weekPayload?.weeklyResults?.matchup;
@@ -143,8 +144,9 @@ if (Array.isArray(lastYearData)) {
         for (const p of players) {
           if (!p?.id || !p?.score) continue;
           const score = parseFloat(p.score);
-          if (!isNaN(score)) {
+          if (!isNaN(score) && score > 0) {
             lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
+            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
           }
         }
       }
@@ -472,7 +474,7 @@ if (Array.isArray(allPlayers)) {
       lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
       snaps: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.snaps : null,
       snapPct: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.pct : null,
-      games: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.games : null,
+      games: lastYrGamesMap.get(p.id) ?? null,
       rookie: p.status === 'R',
       birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
       jersey: p.jersey || null,
@@ -483,7 +485,7 @@ if (Array.isArray(allPlayers)) {
       contractYrs: rosterInfo?.contractYrs ?? null,
       ppg: (() => {
         const pts = lastYrPtsMap.get(p.id);
-        const gp = snapCountMap.get(p.id)?.games;
+        const gp = lastYrGamesMap.get(p.id);
         return (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null;
       })(),
       salaryYear1: historicalSalaryByYearMap.get(p.id)?.[salaryYear1] ?? null,
