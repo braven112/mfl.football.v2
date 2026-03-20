@@ -16,6 +16,7 @@ import {
   getActionColor,
   getTierColor,
   getImpactColor,
+  normalizeStrategicNote,
 } from '../../../utils/intel-helpers';
 import type { IntelAlert, IntelSleeper } from '../../../types/intel';
 import '../../../styles/intel.css';
@@ -111,6 +112,11 @@ const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nop
                   </div>
                   <p class="intel-alert-card__news">{alert.news}</p>
                   <p class="intel-alert-card__impact">{alert.impact}</p>
+                  {alert.sourceUrl && (
+                    <a href={alert.sourceUrl} target="_blank" rel="noopener noreferrer" class="intel-source-link">
+                      Source: {alert.source || 'Link'} ↗
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -173,6 +179,11 @@ const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nop
                             <span class={`intel-sleeper-news${s.news === 'No updates' ? ' intel-sleeper-news--none' : ''}`}>
                               {s.news}
                             </span>
+                            {s.sourceUrl && s.news !== 'No updates' && (
+                              <a href={s.sourceUrl} target="_blank" rel="noopener noreferrer" class="intel-source-link intel-source-link--inline">
+                                {s.source || 'Source'} ↗
+                              </a>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -199,7 +210,13 @@ const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nop
                       style={`background: ${getImpactColor(item.impact)}`}
                     ></span>
                     <span class="intel-news-item__headline">{item.headline}</span>
-                    <span class="intel-source-badge">{item.source}</span>
+                    {item.sourceUrl ? (
+                      <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" class="intel-source-badge intel-source-badge--link">
+                        {item.source} ↗
+                      </a>
+                    ) : (
+                      <span class="intel-source-badge">{item.source}</span>
+                    )}
                   </div>
                   <p class="intel-news-item__summary">{item.summary}</p>
                 </div>
@@ -215,9 +232,19 @@ const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nop
               <h2 class="intel-section-header__title">Strategic Notes</h2>
             </div>
             <div class="intel-strategic-notes">
-              {digest.strategicNotes.map((note) => (
-                <p class="intel-strategic-note">{note}</p>
-              ))}
+              {digest.strategicNotes.map((rawNote) => {
+                const note = normalizeStrategicNote(rawNote);
+                return (
+                  <div class="intel-strategic-note">
+                    <p class="intel-strategic-note__text">{note.text}</p>
+                    {note.sourceUrl && (
+                      <a href={note.sourceUrl} target="_blank" rel="noopener noreferrer" class="intel-source-link">
+                        Source: {note.source || 'Link'} ↗
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

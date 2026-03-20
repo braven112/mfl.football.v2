@@ -5,12 +5,18 @@
  * fantasy-news-scanner scheduled task and rendered on the Intel page.
  */
 
+export interface IntelStrategicNote {
+  text: string;
+  sourceUrl?: string;      // Link to supporting source
+  source?: string;         // Source name
+}
+
 export interface IntelDigest {
   date: string;                                     // YYYY-MM-DD
   alerts: IntelAlert[];                             // Actionable player alerts
   sleeperWatch: Record<string, IntelSleeper[]>;     // Keyed by draft year
   generalNews: IntelNewsItem[];                     // Broader NFL news
-  strategicNotes: string[];                         // Market observations
+  strategicNotes: (string | IntelStrategicNote)[];  // Market observations (string for backward compat)
 }
 
 export interface IntelAlert {
@@ -25,6 +31,8 @@ export interface IntelAlert {
   impact: string;          // Why it matters
   action: 'bid' | 'watch' | 'trade' | 'hold' | 'sell';
   leagueStatus: 'free-agent' | 'rostered' | 'taxi' | 'ir';
+  sourceUrl?: string;      // Link to original news source
+  source?: string;         // Source name (e.g. "ESPN", "Rotoworld")
 }
 
 export interface IntelSleeper {
@@ -37,6 +45,8 @@ export interface IntelSleeper {
   types: string[];
   news: string;            // "No updates" or latest intel
   leagueStatus: string;
+  sourceUrl?: string;      // Link to original news source
+  source?: string;         // Source name
 }
 
 export interface IntelNewsItem {
@@ -44,4 +54,5 @@ export interface IntelNewsItem {
   summary: string;
   source: string;          // "Rotoworld", "ESPN", etc.
   impact: 'low' | 'medium' | 'high';
+  sourceUrl?: string;      // Link to original article
 }

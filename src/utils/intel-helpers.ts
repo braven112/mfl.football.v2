@@ -5,7 +5,7 @@
  * and provides color/badge helpers for the Intel page.
  */
 
-import type { IntelDigest } from '../types/intel';
+import type { IntelDigest, IntelStrategicNote } from '../types/intel';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -159,4 +159,13 @@ const TIER_COLORS: Record<string, string> = {
 
 export function getTierColor(tier: string): string {
   return TIER_COLORS[tier] ?? '#6b7280';
+}
+
+// ---------------------------------------------------------------------------
+// Strategic note normalization (backward-compatible with plain strings)
+// ---------------------------------------------------------------------------
+
+export function normalizeStrategicNote(note: string | IntelStrategicNote): IntelStrategicNote {
+  if (typeof note === 'string') return { text: note };
+  return note;
 }

@@ -12,7 +12,9 @@
       "news": "Jalen Royals has been promoted to WR2 on the Chiefs depth chart after Hollywood Brown's release. He led the team in targets during OTAs.",
       "impact": "Clear path to targets with Kelce aging. RSP had him as a sleeper and the opportunity just materialized. At minimum bid he's a must-add.",
       "action": "bid",
-      "leagueStatus": "free-agent"
+      "leagueStatus": "free-agent",
+      "source": "ESPN",
+      "sourceUrl": "https://www.espn.com/nfl/story/_/id/chiefs-depth-chart-wr2-royals"
     },
     {
       "player": "Edwards, Gus",
@@ -24,7 +26,9 @@
       "news": "Chargers signed Gus Edwards to a veteran minimum deal. He'll compete for the RB2 role behind J.K. Dobbins.",
       "impact": "Minimal dynasty value — touchdown-dependent RB on a team that doesn't run much. Only relevant if Dobbins gets hurt again.",
       "action": "watch",
-      "leagueStatus": "free-agent"
+      "leagueStatus": "free-agent",
+      "source": "NFL Network",
+      "sourceUrl": "https://www.nfl.com/news/chargers-sign-gus-edwards-veteran-deal"
     },
     {
       "player": "Daniels, Jayden",
@@ -34,7 +38,9 @@
       "news": "Daniels threw for 340 yards and 3 TDs in the Pro Bowl Skills Challenge. Scouts noting improved pocket mechanics.",
       "impact": "Already rostered, but the Year 2 leap narrative is building. Extension candidate if his price hasn't spiked yet.",
       "action": "hold",
-      "leagueStatus": "rostered"
+      "leagueStatus": "rostered",
+      "source": "Rotoworld",
+      "sourceUrl": "https://www.nbcsports.com/fantasy/football/news/jayden-daniels-pro-bowl-performance"
     }
   ],
   "sleeperWatch": {
@@ -48,7 +54,9 @@
         "value": "Under 12",
         "types": ["U"],
         "news": "Promoted to WR2 — see alerts above",
-        "leagueStatus": "free-agent"
+        "leagueStatus": "free-agent",
+        "source": "ESPN",
+        "sourceUrl": "https://www.espn.com/nfl/story/_/id/chiefs-depth-chart-wr2-royals"
       },
       {
         "name": "Corum, Blake",
@@ -68,7 +76,9 @@
         "value": "Under 10",
         "types": ["Z"],
         "news": "Named starter opposite Ja'Marr Chase in minicamp reports",
-        "leagueStatus": "free-agent"
+        "leagueStatus": "free-agent",
+        "source": "Bengals.com",
+        "sourceUrl": "https://www.bengals.com/news/minicamp-report-burden-starter"
       }
     ],
     "2024": [
@@ -81,7 +91,9 @@
         "value": "Under 14",
         "types": ["U", "↑"],
         "news": "Dominated OTAs with Josh Allen. Year 2 breakout candidate.",
-        "leagueStatus": "rostered"
+        "leagueStatus": "rostered",
+        "source": "The Athletic",
+        "sourceUrl": "https://theathletic.com/bills-otas-keon-coleman-breakout"
       },
       {
         "name": "Ladd McConkey",
@@ -91,7 +103,9 @@
         "value": "Under 20",
         "types": ["U"],
         "news": "Named team captain for 2026. Herbert's clear WR1.",
-        "leagueStatus": "rostered"
+        "leagueStatus": "rostered",
+        "source": "Chargers.com",
+        "sourceUrl": "https://www.chargers.com/news/mcconkey-named-team-captain-2026"
       }
     ]
   },
@@ -100,24 +114,39 @@
       "headline": "NFL extends trade deadline to Week 10 starting 2026",
       "summary": "The league approved an extension of the trade deadline from Week 8 to Week 10, giving teams more time to evaluate their season outlook before making moves.",
       "source": "ESPN",
-      "impact": "high"
+      "impact": "high",
+      "sourceUrl": "https://www.espn.com/nfl/story/_/id/nfl-trade-deadline-extension-week-10"
     },
     {
       "headline": "Salary cap projected to increase 8% for 2027",
       "summary": "The NFLPA projects the 2027 salary cap will rise to approximately $280M, driven by new media rights revenue. This could affect player market values in dynasty formats.",
       "source": "NFL Network",
-      "impact": "medium"
+      "impact": "medium",
+      "sourceUrl": "https://www.nfl.com/news/nflpa-salary-cap-projection-2027"
     },
     {
       "headline": "Preseason schedule reduced to 2 games for 2026",
       "summary": "NFL owners voted to reduce the preseason from 3 to 2 games. Starters are expected to see even less preseason action, making camp reports more important for evaluation.",
       "source": "Rotoworld",
-      "impact": "low"
+      "impact": "low",
+      "sourceUrl": "https://www.nbcsports.com/fantasy/football/news/nfl-preseason-reduced-two-games-2026"
     }
   ],
   "strategicNotes": [
-    "The KC WR room is wide open after Hollywood Brown's release. Jalen Royals and Xavier Worthy are the only credible options — both are undervalued in dynasty.",
-    "Three teams in TheLeague have 6+ expiring contracts this year. Watch for fire-sale trades as the auction approaches — buy low on talent they can't afford to re-sign.",
-    "RSP sleeper hit rate from the 2024 class is tracking at 35% (5 of 14 identified sleepers became fantasy-relevant starters). The 2025 class has even better value gap data."
+    {
+      "text": "The KC WR room is wide open after Hollywood Brown's release. Jalen Royals and Xavier Worthy are the only credible options — both are undervalued in dynasty.",
+      "source": "ESPN",
+      "sourceUrl": "https://www.espn.com/nfl/story/_/id/chiefs-depth-chart-wr2-royals"
+    },
+    {
+      "text": "Three teams in TheLeague have 6+ expiring contracts this year. Watch for fire-sale trades as the auction approaches — buy low on talent they can't afford to re-sign.",
+      "source": "TheLeague Data",
+      "sourceUrl": "/theleague/contracts"
+    },
+    {
+      "text": "RSP sleeper hit rate from the 2024 class is tracking at 35% (5 of 14 identified sleepers became fantasy-relevant starters). The 2025 class has even better value gap data.",
+      "source": "RSP",
+      "sourceUrl": "https://mattwaldmanrsp.com"
+    }
   ]
 }

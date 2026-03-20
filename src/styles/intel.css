@@ -432,11 +432,47 @@
   border-left: 2px solid var(--color-primary, #1c497c);
   background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, transparent);
   border-radius: 0 var(--radius-sm, 0.25rem) var(--radius-sm, 0.25rem) 0;
+  margin: 0;
+}
+
+.intel-strategic-note__text {
   font-size: 0.8125rem;
   line-height: 1.65;
   color: var(--color-gray-700, #374151);
   font-style: italic;
   margin: 0;
+}
+
+/* ===========================
+   Source Links
+=========================== */
+.intel-source-link {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary, #1c497c);
+  text-decoration: none;
+  margin-top: 0.375rem;
+}
+
+.intel-source-link:hover {
+  text-decoration: underline;
+}
+
+.intel-source-link--inline {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.intel-source-badge--link {
+  text-decoration: none;
+  color: var(--color-primary, #1c497c);
+  background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+  cursor: pointer;
+}
+
+.intel-source-badge--link:hover {
+  background: color-mix(in srgb, var(--color-primary, #1c497c) 18%, transparent);
 }
 
 /* ===========================
