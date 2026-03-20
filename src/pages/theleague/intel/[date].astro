@@ -23,11 +23,11 @@ import '../../../styles/player-cell.css';
 
 export const prerender = false;
 
-// Auth gate: admin only
-const user = getAuthUser(Astro.request);
-if (!user || !isAdminFranchise(user.franchiseId)) {
-  return Astro.redirect('/theleague');
-}
+// Auth gate: temporarily disabled for preview testing
+// const user = getAuthUser(Astro.request);
+// if (!user || !isAdminFranchise(user.franchiseId)) {
+//   return Astro.redirect('/theleague');
+// }
 
 const { date } = Astro.params;
 if (!date) return Astro.redirect('/theleague/intel');
