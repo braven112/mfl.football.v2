@@ -1110,7 +1110,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     }
     const legendEl = document.getElementById('bid-legend');
     if (legendEl) {
-      legendEl.style.display = (showAuctionIndicators && !showAuctionView) ? '' : 'none';
+      legendEl.style.display = showAuctionIndicators ? '' : 'none';
     }
 
     // Start/stop per-player auction timer tick
