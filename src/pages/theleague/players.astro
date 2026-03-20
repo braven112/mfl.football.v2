@@ -3706,8 +3706,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     font-size: 0.75rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
     /* color and font-weight inherited from col-value-bid tier classes (hot/warm/cool/won/none) */
   }
 
@@ -3716,8 +3716,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     font-variant-numeric: tabular-nums;
     font-size: 0.75rem;
     color: var(--color-gray-500, #6b7280);
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
   :global(th.col-auction-bidder),
@@ -3728,7 +3728,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 140px;
-    padding: 0.125rem 0.5rem;
+    padding: 0.125rem 0.75rem;
   }
   :global(.bidder-banner) {
     width: 100px;
@@ -3745,8 +3745,9 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
-    width: 6rem;
-    max-width: 6rem;
+    padding-left: 0.125rem;
+    padding-right: 0.125rem;
+    text-align: center;
   }
 
   :global(td.col-auction-timeleft) {
