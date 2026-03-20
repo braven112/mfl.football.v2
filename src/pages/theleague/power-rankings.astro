@@ -127,7 +127,7 @@ const teamSummaries = computeLeagueSummary(
   teamConfigs,
 );
 
-const teamIntel = computeTeamIntel(teamSummaries);
+const teamIntel = computeTeamIntel(teamSummaries, draftCapitalMap);
 
 // Apply display names
 const teamsForDisplay: TeamIntel[] = teamIntel.map((team) => {
@@ -215,7 +215,7 @@ function fmtCap(v: number): string {
     <section class="intel-section">
       <div class="section-header">
         <h2 class="section-header__title">Power Rankings</h2>
-        <p class="section-header__sub">Composite score from cap, roster, contract, and draft metrics</p>
+        <p class="section-header__sub">Composite score from production, cap, roster, contract, and draft metrics</p>
       </div>
 
       <div class="intel-table-wrap">
@@ -226,6 +226,7 @@ function fmtCap(v: number): string {
               <th class="intel-th intel-th--team">Team</th>
               <th class="intel-th intel-th--archetype">Archetype</th>
               <th class="intel-th intel-th--score">Power</th>
+              <th class="intel-th intel-th--component">Prod</th>
               <th class="intel-th intel-th--component">Cap</th>
               <th class="intel-th intel-th--component">Roster</th>
               <th class="intel-th intel-th--component">Contract</th>
@@ -268,6 +269,7 @@ function fmtCap(v: number): string {
                     </div>
                   </div>
                 </td>
+                <td class="intel-td intel-td--component">{team.productionScore}</td>
                 <td class="intel-td intel-td--component">{team.capScore}</td>
                 <td class="intel-td intel-td--component">{team.rosterScore}</td>
                 <td class="intel-td intel-td--component">{team.contractScore}</td>
@@ -321,6 +323,7 @@ function fmtCap(v: number): string {
             <!-- Score Bars -->
             <div class="intel-card__scores">
               {[
+                { label: 'Production', value: team.productionScore },
                 { label: 'Cap', value: team.capScore },
                 { label: 'Roster', value: team.rosterScore },
                 { label: 'Contract', value: team.contractScore },
@@ -347,8 +350,8 @@ function fmtCap(v: number): string {
                 <span class="intel-metric__label">Eff. Cap</span>
               </div>
               <div class="intel-metric">
-                <span class="intel-metric__value">{team.avgAge.toFixed(1)}</span>
-                <span class="intel-metric__label">Avg Age</span>
+                <span class="intel-metric__value">{team.weightedAge.toFixed(1)}</span>
+                <span class="intel-metric__label">Wtd Age</span>
               </div>
               <div class="intel-metric">
                 <span class="intel-metric__value">{team.playersUnderContract}</span>
@@ -359,12 +362,12 @@ function fmtCap(v: number): string {
                 <span class="intel-metric__label">Expiring</span>
               </div>
               <div class="intel-metric">
-                <span class="intel-metric__value">{team.draftCapital}</span>
-                <span class="intel-metric__label">Picks</span>
+                <span class="intel-metric__value">{team.draftCapitalWeighted}</span>
+                <span class="intel-metric__label">Draft (wtd)</span>
               </div>
               <div class="intel-metric">
-                <span class="intel-metric__value">{team.committedPct.toFixed(0)}%</span>
-                <span class="intel-metric__label">Committed</span>
+                <span class="intel-metric__value">{team.avgContractLength.toFixed(1)}</span>
+                <span class="intel-metric__label">Avg Contract</span>
               </div>
             </div>
 
@@ -393,31 +396,38 @@ function fmtCap(v: number): string {
 
       <div class="intel-method-grid">
         <div class="intel-method-card">
-          <div class="intel-method-card__weight">25%</div>
+          <div class="intel-method-card__weight">15%</div>
           <div class="intel-method-card__content">
-            <h4 class="intel-method-card__title">Cap Score</h4>
-            <p class="intel-method-card__body">Effective cap space (60%) and dead money exposure (40%). More cap flexibility and less dead weight means more options.</p>
+            <h4 class="intel-method-card__title">Production</h4>
+            <p class="intel-method-card__body">Retention-weighted roster strength (60%) and cap efficiency (40%). Points scored is the ultimate test.</p>
           </div>
         </div>
         <div class="intel-method-card">
-          <div class="intel-method-card__weight">30%</div>
+          <div class="intel-method-card__weight">15%</div>
+          <div class="intel-method-card__content">
+            <h4 class="intel-method-card__title">Cap Score</h4>
+            <p class="intel-method-card__body">Dead money exposure (60%) and effective cap space (40%). Cap space is a means, not an end — penalizes dead money, not spending.</p>
+          </div>
+        </div>
+        <div class="intel-method-card">
+          <div class="intel-method-card__weight">25%</div>
           <div class="intel-method-card__content">
             <h4 class="intel-method-card__title">Roster Score</h4>
-            <p class="intel-method-card__body">Players under contract (35%), roster holes (30%), and average age (35%). A full, young roster scores highest.</p>
+            <p class="intel-method-card__body">Salary-weighted age (40%), roster holes (30%), and positional balance (30%). Expensive + old is the risk, not age alone. Missing QB/TE penalized heavily.</p>
           </div>
         </div>
         <div class="intel-method-card">
           <div class="intel-method-card__weight">30%</div>
           <div class="intel-method-card__content">
             <h4 class="intel-method-card__title">Contract Score</h4>
-            <p class="intel-method-card__body">Top player retention (40%), average contract length (35%), and expiring contract exposure (25%). Locked-in cores win dynasties.</p>
+            <p class="intel-method-card__body">Top player retention (40%), average contract length (35%), and expiring exposure (25%). Contract control IS dynasty — locked-in cores win leagues.</p>
           </div>
         </div>
         <div class="intel-method-card">
           <div class="intel-method-card__weight">15%</div>
           <div class="intel-method-card__content">
             <h4 class="intel-method-card__title">Draft Score</h4>
-            <p class="intel-method-card__body">Total draft picks owned. More picks = more chances to hit, more trade ammunition, more roster flexibility.</p>
+            <p class="intel-method-card__body">Round-weighted draft picks (1st=3x, 2nd=2x, 3rd=1x). First-rounders aren't third-rounders.</p>
           </div>
         </div>
       </div>
@@ -817,7 +827,7 @@ function fmtCap(v: number): string {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-gray-500, #6b7280);
-    min-width: 3.5rem;
+    min-width: 4.5rem;
   }
 
   .intel-score-bar__track {
@@ -929,7 +939,7 @@ function fmtCap(v: number): string {
 
   .intel-method-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
   }
 
