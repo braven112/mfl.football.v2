@@ -1,5 +1,22 @@
 [
   {
+    "id": "auction-view",
+    "date": "2026-03-20",
+    "title": "Full Auction View on Free Agents",
+    "summary": "The Free Agent page now has a dedicated Auction view — see every active bid, who's winning, how much time is left, and place your own bid without leaving the site.",
+    "description": [
+      "Tracking a live auction used to mean camping on MFL's auction page in a second tab, refreshing every few minutes, and hoping you didn't miss the 36-hour deadline on that sleeper WR you'd been eyeing since the RSP dropped. The new Auction view puts the entire bid board right next to the player data you already use.",
+      "Switch to Auction view and you'll see Current Bid, High Bidder, Time Left with a live countdown, and a Place Bid button for every nominated player. The table auto-sorts by Time Left so expiring bids surface to the top. Urgency tiers kick in as deadlines approach — amber when closing, red with a warning icon under six hours, and a pulsing alert in the final hour. Countdowns tick every 15 seconds normally and accelerate to 5-second updates when things get critical.",
+      "Data refreshes automatically every 60 seconds from MFL's transaction feed. A freshness indicator in the toolbar tells you exactly how current your view is — click it to force a refresh if you're feeling impatient. The view is available to all league members, not just the commissioner, because everyone deserves to know they're about to get outbid."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/players",
+    "linkLabel": "Open auction view",
+    "icon": "zap",
+    "image": "auction-view.webp",
+    "imageAlt": "Free Agent page Auction view showing active bids with countdown timers, high bidders, and Place Bid buttons"
+  },
+  {
     "id": "live-auction-bids",
     "date": "2026-03-19",
     "title": "Live Auction Bids on Free Agents",
