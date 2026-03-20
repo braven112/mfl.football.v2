@@ -11,6 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
@@ -339,6 +340,12 @@ const auctionMap = new Map<string, { bid: number; franchise: string; status: str
   }
 }
 const hasAuctionData = auctionMap.size > 0;
+
+// Auction season: 3rd Thursday of March through 3rd Sunday of August
+const auctionStart = getNthDayOfMonth(currentYear, 2, 4, 3); // 3rd Thursday of March (month 2 = March)
+const auctionEnd = getNthDayOfMonth(currentYear, 7, 0, 3);   // 3rd Sunday of August (month 7 = August)
+auctionEnd.setHours(20, 45, 0, 0); // 8:45 PM PT close
+const isAuctionSeason = Date.now() >= auctionStart.getTime() && Date.now() < auctionEnd.getTime();
 
 // Player salary by each of the last 3 completed league years.
 const salaryYear1 = currentYear - 1;
@@ -906,7 +913,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAdmin, currentYear, franchiseNamesJson, franchiseBannersJson }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, franchiseNamesJson, franchiseBannersJson }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -915,8 +922,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
   // State — default to free agents only
   let filteredPlayers = [];
-  let currentSort = 'projected';
-  let sortDirection = 'desc';
+  let currentSort = isAuctionSeason ? 'auctionTimeLeft' : 'projected';
+  let sortDirection = isAuctionSeason ? 'asc' : 'desc';
   let visibleCount = 50;
   let activePosition = 'ALL';
   let searchQuery = '';
@@ -953,7 +960,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   // 'stats' = traditional stat columns
   // 'rankings' = ranking import columns
   // 'value' = focused value view (My Rank + money columns + age)
-  let activeView = 'stats';
+  let activeView = isAuctionSeason ? 'auction' : 'stats';
   let hasRankingColumns = false;
   let hasExplicitViewPref = false;
 
@@ -1817,8 +1824,9 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   document.addEventListener('rankings:set-lookup', function (e) {
     rankingLookup = e.detail.lookup;
     hasRankingColumns = e.detail.hasColumns;
-    if (e.detail.hasColumns && !hasExplicitViewPref) {
+    if (e.detail.hasColumns && !hasExplicitViewPref && !isAuctionSeason) {
       // Default to rankings view when available and user hasn't explicitly chosen
+      // (auction season defaults to auction view instead)
       activeView = 'rankings';
     } else if (!e.detail.hasColumns && activeView === 'rankings') {
       // If ranking imports are removed while viewing rankings, fall back to
@@ -1826,7 +1834,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       activeView = (isAdmin && (hasSurplusData || _hasAuctionData)) ? 'value' : 'stats';
     }
     // Auto-sort by "My Rank" composite when it exists and user hasn't explicitly sorted
-    if (e.detail.hasComposite && !hasExplicitSortPref) {
+    if (e.detail.hasComposite && !hasExplicitSortPref && !isAuctionSeason) {
       currentSort = 'ranking___composite__';
       sortDirection = 'asc';
     }
