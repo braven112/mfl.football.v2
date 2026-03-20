@@ -2247,8 +2247,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       el.classList.add('auction-freshness--stale');
     }
 
-    // Show in value view or stats view (when auction data visible)
-    if (activeView === 'value' || activeView === 'stats') {
+    // Show in value view, stats view, or auction view (when auction data visible)
+    if (activeView === 'value' || activeView === 'stats' || activeView === 'auction') {
       el.style.display = '';
     }
   }
@@ -2300,8 +2300,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       announceMilestone('Auction ends in less than 24 hours');
     }
 
-    // Show countdown in value view
-    if (activeView === 'value' || activeView === 'stats') {
+    // Show countdown in value, stats, or auction view
+    if (activeView === 'value' || activeView === 'stats' || activeView === 'auction') {
       el.style.display = '';
     }
   }
