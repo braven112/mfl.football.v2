@@ -1817,9 +1817,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
     filterPlayers();
 
     // ── Auction polling (60s interval) ──
-    if (isAdmin) {
-      startAuctionPolling();
-    }
+    startAuctionPolling();
   }
 
   // ── Bid tier classification ──
