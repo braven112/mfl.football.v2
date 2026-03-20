@@ -1035,9 +1035,11 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
   }
 
   function applyContractVisibility() {
-    const display = (showRostered && activeView !== 'value') ? '' : 'none';
+    // Show contract columns (Yrs, Sal/Bid) when viewing rostered players
+    // OR when auction data exists (free agents have bids in the Sal/Bid column)
+    const showContract = (showRostered || (isAdmin && hasAuctionData)) && activeView !== 'value';
     document.querySelectorAll('.col-contract').forEach(el => {
-      el.style.display = display;
+      el.style.display = showContract ? '' : 'none';
     });
     updateLastVisibleCol();
   }
