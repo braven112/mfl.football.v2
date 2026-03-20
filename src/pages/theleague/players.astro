@@ -802,7 +802,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
               </th>
             )}
             {hasProjected && (
-              <th class="sortable col-num col-group--stats" data-sort="projected">
+              <th class="sortable col-num col-group--stats col-projected" data-sort="projected" style="display: none;">
                 <div class="th-content">Proj</div>
               </th>
             )}
@@ -1437,7 +1437,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
       }
 
       if (hasProjected) {
-        html += `<td class="cell-num cell-pts col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num cell-pts col-group--stats col-projected" style="display: none;">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
       // Auction bid cell (admin only, always rendered when admin so column count matches <th>)
