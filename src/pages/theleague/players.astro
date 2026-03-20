@@ -1168,9 +1168,9 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     if (view === 'auction') {
       currentSort = 'auctionTimeLeft';
       sortDirection = 'asc';
-      sortPlayers();
-      render();
     }
+    // Re-filter when switching to/from auction view (rostered players with bids are included in auction view)
+    filterPlayers();
     applyGroupVisibility();
     applyContractVisibility();
   }
@@ -1499,7 +1499,10 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     const query = searchQuery.toLowerCase();
     filteredPlayers = players.filter(p => {
       // Free agent filter (default on)
-      if (!showRostered && p.rostered) return false;
+      // In auction view, always show rostered players that have active bids
+      if (!showRostered && p.rostered) {
+        if (!(activeView === 'auction' && p.auctionBid != null)) return false;
+      }
 
       // Rookie filter (default on)
       if (!showRookies && p.rookie) return false;
@@ -1520,7 +1523,9 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
     // Update category counts based on current filters + search (minus position filter)
     const pool = players.filter(p => {
-      if (!showRostered && p.rostered) return false;
+      if (!showRostered && p.rostered) {
+        if (!(activeView === 'auction' && p.auctionBid != null)) return false;
+      }
       if (!showRookies && p.rookie) return false;
       if (!passesAdvancedFilters(p)) return false;
       if (query) {
