@@ -3718,6 +3718,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     color: var(--color-gray-500, #6b7280);
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+    width: 1%;
   }
 
   :global(th.col-auction-bidder),
@@ -3745,17 +3746,17 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
-    padding-left: 0.125rem;
-    padding-right: 0.125rem;
-    text-align: center;
+    width: 1%;
   }
 
+  :global(th.col-auction-timeleft),
   :global(td.col-auction-timeleft) {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     font-size: 0.75rem;
     white-space: nowrap;
     transition: color 0.3s ease;
+    width: 1%;
   }
 
   :global(td.col-auction-timeleft--normal) {
@@ -3784,8 +3785,10 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     }
   }
 
+  :global(th.col-auction-placebid),
   :global(td.col-auction-placebid) {
     padding: 0.25rem 0.375rem;
+    width: 1%;
   }
 
   @media (max-width: 767px) {
