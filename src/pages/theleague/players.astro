@@ -3701,27 +3701,34 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
 
   /* ── Auction View Columns ── */
 
+  :global(th.col-auction-bid),
   :global(td.col-auction-bid) {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     font-size: 0.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     /* color and font-weight inherited from col-value-bid tier classes (hot/warm/cool/won/none) */
   }
 
+  :global(th.col-auction-rank),
   :global(td.col-auction-rank) {
     font-variant-numeric: tabular-nums;
     font-size: 0.75rem;
     color: var(--color-gray-500, #6b7280);
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
+  :global(th.col-auction-bidder),
   :global(td.col-auction-bidder) {
     font-size: 0.75rem;
     color: var(--color-gray-700, #374151);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
-    padding: 0.125rem 0.25rem;
+    max-width: 140px;
+    padding: 0.125rem 0.5rem;
   }
   :global(.bidder-banner) {
     width: 100px;
@@ -3730,12 +3737,16 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     object-fit: contain;
   }
 
+  :global(th.col-auction-started),
+  :global(th.col-auction-lastbid),
   :global(td.col-auction-started),
   :global(td.col-auction-lastbid) {
     font-size: 0.6875rem;
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
+    width: 6rem;
+    max-width: 6rem;
   }
 
   :global(td.col-auction-timeleft) {
