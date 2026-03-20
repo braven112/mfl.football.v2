@@ -992,23 +992,24 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     });
 
     if (showValue) {
-      // Value view: keep only Player, Age, My Rank, PPG, and the value money columns.
+      // Value view: keep only Player, Age, one ranking column (My Rank or Avg), and the value money columns.
       document.querySelectorAll('.players-table th, .players-table td').forEach(el => {
         el.style.display = 'none';
       });
+      const hasMyRank = document.querySelector('.players-table th.col-my-rank') !== null;
+      const rankTh = hasMyRank ? '.players-table th.col-my-rank' : '.players-table th.col-ranking-avg';
+      const rankTd = hasMyRank ? '.players-table td.col-my-rank' : '.players-table td.col-ranking-avg';
       const keepSelectors = [
         '.players-table th.col-rank',
         '.players-table th[data-sort="name"]',
         '.players-table th[data-sort="age"]',
-        '.players-table th.col-my-rank',
+        rankTh,
         '.players-table th.col-value-money',
-        '.players-table th.col-ranking-avg',
         '.players-table td.cell-rank',
         '.players-table td.cell-player',
         '.players-table td.cell-age',
-        '.players-table td.col-my-rank',
+        rankTd,
         '.players-table td.col-value-money',
-        '.players-table td.col-ranking-avg',
         '.players-table th.col-place-bid',
         '.players-table td.col-place-bid',
       ];
