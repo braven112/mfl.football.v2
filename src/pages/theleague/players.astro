@@ -816,21 +816,6 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
                 <div class="th-content">Est. Cost</div>
               </th>
             )}
-            {isAdmin && hasSurplusData && recentSalaryYears.includes(salaryYear1) && (
-              <th class="sortable col-num col-group--value col-value-money" data-sort="salaryYear1">
-                <div class="th-content">{salaryYear1}</div>
-              </th>
-            )}
-            {isAdmin && hasSurplusData && recentSalaryYears.includes(salaryYear2) && (
-              <th class="sortable col-num col-group--value col-value-money" data-sort="salaryYear2">
-                <div class="th-content">{salaryYear2}</div>
-              </th>
-            )}
-            {isAdmin && hasSurplusData && recentSalaryYears.includes(salaryYear3) && (
-              <th class="sortable col-num col-group--value col-value-money" data-sort="salaryYear3">
-                <div class="th-content">{salaryYear3}</div>
-              </th>
-            )}
             {isAdmin && hasSurplusData && (
               <th class="sortable col-num col-group--value col-value-money" data-sort="dollarValue">
                 <div class="th-content">$ Value</div>
@@ -838,9 +823,12 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
             )}
             {isAdmin && hasSurplusData && (
               <th class="sortable col-num col-group--value col-value-money col-surplus" data-sort="surplusValue">
-                <div class="th-content">Surplus</div>
+                <div class="th-content">Value</div>
               </th>
             )}
+            <th class="sortable col-num col-group--value col-value-money col-underpriced" data-sort="underpriced" aria-label="Est. Cost minus current bid — higher means bigger bargain">
+              <div class="th-content">Underpriced</div>
+            </th>
             <th class="sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
               <div class="th-content">Yrs</div>
             </th>
@@ -1223,6 +1211,10 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
           aVal = a.surplusValue ?? -Infinity;
           bVal = b.surplusValue ?? -Infinity;
           break;
+        case 'underpriced':
+          aVal = (a.estimatedCost != null && a.auctionBid > 0) ? a.estimatedCost - a.auctionBid : -Infinity;
+          bVal = (b.estimatedCost != null && b.auctionBid > 0) ? b.estimatedCost - b.auctionBid : -Infinity;
+          break;
         case 'auctionBid':
           aVal = a.auctionBid ?? -1;
           bVal = b.auctionBid ?? -1;
@@ -1478,9 +1470,6 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
           return sign + '$' + (abs >= 1000000 ? (abs / 1000000).toFixed(1) + 'M' : (abs / 1000).toFixed(0) + 'K');
         };
         html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.estimatedCost)}</td>`;
-        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.salaryYear1)}</td>`;
-        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.salaryYear2)}</td>`;
-        html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.salaryYear3)}</td>`;
         html += `<td class="cell-num col-group--value col-value-money">${fmtDollar(p.dollarValue)}</td>`;
         if (p.surplusValue != null) {
           const isPositive = p.surplusValue >= 0;
@@ -1491,6 +1480,23 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
           html += `<td class="cell-num col-group--value col-value-money col-surplus ${cls}">${prefix}${formatted}</td>`;
         } else {
           html += `<td class="cell-num col-group--value col-value-money col-surplus"><span class="na">-</span></td>`;
+        }
+      }
+
+      // Underpriced = Est. Cost - Bid (how much below expected cost the current bid is)
+      {
+        const underpriced = (p.estimatedCost != null && p.auctionBid != null && p.auctionBid > 0)
+          ? p.estimatedCost - p.auctionBid
+          : null;
+        if (underpriced != null) {
+          const abs = Math.abs(underpriced);
+          const formatted = abs >= 1000000 ? (abs / 1000000).toFixed(1) + 'M' : (abs / 1000).toFixed(0) + 'K';
+          const isUnder = underpriced > 0;
+          const prefix = isUnder ? '+$' : '-$';
+          const cls = isUnder ? 'underpriced-positive' : 'underpriced-negative';
+          html += `<td class="cell-num col-group--value col-value-money col-underpriced ${cls}">${prefix}${formatted}</td>`;
+        } else {
+          html += `<td class="cell-num col-group--value col-value-money col-underpriced"><span class="na">&mdash;</span></td>`;
         }
       }
 
@@ -1547,7 +1553,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'auctionBid']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'underpriced', 'auctionBid']);
 
   // CustomEvent-based API for the rankings module script to interact with this page.
   // All events use the document as the event bus — no global window properties needed.
@@ -2910,6 +2916,16 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
     font-weight: 600;
   }
   :global(.surplus-negative) {
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  /* Underpriced color coding (Est. Cost - Bid) */
+  :global(.underpriced-positive) {
+    color: #059669;
+    font-weight: 600;
+  }
+  :global(.underpriced-negative) {
     color: #dc2626;
     font-weight: 600;
   }
