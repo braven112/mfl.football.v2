@@ -178,7 +178,16 @@
           "icon": "binoculars",
           "path": "/intel",
           "external": false,
-          "description": "Competitive intelligence dashboard with power rankings and team scouting reports"
+          "visibility": "admin",
+          "description": "Daily fantasy intel digest with RSP sleeper tracking"
+        },
+        {
+          "id": "power-rankings",
+          "label": "Power Rankings",
+          "icon": "standings",
+          "path": "/power-rankings",
+          "external": false,
+          "description": "Composite power scores and team scouting reports"
         },
         {
           "id": "league-summary",
@@ -284,6 +293,7 @@
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
     "/intel": "/intel",
+    "/power-rankings": "/power-rankings",
     "/about": "/about",
     "/rules": "/rules"
   },

@@ -1,0 +1,314 @@
+---
+/**
+ * Intel — Daily Fantasy News Digest (Listing Page)
+ *
+ * Admin-only page showing daily intel digests from the fantasy-news-scanner.
+ * Latest digest expanded, older digests collapsed via <details>.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { isAdminFranchise } from '../../../config/nav-config';
+import {
+  loadAllDigests,
+  formatDigestDate,
+  getActionColor,
+  getTierColor,
+  getImpactColor,
+} from '../../../utils/intel-helpers';
+import type { IntelDigest, IntelAlert, IntelSleeper } from '../../../types/intel';
+import '../../../styles/intel.css';
+import '../../../styles/player-cell.css';
+
+export const prerender = false;
+
+// Auth gate: admin only
+const user = getAuthUser(Astro.request);
+if (!user || !isAdminFranchise(user.franchiseId)) {
+  return Astro.redirect('/theleague');
+}
+
+const digests = loadAllDigests();
+const latestDigest = digests[0] ?? null;
+const olderDigests = digests.slice(1);
+
+// Fallback headshot
+const FALLBACK_HEADSHOT = 'https://a.espncdn.com/combiner/i?img=/i/headshots/nophoto.png&w=350&h=254';
+---
+
+<TheLeagueLayout title="Intel | The League">
+  <main class="intel-page">
+
+    <!-- ===== HERO ===== -->
+    <header class="intel-hero">
+      <div class="intel-hero__eyebrow">
+        <span class="intel-tag">Daily Intel Digest</span>
+      </div>
+      <h1 class="intel-hero__title">Morning briefing.</h1>
+      <p class="intel-hero__deck">
+        Player alerts, RSP sleeper tracking, and league-relevant news — scanned daily
+        at 7 AM PT and cross-referenced with your watchlist. The kind of edge that
+        compounds when everyone else is checking Twitter.
+      </p>
+    </header>
+
+    {!latestDigest ? (
+      <!-- Empty state -->
+      <div class="intel-empty">
+        <p class="intel-empty__title">No intel digests yet.</p>
+        <p class="intel-empty__text">The scanner runs daily at 7 AM PT. Check back tomorrow morning.</p>
+      </div>
+    ) : (
+      <div class="intel-digests">
+        <!-- ===== LATEST DIGEST (expanded) ===== -->
+        <div class="intel-digest">
+          <h2 class="intel-digest__date">{formatDigestDate(latestDigest.date)}</h2>
+          <div class="intel-digest__sections">
+
+            {/* Actionable Alerts */}
+            {latestDigest.alerts.length > 0 && (
+              <section>
+                <div class="intel-section-header">
+                  <h3 class="intel-section-header__title">Actionable Alerts</h3>
+                  <p class="intel-section-header__sub">{latestDigest.alerts.length} player{latestDigest.alerts.length !== 1 ? 's' : ''} flagged</p>
+                </div>
+                <div class="intel-alerts">
+                  {latestDigest.alerts.map((alert: IntelAlert) => (
+                    <div
+                      class="intel-alert-card"
+                      style={`--alert-color: ${getActionColor(alert.action)}`}
+                    >
+                      <div class="intel-alert-card__header">
+                        <img
+                          src={alert.headshot || FALLBACK_HEADSHOT}
+                          alt=""
+                          class="intel-alert-card__avatar"
+                          width="40"
+                          height="40"
+                          loading="lazy"
+                        />
+                        <div class="intel-alert-card__player-info">
+                          <div class="intel-alert-card__name">{alert.player}</div>
+                          <div class="intel-alert-card__meta">
+                            <span>{alert.position}</span>
+                            <span>&middot;</span>
+                            <span>{alert.nflTeam}</span>
+                          </div>
+                        </div>
+                        <div class="intel-alert-card__badges">
+                          <span
+                            class="intel-action-badge"
+                            style={`background: ${getActionColor(alert.action)}`}
+                          >
+                            {alert.action}
+                          </span>
+                          {alert.rspTier && (
+                            <span
+                              class="intel-rsp-badge"
+                              style={`--tier-color: ${getTierColor(alert.rspTier)}`}
+                            >
+                              RSP {alert.rspTier}
+                            </span>
+                          )}
+                          <span class="intel-status-badge">{alert.leagueStatus}</span>
+                        </div>
+                      </div>
+                      <p class="intel-alert-card__news">{alert.news}</p>
+                      <p class="intel-alert-card__impact">{alert.impact}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Sleeper Watch */}
+            {Object.keys(latestDigest.sleeperWatch).length > 0 && (
+              <section>
+                <div class="intel-section-header">
+                  <h3 class="intel-section-header__title">Sleeper Watch</h3>
+                  <p class="intel-section-header__sub">RSP-tracked sleepers with latest updates</p>
+                </div>
+                <div class="intel-sleeper-section">
+                  {Object.entries(latestDigest.sleeperWatch).map(([year, sleepers]) => (
+                    <div>
+                      <h4 class="intel-sleeper-year">{year} Class</h4>
+                      <table class="intel-sleeper-table">
+                        <thead>
+                          <tr>
+                            <th>Player</th>
+                            <th>Tier</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Latest</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(sleepers as IntelSleeper[]).map((s: IntelSleeper) => (
+                            <tr>
+                              <td>
+                                <div class="intel-sleeper-player">
+                                  {s.headshot && (
+                                    <img
+                                      src={s.headshot}
+                                      alt=""
+                                      class="intel-sleeper-player__avatar"
+                                      width="32"
+                                      height="32"
+                                      loading="lazy"
+                                    />
+                                  )}
+                                  <div>
+                                    <span class="intel-sleeper-player__name">{s.name}</span>
+                                    <span class="intel-sleeper-player__pos"> {s.position} &middot; {s.nflTeam}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span
+                                  class="intel-rsp-badge"
+                                  style={`--tier-color: ${getTierColor(s.tier)}`}
+                                >
+                                  {s.tier}{s.types.length > 0 ? ` ${s.types.join('')}` : ''}
+                                </span>
+                              </td>
+                              <td style="font-size: 0.75rem; font-variant-numeric: tabular-nums;">{s.value}</td>
+                              <td><span class="intel-status-badge">{s.leagueStatus}</span></td>
+                              <td>
+                                <span class={`intel-sleeper-news${s.news === 'No updates' ? ' intel-sleeper-news--none' : ''}`}>
+                                  {s.news}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* General News */}
+            {latestDigest.generalNews.length > 0 && (
+              <section>
+                <div class="intel-section-header">
+                  <h3 class="intel-section-header__title">General News</h3>
+                </div>
+                <div class="intel-news-list">
+                  {latestDigest.generalNews.map((item) => (
+                    <div class="intel-news-item">
+                      <div class="intel-news-item__header">
+                        <span
+                          class="intel-impact-dot"
+                          style={`background: ${getImpactColor(item.impact)}`}
+                        ></span>
+                        <span class="intel-news-item__headline">{item.headline}</span>
+                        <span class="intel-source-badge">{item.source}</span>
+                      </div>
+                      <p class="intel-news-item__summary">{item.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Strategic Notes */}
+            {latestDigest.strategicNotes.length > 0 && (
+              <section>
+                <div class="intel-section-header">
+                  <h3 class="intel-section-header__title">Strategic Notes</h3>
+                </div>
+                <div class="intel-strategic-notes">
+                  {latestDigest.strategicNotes.map((note) => (
+                    <p class="intel-strategic-note">{note}</p>
+                  ))}
+                </div>
+              </section>
+            )}
+
+          </div>
+        </div>
+
+        <!-- ===== OLDER DIGESTS (collapsed) ===== -->
+        {olderDigests.map((digest: IntelDigest) => (
+          <details class="intel-digest-collapsed">
+            <summary>
+              {formatDigestDate(digest.date)}
+              <span class="intel-digest-collapsed__count">{digest.alerts.length} alerts</span>
+            </summary>
+            <div class="intel-digest-collapsed__content">
+              <div class="intel-digest__sections">
+
+                {digest.alerts.length > 0 && (
+                  <section>
+                    <div class="intel-section-header">
+                      <h3 class="intel-section-header__title">Actionable Alerts</h3>
+                    </div>
+                    <div class="intel-alerts">
+                      {digest.alerts.map((alert: IntelAlert) => (
+                        <div
+                          class="intel-alert-card"
+                          style={`--alert-color: ${getActionColor(alert.action)}`}
+                        >
+                          <div class="intel-alert-card__header">
+                            <img
+                              src={alert.headshot || FALLBACK_HEADSHOT}
+                              alt=""
+                              class="intel-alert-card__avatar"
+                              width="40"
+                              height="40"
+                              loading="lazy"
+                            />
+                            <div class="intel-alert-card__player-info">
+                              <div class="intel-alert-card__name">{alert.player}</div>
+                              <div class="intel-alert-card__meta">
+                                <span>{alert.position}</span>
+                                <span>&middot;</span>
+                                <span>{alert.nflTeam}</span>
+                              </div>
+                            </div>
+                            <div class="intel-alert-card__badges">
+                              <span
+                                class="intel-action-badge"
+                                style={`background: ${getActionColor(alert.action)}`}
+                              >
+                                {alert.action}
+                              </span>
+                              {alert.rspTier && (
+                                <span
+                                  class="intel-rsp-badge"
+                                  style={`--tier-color: ${getTierColor(alert.rspTier)}`}
+                                >
+                                  RSP {alert.rspTier}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <p class="intel-alert-card__news">{alert.news}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {digest.strategicNotes.length > 0 && (
+                  <section>
+                    <div class="intel-section-header">
+                      <h3 class="intel-section-header__title">Strategic Notes</h3>
+                    </div>
+                    <div class="intel-strategic-notes">
+                      {digest.strategicNotes.map((note) => (
+                        <p class="intel-strategic-note">{note}</p>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+              </div>
+            </div>
+          </details>
+        ))}
+      </div>
+    )}
+
+  </main>
+</TheLeagueLayout>
