@@ -1,0 +1,938 @@
+{
+  "source": "Matt Waldman's Rookie Scouting Portfolio",
+  "edition": "2025 Post-Draft",
+  "publishDate": "2025-05-01",
+  "scoringBasis": "1 PPR, 4pt passing TD, 6pt rush/rec TD",
+  "leagueAdjustment": "TheLeague uses tiered PPR (TE 1.0, WR 0.5, RB 0.25) and 6pt passing TDs \u2014 QBs worth more, WRs/RBs worth less for receptions vs RSP baseline",
+  "shelfLife": "3 years from draft class (expires after 2027 season)",
+  "tierDefinitions": {
+    "A": {
+      "range": "1-8",
+      "description": "See field early, develop into productive starters within 2-3 years"
+    },
+    "B": {
+      "range": "9-32",
+      "description": "Short-term depth obstacle but starter talent; contributor talent with immediate fit"
+    },
+    "C": {
+      "range": "33-87",
+      "description": "Contributor potential on crowded depth chart; situational talent with good immediate fit"
+    },
+    "D": {
+      "range": "88-103",
+      "description": "Stash \u2014 long-term developmental talent or reserve"
+    },
+    "E": {
+      "range": "104-188",
+      "description": "Large leagues only / waiver wire"
+    },
+    "F": {
+      "range": "189+",
+      "description": "UDFAs watched but not formally scored \u2014 bump 35-50 spots if signed"
+    }
+  },
+  "typeSymbols": {
+    "U": "Underrated \u2014 better than draft stock",
+    "\u2195": "High risk/reward",
+    "Z": "Sleeper \u2014 lesser-known talent with skills if earns opportunity",
+    "\u2194": "Specific talent / limited upside",
+    "\u2191": "High ceiling but needs work",
+    "F": "UDFA \u2014 bump 35-50 spots if signed",
+    "I": "Injury concerns"
+  },
+  "valueSystem": {
+    "Par": "Ranked within +/-5 picks of ADP",
+    "Under X": "RSP values player X picks higher than ADP (bargain \u2014 add X to rank for latest you can get him)",
+    "Over X": "RSP values player X picks lower than ADP (market overvalues \u2014 subtract X from rank for where others take him)"
+  },
+  "players": [
+    {
+      "rank": 1,
+      "position": "RB",
+      "name": "Ashton Jeanty",
+      "team": "LV",
+      "tier": "A",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": "RB1",
+      "preDraftScore": 92.9,
+      "notes": "Dynamic mover with excellent vision, slippery power, and stamina. Finishes plays downfield with same energy he started. Uncommon."
+    },
+    {
+      "rank": 2,
+      "position": "WR",
+      "name": "Luther Burden III",
+      "team": "CHI",
+      "tier": "A",
+      "value": "Under 8",
+      "types": [],
+      "preDraftRank": "WR1",
+      "preDraftScore": 93.0,
+      "notes": "RSP's top WR talent. Under 8 means significant market discount. Bears offense with Caleb Williams."
+    },
+    {
+      "rank": 3,
+      "position": "WR",
+      "name": "Travis Hunter",
+      "team": "JAX",
+      "tier": "A",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": "WR9",
+      "preDraftScore": null,
+      "notes": "Two-way player. RSP pre-draft had him as WR9 on talent but post-draft bumped to overall #3 on situation."
+    },
+    {
+      "rank": 4,
+      "position": "RB",
+      "name": "Quinshon Judkins",
+      "team": "CLE",
+      "tier": "A",
+      "value": "Par",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling. Cleveland landing spot."
+    },
+    {
+      "rank": 5,
+      "position": "RB",
+      "name": "Kaleb Johnson",
+      "team": "PIT",
+      "tier": "A",
+      "value": "Par",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling. Pittsburgh."
+    },
+    {
+      "rank": 6,
+      "position": "RB",
+      "name": "Cam Skattebo",
+      "team": "NYG",
+      "tier": "A",
+      "value": "Under 2",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Slight market discount. High ceiling."
+    },
+    {
+      "rank": 7,
+      "position": "RB",
+      "name": "TreVeyon Henderson",
+      "team": "NE",
+      "tier": "A",
+      "value": "Par",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling. New England."
+    },
+    {
+      "rank": 8,
+      "position": "WR",
+      "name": "Matthew Golden",
+      "team": "GB",
+      "tier": "A",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Green Bay \u2014 great landing spot for WR development."
+    },
+    {
+      "rank": 9,
+      "position": "WR",
+      "name": "Emeka Egbuka",
+      "team": "TB",
+      "tier": "B",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Tampa Bay."
+    },
+    {
+      "rank": 10,
+      "position": "QB",
+      "name": "Cam Ward",
+      "team": "TEN",
+      "tier": "B",
+      "value": "Under 1",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Safe starter and priority selection per RSP. High ceiling. 6pt passing TDs in TheLeague makes him more valuable than RSP baseline."
+    },
+    {
+      "rank": 11,
+      "position": "WR",
+      "name": "Jayden Higgins",
+      "team": "HOU",
+      "tier": "B",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Houston. CJ Stroud connection."
+    },
+    {
+      "rank": 12,
+      "position": "WR",
+      "name": "Tetairoa McMillan",
+      "team": "CAR",
+      "tier": "B",
+      "value": "Over 1",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Slight overpay risk. High risk/reward. Carolina situation uncertain."
+    },
+    {
+      "rank": 13,
+      "position": "TE",
+      "name": "Colston Loveland",
+      "team": "CHI",
+      "tier": "B",
+      "value": "Par",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling TE. Full PPR in TheLeague (1.0 for TE) makes him match RSP's valuation."
+    },
+    {
+      "rank": 14,
+      "position": "RB",
+      "name": "Omarion Hampton",
+      "team": "LAC",
+      "tier": "B",
+      "value": "Over 6",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Market overpaying by ~6 picks. High ceiling but crowded."
+    },
+    {
+      "rank": 15,
+      "position": "RB",
+      "name": "R.J. Harvey",
+      "team": "DEN",
+      "tier": "B",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Denver."
+    },
+    {
+      "rank": 16,
+      "position": "WR",
+      "name": "Jalen Royals",
+      "team": "KC",
+      "tier": "B",
+      "value": "Under 12",
+      "types": [
+        "U"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "MAJOR SLEEPER. Under 12 + Underrated tag. Kansas City. Waldman thinks market is sleeping on him by a full round."
+    },
+    {
+      "rank": 18,
+      "position": "TE",
+      "name": "Mason Taylor",
+      "team": "NYJ",
+      "tier": "B",
+      "value": "Under 2",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling TE. Slight bargain. NYJ."
+    },
+    {
+      "rank": 19,
+      "position": "TE/QB",
+      "name": "Harold Fannin Jr.",
+      "team": "CLE",
+      "tier": "B",
+      "value": "Under 10",
+      "types": [
+        "U",
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "MAJOR SLEEPER. Under 10 + Underrated + High ceiling. Cleveland."
+    },
+    {
+      "rank": 19,
+      "position": "QB",
+      "name": "Jalen Milroe",
+      "team": "SEA",
+      "tier": "B",
+      "value": "Under 14",
+      "types": [
+        "U",
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "BEST UPSIDE QB in the class per Waldman. Under 14 = massive bargain. Patience play behind Darnold. 6pt passing TDs in TheLeague amplifies his value. RSP says 'the qualities he possesses are the most promising of all the passers in this class.'"
+    },
+    {
+      "rank": 20,
+      "position": "WR",
+      "name": "Jaylin Noel",
+      "team": "HOU",
+      "tier": "B",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Houston."
+    },
+    {
+      "rank": 21,
+      "position": "TE",
+      "name": "Tyler Warren",
+      "team": "IND",
+      "tier": "B",
+      "value": "Over 8",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Market overvaluing by 8 picks. Waldman says not a Gronk type \u2014 more like Tucker Kraft with Michael Mayer skills. Worth 2nd half of 2nd round, not top 10."
+    },
+    {
+      "rank": 22,
+      "position": "WR",
+      "name": "Jack Bech",
+      "team": "LV",
+      "tier": "B",
+      "value": "Par",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High risk/reward."
+    },
+    {
+      "rank": 23,
+      "position": "WR",
+      "name": "Trey Harris",
+      "team": "LAC",
+      "tier": "B",
+      "value": "Over 2",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Slight overpay."
+    },
+    {
+      "rank": 24,
+      "position": "RB",
+      "name": "Breshard Smith",
+      "team": "KC",
+      "tier": "B",
+      "value": "Under 7",
+      "types": [
+        "\u2191",
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Under 7 + High ceiling + Sleeper tag. Chiefs. Higher ceiling than Pacheco/Hunt per Waldman. Breakaway speed + receiving game."
+    },
+    {
+      "rank": 25,
+      "position": "WR",
+      "name": "Savion Williams",
+      "team": "GB",
+      "tier": "B",
+      "value": "Under 4",
+      "types": [
+        "U"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Underrated. WR/RB hybrid. Green Bay. Bargain."
+    },
+    {
+      "rank": 26,
+      "position": "WR",
+      "name": "Kyle Williams",
+      "team": "NE",
+      "tier": "B",
+      "value": "Par",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High risk/reward. New England."
+    },
+    {
+      "rank": 27,
+      "position": "RB",
+      "name": "Jordan James",
+      "team": "SF",
+      "tier": "B",
+      "value": "Under 4",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Sleeper. San Francisco. Bargain by ~4 picks."
+    },
+    {
+      "rank": 28,
+      "position": "RB",
+      "name": "Dylan Sampson",
+      "team": "CLE",
+      "tier": "B",
+      "value": "Par",
+      "types": [
+        "U"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Underrated. Cleveland."
+    },
+    {
+      "rank": 29,
+      "position": "RB",
+      "name": "Tahj Brooks",
+      "team": "CIN",
+      "tier": "B",
+      "value": "Under 4",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Sleeper. Cincinnati. Bargain by ~4 picks."
+    },
+    {
+      "rank": 30,
+      "position": "RB",
+      "name": "Bhayshul Tuten",
+      "team": "JAX",
+      "tier": "B",
+      "value": "Over 7",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Market overpays by 7. High risk/reward."
+    },
+    {
+      "rank": 31,
+      "position": "RB",
+      "name": "Trevor Etienne",
+      "team": "CAR",
+      "tier": "B",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Carolina."
+    },
+    {
+      "rank": 32,
+      "position": "RB",
+      "name": "Jaydon Blue",
+      "team": "DAL",
+      "tier": "B",
+      "value": "Over 2",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Slight overpay. Dallas."
+    },
+    {
+      "rank": 33,
+      "position": "RB",
+      "name": "Kyle Monangai",
+      "team": "CHI",
+      "tier": "C",
+      "value": "Under 8",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Under 8 + Sleeper tag. Chicago. Market sleeping on him by nearly a round."
+    },
+    {
+      "rank": 34,
+      "position": "QB",
+      "name": "Jaxson Dart",
+      "team": "NYG",
+      "tier": "C",
+      "value": "Over 5",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Market overpays. Below-average vertical accuracy per RSP charting. Risk/reward."
+    },
+    {
+      "rank": 35,
+      "position": "TE",
+      "name": "Elijah Arroyo",
+      "team": "SEA",
+      "tier": "C",
+      "value": "Over 1",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Slight overpay. Risk/reward."
+    },
+    {
+      "rank": 36,
+      "position": "RB",
+      "name": "Jacory Croskey-Merritt",
+      "team": "WAS",
+      "tier": "C",
+      "value": "Under 8",
+      "types": [
+        "Z",
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Under 8 + Sleeper + High ceiling. Washington. Unknown to many but Waldman says style similar to Clinton Portis/Aaron Jones."
+    },
+    {
+      "rank": 37,
+      "position": "RB",
+      "name": "Damien Martinez",
+      "team": "SEA",
+      "tier": "C",
+      "value": "Par",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Risk/reward. Seattle."
+    },
+    {
+      "rank": 38,
+      "position": "RB",
+      "name": "Devin Neal",
+      "team": "NO",
+      "tier": "C",
+      "value": "Over 7",
+      "types": [
+        "\u2194"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Market overpays. Limited upside. New Orleans."
+    },
+    {
+      "rank": 39,
+      "position": "RB",
+      "name": "Woody Marks",
+      "team": "HOU",
+      "tier": "C",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Houston."
+    },
+    {
+      "rank": 40,
+      "position": "RB",
+      "name": "Jarquez Hunter",
+      "team": "LAR",
+      "tier": "C",
+      "value": "Par",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling. LA Rams."
+    },
+    {
+      "rank": 41,
+      "position": "WR",
+      "name": "Chimere Dike",
+      "team": "TEN",
+      "tier": "C",
+      "value": "Under 10",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Under 10 + High ceiling. Tennessee. Market sleeping by nearly a round."
+    },
+    {
+      "rank": 42,
+      "position": "QB",
+      "name": "Tyler Shough",
+      "team": "NO",
+      "tier": "C",
+      "value": "Over 2",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Sell-high candidate after early start per Waldman."
+    },
+    {
+      "rank": 43,
+      "position": "RB",
+      "name": "Phil Mafah",
+      "team": "DAL",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "\u2194"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Waiver wire value. Limited upside but RSP has him at 43 overall \u2014 way above market."
+    },
+    {
+      "rank": 44,
+      "position": "RB",
+      "name": "Ollie Gordon II",
+      "team": "MIA",
+      "tier": "C",
+      "value": "Over 3",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Slight overpay. Risk/reward. Miami."
+    },
+    {
+      "rank": 45,
+      "position": "QB",
+      "name": "Kurtis Rourke",
+      "team": "SF",
+      "tier": "C",
+      "value": "Under 17",
+      "types": [
+        "I",
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "MASSIVE SLEEPER. Under 17 + Sleeper tag. SF. Injury concern but RSP values him nearly 2 rounds above market. Patience play on large rosters."
+    },
+    {
+      "rank": 46,
+      "position": "TE",
+      "name": "Gunnar Helm",
+      "team": "TEN",
+      "tier": "C",
+      "value": "Par",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Tennessee."
+    },
+    {
+      "rank": 47,
+      "position": "WR",
+      "name": "Konata Mumpfield",
+      "team": "LAR",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper tag. Undrafted in dynasty leagues but RSP ranks him 47th overall. LA Rams."
+    },
+    {
+      "rank": 48,
+      "position": "RB",
+      "name": "Kalel Mullings",
+      "team": "TEN",
+      "tier": "C",
+      "value": "Under 16",
+      "types": [],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "MAJOR SLEEPER. Under 16 = nearly 2 rounds below market value. Tennessee. Waldman has him way above ADP."
+    },
+    {
+      "rank": 49,
+      "position": "RB",
+      "name": "LeQuint Allen",
+      "team": "JAX",
+      "tier": "C",
+      "value": "Par",
+      "types": [
+        "\u2194"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Limited upside. Jacksonville."
+    },
+    {
+      "rank": 50,
+      "position": "QB",
+      "name": "Shedeur Sanders",
+      "team": "CLE",
+      "tier": "C",
+      "value": "Over 12",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "OVERRATED per Waldman. Market drafts him 12 picks too early. Skills to become competent starter but off-field concerns and lacks elite physical tools."
+    },
+    {
+      "rank": 52,
+      "position": "WR",
+      "name": "Kaden Prather",
+      "team": "BUF",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper. Buffalo. Undrafted in leagues but RSP has him at 52."
+    },
+    {
+      "rank": 53,
+      "position": "WR",
+      "name": "Elic Ayomanor",
+      "team": "TEN",
+      "tier": "C",
+      "value": "Over 15",
+      "types": [
+        "\u2195"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Overvalued by market. Risk/reward."
+    },
+    {
+      "rank": 55,
+      "position": "WR",
+      "name": "Isaiah Neyor",
+      "team": "SF",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper. SF. Free acquisition if he earns opportunity."
+    },
+    {
+      "rank": 56,
+      "position": "RB",
+      "name": "Mario Anderson Jr.",
+      "team": "LAR",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper. LA Rams."
+    },
+    {
+      "rank": 57,
+      "position": "WR",
+      "name": "Kelly Akhairyi",
+      "team": "BUF",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper. Buffalo."
+    },
+    {
+      "rank": 58,
+      "position": "WR",
+      "name": "Andrew Armstrong",
+      "team": "MIA",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper. Miami."
+    },
+    {
+      "rank": 59,
+      "position": "WR",
+      "name": "Tez Johnson",
+      "team": "WAS",
+      "tier": "C",
+      "value": "Over 12",
+      "types": [
+        "U"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Underrated by RSP talent eval but market overpays. Washington."
+    },
+    {
+      "rank": 60,
+      "position": "RB",
+      "name": "Marcus Yarns",
+      "team": "NO",
+      "tier": "C",
+      "value": "Under 11",
+      "types": [
+        "\u2191",
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Under 11 + High ceiling + Sleeper. New Orleans. Major bargain."
+    },
+    {
+      "rank": 75,
+      "position": "RB",
+      "name": "Tre Stewart",
+      "team": "MIN",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER. Waiver wire + Sleeper. Minnesota."
+    },
+    {
+      "rank": 76,
+      "position": "RB",
+      "name": "Lan Larison",
+      "team": "NE",
+      "tier": "C",
+      "value": "Over 1",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Sleeper tag. New England."
+    },
+    {
+      "rank": 81,
+      "position": "TE",
+      "name": "Thomas Fidone II",
+      "team": "NYG",
+      "tier": "C",
+      "value": "WW",
+      "types": [
+        "U"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "SLEEPER TE. Waiver wire + Underrated. Giants. Free acquisition."
+    },
+    {
+      "rank": 110,
+      "position": "QB",
+      "name": "Max Brosmer",
+      "team": "MIN",
+      "tier": "E",
+      "value": "WW",
+      "types": [
+        "\u2194"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Minnesota. Limited upside but free."
+    },
+    {
+      "rank": 111,
+      "position": "QB",
+      "name": "Seth Henigan",
+      "team": "JAX",
+      "tier": "E",
+      "value": "WW",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling. Jacksonville. Free."
+    },
+    {
+      "rank": 115,
+      "position": "WR",
+      "name": "Tommy Mellott",
+      "team": "LV",
+      "tier": "E",
+      "value": "WW",
+      "types": [
+        "\u2191"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "High ceiling. Las Vegas. Free."
+    },
+    {
+      "rank": 121,
+      "position": "WR",
+      "name": "Will Sheppard",
+      "team": "TB",
+      "tier": "E",
+      "value": "WW",
+      "types": [
+        "Z"
+      ],
+      "preDraftRank": null,
+      "preDraftScore": null,
+      "notes": "Sleeper. Tampa Bay. Free."
+    }
+  ]
+}
