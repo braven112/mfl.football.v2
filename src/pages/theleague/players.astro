@@ -2213,12 +2213,11 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           p.auctionFranchise = newFranchise;
           p.auctionInitTime = newInitTime;
           changed = true;
-        } else if (p.auctionBidTime !== newBidTime) {
+        } else if (p.auctionBidTime !== newBidTime || p.auctionFranchise !== newFranchise || p.auctionInitTime !== newInitTime) {
           p.auctionBidTime = newBidTime;
+          p.auctionFranchise = newFranchise;
+          p.auctionInitTime = newInitTime;
         }
-        // Always update franchise and init time from latest poll
-        p.auctionFranchise = newFranchise;
-        p.auctionInitTime = newInitTime;
       }
 
       updateAuctionFreshness();
