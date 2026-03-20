@@ -442,26 +442,29 @@ Taxi cap hit = salary × 0.50 (current year only)
 ### On-Demand News Scan
 When the user asks for news, latest intel, or "what's happening with [player]", perform a deep dive:
 
+**IMPORTANT: Only surface news from the last 24 hours.** When searching, always append time-based filters (e.g., `tbs=qdr:d` for Google, `&limit=50` + filter by published date for APIs). Discard any results older than 24 hours from the current date/time. If no news exists within the last 24 hours for a topic, explicitly state "No news in the last 24 hours" rather than falling back to older results.
+
 1. **Load context first:**
    - Read the RSP sleeper watchlist from `data/fantasy-expert/sources/rsp/*.json`
    - Read the latest news digest from `data/fantasy-expert/news/` (if exists)
    - Read TheLeague rosters to know who's available vs. rostered
 
-2. **Search news sources** (use WebFetch or web search):
+2. **Search news sources** (use WebFetch or web search — restrict to last 24 hours only):
    - Rotoworld / NBC Sports player news (structured per-player updates)
    - FantasyPros news (aggregated fantasy-relevant news)
    - Pro Football Talk (breaking NFL news, transactions)
    - ESPN NFL (beat reporter insights)
    - NFL.com transactions wire
+   - When using web search, always include a time filter for the past 24 hours (e.g., add `after:YYYY-MM-DD` or use `tbs=qdr:d`)
 
-3. **For a specific player:** Search "[player name] NFL news", "[player name] fantasy football", "[player name] depth chart"
+3. **For a specific player:** Search "[player name] NFL news today", "[player name] fantasy football", "[player name] depth chart" — always with a 24-hour time filter
 
-4. **For a general scan:** Search by category:
-   - "NFL roster cuts [date]"
-   - "NFL depth chart changes [week]"
-   - "NFL injury report"
-   - "NFL free agent signings"
-   - "NFL trade rumors"
+4. **For a general scan:** Search by category (always with 24-hour time filter):
+   - "NFL roster cuts today"
+   - "NFL depth chart changes today"
+   - "NFL injury report today"
+   - "NFL free agent signings today"
+   - "NFL trade rumors today"
 
 5. **Always cross-reference** findings with:
    - RSP scouting data (is this player an identified sleeper?)
