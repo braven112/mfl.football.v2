@@ -634,7 +634,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
         </div>
-        <button class="auction-freshness" id="auction-freshness" type="button" role="status" aria-live="polite" aria-atomic="true" title="Click to refresh auction data" style="display: none;">
+        <button class="auction-freshness" id="auction-freshness" type="button" aria-label="Refresh auction data" title="Click to refresh auction data" style="display: none;">
           <span class="freshness__dot" aria-hidden="true"></span>
           Updated <span id="auction-freshness-time">&mdash;</span>
         </button>
@@ -1219,11 +1219,15 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
     if (ms == null || ms <= 0) return 'Ended';
     const h = Math.floor(ms / 3_600_000);
     const m = Math.floor((ms % 3_600_000) / 60_000);
+    let time;
     if (tier === 'critical') {
       const s = Math.floor((ms % 60_000) / 1000);
-      return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s).padStart(2, '0')}s`;
+      time = h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s).padStart(2, '0')}s`;
+      return `\u26a0 ${time}`;
     }
-    return `${h}h ${String(m).padStart(2, '0')}m`;
+    time = `${h}h ${String(m).padStart(2, '0')}m`;
+    if (tier === 'urgent') return `\u26a0 ${time}`;
+    return time;
   }
 
   function formatRelativeTime(timestamp) {
@@ -1671,7 +1675,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       // Place Bid button (Value view only — links to MFL's Place Bid page with player pre-selected)
       {
         const bidUrl = `https://www49.myfantasyleague.com/${currentYear}/options?L=13522&O=43&P=${p.id}`;
-        html += `<td class="col-group--value col-value-money col-place-bid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" title="Place bid on ${p.name}">Bid &#8599;</a></td>`;
+        html += `<td class="col-group--value col-value-money col-place-bid"><a href="${bidUrl}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
       }
 
       // ── Auction view cells ──
@@ -1714,7 +1718,7 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           const tier = getTimeLeftTier(tlMs);
           const tlText = tlMs != null && tlMs > 0 ? formatTimeLeft(tlMs, tier) : 'Ended';
           const tierCls = tier === 'none' ? '' : ` col-auction-timeleft--${tier}`;
-          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" role="timer" aria-label="Time left: ${tlText}" data-bid-time="${p.auctionBidTime}">${tlText}</td>`;
+          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" aria-label="Time left: ${tlText}" data-bid-time="${p.auctionBidTime}">${tlText}</td>`;
         } else {
           html += `<td class="cell-num col-group--auction col-auction-timeleft"><span class="na">&mdash;</span></td>`;
         }
@@ -2105,10 +2109,10 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
       if (tier !== 'none') cell.classList.add(`col-auction-timeleft--${tier}`);
       if (tier === 'critical') hasCritical = true;
     });
-    // Switch to faster ticks when any player is critical
-    if (hasCritical && auctionTimerInterval) {
+    // Switch to faster ticks when any player is critical, back to normal otherwise
+    if (auctionTimerInterval) {
       clearInterval(auctionTimerInterval);
-      auctionTimerInterval = setInterval(tickAuctionTimers, 5000);
+      auctionTimerInterval = setInterval(tickAuctionTimers, hasCritical ? 5000 : 15000);
     }
   }
 
