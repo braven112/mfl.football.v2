@@ -1041,7 +1041,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
   function applyContractVisibility() {
     // Show contract columns (Yrs, Sal/Bid) when viewing rostered players
     // OR when auction data exists (free agents have bids in the Sal/Bid column)
-    const showContract = (showRostered || (isAdmin && hasAuctionData)) && activeView !== 'value';
+    const showContract = (showRostered || hasAuctionData) && activeView !== 'value';
     document.querySelectorAll('.col-contract').forEach(el => {
       el.style.display = showContract ? '' : 'none';
     });
@@ -1494,7 +1494,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
       // Salary cell — show auction bid for free agents without a salary
       if (p.salary != null && p.salary > 0) {
         html += `<td class="cell-num col-contract">$${p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K'}</td>`;
-      } else if (isAdmin && p.auctionBid != null && p.auctionBid > 0) {
+      } else if (p.auctionBid != null && p.auctionBid > 0) {
         const tierCls = getBidTierClass(p.auctionStatus, p.auctionBidTime);
         const changedCls = changedPlayerIds.has(p.id) ? ' col-value-bid--changed' : '';
         const bidFmt = p.auctionBid >= 1000000
