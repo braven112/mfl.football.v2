@@ -1211,11 +1211,11 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
 
   // ── Auction view helpers ──
-  function getTimeLeftMs(lastBidTime) {
-    if (lastBidTime == null) return null;
-    // lastBidTime from API is Unix seconds — convert to ms
-    const bidMs = lastBidTime > 1e12 ? lastBidTime : lastBidTime * 1000;
-    const deadline = bidMs + BID_WINDOW_MS;
+  function getTimeLeftMs(initTime) {
+    if (initTime == null) return null;
+    // initTime from API is Unix seconds — convert to ms
+    const initMs = initTime > 1e12 ? initTime : initTime * 1000;
+    const deadline = initMs + BID_WINDOW_MS;
     const remaining = deadline - Date.now();
     return remaining > 0 ? remaining : 0;
   }
@@ -1402,8 +1402,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         }
         case 'auctionTimeLeft': {
           // Active bids first (sorted by time remaining asc), won second, no bid last
-          const aTime = getTimeLeftMs(a.auctionBidTime);
-          const bTime = getTimeLeftMs(b.auctionBidTime);
+          const aTime = getTimeLeftMs(a.auctionInitTime);
+          const bTime = getTimeLeftMs(b.auctionInitTime);
           if (a.auctionStatus === 'won' && b.auctionStatus !== 'won') return 1;
           if (b.auctionStatus === 'won' && a.auctionStatus !== 'won') return -1;
           aVal = aTime != null ? aTime : (a.auctionStatus === 'won' ? Infinity - 1 : Infinity);
@@ -1738,12 +1738,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         // Time Left
         if (p.auctionStatus === 'won') {
           html += `<td class="cell-num col-group--auction col-auction-timeleft col-auction-timeleft--won">Won</td>`;
-        } else if (p.auctionBidTime != null) {
-          const tlMs = getTimeLeftMs(p.auctionBidTime);
+        } else if (p.auctionInitTime != null) {
+          const tlMs = getTimeLeftMs(p.auctionInitTime);
           const tier = getTimeLeftTier(tlMs);
           const tlText = tlMs != null && tlMs > 0 ? formatTimeLeft(tlMs, tier) : 'Ended';
           const tierCls = tier === 'none' ? '' : ` col-auction-timeleft--${tier}`;
-          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" aria-label="Time left: ${tlText}" data-bid-time="${p.auctionBidTime}">${tlText}</td>`;
+          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" aria-label="Time left: ${tlText}" data-init-time="${p.auctionInitTime}">${tlText}</td>`;
         } else {
           html += `<td class="cell-num col-group--auction col-auction-timeleft"><span class="na">&mdash;</span></td>`;
         }
@@ -2119,12 +2119,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
 
   function tickAuctionTimers() {
-    const cells = document.querySelectorAll('.col-auction-timeleft[data-bid-time]');
+    const cells = document.querySelectorAll('.col-auction-timeleft[data-init-time]');
     let hasCritical = false;
     cells.forEach(cell => {
-      const bidTime = parseInt(cell.getAttribute('data-bid-time'), 10);
-      if (!bidTime) return;
-      const ms = getTimeLeftMs(bidTime);
+      const initTime = parseInt(cell.getAttribute('data-init-time'), 10);
+      if (!initTime) return;
+      const ms = getTimeLeftMs(initTime);
       const tier = getTimeLeftTier(ms);
       const text = ms != null && ms > 0 ? formatTimeLeft(ms, tier) : 'Ended';
       cell.textContent = text;
@@ -2220,7 +2220,9 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         if (changedPlayerIds.size > 0) {
           announceBidChanges(changedPlayerIds.size);
         }
-        render();
+        // Re-filter to include rostered players that gained bids (auction view)
+        // and re-sort since initTime/bid data changed
+        filterPlayers();
         applyGroupVisibility();
         applyContractVisibility();
 
