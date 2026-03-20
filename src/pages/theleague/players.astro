@@ -1370,6 +1370,10 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           aVal = a.auctionInitTime ?? -1;
           bVal = b.auctionInitTime ?? -1;
           break;
+        case 'auctionBidTime':
+          aVal = a.auctionBidTime ?? -1;
+          bVal = b.auctionBidTime ?? -1;
+          break;
         case 'auctionRank': {
           // Composite rank if available, else average, else single ranking
           const aRank = getAuctionRank(a);
