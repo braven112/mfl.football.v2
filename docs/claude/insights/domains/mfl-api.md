@@ -483,3 +483,121 @@ This looks correct — it sends `FRANCHISE_ID` when the client provides a non-`0
 - MFL API docs at `https://www49.myfantasyleague.com/2025/api_info?L=13522` — commissioner impersonation section
 - MFL API details at `https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522` — per-endpoint FRANCHISE_ID documentation
 - Error message from live API: "Can not specify a FRANCHISE_ID (0001) other than the owner's ()"
+
+---
+
+## 2026-03-19 - Auction Timing: What MFL Provides vs What It Doesn't
+
+**Context:** Researching how to determine auction end time and bid-level timestamps for league 13522's 2026 auction (March 15-21, 2026)
+
+### What Timing Data IS Available
+
+**On `auctionResults` (completed auctions only):**
+Each completed auction object has exactly two timing fields:
+```json
+{
+  "player": "13674",
+  "franchise": "0001",
+  "winningBid": "2500000",
+  "timeStarted": "1742479347",
+  "lastBidTime": "1742479419"
+}
+```
+- `timeStarted` — Unix timestamp (seconds) when the auction for this player started
+- `lastBidTime` — Unix timestamp of the final/winning bid
+- Both are Unix epoch seconds; multiply by 1000 for JS `Date` constructor
+- `lastBidTime === timeStarted` means the player sold at the opening bid (no competing bids)
+- These fields only appear in `auctionResults`, NOT in `transactions`
+
+**On `transactions` (live auction events):**
+Each `AUCTION_INIT`, `AUCTION_BID`, and `AUCTION_WON` transaction has exactly four fields:
+```json
+{
+  "type": "AUCTION_BID",
+  "franchise": "0005",
+  "transaction": "14073|1550000|",
+  "timestamp": "1773967270"
+}
+```
+- `timestamp` — Unix epoch seconds when this specific bid/event occurred
+- This IS the "when was the last bid placed" field for live auctions
+- The `TRANS_TYPE` parameter filters by type: `?TRANS_TYPE=AUCTION_BID`, `?TRANS_TYPE=AUCTION_INIT`, `?TRANS_TYPE=AUCTION_WON`
+
+### How to Determine "Last Bid Time" for an Active Player
+
+Since `auctionResults` only shows completed auctions, for an **active** (in-progress) player auction:
+1. Filter `transactions` for `AUCTION_BID` events matching the player ID
+2. The transaction with the highest `timestamp` value is the most recent bid
+3. That `timestamp` IS the "last bid time" for countdown purposes
+
+**Derivation approach:**
+```typescript
+// Get last bid time for player 14823
+const bidsForPlayer = transactions
+  .filter(t => t.type === 'AUCTION_BID' && t.transaction.startsWith('14823|'))
+  .sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
+const lastBidTimestamp = bidsForPlayer[0]?.timestamp; // Unix seconds
+const lastBidMs = parseInt(lastBidTimestamp) * 1000;  // JS Date
+```
+
+### What MFL Does NOT Provide
+
+**No auction-wide end time:** The API has no field indicating when the overall auction week ends (e.g., "auction closes Friday at midnight"). This must come from league rules or manual configuration.
+
+**No per-player countdown/expiry:** The `AUCTION_BID` and `AUCTION_INIT` transactions have no `expires` or `deadline` field. The only timing-related field is the transaction's own `timestamp`. Compare this with `TRADE` transactions, which DO have an `expires` field — auctions do not.
+
+**No bid timer on active auctions:** Unlike the league settings' `draftLimitHours` field for drafts, there is no `auctionBidTimer` or equivalent field. The auction "24-hour bid clock" (if the league uses one) is not exposed via API.
+
+**No current player on block:** The API has no "currently active player" field. You must infer it from the most recent `AUCTION_INIT` that hasn't been followed by `AUCTION_WON` for the same player.
+
+**`calendar` endpoint is auth-gated:** `TYPE=calendar` returns "API requires logged in user" for league 13522. Any auction scheduling events stored there are inaccessible without authentication.
+
+### League Settings Fields (from `TYPE=league`)
+
+These auction-related fields exist but none are timing fields:
+- `auction_kind`: "email" — meaning auction nominations/bids happen via email
+- `auctionStartAmount`: "45000000" — total cap ($45M)
+- `minBid` / `bbidMinimum`: "425000" — floor bid
+- `bidIncrement` / `bbidIncrement`: "25000" — minimum raise
+- `bbidTiebreaker`: "SORT" — tiebreaker rule
+- `bbidConditional`: "Yes" — conditional bids allowed
+
+**Key implication:** `auction_kind: "email"` explains why there's no real-time bid timer. This is an email-based auction (owners email bids), not a live web interface. MFL processes those emails and records them as `AUCTION_BID` transactions, but the timing of the auction closure is determined by the commissioner's rules, not the API.
+
+### Inferring Auction Status From Transaction Data
+
+Since there's no explicit "auction active" flag, use this heuristic:
+```typescript
+// Is there an active auction?
+const recentWindow = Date.now() - (7 * 24 * 60 * 60 * 1000); // last 7 days
+const hasRecentAuctionActivity = transactions.some(
+  t => ['AUCTION_INIT', 'AUCTION_BID', 'AUCTION_WON'].includes(t.type)
+  && parseInt(t.timestamp) * 1000 > recentWindow
+);
+
+// Is the auction still going? (no AUCTION_WON for the most recent AUCTION_INIT player)
+const latestInit = transactions.find(t => t.type === 'AUCTION_INIT');
+const latestInitPlayerId = latestInit?.transaction.split('|')[0];
+const hasWon = transactions.some(
+  t => t.type === 'AUCTION_WON' && t.transaction.startsWith(`${latestInitPlayerId}|`)
+);
+const isAuctionActive = latestInit && !hasWon;
+```
+
+### Evidence (Live Verification 2026-03-19)
+
+Verified against live league 13522 during active 2026 auction (March 15-21):
+- `auctionResults`: Returns `{ "auctionUnit": { "unit": "LEAGUE" } }` with NO auction objects during active auction (0 completed auctions yet)
+- `transactions`: 80+ `AUCTION_INIT` transactions, many `AUCTION_BID` transactions, 0 `AUCTION_WON` transactions — confirms auction is mid-stream
+- First AUCTION_INIT timestamp: `1773955259` → Thu Mar 19 2026 (UTC)
+- Recent AUCTION_BID timestamp: `1773967270` → same day, confirms real-time updates
+- TRADE transactions DO have `expires` field; AUCTION transactions do NOT
+
+**URLs used:**
+```
+https://www49.myfantasyleague.com/2026/export?TYPE=transactions&L=13522&TRANS_TYPE=AUCTION_INIT&JSON=1
+https://www49.myfantasyleague.com/2026/export?TYPE=transactions&L=13522&TRANS_TYPE=AUCTION_BID&JSON=1
+https://www49.myfantasyleague.com/2026/export?TYPE=transactions&L=13522&TRANS_TYPE=AUCTION_WON&JSON=1
+https://www49.myfantasyleague.com/2026/export?TYPE=auctionResults&L=13522&JSON=1
+https://www49.myfantasyleague.com/2026/export?TYPE=league&L=13522&JSON=1
+```
