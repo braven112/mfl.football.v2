@@ -985,6 +985,10 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
       document.querySelectorAll('.col-group--stats').forEach(el => {
         el.style.display = showStats ? '' : 'none';
       });
+      // PROJ column is permanently hidden
+      document.querySelectorAll('.col-projected').forEach(el => {
+        el.style.display = 'none';
+      });
       document.querySelectorAll('.col-group--rankings').forEach(el => {
         el.style.display = showRankings ? '' : 'none';
       });
