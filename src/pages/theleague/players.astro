@@ -879,6 +879,8 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
 </TheLeagueLayout>
 
 <script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAdmin }}>
+  // define:vars creates const — copy to let so polling can update at runtime
+  let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
 
   // State — default to free agents only
@@ -941,7 +943,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
 
   function applyGroupVisibility() {
     const canShowRankingsView = hasRankingColumns;
-    const canShowValueView = isAdmin && (hasSurplusData || hasAuctionData);
+    const canShowValueView = isAdmin && (hasSurplusData || _hasAuctionData);
 
     if (activeView === 'rankings' && !canShowRankingsView) {
       activeView = canShowValueView ? 'value' : 'stats';
@@ -1041,7 +1043,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
   function applyContractVisibility() {
     // Show contract columns (Yrs, Sal/Bid) when viewing rostered players
     // OR when auction data exists (free agents have bids in the Sal/Bid column)
-    const showContract = (showRostered || hasAuctionData) && activeView !== 'value';
+    const showContract = (showRostered || _hasAuctionData) && activeView !== 'value';
     document.querySelectorAll('.col-contract').forEach(el => {
       el.style.display = showContract ? '' : 'none';
     });
@@ -1556,7 +1558,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
     } else if (!e.detail.hasColumns && activeView === 'rankings') {
       // If ranking imports are removed while viewing rankings, fall back to
       // value view when available, otherwise stats.
-      activeView = (isAdmin && (hasSurplusData || hasAuctionData)) ? 'value' : 'stats';
+      activeView = (isAdmin && (hasSurplusData || _hasAuctionData)) ? 'value' : 'stats';
     }
     // Auto-sort by "My Rank" composite when it exists and user hasn't explicitly sorted
     if (e.detail.hasComposite && !hasExplicitSortPref) {
@@ -1881,7 +1883,7 @@ const isAdmin = true; // TEMP: was isAdminFranchise(authUser?.franchiseId)
 
       consecutiveFailures = 0;
       lastAuctionFetchTime = data.timestamp || Date.now();
-      if (data.count > 0) hasAuctionData = true;
+      if (data.count > 0) _hasAuctionData = true;
       let changed = false;
       changedPlayerIds.clear();
 
