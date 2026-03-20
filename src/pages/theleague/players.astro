@@ -3704,9 +3704,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   :global(td.col-auction-bid) {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    font-weight: 600;
     font-size: 0.75rem;
-    color: var(--color-gray-900, #111827);
+    /* color and font-weight inherited from col-value-bid tier classes (hot/warm/cool/won/none) */
   }
 
   :global(td.col-auction-rank) {
