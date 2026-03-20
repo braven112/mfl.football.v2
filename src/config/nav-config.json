@@ -173,6 +173,14 @@
       "leagueOnly": "theleague",
       "links": [
         {
+          "id": "intel",
+          "label": "Intel",
+          "icon": "binoculars",
+          "path": "/intel",
+          "external": false,
+          "description": "Competitive intelligence dashboard with power rankings and team scouting reports"
+        },
+        {
           "id": "league-summary",
           "label": "League Summary",
           "icon": "spreadsheet",
@@ -275,6 +283,7 @@
     "/whats-new": "/whats-new",
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
+    "/intel": "/intel",
     "/about": "/about",
     "/rules": "/rules"
   },
