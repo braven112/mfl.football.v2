@@ -214,6 +214,7 @@
               <thead>
                 <tr>
                   <th>Season</th>
+                  <th class="cdm-projection-th--salary">Contract</th>
                   <th class="cdm-projection-th--salary">Committed</th>
                   <th class="cdm-projection-th--salary">Available</th>
                 </tr>
@@ -1221,12 +1222,17 @@
   }
 
   .cdm-cap-impact-table :global(td:nth-child(2)),
-  .cdm-cap-impact-table :global(td:nth-child(3)) {
+  .cdm-cap-impact-table :global(td:nth-child(3)),
+  .cdm-cap-impact-table :global(td:nth-child(4)) {
     text-align: right;
     font-weight: 600;
   }
 
-  .cdm-cap-impact-table :global(td:nth-child(3)) {
+  .cdm-cap-impact-table :global(td:nth-child(2)) {
+    color: var(--color-primary, #1e5fa8);
+  }
+
+  .cdm-cap-impact-table :global(td:nth-child(4)) {
     color: var(--color-success, #16a34a);
   }
 

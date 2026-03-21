@@ -7995,6 +7995,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const tdYear = document.createElement('td');
         tdYear.textContent = String(yr0 + i);
 
+        const tdContract = document.createElement('td');
+        tdContract.textContent = formatSalaryCompact(playerSalaryThisYear);
+
         const tdCommitted = document.createElement('td');
         tdCommitted.textContent = formatSalaryCompact(newCommitted);
 
@@ -8006,6 +8009,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         }
 
         tr.appendChild(tdYear);
+        tr.appendChild(tdContract);
         tr.appendChild(tdCommitted);
         tr.appendChild(tdAvailable);
         tbody.appendChild(tr);
