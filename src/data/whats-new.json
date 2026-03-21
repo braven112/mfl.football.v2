@@ -2,11 +2,12 @@
   {
     "id": "auction-view",
     "date": "2026-03-20",
-    "title": "Full Auction View on Free Agents",
-    "summary": "The Free Agent page now has a dedicated Auction view — see every active bid, who's winning, how much time is left, and place your own bid without leaving the site.",
+    "title": "Live Auction on Free Agents",
+    "summary": "The Free Agent page now has a dedicated Auction view with live bid tracking — see every active bid, who's winning, current prices, and how much time is left, all updated every 60 seconds.",
     "description": [
       "Tracking a live auction used to mean camping on MFL's auction page in a second tab, refreshing every few minutes, and hoping you didn't miss the 36-hour deadline on that sleeper WR you'd been eyeing since the RSP dropped. The new Auction view puts the entire bid board right next to the player data you already use.",
       "Switch to Auction view and you'll see Current Bid, High Bidder, Time Left with a live countdown, and a Place Bid button for every nominated player. The table auto-sorts by Time Left so expiring bids surface to the top. Urgency tiers kick in as deadlines approach — amber when closing, red with a warning icon under six hours, and a pulsing alert in the final hour. Countdowns tick every 15 seconds normally and accelerate to 5-second updates when things get critical.",
+      "The Value tab also picked up live bid data — a Bid column right next to your estimated cost and surplus value analysis shows exactly what each player sold for. Won auctions appear in bold so you can spot completed sales at a glance. Your My Rank composite and average rank now appear alongside the money columns, so you can cross-reference your board with market prices without switching views.",
       "Data refreshes automatically every 60 seconds from MFL's transaction feed. A freshness indicator in the toolbar tells you exactly how current your view is — click it to force a refresh if you're feeling impatient. The view is available to all league members, not just the commissioner, because everyone deserves to know they're about to get outbid."
     ],
     "category": "new-feature",
@@ -14,24 +15,7 @@
     "linkLabel": "Open auction view",
     "icon": "zap",
     "image": "auction-view.webp",
-    "imageAlt": "Free Agent page Auction view showing active bids with countdown timers, high bidders, and Place Bid buttons"
-  },
-  {
-    "id": "live-auction-bids",
-    "date": "2026-03-19",
-    "title": "Live Auction Bids on Free Agents",
-    "summary": "The Free Agent page's Value tab now shows real-time auction bid amounts — updated every 60 seconds so you can track who's paying what without leaving the site.",
-    "description": [
-      "During auction season, knowing the going rate used to require a second browser tab permanently parked on the MFL auction page, a third tab for a spreadsheet, and the kind of alt-tab reflexes usually reserved for day traders. You'd check the bid, switch tabs, lose your place in the player list, and repeat until your eyes crossed or someone overbid you because you were busy squinting at a different screen.",
-      "Now the Free Agent page's Value tab has a live Bid column right next to your estimated cost and surplus value analysis. It polls MFL every 60 seconds for updated auction results, formats everything in the same $X.XM style as the other value columns, and shows you exactly what each player sold for. Won auctions appear in bold so you can spot completed sales at a glance. A 'last updated' timestamp in the toolbar tells you how fresh your data is — and turns amber if the connection goes stale.",
-      "The Value tab also picked up the ranking columns — your My Rank composite and average rank now appear alongside the money columns, so you can cross-reference your board with market prices without switching views. It's the difference between flying blind and flying with instruments. Use it during the auction, or don't — and then use it after the auction to figure out where things went sideways."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/players",
-    "linkLabel": "Check auction prices",
-    "icon": "zap",
-    "image": "live-auction-bids.webp",
-    "imageAlt": "Free Agent page Value tab showing the Bid column with auction prices alongside estimated cost and surplus value analysis"
+    "imageAlt": "Free Agent page showing the Auction view with live bid amounts, countdown timers, and Place Bid buttons"
   },
   {
     "id": "weekly-rollup-2026-03-16",
