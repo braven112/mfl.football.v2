@@ -11,7 +11,7 @@ const isCommish = !!user && isCommissionerOrAdmin(user);
 const pending = await getPendingDeclarations();
 const allDeclarations = await getDeclarations();
 const recentDecisions = allDeclarations
-  .filter(d => d.status === 'approved' || d.status === 'rejected' || d.status === 'applied')
+  .filter(d => d.status === 'applied')
   .slice(0, 20);
 
 const declarationTypeLabels: Record<string, string> = {
@@ -23,13 +23,8 @@ const declarationTypeLabels: Record<string, string> = {
   'team-option': 'Team Option',
 };
 
-const approvedCount = allDeclarations.filter(d => d.status === 'approved').length;
-const rejectedCount = allDeclarations.filter(d => d.status === 'rejected').length;
 const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
 
-function formatSalary(cents: number): string {
-  return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
 ---
 
 <TheLeagueLayout title="Manage Declarations">
@@ -77,13 +72,11 @@ function formatSalary(cents: number): string {
                 <div class="decl-card__grid">
                   <div class="decl-card__field">
                     <span class="field__label">Current</span>
-                    <span class="field__value">{d.currentYears}yr / {formatSalary(d.currentSalary)}</span>
+                    <span class="field__value">{d.currentYears}yr</span>
                   </div>
                   <div class="decl-card__field">
                     <span class="field__label">Requested</span>
-                    <span class="field__value field__value--accent">
-                      {d.requestedYears}yr{d.requestedSalary ? ` / ${formatSalary(d.requestedSalary)}` : ''}
-                    </span>
+                    <span class="field__value field__value--accent">{d.requestedYears}yr</span>
                   </div>
                   {d.currentContractInfo && (
                     <div class="decl-card__field">
@@ -112,18 +105,9 @@ function formatSalary(cents: number): string {
                       data-action="approve"
                       data-id={d.id}
                       data-player={d.playerName}
-                      aria-label={`Approve declaration for ${d.playerName}`}
+                      aria-label={`Apply declaration for ${d.playerName}`}
                     >
-                      Approve
-                    </button>
-                    <button
-                      class="action-btn action-btn--reject"
-                      data-action="reject"
-                      data-id={d.id}
-                      data-player={d.playerName}
-                      aria-label={`Reject declaration for ${d.playerName}`}
-                    >
-                      Reject
+                      Apply
                     </button>
                   </div>
                 )}
@@ -139,62 +123,25 @@ function formatSalary(cents: number): string {
 
         {recentDecisions.length === 0 ? (
           <div class="empty-state">
-            <p class="empty-state__text">No decisions yet</p>
+            <p class="empty-state__text">No applied declarations yet</p>
           </div>
         ) : (
-          <div class="card-list">
+          <ul class="recent-list">
             {recentDecisions.map(d => (
-              <article class={`decl-card decl-card--decided decl-card--${d.status}`}>
-                <div class="decl-card__top">
-                  <div class="decl-card__identity">
-                    <h3 class="decl-card__player">{d.playerName}</h3>
-                    <span class="decl-card__team">{d.franchiseName}</span>
-                  </div>
-                  <div class="decl-card__top-right">
-                    <span class={`status-indicator status-indicator--${d.status}`}>
-                      {d.status === 'applied' ? 'Applied' : d.status === 'approved' ? 'Approved' : 'Rejected'}
-                    </span>
-                    <span class="decl-card__type decl-card__type--muted">
-                      {declarationTypeLabels[d.type] || d.type}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="decl-card__grid">
-                  <div class="decl-card__field">
-                    <span class="field__label">Change</span>
-                    <span class="field__value">
-                      <span class="contract-arrow">{d.currentYears}yr &rarr; {d.requestedYears}yr</span>
-                    </span>
-                  </div>
-                  {d.reviewedBy && (
-                    <div class="decl-card__field">
-                      <span class="field__label">Reviewed by</span>
-                      <span class="field__value">{d.reviewedBy}</span>
-                    </div>
-                  )}
-                  {d.reviewedAt && (
-                    <div class="decl-card__field">
-                      <span class="field__label">Reviewed</span>
-                      <span class="field__value">{new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  )}
-                  {d.rejectionReason && (
-                    <div class="decl-card__field decl-card__field--full">
-                      <span class="field__label">Reason</span>
-                      <span class="field__value field__value--italic">{d.rejectionReason}</span>
-                    </div>
-                  )}
-                  <div class="decl-card__field">
-                    <span class="field__label">MFL Sync</span>
-                    <span class={`field__value ${d.mflSynced ? 'field__value--success' : ''}`}>
-                      {d.mflSynced ? 'Synced' : d.status === 'approved' ? 'Pending sync' : d.status === 'applied' ? 'Synced' : '\u2014'}
-                    </span>
-                  </div>
-                </div>
-              </article>
+              <li class="recent-item">
+                <span class="recent-item__player">{d.playerName}</span>
+                <span class="recent-item__detail">
+                  {d.currentYears}yr &rarr; {d.requestedYears}yr
+                </span>
+                <span class="recent-item__type">{declarationTypeLabels[d.type] || d.type}</span>
+                {d.reviewedAt && (
+                  <span class="recent-item__date">
+                    {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </section>
 
@@ -209,14 +156,6 @@ function formatSalary(cents: number): string {
               <span class="metric__value" id="pendingCount">{pending.length}</span>
               <span class="metric__label">Pending</span>
             </article>
-            <article class="metric" data-variant="approved">
-              <span class="metric__value">{approvedCount}</span>
-              <span class="metric__label">Approved</span>
-            </article>
-            <article class="metric" data-variant="rejected">
-              <span class="metric__value">{rejectedCount}</span>
-              <span class="metric__label">Rejected</span>
-            </article>
             <article class="metric" data-variant="applied">
               <span class="metric__value">{appliedCount}</span>
               <span class="metric__label">Applied</span>
@@ -227,31 +166,9 @@ function formatSalary(cents: number): string {
     </div>
   </main>
 
-  {isCommish && (
-    <!-- Rejection reason modal -->
-    <dialog id="rejectModal" class="reject-dialog" aria-labelledby="rejectDialogTitle">
-      <form method="dialog" class="reject-dialog__form">
-        <h3 class="reject-dialog__title" id="rejectDialogTitle">Reject Declaration</h3>
-        <p id="rejectModalPlayer" class="reject-dialog__player"></p>
-        <label for="rejectReason" class="reject-dialog__label">Reason (optional)</label>
-        <textarea id="rejectReason" class="reject-dialog__textarea" rows="3" placeholder="Enter reason for rejection..."></textarea>
-        <input type="hidden" id="rejectDeclarationId" />
-        <div class="reject-dialog__actions">
-          <button type="button" class="action-btn action-btn--cancel" id="rejectModalCancel">Cancel</button>
-          <button type="button" class="action-btn action-btn--reject" id="rejectModalConfirm">Reject</button>
-        </div>
-      </form>
-    </dialog>
-  )}
 
   <script type="module">
     const pendingList = document.getElementById('pendingList');
-    const rejectModal = /** @type {HTMLDialogElement} */ (document.getElementById('rejectModal'));
-    const rejectReason = /** @type {HTMLTextAreaElement} */ (document.getElementById('rejectReason'));
-    const rejectDeclarationId = /** @type {HTMLInputElement} */ (document.getElementById('rejectDeclarationId'));
-    const rejectModalPlayer = document.getElementById('rejectModalPlayer');
-    const rejectModalCancel = document.getElementById('rejectModalCancel');
-    const rejectModalConfirm = document.getElementById('rejectModalConfirm');
     const pendingCount = document.getElementById('pendingCount');
 
     function showEmptyState() {
@@ -263,7 +180,7 @@ function formatSalary(cents: number): string {
       emptyDiv.className = 'empty-state';
       const p = document.createElement('p');
       p.className = 'empty-state__text';
-      p.textContent = 'No pending declarations to review.';
+      p.textContent = 'No pending declarations.';
       emptyDiv.appendChild(p);
       pendingList.appendChild(emptyDiv);
     }
@@ -284,27 +201,21 @@ function formatSalary(cents: number): string {
       }, 500);
     }
 
-    // Event delegation for approve/reject buttons
+    // Event delegation for apply button
     pendingList?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
 
-      const action = btn.dataset.action;
       const declarationId = btn.dataset.id;
       const playerName = btn.dataset.player;
-
-      if (action === 'approve') {
-        handleApprove(declarationId, playerName, btn);
-      } else if (action === 'reject') {
-        openRejectModal(declarationId, playerName);
-      }
+      handleApply(declarationId, playerName, btn);
     });
 
-    async function handleApprove(declarationId, playerName, btn) {
-      if (!confirm(`Approve contract declaration for ${playerName}?`)) return;
+    async function handleApply(declarationId, playerName, btn) {
+      if (!confirm(`Apply contract change for ${playerName} to MFL?`)) return;
 
       btn.disabled = true;
-      btn.textContent = 'Approving\u2026';
+      btn.textContent = 'Applying\u2026';
 
       try {
         const res = await fetch('/api/contracts/approve', {
@@ -316,9 +227,9 @@ function formatSalary(cents: number): string {
         const data = await res.json();
 
         if (!res.ok) {
-          alert(`Failed to approve: ${data.error}`);
+          alert(`Failed to apply: ${data.error}`);
           btn.disabled = false;
-          btn.textContent = 'Approve';
+          btn.textContent = 'Apply';
           return;
         }
 
@@ -326,62 +237,12 @@ function formatSalary(cents: number): string {
         updatePendingCount();
         removeCard(card);
       } catch (err) {
-        console.error('Approve error:', err);
+        console.error('Apply error:', err);
         alert('Network error. Please try again.');
         btn.disabled = false;
-        btn.textContent = 'Approve';
+        btn.textContent = 'Apply';
       }
     }
-
-    function openRejectModal(declarationId, playerName) {
-      rejectDeclarationId.value = declarationId;
-      rejectModalPlayer.textContent = playerName;
-      rejectReason.value = '';
-      rejectModal.showModal();
-    }
-
-    rejectModalCancel?.addEventListener('click', () => {
-      rejectModal.close();
-    });
-
-    rejectModalConfirm?.addEventListener('click', async () => {
-      const declarationId = rejectDeclarationId.value;
-      const reason = rejectReason.value.trim();
-
-      rejectModalConfirm.disabled = true;
-      rejectModalConfirm.textContent = 'Rejecting\u2026';
-
-      try {
-        const res = await fetch('/api/contracts/reject', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ declarationId, reason }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(`Failed to reject: ${data.error}`);
-          rejectModalConfirm.disabled = false;
-          rejectModalConfirm.textContent = 'Reject';
-          return;
-        }
-
-        rejectModal.close();
-
-        const card = document.querySelector(`[data-id="${CSS.escape(declarationId)}"]`);
-        if (card) {
-          updatePendingCount();
-          removeCard(card);
-        }
-      } catch (err) {
-        console.error('Reject error:', err);
-        alert('Network error. Please try again.');
-      } finally {
-        rejectModalConfirm.disabled = false;
-        rejectModalConfirm.textContent = 'Reject';
-      }
-    });
 
     // Deadline countdown coloring
     document.querySelectorAll('[data-deadline]').forEach(el => {
@@ -743,54 +604,53 @@ function formatSalary(cents: number): string {
     }
 
     /* ================================================
-       Status Indicator (replaces ugly badges)
+       Recent Decisions List (text-link style)
        ================================================ */
-    .status-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
+    .recent-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .recent-item {
+      display: flex;
+      align-items: baseline;
+      gap: 0.625rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--color-gray-100);
+      font-size: var(--font-size-sm);
+      color: var(--content-text-muted);
+    }
+
+    .recent-item:last-child {
+      border-bottom: none;
+    }
+
+    .recent-item__player {
+      font-weight: 500;
+      color: var(--color-gray-900);
+    }
+
+    .recent-item__detail {
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+    }
+
+    .recent-item__type {
       font-size: 0.7rem;
-      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
+      color: var(--color-gray-400);
     }
 
-    .status-indicator::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
+    .recent-item__date {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--color-gray-400);
     }
-
-    .status-indicator--approved {
-      color: var(--color-success-dark);
-    }
-    .status-indicator--approved::before {
-      background: var(--color-success);
-    }
-
-    .status-indicator--applied {
-      color: var(--color-info-dark);
-    }
-    .status-indicator--applied::before {
-      background: var(--color-info);
-    }
-
-    .status-indicator--rejected {
-      color: var(--color-error-dark);
-    }
-    .status-indicator--rejected::before {
-      background: var(--color-error);
-    }
-
-    /* Decided card left accent */
-    .decl-card--decided {
-      border-left: 3px solid transparent;
-    }
-    .decl-card--approved { border-left-color: var(--color-success); }
-    .decl-card--applied { border-left-color: var(--color-info); }
-    .decl-card--rejected { border-left-color: var(--color-error); }
 
     /* ================================================
        Buttons (using design system tokens)
@@ -834,24 +694,6 @@ function formatSalary(cents: number): string {
       box-shadow: var(--shadow-btn-hover);
     }
 
-    /* Reject = Primary (blue = default CTA) */
-    .action-btn--reject {
-      background: var(--btn-primary-bg, #1c497c);
-      color: var(--btn-primary-text, #fff);
-    }
-    .action-btn--reject:hover:not(:disabled) {
-      background: var(--btn-primary-bg-hover, #164066);
-      box-shadow: var(--shadow-btn-hover);
-    }
-
-    /* Cancel = Ghost (low-emphasis) */
-    .action-btn--cancel {
-      background: transparent;
-      color: var(--color-gray-500, #6b7280);
-    }
-    .action-btn--cancel:hover {
-      color: var(--color-gray-700, #374151);
-    }
 
     /* ================================================
        Empty State
@@ -886,78 +728,6 @@ function formatSalary(cents: number): string {
       color: var(--color-gray-400);
     }
 
-    /* ================================================
-       Reject Dialog
-       ================================================ */
-    .reject-dialog {
-      border: none;
-      border-radius: 12px;
-      padding: 0;
-      max-width: 440px;
-      width: 90%;
-      box-shadow: var(--shadow-xl);
-    }
-
-    .reject-dialog::backdrop {
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(4px);
-    }
-
-    .reject-dialog__form {
-      padding: 1.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .reject-dialog__title {
-      margin: 0;
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: var(--color-gray-900);
-    }
-
-    .reject-dialog__player {
-      margin: 0;
-      font-weight: 500;
-      color: var(--color-gray-600);
-      font-size: 0.95rem;
-    }
-
-    .reject-dialog__label {
-      font-size: 0.7rem;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--content-text-muted);
-    }
-
-    .reject-dialog__textarea {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid var(--content-border);
-      border-radius: var(--radius-md);
-      font-size: 0.9rem;
-      font-weight: 300;
-      font-family: inherit;
-      resize: vertical;
-      box-sizing: border-box;
-      color: var(--color-gray-900);
-      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    }
-
-    .reject-dialog__textarea:focus-visible {
-      outline: none;
-      border-color: var(--color-primary);
-      box-shadow: var(--shadow-focus-ring);
-    }
-
-    .reject-dialog__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.625rem;
-      padding-top: 0.5rem;
-    }
 
     /* ================================================
        Responsive

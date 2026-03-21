@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         declarationId: declaration.id,
         status: 'pending',
-        message: 'Declaration submitted for commissioner approval',
+        message: 'Declaration submitted — pending commissioner apply',
       }),
       { status: 200, headers: JSON_HEADERS },
     );
