@@ -935,33 +935,32 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
     projectionMap.set(projectedScores.id, projectedScores.score);
   }
 
-  // Include players from live rosters that are missing from the salary file
-  // (e.g. auction winners added after the last salary sync)
-  const salaryPlayerIds = new Set((rawData?.players ?? []).map((p) => p.id));
-  const missingFromSalary = Object.entries(liveRosterData)
-    .filter(([id]) => !salaryPlayerIds.has(id))
-    .map(([id, liveData]) => {
-      const feed = feedPlayers[id] ?? {};
-      return {
-        id,
-        name: feed.name ?? `Player ${id}`,
-        position: (feed.position ?? 'N/A').replace(/^Def$/i, 'DEF'),
-        team: feed.team ?? '',
-        salary: liveData.salary ?? '0',
-        contractYear: liveData.contractYear ?? '1',
-        status: liveData.status ?? 'ROSTER',
-        points: 0,
-        draftYear: feed.draft_year ? Number(feed.draft_year) : null,
-        draftTeam: feed.draft_team ?? '',
-      };
-    });
+  // Build player list from live roster data (the authoritative source).
+  // The salary file is only used for enrichment (sleeper, nflverse, etc.).
+  const salaryDataById = new Map((rawData?.players ?? []).map((p) => [p.id, p]));
+  const hasLiveRosters = Object.keys(liveRosterData).length > 0;
 
-  const allPlayers = [...(rawData?.players ?? []), ...missingFromSalary];
+  const basePlayers = hasLiveRosters
+    ? Object.entries(liveRosterData).map(([id, liveData]) => {
+        const salaryPlayer = salaryDataById.get(id) ?? {};
+        const feed = feedPlayers[id] ?? {};
+        return {
+          ...salaryPlayer,
+          id,
+          name: salaryPlayer.name ?? feed.name ?? `Player ${id}`,
+          position: (salaryPlayer.position ?? feed.position ?? 'N/A').replace(/^Def$/i, 'DEF'),
+          team: salaryPlayer.team ?? feed.team ?? '',
+          salary: liveData.salary ?? salaryPlayer.salary ?? '0',
+          contractYear: liveData.contractYear ?? salaryPlayer.contractYear ?? '1',
+          status: liveData.status ?? salaryPlayer.status ?? 'ROSTER',
+          points: salaryPlayer.points ?? 0,
+          draftYear: salaryPlayer.draftYear ?? (feed.draft_year ? Number(feed.draft_year) : null),
+          draftTeam: salaryPlayer.draftTeam ?? feed.draft_team ?? '',
+        };
+      })
+    : (rawData?.players ?? []).filter((player) => !!liveRosterData[player.id] || !hasLiveRosters);
 
-  const players = allPlayers.filter((player) => {
-    // Filter out players no longer on any roster (dropped/released)
-    return !!liveRosterData[player.id];
-  }).map((player) => {
+  const players = basePlayers.map((player) => {
     // Get live roster data for this player (includes current salary, contract, franchise)
     const liveData = liveRosterData[player.id];
 
