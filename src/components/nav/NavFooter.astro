@@ -224,128 +224,19 @@ const showCommish = isCommissioner && isCommishMode;
     const announcer = document.querySelector('[data-commish-announce]');
     if (!toggle) return;
 
-    // Read team data from toggle's data attributes (server-rendered, trusted)
-    const teamName = toggle.dataset.commishTeamName || 'My Team';
-    const teamIcon = toggle.dataset.commishTeamIcon || '';
-    const teamOwner = toggle.dataset.commishTeamOwner || '';
-    const spUrl = toggle.dataset.spriteUrl || '/assets/icons/sprite.svg';
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
     function isCommishMode(): boolean {
       return document.cookie.split('; ').some(c => c === `${COOKIE_NAME}=true`);
     }
 
-    function setCommishCookie(enabled: boolean): void {
-      if (enabled) {
+    toggle.addEventListener('click', () => {
+      const entering = !isCommishMode();
+      // Set or clear the cookie, then reload so the server renders the correct state
+      if (entering) {
         document.cookie = `${COOKIE_NAME}=true; path=/; max-age=31536000; SameSite=Lax`;
       } else {
         document.cookie = `${COOKIE_NAME}=; path=/; max-age=0`;
       }
-    }
-
-    /** Build footer content using safe DOM methods */
-    function buildImg(src: string, alt: string): HTMLImageElement {
-      const img = document.createElement('img');
-      img.src = src;
-      img.alt = alt;
-      img.className = 'nav-footer__team-img';
-      img.width = 40;
-      img.height = 40;
-      img.loading = 'lazy';
-      return img;
-    }
-
-    function buildPlaceholder(): HTMLDivElement {
-      const div = document.createElement('div');
-      div.className = 'nav-footer__team-placeholder';
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'nav-footer__icon');
-      svg.setAttribute('aria-hidden', 'true');
-      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-      use.setAttribute('href', `${spUrl}#icon-shield-2`);
-      svg.appendChild(use);
-      div.appendChild(svg);
-      return div;
-    }
-
-    function buildTextSpan(className: string, text: string): HTMLSpanElement {
-      const span = document.createElement('span');
-      span.className = className;
-      span.textContent = text;
-      return span;
-    }
-
-    function updateFooterContent(isCommish: boolean): void {
-      const logoEl = document.querySelector('[data-commish-swap="logo"]') as HTMLElement | null;
-      const infoEl = document.querySelector('[data-commish-swap="info"]') as HTMLElement | null;
-      const linkEl = document.querySelector('[data-commish-link]') as HTMLAnchorElement | null;
-      if (!logoEl || !infoEl || !linkEl) return;
-
-      logoEl.replaceChildren();
-      infoEl.replaceChildren();
-
-      if (isCommish) {
-        logoEl.classList.add('nav-footer__team-logo--commish');
-        logoEl.appendChild(buildImg('/assets/commissioner-avatar.webp?v=5', 'Commissioner'));
-        infoEl.appendChild(buildTextSpan('nav-footer__team-name', 'Commissioner'));
-        infoEl.appendChild(buildTextSpan('nav-footer__owner-name', 'League Office'));
-        linkEl.setAttribute('aria-label', 'Commissioner dashboard');
-      } else {
-        logoEl.classList.remove('nav-footer__team-logo--commish');
-        if (teamIcon) {
-          logoEl.appendChild(buildImg(teamIcon, `${teamName} logo`));
-        } else {
-          logoEl.appendChild(buildPlaceholder());
-        }
-        infoEl.appendChild(buildTextSpan('nav-footer__team-name', teamName));
-        if (teamOwner) {
-          infoEl.appendChild(buildTextSpan('nav-footer__owner-name', teamOwner));
-        }
-        linkEl.setAttribute('aria-label', linkEl.dataset.ownerLabel || `View ${teamName} roster`);
-      }
-    }
-
-    function updateAdminNavLinks(showAdmin: boolean): void {
-      const adminLinks = document.querySelectorAll('[data-visibility="admin"]');
-      adminLinks.forEach(el => {
-        (el as HTMLElement).style.display = showAdmin ? '' : 'none';
-      });
-      const adminSections = document.querySelectorAll('[data-section-visibility="admin"]');
-      adminSections.forEach(el => {
-        (el as HTMLElement).style.display = showAdmin ? '' : 'none';
-      });
-    }
-
-    toggle.addEventListener('click', () => {
-      const entering = !isCommishMode();
-      setCommishCookie(entering);
-
-      // ARIA updates fire immediately — no delay
-      toggle.setAttribute('aria-pressed', String(entering));
-      toggle.setAttribute('aria-label',
-        entering ? 'Switch to owner mode' : 'Switch to commissioner mode'
-      );
-
-      if (announcer) {
-        announcer.textContent = entering
-          ? 'Commissioner mode activated'
-          : 'Owner mode activated';
-        setTimeout(() => { announcer.textContent = ''; }, 1000);
-      }
-
-      // Visual crossfade (skipped for reduced motion)
-      if (prefersReducedMotion) {
-        updateFooterContent(entering);
-        updateAdminNavLinks(entering);
-      } else {
-        const swaps = document.querySelectorAll('[data-commish-swap]');
-        swaps.forEach(el => el.classList.add('is-fading'));
-        setTimeout(() => {
-          updateFooterContent(entering);
-          updateAdminNavLinks(entering);
-          swaps.forEach(el => el.classList.remove('is-fading'));
-        }, 200);
-      }
+      window.location.reload();
     });
   }
 
