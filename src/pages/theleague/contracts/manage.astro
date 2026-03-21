@@ -3,14 +3,15 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 
-// Check if current user is a commissioner (same auth as nav sidebar)
+// Commissioner actions (Apply button) only show when commish-mode toggle is ON
 const user = getAuthUser(Astro.request);
 const isCommish = !!user && isCommissionerOrAdmin(user);
+const isCommishMode = isCommish && Astro.cookies.get('commish-mode')?.value === 'true';
 
 // Load declaration data at build/request time
 const pending = await getPendingDeclarations();
 const allDeclarations = await getDeclarations();
-const recentDecisions = allDeclarations
+const appliedContracts = allDeclarations
   .filter(d => d.status === 'applied')
   .slice(0, 20);
 
@@ -98,7 +99,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
                   )}
                 </div>
 
-                {isCommish && (
+                {isCommishMode && (
                   <div class="decl-card__actions">
                     <button
                       class="action-btn action-btn--approve"
@@ -118,16 +119,16 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
       </section>
 
       <!-- Recent decisions -->
-      <section class="section" aria-labelledby="recent-decisions-heading">
-        <h2 class="section__title" id="recent-decisions-heading">Recent Decisions</h2>
+      <section class="section" aria-labelledby="applied-contracts-heading">
+        <h2 class="section__title" id="applied-contracts-heading">Applied Contracts</h2>
 
-        {recentDecisions.length === 0 ? (
+        {appliedContracts.length === 0 ? (
           <div class="empty-state">
-            <p class="empty-state__text">No applied declarations yet</p>
+            <p class="empty-state__text">No applied contracts yet</p>
           </div>
         ) : (
           <ul class="recent-list">
-            {recentDecisions.map(d => (
+            {appliedContracts.map(d => (
               <li class="recent-item">
                 <span class="recent-item__player">{d.playerName}</span>
                 <span class="recent-item__detail">
