@@ -85,6 +85,10 @@ async function writeAllDeclarations(declarations: ContractDeclaration[]): Promis
     await redis.set(REDIS_KEY, declarations);
     return;
   }
+  // On Vercel the filesystem is read-only — don't attempt file writes
+  if (process.env.VERCEL) {
+    throw new Error('Storage not configured: Upstash Redis credentials are missing');
+  }
   writeDeclarationsFileSync({
     version: '1.0',
     lastUpdated: new Date().toISOString(),
