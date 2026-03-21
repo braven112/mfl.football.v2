@@ -259,8 +259,8 @@ export function getPlayerEligibility(
     const nowMs = now.getTime();
     const isExpired = nowMs > deadlineMs;
 
-    // If still within deadline and contract is at default 1 year, player can declare
-    if (!isExpired && currentYears === 1 && !isRC) {
+    // If still within deadline, player can declare (regardless of current contract years)
+    if (!isExpired && !isRC) {
       return {
         ...base,
         eligible: true,

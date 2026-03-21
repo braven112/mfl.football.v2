@@ -369,7 +369,7 @@ describe('getPlayerEligibility', () => {
       expect(result.declarationType).not.toBe('new-acquisition');
     });
 
-    it('does not mark players with existing multi-year contracts as new-acquisition eligible', () => {
+    it('allows acquired players with multi-year contracts to change within deadline', () => {
       const acquisitionTime = Math.floor(now.getTime() / 1000) - 3600;
       const rawTxns: MFLRawTransaction[] = [
         {
@@ -384,8 +384,10 @@ describe('getPlayerEligibility', () => {
       const playerInfo = makePlayerInfo();
 
       const result = getPlayerEligibility('14867', '0009', roster, transactions, playerInfo, currentYear, now);
-      // Should not be new-acquisition since they already have 3 years
-      expect(result.declarationType).not.toBe('new-acquisition');
+      // Within deadline, owner can always change contract regardless of current years
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('new-acquisition');
+      expect(result.yearOptions).toEqual([1, 2, 3, 4, 5]);
     });
   });
 
