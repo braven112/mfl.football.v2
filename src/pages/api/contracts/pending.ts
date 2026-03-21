@@ -6,7 +6,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getPendingDeclarations } from '../../../utils/contract-storage';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    if (user.role !== 'commissioner' && user.role !== 'admin') {
+    if (!isCommissionerOrAdmin(user)) {
       return new Response(
         JSON.stringify({ error: 'Commissioner access required' }),
         { status: 403, headers: JSON_HEADERS },

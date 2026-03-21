@@ -5,6 +5,7 @@
  */
 
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
+import { isAdminFranchise } from '../config/nav-config';
 
 export interface AuthUser {
   id: string;
@@ -106,6 +107,19 @@ export function requireAuth(user: AuthUser | null): user is AuthUser {
  */
 export function isFranchiseOwner(user: AuthUser, franchiseId: string): boolean {
   return user.franchiseId === franchiseId;
+}
+
+/**
+ * Verify that user has commissioner-level access.
+ * Checks both the JWT role AND the admin franchise list from nav config,
+ * so commissioners are recognized even if MFL didn't set the commish cookie at login.
+ */
+export function isCommissionerOrAdmin(user: AuthUser): boolean {
+  if (user.role === 'commissioner' || user.role === 'admin') return true;
+
+  // Fallback: check admin franchise IDs from nav config
+  // This handles cases where MFL login didn't return the MFL_IS_COMMISH cookie
+  return isAdminFranchise(user.franchiseId);
 }
 
 /**
