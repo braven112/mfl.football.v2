@@ -2,8 +2,8 @@ name: Roster Sync
 
 on:
   schedule:
-    # Run every 10 minutes to fetch latest roster data
-    - cron: "*/10 * * * *"
+    # TEMPORARY: Run every 4 minutes until April 4, 2026, then revert to */10
+    - cron: "*/4 * * * *"
   workflow_dispatch:
 
 concurrency:
