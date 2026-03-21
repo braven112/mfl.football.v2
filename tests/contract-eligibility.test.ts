@@ -99,6 +99,13 @@ describe('parseTransactionString', () => {
     expect(result.addedPlayerIds).toEqual([]);
     expect(result.droppedPlayerIds).toContain('13604');
   });
+
+  it('parses auction format (playerId|amount|)', () => {
+    const result = parseTransactionString('13592|3250000|');
+    expect(result.addedPlayerIds).toEqual(['13592']);
+    expect(result.droppedPlayerIds).toEqual([]);
+    expect(result.bbidAmount).toBe(3250000);
+  });
 });
 
 // --- parseTransactions ---
@@ -160,6 +167,21 @@ describe('parseTransactions', () => {
     ];
     const result = parseTransactions(raw);
     expect(result).toHaveLength(0);
+  });
+
+  it('includes AUCTION_WON transactions', () => {
+    const raw: MFLRawTransaction[] = [
+      {
+        type: 'AUCTION_WON',
+        franchise: '0001',
+        timestamp: '1774060150',
+        transaction: '13592|3250000|',
+      },
+    ];
+    const result = parseTransactions(raw);
+    expect(result).toHaveLength(1);
+    expect(result[0].addedPlayerIds).toEqual(['13592']);
+    expect(result[0].bbidAmount).toBe(3250000);
   });
 
   it('includes FREE_AGENT transactions that have adds', () => {
@@ -299,6 +321,27 @@ describe('getPlayerEligibility', () => {
       const playerInfo = makePlayerInfo();
 
       const result = getPlayerEligibility('14867', '0009', roster, transactions, playerInfo, currentYear, now);
+      expect(result.eligible).toBe(true);
+      expect(result.declarationType).toBe('new-acquisition');
+      expect(result.yearOptions).toEqual([2, 3, 4, 5]);
+      expect(result.isExpired).toBe(false);
+    });
+
+    it('marks a recent auction acquisition as eligible with 2-5 year options', () => {
+      const acquisitionTime = Math.floor(now.getTime() / 1000) - 3600;
+      const rawTxns: MFLRawTransaction[] = [
+        {
+          type: 'AUCTION_WON',
+          franchise: '0001',
+          timestamp: String(acquisitionTime),
+          transaction: '13592|3250000|',
+        },
+      ];
+      const transactions = parseTransactions(rawTxns);
+      const roster = makeRosterPlayer({ id: '13592', contractYear: '1', contractInfo: '' });
+      const playerInfo = makePlayerInfo({ id: '13592' });
+
+      const result = getPlayerEligibility('13592', '0001', roster, transactions, playerInfo, currentYear, now);
       expect(result.eligible).toBe(true);
       expect(result.declarationType).toBe('new-acquisition');
       expect(result.yearOptions).toEqual([2, 3, 4, 5]);
