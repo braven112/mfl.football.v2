@@ -169,14 +169,6 @@ export function validateContractSubmission(
     });
   }
 
-  // Validate that we're changing the contract
-  if (oldYears === newYears) {
-    errors.push({
-      field: 'contractYears',
-      message: 'New contract years must be different from current contract years',
-    });
-  }
-
   // Validate new contract years
   errors.push(...validateContractYears(newYears));
 
