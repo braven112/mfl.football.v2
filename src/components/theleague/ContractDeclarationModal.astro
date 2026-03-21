@@ -206,6 +206,25 @@
           </div>
         </div>
 
+        <!-- Team Cap Impact (shown alongside salary projection) -->
+        <div class="cdm-section" id="cdm-cap-impact-section" style="display: none;">
+          <h4 class="cdm-section__title">Team Cap Impact</h4>
+          <div class="cdm-projection-wrapper">
+            <table class="cdm-cap-impact-table">
+              <thead>
+                <tr>
+                  <th>Season</th>
+                  <th class="cdm-projection-th--salary">Committed</th>
+                  <th class="cdm-projection-th--salary">Available</th>
+                </tr>
+              </thead>
+              <tbody id="cdm-cap-impact-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div><!-- /cdm-review-panel -->
     </div><!-- /cdm-body -->
 
@@ -1169,6 +1188,57 @@
   }
 
   .cdm-projection-table :global(tbody tr:hover) {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  /* ================================================================
+     Team Cap Impact Table
+     ================================================================ */
+  .cdm-cap-impact-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdm-cap-impact-table th {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-400, #9ca3af);
+    font-weight: 600;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .cdm-cap-impact-table :global(td) {
+    padding: 0.4rem 0.75rem;
+    color: var(--color-gray-700, #374151);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-size: 0.8125rem;
+  }
+
+  .cdm-cap-impact-table :global(td:nth-child(2)),
+  .cdm-cap-impact-table :global(td:nth-child(3)) {
+    text-align: right;
+    font-weight: 600;
+  }
+
+  .cdm-cap-impact-table :global(td:nth-child(3)) {
+    color: var(--color-success, #16a34a);
+  }
+
+  .cdm-cap-impact-table :global(.cap-over) {
+    color: var(--color-error, #dc2626) !important;
+  }
+
+  .cdm-cap-impact-table :global(tr:last-child td) {
+    border-bottom: none;
+  }
+
+  .cdm-cap-impact-table :global(tbody tr:hover) {
     background: var(--color-gray-50, #f9fafb);
   }
 
