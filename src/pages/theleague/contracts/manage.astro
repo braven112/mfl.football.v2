@@ -1,6 +1,11 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+
+// Check if current user is a commissioner
+const user = getAuthUser(Astro.request);
+const isCommish = !!user && isCommissionerOrAdmin(user);
 
 // Load declaration data at build/request time
 const pending = await getPendingDeclarations();
@@ -32,7 +37,7 @@ function formatSalary(cents: number): string {
     <!-- Page header -->
     <header class="page-header">
       <h1 class="page-title">Contract Declarations</h1>
-      <p class="page-subtitle">Commissioner review and approval workflow</p>
+      <p class="page-subtitle">Contract declaration status and history</p>
     </header>
 
     <div class="page-grid">
@@ -100,24 +105,26 @@ function formatSalary(cents: number): string {
                   )}
                 </div>
 
-                <div class="decl-card__actions">
-                  <button
-                    class="action-btn action-btn--approve"
-                    data-action="approve"
-                    data-id={d.id}
-                    data-player={d.playerName}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    class="action-btn action-btn--reject"
-                    data-action="reject"
-                    data-id={d.id}
-                    data-player={d.playerName}
-                  >
-                    Reject
-                  </button>
-                </div>
+                {isCommish && (
+                  <div class="decl-card__actions">
+                    <button
+                      class="action-btn action-btn--approve"
+                      data-action="approve"
+                      data-id={d.id}
+                      data-player={d.playerName}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      class="action-btn action-btn--reject"
+                      data-action="reject"
+                      data-id={d.id}
+                      data-player={d.playerName}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -218,20 +225,22 @@ function formatSalary(cents: number): string {
     </div>
   </main>
 
-  <!-- Rejection reason modal -->
-  <dialog id="rejectModal" class="reject-dialog">
-    <form method="dialog" class="reject-dialog__form">
-      <h3 class="reject-dialog__title">Reject Declaration</h3>
-      <p id="rejectModalPlayer" class="reject-dialog__player"></p>
-      <label for="rejectReason" class="reject-dialog__label">Reason (optional)</label>
-      <textarea id="rejectReason" class="reject-dialog__textarea" rows="3" placeholder="Enter reason for rejection..."></textarea>
-      <input type="hidden" id="rejectDeclarationId" />
-      <div class="reject-dialog__actions">
-        <button type="button" class="action-btn action-btn--cancel" id="rejectModalCancel">Cancel</button>
-        <button type="button" class="action-btn action-btn--reject" id="rejectModalConfirm">Reject</button>
-      </div>
-    </form>
-  </dialog>
+  {isCommish && (
+    <!-- Rejection reason modal -->
+    <dialog id="rejectModal" class="reject-dialog">
+      <form method="dialog" class="reject-dialog__form">
+        <h3 class="reject-dialog__title">Reject Declaration</h3>
+        <p id="rejectModalPlayer" class="reject-dialog__player"></p>
+        <label for="rejectReason" class="reject-dialog__label">Reason (optional)</label>
+        <textarea id="rejectReason" class="reject-dialog__textarea" rows="3" placeholder="Enter reason for rejection..."></textarea>
+        <input type="hidden" id="rejectDeclarationId" />
+        <div class="reject-dialog__actions">
+          <button type="button" class="action-btn action-btn--cancel" id="rejectModalCancel">Cancel</button>
+          <button type="button" class="action-btn action-btn--reject" id="rejectModalConfirm">Reject</button>
+        </div>
+      </form>
+    </dialog>
+  )}
 
   <script type="module">
     const pendingList = document.getElementById('pendingList');
