@@ -268,7 +268,7 @@ export function getPlayerEligibility(
         acquisitionTimestamp: acquisition.timestamp,
         deadlineTimestamp: Math.floor(deadlineMs / 1000),
         isExpired: false,
-        yearOptions: [2, 3, 4, 5],
+        yearOptions: [1, 2, 3, 4, 5],
       };
     }
   }

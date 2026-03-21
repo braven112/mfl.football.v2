@@ -323,11 +323,11 @@ describe('getPlayerEligibility', () => {
       const result = getPlayerEligibility('14867', '0009', roster, transactions, playerInfo, currentYear, now);
       expect(result.eligible).toBe(true);
       expect(result.declarationType).toBe('new-acquisition');
-      expect(result.yearOptions).toEqual([2, 3, 4, 5]);
+      expect(result.yearOptions).toEqual([1, 2, 3, 4, 5]);
       expect(result.isExpired).toBe(false);
     });
 
-    it('marks a recent auction acquisition as eligible with 2-5 year options', () => {
+    it('marks a recent auction acquisition as eligible with 1-5 year options', () => {
       const acquisitionTime = Math.floor(now.getTime() / 1000) - 3600;
       const rawTxns: MFLRawTransaction[] = [
         {
@@ -344,7 +344,7 @@ describe('getPlayerEligibility', () => {
       const result = getPlayerEligibility('13592', '0001', roster, transactions, playerInfo, currentYear, now);
       expect(result.eligible).toBe(true);
       expect(result.declarationType).toBe('new-acquisition');
-      expect(result.yearOptions).toEqual([2, 3, 4, 5]);
+      expect(result.yearOptions).toEqual([1, 2, 3, 4, 5]);
       expect(result.isExpired).toBe(false);
     });
 
