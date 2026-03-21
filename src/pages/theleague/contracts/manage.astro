@@ -45,8 +45,8 @@ function formatSalary(cents: number): string {
       <div class="manage-content">
 
       <!-- Pending declarations -->
-      <section class="section">
-        <h2 class="section__title">
+      <section class="section" aria-labelledby="pending-review-heading">
+        <h2 class="section__title" id="pending-review-heading">
           Pending Review
           <span class="section__count">{pending.length}</span>
         </h2>
@@ -112,6 +112,7 @@ function formatSalary(cents: number): string {
                       data-action="approve"
                       data-id={d.id}
                       data-player={d.playerName}
+                      aria-label={`Approve declaration for ${d.playerName}`}
                     >
                       Approve
                     </button>
@@ -120,6 +121,7 @@ function formatSalary(cents: number): string {
                       data-action="reject"
                       data-id={d.id}
                       data-player={d.playerName}
+                      aria-label={`Reject declaration for ${d.playerName}`}
                     >
                       Reject
                     </button>
@@ -132,8 +134,8 @@ function formatSalary(cents: number): string {
       </section>
 
       <!-- Recent decisions -->
-      <section class="section">
-        <h2 class="section__title">Recent Decisions</h2>
+      <section class="section" aria-labelledby="recent-decisions-heading">
+        <h2 class="section__title" id="recent-decisions-heading">Recent Decisions</h2>
 
         {recentDecisions.length === 0 ? (
           <div class="empty-state">
@@ -200,7 +202,7 @@ function formatSalary(cents: number): string {
 
       <!-- Status sidebar (right) -->
       <aside class="status-sidebar">
-        <nav class="status-sidebar__container">
+        <div class="status-sidebar__container" role="region" aria-label="Declaration statistics">
           <h3 class="status-sidebar__title">Status</h3>
           <div class="status-sidebar__metrics">
             <article class="metric" data-variant="pending">
@@ -220,16 +222,16 @@ function formatSalary(cents: number): string {
               <span class="metric__label">Applied</span>
             </article>
           </div>
-        </nav>
+        </div>
       </aside>
     </div>
   </main>
 
   {isCommish && (
     <!-- Rejection reason modal -->
-    <dialog id="rejectModal" class="reject-dialog">
+    <dialog id="rejectModal" class="reject-dialog" aria-labelledby="rejectDialogTitle">
       <form method="dialog" class="reject-dialog__form">
-        <h3 class="reject-dialog__title">Reject Declaration</h3>
+        <h3 class="reject-dialog__title" id="rejectDialogTitle">Reject Declaration</h3>
         <p id="rejectModalPlayer" class="reject-dialog__player"></p>
         <label for="rejectReason" class="reject-dialog__label">Reason (optional)</label>
         <textarea id="rejectReason" class="reject-dialog__textarea" rows="3" placeholder="Enter reason for rejection..."></textarea>
@@ -812,6 +814,11 @@ function formatSalary(cents: number): string {
       transform: scale(0.97);
     }
 
+    .action-btn:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
     .action-btn:disabled {
       opacity: 0.45;
       cursor: not-allowed;
@@ -939,7 +946,7 @@ function formatSalary(cents: number): string {
       transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
-    .reject-dialog__textarea:focus {
+    .reject-dialog__textarea:focus-visible {
       outline: none;
       border-color: var(--color-primary);
       box-shadow: var(--shadow-focus-ring);
@@ -1102,5 +1109,17 @@ function formatSalary(cents: number): string {
     .card-list .decl-card:nth-child(3) { animation-delay: 0.2s; }
     .card-list .decl-card:nth-child(4) { animation-delay: 0.25s; }
     .card-list .decl-card:nth-child(5) { animation-delay: 0.3s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .decl-card, .metric, .status-sidebar {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+      .decl-card--fade {
+        transition: none;
+        opacity: 0;
+      }
+    }
   </style>
 </TheLeagueLayout>
