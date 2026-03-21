@@ -177,6 +177,14 @@ const SKELETON_ROWS = 12;
         </div>
     </div>
 
+    <!-- Loading Progress Bar — shows estimated load time, hidden once data arrives -->
+    <div class="roster-loading-bar" id="rosterLoadingBar">
+      <div class="roster-loading-bar__track">
+        <div class="roster-loading-bar__fill" id="rosterLoadingFill"></div>
+      </div>
+      <span class="roster-loading-bar__label" id="rosterLoadingLabel">Loading roster data…</span>
+    </div>
+
     <!-- Roster View (skeleton — populated by deferred scripts) -->
     <div class="view-container" data-view-content="roster">
       <div class="roster-table-card">
@@ -432,6 +440,68 @@ const SKELETON_ROWS = 12;
   <div slot="fallback"></div>
 </RosterDataIsland>
 
+<!-- Loading progress bar controller -->
+<script>
+  (() => {
+    const bar = document.getElementById('rosterLoadingBar');
+    const fill = document.getElementById('rosterLoadingFill');
+    const label = document.getElementById('rosterLoadingLabel');
+    if (!bar || !fill || !label) return;
+
+    const ESTIMATED_MS = 8000; // estimated load time
+    const TICK_MS = 100;
+    const start = performance.now();
+    let done = false;
+
+    function updateLabel(elapsed) {
+      const remaining = Math.max(0, Math.ceil((ESTIMATED_MS - elapsed) / 1000));
+      if (remaining > 0) {
+        label.textContent = `Loading roster data… ~${remaining}s`;
+      } else {
+        label.textContent = 'Almost there…';
+      }
+    }
+
+    // Animate progress — fast at first, asymptotic near 95%
+    const timer = setInterval(() => {
+      if (done) return;
+      const elapsed = performance.now() - start;
+      // Ease-out: rushes to ~90% then crawls
+      const raw = elapsed / ESTIMATED_MS;
+      const pct = Math.min(95, raw < 1 ? raw * 90 : 90 + (1 - Math.exp(-(raw - 1) * 2)) * 5);
+      fill.style.width = pct + '%';
+      updateLabel(elapsed);
+    }, TICK_MS);
+
+    // Watch for the data island to inject the roster-config script tag
+    const observer = new MutationObserver(() => {
+      if (document.getElementById('roster-config')) {
+        finish();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Also check immediately in case it already loaded
+    if (document.getElementById('roster-config')) {
+      finish();
+    }
+
+    function finish() {
+      if (done) return;
+      done = true;
+      observer.disconnect();
+      clearInterval(timer);
+      fill.style.width = '100%';
+      fill.style.transition = 'width 0.3s ease';
+      label.textContent = 'Roster loaded';
+      setTimeout(() => {
+        bar.style.opacity = '0';
+        bar.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => { bar.style.display = 'none'; }, 400);
+      }, 600);
+    }
+  })();
+</script>
 
 <style is:global>
   .roster-page {
@@ -2471,6 +2541,40 @@ const SKELETON_ROWS = 12;
     .mode-toggle {
       order: 1;
     }
+  }
+
+  /* ========================================
+     LOADING PROGRESS BAR
+     ======================================== */
+  .roster-loading-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 0.25rem;
+  }
+
+  .roster-loading-bar__track {
+    flex: 1;
+    height: 6px;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .roster-loading-bar__fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-primary, #2563eb), var(--color-primary-light, #60a5fa));
+    border-radius: 3px;
+    transition: width 0.1s linear;
+  }
+
+  .roster-loading-bar__label {
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    white-space: nowrap;
+    min-width: 10ch;
+    font-variant-numeric: tabular-nums;
   }
 
   /* ========================================
