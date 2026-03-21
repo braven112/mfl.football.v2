@@ -8898,18 +8898,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       const elig = cdmPlayerData.eligibility;
 
-      // If selecting the same years as current contract, cancel any pending declaration
-      if (cdmSelectedYears === elig?.currentYears) {
-        delete localDeclarations[cdmPlayerData.id];
-        delete declarationsByPlayer[cdmPlayerData.id];
-        cdmSubmitBtn.style.display = 'none';
-        cdmSuccess.style.display = 'flex';
-        updateView();
-        applyEligibilityStyling();
-        setTimeout(closeDeclarationModal, 1500);
-        return;
-      }
-
       // Demo mode: skip API call, show success immediately
       const isDemoPlayer = demoActive && String(cdmPlayerData.id).startsWith('DEMO_');
       if (isDemoPlayer) {
