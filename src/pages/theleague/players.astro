@@ -1415,8 +1415,8 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         }
         case 'auctionTimeLeft': {
           // Active bids first (sorted by time remaining asc), won second, no bid last
-          const aTime = getTimeLeftMs(a.auctionInitTime);
-          const bTime = getTimeLeftMs(b.auctionInitTime);
+          const aTime = getTimeLeftMs(a.auctionBidTime ?? a.auctionInitTime);
+          const bTime = getTimeLeftMs(b.auctionBidTime ?? b.auctionInitTime);
           if (a.auctionStatus === 'won' && b.auctionStatus !== 'won') return 1;
           if (b.auctionStatus === 'won' && a.auctionStatus !== 'won') return -1;
           aVal = aTime != null ? aTime : (a.auctionStatus === 'won' ? Infinity - 1 : Infinity);
@@ -1751,12 +1751,13 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
         // Time Left
         if (p.auctionStatus === 'won') {
           html += `<td class="cell-num col-group--auction col-auction-timeleft col-auction-timeleft--won">Won</td>`;
-        } else if (p.auctionInitTime != null) {
-          const tlMs = getTimeLeftMs(p.auctionInitTime);
+        } else if (p.auctionBidTime != null || p.auctionInitTime != null) {
+          const timerStart = p.auctionBidTime ?? p.auctionInitTime;
+          const tlMs = getTimeLeftMs(timerStart);
           const tier = getTimeLeftTier(tlMs);
           const tlText = tlMs != null && tlMs > 0 ? formatTimeLeft(tlMs, tier) : 'Ended';
           const tierCls = tier === 'none' ? '' : ` col-auction-timeleft--${tier}`;
-          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" aria-label="Time left: ${tlText}" data-init-time="${p.auctionInitTime}">${tlText}</td>`;
+          html += `<td class="cell-num col-group--auction col-auction-timeleft${tierCls}" aria-label="Time left: ${tlText}" data-bid-time="${timerStart}">${tlText}</td>`;
         } else {
           html += `<td class="cell-num col-group--auction col-auction-timeleft"><span class="na">&mdash;</span></td>`;
         }
@@ -2133,12 +2134,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
 
   function tickAuctionTimers() {
-    const cells = document.querySelectorAll('.col-auction-timeleft[data-init-time]');
+    const cells = document.querySelectorAll('.col-auction-timeleft[data-bid-time]');
     let hasCritical = false;
     cells.forEach(cell => {
-      const initTime = parseInt(cell.getAttribute('data-init-time'), 10);
-      if (!initTime) return;
-      const ms = getTimeLeftMs(initTime);
+      const bidTime = parseInt(cell.getAttribute('data-bid-time'), 10);
+      if (!bidTime) return;
+      const ms = getTimeLeftMs(bidTime);
       const tier = getTimeLeftTier(ms);
       const text = ms != null && ms > 0 ? formatTimeLeft(ms, tier) : 'Ended';
       cell.textContent = text;
