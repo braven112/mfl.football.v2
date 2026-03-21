@@ -13,37 +13,23 @@ import {
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
+import { getFeedData, getMultiFeedData } from '../../lib/mfl-data-loader';
 
 export const prerender = false;
 
 // ---------------------------------------------------------------------------
-// Data loading — same patterns as league-comparison.astro and rosters.astro
+// Data loading — salary files stay as static globs, MFL feeds use data loader
 // ---------------------------------------------------------------------------
 
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
 });
 
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
-  { eager: true }
-);
-
-const draftResultsFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/draftResults.json',
-  { eager: true }
-);
-
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
 const extractSeason = (filepath: string): string | null => {
   const match = filepath.match(/(\d{4})\.json$/);
-  return match ? match[1] : null;
-};
-
-const extractFeedSeason = (filepath: string): string | null => {
-  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
   return match ? match[1] : null;
 };
 
@@ -59,28 +45,16 @@ const rosterEntries = Object.entries(rosterModules)
 const latestRoster = rosterEntries[0]?.data || {};
 const currentYear = rosterEntries[0]?.season || String(SALARY_YEARS[0]);
 
-// Get salary adjustments for the current year
-const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
-  .map(([path, mod]) => ({
-    season: extractFeedSeason(path),
-    data: getModuleData(mod),
-  }))
-  .filter((item) => item.season === currentYear && item.data);
+// Get salary adjustments and draft results for the current year (live MFL API fetch)
+const mflFeeds = await getMultiFeedData('theleague', '13522', currentYear, ['salaryAdjustments', 'draftResults']);
 
-const adjustmentData = adjustmentEntries[0]?.data || {};
+const adjustmentData = mflFeeds.salaryAdjustments || {};
 const rawAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
 
 // Get draft capital from the current year's draftResults API.
 // Unlike futureDraftPicks (which only has *future* years), draftResults shows
 // the current year's draft board with live ownership after trades.
-const draftResultsEntries = Object.entries(draftResultsFeeds)
-  .map(([path, mod]) => ({
-    season: extractFeedSeason(path),
-    data: getModuleData(mod),
-  }))
-  .filter((item) => item.season === currentYear && item.data);
-
-const draftResultsData = draftResultsEntries[0]?.data || null;
+const draftResultsData = mflFeeds.draftResults || null;
 const draftCapitalMap = getDraftCapitalFromDraftResults(draftResultsData);
 
 // ---------------------------------------------------------------------------

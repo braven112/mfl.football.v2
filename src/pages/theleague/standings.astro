@@ -19,26 +19,14 @@ import {
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
+import { getFeedData, getAvailableYears } from '../../lib/mfl-data-loader';
 
-// Import standings data
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
-  eager: true,
-});
-
-// Extract available years from the imported feeds
-const availableYears = Object.keys(standingsFeeds)
-  .map(path => {
-    const match = path.match(/\/(\d{4})\/standings\.json$/);
-    return match ? parseInt(match[1], 10) : null;
-  })
-  .filter((year): year is number => year !== null)
-  .sort((a, b) => b - a);
-
-// Get year from query parameter (default to latest available or current season year)
+// Discover available years from disk + ensure current year is included
+const diskYears = getAvailableYears('theleague');
 const currentSeasonYear = getCurrentSeasonYear();
+const availableYears = [...new Set([currentSeasonYear, ...diskYears])].sort((a, b) => b - a);
+
+// Get year from query parameter (default to current season year)
 const defaultYear = availableYears.includes(currentSeasonYear)
   ? currentSeasonYear
   : availableYears[0] || currentSeasonYear;
@@ -50,20 +38,15 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
 }
 
-// Get standings data for selected year
-const selectedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
-  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
-  | undefined;
+// Get standings data — live from MFL for current year, static for historical
+const selectedFeed = await getFeedData('theleague', '13522', selectedYear, 'standings') as
+  | { leagueStandings?: { franchise: any[] }; error?: any }
+  | null;
 
 // Check if data is valid (has leagueStandings and no error)
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
   return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
 }
-
-const fetchMeta = fetchMetaFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/fetch.meta.json`] as
-  | { lastFetched?: string }
-  | undefined;
-const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 
 const franchises = selectedFeed.leagueStandings.franchise;
 
@@ -266,11 +249,9 @@ const defendingChampions = championsByYear[previousYear] || {};
         </div>
       )}
 
-      {lastFetched && (
-        <p class="data-disclaimer">
-          Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-        </p>
-      )}
+      <p class="data-disclaimer">
+        Live data &middot; refreshed every 2 minutes
+      </p>
     </main>
   </div>
 </TheLeagueLayout>

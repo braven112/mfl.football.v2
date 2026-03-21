@@ -21,32 +21,18 @@ import {
 } from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getFeedData, getAvailableYears, readStaticFile } from '../../lib/mfl-data-loader';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 
-// Import standings data
-const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-
-// Import weekly results data for calculating all-play with week cutoff
-const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
-  eager: true,
-});
-
-// Extract available years from the imported feeds
-const availableYears = Object.keys(standingsFeeds)
-  .map(path => {
-    const match = path.match(/\/(\d{4})\/standings\.json$/);
-    return match ? parseInt(match[1], 10) : null;
-  })
-  .filter((year): year is number => year !== null)
-  .sort((a, b) => b - a);
+// Discover available years from disk + ensure current year is included
+const diskYears = getAvailableYears('afl-fantasy');
+const currentSeasonYear = getCurrentSeasonYear();
+const availableYears = [...new Set([currentSeasonYear, ...diskYears])].sort((a, b) => b - a);
 
 // Get year from query parameter (default to latest available or current season year)
-const currentSeasonYear = getCurrentSeasonYear();
 const defaultYear = availableYears.includes(currentSeasonYear)
   ? currentSeasonYear
   : availableYears[0] || currentSeasonYear;
@@ -58,10 +44,10 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`${baseUrl}/standings?year=${defaultYear}`);
 }
 
-// Get standings data for selected year
-const selectedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`] as
-  | { version: string; leagueStandings?: { franchise: any[] }; error?: any }
-  | undefined;
+// Get standings data — live from MFL for current year, static for historical
+const selectedFeed = await getFeedData('afl-fantasy', '19621', selectedYear, 'standings') as
+  | { leagueStandings?: { franchise: any[] }; error?: any }
+  | null;
 
 // Check if data is valid (has leagueStandings and no error)
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
@@ -95,7 +81,7 @@ const preferredTeamId = resolveAFLTeamSelection({
 });
 
 // Get weekly results for selected year to calculate all-play with week cutoff
-const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/weekly-results.json`] as
+const weeklyResultsFeed = readStaticFile('afl-fantasy', selectedYear, 'weekly-results') as
   | WeeklyResultsData
   | undefined;
 

@@ -78,6 +78,8 @@ function buildFeedUrl(
   opts: FetchMflOptions = {},
 ): string {
   let url = `${MFL_HOST}/${year}/export?TYPE=${feedType}&L=${leagueId}&JSON=1`;
+  // players feed needs DETAILS=1 for full player info (position, team, etc.)
+  if (feedType === 'players') url += '&DETAILS=1';
   if (opts.week) url += `&W=${opts.week}`;
   if (opts.apiKey) url += `&APIKEY=${encodeURIComponent(opts.apiKey)}`;
   return url;
@@ -184,21 +186,32 @@ export async function getMflAdp<T = any>(
 /**
  * Fetch weekly results for a specific week
  */
-export async function getMflWeeklyResults<T = any>(
+export async function getMflWeeklyResults(
   leagueSlug: string,
   leagueId: string,
   year: number | string,
   week: number,
   opts: FetchMflOptions = {},
-): Promise<T | null> {
-  return getMflFeed<T>(leagueSlug, leagueId, year, 'rosters', {
-    ...opts,
-    week,
-  });
+): Promise<any | null> {
+  const cacheKey = `mfl/${leagueSlug}/${year}/weeklyResults/w${week}`;
+  try {
+    return await cachedFetch(
+      cacheKey,
+      async () => {
+        const url = `${MFL_HOST}/${year}/export?TYPE=weeklyResults&L=${leagueId}&W=${week}&JSON=1`;
+        console.log(`[mfl-feeds] Fetching weeklyResults week ${week} for ${leagueSlug}/${year}`);
+        return await fetchMflRaw(url);
+      },
+      opts.ttlMs ?? 5 * 60 * 1000,
+    );
+  } catch (err) {
+    console.error(`[mfl-feeds] Failed weeklyResults week ${week}:`, (err as Error).message);
+    return null;
+  }
 }
 
 /**
- * Fetch all weekly results for weeks 1-17 (cached individually per week)
+ * Fetch all weekly results for weeks 1-17 (cached individually, fetched in parallel)
  */
 export async function getMflAllWeeklyResults(
   leagueSlug: string,
@@ -207,27 +220,16 @@ export async function getMflAllWeeklyResults(
   opts: FetchMflOptions = {},
 ): Promise<any[]> {
   const weeks = Array.from({ length: 17 }, (_, i) => i + 1);
-  const results: any[] = [];
+  const ttl = opts.ttlMs ?? 10 * 60 * 1000; // 10 min TTL — weekly results only change once per week
 
-  for (const week of weeks) {
-    const cacheKey = `mfl/${leagueSlug}/${year}/weeklyResults/w${week}`;
-    try {
-      const data = await cachedFetch(
-        cacheKey,
-        async () => {
-          const url = `${MFL_HOST}/${year}/export?TYPE=weeklyResults&L=${leagueId}&W=${week}&JSON=1`;
-          console.log(`[mfl-feeds] Fetching weeklyResults week ${week} for ${leagueSlug}/${year}`);
-          return await fetchMflRaw(url);
-        },
-        opts.ttlMs ?? 5 * 60 * 1000, // 5 min TTL for weekly results (they change less often)
-      );
-      results.push(data);
-    } catch (err) {
-      console.error(`[mfl-feeds] Failed weeklyResults week ${week}:`, (err as Error).message);
-    }
-  }
+  // Fetch all weeks in parallel (cache dedup prevents duplicate MFL hits)
+  const settled = await Promise.allSettled(
+    weeks.map((week) => getMflWeeklyResults(leagueSlug, leagueId, year, week, { ...opts, ttlMs: ttl })),
+  );
 
-  return results;
+  return settled
+    .map((r) => (r.status === 'fulfilled' ? r.value : null))
+    .filter(Boolean);
 }
 
 /**

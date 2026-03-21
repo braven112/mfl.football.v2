@@ -48,8 +48,6 @@ import {
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser } from '../../utils/auth';
-import fs from 'fs';
-import path from 'path';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
 import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
@@ -62,6 +60,7 @@ import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-y
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
+import { getFeedData, getMultiFeedData, getWeeklyResultsRaw, readStaticFile } from '../../lib/mfl-data-loader';
 
 // Weather icon mapping based on condition text
 const getWeatherIcon = (displayValue: string | undefined): string => {
@@ -434,30 +433,14 @@ const currentSeasonYearStr = String(getCurrentSeasonYear());
 // weeklyResultsRawData is loaded below with other season-specific feeds
 // playerScoresMap is computed after the feed loading block
 
+// Salary data files remain static (produced by salary scripts, not MFL API)
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
 });
 const salaryAveragesModules = import.meta.glob('../../data/mfl-salary-averages-*.json', {
   eager: true,
 });
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
-  {
-    eager: true,
-  }
-);
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json', {
-  eager: true,
-});
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
-  eager: true,
-});
-const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/rosters.json', {
-  eager: true,
-});
+
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -466,52 +449,60 @@ const extractSeason = (filepath) => {
   return match ? match[1] : null;
 };
 
-const extractFeedSeason = (filepath) => {
-  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
-  return match ? match[1] : null;
-};
-
-// Load season-specific feed data using fs — avoids globbing massive JSON files
-const loadFeedJson = (year: string | number, filename: string) => {
-  const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/${filename}`);
-  try {
-    if (fs.existsSync(feedPath)) {
-      return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
-    }
-  } catch (e) {
-    console.warn(`⚠️ Failed to load feed ${feedPath}:`, e);
-  }
-  return null;
-};
-
 // Build season-indexed lookups — load current league year + current season year
 const currentLeagueYearStr = String(getCurrentLeagueYear());
 const feedYears = [...new Set([currentLeagueYearStr, currentSeasonYearStr])];
 
-const tradeBaitBySeason = {};
-const projectedScoresBySeason = {};
-const weeklyResultsRawBySeason = {};
-const fantasyPointsAllowedBySeason = {};
+// Fetch MFL feeds LIVE for current year(s) — parallel for speed
+const [
+  salaryAdjustmentsByYear,
+  leagueFeedsByYear,
+  playersFeedsByYear,
+  rostersFeedsByYear,
+  standingsFeedsByYear,
+] = await Promise.all([
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'salaryAdjustments')] as const)),
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'league')] as const)),
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'players')] as const)),
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'rosters')] as const)),
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'standings')] as const)),
+]);
 
+// Also fetch season-specific feeds in parallel
+const [tradeBaitResults, projectedScoresResults] = await Promise.all([
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'tradeBait')] as const)),
+  Promise.all(feedYears.map(async (yr) => [yr, await getFeedData('theleague', '13522', yr, 'projectedScores')] as const)),
+]);
+
+// Weekly results (fetched in parallel internally, 10-min cache)
+const weeklyResultsRawBySeason = {};
+await Promise.all(feedYears.map(async (yr) => {
+  const wr = await getWeeklyResultsRaw('theleague', '13522', yr);
+  if (wr.length > 0) weeklyResultsRawBySeason[yr] = wr;
+}));
+
+// Non-MFL data stays static (from other scripts)
+const fantasyPointsAllowedBySeason = {};
 feedYears.forEach((yr) => {
-  const tb = loadFeedJson(yr, 'tradeBait.json');
-  if (tb) tradeBaitBySeason[yr] = new Set(tb);
-  const ps = loadFeedJson(yr, 'projectedScores.json');
-  if (ps) projectedScoresBySeason[yr] = ps;
-  const wr = loadFeedJson(yr, 'weekly-results-raw.json');
-  if (wr) weeklyResultsRawBySeason[yr] = wr;
-  const fpa = loadFeedJson(yr, 'fantasyPointsAllowed.json');
+  const fpa = readStaticFile('theleague', yr, 'fantasyPointsAllowed');
   if (fpa) fantasyPointsAllowedBySeason[yr] = fpa;
 });
 
-// Now compute playerScoresMap from the loaded weekly results
+// Build season-indexed lookups from fetched data
+const tradeBaitBySeason = {};
+tradeBaitResults.forEach(([yr, tb]) => { if (tb) tradeBaitBySeason[yr] = new Set(tb); });
+
+const projectedScoresBySeason = {};
+projectedScoresResults.forEach(([yr, ps]) => { if (ps) projectedScoresBySeason[yr] = ps; });
+
+// Compute playerScoresMap from weekly results
 const weeklyResultsRawData = weeklyResultsRawBySeason[currentSeasonYearStr] ?? {};
 const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum);
 
 // Build weekly player results for the modal's Season Results table
-const nflScheduleData = loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
-const leagueJsonData = loadFeedJson(currentSeasonYearStr, 'league.json');
-const playersJsonData = loadFeedJson(currentSeasonYearStr, 'players.json');
+const nflScheduleData = readStaticFile('theleague', currentSeasonYearStr, 'nflSchedule');
+const leagueJsonData = Object.fromEntries(leagueFeedsByYear)?.[currentSeasonYearStr] ?? null;
+const playersJsonData = Object.fromEntries(playersFeedsByYear)?.[currentSeasonYearStr] ?? null;
 const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.isArray(weeklyResultsRawData))
   ? buildWeeklyPlayerResults(
       weeklyResultsRawData,
@@ -773,16 +764,14 @@ const aggregateDeadMoneyFromSeasonData = (seasonData = {}, franchiseId) => {
 };
 
 const feedSalaryAdjustmentsBySeason = {};
-Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
-  const season = extractFeedSeason(path);
-  const data = getModuleData(mod);
+salaryAdjustmentsByYear.forEach(([season, data]) => {
   if (!season || !data?.salaryAdjustments?.salaryAdjustment) return;
   feedSalaryAdjustmentsBySeason[season] = data.salaryAdjustments.salaryAdjustment
     .map((adj) => ({
       franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
       amount: parseNumber(adj.amount),
       description: adj.description ?? '',
-      yearOffset: 0, // default to current season; can enhance if offset parsing desired
+      yearOffset: 0,
       timestamp: adj.timestamp ?? null,
       ...parseAdjustmentMeta(adj.description ?? ''),
     }))
@@ -790,9 +779,7 @@ Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
 });
 
 const leagueMetaBySeason = {};
-Object.entries(leagueFeeds).forEach(([path, mod]) => {
-  const season = extractFeedSeason(path);
-  const data = getModuleData(mod);
+leagueFeedsByYear.forEach(([season, data]) => {
   if (!season || !data?.league) return;
   const league = data.league;
   leagueMetaBySeason[season] = {
@@ -804,9 +791,7 @@ Object.entries(leagueFeeds).forEach(([path, mod]) => {
 });
 
 const playersFeedBySeason = {};
-Object.entries(playersFeeds).forEach(([path, mod]) => {
-  const season = extractFeedSeason(path);
-  const data = getModuleData(mod);
+playersFeedsByYear.forEach(([season, data]) => {
   const list =
     data?.players?.player ??
     data?.players ??
@@ -824,9 +809,7 @@ Object.entries(playersFeeds).forEach(([path, mod]) => {
 // Build player data mapping from live rosters data
 // This ensures we show current roster assignments AND salary data (not frozen week 14)
 const liveRosterDataByPlayerId = {};
-Object.entries(rostersFeeds).forEach(([path, mod]) => {
-  const season = extractFeedSeason(path);
-  const data = getModuleData(mod);
+rostersFeedsByYear.forEach(([season, data]) => {
   const franchises = data?.rosters?.franchise ?? [];
   if (!season || !Array.isArray(franchises)) return;
   if (!liveRosterDataByPlayerId[season]) liveRosterDataByPlayerId[season] = {};
@@ -836,7 +819,6 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
     const players = Array.isArray(franchise.player) ? franchise.player : [franchise.player].filter(Boolean);
     players.forEach((player) => {
       if (player?.id) {
-        // Store full player data from live rosters including salary, contractYear, status
         liveRosterDataByPlayerId[season][player.id] = {
           franchiseId,
           salary: player.salary,
@@ -869,9 +851,7 @@ try {
 }
 
 const recordsBySeason = {};
-Object.entries(standingsFeeds).forEach(([path, mod]) => {
-  const season = extractFeedSeason(path);
-  const data = getModuleData(mod);
+standingsFeedsByYear.forEach(([season, data]) => {
   const rows =
     data?.leagueStandings?.franchise ??
     data?.standings?.standing ??
@@ -1404,9 +1384,6 @@ if (prevSeasonData) {
 const draftSeasonYear = getCurrentSeasonYear();
 const draftNextYear = draftSeasonYear + 1;
 
-// Get last fetched timestamp from meta file
-const fetchMeta = loadFeedJson(currentLeagueYear, 'fetch.meta.json');
-const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
 let draftPredictions = [];
 let actualDraftPicks = [];
 let assetsPredictions = [];
@@ -1414,18 +1391,14 @@ let toiletBowlWinners = [];
 let assetTeamIds: string[] = [];
 
 // Load standings and bracket data for draft predictions (from the season that was played)
-const standingsKey = Object.keys(standingsFeeds).find(
-  (path) => extractFeedSeason(path) === String(draftSeasonYear)
-);
-const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+const standingsData = Object.fromEntries(standingsFeedsByYear)?.[String(draftSeasonYear)] ?? null;
 
-const bracketData = loadFeedJson(draftSeasonYear, 'playoff-brackets.json');
-
-// Load draft results from next year to show actual picks with trades
-const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
-
-// Load transactions from season year to extract trade information
-const transactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
+const { getPlayoffBracketsData } = await import('../../lib/mfl-data-loader');
+const [bracketData, draftResultsData, transactionsData] = await Promise.all([
+  getPlayoffBracketsData('theleague', '13522', draftSeasonYear),
+  getFeedData('theleague', '13522', draftNextYear, 'draftResults'),
+  getFeedData('theleague', '13522', draftSeasonYear, 'transactions'),
+]);
 
 if (standingsData?.leagueStandings?.franchise) {
   // Build team config map with icons and banners
@@ -1538,7 +1511,7 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
 // Load transactions for the current league year
 const eligibilityYear = getCurrentLeagueYear();
 const eligibilityYearStr = String(eligibilityYear);
-const eligTxData = loadFeedJson(eligibilityYearStr, 'transactions.json');
+const eligTxData = await getFeedData('theleague', '13522', eligibilityYearStr, 'transactions');
 const eligRawTransactions = eligTxData?.transactions?.transaction
   ? (Array.isArray(eligTxData.transactions.transaction)
       ? eligTxData.transactions.transaction
@@ -1552,11 +1525,8 @@ for (const [id, player] of Object.entries(eligPlayersFeed)) {
   eligPlayersMap.set(id, player as MFLPlayerInfo);
 }
 
-// Get rosters data for eligibility
-const eligRostersFeed = rostersFeeds[Object.keys(rostersFeeds).find(
-  (path) => extractFeedSeason(path) === eligibilityYearStr
-) ?? ''];
-const eligRostersData = eligRostersFeed ? getModuleData(eligRostersFeed) : null;
+// Get rosters data for eligibility (already fetched above)
+const eligRostersData = Object.fromEntries(rostersFeedsByYear)?.[eligibilityYearStr] ?? null;
 const eligFranchises = eligRostersData?.rosters?.franchise ?? [];
 
 // Compute top-10 positional salary averages for team option calculations.
@@ -2824,11 +2794,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     </div>
     <!-- End Next Year View -->
 
-    {lastFetched && (
-      <p class="data-disclaimer">
-        Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-      </p>
-    )}
+    <p class="data-disclaimer">
+      Live data &middot; refreshed every 2 minutes
+    </p>
   </section>
 </TheLeagueLayout>
 

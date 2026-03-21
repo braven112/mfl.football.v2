@@ -15,28 +15,18 @@ import {
 } from '../../utils/league-comparison-utils';
 import { parseNumber } from '../../utils/formatters';
 import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getFeedData } from '../../lib/mfl-data-loader';
 
-// Load roster and salary data
+// Load roster and salary data (keep as static — not MFL API feeds)
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
 });
-const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
-  {
-    eager: true,
-  }
-);
 
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
 const extractSeason = (filepath) => {
   const match = filepath.match(/(\d{4})\.json$/);
-  return match ? match[1] : null;
-};
-
-const extractFeedSeason = (filepath) => {
-  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
   return match ? match[1] : null;
 };
 
@@ -60,16 +50,8 @@ const rosterEntries = Object.entries(rosterModules)
 const latestRoster = rosterEntries[0]?.data || {};
 const currentYear = rosterEntries[0]?.season || getCurrentSeasonYear().toString();
 
-// Get salary adjustments for the current year
-const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
-  .map(([path, mod]) => {
-    const season = extractFeedSeason(path);
-    const data = getModuleData(mod);
-    return { season, data, path };
-  })
-  .filter((item) => item.season === currentYear && item.data);
-
-const adjustmentData = adjustmentEntries[0]?.data || {};
+// Get salary adjustments for the current year (live MFL API fetch)
+const adjustmentData = await getFeedData('theleague', '13522', currentYear, 'salaryAdjustments') || {};
 const salaryAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
 
 // Build dead money map and IR map from adjustments

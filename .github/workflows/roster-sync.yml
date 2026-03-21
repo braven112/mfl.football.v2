@@ -1,9 +1,10 @@
 name: Roster Sync
 
 on:
-  schedule:
-    # Fallback schedule — primary trigger is Vercel cron (every 4 min)
-    - cron: "*/10 * * * *"
+  # Schedule disabled — data is now fetched live via in-memory cache at request time.
+  # Keep workflow_dispatch for manual backfills if needed.
+  # schedule:
+  #   - cron: "*/10 * * * *"
   workflow_dispatch:
 
 concurrency:

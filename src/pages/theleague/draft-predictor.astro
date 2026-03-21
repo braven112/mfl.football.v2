@@ -19,71 +19,28 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
-
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const playoffBracketFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/playoff-brackets.json',
-  {
-    eager: true,
-  }
-);
-const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', {
-  eager: true,
-});
-const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
-  eager: true,
-});
-const futureDraftPicksFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/futureDraftPicks.json', {
-  eager: true,
-});
-
-const getModuleData = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-
-const extractFeedSeason = (filepath: string) => {
-  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
-  return match ? match[1] : null;
-};
+import { getFeedData, getAvailableYears, getPlayoffBracketsData } from '../../lib/mfl-data-loader';
 
 // Get current season year (updates Labor Day) and next draft year
 const currentYear = getCurrentSeasonYear();
 const nextYear = getNextDraftYear();
 
-// Load standings for current year
-const standingsKey = Object.keys(standingsFeeds).find(
-  (path) => extractFeedSeason(path) === String(currentYear)
-);
-const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+// Load standings for current year (live for current year, static for historical)
+const standingsData = await getFeedData('theleague', '13522', currentYear, 'standings');
 
 // Load playoff bracket for current year to determine toilet bowl winners
-const bracketKey = Object.keys(playoffBracketFeeds).find(
-  (path) => extractFeedSeason(path) === String(currentYear)
-);
-const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+const bracketData = await getPlayoffBracketsData('theleague', '13522', currentYear);
 
 // Load draft results for next year (to show actual picks with trades)
-const draftResultsKey = Object.keys(draftResultsFeeds).find(
-  (path) => extractFeedSeason(path) === String(nextYear)
-);
-const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+const draftResultsData = await getFeedData('theleague', '13522', nextYear, 'draftResults');
 
-// All available years for history view
-const draftResultYears = Object.keys(draftResultsFeeds)
-  .map((path) => extractFeedSeason(path))
-  .filter((y) => !!y)
+// All available years for history view (discover from disk, ensure current year is included)
+const diskYears = getAvailableYears('theleague');
+const draftResultYears = [...new Set([String(currentYear), ...diskYears.map(String)])]
   .sort((a, b) => Number(b) - Number(a));
 
 // Load futureDraftPicks for current year (to show team ownership of draft picks)
-let futureDraftPicksData = null;
-const futureDraftPicksKey = Object.keys(futureDraftPicksFeeds).find(
-  (path) => extractFeedSeason(path) === String(currentYear)
-);
-
-if (futureDraftPicksKey) {
-  futureDraftPicksData = getModuleData(futureDraftPicksFeeds[futureDraftPicksKey]);
-}
+const futureDraftPicksData = await getFeedData('theleague', '13522', currentYear, 'futureDraftPicks');
 
 // Build team config map
 const teamsList = (leagueConfigData.teams ?? []).map((team: any) => ({
@@ -184,10 +141,7 @@ const historyYear =
   draftResultYears[0] ||
   String(currentYear);
 
-const historyResultsKey = Object.keys(draftResultsFeeds).find(
-  (path) => extractFeedSeason(path) === String(historyYear)
-);
-const historyResultsData = historyResultsKey ? getModuleData(draftResultsFeeds[historyResultsKey]) : null;
+const historyResultsData = await getFeedData('theleague', '13522', historyYear, 'draftResults');
 const historyConfig = resolveConfigForYear(leagueConfigData as any, Number(historyYear));
 const historyTeamConfigMap: Map<string, { id: string; name: string; icon: string; banner: string }> = new Map(
   (historyConfig.teams ?? []).map((team: any) => [
@@ -201,27 +155,23 @@ const historyTeamConfigMap: Map<string, { id: string; name: string; icon: string
   ])
 );
 
-const playerFeedYears = Object.keys(playersFeeds)
-  .map((path) => extractFeedSeason(path))
-  .filter((y) => !!y)
-  .map((y) => Number(y))
-  .sort((a, b) => b - a);
+const playerFeedYears = diskYears; // Already sorted descending from getAvailableYears
 
-const resolvePlayersDataForYear = (year: number | string) => {
+const resolvePlayersDataForYear = async (year: number | string) => {
   const numeric = Number(year);
-  const exactKey = Object.keys(playersFeeds).find(
-    (path) => extractFeedSeason(path) === String(year)
-  );
-  if (exactKey) return getModuleData(playersFeeds[exactKey]);
+  // Try exact year first
+  const exactData = await getFeedData('theleague', '13522', year, 'players');
+  if (exactData) return exactData;
 
+  // Fallback to nearest earlier year
   const fallbackYear = playerFeedYears.find((y) => y <= numeric) ?? playerFeedYears[0];
-  const fallbackKey = Object.keys(playersFeeds).find(
-    (path) => extractFeedSeason(path) === String(fallbackYear)
-  );
-  return fallbackKey ? getModuleData(playersFeeds[fallbackKey]) : null;
+  if (fallbackYear) {
+    return await getFeedData('theleague', '13522', fallbackYear, 'players');
+  }
+  return null;
 };
 
-const historyPlayersData = resolvePlayersDataForYear(historyYear);
+const historyPlayersData = await resolvePlayersDataForYear(historyYear);
 
 const buildPlayerLookup = (playersData: any) => {
   const lookup = new Map<

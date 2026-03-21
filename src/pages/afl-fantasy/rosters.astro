@@ -7,6 +7,7 @@ import {
   getAFLTeamData,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getMultiFeedData, getAvailableYears } from '../../lib/mfl-data-loader';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -23,27 +24,13 @@ if (myTeamParam) {
   }
 }
 
-// Import rosters data for AFL Fantasy
-const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', {
-  eager: true,
-});
-
-// Import players data for AFL Fantasy
-const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', {
-  eager: true,
-});
-
-// Extract available years
-const availableYears = Object.keys(rostersFeeds)
-  .map(path => {
-    const match = path.match(/\/(\d{4})\/rosters\.json$/);
-    return match ? parseInt(match[1], 10) : null;
-  })
-  .filter((year): year is number => year !== null)
-  .sort((a, b) => b - a);
+// Discover available years from disk + ensure current year is included
+const diskYears = getAvailableYears('afl-fantasy');
+const currentLeagueYear = getCurrentLeagueYear();
+const availableYears = [...new Set([currentLeagueYear, ...diskYears])].sort((a, b) => b - a);
 
 // Get selected year - default to latest available or current league year
-const defaultYear = availableYears[0] || getCurrentLeagueYear();
+const defaultYear = availableYears[0] || currentLeagueYear;
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
 
@@ -52,16 +39,9 @@ if (!availableYears.includes(selectedYear)) {
   return Astro.redirect(`${baseUrl}/rosters?year=${defaultYear}`);
 }
 
-// Get rosters data
-const getModuleData = (mod: any) =>
-  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-
-const rostersData = getModuleData(
-  rostersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/rosters.json`]
-);
-
-const playersData = getModuleData(
-  playersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]
+// Get rosters and players data — live from MFL for current year, static for historical
+const { rosters: rostersData, players: playersData } = await getMultiFeedData(
+  'afl-fantasy', '19621', selectedYear, ['rosters', 'players']
 );
 
 if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
