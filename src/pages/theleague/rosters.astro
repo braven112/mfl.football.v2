@@ -7829,6 +7829,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         document.getElementById('cdm-ext-current').textContent = formatSalaryCompact(elig.currentSalary);
         document.getElementById('cdm-ext-new').textContent = formatSalaryCompact(extSalary);
         updateProjectionTable(extSalary, extYears, null, config.salaryYears?.[0]);
+        updateCapImpact(extSalary, extYears, config.salaryYears?.[0]);
         cdmSelectedYears = extYears;
         cdmSelectedSalary = extSalary;
         cdmSubmitBtn.disabled = false;
@@ -7867,6 +7868,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             cdmSelectedYears = yr;
             cdmSubmitBtn.disabled = false;
             updateProjectionTable(elig.currentSalary, yr, null, config.salaryYears?.[0]);
+            updateCapImpact(elig.currentSalary, yr, config.salaryYears?.[0]);
           });
           yearContainer.appendChild(btn);
         });
@@ -7879,6 +7881,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             cdmSelectedYears = preSelectedYears;
             cdmSubmitBtn.disabled = false;
             updateProjectionTable(elig.currentSalary, preSelectedYears, null, config.salaryYears?.[0]);
+            updateCapImpact(elig.currentSalary, preSelectedYears, config.salaryYears?.[0]);
           }
         }
       }
@@ -7909,6 +7912,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       document.getElementById('cdm-extension-section').style.display = 'none';
       document.getElementById('cdm-formula-section').style.display = 'none';
       document.getElementById('cdm-projection-section').style.display = 'none';
+      document.getElementById('cdm-cap-impact-section').style.display = 'none';
 
       // Clear year selection and disable submit
       document.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
@@ -7953,6 +7957,57 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         tr.appendChild(tdYear);
         tr.appendChild(tdAge);
         tr.appendChild(tdSalary);
+        tbody.appendChild(tr);
+      }
+      section.style.display = '';
+    };
+
+    /**
+     * Show team cap impact for each year of the proposed contract.
+     * Uses lastViewContext (current team's cap charges) to show
+     * committed salary and available cap space per season.
+     */
+    const updateCapImpact = (playerBaseSalary, years, startYear = null) => {
+      const section = document.getElementById('cdm-cap-impact-section');
+      const tbody = document.getElementById('cdm-cap-impact-body');
+      if (!section || !tbody) return;
+
+      const ctx = lastViewContext;
+      if (!ctx || !ctx.capChargesWithDead) {
+        section.style.display = 'none';
+        return;
+      }
+
+      const teamCapCharges = ctx.capChargesWithDead;
+      const capLimitForSeason = ctx.capLimitForSeason ?? capLimit ?? 45_000_000;
+      const salary = Number(playerBaseSalary) || 0;
+      const yr0 = startYear ?? (salaryYears[0] || 2026);
+
+      tbody.replaceChildren();
+      for (let i = 0; i < years; i++) {
+        const playerSalaryThisYear = Math.round(salary * Math.pow(ESCALATION_RATE, i));
+        const existingCharge = teamCapCharges[i] ?? 0;
+        const newCommitted = existingCharge + playerSalaryThisYear;
+        const available = capLimitForSeason - newCommitted;
+
+        const tr = document.createElement('tr');
+
+        const tdYear = document.createElement('td');
+        tdYear.textContent = String(yr0 + i);
+
+        const tdCommitted = document.createElement('td');
+        tdCommitted.textContent = formatSalaryCompact(newCommitted);
+
+        const tdAvailable = document.createElement('td');
+        tdAvailable.textContent = formatSalaryCompact(Math.abs(available));
+        if (available < 0) {
+          tdAvailable.classList.add('cap-over');
+          tdAvailable.textContent = '-' + tdAvailable.textContent;
+        }
+
+        tr.appendChild(tdYear);
+        tr.appendChild(tdCommitted);
+        tr.appendChild(tdAvailable);
         tbody.appendChild(tr);
       }
       section.style.display = '';
@@ -8044,6 +8099,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
           const playerAge = data.birthdate ? calculateAge(data.birthdate) : null;
           updateProjectionTable(newSalary, existingYears + yr, playerAge, config.salaryYears?.[0]);
+          updateCapImpact(newSalary, existingYears + yr, config.salaryYears?.[0]);
 
           if (formulaSection) {
             formulaSection.style.display = '';
@@ -8388,6 +8444,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       document.getElementById('cdm-extension-section').style.display = 'none';
       document.getElementById('cdm-formula-section').style.display = 'none';
       document.getElementById('cdm-projection-section').style.display = 'none';
+      document.getElementById('cdm-cap-impact-section').style.display = 'none';
 
       const metricsEl = document.getElementById('cdm-metrics');
       if (metricsEl) metricsEl.style.display = 'none';
@@ -8450,6 +8507,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
       updateProjectionTable(tagSalary, 1, playerAge, config.salaryYears?.[0]);
+      updateCapImpact(tagSalary, 1, config.salaryYears?.[0]);
 
       const reviewPanel = document.getElementById('cdm-review-panel');
       if (reviewPanel) {
@@ -8514,6 +8572,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
       const ageAtOption = playerAge !== null ? playerAge + elig.currentYears : null;
       updateProjectionTable(optionSalary, 1, ageAtOption, teamOptionYear);
+      updateCapImpact(optionSalary, 1, teamOptionYear);
 
       const reviewPanel = document.getElementById('cdm-review-panel');
       if (reviewPanel) {
@@ -8631,6 +8690,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
       const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
       updateProjectionTable(newSalary, denominator, playerAge, config.salaryYears?.[0]);
+      updateCapImpact(newSalary, denominator, config.salaryYears?.[0]);
 
       const reviewPanel = document.getElementById('cdm-review-panel');
       if (reviewPanel) {
@@ -8689,6 +8749,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       document.getElementById('cdm-extension-section').style.display = 'none';
       document.getElementById('cdm-formula-section').style.display = 'none';
       document.getElementById('cdm-projection-section').style.display = 'none';
+      document.getElementById('cdm-cap-impact-section').style.display = 'none';
 
       const yearSection = document.getElementById('cdm-year-section');
       if (yearSection) yearSection.style.display = '';
