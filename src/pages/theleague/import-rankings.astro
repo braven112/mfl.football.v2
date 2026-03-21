@@ -10,13 +10,12 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import RankingsImportPage from '../../components/theleague/rankings-import/RankingsImportPage';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import bookmarkletManifest from '../../data/bookmarklet-manifest.json';
-import { getAuthUser } from '../../utils/auth';
-import { isAdminFranchise } from '../../config/nav-config';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 
 export const prerender = false;
 
 const user = getAuthUser(Astro.request);
-const isAdmin = !!user && isAdminFranchise(user.franchiseId);
+const isAdmin = !!user && isCommissionerOrAdmin(user);
 
 const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);

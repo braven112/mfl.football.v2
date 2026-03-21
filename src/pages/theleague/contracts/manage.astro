@@ -2,22 +2,10 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import { getTheLeaguePreference } from '../../../utils/team-preferences';
-import { isAdminFranchise } from '../../../config/nav-config';
 
-// Check if current user is a commissioner
-// Primary: JWT session auth
+// Check if current user is a commissioner (same auth as nav sidebar)
 const user = getAuthUser(Astro.request);
-let isCommish = !!user && isCommissionerOrAdmin(user);
-
-// Fallback: check team preference cookie against admin franchise list
-// (matches the same logic TheLeagueLayout uses to show commissioner UI)
-if (!isCommish) {
-  const teamPref = getTheLeaguePreference(Astro.cookies);
-  if (teamPref?.franchiseId && isAdminFranchise(teamPref.franchiseId)) {
-    isCommish = true;
-  }
-}
+const isCommish = !!user && isCommissionerOrAdmin(user);
 
 // Load declaration data at build/request time
 const pending = await getPendingDeclarations();

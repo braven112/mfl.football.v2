@@ -9,8 +9,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
-import { isAdminFranchise } from '../../config/nav-config';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import type { CustomRankingsState } from '../../types/custom-rankings';
 
 type RedisClient = {
@@ -44,7 +43,7 @@ function makeKey(franchiseId: string): string {
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !isAdminFranchise(user.franchiseId)) {
+  if (!user || !isCommissionerOrAdmin(user)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -76,7 +75,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !isAdminFranchise(user.franchiseId)) {
+  if (!user || !isCommissionerOrAdmin(user)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

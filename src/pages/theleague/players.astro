@@ -15,8 +15,7 @@ import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
-import { getAuthUser } from '../../utils/auth';
-import { isAdminFranchise } from '../../config/nav-config';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import '../../styles/player-cell.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
@@ -554,9 +553,9 @@ const playerDataJson = JSON.stringify(playerList);
 const faCountsJson = JSON.stringify(faCounts);
 const nflTeamsJson = JSON.stringify(nflTeamsList);
 
-// Admin gate: Value view is only visible to admin franchises
+// Admin gate: Value view is only visible to admin franchises (same auth as nav sidebar)
 const authUser = getAuthUser(Astro.request);
-const isAdmin = isAdminFranchise(authUser?.franchiseId);
+const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 ---
 
 <TheLeagueLayout title="Free Agents | TheLeague">
