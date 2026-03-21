@@ -157,7 +157,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
               <span class="metric__label">Pending</span>
             </article>
             <article class="metric" data-variant="applied">
-              <span class="metric__value">{appliedCount}</span>
+              <span class="metric__value" id="appliedCount">{appliedCount}</span>
               <span class="metric__label">Applied</span>
             </article>
           </div>
@@ -168,7 +168,9 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
 
   <script type="module">
     const pendingList = document.getElementById('pendingList');
-    const pendingCount = document.getElementById('pendingCount');
+    const pendingCountEl = document.getElementById('pendingCount');
+    const sectionCountEl = document.querySelector('.section__count');
+    const appliedCountEl = document.getElementById('appliedCount');
 
     function showEmptyState() {
       if (!pendingList) return;
@@ -184,10 +186,18 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
       pendingList.appendChild(emptyDiv);
     }
 
-    function updatePendingCount() {
-      if (!pendingCount) return;
-      const current = parseInt(pendingCount.textContent || '0', 10);
-      pendingCount.textContent = String(Math.max(0, current - 1));
+    function updateCounts() {
+      // Decrement pending counts (sidebar + section badge)
+      [pendingCountEl, sectionCountEl].forEach(el => {
+        if (!el) return;
+        const current = parseInt(el.textContent || '0', 10);
+        el.textContent = String(Math.max(0, current - 1));
+      });
+      // Increment applied count
+      if (appliedCountEl) {
+        const current = parseInt(appliedCountEl.textContent || '0', 10);
+        appliedCountEl.textContent = String(current + 1);
+      }
     }
 
     function removeCard(card) {
@@ -233,7 +243,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         }
 
         const card = btn.closest('.decl-card');
-        updatePendingCount();
+        updateCounts();
         removeCard(card);
       } catch (err) {
         console.error('Apply error:', err);
