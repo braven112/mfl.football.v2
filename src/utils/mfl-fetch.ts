@@ -17,8 +17,18 @@ interface MflFetchOptions {
   method: 'GET' | 'POST';
   /** The raw MFL_USER_ID cookie value */
   mflUserCookie: string;
+  /** The raw MFL_IS_COMMISH cookie value (commissioners only, needed for write operations) */
+  mflCommishCookie?: string;
   /** URL-encoded body for POST requests */
   body?: string;
+  /** If true, collect Set-Cookie headers from all redirect hops */
+  collectSetCookies?: boolean;
+}
+
+export interface MflFetchResult {
+  response: Response;
+  /** Set-Cookie header values collected across all redirect hops (only when collectSetCookies is true) */
+  setCookies: string[];
 }
 
 /**
@@ -27,14 +37,23 @@ interface MflFetchOptions {
  * Follows up to 3 redirects, re-attaching the Cookie header on each hop.
  * Returns the final Response object.
  */
-export async function mflFetch(opts: MflFetchOptions): Promise<Response> {
-  const { mflUserCookie } = opts;
+export async function mflFetch(opts: MflFetchOptions): Promise<Response>;
+export async function mflFetch(opts: MflFetchOptions & { collectSetCookies: true }): Promise<MflFetchResult>;
+export async function mflFetch(opts: MflFetchOptions): Promise<Response | MflFetchResult> {
+  const { mflUserCookie, mflCommishCookie, collectSetCookies } = opts;
   let url = opts.url;
   let method = opts.method;
   let body: string | undefined = opts.body;
 
-  const cookieHeader = `MFL_USER_ID=${mflUserCookie}`;
+  // Build cookie header with both MFL_USER_ID and MFL_IS_COMMISH (if available)
+  const cookieParts = [`MFL_USER_ID=${mflUserCookie}`];
+  if (mflCommishCookie) {
+    cookieParts.push(`MFL_IS_COMMISH=${mflCommishCookie}`);
+  }
+  const cookieHeader = cookieParts.join('; ');
+
   const maxRedirects = 3;
+  const allSetCookies: string[] = [];
 
   for (let i = 0; i <= maxRedirects; i++) {
     const headers: Record<string, string> = {
@@ -51,9 +70,18 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response> {
       redirect: 'manual',
     });
 
+    // Collect Set-Cookie headers from every hop
+    if (collectSetCookies) {
+      const hopCookies = response.headers.getSetCookie?.() ?? [];
+      allSetCookies.push(...hopCookies);
+    }
+
     // Not a redirect — return the final response
     if (response.status < 300 || response.status >= 400) {
       if (i > 0) console.log(`[mflFetch] Final response after ${i} redirect(s): ${response.status}`);
+      if (collectSetCookies) {
+        return { response, setCookies: allSetCookies };
+      }
       return response;
     }
 
@@ -61,7 +89,10 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response> {
     const location = response.headers.get('location');
     if (!location) {
       console.warn(`[mflFetch] ${response.status} redirect but no Location header`);
-      return response; // No Location header — return as-is
+      if (collectSetCookies) {
+        return { response, setCookies: allSetCookies };
+      }
+      return response;
     }
 
     console.log(`[mflFetch] ${response.status} redirect: ${url} → ${location}`);
@@ -82,6 +113,6 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response> {
     // 307/308 preserve method and body — just update the URL
   }
 
-  // Exhausted redirect limit — make one final attempt
+  // Exhausted redirect limit
   throw new Error(`MFL API exceeded ${maxRedirects} redirects from ${opts.url}`);
 }

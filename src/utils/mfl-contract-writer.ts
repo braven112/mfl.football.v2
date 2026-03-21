@@ -9,6 +9,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { mflFetch } from './mfl-fetch';
 
 // Reads use api.myfantasyleague.com; writes MUST use www49 (commissioner writes fail on the api subdomain)
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
@@ -182,28 +183,20 @@ export async function writeContractToMFL(
   const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
   const xmlData = buildSalaryXML(params);
 
-  const body = new URLSearchParams({ DATA: xmlData });
+  const bodyStr = new URLSearchParams({ DATA: xmlData }).toString();
 
-  // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
-  const cookieParts = [`MFL_USER_ID=${userId}`];
-  if (commish) {
-    cookieParts.push(`MFL_IS_COMMISH=${commish}`);
-  }
-  const cookieHeader = cookieParts.join('; ');
-
-  const delays = [1000, 3000, 9000]; // Exponential backoff: 1s, 3s, 9s
+  // Use mflFetch for manual redirect handling — native fetch strips Cookie on cross-origin 302s
+  const delays = [500, 1500]; // Shorter backoff since auth failures are deterministic
   let lastError = '';
 
-  for (let attempt = 0; attempt < delays.length; attempt++) {
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
-      const response = await fetch(url, {
+      const response = await mflFetch({
+        url,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: cookieHeader,
-        },
-        body: body.toString(),
-        redirect: 'follow',
+        mflUserCookie: userId,
+        mflCommishCookie: commish || undefined,
+        body: bodyStr,
       });
 
       if (response.ok) {
@@ -211,8 +204,9 @@ export async function writeContractToMFL(
         // MFL returns XML; check for error indicators
         if (text.includes('error') || text.includes('Error')) {
           lastError = `MFL returned error response: ${text.slice(0, 200)}`;
-          console.error(`MFL write attempt ${attempt + 1} failed:`, lastError);
+          console.error(`[mfl-writer] attempt ${attempt + 1} failed:`, lastError);
         } else {
+          console.log(`[mfl-writer] write succeeded on attempt ${attempt + 1}`);
           return {
             success: true,
             backupFile: backupFile || undefined,
@@ -221,24 +215,24 @@ export async function writeContractToMFL(
         }
       } else {
         lastError = `HTTP ${response.status}: ${response.statusText}`;
-        console.error(`MFL write attempt ${attempt + 1} failed:`, lastError);
+        console.error(`[mfl-writer] attempt ${attempt + 1} failed:`, lastError);
       }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
-      console.error(`MFL write attempt ${attempt + 1} error:`, lastError);
+      console.error(`[mfl-writer] attempt ${attempt + 1} error:`, lastError);
     }
 
     // Wait before retrying (skip wait after last attempt)
-    if (attempt < delays.length - 1) {
+    if (attempt < delays.length) {
       await new Promise(resolve => setTimeout(resolve, delays[attempt]));
     }
   }
 
   return {
     success: false,
-    error: `Failed after ${delays.length} attempts: ${lastError}`,
+    error: `Failed after ${delays.length + 1} attempts: ${lastError}`,
     backupFile: backupFile || undefined,
-    attempts: delays.length,
+    attempts: delays.length + 1,
   };
 }
 
@@ -279,36 +273,29 @@ export async function writeMultipleContractsToMFL(
     )
     .join('');
   const xmlData = `<salaries><leagueUnit unit="LEAGUE">${playerXml}</leagueUnit></salaries>`;
-  const body = new URLSearchParams({ DATA: xmlData });
+  const bodyStr = new URLSearchParams({ DATA: xmlData }).toString();
 
-  // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
-  const cookieParts = [`MFL_USER_ID=${userId}`];
-  if (commish) {
-    cookieParts.push(`MFL_IS_COMMISH=${commish}`);
-  }
-  const cookieHeader = cookieParts.join('; ');
-
-  const delays = [1000, 3000, 9000];
+  // Use mflFetch for manual redirect handling — native fetch strips Cookie on cross-origin 302s
+  const delays = [500, 1500];
   let lastError = '';
 
-  for (let attempt = 0; attempt < delays.length; attempt++) {
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
-      const response = await fetch(url, {
+      const response = await mflFetch({
+        url,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: cookieHeader,
-        },
-        body: body.toString(),
-        redirect: 'follow',
+        mflUserCookie: userId,
+        mflCommishCookie: commish || undefined,
+        body: bodyStr,
       });
 
       if (response.ok) {
         const text = await response.text();
         if (text.includes('error') || text.includes('Error')) {
           lastError = `MFL returned error response: ${text.slice(0, 200)}`;
-          console.error(`MFL batch write attempt ${attempt + 1} failed:`, lastError);
+          console.error(`[mfl-writer] batch attempt ${attempt + 1} failed:`, lastError);
         } else {
+          console.log(`[mfl-writer] batch write succeeded on attempt ${attempt + 1}`);
           return {
             success: true,
             backupFile: backupFile || undefined,
@@ -317,21 +304,21 @@ export async function writeMultipleContractsToMFL(
         }
       } else {
         lastError = `HTTP ${response.status}: ${response.statusText}`;
-        console.error(`MFL batch write attempt ${attempt + 1} failed:`, lastError);
+        console.error(`[mfl-writer] batch attempt ${attempt + 1} failed:`, lastError);
       }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
-      console.error(`MFL batch write attempt ${attempt + 1} error:`, lastError);
+      console.error(`[mfl-writer] batch attempt ${attempt + 1} error:`, lastError);
     }
 
-    if (attempt < delays.length - 1) {
+    if (attempt < delays.length) {
       await new Promise(resolve => setTimeout(resolve, delays[attempt]));
     }
   }
 
   return {
     success: false,
-    error: `Failed after ${delays.length} attempts: ${lastError}`,
+    error: `Failed after ${delays.length + 1} attempts: ${lastError}`,
     backupFile: backupFile || undefined,
     attempts: delays.length,
   };
