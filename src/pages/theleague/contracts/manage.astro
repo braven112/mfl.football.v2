@@ -54,7 +54,7 @@ function formatSalary(cents: number): string {
         {pending.length === 0 ? (
           <div class="empty-state">
             <div class="empty-state__icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg class="empty-state__svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 12l2 2 4-4" />
                 <circle cx="12" cy="12" r="10" />
               </svg>
@@ -446,7 +446,7 @@ function formatSalary(cents: number): string {
     .page-subtitle {
       font-size: var(--font-size-sm);
       font-weight: 300;
-      color: #64748b;
+      color: var(--content-text-muted);
       margin: 0;
       letter-spacing: 0.01em;
     }
@@ -461,22 +461,16 @@ function formatSalary(cents: number): string {
     }
 
     .status-sidebar__container {
-      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      background: linear-gradient(135deg, var(--color-white) 0%, var(--color-gray-50) 100%);
       border-radius: 12px;
       padding: 1.25rem;
-      box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.1),
-        0 2px 4px -1px rgba(0, 0, 0, 0.06),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
-      border: 1px solid rgba(148, 163, 184, 0.1);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--content-border);
       transition: box-shadow 0.3s ease;
     }
 
     .status-sidebar__container:hover {
-      box-shadow:
-        0 10px 15px -3px rgba(0, 0, 0, 0.1),
-        0 4px 6px -2px rgba(0, 0, 0, 0.05),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
+      box-shadow: var(--shadow-lg);
     }
 
     .status-sidebar__title {
@@ -485,7 +479,7 @@ function formatSalary(cents: number): string {
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #64748b;
+      color: var(--content-text-muted);
     }
 
     .status-sidebar__metrics {
@@ -507,12 +501,12 @@ function formatSalary(cents: number): string {
       position: relative;
       overflow: hidden;
       transition: transform var(--transition-base), box-shadow var(--transition-base);
-      border: 1px solid rgba(148, 163, 184, 0.12);
+      border: 1px solid var(--content-border);
     }
 
     .metric:hover {
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-sm);
     }
 
     .metric::before {
@@ -548,7 +542,7 @@ function formatSalary(cents: number): string {
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: #64748b;
+      color: var(--content-text-muted);
     }
 
     /* ================================================
@@ -565,7 +559,7 @@ function formatSalary(cents: number): string {
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #475569;
+      color: var(--color-gray-600);
       margin: 0;
       display: flex;
       align-items: center;
@@ -622,7 +616,7 @@ function formatSalary(cents: number): string {
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.25rem;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid var(--color-gray-100);
     }
 
     .decl-card__identity {
@@ -635,14 +629,14 @@ function formatSalary(cents: number): string {
       font-size: 1rem;
       font-weight: 600;
       margin: 0;
-      color: #1a1a1a;
+      color: var(--color-gray-900);
       line-height: 1.3;
     }
 
     .decl-card__team {
       font-size: 0.78rem;
       font-weight: 300;
-      color: #64748b;
+      color: var(--content-text-muted);
     }
 
     .decl-card__top-right {
@@ -665,7 +659,7 @@ function formatSalary(cents: number): string {
 
     .decl-card__type--muted {
       background: transparent;
-      color: #94a3b8;
+      color: var(--color-gray-400);
       padding: 0;
     }
 
@@ -692,13 +686,13 @@ function formatSalary(cents: number): string {
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: #64748b;
+      color: var(--content-text-muted);
     }
 
     .field__value {
       font-size: 0.9rem;
       font-weight: 300;
-      color: #1a1a1a;
+      color: var(--color-gray-900);
     }
 
     .field__value--accent {
@@ -708,7 +702,7 @@ function formatSalary(cents: number): string {
 
     .field__value--italic {
       font-style: italic;
-      color: #64748b;
+      color: var(--content-text-muted);
     }
 
     .field__value--success {
@@ -719,7 +713,7 @@ function formatSalary(cents: number): string {
     .contract-arrow {
       font-variant-numeric: tabular-nums;
       font-weight: 400;
-      color: #1a1a1a;
+      color: var(--color-gray-900);
     }
 
     /* Deadline colors */
@@ -797,16 +791,20 @@ function formatSalary(cents: number): string {
     .decl-card--rejected { border-left-color: var(--color-error); }
 
     /* ================================================
-       Buttons
+       Buttons (using design system tokens)
        ================================================ */
     .action-btn {
-      padding: 0.5rem 1.125rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.625rem 1rem;
       border: none;
-      border-radius: var(--radius-md);
-      font-size: 0.8rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
       font-weight: 600;
       cursor: pointer;
       letter-spacing: 0.01em;
+      text-decoration: none;
       transition: background-color var(--transition-fast), transform 0.1s ease, box-shadow var(--transition-fast);
     }
 
@@ -815,34 +813,37 @@ function formatSalary(cents: number): string {
     }
 
     .action-btn:disabled {
-      opacity: 0.5;
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
+    /* Approve = Secondary (green = affirmative "go" action) */
     .action-btn--approve {
-      background: var(--color-success);
-      color: var(--color-white);
+      background: var(--btn-secondary-bg, #2e8743);
+      color: var(--btn-secondary-text, #fff);
     }
     .action-btn--approve:hover:not(:disabled) {
-      background: var(--color-success-dark);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      background: var(--btn-secondary-bg-hover, #26743a);
+      box-shadow: var(--shadow-btn-hover);
     }
 
+    /* Reject = Primary (blue = default CTA) */
     .action-btn--reject {
-      background: var(--color-error);
-      color: var(--color-white);
+      background: var(--btn-primary-bg, #1c497c);
+      color: var(--btn-primary-text, #fff);
     }
     .action-btn--reject:hover:not(:disabled) {
-      background: var(--color-error-dark);
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+      background: var(--btn-primary-bg-hover, #164066);
+      box-shadow: var(--shadow-btn-hover);
     }
 
+    /* Cancel = Ghost (low-emphasis) */
     .action-btn--cancel {
-      background: var(--color-gray-100);
-      color: var(--color-gray-700);
+      background: transparent;
+      color: var(--color-gray-500, #6b7280);
     }
     .action-btn--cancel:hover {
-      background: var(--color-gray-200);
+      color: var(--color-gray-700, #374151);
     }
 
     /* ================================================
@@ -861,20 +862,21 @@ function formatSalary(cents: number): string {
 
     .empty-state__icon {
       opacity: 0.5;
+      color: var(--color-gray-400);
     }
 
     .empty-state__text {
       margin: 0;
       font-size: 0.95rem;
       font-weight: 400;
-      color: #475569;
+      color: var(--color-gray-600);
     }
 
     .empty-state__hint {
       margin: 0;
       font-size: 0.8rem;
       font-weight: 300;
-      color: #94a3b8;
+      color: var(--color-gray-400);
     }
 
     /* ================================================
@@ -886,9 +888,7 @@ function formatSalary(cents: number): string {
       padding: 0;
       max-width: 440px;
       width: 90%;
-      box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.15),
-        0 4px 16px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-xl);
     }
 
     .reject-dialog::backdrop {
@@ -913,7 +913,7 @@ function formatSalary(cents: number): string {
     .reject-dialog__player {
       margin: 0;
       font-weight: 500;
-      color: #475569;
+      color: var(--color-gray-600);
       font-size: 0.95rem;
     }
 
@@ -922,7 +922,7 @@ function formatSalary(cents: number): string {
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: #64748b;
+      color: var(--content-text-muted);
     }
 
     .reject-dialog__textarea {
@@ -935,7 +935,7 @@ function formatSalary(cents: number): string {
       font-family: inherit;
       resize: vertical;
       box-sizing: border-box;
-      color: #1a1a1a;
+      color: var(--color-gray-900);
       transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
