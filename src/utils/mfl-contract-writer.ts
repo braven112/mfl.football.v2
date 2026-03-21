@@ -9,14 +9,11 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { mflFetch } from './mfl-fetch';
 
-// Reads use api.myfantasyleague.com; writes MUST use www49 (commissioner writes fail on the api subdomain)
+// Reads use api.myfantasyleague.com; writes go through mflFetch which handles redirects
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
-const MFL_WRITE_HOST = process.env.MFL_WRITE_HOST || 'https://www49.myfantasyleague.com';
 const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || '13522';
-// Cookie names match the actual MFL cookie names for clarity
-const MFL_USER_ID = process.env.MFL_USER_ID || '';
-const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH || '';
 
 const BACKUP_DIR = join(process.cwd(), 'data/theleague/contract-backups');
 const MAX_BACKUP_AGE_DAYS = 30;
@@ -26,6 +23,10 @@ export interface ContractWriteParams {
   salary: string;
   contractYear: string;
   contractInfo: string;
+  /** The authenticated user's MFL_USER_ID cookie value */
+  mflUserCookie: string;
+  /** The authenticated user's MFL_IS_COMMISH cookie value (required for commissioner writes) */
+  mflCommishCookie?: string;
 }
 
 export interface ContractWriteResult {
@@ -63,9 +64,9 @@ function ensureBackupDir(): void {
  * Export current salary data from MFL as a pre-write backup.
  * Returns the backup file path on success, null on failure.
  */
-export async function createPreWriteBackup(): Promise<string | null> {
-  if (!MFL_USER_ID) {
-    console.error('MFL_USER_ID not set, skipping backup');
+export async function createPreWriteBackup(mflUserCookie: string): Promise<string | null> {
+  if (!mflUserCookie) {
+    console.error('No MFL user cookie provided, skipping backup');
     return null;
   }
 
@@ -73,11 +74,10 @@ export async function createPreWriteBackup(): Promise<string | null> {
     const year = getYear();
     const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
 
-    const response = await fetch(url, {
-      headers: {
-        Cookie: `MFL_USER_ID=${MFL_USER_ID}`,
-      },
-      redirect: 'follow',
+    const response = await mflFetch({
+      url,
+      method: 'GET',
+      mflUserCookie,
     });
 
     if (!response.ok) {
@@ -156,48 +156,41 @@ function buildSalaryXML(params: ContractWriteParams): string {
 export async function writeContractToMFL(
   params: ContractWriteParams,
 ): Promise<ContractWriteResult> {
-  if (!MFL_USER_ID) {
+  const { mflUserCookie, mflCommishCookie } = params;
+
+  if (!mflUserCookie) {
     return {
       success: false,
-      error: 'MFL_USER_ID environment variable is not set',
+      error: 'No MFL user cookie — please log out and log back in',
       attempts: 0,
     };
   }
 
   // Create pre-write backup
-  const backupFile = await createPreWriteBackup();
+  const backupFile = await createPreWriteBackup(mflUserCookie);
 
   const year = getYear();
-  // Commissioner writes MUST use www49 host (api subdomain rejects commissioner imports)
-  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
+  // Use api host — mflFetch handles the redirect to www49 and preserves cookies
+  const url = `${MFL_READ_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
   const xmlData = buildSalaryXML(params);
-
-  const body = new URLSearchParams({ DATA: xmlData });
-
-  // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
-  const cookieParts = [`MFL_USER_ID=${MFL_USER_ID}`];
-  if (MFL_IS_COMMISH) {
-    cookieParts.push(`MFL_IS_COMMISH=${MFL_IS_COMMISH}`);
-  }
-  const cookieHeader = cookieParts.join('; ');
+  const body = new URLSearchParams({ DATA: xmlData }).toString();
 
   const delays = [1000, 3000, 9000]; // Exponential backoff: 1s, 3s, 9s
   let lastError = '';
 
   for (let attempt = 0; attempt < delays.length; attempt++) {
     try {
-      const response = await fetch(url, {
+      const response = await mflFetch({
+        url,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: cookieHeader,
-        },
-        body: body.toString(),
-        redirect: 'follow',
+        mflUserCookie,
+        mflCommishCookie,
+        body,
       });
 
+      const text = await response.text();
+
       if (response.ok) {
-        const text = await response.text();
         // MFL returns XML; check for error indicators
         if (text.includes('error') || text.includes('Error')) {
           lastError = `MFL returned error response: ${text.slice(0, 200)}`;
@@ -210,7 +203,7 @@ export async function writeContractToMFL(
           };
         }
       } else {
-        lastError = `HTTP ${response.status}: ${response.statusText}`;
+        lastError = `HTTP ${response.status}: ${text.slice(0, 200)}`;
         console.error(`MFL write attempt ${attempt + 1} failed:`, lastError);
       }
     } catch (error) {
@@ -239,23 +232,25 @@ export async function writeContractToMFL(
 export async function writeMultipleContractsToMFL(
   players: ContractWriteParams[],
 ): Promise<ContractWriteResult> {
-  if (!MFL_USER_ID) {
-    return {
-      success: false,
-      error: 'MFL_USER_ID environment variable is not set',
-      attempts: 0,
-    };
-  }
-
   if (players.length === 0) {
     return { success: true, attempts: 0 };
   }
 
-  const backupFile = await createPreWriteBackup();
+  // Use cookies from the first player entry (all should share the same auth)
+  const { mflUserCookie, mflCommishCookie } = players[0];
+
+  if (!mflUserCookie) {
+    return {
+      success: false,
+      error: 'No MFL user cookie — please log out and log back in',
+      attempts: 0,
+    };
+  }
+
+  const backupFile = await createPreWriteBackup(mflUserCookie);
 
   const year = getYear();
-  // Commissioner writes MUST use www49 host (api subdomain rejects commissioner imports)
-  const url = `${MFL_WRITE_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
+  const url = `${MFL_READ_HOST}/${year}/import?TYPE=salaries&L=${MFL_LEAGUE_ID}&APPEND=1`;
 
   const playerXml = players
     .map(
@@ -264,32 +259,24 @@ export async function writeMultipleContractsToMFL(
     )
     .join('');
   const xmlData = `<salaries><leagueUnit unit="LEAGUE">${playerXml}</leagueUnit></salaries>`;
-  const body = new URLSearchParams({ DATA: xmlData });
-
-  // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
-  const cookieParts = [`MFL_USER_ID=${MFL_USER_ID}`];
-  if (MFL_IS_COMMISH) {
-    cookieParts.push(`MFL_IS_COMMISH=${MFL_IS_COMMISH}`);
-  }
-  const cookieHeader = cookieParts.join('; ');
+  const body = new URLSearchParams({ DATA: xmlData }).toString();
 
   const delays = [1000, 3000, 9000];
   let lastError = '';
 
   for (let attempt = 0; attempt < delays.length; attempt++) {
     try {
-      const response = await fetch(url, {
+      const response = await mflFetch({
+        url,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: cookieHeader,
-        },
-        body: body.toString(),
-        redirect: 'follow',
+        mflUserCookie,
+        mflCommishCookie,
+        body,
       });
 
+      const text = await response.text();
+
       if (response.ok) {
-        const text = await response.text();
         if (text.includes('error') || text.includes('Error')) {
           lastError = `MFL returned error response: ${text.slice(0, 200)}`;
           console.error(`MFL batch write attempt ${attempt + 1} failed:`, lastError);
@@ -301,7 +288,7 @@ export async function writeMultipleContractsToMFL(
           };
         }
       } else {
-        lastError = `HTTP ${response.status}: ${response.statusText}`;
+        lastError = `HTTP ${response.status}: ${text.slice(0, 200)}`;
         console.error(`MFL batch write attempt ${attempt + 1} failed:`, lastError);
       }
     } catch (error) {
@@ -326,7 +313,11 @@ export async function writeMultipleContractsToMFL(
  * Restore salary data from a backup file.
  * Reads the backup and writes each player's data back to MFL.
  */
-export async function restoreFromBackup(backupFilePath: string): Promise<ContractWriteResult> {
+export async function restoreFromBackup(
+  backupFilePath: string,
+  mflUserCookie: string,
+  mflCommishCookie?: string,
+): Promise<ContractWriteResult> {
   try {
     const data = JSON.parse(readFileSync(backupFilePath, 'utf-8')) as MFLSalaryExport;
     const players = data.salaries?.leagueUnit?.player;
@@ -340,6 +331,8 @@ export async function restoreFromBackup(backupFilePath: string): Promise<Contrac
       salary: p.salary,
       contractYear: p.contractYear,
       contractInfo: p.contractInfo,
+      mflUserCookie,
+      mflCommishCookie,
     }));
 
     return writeMultipleContractsToMFL(params);
