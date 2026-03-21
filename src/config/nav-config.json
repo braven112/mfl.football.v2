@@ -117,6 +117,14 @@
           "description": "Coach mode with matchups & odds"
         },
         {
+          "id": "contracts",
+          "label": "My Contracts",
+          "icon": "file-text",
+          "path": "/contracts/manage",
+          "external": false,
+          "description": "View and manage your contract declarations"
+        },
+        {
           "id": "trade-builder",
           "label": "Trade Builder",
           "icon": "transactions-2",
@@ -269,6 +277,7 @@
     "/draft-predictor": "/draft-predictor",
     "/icons": "/icons",
     "/assets": "/assets",
+    "/contracts/manage": "/contracts/manage",
     "/trade-builder": "/trade-builder",
     "/players": "/players",
     "/calendar": "/calendar",
