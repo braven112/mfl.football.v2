@@ -54,7 +54,9 @@ export async function cachedFetch<T>(
     return entry.pending;
   }
 
-  // Create a new fetch promise
+  // Track the pending promise separately from cache entries so we never
+  // store a placeholder with fetchedAt: 0 (which would short-circuit the
+  // TTL check and return undefined on the next request if the fetch fails).
   const pending = fetcher()
     .then((data) => {
       cache.set(key, { data, fetchedAt: Date.now() });
@@ -63,20 +65,25 @@ export async function cachedFetch<T>(
     .catch((err) => {
       // On error, if we have stale data, return it instead of throwing
       const stale = cache.get(key) as CacheEntry<T> | undefined;
-      if (stale?.data) {
+      if (stale?.data !== undefined && stale.fetchedAt > 0) {
         console.warn(`[mfl-cache] Fetch failed for "${key}", returning stale data:`, err.message);
+        // Clear pending so next request retries
+        stale.pending = undefined;
         return stale.data;
       }
-      // Remove the failed pending entry
+      // Remove any failed placeholder entry
       cache.delete(key);
       throw err;
     });
 
-  // Store the pending promise (keep old data around for stale fallback)
+  // Store the pending promise on the existing entry (preserves stale data),
+  // or create a minimal entry just for dedup tracking
   if (entry) {
     entry.pending = pending;
   } else {
-    cache.set(key, { data: undefined as T, fetchedAt: 0, pending });
+    // No existing entry — use a sentinel fetchedAt so TTL check never
+    // treats this as "fresh" data if the fetch fails
+    cache.set(key, { data: undefined as T, fetchedAt: -1, pending });
   }
 
   return pending;

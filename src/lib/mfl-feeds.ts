@@ -86,6 +86,15 @@ function buildFeedUrl(
 }
 
 /**
+ * Normalize MFL single-item responses to always be arrays.
+ * MFL returns `{ key: {...} }` for single items and `{ key: [...] }` for multiple.
+ */
+function ensureArray<T>(value: T | T[] | undefined | null): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+/**
  * Parse MFL trade bait response into a flat array of player IDs
  */
 function parseTradeBait(data: any): string[] {
@@ -129,7 +138,8 @@ export async function getMflFeed<T = any>(
   opts: FetchMflOptions = {},
 ): Promise<T | null> {
   const weekSuffix = opts.week ? `/w${opts.week}` : '';
-  const cacheKey = `mfl/${leagueSlug}/${year}/${feedType}${weekSuffix}`;
+  const apiKeySuffix = opts.apiKey ? `/k${opts.apiKey.slice(0, 8)}` : '';
+  const cacheKey = `mfl/${leagueSlug}/${year}/${feedType}${weekSuffix}${apiKeySuffix}`;
 
   try {
     return await cachedFetch<T>(
@@ -142,6 +152,20 @@ export async function getMflFeed<T = any>(
         // Special handling for tradeBait — flatten to player ID array
         if (feedType === 'tradeBait') {
           return parseTradeBait(data) as T;
+        }
+
+        // Normalize single-item MFL responses to arrays
+        if (feedType === 'rosters' && data?.rosters?.franchise) {
+          data.rosters.franchise = ensureArray(data.rosters.franchise);
+        }
+        if (feedType === 'standings' && data?.leagueStandings?.franchise) {
+          data.leagueStandings.franchise = ensureArray(data.leagueStandings.franchise);
+        }
+        if (feedType === 'draftResults' && data?.draftResults?.draftUnit) {
+          data.draftResults.draftUnit = ensureArray(data.draftResults.draftUnit);
+        }
+        if (feedType === 'transactions' && data?.transactions?.transaction) {
+          data.transactions.transaction = ensureArray(data.transactions.transaction);
         }
 
         return data as T;
