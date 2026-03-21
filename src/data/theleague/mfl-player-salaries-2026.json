@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-21T03:00:16.722Z"
+    "fetchedAt": "2026-03-21T05:08:39.944Z"
   },
   "players": [
     {
@@ -582,7 +582,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13772",
+          "name": "Schultz, Dalton"
+        }
+      ]
     },
     {
       "id": "14800",
@@ -9781,6 +9786,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": "00-0034857"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13772",
+      "name": "Schultz, Dalton",
+      "position": "TE",
+      "salary": 1000000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "HOU",
+      "draftYear": 2018,
+      "draftTeam": "DAL",
+      "birthdate": 837061200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13772_thumb.jpg",
+      "externalIds": {
+        "mfl": "13772",
+        "sleeper": "5001",
+        "gsis": "00-0034383"
+      },
+      "sleeper": {
+        "id": "5001",
+        "fullName": "Dalton Schultz",
+        "team": "HOU",
+        "age": 29,
+        "height": "77",
+        "weight": "242",
+        "number": 86,
+        "college": "Stanford",
+        "birthDate": "1996-07-11",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034383"
       },
       "nflverse": null,
       "gamesPlayed": null,
