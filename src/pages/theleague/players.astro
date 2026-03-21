@@ -1224,11 +1224,11 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
   }
 
   // ── Auction view helpers ──
-  function getTimeLeftMs(initTime) {
-    if (initTime == null) return null;
-    // initTime from API is Unix seconds — convert to ms
-    const initMs = initTime > 1e12 ? initTime : initTime * 1000;
-    const deadline = initMs + BID_WINDOW_MS;
+  function getTimeLeftMs(anchorTime) {
+    if (anchorTime == null) return null;
+    // anchorTime from API is Unix seconds — convert to ms
+    const anchorMs = anchorTime > 1e12 ? anchorTime : anchorTime * 1000;
+    const deadline = anchorMs + BID_WINDOW_MS;
     const remaining = deadline - Date.now();
     return remaining > 0 ? remaining : 0;
   }
@@ -2224,6 +2224,12 @@ const isAdmin = isAdminFranchise(authUser?.franchiseId);
           p.auctionBidTime = newBidTime;
           p.auctionFranchise = newFranchise;
           p.auctionInitTime = newInitTime;
+          // Patch the DOM timer attribute so tickAuctionTimers uses the updated anchor
+          const timerCell = document.querySelector(`tr[data-player-id="${p.id}"] .col-auction-timeleft[data-bid-time]`);
+          if (timerCell) {
+            const newAnchor = newBidTime ?? newInitTime;
+            if (newAnchor != null) timerCell.setAttribute('data-bid-time', String(newAnchor));
+          }
         }
       }
 
