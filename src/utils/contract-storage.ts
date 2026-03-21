@@ -23,6 +23,7 @@ async function getRedis(): Promise<RedisClient | null> {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) {
+    console.warn('[contract-storage] Redis env vars missing. UPSTASH_REDIS_REST_URL:', !!process.env.UPSTASH_REDIS_REST_URL, 'KV_REST_API_URL:', !!process.env.KV_REST_API_URL);
     _redis = null;
     return null;
   }
@@ -31,7 +32,8 @@ async function getRedis(): Promise<RedisClient | null> {
     const { Redis } = await import('@upstash/redis');
     _redis = new Redis({ url, token });
     return _redis;
-  } catch {
+  } catch (err) {
+    console.error('[contract-storage] Failed to import @upstash/redis:', err);
     _redis = null;
     return null;
   }
