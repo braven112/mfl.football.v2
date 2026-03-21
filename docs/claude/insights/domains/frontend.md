@@ -272,3 +272,28 @@ Key data sizes discovered:
 3. Add a Vercel cron job (`vercel.json` `crons` field) or a `POST /api/warm-cache` route called from the deploy hook that pings the rosters page to prime the in-memory cache after every deploy.
 4. Introduce a `GET /api/rosters/[season]` API route that returns pre-processed roster data for a given season as JSON, so the client can lazy-load non-default seasons on team/season switch rather than serializing all seasons upfront.
 5. Evaluate splitting `weeklyPlayerResults` out of the inline blob — it is only read when the player details modal is opened, so it could be fetched on-demand from `GET /api/player-results/[season]`.
+
+---
+
+## 2026-03-21 - Cold-Start API Call Budget for rosters.astro
+
+**Context:** Full performance audit of `src/pages/theleague/rosters.astro` quantifying exactly how many outbound HTTP calls occur on a cold Vercel function start.
+
+**Insight:** The actual cold-start call count is ~69, not the ~45 previously estimated. The full breakdown:
+- 5 MFL feeds × 2 years (batch 1) = 10 calls
+- 2 MFL feeds × 2 years (batch 2) = 4 calls
+- `getMflAllWeeklyResults` weeks 1–17 × 2 years = 34 calls (17 per year, each a separate cache key)
+- `getPlayoffBracketsData` = 1 metadata + N bracket detail calls
+- `draftResults` + `transactions` (draft block) = 2 calls
+- `transactions` again for eligibility = 1 call (duplicate — same feed fetched twice)
+- ESPN scoreboard = 1 call
+- Open-Meteo weather = up to 16 calls (one per outdoor NFL home stadium)
+
+The `transactions` feed at line 1,525 (`transactionsData`) and line 1,639 (`eligTxData`) hit the same MFL endpoint. The in-memory cache deduplicates the actual HTTP call, but the code calls `getFeedData` twice. Collapsing to one call clarifies intent and removes a subtle dependency on cache state.
+
+**Evidence:**
+- `src/pages/theleague/rosters.astro` lines 1,522–1,526 and 1,639
+- `src/lib/mfl-feeds.ts` lines 240–257: `getMflAllWeeklyResults` maps weeks 1–17 to individual cache keys
+- `src/pages/theleague/rosters.astro` lines 290–303: `weatherPromises = Array.from(homeTeams).map(...)` — up to 16 parallel Open-Meteo calls
+
+**Recommendation:** The most actionable single fix for cold-start latency is the Vercel cron warm-cache pattern (see previous entry). For the duplicate fetch: pass `transactionsData` directly into the eligibility block rather than calling `getFeedData` again. For weather: move `loadLiveOddsData` to `GET /api/live-odds.ts` with `Cache-Control: s-maxage=300, stale-while-revalidate=60` so Vercel's edge cache serves it without hitting the origin.
