@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { authenticateWithMFL } from '../../../utils/mfl-login';
-import { createSessionToken, createSessionCookie } from '../../../utils/session';
+import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference } from '../../../utils/team-preferences';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -55,6 +55,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Set team preference cookie
     setTheLeaguePreference(cookies, mflResponse.franchiseId);
 
+    // Build all Set-Cookie headers: session + MFL credentials
+    const setCookieHeaders = [sessionCookie];
+    if (mflResponse.userId) {
+      setCookieHeaders.push(
+        ...createMFLCookies(mflResponse.userId, mflResponse.commishCookie, isDev),
+      );
+    }
+
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    for (const cookie of setCookieHeaders) {
+      headers.append('Set-Cookie', cookie);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -66,13 +79,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           role: mflResponse.role || 'owner',
         },
       }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Set-Cookie': sessionCookie,
-        },
-      }
+      { status: 200, headers },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';

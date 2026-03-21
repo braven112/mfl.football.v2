@@ -21,6 +21,11 @@ const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH || '';
 const BACKUP_DIR = join(process.cwd(), 'data/theleague/contract-backups');
 const MAX_BACKUP_AGE_DAYS = 30;
 
+export interface MFLCredentials {
+  mflUserId: string;
+  mflIsCommish?: string;
+}
+
 export interface ContractWriteParams {
   playerId: string;
   salary: string;
@@ -155,11 +160,16 @@ function buildSalaryXML(params: ContractWriteParams): string {
  */
 export async function writeContractToMFL(
   params: ContractWriteParams,
+  credentials?: MFLCredentials,
 ): Promise<ContractWriteResult> {
-  if (!MFL_USER_ID) {
+  // Use provided credentials (from user's session cookies) or fall back to env vars
+  const userId = credentials?.mflUserId || MFL_USER_ID;
+  const commish = credentials?.mflIsCommish || MFL_IS_COMMISH;
+
+  if (!userId) {
     return {
       success: false,
-      error: 'MFL_USER_ID environment variable is not set',
+      error: 'No MFL credentials available. Please log in again.',
       attempts: 0,
     };
   }
@@ -175,9 +185,9 @@ export async function writeContractToMFL(
   const body = new URLSearchParams({ DATA: xmlData });
 
   // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
-  const cookieParts = [`MFL_USER_ID=${MFL_USER_ID}`];
-  if (MFL_IS_COMMISH) {
-    cookieParts.push(`MFL_IS_COMMISH=${MFL_IS_COMMISH}`);
+  const cookieParts = [`MFL_USER_ID=${userId}`];
+  if (commish) {
+    cookieParts.push(`MFL_IS_COMMISH=${commish}`);
   }
   const cookieHeader = cookieParts.join('; ');
 
@@ -238,11 +248,16 @@ export async function writeContractToMFL(
  */
 export async function writeMultipleContractsToMFL(
   players: ContractWriteParams[],
+  credentials?: MFLCredentials,
 ): Promise<ContractWriteResult> {
-  if (!MFL_USER_ID) {
+  // Use provided credentials (from user's session cookies) or fall back to env vars
+  const userId = credentials?.mflUserId || MFL_USER_ID;
+  const commish = credentials?.mflIsCommish || MFL_IS_COMMISH;
+
+  if (!userId) {
     return {
       success: false,
-      error: 'MFL_USER_ID environment variable is not set',
+      error: 'No MFL credentials available. Please log in again.',
       attempts: 0,
     };
   }
@@ -267,9 +282,9 @@ export async function writeMultipleContractsToMFL(
   const body = new URLSearchParams({ DATA: xmlData });
 
   // Build cookie header: MFL_USER_ID is required, MFL_IS_COMMISH grants commissioner access
-  const cookieParts = [`MFL_USER_ID=${MFL_USER_ID}`];
-  if (MFL_IS_COMMISH) {
-    cookieParts.push(`MFL_IS_COMMISH=${MFL_IS_COMMISH}`);
+  const cookieParts = [`MFL_USER_ID=${userId}`];
+  if (commish) {
+    cookieParts.push(`MFL_IS_COMMISH=${commish}`);
   }
   const cookieHeader = cookieParts.join('; ');
 
