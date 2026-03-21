@@ -1,20 +1,20 @@
 /**
- * POST /api/contracts/approve
+ * POST /api/contracts/reject
  *
- * Approve a pending contract declaration.
+ * Reject a pending contract declaration.
  * Requires commissioner or admin authentication.
- * Updates declaration status to 'approved', then writes to MFL.
+ * Optionally includes a rejection reason.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getDeclarationById, updateDeclaration } from '../../../utils/contract-storage';
-import { writeContractToMFL } from '../../../utils/mfl-contract-writer';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-interface ApproveRequestBody {
+interface RejectRequestBody {
   declarationId: string;
+  reason?: string;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -34,8 +34,8 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const body: ApproveRequestBody = await request.json();
-    const { declarationId } = body;
+    const body: RejectRequestBody = await request.json();
+    const { declarationId, reason } = body;
 
     if (!declarationId) {
       return new Response(
@@ -55,16 +55,17 @@ export const POST: APIRoute = async ({ request }) => {
     if (declaration.status !== 'pending') {
       return new Response(
         JSON.stringify({
-          error: `Cannot approve a declaration with status '${declaration.status}'`,
+          error: `Cannot reject a declaration with status '${declaration.status}'`,
         }),
         { status: 400, headers: JSON_HEADERS },
       );
     }
 
     const updated = await updateDeclaration(declarationId, {
-      status: 'approved',
+      status: 'rejected',
       reviewedBy: user.name || user.id,
       reviewedAt: new Date().toISOString(),
+      rejectionReason: reason || undefined,
     });
 
     if (!updated) {
@@ -74,42 +75,17 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Write to MFL after approval
-    const mflResult = await writeContractToMFL({
-      playerId: declaration.playerId,
-      salary: String(declaration.requestedSalary ?? declaration.currentSalary),
-      contractYear: String(declaration.requestedYears),
-      contractInfo: declaration.requestedContractInfo ?? declaration.currentContractInfo,
-    });
-
-    if (mflResult.success) {
-      await updateDeclaration(declarationId, {
-        status: 'applied',
-        mflSynced: true,
-        mflSyncedAt: new Date().toISOString(),
-      });
-    } else {
-      // Approved but MFL write failed — mark the error but keep approved status
-      await updateDeclaration(declarationId, {
-        mflError: mflResult.error,
-      });
-    }
-
     return new Response(
       JSON.stringify({
         success: true,
         declarationId: updated.id,
-        status: mflResult.success ? 'applied' : 'approved',
-        mflSynced: mflResult.success,
-        mflError: mflResult.error || undefined,
-        message: mflResult.success
-          ? 'Declaration approved and synced to MFL'
-          : 'Declaration approved but MFL sync failed — will need manual retry',
+        status: updated.status,
+        message: 'Declaration rejected',
       }),
       { status: 200, headers: JSON_HEADERS },
     );
   } catch (error) {
-    console.error('Approve declaration error:', error);
+    console.error('Reject declaration error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: JSON_HEADERS },
