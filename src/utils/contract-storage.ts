@@ -1,41 +1,44 @@
 /**
  * Contract Declaration Storage
  *
- * Stores contract declarations in Upstash Redis (production/Vercel)
+ * Stores contract declarations in Vercel Blob (production/preview)
  * with filesystem fallback for local development.
- * Follows the same pattern as custom-rankings-storage / cr.ts.
  */
 
 import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
 
-const REDIS_KEY = 'contract-declarations';
+const BLOB_PATH = 'data/contract-declarations.json';
 
-type RedisClient = {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown) => Promise<unknown>;
-};
+// --- Vercel Blob helpers ---
 
-let _redis: RedisClient | null | undefined;
+async function readFromBlob(): Promise<ContractDeclaration[] | null> {
+  try {
+    const { list: listBlobs } = await import('@vercel/blob');
+    const { blobs } = await listBlobs({ prefix: BLOB_PATH, limit: 1 });
+    if (blobs.length === 0) return [];
 
-async function getRedis(): Promise<RedisClient | null> {
-  if (_redis !== undefined) return _redis;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) {
-    console.warn('[contract-storage] Redis env vars missing. UPSTASH_REDIS_REST_URL:', !!process.env.UPSTASH_REDIS_REST_URL, 'KV_REST_API_URL:', !!process.env.KV_REST_API_URL);
-    _redis = null;
+    const res = await fetch(blobs[0].url);
+    if (!res.ok) return null;
+    const data = await res.json() as ContractDeclaration[];
+    return data;
+  } catch (err) {
+    console.error('[contract-storage] Blob read error:', err);
     return null;
   }
+}
 
+async function writeToBlob(declarations: ContractDeclaration[]): Promise<boolean> {
   try {
-    const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token });
-    return _redis;
+    const { put } = await import('@vercel/blob');
+    await put(BLOB_PATH, JSON.stringify(declarations), {
+      access: 'public',
+      addRandomSuffix: false,
+      contentType: 'application/json',
+    });
+    return true;
   } catch (err) {
-    console.error('[contract-storage] Failed to import @upstash/redis:', err);
-    _redis = null;
-    return null;
+    console.error('[contract-storage] Blob write error:', err);
+    return false;
   }
 }
 
@@ -73,23 +76,18 @@ function writeDeclarationsFileSync(file: DeclarationsFile): void {
 // --- Unified async read/write ---
 
 async function readAllDeclarations(): Promise<ContractDeclaration[]> {
-  const redis = await getRedis();
-  if (redis) {
-    const data = await redis.get<ContractDeclaration[]>(REDIS_KEY);
+  if (process.env.VERCEL) {
+    const data = await readFromBlob();
     return data ?? [];
   }
   return readDeclarationsFileSync().declarations;
 }
 
 async function writeAllDeclarations(declarations: ContractDeclaration[]): Promise<void> {
-  const redis = await getRedis();
-  if (redis) {
-    await redis.set(REDIS_KEY, declarations);
-    return;
-  }
-  // On Vercel the filesystem is read-only — don't attempt file writes
   if (process.env.VERCEL) {
-    throw new Error('Storage not configured: Upstash Redis credentials are missing');
+    const ok = await writeToBlob(declarations);
+    if (!ok) throw new Error('Failed to write declarations to Vercel Blob');
+    return;
   }
   writeDeclarationsFileSync({
     version: '1.0',
