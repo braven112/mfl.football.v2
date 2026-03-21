@@ -1903,10 +1903,10 @@ if (testEligibility) {
 
   // --- Eligibility data for the 3 scenarios ---
   eligibilityByTeam[testTeamId] = {
-    // Hopkins: free agent BBID pickup, 18h deadline, can declare 2-5 years
+    // Hopkins: free agent BBID pickup, 18h deadline, can declare 1-5 years
     '11232': {
       type: 'new-acquisition',
-      yearOptions: [2, 3, 4, 5],
+      yearOptions: [1, 2, 3, 4, 5],
       deadlineTimestamp: Math.floor((now + 18 * 60 * 60 * 1000) / 1000),
       isExpired: false,
       currentYears: 1,
@@ -8896,6 +8896,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       cdmSubmitBtn.textContent = 'Submitting...';
       cdmError.style.display = 'none';
 
+      const elig = cdmPlayerData.eligibility;
+
+      // If selecting the same years as current contract, cancel any pending declaration
+      if (cdmSelectedYears === elig?.currentYears) {
+        delete localDeclarations[cdmPlayerData.id];
+        delete declarationsByPlayer[cdmPlayerData.id];
+        cdmSubmitBtn.style.display = 'none';
+        cdmSuccess.style.display = 'flex';
+        updateView();
+        applyEligibilityStyling();
+        setTimeout(closeDeclarationModal, 1500);
+        return;
+      }
+
       // Demo mode: skip API call, show success immediately
       const isDemoPlayer = demoActive && String(cdmPlayerData.id).startsWith('DEMO_');
       if (isDemoPlayer) {
@@ -8910,8 +8924,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         setTimeout(closeDeclarationModal, 1500);
         return;
       }
-
-      const elig = cdmPlayerData.eligibility;
       const franchiseId = config.authUser?.franchiseId ?? currentTeam;
       const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
       const leagueId = config.authUser?.leagueId ?? '13522';
@@ -9520,7 +9532,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       eligibilityByTeam[currentTeam] = {};
       eligibilityByTeam[currentTeam]['DEMO_HOPKINS'] = {
         type: 'new-acquisition',
-        yearOptions: [2, 3, 4, 5],
+        yearOptions: [1, 2, 3, 4, 5],
         deadlineTimestamp: Math.floor((now + 18 * 60 * 60 * 1000) / 1000),
         isExpired: false,
         currentYears: 1,
