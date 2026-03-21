@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    const pending = getPendingDeclarations();
+    const pending = await getPendingDeclarations();
 
     return new Response(
       JSON.stringify({ declarations: pending }),

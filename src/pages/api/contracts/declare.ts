@@ -96,7 +96,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // 5. Check for existing pending declaration on this player
-    const existing = getPendingDeclarationForPlayer(playerId, franchiseId);
+    const existing = await getPendingDeclarationForPlayer(playerId, franchiseId);
     if (existing) {
       return new Response(
         JSON.stringify({
@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // 6. Type-specific validations
     if (type === 'franchise-tag') {
-      const existingTag = getTeamFranchiseTag(franchiseId, new Date().getFullYear());
+      const existingTag = await getTeamFranchiseTag(franchiseId, new Date().getFullYear());
       if (existingTag) {
         return new Response(
           JSON.stringify({ error: 'Your team has already used its franchise tag this year' }),
@@ -120,7 +120,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // team-option counts as an extension (exercise or rookie extension both use the same limit)
     if (type === 'veteran-extension' || type === 'rookie-extension' || type === 'team-option') {
-      const existingExt = getTeamExtension(franchiseId, new Date().getFullYear());
+      const existingExt = await getTeamExtension(franchiseId, new Date().getFullYear());
       if (existingExt) {
         return new Response(
           JSON.stringify({ error: 'Your team has already used its extension this season' }),
@@ -152,7 +152,7 @@ export const POST: APIRoute = async ({ request }) => {
       acquisitionTimestamp,
     };
 
-    addDeclaration(declaration);
+    await addDeclaration(declaration);
 
     return new Response(
       JSON.stringify({

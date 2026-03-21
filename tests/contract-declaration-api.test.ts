@@ -71,57 +71,57 @@ describe('contract-storage', () => {
   });
 
   describe('getDeclarations', () => {
-    it('returns empty array when file does not exist', () => {
+    it('returns empty array when file does not exist', async () => {
       vi.mocked(readFileSync).mockImplementation(() => {
         throw new Error('ENOENT');
       });
-      expect(getDeclarations()).toEqual([]);
+      expect(await getDeclarations()).toEqual([]);
     });
 
-    it('returns declarations from file', () => {
+    it('returns declarations from file', async () => {
       const decl = mockDeclaration();
       setupMockFile([decl]);
-      const result = getDeclarations();
+      const result = await getDeclarations();
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('DECL_123_abc');
     });
   });
 
   describe('getPendingDeclarations', () => {
-    it('filters to only pending status', () => {
+    it('filters to only pending status', async () => {
       setupMockFile([
         mockDeclaration({ id: '1', status: 'pending' }),
         mockDeclaration({ id: '2', status: 'approved' }),
         mockDeclaration({ id: '3', status: 'pending' }),
         mockDeclaration({ id: '4', status: 'rejected' }),
       ]);
-      const result = getPendingDeclarations();
+      const result = await getPendingDeclarations();
       expect(result).toHaveLength(2);
       expect(result.map(d => d.id)).toEqual(['1', '3']);
     });
   });
 
   describe('getDeclarationById', () => {
-    it('returns matching declaration', () => {
+    it('returns matching declaration', async () => {
       setupMockFile([
         mockDeclaration({ id: 'DECL_A' }),
         mockDeclaration({ id: 'DECL_B' }),
       ]);
-      const result = getDeclarationById('DECL_B');
+      const result = await getDeclarationById('DECL_B');
       expect(result?.id).toBe('DECL_B');
     });
 
-    it('returns undefined for missing ID', () => {
+    it('returns undefined for missing ID', async () => {
       setupMockFile([mockDeclaration({ id: 'DECL_A' })]);
-      expect(getDeclarationById('DECL_MISSING')).toBeUndefined();
+      expect(await getDeclarationById('DECL_MISSING')).toBeUndefined();
     });
   });
 
   describe('addDeclaration', () => {
-    it('writes declaration to file', () => {
+    it('writes declaration to file', async () => {
       setupMockFile([]);
       const decl = mockDeclaration();
-      addDeclaration(decl);
+      await addDeclaration(decl);
 
       expect(writeFileSync).toHaveBeenCalledTimes(1);
       const written = JSON.parse(vi.mocked(writeFileSync).mock.calls[0][1] as string);
@@ -129,9 +129,9 @@ describe('contract-storage', () => {
       expect(written.declarations[0].id).toBe('DECL_123_abc');
     });
 
-    it('prepends new declaration (newest first)', () => {
+    it('prepends new declaration (newest first)', async () => {
       setupMockFile([mockDeclaration({ id: 'OLD' })]);
-      addDeclaration(mockDeclaration({ id: 'NEW' }));
+      await addDeclaration(mockDeclaration({ id: 'NEW' }));
 
       const written = JSON.parse(vi.mocked(writeFileSync).mock.calls[0][1] as string);
       expect(written.declarations[0].id).toBe('NEW');
@@ -140,10 +140,10 @@ describe('contract-storage', () => {
   });
 
   describe('updateDeclaration', () => {
-    it('updates matching declaration fields', () => {
+    it('updates matching declaration fields', async () => {
       setupMockFile([mockDeclaration({ id: 'DECL_A', status: 'pending' })]);
 
-      const result = updateDeclaration('DECL_A', {
+      const result = await updateDeclaration('DECL_A', {
         status: 'approved',
         reviewedBy: 'commish',
         reviewedAt: '2026-02-28T12:00:00.000Z',
@@ -156,26 +156,26 @@ describe('contract-storage', () => {
       expect(written.declarations[0].status).toBe('approved');
     });
 
-    it('returns null for missing declaration', () => {
+    it('returns null for missing declaration', async () => {
       setupMockFile([]);
-      expect(updateDeclaration('MISSING', { status: 'approved' })).toBeNull();
+      expect(await updateDeclaration('MISSING', { status: 'approved' })).toBeNull();
     });
   });
 
   describe('getDeclarationsByFranchise', () => {
-    it('filters by franchiseId', () => {
+    it('filters by franchiseId', async () => {
       setupMockFile([
         mockDeclaration({ id: '1', franchiseId: '0001' }),
         mockDeclaration({ id: '2', franchiseId: '0002' }),
         mockDeclaration({ id: '3', franchiseId: '0001' }),
       ]);
-      const result = getDeclarationsByFranchise('0001');
+      const result = await getDeclarationsByFranchise('0001');
       expect(result).toHaveLength(2);
     });
   });
 
   describe('getTeamFranchiseTag', () => {
-    it('finds existing non-rejected franchise tag for the year', () => {
+    it('finds existing non-rejected franchise tag for the year', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'TAG_1',
@@ -185,11 +185,11 @@ describe('contract-storage', () => {
           submittedAt: '2026-03-01T10:00:00.000Z',
         }),
       ]);
-      const result = getTeamFranchiseTag('0001', 2026);
+      const result = await getTeamFranchiseTag('0001', 2026);
       expect(result?.id).toBe('TAG_1');
     });
 
-    it('ignores rejected tags', () => {
+    it('ignores rejected tags', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'TAG_1',
@@ -199,10 +199,10 @@ describe('contract-storage', () => {
           submittedAt: '2026-03-01T10:00:00.000Z',
         }),
       ]);
-      expect(getTeamFranchiseTag('0001', 2026)).toBeUndefined();
+      expect(await getTeamFranchiseTag('0001', 2026)).toBeUndefined();
     });
 
-    it('ignores tags from different years', () => {
+    it('ignores tags from different years', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'TAG_1',
@@ -212,12 +212,12 @@ describe('contract-storage', () => {
           submittedAt: '2025-03-01T10:00:00.000Z',
         }),
       ]);
-      expect(getTeamFranchiseTag('0001', 2026)).toBeUndefined();
+      expect(await getTeamFranchiseTag('0001', 2026)).toBeUndefined();
     });
   });
 
   describe('getTeamExtension', () => {
-    it('finds existing veteran extension', () => {
+    it('finds existing veteran extension', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'EXT_1',
@@ -227,10 +227,10 @@ describe('contract-storage', () => {
           submittedAt: '2026-02-20T10:00:00.000Z',
         }),
       ]);
-      expect(getTeamExtension('0002', 2026)?.id).toBe('EXT_1');
+      expect((await getTeamExtension('0002', 2026))?.id).toBe('EXT_1');
     });
 
-    it('finds existing rookie extension', () => {
+    it('finds existing rookie extension', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'EXT_2',
@@ -240,10 +240,10 @@ describe('contract-storage', () => {
           submittedAt: '2026-02-20T10:00:00.000Z',
         }),
       ]);
-      expect(getTeamExtension('0003', 2026)?.id).toBe('EXT_2');
+      expect((await getTeamExtension('0003', 2026))?.id).toBe('EXT_2');
     });
 
-    it('ignores expired extensions', () => {
+    it('ignores expired extensions', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'EXT_1',
@@ -253,12 +253,12 @@ describe('contract-storage', () => {
           submittedAt: '2026-02-20T10:00:00.000Z',
         }),
       ]);
-      expect(getTeamExtension('0002', 2026)).toBeUndefined();
+      expect(await getTeamExtension('0002', 2026)).toBeUndefined();
     });
   });
 
   describe('getPendingDeclarationForPlayer', () => {
-    it('finds pending declaration for player on franchise', () => {
+    it('finds pending declaration for player on franchise', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'D1',
@@ -267,11 +267,11 @@ describe('contract-storage', () => {
           status: 'pending',
         }),
       ]);
-      const result = getPendingDeclarationForPlayer('14056', '0001');
+      const result = await getPendingDeclarationForPlayer('14056', '0001');
       expect(result?.id).toBe('D1');
     });
 
-    it('finds approved (not yet synced) declaration', () => {
+    it('finds approved (not yet synced) declaration', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'D2',
@@ -280,10 +280,10 @@ describe('contract-storage', () => {
           status: 'approved',
         }),
       ]);
-      expect(getPendingDeclarationForPlayer('14056', '0001')?.id).toBe('D2');
+      expect((await getPendingDeclarationForPlayer('14056', '0001'))?.id).toBe('D2');
     });
 
-    it('does not return rejected declarations', () => {
+    it('does not return rejected declarations', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'D3',
@@ -292,10 +292,10 @@ describe('contract-storage', () => {
           status: 'rejected',
         }),
       ]);
-      expect(getPendingDeclarationForPlayer('14056', '0001')).toBeUndefined();
+      expect(await getPendingDeclarationForPlayer('14056', '0001')).toBeUndefined();
     });
 
-    it('does not match different franchise', () => {
+    it('does not match different franchise', async () => {
       setupMockFile([
         mockDeclaration({
           id: 'D4',
@@ -304,7 +304,7 @@ describe('contract-storage', () => {
           status: 'pending',
         }),
       ]);
-      expect(getPendingDeclarationForPlayer('14056', '0001')).toBeUndefined();
+      expect(await getPendingDeclarationForPlayer('14056', '0001')).toBeUndefined();
     });
   });
 });

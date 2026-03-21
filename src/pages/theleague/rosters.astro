@@ -1984,7 +1984,7 @@ if (testEligibility) {
 }
 
 // Load existing declarations for indicator display
-const allDeclarations = getDeclarations();
+const allDeclarations = await getDeclarations();
 const declarationsByPlayer: Record<string, { status: string; type: string; requestedYears: number }> = {};
 for (const decl of allDeclarations) {
   if (decl.status === 'pending' || decl.status === 'approved') {

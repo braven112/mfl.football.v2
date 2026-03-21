@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const declaration = getDeclarationById(declarationId);
+    const declaration = await getDeclarationById(declarationId);
     if (!declaration) {
       return new Response(
         JSON.stringify({ error: 'Declaration not found' }),
@@ -61,7 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const updated = updateDeclaration(declarationId, {
+    const updated = await updateDeclaration(declarationId, {
       status: 'approved',
       reviewedBy: user.name || user.id,
       reviewedAt: new Date().toISOString(),
@@ -83,14 +83,14 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     if (mflResult.success) {
-      updateDeclaration(declarationId, {
+      await updateDeclaration(declarationId, {
         status: 'applied',
         mflSynced: true,
         mflSyncedAt: new Date().toISOString(),
       });
     } else {
       // Approved but MFL write failed — mark the error but keep approved status
-      updateDeclaration(declarationId, {
+      await updateDeclaration(declarationId, {
         mflError: mflResult.error,
       });
     }
