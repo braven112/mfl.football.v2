@@ -2,8 +2,7 @@ name: Roster Sync
 
 on:
   schedule:
-    # Fallback schedule — primary trigger is Vercel cron (every 4 min)
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 concurrency:
