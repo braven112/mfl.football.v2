@@ -17,7 +17,9 @@ async function readFromBlob(): Promise<ContractDeclaration[] | null> {
     const { blobs } = await listBlobs({ prefix: BLOB_PATH, limit: 1 });
     if (blobs.length === 0) return [];
 
-    const res = await fetch(blobs[0].url);
+    // Bust CDN cache — Vercel Blob serves from CDN which can return stale data
+    const cacheBust = `${blobs[0].url}${blobs[0].url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+    const res = await fetch(cacheBust, { cache: 'no-store' });
     if (!res.ok) return null;
     const data = await res.json() as ContractDeclaration[];
     return data;
@@ -30,12 +32,13 @@ async function readFromBlob(): Promise<ContractDeclaration[] | null> {
 async function writeToBlob(declarations: ContractDeclaration[]): Promise<boolean> {
   try {
     const { put } = await import('@vercel/blob');
-    await put(BLOB_PATH, JSON.stringify(declarations), {
+    const result = await put(BLOB_PATH, JSON.stringify(declarations), {
       access: 'public',
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: 'application/json',
     });
+    console.log('[contract-storage] Blob write OK:', result.url, '— entries:', declarations.length);
     return true;
   } catch (err) {
     console.error('[contract-storage] Blob write error:', err);
@@ -79,6 +82,9 @@ function writeDeclarationsFileSync(file: DeclarationsFile): void {
 async function readAllDeclarations(): Promise<ContractDeclaration[]> {
   if (process.env.VERCEL) {
     const data = await readFromBlob();
+    if (data === null) {
+      console.error('[contract-storage] readFromBlob returned null — blob read failed');
+    }
     return data ?? [];
   }
   return readDeclarationsFileSync().declarations;
@@ -148,11 +154,16 @@ export async function updateDeclaration(
   updates: Partial<ContractDeclaration>,
 ): Promise<ContractDeclaration | null> {
   const all = await readAllDeclarations();
+  console.log('[contract-storage] updateDeclaration: read', all.length, 'declarations, looking for', id);
   const index = all.findIndex(d => d.id === id);
-  if (index === -1) return null;
+  if (index === -1) {
+    console.error('[contract-storage] updateDeclaration: declaration not found!', id);
+    return null;
+  }
 
   all[index] = { ...all[index], ...updates };
   await writeAllDeclarations(all);
+  console.log('[contract-storage] updateDeclaration: wrote updated declaration', id, 'status:', all[index].status);
   return all[index];
 }
 
