@@ -11,6 +11,7 @@ import { validateContractSubmission } from '../../../utils/contract-validation';
 import {
   generateDeclarationId,
   addDeclaration,
+  updateDeclaration,
   getPendingDeclarationForPlayer,
   getTeamFranchiseTag,
   getTeamExtension,
@@ -95,15 +96,25 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 5. Check for existing pending declaration on this player
+    // 5. Check for existing pending declaration — update it if found
     const existing = await getPendingDeclarationForPlayer(playerId, franchiseId);
-    if (existing) {
+    if (existing && existing.status === 'pending') {
+      await updateDeclaration(existing.id, {
+        requestedYears,
+        requestedSalary,
+        requestedContractInfo,
+        submittedAt: new Date().toISOString(),
+      });
+
       return new Response(
         JSON.stringify({
-          error: 'A pending declaration already exists for this player',
-          existingDeclarationId: existing.id,
+          success: true,
+          declarationId: existing.id,
+          status: 'pending',
+          updated: true,
+          message: 'Declaration updated',
         }),
-        { status: 409, headers: JSON_HEADERS },
+        { status: 200, headers: JSON_HEADERS },
       );
     }
 
