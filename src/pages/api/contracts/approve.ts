@@ -74,12 +74,14 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Write to MFL after approval
+    // Write to MFL after approval — use the commissioner's own MFL cookies
     const mflResult = await writeContractToMFL({
       playerId: declaration.playerId,
       salary: String(declaration.requestedSalary ?? declaration.currentSalary),
       contractYear: String(declaration.requestedYears),
       contractInfo: declaration.requestedContractInfo ?? declaration.currentContractInfo,
+      mflUserCookie: user.id,
+      mflCommishCookie: user.commishCookie,
     });
 
     if (mflResult.success) {
@@ -88,25 +90,30 @@ export const POST: APIRoute = async ({ request }) => {
         mflSynced: true,
         mflSyncedAt: new Date().toISOString(),
       });
-    } else {
-      // Approved but MFL write failed — mark the error but keep approved status
-      await updateDeclaration(declarationId, {
-        mflError: mflResult.error,
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          declarationId: updated.id,
+          status: 'applied',
+          message: 'Declaration approved and synced to MFL',
+        }),
+        { status: 200, headers: JSON_HEADERS },
+      );
     }
+
+    // MFL write failed — revert to pending so commissioner can retry
+    await updateDeclaration(declarationId, {
+      status: 'pending',
+      mflError: mflResult.error,
+    });
 
     return new Response(
       JSON.stringify({
-        success: true,
-        declarationId: updated.id,
-        status: mflResult.success ? 'applied' : 'approved',
-        mflSynced: mflResult.success,
-        mflError: mflResult.error || undefined,
-        message: mflResult.success
-          ? 'Declaration approved and synced to MFL'
-          : 'Declaration approved but MFL sync failed — will need manual retry',
+        success: false,
+        error: `MFL sync failed: ${mflResult.error}. Declaration was NOT applied. Try logging out and back in, then retry.`,
       }),
-      { status: 200, headers: JSON_HEADERS },
+      { status: 502, headers: JSON_HEADERS },
     );
   } catch (error) {
     console.error('Approve declaration error:', error);
