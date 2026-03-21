@@ -1099,6 +1099,131 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
     return playerObj;
   });
 
+  // Add players from live rosters that aren't in the static salary file
+  // (e.g., players just won in auction after the last build)
+  const staticPlayerIds = new Set((rawData?.players ?? []).map(p => p.id));
+  Object.entries(liveRosterData).forEach(([playerId, liveData]) => {
+    if (staticPlayerIds.has(playerId)) return; // Already processed above
+    const feedPlayer = feedPlayers[playerId] ?? null;
+    if (!feedPlayer) return; // No metadata available at all — skip unknown IDs
+    const salary = liveData?.salary ? parseNumber(liveData.salary) : 0;
+    const contractYears = Number.parseInt(liveData?.contractYear ?? '0', 10) || 0;
+    const franchiseId = liveData?.franchiseId ?? 'FA';
+    const status = liveData?.status ?? 'ROSTER';
+    const nflTeam = normalizeTeamCode(feedPlayer?.team ?? '');
+    const totalRemaining = salary * Math.max(contractYears || 1, 1);
+    const seasonYear = Number.parseInt(season, 10) || getCurrentLeagueYear();
+    const contractType = status && status !== 'ROSTER' ? status
+      : feedPlayer?.draft_year && seasonYear - Number(feedPlayer.draft_year) <= 2 ? 'Rookie' : 'Standard';
+    const resolvedEspnId = feedPlayer?.espn_id || (espnCollegeIds as any).players?.[playerId]?.espnCollegeId || null;
+    const headshot = getPlayerHeadshot(playerId, resolvedEspnId);
+    const collegeName = feedPlayer?.college ?? null;
+    const collegeAssets = getCollegeAssets(collegeName);
+    const parseDraftVal = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = parseInt(val, 10);
+      return Number.isFinite(num) ? num : null;
+    };
+
+    // Get odds data for opponent display
+    const getOddsDataNew = (team) => {
+      const normalized = team === 'JAC' ? 'JAX' : team === 'WSH' ? 'WAS' : team;
+      return liveOddsData[normalized] || null;
+    };
+    const gameOdds = getOddsDataNew(nflTeam);
+    const opponent = gameOdds ? (gameOdds.isHome ? `vs ${gameOdds.opponent}` : `@ ${gameOdds.opponent}`) : 'BYE';
+
+    let favoredTeam = null;
+    let spreadAmount = null;
+    if (gameOdds?.spread) {
+      const parts = gameOdds.spread.split(' ');
+      if (parts.length >= 2) {
+        favoredTeam = parts[0];
+        spreadAmount = parts[1].replace(/[^0-9.]/g, '');
+      }
+    }
+
+    let oppStats = null;
+    const fpaData = fantasyPointsAllowedBySeason[season] ?? fantasyPointsAllowedBySeason[currentSeasonYearStr];
+    if (gameOdds && fpaData?.fantasyPointsAllowed) {
+      const oppCode = gameOdds.opponent === 'JAX' ? 'JAC' : gameOdds.opponent === 'WAS' ? 'WSH' : gameOdds.opponent;
+      const teamStats = fpaData.fantasyPointsAllowed[oppCode] || fpaData.fantasyPointsAllowed[gameOdds.opponent];
+      if (teamStats) {
+        const pos = (feedPlayer?.position ?? '').toUpperCase();
+        const posKey = pos === 'DEF' ? 'DST' : pos;
+        oppStats = teamStats[posKey] ?? null;
+      }
+    }
+
+    const playerName = feedPlayer?.name ?? `Player ${playerId}`;
+    const position = feedPlayer?.position ?? 'N/A';
+
+    players.push({
+      id: playerId,
+      espnId: resolvedEspnId,
+      name: playerName,
+      position,
+      salary,
+      contractYears,
+      totalRemaining,
+      franchiseId,
+      status,
+      contractType,
+      points: 0,
+      projectedPoints: projectionMap.get(playerId) || '-',
+      recentScores: trendWeeks.map(week => ({ week, score: playerScoresMap.get(playerId)?.[week] ?? '-' })),
+      avgRecent: '-',
+      avgSeason: '-',
+      nflTeam,
+      opponent,
+      oppStats,
+      gameOdds: gameOdds ? {
+        spread: gameOdds.spread,
+        overUnder: gameOdds.overUnder,
+        favoredTeam,
+        spreadAmount,
+        weather: gameOdds.weather,
+        opponent: gameOdds.opponent,
+        isHome: gameOdds.isHome
+      } : null,
+      draftYear: parseDraftVal(feedPlayer?.draft_year),
+      draftTeam: (feedPlayer?.draft_team ?? '').toUpperCase() || null,
+      draftRound: parseDraftVal(feedPlayer?.draft_round),
+      draftPick: parseDraftVal(feedPlayer?.draft_pick),
+      nflLogo: getNflLogoUrl(nflTeam),
+      rosterSlot: normalizeStatus(status),
+      byeWeek: nflByeWeeks[nflTeam] ?? null,
+      birthdate: feedPlayer?.birthdate ?? null,
+      headshot,
+      college: collegeName,
+      collegeLogo: collegeAssets?.logo ?? null,
+      collegeLogoDark: collegeAssets?.logoDark ?? null,
+      height: null,
+      weight: null,
+      number: null,
+      experience: null,
+      depthChartPosition: null,
+      depthChartOrder: null,
+      injuryStatus: mflInjuryData[playerId]?.injuryStatus ?? null,
+      injuryBodyPart: mflInjuryData[playerId]?.injuryBodyPart ?? null,
+      sleeperId: null,
+      sleeperFullName: null,
+      sleeperPosition: null,
+      fantasyPositions: null,
+      gsisId: null,
+      sleeperAge: null,
+      sleeperStatus: null,
+      sleeperActive: null,
+      offenseSnaps: null,
+      defenseSnaps: null,
+      stSnaps: null,
+      gamesPlayed: null,
+      depthChartAhead: null,
+      tradeBait: tradeBaitPlayerIds.has(String(playerId)),
+      contractInfo: liveData?.contractInfo || '',
+    });
+  });
+
   const grouped = {};
   players.forEach((player) => {
     const key = player.franchiseId || 'FA';
