@@ -172,6 +172,48 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
     const sectionCountEl = document.querySelector('.section__count');
     const appliedCountEl = document.getElementById('appliedCount');
 
+    // Track applied IDs in sessionStorage so they stay hidden on reload
+    // (Vercel Blob CDN can serve stale data briefly after a write)
+    const APPLIED_KEY = 'contract_applied_ids';
+    function getAppliedIds() {
+      try { return JSON.parse(sessionStorage.getItem(APPLIED_KEY) || '[]'); }
+      catch { return []; }
+    }
+    function markApplied(id) {
+      const ids = getAppliedIds();
+      ids.push(id);
+      sessionStorage.setItem(APPLIED_KEY, JSON.stringify(ids));
+    }
+
+    // On page load, hide any cards that were already applied this session
+    // (handles CDN stale reads returning "pending" after successful apply)
+    const alreadyApplied = getAppliedIds();
+    let hiddenOnLoad = 0;
+    if (alreadyApplied.length > 0 && pendingList) {
+      for (const id of alreadyApplied) {
+        const card = pendingList.querySelector(`[data-id="${id}"]`);
+        if (card) {
+          card.remove();
+          hiddenOnLoad++;
+        }
+      }
+      // Update counts to reflect hidden cards
+      if (hiddenOnLoad > 0) {
+        [pendingCountEl, sectionCountEl].forEach(el => {
+          if (!el) return;
+          const current = parseInt(el.textContent || '0', 10);
+          el.textContent = String(Math.max(0, current - hiddenOnLoad));
+        });
+        if (appliedCountEl) {
+          const current = parseInt(appliedCountEl.textContent || '0', 10);
+          appliedCountEl.textContent = String(current + hiddenOnLoad);
+        }
+        if (pendingList.querySelectorAll('.decl-card').length === 0) {
+          showEmptyState();
+        }
+      }
+    }
+
     function showEmptyState() {
       if (!pendingList) return;
       while (pendingList.firstChild) {
@@ -187,13 +229,11 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
     }
 
     function updateCounts() {
-      // Decrement pending counts (sidebar + section badge)
       [pendingCountEl, sectionCountEl].forEach(el => {
         if (!el) return;
         const current = parseInt(el.textContent || '0', 10);
         el.textContent = String(Math.max(0, current - 1));
       });
-      // Increment applied count
       if (appliedCountEl) {
         const current = parseInt(appliedCountEl.textContent || '0', 10);
         appliedCountEl.textContent = String(current + 1);
@@ -236,11 +276,24 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         const data = await res.json();
 
         if (!res.ok) {
-          alert(`Failed to apply: ${data.error}`);
+          // Show specific error so user knows what went wrong
+          const msg = data.error || 'Unknown error';
+          if (res.status === 401) {
+            alert('Session expired. Please log in again via the sidebar, then retry.');
+          } else if (res.status === 403) {
+            alert('Commissioner access required. Please log in as commissioner via the sidebar.');
+          } else if (res.status === 502) {
+            alert(`MFL write failed: ${msg}\n\nThis usually means your MFL session expired. Try logging out and back in via the sidebar.`);
+          } else {
+            alert(`Failed to apply: ${msg}`);
+          }
           btn.disabled = false;
           btn.textContent = 'Apply';
           return;
         }
+
+        // Success — track applied ID so it stays hidden on reload
+        markApplied(declarationId);
 
         const card = btn.closest('.decl-card');
         updateCounts();
