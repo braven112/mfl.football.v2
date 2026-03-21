@@ -1,13 +1,14 @@
 /**
  * POST /api/contracts/approve
  *
- * Approve a pending contract declaration.
+ * Apply a pending contract declaration to MFL.
  * Requires commissioner or admin authentication.
- * Updates declaration status to 'approved', then writes to MFL.
+ * Writes directly to MFL and sets status to 'applied'.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getMFLCookiesFromRequest } from '../../../utils/session';
 import { getDeclarationById, updateDeclaration } from '../../../utils/contract-storage';
 import { writeContractToMFL } from '../../../utils/mfl-contract-writer';
 
@@ -55,61 +56,63 @@ export const POST: APIRoute = async ({ request }) => {
     if (declaration.status !== 'pending') {
       return new Response(
         JSON.stringify({
-          error: `Cannot approve a declaration with status '${declaration.status}'`,
+          error: `Cannot apply a declaration with status '${declaration.status}'`,
         }),
         { status: 400, headers: JSON_HEADERS },
       );
     }
 
-    const updated = await updateDeclaration(declarationId, {
-      status: 'approved',
-      reviewedBy: user.name || user.id,
-      reviewedAt: new Date().toISOString(),
-    });
+    // Get MFL credentials from the commissioner's session cookies
+    const { mflUserId, mflIsCommish } = getMFLCookiesFromRequest(request);
 
-    if (!updated) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to update declaration' }),
-        { status: 500, headers: JSON_HEADERS },
-      );
-    }
-
-    // Write to MFL after approval
-    const mflResult = await writeContractToMFL({
-      playerId: declaration.playerId,
-      salary: String(declaration.requestedSalary ?? declaration.currentSalary),
-      contractYear: String(declaration.requestedYears),
-      contractInfo: declaration.requestedContractInfo ?? declaration.currentContractInfo,
-    });
+    // Write to MFL directly (skip intermediate "approved" status)
+    const mflResult = await writeContractToMFL(
+      {
+        playerId: declaration.playerId,
+        salary: String(declaration.requestedSalary ?? declaration.currentSalary),
+        contractYear: String(declaration.requestedYears),
+        contractInfo: declaration.requestedContractInfo ?? declaration.currentContractInfo,
+      },
+      mflUserId ? { mflUserId, mflIsCommish: mflIsCommish || undefined } : undefined,
+    );
 
     if (mflResult.success) {
       await updateDeclaration(declarationId, {
         status: 'applied',
         mflSynced: true,
         mflSyncedAt: new Date().toISOString(),
+        reviewedBy: user.name || user.id,
+        reviewedAt: new Date().toISOString(),
       });
-    } else {
-      // Approved but MFL write failed — mark the error but keep approved status
-      await updateDeclaration(declarationId, {
-        mflError: mflResult.error,
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          declarationId,
+          status: 'applied',
+          mflSynced: true,
+          message: 'Contract applied to MFL',
+        }),
+        { status: 200, headers: JSON_HEADERS },
+      );
     }
+
+    // MFL write failed — keep as pending
+    await updateDeclaration(declarationId, {
+      mflError: mflResult.error,
+    });
 
     return new Response(
       JSON.stringify({
-        success: true,
-        declarationId: updated.id,
-        status: mflResult.success ? 'applied' : 'approved',
-        mflSynced: mflResult.success,
-        mflError: mflResult.error || undefined,
-        message: mflResult.success
-          ? 'Declaration approved and synced to MFL'
-          : 'Declaration approved but MFL sync failed — will need manual retry',
+        success: false,
+        error: `MFL sync failed: ${mflResult.error}`,
+        declarationId,
+        status: 'pending',
       }),
-      { status: 200, headers: JSON_HEADERS },
+      { status: 502, headers: JSON_HEADERS },
     );
   } catch (error) {
-    console.error('Approve declaration error:', error);
+    console.error('Apply declaration error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: JSON_HEADERS },
