@@ -1307,6 +1307,9 @@ Object.entries(rosterModules).forEach(([path, mod]) => {
   );
 });
 
+// All available seasons for the switcher dropdown
+const allSeasonOptions = Object.keys(rostersBySeason).sort((a, b) => Number(b) - Number(a));
+
 // Process salary averages for extension calculator
 const salaryAveragesBySeason = {};
 Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
@@ -1346,9 +1349,7 @@ Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
 // Use previous season's frozen (week 14) salary averages until current season reaches week 14
 const extensionSeason = String(getFrozenSalaryAveragesYear(salaryAveragesModules, getModuleData));
 
-const seasonOptions = Object.keys(rostersBySeason).sort(
-  (a, b) => Number(b) - Number(a)
-);
+const seasonOptions = allSeasonOptions;
 const currentLeagueYear = getCurrentLeagueYear();
 const preferredSeason = seasonOptions.find(
   (season) => Number(season) === currentLeagueYear
@@ -2069,14 +2070,18 @@ for (const decl of allDeclarations) {
   }
 }
 
+// Only serialize the current season to the client — historical seasons are lazy-loaded via API
+const currentSeasonOnly = { [defaultSeason]: rostersBySeason[defaultSeason] };
+const currentAdjustmentsOnly = { [defaultSeason]: feedSalaryAdjustmentsBySeason[defaultSeason] ?? [] };
+
 const serializedConfig = JSON.stringify({
-  seasons: rostersBySeason,
+  seasons: currentSeasonOnly,
   seasonOptions,
   defaultSeason,
   defaultTeamId,
   initialSeasonData,
   initialTeamData,
-  adjustmentsBySeason: feedSalaryAdjustmentsBySeason,
+  adjustmentsBySeason: currentAdjustmentsOnly,
   salaryAverages: salaryAveragesBySeason,
   extensionSeason,
   teams: teamLookup,
@@ -6248,6 +6253,27 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       initialSeasonDataConfig ||
       {};
 
+    // Lazy-load historical season data from API
+    let seasonLoadingPromise = null;
+    const fetchSeasonData = async (season) => {
+      if (seasons[season]) return seasons[season]; // Already loaded
+      try {
+        const resp = await fetch(`/api/rosters/${season}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        // Cache in the seasons object so it's available immediately next time
+        seasons[season] = data;
+        // Also populate adjustmentsBySeason if available
+        if (data.salaryAdjustments) {
+          adjustmentsBySeason[season] = data.salaryAdjustments;
+        }
+        return data;
+      } catch (err) {
+        console.error(`Failed to load season ${season}:`, err);
+        return null;
+      }
+    };
+
     const getTeamData = () => {
       const seasonData = getSeasonData();
       const teamData =
@@ -9159,8 +9185,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     });
 
-    seasonSelect?.addEventListener('change', (event) => {
-      currentSeason = event.target.value;
+    seasonSelect?.addEventListener('change', async (event) => {
+      const newSeason = event.target.value;
+      currentSeason = newSeason;
+
+      // If season data isn't loaded yet, fetch it from the API
+      if (!seasons[newSeason]) {
+        // Show loading state
+        if (rosterTableBody) {
+          rosterTableBody.innerHTML = `<tr><td colspan="10" class="roster-empty">Loading ${newSeason} season data…</td></tr>`;
+        }
+        await fetchSeasonData(newSeason);
+      }
       updateView();
     });
 
