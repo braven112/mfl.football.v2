@@ -935,7 +935,30 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
     projectionMap.set(projectedScores.id, projectedScores.score);
   }
 
-  const players = (rawData?.players ?? []).filter((player) => {
+  // Include players from live rosters that are missing from the salary file
+  // (e.g. auction winners added after the last salary sync)
+  const salaryPlayerIds = new Set((rawData?.players ?? []).map((p) => p.id));
+  const missingFromSalary = Object.entries(liveRosterData)
+    .filter(([id]) => !salaryPlayerIds.has(id))
+    .map(([id, liveData]) => {
+      const feed = feedPlayers[id] ?? {};
+      return {
+        id,
+        name: feed.name ?? `Player ${id}`,
+        position: (feed.position ?? 'N/A').replace(/^Def$/i, 'DEF'),
+        team: feed.team ?? '',
+        salary: liveData.salary ?? '0',
+        contractYear: liveData.contractYear ?? '1',
+        status: liveData.status ?? 'ROSTER',
+        points: 0,
+        draftYear: feed.draft_year ? Number(feed.draft_year) : null,
+        draftTeam: feed.draft_team ?? '',
+      };
+    });
+
+  const allPlayers = [...(rawData?.players ?? []), ...missingFromSalary];
+
+  const players = allPlayers.filter((player) => {
     // Filter out players no longer on any roster (dropped/released)
     return !!liveRosterData[player.id];
   }).map((player) => {
