@@ -165,8 +165,9 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contract declaration error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: JSON_HEADERS },
     );
   }
