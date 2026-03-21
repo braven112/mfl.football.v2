@@ -33,6 +33,7 @@ async function writeToBlob(declarations: ContractDeclaration[]): Promise<boolean
     await put(BLOB_PATH, JSON.stringify(declarations), {
       access: 'public',
       addRandomSuffix: false,
+      allowOverwrite: true,
       contentType: 'application/json',
     });
     return true;
