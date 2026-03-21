@@ -99,8 +99,8 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
                   )}
                 </div>
 
-                {isCommishMode && (
-                  <div class="decl-card__actions">
+                {isCommish && (
+                  <div class="decl-card__actions" data-commish-only style={isCommishMode ? '' : 'display:none'}>
                     <button
                       class="action-btn action-btn--approve"
                       data-action="approve"
@@ -321,6 +321,23 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         el.classList.add('deadline--warning');
       }
     });
+
+    // Sync Apply button visibility with the sidebar commish-mode toggle.
+    // The sidebar sets/clears the commish-mode cookie client-side, so we
+    // watch for clicks on the toggle and show/hide Apply buttons accordingly.
+    const commishToggle = document.querySelector('[data-commish-toggle]');
+    if (commishToggle) {
+      commishToggle.addEventListener('click', () => {
+        // Cookie is toggled by NavFooter before this fires via event bubbling,
+        // but use a microtask to ensure the cookie is updated first.
+        setTimeout(() => {
+          const isOn = document.cookie.split('; ').some(c => c === 'commish-mode=true');
+          document.querySelectorAll('[data-commish-only]').forEach(el => {
+            (el as HTMLElement).style.display = isOn ? '' : 'none';
+          });
+        }, 0);
+      });
+    }
   </script>
 
   <style>
