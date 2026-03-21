@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/roster-sync",
+      "schedule": "*/4 * * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/theleague/:path*",

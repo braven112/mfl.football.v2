@@ -2,8 +2,8 @@ name: Roster Sync
 
 on:
   schedule:
-    # TEMPORARY: Run every 4 minutes until April 4, 2026, then revert to */10
-    - cron: "*/4 * * * *"
+    # Fallback schedule — primary trigger is Vercel cron (every 4 min)
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 concurrency:
