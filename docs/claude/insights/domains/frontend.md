@@ -242,3 +242,33 @@ Future franchise rebrandings just need a new history entry added to the config.
 ```
 
 **Evidence:** `src/pages/theleague/salary.astro` — editorial table with JS-injected player rows.
+
+---
+
+## 2026-03-21 - rosters.astro Serialized Config Architecture and Data Payload
+
+**Context:** Performance review of `src/pages/theleague/rosters.astro` (~9,888 lines, ~370KB).
+
+**Insight:** The page uses a "config blob" pattern: all roster data for all 20 seasons is assembled server-side into `rostersBySeason`, then the entire structure (plus `collegeLogosNormalized`, `eligibilityByTeam`, `adjustmentsBySeason`, `salaryAverages`, etc.) is JSON-serialized into a `<script type="application/json" id="roster-config">` tag. A second blob, `weeklyPlayerResults`, is serialized into its own tag. The client then reads both tags on load and drives all interactivity from that config.
+
+Key data sizes discovered:
+- `import.meta.glob` loads all 20 salary JSON files eagerly at SSR time (4.4MB total raw JSON on disk); this entire dataset is processed into `rostersBySeason` — but only 1-2 seasons are used per request.
+- `college-logos.json` is 79KB; it is imported server-side, normalized, and then embedded in its entirety inside `serializedConfig` (under `collegeLogos:`), which ships that entire lookup table to every client.
+- The `weeklyPlayerResults` blob covers all 17 weeks of per-player fantasy data from the MFL API, cross-referenced with the NFL schedule and FPA data.
+- The `players` MFL feed is fetched for `feedYears` (up to 2 years) and loaded into `playersFeedBySeason`. The full players feed contains thousands of NFL players with `DETAILS=1`. This is only used to enrich roster players; the rest is discarded during processing but still fetched over the network.
+- There is no prewarming mechanism — the 2-minute in-memory cache starts cold on every Vercel function cold start, meaning the first visitor after a deploy or idle period triggers all MFL API calls in series (ESPN odds + up to 17 weekly results fetches + 5 parallel MFL feed calls × 2 years = up to ~45 network calls on a cold start).
+
+**Evidence:**
+- `src/pages/theleague/rosters.astro` lines 437–441: `import.meta.glob('../../data/mfl-player-salaries-*.json', { eager: true })` — loads all 20 files at module evaluation time.
+- Lines 2072–2105: `serializedConfig` includes `collegeLogos: collegeLogosNormalized` (the full 79KB dictionary).
+- Lines 4984–4988: `weeklyPlayerResults` serialized as second JSON blob.
+- Lines 457–475: Two sequential `await Promise.all` calls (5 feeds + 2 feeds), each for up to 2 years = up to 14 MFL API calls.
+- Lines 479–482: `getWeeklyResultsRaw` calls `getMflAllWeeklyResults` which fires weeks 1–17 in parallel = up to 17 more MFL calls.
+- `src/lib/mfl-feeds.ts` line 247: `getMflAllWeeklyResults` uses 10-minute TTL but each week is its own cache key — 17 separate cold-start fetches.
+
+**Recommendation:**
+1. Filter `import.meta.glob` to current and previous year only (not all 20 years) — the UI only shows a season switcher for recent seasons.
+2. Remove `collegeLogos` from `serializedConfig`. Load it lazily via `fetch('/api/college-logos')` only when the player details modal opens — this field is only needed for the modal headshot fallback chain.
+3. Add a Vercel cron job (`vercel.json` `crons` field) or a `POST /api/warm-cache` route called from the deploy hook that pings the rosters page to prime the in-memory cache after every deploy.
+4. Introduce a `GET /api/rosters/[season]` API route that returns pre-processed roster data for a given season as JSON, so the client can lazy-load non-default seasons on team/season switch rather than serializing all seasons upfront.
+5. Evaluate splitting `weeklyPlayerResults` out of the inline blob — it is only read when the player details modal is opened, so it could be fetched on-demand from `GET /api/player-results/[season]`.
