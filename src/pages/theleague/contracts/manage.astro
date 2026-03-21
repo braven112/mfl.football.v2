@@ -3,8 +3,8 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
 
 // Load declaration data at build/request time
-const pending = getPendingDeclarations();
-const allDeclarations = getDeclarations();
+const pending = await getPendingDeclarations();
+const allDeclarations = await getDeclarations();
 const recentDecisions = allDeclarations
   .filter(d => d.status === 'approved' || d.status === 'rejected' || d.status === 'applied')
   .slice(0, 20);

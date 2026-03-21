@@ -12,7 +12,7 @@ if (!user || !isAdminFranchise(user.franchiseId)) {
 }
 
 const leagueYear = getCurrentLeagueYear();
-const tags = getFranchiseTagsByYear(leagueYear);
+const tags = await getFranchiseTagsByYear(leagueYear);
 
 // Sort: pending first, then approved, then by submission date
 const sorted = [...tags].sort((a, b) => {

@@ -1,13 +1,45 @@
 /**
  * Contract Declaration Storage
  *
- * Reads and writes contract declarations to a JSON file.
- * Follows the existing codebase pattern of JSON file caching in data/theleague/.
+ * Stores contract declarations in Upstash Redis (production/Vercel)
+ * with filesystem fallback for local development.
+ * Follows the same pattern as custom-rankings-storage / cr.ts.
  */
 
+import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
+
+const REDIS_KEY = 'contract-declarations';
+
+type RedisClient = {
+  get: <T>(key: string) => Promise<T | null>;
+  set: (key: string, value: unknown) => Promise<unknown>;
+};
+
+let _redis: RedisClient | null | undefined;
+
+async function getRedis(): Promise<RedisClient | null> {
+  if (_redis !== undefined) return _redis;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (!url || !token) {
+    _redis = null;
+    return null;
+  }
+
+  try {
+    const { Redis } = await import('@upstash/redis');
+    _redis = new Redis({ url, token });
+    return _redis;
+  } catch {
+    _redis = null;
+    return null;
+  }
+}
+
+// --- Filesystem fallback for local dev ---
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
 
 const DECLARATIONS_PATH = join(
   process.cwd(),
@@ -20,31 +52,47 @@ interface DeclarationsFile {
   declarations: ContractDeclaration[];
 }
 
-function ensureDirectoryExists(filePath: string): void {
-  const dir = dirname(filePath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-}
-
-function readDeclarationsFile(): DeclarationsFile {
+function readDeclarationsFileSync(): DeclarationsFile {
   try {
     const data = readFileSync(DECLARATIONS_PATH, 'utf-8');
     return JSON.parse(data);
   } catch {
-    return {
-      version: '1.0',
-      lastUpdated: new Date().toISOString(),
-      declarations: [],
-    };
+    return { version: '1.0', lastUpdated: new Date().toISOString(), declarations: [] };
   }
 }
 
-function writeDeclarationsFile(file: DeclarationsFile): void {
-  ensureDirectoryExists(DECLARATIONS_PATH);
+function writeDeclarationsFileSync(file: DeclarationsFile): void {
+  const dir = dirname(DECLARATIONS_PATH);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   file.lastUpdated = new Date().toISOString();
   writeFileSync(DECLARATIONS_PATH, JSON.stringify(file, null, 2), 'utf-8');
 }
+
+// --- Unified async read/write ---
+
+async function readAllDeclarations(): Promise<ContractDeclaration[]> {
+  const redis = await getRedis();
+  if (redis) {
+    const data = await redis.get<ContractDeclaration[]>(REDIS_KEY);
+    return data ?? [];
+  }
+  return readDeclarationsFileSync().declarations;
+}
+
+async function writeAllDeclarations(declarations: ContractDeclaration[]): Promise<void> {
+  const redis = await getRedis();
+  if (redis) {
+    await redis.set(REDIS_KEY, declarations);
+    return;
+  }
+  writeDeclarationsFileSync({
+    version: '1.0',
+    lastUpdated: new Date().toISOString(),
+    declarations,
+  });
+}
+
+// --- Public API (all async) ---
 
 /** Generate a unique declaration ID */
 export function generateDeclarationId(): string {
@@ -54,61 +102,65 @@ export function generateDeclarationId(): string {
 }
 
 /** Get all declarations */
-export function getDeclarations(): ContractDeclaration[] {
-  return readDeclarationsFile().declarations;
+export async function getDeclarations(): Promise<ContractDeclaration[]> {
+  return readAllDeclarations();
 }
 
 /** Get declarations filtered by status */
-export function getDeclarationsByStatus(status: DeclarationStatus): ContractDeclaration[] {
-  return getDeclarations().filter(d => d.status === status);
+export async function getDeclarationsByStatus(status: DeclarationStatus): Promise<ContractDeclaration[]> {
+  const all = await readAllDeclarations();
+  return all.filter(d => d.status === status);
 }
 
 /** Get pending declarations (for commissioner dashboard) */
-export function getPendingDeclarations(): ContractDeclaration[] {
+export async function getPendingDeclarations(): Promise<ContractDeclaration[]> {
   return getDeclarationsByStatus('pending');
 }
 
 /** Get declarations for a specific franchise */
-export function getDeclarationsByFranchise(franchiseId: string): ContractDeclaration[] {
-  return getDeclarations().filter(d => d.franchiseId === franchiseId);
+export async function getDeclarationsByFranchise(franchiseId: string): Promise<ContractDeclaration[]> {
+  const all = await readAllDeclarations();
+  return all.filter(d => d.franchiseId === franchiseId);
 }
 
 /** Get a single declaration by ID */
-export function getDeclarationById(id: string): ContractDeclaration | undefined {
-  return getDeclarations().find(d => d.id === id);
+export async function getDeclarationById(id: string): Promise<ContractDeclaration | undefined> {
+  const all = await readAllDeclarations();
+  return all.find(d => d.id === id);
 }
 
 /** Add a new declaration */
-export function addDeclaration(declaration: ContractDeclaration): ContractDeclaration {
-  const file = readDeclarationsFile();
-  file.declarations.unshift(declaration); // Newest first
-  writeDeclarationsFile(file);
+export async function addDeclaration(declaration: ContractDeclaration): Promise<ContractDeclaration> {
+  const all = await readAllDeclarations();
+  all.unshift(declaration); // Newest first
+  await writeAllDeclarations(all);
   return declaration;
 }
 
 /** Update an existing declaration */
-export function updateDeclaration(
+export async function updateDeclaration(
   id: string,
   updates: Partial<ContractDeclaration>,
-): ContractDeclaration | null {
-  const file = readDeclarationsFile();
-  const index = file.declarations.findIndex(d => d.id === id);
+): Promise<ContractDeclaration | null> {
+  const all = await readAllDeclarations();
+  const index = all.findIndex(d => d.id === id);
   if (index === -1) return null;
 
-  file.declarations[index] = { ...file.declarations[index], ...updates };
-  writeDeclarationsFile(file);
-  return file.declarations[index];
+  all[index] = { ...all[index], ...updates };
+  await writeAllDeclarations(all);
+  return all[index];
 }
 
 /**
  * Check if a team has already used their franchise tag for a given league year.
  * Returns the existing tag declaration if found.
  */
-export function getTeamFranchiseTag(
+export async function getTeamFranchiseTag(
   franchiseId: string,
   leagueYear: number,
-): ContractDeclaration | undefined {
-  return getDeclarations().find(
+): Promise<ContractDeclaration | undefined> {
+  const all = await readAllDeclarations();
+  return all.find(
     d =>
       d.franchiseId === franchiseId &&
       d.type === 'franchise-tag' &&
@@ -122,8 +174,9 @@ export function getTeamFranchiseTag(
  * Get all active franchise tags for a given league year (all teams).
  * Used for the franchise tags listing page.
  */
-export function getFranchiseTagsByYear(leagueYear: number): ContractDeclaration[] {
-  return getDeclarations().filter(
+export async function getFranchiseTagsByYear(leagueYear: number): Promise<ContractDeclaration[]> {
+  const all = await readAllDeclarations();
+  return all.filter(
     d =>
       d.type === 'franchise-tag' &&
       d.status !== 'rejected' &&
@@ -136,11 +189,12 @@ export function getFranchiseTagsByYear(leagueYear: number): ContractDeclaration[
  * Check if a team has already used their extension for a given league year.
  * Returns the existing extension declaration if found.
  */
-export function getTeamExtension(
+export async function getTeamExtension(
   franchiseId: string,
   leagueYear: number,
-): ContractDeclaration | undefined {
-  return getDeclarations().find(
+): Promise<ContractDeclaration | undefined> {
+  const all = await readAllDeclarations();
+  return all.find(
     d =>
       d.franchiseId === franchiseId &&
       (d.type === 'veteran-extension' || d.type === 'rookie-extension' || d.type === 'team-option') &&
@@ -154,11 +208,12 @@ export function getTeamExtension(
  * Get pending declaration for a specific player (to support optimistic UI).
  * Returns the most recent non-rejected declaration for this player.
  */
-export function getPendingDeclarationForPlayer(
+export async function getPendingDeclarationForPlayer(
   playerId: string,
   franchiseId: string,
-): ContractDeclaration | undefined {
-  return getDeclarations().find(
+): Promise<ContractDeclaration | undefined> {
+  const all = await readAllDeclarations();
+  return all.find(
     d =>
       d.playerId === playerId &&
       d.franchiseId === franchiseId &&

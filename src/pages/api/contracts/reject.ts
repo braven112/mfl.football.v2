@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const declaration = getDeclarationById(declarationId);
+    const declaration = await getDeclarationById(declarationId);
     if (!declaration) {
       return new Response(
         JSON.stringify({ error: 'Declaration not found' }),
@@ -61,7 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const updated = updateDeclaration(declarationId, {
+    const updated = await updateDeclaration(declarationId, {
       status: 'rejected',
       reviewedBy: user.name || user.id,
       reviewedAt: new Date().toISOString(),
