@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-21T13-04-38.894Z",
+  "snapshot": "2026-03-21T13-29-37.858Z",
   "week": "off-4",
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-21T13:04:39.152Z",
+    "fetchedAt": "2026-03-21T13:29:38.150Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-4).",
-    "generatedAt": "2026-03-21T13:04:39.152Z"
+    "generatedAt": "2026-03-21T13:29:38.150Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 101,
-      "top3Average": 9833333.33,
-      "top5Average": 9280908.74,
-      "top10Average": 6942479.37,
-      "starterAverage": 3046461.12,
-      "starterMedian": 2187625,
+      "totalPlayers": 103,
+      "top3Average": 9933333.33,
+      "top5Average": 9568908.74,
+      "top10Average": 7535279.37,
+      "starterAverage": 3232981.95,
+      "starterMedian": 2323750,
       "starterCount": 48,
-      "averageSalary": 1759535.23,
+      "averageSalary": 1825854.94,
       "medianSalary": 768652.5,
       "topPlayers": [
         {
@@ -43,6 +43,12 @@
           "name": "Chase, Ja'Marr",
           "salary": 10000000,
           "franchiseId": "0013"
+        },
+        {
+          "id": "14836",
+          "name": "Jefferson, Justin",
+          "salary": 9800000,
+          "franchiseId": "0009"
         },
         {
           "id": "14832",
@@ -519,6 +525,12 @@
           "franchiseId": "0001"
         },
         {
+          "id": "16788",
+          "name": "Vele, Devaughn",
+          "salary": 550000,
+          "franchiseId": "0004"
+        },
+        {
           "id": "17171",
           "name": "Dike, Chimere",
           "salary": 550000,
@@ -641,15 +653,15 @@
       ]
     },
     "RB": {
-      "totalPlayers": 72,
+      "totalPlayers": 74,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6728956.45,
       "starterAverage": 3673418.07,
       "starterMedian": 3330000,
       "starterCount": 30,
-      "averageSalary": 1852602.49,
-      "medianSalary": 627233.75,
+      "averageSalary": 1814356.48,
+      "medianSalary": 610596.25,
       "topPlayers": [
         {
           "id": "13130",
@@ -1082,6 +1094,18 @@
           "name": "Johnson, Ty",
           "salary": 467500,
           "franchiseId": "0015"
+        },
+        {
+          "id": "16608",
+          "name": "Holani, George",
+          "salary": 450000,
+          "franchiseId": "0002"
+        },
+        {
+          "id": "13133",
+          "name": "Perine, Samaje",
+          "salary": 425000,
+          "franchiseId": "0004"
         }
       ]
     },
