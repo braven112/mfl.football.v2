@@ -23,7 +23,7 @@ const IN_SEASON_DEADLINE_MS = 24 * 60 * 60 * 1000;  // 24 hours
 const OFFSEASON_DEADLINE_MS = 48 * 60 * 60 * 1000;   // 48 hours
 
 // Transaction types that represent new player acquisitions (not trades)
-const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT'];
+const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
 
 /**
  * Parse the MFL transaction string format into added/dropped player IDs.
@@ -33,6 +33,7 @@ const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT'];
  *   "addId|dropId,"       -> add/drop swap
  *   "addId|,"             -> add only (no drop)
  *   "addId,|bbid|dropId," -> BBID add/drop with bid amount
+ *   "playerId|amount|"    -> auction won (AUCTION_WON)
  *   ""                    -> empty (batch marker like BBID_AUTO_PROCESS_WAIVERS)
  */
 export function parseTransactionString(txnString: string): {
@@ -75,6 +76,14 @@ export function parseTransactionString(txnString: string): {
       }
     }
     return { addedPlayerIds, droppedPlayerIds };
+  }
+
+  // Auction format: "playerId|amount|" (no commas, trailing pipe)
+  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|$/);
+  if (auctionMatch) {
+    addedPlayerIds.push(auctionMatch[1]);
+    bbidAmount = parseInt(auctionMatch[2], 10);
+    return { addedPlayerIds, droppedPlayerIds, bbidAmount };
   }
 
   // Add/drop swap: "addId|dropId," or "addId|,"
