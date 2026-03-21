@@ -81,29 +81,88 @@ export async function authenticateWithMFL(
       console.log('[mfl-login] Step 1: calling /login (year:', year, ')');
     }
 
-    let loginResponse = await fetch(loginUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: loginParams.toString(),
-    });
+    // Use manual redirect handling to capture Set-Cookie headers from ALL hops.
+    // Native fetch with redirect:'follow' silently drops Set-Cookie on cross-origin
+    // 302 redirects, so MFL_IS_COMMISH (set on an intermediate hop) is lost.
+    let loginResponse: Response;
+    let loginText: string;
+    const allSetCookies: string[] = [];
 
-    let loginText = await loginResponse.text();
+    {
+      let url = loginUrl;
+      let method: 'POST' | 'GET' = 'POST';
+      let body: string | undefined = loginParams.toString();
+      const maxHops = 3;
+
+      for (let hop = 0; hop <= maxHops; hop++) {
+        const headers: Record<string, string> = {};
+        if (method === 'POST' && body) {
+          headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        }
+
+        const res = await fetch(url, {
+          method,
+          headers,
+          body: method === 'POST' ? body : undefined,
+          redirect: 'manual',
+        });
+
+        // Collect Set-Cookie from every hop
+        const hopCookies = res.headers.getSetCookie?.() ?? [];
+        allSetCookies.push(...hopCookies);
+
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location');
+          if (!location) break;
+          console.log(`[mfl-login] ${res.status} redirect: ${url} → ${location}`);
+          url = location.startsWith('http') ? location : new URL(location, url).href;
+          if (res.status === 302 || res.status === 303) {
+            if (method === 'POST' && body) {
+              const sep = url.includes('?') ? '&' : '?';
+              url = `${url}${sep}${body}`;
+            }
+            method = 'GET';
+            body = undefined;
+          }
+          continue;
+        }
+
+        loginResponse = res;
+        break;
+      }
+      loginResponse ??= await fetch(url, { method, redirect: 'follow' });
+    }
+
+    loginText = await loginResponse!.text();
 
     // POST returned empty body → fall back to GET with params in URL
     if (!loginText.trim()) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('[mfl-login] POST returned empty, falling back to GET');
       }
-      loginResponse = await fetch(`${loginUrl}?${loginParams.toString()}`, {
-        method: 'GET',
-      });
-      loginText = await loginResponse.text();
+      // Also use manual redirect for the GET fallback
+      let url = `${loginUrl}?${loginParams.toString()}`;
+      const maxHops = 3;
+      for (let hop = 0; hop <= maxHops; hop++) {
+        const res = await fetch(url, { method: 'GET', redirect: 'manual' });
+        const hopCookies = res.headers.getSetCookie?.() ?? [];
+        allSetCookies.push(...hopCookies);
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location');
+          if (!location) break;
+          url = location.startsWith('http') ? location : new URL(location, url).href;
+          continue;
+        }
+        loginResponse = res;
+        break;
+      }
+      loginText = await loginResponse!.text();
     }
 
-    if (!loginResponse.ok && !loginText.trim()) {
+    if (!loginResponse!.ok && !loginText.trim()) {
       return {
         success: false,
-        error: `MFL API error: ${loginResponse.status} ${loginResponse.statusText}`,
+        error: `MFL API error: ${loginResponse!.status} ${loginResponse!.statusText}`,
       };
     }
 
@@ -131,15 +190,16 @@ export async function authenticateWithMFL(
 
     const mflCookie = parsed.cookie;
 
-    // Capture MFL_IS_COMMISH cookie from Set-Cookie headers (commissioners only).
+    // Capture MFL_IS_COMMISH cookie from Set-Cookie headers collected across ALL redirect hops.
     // MFL sets this alongside MFL_USER_ID for commissioner accounts.
     // Without it, write operations (trades, etc.) fail with "API requires a logged in user".
     let commishCookie: string | undefined;
-    const setCookieHeaders = loginResponse.headers.getSetCookie?.() ?? [];
-    for (const cookieStr of setCookieHeaders) {
+    console.log('[mfl-login] collected', allSetCookies.length, 'Set-Cookie headers across all hops');
+    for (const cookieStr of allSetCookies) {
       const match = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
       if (match) {
         commishCookie = match[1];
+        console.log('[mfl-login] found MFL_IS_COMMISH cookie');
         break;
       }
     }
