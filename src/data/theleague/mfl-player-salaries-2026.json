@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-21T17:16:22.733Z"
+    "fetchedAt": "2026-03-21T17:30:37.517Z"
   },
   "players": [
     {
@@ -6505,6 +6505,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "14102",
+          "name": "Metcalf, DK"
+        },
+        {
           "id": "14842",
           "name": "Pittman, Michael"
         }
@@ -8253,6 +8257,52 @@
       "depthChartAhead": null
     },
     {
+      "id": "14102",
+      "name": "Metcalf, DK",
+      "position": "WR",
+      "salary": 2050000,
+      "franchiseId": "0009",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "PIT",
+      "draftYear": 2019,
+      "draftTeam": "SEA",
+      "birthdate": 882075600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14102_thumb.jpg",
+      "externalIds": {
+        "mfl": "14102",
+        "sleeper": "5846",
+        "gsis": " 00-0035640"
+      },
+      "sleeper": {
+        "id": "5846",
+        "fullName": "DK Metcalf",
+        "team": "PIT",
+        "age": 28,
+        "height": "76",
+        "weight": "229",
+        "number": 4,
+        "college": "Ole Miss",
+        "birthDate": "1997-12-14",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035640"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "15756",
       "name": "Williams, Jameson",
       "position": "WR",
@@ -8674,7 +8724,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14102",
+          "name": "Metcalf, DK"
+        }
+      ]
     },
     {
       "id": "14127",
