@@ -12,8 +12,6 @@ export interface SessionData {
   franchiseId: string;
   leagueId: string;
   role: 'owner' | 'commissioner' | 'admin';
-  /** MFL_IS_COMMISH cookie value — stored at login for commissioner write operations */
-  commishCookie?: string;
   issuedAt: number;
   expiresAt: number;
 }
@@ -127,7 +125,6 @@ export function validateSessionToken(token: string): SessionData | null {
       franchiseId: payload.franchiseId,
       leagueId: payload.leagueId,
       role: payload.role,
-      commishCookie: payload.commishCookie,
       issuedAt: payload.issuedAt,
       expiresAt: payload.expiresAt,
     };

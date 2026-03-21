@@ -13,8 +13,6 @@ export interface AuthUser {
   franchiseId: string;
   leagueId: string;
   role: 'owner' | 'commissioner' | 'admin';
-  /** MFL_IS_COMMISH cookie value — available for commissioner write operations */
-  commishCookie?: string;
 }
 
 const normalizeFranchise = (value: string | null | undefined): string => {
@@ -47,7 +45,6 @@ export function getAuthUser(request: Request): AuthUser | null {
         franchiseId: normalizeFranchise(sessionData.franchiseId),
         leagueId: sessionData.leagueId,
         role: sessionData.role,
-        commishCookie: sessionData.commishCookie,
       };
     }
   }

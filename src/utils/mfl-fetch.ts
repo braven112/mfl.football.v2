@@ -17,8 +17,6 @@ interface MflFetchOptions {
   method: 'GET' | 'POST';
   /** The raw MFL_USER_ID cookie value */
   mflUserCookie: string;
-  /** Optional MFL_IS_COMMISH cookie value — required for commissioner write operations */
-  mflCommishCookie?: string;
   /** URL-encoded body for POST requests */
   body?: string;
 }
@@ -30,16 +28,12 @@ interface MflFetchOptions {
  * Returns the final Response object.
  */
 export async function mflFetch(opts: MflFetchOptions): Promise<Response> {
-  const { mflUserCookie, mflCommishCookie } = opts;
+  const { mflUserCookie } = opts;
   let url = opts.url;
   let method = opts.method;
   let body: string | undefined = opts.body;
 
-  const cookieParts = [`MFL_USER_ID=${mflUserCookie}`];
-  if (mflCommishCookie) {
-    cookieParts.push(`MFL_IS_COMMISH=${mflCommishCookie}`);
-  }
-  const cookieHeader = cookieParts.join('; ');
+  const cookieHeader = `MFL_USER_ID=${mflUserCookie}`;
   const maxRedirects = 3;
 
   for (let i = 0; i <= maxRedirects; i++) {
