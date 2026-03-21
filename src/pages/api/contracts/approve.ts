@@ -64,6 +64,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Get MFL credentials from the commissioner's session cookies
     const { mflUserId, mflIsCommish } = getMFLCookiesFromRequest(request);
+    console.log('[approve] credentials:', { mflUserId: !!mflUserId, mflIsCommish: !!mflIsCommish });
 
     // Write to MFL directly (skip intermediate "approved" status)
     const mflResult = await writeContractToMFL(
@@ -76,14 +77,34 @@ export const POST: APIRoute = async ({ request }) => {
       mflUserId ? { mflUserId, mflIsCommish: mflIsCommish || undefined } : undefined,
     );
 
+    console.log('[approve] MFL write result:', {
+      success: mflResult.success,
+      error: mflResult.error,
+      attempts: mflResult.attempts,
+    });
+
     if (mflResult.success) {
-      await updateDeclaration(declarationId, {
+      const updated = await updateDeclaration(declarationId, {
         status: 'applied',
         mflSynced: true,
         mflSyncedAt: new Date().toISOString(),
         reviewedBy: user.name || user.id,
         reviewedAt: new Date().toISOString(),
       });
+
+      if (!updated) {
+        console.error('[approve] updateDeclaration returned null — storage write failed for', declarationId);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'MFL write succeeded but declaration storage update failed. The contract was applied on MFL but our records were not updated.',
+            declarationId,
+          }),
+          { status: 500, headers: JSON_HEADERS },
+        );
+      }
+
+      console.log('[approve] declaration updated to applied:', declarationId);
 
       return new Response(
         JSON.stringify({
