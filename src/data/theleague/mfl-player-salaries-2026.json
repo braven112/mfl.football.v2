@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-21T02:20:41.249Z"
+    "fetchedAt": "2026-03-21T03:00:16.722Z"
   },
   "players": [
     {
@@ -749,7 +749,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13592",
+          "name": "Darnold, Sam"
+        }
+      ]
     },
     {
       "id": "0516",
@@ -968,6 +973,153 @@
           "name": "Nacua, Puka"
         }
       ]
+    },
+    {
+      "id": "16192",
+      "name": "Washington, Parker",
+      "position": "WR",
+      "salary": 2000000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "JAX",
+      "draftYear": 2023,
+      "draftTeam": "JAC",
+      "birthdate": 1016686800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16192_thumb.jpg",
+      "externalIds": {
+        "mfl": "16192",
+        "sleeper": "9487",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "9487",
+        "fullName": "Parker Washington",
+        "team": "JAX",
+        "age": 24,
+        "height": "70",
+        "weight": "204",
+        "number": 11,
+        "college": "Penn State",
+        "birthDate": "2002-03-21",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "17074",
+          "name": "Hunter, Travis"
+        },
+        {
+          "id": "14127",
+          "name": "Meyers, Jakobi"
+        }
+      ]
+    },
+    {
+      "id": "14138",
+      "name": "Hockenson, T.J.",
+      "position": "TE",
+      "salary": 2500000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "MIN",
+      "draftYear": 2019,
+      "draftTeam": "DET",
+      "birthdate": 867906000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14138_thumb.jpg",
+      "externalIds": {
+        "mfl": "14138",
+        "sleeper": "5844",
+        "gsis": " 00-0035229"
+      },
+      "sleeper": {
+        "id": "5844",
+        "fullName": "T.J. Hockenson",
+        "team": "MIN",
+        "age": 28,
+        "height": "77",
+        "weight": "248",
+        "number": 87,
+        "college": "Iowa",
+        "birthDate": "1997-07-03",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035229"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13592",
+      "name": "Darnold, Sam",
+      "position": "QB",
+      "salary": 3250000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "SEA",
+      "draftYear": 2018,
+      "draftTeam": "NYJ",
+      "birthdate": 865486800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13592_thumb.jpg",
+      "externalIds": {
+        "mfl": "13592",
+        "sleeper": "4943",
+        "gsis": "00-0034869"
+      },
+      "sleeper": {
+        "id": "4943",
+        "fullName": "Sam Darnold",
+        "team": "SEA",
+        "age": 28,
+        "height": "75",
+        "weight": "225",
+        "number": 14,
+        "college": "USC",
+        "birthDate": "1997-06-05",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034869"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
     },
     {
       "id": "14717",
@@ -3556,7 +3708,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14138",
+          "name": "Hockenson, T.J."
+        }
+      ]
     },
     {
       "id": "17049",
@@ -6121,6 +6278,10 @@
         {
           "id": "16287",
           "name": "Tucker, Tre"
+        },
+        {
+          "id": "15786",
+          "name": "Nailor, Jalen"
         }
       ]
     },
@@ -6413,6 +6574,61 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "15786",
+      "name": "Nailor, Jalen",
+      "position": "WR",
+      "salary": 725000,
+      "franchiseId": "0008",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "LV",
+      "draftYear": 2022,
+      "draftTeam": "MIN",
+      "birthdate": 920350800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15786_thumb.jpg",
+      "externalIds": {
+        "mfl": "15786",
+        "sleeper": "8180",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8180",
+        "fullName": "Jalen Nailor",
+        "team": "LV",
+        "age": 27,
+        "height": "71",
+        "weight": "199",
+        "number": 83,
+        "college": "Michigan State",
+        "birthDate": "1999-03-02",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "17087",
+          "name": "Thornton, Dont'e"
+        },
+        {
+          "id": "16287",
+          "name": "Tucker, Tre"
+        }
+      ]
     },
     {
       "id": "14802",
@@ -9525,6 +9741,52 @@
       "depthChartAhead": null
     },
     {
+      "id": "13589",
+      "name": "Allen, Josh",
+      "position": "QB",
+      "salary": 9000000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "BUF",
+      "draftYear": 2018,
+      "draftTeam": "BUF",
+      "birthdate": 832654800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13589_thumb.jpg",
+      "externalIds": {
+        "mfl": "13589",
+        "sleeper": "4984",
+        "gsis": "00-0034857"
+      },
+      "sleeper": {
+        "id": "4984",
+        "fullName": "Josh Allen",
+        "team": "BUF",
+        "age": 29,
+        "height": "77",
+        "weight": "237",
+        "number": 17,
+        "college": "Wyoming",
+        "birthDate": "1996-05-21",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034857"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "14782",
       "name": "Love, Jordan",
       "position": "QB",
@@ -10263,6 +10525,52 @@
           "name": "Kupp, Cooper"
         }
       ]
+    },
+    {
+      "id": "12860",
+      "name": "Fairbairn, Ka'imi",
+      "position": "PK",
+      "salary": 575000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "HOU",
+      "draftYear": 2016,
+      "draftTeam": "FA",
+      "birthdate": 759819600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/12860_thumb.jpg",
+      "externalIds": {
+        "mfl": "12860",
+        "sleeper": "3451",
+        "gsis": "00-0032726"
+      },
+      "sleeper": {
+        "id": "3451",
+        "fullName": "Ka'imi Fairbairn",
+        "team": "HOU",
+        "age": 32,
+        "height": "72",
+        "weight": "183",
+        "number": 15,
+        "college": "UCLA",
+        "birthDate": "1994-01-29",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 10,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0032726"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
     },
     {
       "id": "15889",

@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-21T02-20-41.254Z",
+  "snapshot": "2026-03-21T03-00-16.726Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,20 +15,20 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-21T02:20:41.249Z",
+    "fetchedAt": "2026-03-21T03:00:16.722Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-03-21T02:20:41.252Z"
+    "generatedAt": "2026-03-21T03:00:16.725Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 97,
+      "totalPlayers": 99,
       "top3Average": 8968181.23,
       "top5Average": 7498408.74,
       "top10Average": 5724529.37,
-      "starterAverage": 2647902.37,
+      "starterAverage": 2673555.44,
       "starterMedian": 2072125,
       "starterCount": 48,
-      "averageSalary": 1602969.68,
+      "averageSalary": 1598111.7,
       "medianSalary": 765325,
       "topPlayers": [
         {
@@ -180,6 +180,12 @@
           "name": "Thomas Jr., Brian",
           "salary": 2026750,
           "franchiseId": "0003"
+        },
+        {
+          "id": "16192",
+          "name": "Washington, Parker",
+          "salary": 2000000,
+          "franchiseId": "0001"
         },
         {
           "id": "15756",
@@ -336,6 +342,12 @@
           "name": "Reed, Jayden",
           "salary": 732050,
           "franchiseId": "0002"
+        },
+        {
+          "id": "15786",
+          "name": "Nailor, Jalen",
+          "salary": 725000,
+          "franchiseId": "0008"
         },
         {
           "id": "17086",
@@ -1043,15 +1055,15 @@
       ]
     },
     "PK": {
-      "totalPlayers": 17,
+      "totalPlayers": 18,
       "top3Average": 759440,
       "top5Average": 701112.5,
-      "top10Average": 637048.75,
-      "starterAverage": 575186.72,
-      "starterMedian": 570337.5,
+      "top10Average": 643123.75,
+      "starterAverage": 581905.47,
+      "starterMedian": 575000,
       "starterCount": 16,
-      "averageSalary": 568852.21,
-      "medianSalary": 565675,
+      "averageSalary": 569193.75,
+      "medianSalary": 570337.5,
       "topPlayers": [
         {
           "id": "13354",
@@ -1100,6 +1112,12 @@
           "name": "Bates, Jake",
           "salary": 575000,
           "franchiseId": "0011"
+        },
+        {
+          "id": "12860",
+          "name": "Fairbairn, Ka'imi",
+          "salary": 575000,
+          "franchiseId": "0013"
         },
         {
           "id": "16286",
@@ -1327,15 +1345,15 @@
       ]
     },
     "TE": {
-      "totalPlayers": 39,
+      "totalPlayers": 40,
       "top3Average": 4045790.83,
-      "top5Average": 3172474.5,
-      "top10Average": 2286182.25,
-      "starterAverage": 1627424.03,
-      "starterMedian": 1237225,
+      "top5Average": 3367474.5,
+      "top10Average": 2415182.25,
+      "starterAverage": 1729710.42,
+      "starterMedian": 1382225,
       "starterCount": 18,
-      "averageSalary": 1039543.01,
-      "medianSalary": 605000,
+      "averageSalary": 1076054.44,
+      "medianSalary": 631922.5,
       "topPlayers": [
         {
           "id": "15794",
@@ -1354,6 +1372,12 @@
           "name": "Kraft, Tucker",
           "salary": 3466870,
           "franchiseId": "0011"
+        },
+        {
+          "id": "14138",
+          "name": "Hockenson, T.J.",
+          "salary": 2500000,
+          "franchiseId": "0001"
         },
         {
           "id": "16269",
@@ -1574,16 +1598,22 @@
       ]
     },
     "QB": {
-      "totalPlayers": 27,
-      "top3Average": 5061000,
-      "top5Average": 3841855,
-      "top10Average": 2447882.5,
-      "starterAverage": 1802056.25,
-      "starterMedian": 937750,
+      "totalPlayers": 29,
+      "top3Average": 7133333.33,
+      "top5Average": 5486600,
+      "top10Average": 3492290,
+      "starterAverage": 2488464.06,
+      "starterMedian": 1247812.5,
       "starterCount": 16,
-      "averageSalary": 1288401.57,
-      "medianSalary": 695447.5,
+      "averageSalary": 1621960.09,
+      "medianSalary": 742500,
       "topPlayers": [
+        {
+          "id": "13589",
+          "name": "Allen, Josh",
+          "salary": 9000000,
+          "franchiseId": "0012"
+        },
         {
           "id": "14783",
           "name": "Hurts, Jalen",
@@ -1595,6 +1625,12 @@
           "name": "Herbert, Justin",
           "salary": 5250000,
           "franchiseId": "0011"
+        },
+        {
+          "id": "13592",
+          "name": "Darnold, Sam",
+          "salary": 3250000,
+          "franchiseId": "0001"
         },
         {
           "id": "16579",
