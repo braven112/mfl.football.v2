@@ -6534,7 +6534,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           // Check for declared contract years (pending or approved)
           const decl = localDeclarations[player.id] || declarationsByPlayer[player.id];
           const declaredYears = decl ? (decl.years ?? decl.requestedYears ?? null) : null;
-          const effectiveYears = declaredYears ?? parseInt(displayYears, 10) || 0;
+          const effectiveYears = declaredYears ?? (parseInt(displayYears, 10) || 0);
 
           const salaryCells = salaryYears
             .map((year, index) => {
@@ -6964,7 +6964,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           // Use declared contract years if available
           const decl = localDeclarations[player.id] || declarationsByPlayer[player.id];
           const declYears = decl ? (decl.years ?? decl.requestedYears ?? null) : null;
-          const effectiveContractYears = declYears ?? (player.contractYears ?? 0);
+          const effectiveContractYears = declYears != null ? declYears : (player.contractYears ?? 0);
 
           if (effectiveContractYears > index) {
             const isCurrent = index === 0;
