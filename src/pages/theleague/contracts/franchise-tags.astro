@@ -2,12 +2,11 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getFranchiseTagsByYear } from '../../../utils/contract-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
-import { getAuthUser } from '../../../utils/auth';
-import { isAdminFranchise } from '../../../config/nav-config';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 
-// Auth gate: admin only
+// Auth gate: admin only (same auth as nav sidebar)
 const user = getAuthUser(Astro.request);
-if (!user || !isAdminFranchise(user.franchiseId)) {
+if (!user || !isCommissionerOrAdmin(user)) {
   return Astro.redirect('/theleague');
 }
 

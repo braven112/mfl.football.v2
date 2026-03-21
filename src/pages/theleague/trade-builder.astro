@@ -28,8 +28,7 @@ import { chooseTeamName } from '../../utils/team-names';
 import { calculatePlayerCapHitByYear } from '../../utils/trade-calculations';
 import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
-import { getAuthUser } from '../../utils/auth';
-import { isAdminFranchise } from '../../config/nav-config';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
 import { buildPickValueMap } from '../../utils/draft-pick-value';
 import type { PlayerSurplusData, DraftPickValueData } from '../../types/trade-builder';
@@ -373,7 +372,7 @@ const defaultTeam = hasPreference
 // Surplus Value (admin-only) — value analysis for trade evaluation
 // ---------------------------------------------------------------------------
 const user = getAuthUser(Astro.request);
-const showSurplusValue = user && isAdminFranchise(user.franchiseId);
+const showSurplusValue = !!user && isCommissionerOrAdmin(user);
 let surplusMap: Record<string, PlayerSurplusData> = {};
 
 if (showSurplusValue) {

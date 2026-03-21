@@ -26,6 +26,7 @@ import { getVisibleSections, parseMyTeamFromUrl } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference } from '../utils/team-preferences';
+import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import leagueConfigData from '../data/theleague.config.json';
 
 export interface Props {
@@ -143,8 +144,9 @@ const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds();
 
-// Commissioner mode: check if user is a commissioner and read toggle state
-const isCommissioner = !!myteam && adminFranchiseIds.includes(myteam);
+// Commissioner mode: use JWT session auth as the single source of truth
+const authUser = getAuthUser(Astro.request);
+const isCommissioner = !!authUser && isCommissionerOrAdmin(authUser);
 const isCommishMode = isCommissioner && Astro.cookies.get('commish-mode')?.value === 'true';
 
 // Get visible navigation sections

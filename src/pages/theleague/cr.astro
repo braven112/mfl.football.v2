@@ -11,8 +11,7 @@ import CustomRankingsPage from '../../components/theleague/custom-rankings/Custo
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import '../../styles/player-cell.css';
 import '../../styles/custom-rankings.css';
-import { getAuthUser } from '../../utils/auth';
-import { isAdminFranchise } from '../../config/nav-config';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { parseNumber } from '../../utils/formatters';
 import { calculatePointsPerDollar } from '../../utils/surplus-value';
 import { calculateAllVORP } from '../../utils/vorp';
@@ -20,9 +19,9 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
 export const prerender = false;
 
-// Auth gate: admin only
+// Auth gate: admin only (same auth as nav sidebar)
 const user = getAuthUser(Astro.request);
-if (!user || !isAdminFranchise(user.franchiseId)) {
+if (!user || !isCommissionerOrAdmin(user)) {
   return Astro.redirect('/theleague');
 }
 
