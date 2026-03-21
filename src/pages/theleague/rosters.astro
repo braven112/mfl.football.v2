@@ -3920,6 +3920,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     font-style: italic;
   }
 
+  :global(.salary-cell--declared) {
+    color: var(--color-primary, #1e5fa8) !important;
+    font-style: italic;
+  }
+
   :global(.actions-cell) {
     text-align: center;
     vertical-align: middle;
@@ -6526,12 +6531,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             ? player.nflLogo
             : player.headshot ?? getPlayerHeadshot(player.id, player.espnId);
 
+          // Check for declared contract years (pending or approved)
+          const decl = localDeclarations[player.id] || declarationsByPlayer[player.id];
+          const declaredYears = decl ? (decl.years ?? decl.requestedYears ?? null) : null;
+          const effectiveYears = declaredYears ?? parseInt(displayYears, 10) || 0;
+
           const salaryCells = salaryYears
             .map((year, index) => {
               const columnKey = `year${index + 1}`;
-              const isUfa = !(parseInt(player.contractYears, 10) > index);
-              const isFirstYearUfa = isUfa && parseInt(player.contractYears, 10) === index;
-              const isFutureUfa = isUfa && parseInt(player.contractYears, 10) < index;
+              const isUfa = !(effectiveYears > index);
+              const isFirstYearUfa = isUfa && effectiveYears === index;
+              const isFutureUfa = isUfa && effectiveYears < index;
 
               let value;
               let cellClass = 'salary-cell gm-col';
@@ -6564,6 +6574,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 value = '—';
                 cellClass += ' salary-cell--future-ufa';
               } else {
+                const originalYears = parseInt(player.contractYears, 10) || 0;
+                const isDeclaredYear = declaredYears && index >= originalYears;
                 if (action && action.type === 'extension' && action.salaryBreakdown) {
                   cellClass += ' salary-cell--simulated';
                   const yearKey = `year${index}`;
@@ -6573,6 +6585,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                   const baseSalary = Number(player.salary ?? 0);
                   const escalatedSalary = Math.round(baseSalary * Math.pow(1.1, index));
                   value = _capSpaceFmt.format(escalatedSalary);
+                  if (isDeclaredYear) cellClass += ' salary-cell--declared';
                 }
               }
 
@@ -6948,7 +6961,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             return sum;
           }
 
-          if ((player.contractYears ?? 0) > index) {
+          // Use declared contract years if available
+          const decl = localDeclarations[player.id] || declarationsByPlayer[player.id];
+          const declYears = decl ? (decl.years ?? decl.requestedYears ?? null) : null;
+          const effectiveContractYears = declYears ?? (player.contractYears ?? 0);
+
+          if (effectiveContractYears > index) {
             const isCurrent = index === 0;
             const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
             const tag = tagRaw.includes('PRACTICE')
