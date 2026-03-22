@@ -17,9 +17,11 @@ async function readFromBlob(): Promise<ContractDeclaration[] | null> {
     const { blobs } = await listBlobs({ prefix: BLOB_PATH, limit: 1 });
     if (blobs.length === 0) return [];
 
-    // Bust CDN cache — Vercel Blob serves from CDN which can return stale data
-    const cacheBust = `${blobs[0].url}${blobs[0].url.includes('?') ? '&' : '?'}t=${Date.now()}`;
-    const res = await fetch(cacheBust, { cache: 'no-store' });
+    // Use downloadUrl to bypass Vercel Blob CDN caching entirely.
+    // The CDN url serves stale data even with cache-busting query params,
+    // causing new declarations to not appear on the manage page.
+    const fetchUrl = blobs[0].downloadUrl || blobs[0].url;
+    const res = await fetch(fetchUrl, { cache: 'no-store' });
     if (!res.ok) return null;
     const data = await res.json() as ContractDeclaration[];
     return data;
