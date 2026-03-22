@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getAllImports, migrateFromLegacyKeys } from '../../../utils/rankings-storage';
+import { getAllImports, migrateFromLegacyKeys, initFromServer } from '../../../utils/rankings-storage';
 import type {
   BookmarkletSiteConfig,
   MFLPlayerForMatching,
@@ -34,6 +34,10 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson, is
 
   useEffect(() => {
     setSavedImports(getAllImports());
+    // Sync with server (Redis) for cross-device access
+    initFromServer().then((updated) => {
+      if (updated) setSavedImports(getAllImports());
+    });
   }, []);
 
   const handleImportComplete = useCallback((newImport: StoredRankingImport) => {
@@ -52,13 +56,11 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson, is
     <div className="ri-page">
       <div className="ri-page__header">
         <h1 className="ri-page__title">Import Rankings</h1>
-        <p className="ri-page__subtitle">
-          Import player rankings from your favorite fantasy football sites.
-          All data is stored privately in your browser — never shared with other league members.
-          {isAdmin && (
-            <> · <a href="/theleague/cr" className="ri-page__link">Custom Rankings</a></>
-          )}
-        </p>
+        {isAdmin && (
+          <p className="ri-page__subtitle">
+            <a href="/theleague/cr" className="ri-page__link">Custom Rankings</a>
+          </p>
+        )}
       </div>
 
       {savedImports.length > 0 && (

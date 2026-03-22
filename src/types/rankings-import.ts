@@ -120,3 +120,15 @@ export interface CompositeImportConfig {
 export interface CompositeRankConfig {
   members: CompositeImportConfig[];
 }
+
+// ---------------------------------------------------------------------------
+// Synced rankings payload (what gets stored in Redis per franchise)
+// ---------------------------------------------------------------------------
+
+/** Complete rankings state synced to Redis for cross-device access. */
+export interface SyncedRankingsPayload {
+  imports: StoredRankingImport[];
+  compositeConfig: CompositeRankConfig | null;
+  averagePosition: number;
+  lastModified: string; // ISO 8601
+}

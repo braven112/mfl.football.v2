@@ -1,13 +1,15 @@
 /**
  * Rankings Storage
  *
- * localStorage CRUD for imported rankings. All data is private per user —
- * never sent to the server, never visible to other league members.
+ * localStorage CRUD for imported rankings with Redis sync for cross-device
+ * access. localStorage is the instant layer; Redis (via /api/ri) is the
+ * durable layer that lets rankings follow you across devices.
  *
  * Also handles migration from the legacy auctionPredictor.* localStorage keys.
  */
 
-import type { StoredRankingImport, CompositeRankConfig } from '../types/rankings-import';
+import type { StoredRankingImport, CompositeRankConfig, SyncedRankingsPayload } from '../types/rankings-import';
+import { loadFromServer, saveToServer } from './rankings-sync';
 
 const STORAGE_KEY = 'rankings.imports';
 const AVG_POSITION_KEY = 'rankings.averagePosition';
@@ -42,6 +44,7 @@ function writeToStorage(imports: StoredRankingImport[]): void {
   _cache = imports;
   writeLegacyKeys(imports);
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  syncToServer();
 }
 
 /** Exported for tests — clears the in-memory cache. */
@@ -222,6 +225,7 @@ export function getCompositeConfig(): CompositeRankConfig | null {
 export function saveCompositeConfig(config: CompositeRankConfig): void {
   localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  syncToServer();
 }
 
 /**
@@ -369,6 +373,129 @@ function writeLegacyKeys(imports: StoredRankingImport[]): void {
     }));
     localStorage.setItem('auctionPredictor.redraftRankings', JSON.stringify(legacyFormat));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Server sync (Redis via /api/ri)
+// ---------------------------------------------------------------------------
+
+/** Build the current state into a payload and push to server. Fire-and-forget. */
+function syncToServer(): void {
+  const imports = getAllImports();
+  const compositeConfig = getCompositeConfig();
+  const averagePosition = getAveragePosition();
+
+  const payload: SyncedRankingsPayload = {
+    imports,
+    compositeConfig,
+    averagePosition,
+    lastModified: new Date().toISOString(),
+  };
+
+  saveToServer(payload);
+}
+
+/**
+ * Initialize from server on page load. Merges server data with local data:
+ * - Server has data, local empty → adopt server data
+ * - Both have data → merge by source+type, prefer newer importDate
+ * - Server empty, local has data → push local to server (first-device bootstrap)
+ *
+ * Returns true if local data was updated from server.
+ */
+export async function initFromServer(): Promise<boolean> {
+  const serverData = await loadFromServer();
+  const localImports = getAllImports();
+
+  // Server unavailable or user not authenticated
+  if (!serverData) {
+    // Bootstrap: push local data to server if we have any
+    if (localImports.length > 0) {
+      syncToServer();
+    }
+    return false;
+  }
+
+  const serverImports = serverData.imports ?? [];
+
+  // Server has data, local is empty → adopt server data
+  if (localImports.length === 0 && serverImports.length > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serverImports));
+    _cache = serverImports;
+    writeLegacyKeys(serverImports);
+
+    if (serverData.compositeConfig) {
+      localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(serverData.compositeConfig));
+    }
+    if (serverData.averagePosition != null) {
+      localStorage.setItem(AVG_POSITION_KEY, String(serverData.averagePosition));
+    }
+
+    window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+    return true;
+  }
+
+  // Both have data → merge by source+type, prefer newer importDate
+  if (localImports.length > 0 && serverImports.length > 0) {
+    const merged = mergeImports(localImports, serverImports);
+    const changed = merged.length !== localImports.length ||
+      merged.some((m, i) => m.id !== localImports[i]?.id);
+
+    if (changed) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      _cache = merged;
+      writeLegacyKeys(merged);
+
+      // Use server composite config if local doesn't have one
+      if (!getCompositeConfig() && serverData.compositeConfig) {
+        localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(serverData.compositeConfig));
+      }
+
+      window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+      syncToServer(); // Push merged result back
+      return true;
+    }
+  }
+
+  // Local has data but server is empty → bootstrap server
+  if (localImports.length > 0 && serverImports.length === 0) {
+    syncToServer();
+  }
+
+  return false;
+}
+
+/**
+ * Merge two import arrays by source+type. When both have the same
+ * source+type, the one with the newer importDate wins.
+ */
+function mergeImports(
+  localImports: StoredRankingImport[],
+  serverImports: StoredRankingImport[],
+): StoredRankingImport[] {
+  const byKey = new Map<string, StoredRankingImport>();
+
+  // Start with local imports
+  for (const imp of localImports) {
+    byKey.set(`${imp.source}:${imp.type}`, imp);
+  }
+
+  // Overlay server imports — newer wins
+  for (const imp of serverImports) {
+    const key = `${imp.source}:${imp.type}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, imp);
+    } else {
+      const existingDate = new Date(existing.importDate).getTime();
+      const serverDate = new Date(imp.importDate).getTime();
+      if (serverDate > existingDate) {
+        byKey.set(key, imp);
+      }
+    }
+  }
+
+  return Array.from(byKey.values());
 }
 
 // ---------------------------------------------------------------------------
