@@ -142,6 +142,36 @@ export function pruneOldBackups(): number {
 }
 
 /**
+ * Fetch current salary data from MFL.
+ * Returns a map of playerId → { salary, contractYear, contractInfo }.
+ */
+export async function fetchMFLSalaries(): Promise<Record<string, { salary: string; contractYear: string; contractInfo: string }> | null> {
+  try {
+    const year = getYear();
+    const url = `${MFL_READ_HOST}/${year}/export?TYPE=salaries&L=${MFL_LEAGUE_ID}&JSON=1`;
+
+    const response = await fetch(url, {
+      headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},
+      redirect: 'follow',
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json() as MFLSalaryExport;
+    const players = data?.salaries?.leagueUnit?.player ?? [];
+
+    const contracts: Record<string, { salary: string; contractYear: string; contractInfo: string }> = {};
+    for (const p of players) {
+      contracts[p.id] = { salary: p.salary, contractYear: p.contractYear, contractInfo: p.contractInfo };
+    }
+    return contracts;
+  } catch (err) {
+    console.error('[mfl-writer] fetchMFLSalaries error:', err);
+    return null;
+  }
+}
+
+/**
  * Build the XML payload for MFL import?TYPE=salaries.
  *
  * CRITICAL: Always includes ALL current field values to prevent blanking.

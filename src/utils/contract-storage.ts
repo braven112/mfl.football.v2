@@ -1,47 +1,82 @@
 /**
  * Contract Declaration Storage
  *
- * Stores contract declarations in Vercel Blob (production/preview)
+ * Stores contract declarations in Upstash Redis (production/preview)
  * with filesystem fallback for local development.
+ *
+ * Each declaration is stored as a separate Redis hash field keyed by ID,
+ * eliminating the read-all/modify/write-all race condition that plagued
+ * the previous Vercel Blob implementation.
  */
 
 import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
 
-const BLOB_PATH = 'data/contract-declarations.json';
+const REDIS_KEY = 'contract-declarations';
 
-// --- Vercel Blob helpers ---
+// --- Redis helpers ---
 
-async function readFromBlob(): Promise<ContractDeclaration[] | null> {
+type RedisClient = {
+  hget: <T>(key: string, field: string) => Promise<T | null>;
+  hgetall: <T>(key: string) => Promise<Record<string, T> | null>;
+  hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
+  hdel: (key: string, ...fields: string[]) => Promise<number>;
+};
+
+let _redis: RedisClient | null | undefined;
+
+async function getRedis(): Promise<RedisClient | null> {
+  if (_redis !== undefined) return _redis;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
+  if (!url || !token) {
+    _redis = null;
+    return null;
+  }
+
   try {
-    const { list: listBlobs } = await import('@vercel/blob');
-    const { blobs } = await listBlobs({ prefix: BLOB_PATH, limit: 1 });
-    if (blobs.length === 0) return [];
-
-    // Bust CDN cache — Vercel Blob serves from CDN which can return stale data
-    const cacheBust = `${blobs[0].url}${blobs[0].url.includes('?') ? '&' : '?'}t=${Date.now()}`;
-    const res = await fetch(cacheBust, { cache: 'no-store' });
-    if (!res.ok) return null;
-    const data = await res.json() as ContractDeclaration[];
-    return data;
+    const { Redis } = await import('@upstash/redis');
+    _redis = new Redis({ url, token }) as unknown as RedisClient;
+    return _redis;
   } catch (err) {
-    console.error('[contract-storage] Blob read error:', err);
+    console.warn('[contract-storage] Redis unavailable:', err);
+    _redis = null;
     return null;
   }
 }
 
-async function writeToBlob(declarations: ContractDeclaration[]): Promise<boolean> {
+/** Read all declarations from Redis hash, sorted newest first */
+async function readFromRedis(): Promise<ContractDeclaration[]> {
+  const redis = await getRedis();
+  if (!redis) {
+    console.error('[contract-storage] Redis not configured — check UPSTASH_REDIS_REST_URL / KV_REST_API_URL env vars');
+    return [];
+  }
+
   try {
-    const { put } = await import('@vercel/blob');
-    const result = await put(BLOB_PATH, JSON.stringify(declarations), {
-      access: 'public',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: 'application/json',
-    });
-    console.log('[contract-storage] Blob write OK:', result.url, '— entries:', declarations.length);
+    const all = await redis.hgetall<ContractDeclaration>(REDIS_KEY);
+    if (!all || Object.keys(all).length === 0) return [];
+
+    const declarations = Object.values(all);
+    declarations.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    return declarations;
+  } catch (err) {
+    console.error('[contract-storage] Redis read error:', err);
+    return [];
+  }
+}
+
+/** Write a single declaration to Redis (atomic, no read-modify-write) */
+async function writeOneToRedis(declaration: ContractDeclaration): Promise<boolean> {
+  const redis = await getRedis();
+  if (!redis) return false;
+
+  try {
+    await redis.hset(REDIS_KEY, { [declaration.id]: declaration });
+    console.log('[contract-storage] Redis write OK:', declaration.id, 'status:', declaration.status);
     return true;
   } catch (err) {
-    console.error('[contract-storage] Blob write error:', err);
+    console.error('[contract-storage] Redis write error:', err);
     return false;
   }
 }
@@ -81,19 +116,23 @@ function writeDeclarationsFileSync(file: DeclarationsFile): void {
 
 async function readAllDeclarations(): Promise<ContractDeclaration[]> {
   if (process.env.VERCEL) {
-    const data = await readFromBlob();
-    if (data === null) {
-      console.error('[contract-storage] readFromBlob returned null — blob read failed');
-    }
-    return data ?? [];
+    return readFromRedis();
   }
   return readDeclarationsFileSync().declarations;
 }
 
 async function writeAllDeclarations(declarations: ContractDeclaration[]): Promise<void> {
   if (process.env.VERCEL) {
-    const ok = await writeToBlob(declarations);
-    if (!ok) throw new Error('Failed to write declarations to Vercel Blob');
+    const redis = await getRedis();
+    if (!redis) throw new Error('Redis not available');
+
+    const fieldValues: Record<string, ContractDeclaration> = {};
+    for (const d of declarations) {
+      fieldValues[d.id] = d;
+    }
+    if (Object.keys(fieldValues).length > 0) {
+      await redis.hset(REDIS_KEY, fieldValues);
+    }
     return;
   }
   writeDeclarationsFileSync({
@@ -136,35 +175,61 @@ export async function getDeclarationsByFranchise(franchiseId: string): Promise<C
 
 /** Get a single declaration by ID */
 export async function getDeclarationById(id: string): Promise<ContractDeclaration | undefined> {
+  if (process.env.VERCEL) {
+    const redis = await getRedis();
+    if (redis) {
+      const decl = await redis.hget<ContractDeclaration>(REDIS_KEY, id);
+      return decl ?? undefined;
+    }
+  }
   const all = await readAllDeclarations();
   return all.find(d => d.id === id);
 }
 
 /** Add a new declaration */
 export async function addDeclaration(declaration: ContractDeclaration): Promise<ContractDeclaration> {
-  const all = await readAllDeclarations();
-  all.unshift(declaration); // Newest first
-  await writeAllDeclarations(all);
+  if (process.env.VERCEL) {
+    const ok = await writeOneToRedis(declaration);
+    if (!ok) throw new Error('Failed to write declaration to Redis');
+    return declaration;
+  }
+  const file = readDeclarationsFileSync();
+  file.declarations.unshift(declaration);
+  writeDeclarationsFileSync(file);
   return declaration;
 }
 
-/** Update an existing declaration */
+/** Update an existing declaration (atomic — no read-modify-write race) */
 export async function updateDeclaration(
   id: string,
   updates: Partial<ContractDeclaration>,
 ): Promise<ContractDeclaration | null> {
-  const all = await readAllDeclarations();
-  console.log('[contract-storage] updateDeclaration: read', all.length, 'declarations, looking for', id);
-  const index = all.findIndex(d => d.id === id);
-  if (index === -1) {
-    console.error('[contract-storage] updateDeclaration: declaration not found!', id);
-    return null;
+  if (process.env.VERCEL) {
+    const redis = await getRedis();
+    if (!redis) return null;
+
+    const existing = await redis.hget<ContractDeclaration>(REDIS_KEY, id);
+    if (!existing) {
+      console.error('[contract-storage] updateDeclaration: not found in Redis:', id);
+      return null;
+    }
+
+    const updated = { ...existing, ...updates };
+    await redis.hset(REDIS_KEY, { [id]: updated });
+    console.log('[contract-storage] updateDeclaration OK:', id, 'status:', updated.status);
+    return updated;
   }
 
-  all[index] = { ...all[index], ...updates };
-  await writeAllDeclarations(all);
-  console.log('[contract-storage] updateDeclaration: wrote updated declaration', id, 'status:', all[index].status);
-  return all[index];
+  // Filesystem fallback
+  const file = readDeclarationsFileSync();
+  const index = file.declarations.findIndex(d => d.id === id);
+  if (index === -1) {
+    console.error('[contract-storage] updateDeclaration: not found:', id);
+    return null;
+  }
+  file.declarations[index] = { ...file.declarations[index], ...updates };
+  writeDeclarationsFileSync(file);
+  return file.declarations[index];
 }
 
 /**
@@ -235,4 +300,32 @@ export async function getPendingDeclarationForPlayer(
       d.franchiseId === franchiseId &&
       (d.status === 'pending' || d.status === 'approved'),
   );
+}
+
+/**
+ * Bulk import declarations into Redis.
+ * Writes all declarations at once without reading first.
+ */
+export async function bulkImportDeclarations(declarations: ContractDeclaration[]): Promise<boolean> {
+  if (!process.env.VERCEL) {
+    writeDeclarationsFileSync({
+      version: '1.0',
+      lastUpdated: new Date().toISOString(),
+      declarations,
+    });
+    return true;
+  }
+
+  const redis = await getRedis();
+  if (!redis) return false;
+
+  const fieldValues: Record<string, ContractDeclaration> = {};
+  for (const d of declarations) {
+    fieldValues[d.id] = d;
+  }
+  if (Object.keys(fieldValues).length > 0) {
+    await redis.hset(REDIS_KEY, fieldValues);
+  }
+  console.log('[contract-storage] Bulk imported', declarations.length, 'declarations to Redis');
+  return true;
 }

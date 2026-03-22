@@ -99,12 +99,19 @@ export const POST: APIRoute = async ({ request }) => {
     // 5. Check for existing pending declaration — update it if found
     const existing = await getPendingDeclarationForPlayer(playerId, franchiseId);
     if (existing && existing.status === 'pending') {
-      await updateDeclaration(existing.id, {
+      const updated = await updateDeclaration(existing.id, {
         requestedYears,
         requestedSalary,
         requestedContractInfo,
         submittedAt: new Date().toISOString(),
       });
+
+      if (!updated) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to update declaration' }),
+          { status: 500, headers: JSON_HEADERS },
+        );
+      }
 
       return new Response(
         JSON.stringify({
