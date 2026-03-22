@@ -80,16 +80,20 @@ if (league === 'afl') {
 	const aflPref = getAFLPreference(Astro.cookies);
 	myteam = myteamParam || aflPref?.franchiseId || null;
 
-	if (myteam) {
+	// Only populate nav teamInfo from authenticated sources (AFL preference cookie),
+	// not from ?myteam= query param which doesn't require login
+	const navTeamId = aflPref?.franchiseId || null;
+
+	if (navTeamId) {
 		// Dynamic import AFL config only when needed
 		const aflConfigData = await import('../../data/afl-fantasy/afl.config.json');
 		const teamData = aflConfigData.teams.find(
-			(t: { franchiseId: string }) => t.franchiseId === myteam
+			(t: { franchiseId: string }) => t.franchiseId === navTeamId
 		);
 
 		if (teamData) {
 			teamInfo = {
-				franchiseId: myteam,
+				franchiseId: navTeamId,
 				teamName: teamData.name,
 				iconUrl: teamData.icon || null,
 				ownerName: null,
@@ -97,8 +101,8 @@ if (league === 'afl') {
 			};
 		} else {
 			teamInfo = {
-				franchiseId: myteam,
-				teamName: `Team ${myteam}`,
+				franchiseId: navTeamId,
+				teamName: `Team ${navTeamId}`,
 				iconUrl: null,
 				ownerName: null,
 				league: 'afl' as LeagueSlug,
@@ -110,14 +114,18 @@ if (league === 'afl') {
 	const theLeaguePref = getTheLeaguePreference(Astro.cookies);
 	myteam = myteamParam || theLeaguePref?.franchiseId || Astro.cookies.get('myteam')?.value || null;
 
-	if (myteam) {
+	// Only populate nav teamInfo from authenticated sources (verify flow preference cookie),
+	// not from ?myteam= query param or raw myteam cookie which don't require login
+	const navTeamId = theLeaguePref?.franchiseId || null;
+
+	if (navTeamId) {
 		const teamData = leagueConfigData.teams.find(
-			(t: { franchiseId: string }) => t.franchiseId === myteam
+			(t: { franchiseId: string }) => t.franchiseId === navTeamId
 		);
 
 		if (teamData) {
 			teamInfo = {
-				franchiseId: myteam,
+				franchiseId: navTeamId,
 				teamName: teamData.name,
 				iconUrl: teamData.icon || null,
 				ownerName: null,
@@ -125,8 +133,8 @@ if (league === 'afl') {
 			};
 		} else {
 			teamInfo = {
-				franchiseId: myteam,
-				teamName: `Team ${myteam}`,
+				franchiseId: navTeamId,
+				teamName: `Team ${navTeamId}`,
 				iconUrl: null,
 				ownerName: null,
 				league: 'theleague' as LeagueSlug,
