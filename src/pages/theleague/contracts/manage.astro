@@ -66,6 +66,10 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
                 Reconcile
               </button>
             )}
+          </div>
+        )}
+        {isCommish && (
+          <div class="batch-actions">
             <button
               class="action-btn action-btn--verify"
               id="migrateBtn"

@@ -45,14 +45,30 @@ async function getRedis(): Promise<RedisClient | null> {
   }
 }
 
-/** Read all declarations from Redis hash, sorted newest first */
+/** Read all declarations from Redis hash, sorted newest first.
+ *  Falls back to Vercel Blob if Redis is empty (pre-migration). */
 async function readFromRedis(): Promise<ContractDeclaration[]> {
   const redis = await getRedis();
-  if (!redis) return [];
+  if (!redis) {
+    // Redis not configured — try Blob fallback
+    return readFromBlobFallback();
+  }
 
   try {
     const all = await redis.hgetall<ContractDeclaration>(REDIS_KEY);
-    if (!all) return [];
+    if (!all || Object.keys(all).length === 0) {
+      // Redis is empty — auto-migrate from Blob
+      console.log('[contract-storage] Redis empty, auto-migrating from Blob');
+      const blobData = await readFromBlobFallback();
+      if (blobData.length > 0) {
+        // Seed Redis so future reads don't need Blob
+        const fieldValues: Record<string, ContractDeclaration> = {};
+        for (const d of blobData) fieldValues[d.id] = d;
+        await redis.hset(REDIS_KEY, fieldValues);
+        console.log('[contract-storage] Auto-migrated', blobData.length, 'declarations to Redis');
+      }
+      return blobData;
+    }
 
     // Values come back as parsed objects from Upstash
     const declarations = Object.values(all);
@@ -61,6 +77,25 @@ async function readFromRedis(): Promise<ContractDeclaration[]> {
     return declarations;
   } catch (err) {
     console.error('[contract-storage] Redis read error:', err);
+    return readFromBlobFallback();
+  }
+}
+
+/** Fallback: read declarations from Vercel Blob (legacy storage) */
+async function readFromBlobFallback(): Promise<ContractDeclaration[]> {
+  try {
+    const { list: listBlobs } = await import('@vercel/blob');
+    const { blobs } = await listBlobs({ prefix: 'data/contract-declarations.json', limit: 1 });
+    if (blobs.length === 0) return [];
+
+    const fetchUrl = blobs[0].downloadUrl || blobs[0].url;
+    const res = await fetch(fetchUrl, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json() as ContractDeclaration[];
+    console.log('[contract-storage] Blob fallback read OK:', data.length, 'declarations');
+    return data;
+  } catch (err) {
+    console.warn('[contract-storage] Blob fallback unavailable:', err);
     return [];
   }
 }
