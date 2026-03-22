@@ -232,6 +232,25 @@ export async function updateDeclaration(
   return file.declarations[index];
 }
 
+/** Delete a declaration by ID (for testing/cleanup) */
+export async function deleteDeclaration(id: string): Promise<boolean> {
+  if (process.env.VERCEL) {
+    const redis = await getRedis();
+    if (!redis) return false;
+    const deleted = await redis.hdel(REDIS_KEY, id);
+    console.log('[contract-storage] deleteDeclaration:', id, 'deleted:', deleted);
+    return deleted > 0;
+  }
+
+  // Filesystem fallback
+  const file = readDeclarationsFileSync();
+  const index = file.declarations.findIndex(d => d.id === id);
+  if (index === -1) return false;
+  file.declarations.splice(index, 1);
+  writeDeclarationsFileSync(file);
+  return true;
+}
+
 /**
  * Check if a team has already used their franchise tag for a given league year.
  * Returns the existing tag declaration if found.

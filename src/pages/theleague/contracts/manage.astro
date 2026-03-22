@@ -183,15 +183,26 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
                   </span>
                 )}
                 {isCommishMode && (
-                  <button
-                    class="action-btn action-btn--reapply"
-                    data-action="reapply"
-                    data-id={d.id}
-                    data-player={d.playerName}
-                    aria-label={`Reapply declaration for ${d.playerName}`}
-                  >
-                    Reapply
-                  </button>
+                  <div class="action-btn-group">
+                    <button
+                      class="action-btn action-btn--reapply"
+                      data-action="reapply"
+                      data-id={d.id}
+                      data-player={d.playerName}
+                      aria-label={`Reapply declaration for ${d.playerName}`}
+                    >
+                      Reapply
+                    </button>
+                    <button
+                      class="action-btn action-btn--delete"
+                      data-action="delete"
+                      data-id={d.id}
+                      data-player={d.playerName}
+                      aria-label={`Delete declaration for ${d.playerName}`}
+                    >
+                      &times;
+                    </button>
+                  </div>
                 )}
               </li>
             ))}
@@ -360,12 +371,16 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
       }
     }
 
-    // Reapply handler (for applied declarations)
+    // Reapply + Delete handlers (for applied declarations)
     const appliedList = document.getElementById('appliedList');
     appliedList?.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action="reapply"]');
+      const btn = e.target.closest('[data-action]');
       if (!btn) return;
-      handleReapply(btn.dataset.id, btn.dataset.player, btn);
+      if (btn.dataset.action === 'reapply') {
+        handleReapply(btn.dataset.id, btn.dataset.player, btn);
+      } else if (btn.dataset.action === 'delete') {
+        handleDelete(btn.dataset.id, btn.dataset.player, btn);
+      }
     });
 
     async function handleReapply(declarationId, playerName, btn) {
@@ -403,6 +418,52 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         alert('Network error. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Reapply';
+      }
+    }
+
+    async function handleDelete(declarationId, playerName, btn) {
+      if (!confirm(`Delete declaration for ${playerName}? This removes it from the database.`)) return;
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/contracts/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ declarationId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(`Failed to delete: ${data.error || 'Unknown error'}`);
+          btn.disabled = false;
+          return;
+        }
+
+        const row = btn.closest('.recent-item');
+        row.style.transition = 'opacity 0.3s';
+        row.style.opacity = '0';
+        setTimeout(() => {
+          row.remove();
+          if (appliedCountEl) {
+            const current = parseInt(appliedCountEl.textContent || '0', 10);
+            appliedCountEl.textContent = String(Math.max(0, current - 1));
+          }
+          if (appliedList && appliedList.querySelectorAll('.recent-item').length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-state';
+            const p = document.createElement('p');
+            p.className = 'empty-state__text';
+            p.textContent = 'No applied contracts yet';
+            emptyDiv.appendChild(p);
+            appliedList.appendChild(emptyDiv);
+          }
+        }, 300);
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('Network error. Please try again.');
+        btn.disabled = false;
       }
     }
 
@@ -1050,6 +1111,24 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
     }
     .action-btn--reapply:hover:not(:disabled) {
       background: var(--color-info-dark, #1d4ed8);
+    }
+
+    .action-btn-group {
+      display: flex;
+      gap: 0.25rem;
+      align-items: center;
+    }
+
+    .action-btn--delete {
+      background: var(--color-gray-400, #9ca3af);
+      color: #fff;
+      padding: 0.375rem 0.5rem;
+      font-size: 0.8rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .action-btn--delete:hover:not(:disabled) {
+      background: var(--color-danger, #dc2626);
     }
 
     .action-btn--verify {
