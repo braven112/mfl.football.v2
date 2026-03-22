@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T16:35:32.432Z"
+    "fetchedAt": "2026-03-22T16:52:18.893Z"
   },
   "players": [
     {
@@ -11192,6 +11192,52 @@
       "depthChartAhead": null
     },
     {
+      "id": "9431",
+      "name": "Stafford, Matthew",
+      "position": "QB",
+      "salary": 3775000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "LAR",
+      "draftYear": 2009,
+      "draftTeam": "DET",
+      "birthdate": 571208400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/9431_thumb.jpg",
+      "externalIds": {
+        "mfl": "9431",
+        "sleeper": "421",
+        "gsis": "00-0026498"
+      },
+      "sleeper": {
+        "id": "421",
+        "fullName": "Matthew Stafford",
+        "team": "LAR",
+        "age": 38,
+        "height": "75",
+        "weight": "214",
+        "number": 9,
+        "college": "Georgia",
+        "birthDate": "1988-02-07",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 17,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0026498"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "14782",
       "name": "Love, Jordan",
       "position": "QB",
@@ -12219,7 +12265,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "9431",
+          "name": "Stafford, Matthew"
+        }
+      ]
     },
     {
       "id": "16174",
@@ -13873,6 +13924,57 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "12141",
+      "name": "Mariota, Marcus",
+      "position": "QB",
+      "salary": 525000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "WAS",
+      "draftYear": 2015,
+      "draftTeam": "TEN",
+      "birthdate": 751957200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/12141_thumb.jpg",
+      "externalIds": {
+        "mfl": "12141",
+        "sleeper": "2307",
+        "gsis": "00-0032268"
+      },
+      "sleeper": {
+        "id": "2307",
+        "fullName": "Marcus Mariota",
+        "team": "WAS",
+        "age": 32,
+        "height": "76",
+        "weight": "222",
+        "number": 8,
+        "college": "Oregon",
+        "birthDate": "1993-10-30",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 11,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0032268"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "16581",
+          "name": "Daniels, Jayden"
+        }
+      ]
     },
     {
       "id": "15692",
