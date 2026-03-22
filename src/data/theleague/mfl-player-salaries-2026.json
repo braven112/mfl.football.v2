@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-21T23:49:21.133Z"
+    "fetchedAt": "2026-03-22T06:06:33.381Z"
   },
   "players": [
     {
@@ -864,7 +864,7 @@
       "salary": 3250000,
       "franchiseId": "0001",
       "status": "ROSTER",
-      "contractYear": "5",
+      "contractYear": "2",
       "points": 0,
       "team": "BUF",
       "draftYear": 2018,
@@ -3534,6 +3534,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "15256",
+          "name": "Williams, Javonte"
+        },
+        {
           "id": "17069",
           "name": "Blue, Jaydon"
         }
@@ -5268,6 +5272,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13832",
+      "name": "Sanders, Jason",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0006",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "NYG",
+      "draftYear": 2018,
+      "draftTeam": "MIA",
+      "birthdate": 816498000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13832_thumb.jpg",
+      "externalIds": {
+        "mfl": "13832",
+        "sleeper": "5119",
+        "gsis": "00-0034794"
+      },
+      "sleeper": {
+        "id": "5119",
+        "fullName": "Jason Sanders",
+        "team": "NYG",
+        "age": 30,
+        "height": "71",
+        "weight": "195",
+        "number": 7,
+        "college": "New Mexico",
+        "birthDate": "1995-11-16",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034794"
       },
       "nflverse": null,
       "gamesPlayed": null,
@@ -7747,7 +7797,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15256",
+          "name": "Williams, Javonte"
+        }
+      ]
     },
     {
       "id": "14867",
@@ -10707,6 +10762,122 @@
       "depthChartAhead": null
     },
     {
+      "id": "15256",
+      "name": "Williams, Javonte",
+      "position": "RB",
+      "salary": 4600000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "DAL",
+      "draftYear": 2021,
+      "draftTeam": "DEN",
+      "birthdate": 956638800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15256_thumb.jpg",
+      "externalIds": {
+        "mfl": "15256",
+        "sleeper": "7588",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "7588",
+        "fullName": "Javonte Williams",
+        "team": "DAL",
+        "age": 25,
+        "height": "70",
+        "weight": "220",
+        "number": 33,
+        "college": "North Carolina",
+        "birthDate": "2000-04-25",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "16036",
+      "name": "Tonges, Jake",
+      "position": "TE",
+      "salary": 800000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "SF",
+      "draftYear": 2022,
+      "draftTeam": "FA",
+      "birthdate": 931410000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16036_thumb.jpg",
+      "externalIds": {
+        "mfl": "16036",
+        "sleeper": "8698",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8698",
+        "fullName": "Jake Tonges",
+        "team": "SF",
+        "age": 26,
+        "height": "76",
+        "weight": "240",
+        "number": 88,
+        "college": "California",
+        "birthDate": "1999-07-08",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "7836",
+      "name": "Rodgers, Aaron",
+      "position": "QB",
+      "salary": 1250000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "PIT",
+      "draftYear": 2005,
+      "draftTeam": "FA",
+      "birthdate": 439189200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/7836_thumb.jpg",
+      "externalIds": {
+        "mfl": "7836",
+        "sleeper": null,
+        "gsis": null
+      },
+      "sleeper": null,
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "14782",
       "name": "Love, Jordan",
       "position": "QB",
@@ -13230,6 +13401,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13671",
+      "name": "Andrews, Mark",
+      "position": "TE",
+      "salary": 4000000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "BAL",
+      "draftYear": 2018,
+      "draftTeam": "BAL",
+      "birthdate": 810363600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13671_thumb.jpg",
+      "externalIds": {
+        "mfl": "13671",
+        "sleeper": "5012",
+        "gsis": "00-0034753"
+      },
+      "sleeper": {
+        "id": "5012",
+        "fullName": "Mark Andrews",
+        "team": "BAL",
+        "age": 30,
+        "height": "77",
+        "weight": "250",
+        "number": 89,
+        "college": "Oklahoma",
+        "birthDate": "1995-09-06",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034753"
       },
       "nflverse": null,
       "gamesPlayed": null,
