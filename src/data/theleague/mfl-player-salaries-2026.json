@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T19:18:09.368Z"
+    "fetchedAt": "2026-03-22T19:33:17.488Z"
   },
   "players": [
     {
@@ -12158,6 +12158,65 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "15789",
+      "name": "Watson, Christian",
+      "position": "WR",
+      "salary": 4750000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "GB",
+      "draftYear": 2022,
+      "draftTeam": "GBP",
+      "birthdate": 926485200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15789_thumb.jpg",
+      "externalIds": {
+        "mfl": "15789",
+        "sleeper": "8167",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8167",
+        "fullName": "Christian Watson",
+        "team": "GB",
+        "age": 26,
+        "height": "76",
+        "weight": "208",
+        "number": 9,
+        "college": "North Dakota State",
+        "birthDate": "1999-05-12",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "17075",
+          "name": "Golden, Matthew"
+        },
+        {
+          "id": "16184",
+          "name": "Reed, Jayden"
+        },
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
+        }
+      ]
     },
     {
       "id": "15889",
