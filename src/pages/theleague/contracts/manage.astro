@@ -1,7 +1,12 @@
 ---
+import fs from 'node:fs';
+import path from 'node:path';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../../../components/theleague/PlayerCell.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
 
 // Commissioner actions (Apply button) only show when commish-mode toggle is ON
 const user = getAuthUser(Astro.request);
@@ -25,6 +30,31 @@ const declarationTypeLabels: Record<string, string> = {
 };
 
 const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
+
+// Load player data for headshots/positions in applied contracts
+const leagueYear = getCurrentLeagueYear();
+const playersPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${leagueYear}/players.json`);
+let playerLookup: Record<string, { position: string; team: string; espnId?: string }> = {};
+try {
+  if (fs.existsSync(playersPath)) {
+    const playersData = JSON.parse(fs.readFileSync(playersPath, 'utf8'));
+    const players = playersData?.players?.player ?? [];
+    for (const p of players) {
+      playerLookup[p.id] = {
+        position: p.position === 'Def' ? 'DEF' : p.position,
+        team: normalizeTeamCode(p.team || ''),
+        espnId: p.espn_id,
+      };
+    }
+  }
+} catch (e) {
+  console.warn('Failed to load players.json for contract manage page:', e);
+}
+
+const getHeadshot = (playerId: string, espnId?: string) => {
+  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+  return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+};
 ---
 
 <TheLeagueLayout title="Manage Declarations">
@@ -169,43 +199,55 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
           </div>
         ) : (
           <ul class="recent-list" id="appliedList">
-            {appliedContracts.map(d => (
-              <li class="recent-item" data-id={d.id} data-player-id={d.playerId} data-requested-years={d.requestedYears}>
-                <span class="recent-item__player">{d.playerName}</span>
-                <span class="recent-item__detail">
-                  {d.currentYears}yr &rarr; {d.requestedYears}yr
-                </span>
-                <span class="recent-item__mfl-status" data-mfl-check={d.playerId}></span>
-                <span class="recent-item__type">{declarationTypeLabels[d.type] || d.type}</span>
-                {d.reviewedAt && (
-                  <span class="recent-item__date">
-                    {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                )}
-                {isCommishMode && (
-                  <div class="action-btn-group">
-                    <button
-                      class="action-btn action-btn--reapply"
-                      data-action="reapply"
-                      data-id={d.id}
-                      data-player={d.playerName}
-                      aria-label={`Reapply declaration for ${d.playerName}`}
-                    >
-                      Reapply
-                    </button>
-                    <button
-                      class="action-btn action-btn--delete"
-                      data-action="delete"
-                      data-id={d.id}
-                      data-player={d.playerName}
-                      aria-label={`Delete declaration for ${d.playerName}`}
-                    >
-                      &times;
-                    </button>
+            {appliedContracts.map(d => {
+              const pInfo = playerLookup[d.playerId];
+              const headshot = pInfo ? getHeadshot(d.playerId, pInfo.espnId) : undefined;
+              return (
+                <li class="recent-item" data-id={d.id} data-player-id={d.playerId} data-requested-years={d.requestedYears}>
+                  <div class="recent-item__player-cell">
+                    <PlayerCell
+                      name={d.playerName}
+                      headshot={headshot}
+                      position={pInfo?.position}
+                      nflTeam={pInfo?.team}
+                      size="compact"
+                    />
                   </div>
-                )}
-              </li>
-            ))}
+                  <span class="recent-item__detail">
+                    {d.currentYears}yr &rarr; {d.requestedYears}yr
+                  </span>
+                  <span class="recent-item__mfl-status" data-mfl-check={d.playerId}></span>
+                  <span class="recent-item__type">{declarationTypeLabels[d.type] || d.type}</span>
+                  {d.reviewedAt && (
+                    <span class="recent-item__date">
+                      {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                  {isCommishMode && (
+                    <div class="action-btn-group">
+                      <button
+                        class="action-btn action-btn--reapply"
+                        data-action="reapply"
+                        data-id={d.id}
+                        data-player={d.playerName}
+                        aria-label={`Reapply declaration for ${d.playerName}`}
+                      >
+                        Reapply
+                      </button>
+                      <button
+                        class="action-btn action-btn--delete"
+                        data-action="delete"
+                        data-id={d.id}
+                        data-player={d.playerName}
+                        aria-label={`Delete declaration for ${d.playerName}`}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -1042,9 +1084,9 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
 
     .recent-item {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: 0.625rem;
-      padding: 0.5rem 0;
+      padding: 0.625rem 0;
       border-bottom: 1px solid var(--color-gray-100);
       font-size: var(--font-size-sm);
       color: var(--content-text-muted);
@@ -1054,9 +1096,9 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
       border-bottom: none;
     }
 
-    .recent-item__player {
-      font-weight: 500;
-      color: var(--color-gray-900);
+    .recent-item__player-cell {
+      flex-shrink: 0;
+      min-width: 0;
     }
 
     .recent-item__detail {
