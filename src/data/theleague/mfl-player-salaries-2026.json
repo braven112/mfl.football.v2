@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T21:44:47.543Z"
+    "fetchedAt": "2026-03-22T22:05:11.088Z"
   },
   "players": [
     {
@@ -5586,6 +5586,103 @@
       "depthChartAhead": null
     },
     {
+      "id": "14056",
+      "name": "Murray, Kyler",
+      "position": "QB",
+      "salary": 4000000,
+      "franchiseId": "0006",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "MIN",
+      "draftYear": 2019,
+      "draftTeam": "ARI",
+      "birthdate": 870930000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14056_thumb.jpg",
+      "externalIds": {
+        "mfl": "14056",
+        "sleeper": "5849",
+        "gsis": " 00-0035228"
+      },
+      "sleeper": {
+        "id": "5849",
+        "fullName": "Kyler Murray",
+        "team": "MIN",
+        "age": 28,
+        "height": "70",
+        "weight": "207",
+        "number": 1,
+        "college": "Oklahoma",
+        "birthDate": "1997-08-07",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035228"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "15972",
+      "name": "Mason, Jordan",
+      "position": "RB",
+      "salary": 3100000,
+      "franchiseId": "0006",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "MIN",
+      "draftYear": 2022,
+      "draftTeam": "FA",
+      "birthdate": 927522000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15972_thumb.jpg",
+      "externalIds": {
+        "mfl": "15972",
+        "sleeper": "8408",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8408",
+        "fullName": "Jordan Mason",
+        "team": "MIN",
+        "age": 26,
+        "height": "71",
+        "weight": "230",
+        "number": 27,
+        "college": "Georgia Tech",
+        "birthDate": "1999-05-24",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "13319",
+          "name": "Jones, Aaron"
+        }
+      ]
+    },
+    {
       "id": "15751",
       "name": "London, Drake",
       "position": "WR",
@@ -10684,7 +10781,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14056",
+          "name": "Murray, Kyler"
+        }
+      ]
     },
     {
       "id": "16603",
