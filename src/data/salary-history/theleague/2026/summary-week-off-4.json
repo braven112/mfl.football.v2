@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-22T07-33-41.255Z",
+  "snapshot": "2026-03-22T08-38-53.123Z",
   "week": "off-4",
   "metadata": {
     "leagueId": "13522",
@@ -15,22 +15,22 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T07:33:41.498Z",
+    "fetchedAt": "2026-03-22T08:38:53.384Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-4).",
-    "generatedAt": "2026-03-22T07:33:41.498Z"
+    "generatedAt": "2026-03-22T08:38:53.384Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 104,
+      "totalPlayers": 105,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8011779.37,
-      "starterAverage": 3426580.91,
-      "starterMedian": 2436183.75,
+      "starterAverage": 3490087.89,
+      "starterMedian": 2457358.75,
       "starterCount": 48,
-      "averageSalary": 1910053.45,
-      "medianSalary": 800263.75,
+      "averageSalary": 1929957.7,
+      "medianSalary": 831875,
       "topPlayers": [
         {
           "id": "15287",
@@ -97,6 +97,12 @@
           "name": "Harrison Jr., Marvin",
           "salary": 4235000,
           "franchiseId": "0009"
+        },
+        {
+          "id": "11671",
+          "name": "Evans, Mike",
+          "salary": 4000000,
+          "franchiseId": "0007"
         },
         {
           "id": "16615",
@@ -1743,15 +1749,15 @@
       ]
     },
     "QB": {
-      "totalPlayers": 32,
+      "totalPlayers": 33,
       "top3Average": 7133333.33,
-      "top5Average": 5610000,
-      "top10Average": 3799027.5,
-      "starterAverage": 2753676.56,
-      "starterMedian": 1565500,
+      "top5Average": 5630000,
+      "top10Average": 4000927.5,
+      "starterAverage": 2908051.56,
+      "starterMedian": 2247637.5,
       "starterCount": 16,
-      "averageSalary": 1671463.83,
-      "medianSalary": 824326.25,
+      "averageSalary": 1722328.56,
+      "medianSalary": 880000,
       "topPlayers": [
         {
           "id": "13589",
@@ -1776,6 +1782,12 @@
           "name": "Goff, Jared",
           "salary": 3400000,
           "franchiseId": "0001"
+        },
+        {
+          "id": "13590",
+          "name": "Mayfield, Baker",
+          "salary": 3350000,
+          "franchiseId": "0003"
         },
         {
           "id": "13592",

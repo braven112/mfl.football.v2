@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T08:04:08.761Z"
+    "fetchedAt": "2026-03-22T08:38:53.119Z"
   },
   "players": [
     {
@@ -2465,7 +2465,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11671",
+          "name": "Evans, Mike"
+        }
+      ]
     },
     {
       "id": "16619",
@@ -6490,6 +6495,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "11671",
+      "name": "Evans, Mike",
+      "position": "WR",
+      "salary": 4000000,
+      "franchiseId": "0007",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "SF",
+      "draftYear": 2014,
+      "draftTeam": "TBB",
+      "birthdate": 745909200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/11671_thumb.jpg",
+      "externalIds": {
+        "mfl": "11671",
+        "sleeper": "2216",
+        "gsis": "00-0031408"
+      },
+      "sleeper": {
+        "id": "2216",
+        "fullName": "Mike Evans",
+        "team": "SF",
+        "age": 32,
+        "height": "77",
+        "weight": "231",
+        "number": 13,
+        "college": "Texas A&M",
+        "birthDate": "1993-08-21",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 12,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0031408"
       },
       "nflverse": null,
       "gamesPlayed": null,
@@ -12500,6 +12551,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "11671",
+          "name": "Evans, Mike"
+        },
         {
           "id": "16622",
           "name": "Pearsall, Ricky"
