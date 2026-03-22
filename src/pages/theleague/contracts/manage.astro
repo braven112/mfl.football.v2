@@ -46,14 +46,32 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
           <span class="section__count">{pending.length}</span>
         </h2>
 
-        {isCommishMode && pending.length > 1 && (
+        {isCommishMode && (
           <div class="batch-actions">
+            {pending.length > 1 && (
+              <button
+                class="action-btn action-btn--approve action-btn--batch"
+                id="applyAllBtn"
+                aria-label="Apply all pending declarations"
+              >
+                Apply All ({pending.length})
+              </button>
+            )}
+            {pending.length > 0 && (
+              <button
+                class="action-btn action-btn--verify"
+                id="reconcileBtn"
+                aria-label="Auto-fix stuck declarations by checking MFL"
+              >
+                Reconcile
+              </button>
+            )}
             <button
-              class="action-btn action-btn--approve action-btn--batch"
-              id="applyAllBtn"
-              aria-label="Apply all pending declarations"
+              class="action-btn action-btn--verify"
+              id="migrateBtn"
+              aria-label="Migrate declarations from Blob to Redis"
             >
-              Apply All ({pending.length})
+              Migrate to Redis
             </button>
           </div>
         )}
@@ -506,6 +524,66 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         el.classList.add('deadline--critical');
       } else if (hoursLeft < 12) {
         el.classList.add('deadline--warning');
+      }
+    });
+
+    // Reconcile handler — auto-fixes stuck pending declarations
+    const reconcileBtn = document.getElementById('reconcileBtn');
+    reconcileBtn?.addEventListener('click', async () => {
+      if (!confirm('Check MFL and auto-mark any stuck pending declarations as applied?')) return;
+
+      reconcileBtn.disabled = true;
+      reconcileBtn.textContent = 'Checking...';
+
+      try {
+        const res = await fetch('/api/contracts/reconcile', { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(`Reconcile failed: ${data.error || res.statusText}`);
+          return;
+        }
+
+        if (data.reconciled > 0) {
+          alert(`Reconciled ${data.reconciled} declaration(s):\n${data.players.join('\n')}\n\nRefresh the page to see updates.`);
+          location.reload();
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Reconcile error:', err);
+        alert('Network error during reconcile.');
+      } finally {
+        reconcileBtn.disabled = false;
+        reconcileBtn.textContent = 'Reconcile';
+      }
+    });
+
+    // Migrate handler — one-time Blob → Redis migration
+    const migrateBtn = document.getElementById('migrateBtn');
+    migrateBtn?.addEventListener('click', async () => {
+      if (!confirm('Migrate all declarations from Vercel Blob to Redis? This is safe to run multiple times.')) return;
+
+      migrateBtn.disabled = true;
+      migrateBtn.textContent = 'Migrating...';
+
+      try {
+        const res = await fetch('/api/contracts/migrate-to-redis', { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(`Migration failed: ${data.error || res.statusText}`);
+          return;
+        }
+
+        alert(`Migrated ${data.migrated} declaration(s) to Redis.\n\nRefresh the page to verify.`);
+        location.reload();
+      } catch (err) {
+        console.error('Migration error:', err);
+        alert('Network error during migration.');
+      } finally {
+        migrateBtn.disabled = false;
+        migrateBtn.textContent = 'Migrate to Redis';
       }
     });
 
