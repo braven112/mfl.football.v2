@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T19:02:38.424Z"
+    "fetchedAt": "2026-03-22T19:18:09.368Z"
   },
   "players": [
     {
@@ -2564,6 +2564,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "13630",
+          "name": "Sutton, Courtland"
+        },
+        {
           "id": "16189",
           "name": "Mims, Marvin"
         },
@@ -2666,6 +2670,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "13630",
+          "name": "Sutton, Courtland"
+        },
         {
           "id": "16189",
           "name": "Mims, Marvin"
@@ -3753,7 +3761,7 @@
       "salary": 975000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "2",
       "points": 0,
       "team": "PHI",
       "draftYear": 2023,
@@ -3804,7 +3812,7 @@
       "salary": 775000,
       "franchiseId": "0004",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "3",
       "points": 0,
       "team": "LAC",
       "draftYear": 2024,
@@ -4798,7 +4806,7 @@
       "salary": 1000000,
       "franchiseId": "0005",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "3",
       "points": 0,
       "team": "KC",
       "draftYear": 2021,
@@ -11036,7 +11044,7 @@
       "salary": 1000000,
       "franchiseId": "0012",
       "status": "ROSTER",
-      "contractYear": "1",
+      "contractYear": "2",
       "points": 0,
       "team": "HOU",
       "draftYear": 2018,
@@ -12100,6 +12108,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13630",
+      "name": "Sutton, Courtland",
+      "position": "WR",
+      "salary": 5000000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "DEN",
+      "draftYear": 2018,
+      "draftTeam": "DEN",
+      "birthdate": 813301200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13630_thumb.jpg",
+      "externalIds": {
+        "mfl": "13630",
+        "sleeper": "5045",
+        "gsis": "00-0034348"
+      },
+      "sleeper": {
+        "id": "5045",
+        "fullName": "Courtland Sutton",
+        "team": "DEN",
+        "age": 30,
+        "height": "76",
+        "weight": "216",
+        "number": 14,
+        "college": "SMU",
+        "birthDate": "1995-10-10",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034348"
       },
       "nflverse": null,
       "gamesPlayed": null,
@@ -13207,7 +13261,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13630",
+          "name": "Sutton, Courtland"
+        }
+      ]
     },
     {
       "id": "0520",
