@@ -1,0 +1,1020 @@
+---
+/**
+ * Intel Page — Competitive Intelligence Dashboard
+ *
+ * A single-page dashboard that aggregates cap, roster, contract, and draft data
+ * into a competitive scouting report for every franchise. Each team gets a power
+ * score, archetype classification, component breakdowns, and key highlights.
+ *
+ * Data reuses the same league-summary-utils pipeline as League Summary to
+ * guarantee consistency.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { SALARY_YEARS } from '../../utils/salary-calculations';
+import {
+  computeLeagueSummary,
+  parseSalaryAdjustment,
+  type SalaryPlayer,
+  type TeamConfig,
+} from '../../utils/league-summary-utils';
+import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
+import { computeTeamIntel, type TeamIntel } from '../../utils/intel-utils';
+import { chooseTeamName } from '../../utils/team-names';
+import { parseNumber, formatCompactNumber } from '../../utils/formatters';
+
+export const prerender = false;
+
+// ---------------------------------------------------------------------------
+// Data loading (same pattern as league-summary.astro)
+// ---------------------------------------------------------------------------
+
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
+  eager: true,
+});
+
+const salaryAdjustmentFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  { eager: true }
+);
+
+const draftResultsFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractSeason = (filepath: string): string | null => {
+  const match = filepath.match(/(\d{4})\.json$/);
+  return match ? match[1] : null;
+};
+
+const extractFeedSeason = (filepath: string): string | null => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Get latest roster data
+const rosterEntries = Object.entries(rosterModules)
+  .map(([path, mod]) => ({
+    season: extractSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season && item.data)
+  .sort((a, b) => parseInt(b.season!) - parseInt(a.season!));
+
+const latestRoster = rosterEntries[0]?.data || {};
+const currentYear = rosterEntries[0]?.season || String(SALARY_YEARS[0]);
+
+// Salary adjustments
+const adjustmentEntries = Object.entries(salaryAdjustmentFeeds)
+  .map(([path, mod]) => ({
+    season: extractFeedSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season === currentYear && item.data);
+
+const adjustmentData = adjustmentEntries[0]?.data || {};
+const rawAdjustments = adjustmentData.salaryAdjustments?.salaryAdjustment || [];
+
+// Draft capital
+const draftResultsEntries = Object.entries(draftResultsFeeds)
+  .map(([path, mod]) => ({
+    season: extractFeedSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season === currentYear && item.data);
+
+const draftResultsData = draftResultsEntries[0]?.data || null;
+const draftCapitalMap = getDraftCapitalFromDraftResults(draftResultsData);
+
+// ---------------------------------------------------------------------------
+// Build team configs + player list
+// ---------------------------------------------------------------------------
+
+const teamConfigs: TeamConfig[] = (leagueConfig.teams ?? []).map((team: any) => ({
+  franchiseId: team.franchiseId,
+  name: team.name,
+  nameMedium: team.nameMedium,
+  nameShort: team.nameShort,
+  abbrev: team.abbrev,
+  icon: team.icon,
+  division: team.division,
+}));
+
+const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  position: p.position ?? '',
+  salary: parseNumber(p.salary),
+  franchiseId: p.franchiseId ?? '',
+  status: p.status ?? 'ROSTER',
+  contractYear: p.contractYear ?? '0',
+  points: parseNumber(p.points),
+  birthdate: parseNumber(p.birthdate),
+}));
+
+// ---------------------------------------------------------------------------
+// Compute intel data
+// ---------------------------------------------------------------------------
+
+const teamSummaries = computeLeagueSummary(
+  players,
+  rawAdjustments,
+  draftCapitalMap,
+  teamConfigs,
+);
+
+const teamIntel = computeTeamIntel(teamSummaries, draftCapitalMap);
+
+// Apply display names
+const teamsForDisplay: TeamIntel[] = teamIntel.map((team) => {
+  const config = teamConfigs.find((t) => t.franchiseId === team.franchiseId);
+  const nameOpts = {
+    fullName: team.teamName,
+    nameMedium: config?.nameMedium,
+    nameShort: config?.nameShort,
+    abbrev: config?.abbrev,
+  };
+  return {
+    ...team,
+    teamName: chooseTeamName(nameOpts, 'default'),
+    teamNameShort: chooseTeamName(nameOpts, 'short'),
+  };
+}).sort((a, b) => b.powerScore - a.powerScore);
+
+// Archetype counts for summary strip
+const archetypeCounts = teamsForDisplay.reduce((acc, t) => {
+  acc[t.archetype] = (acc[t.archetype] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
+
+const avgPowerScore = Math.round(
+  teamsForDisplay.reduce((s, t) => s + t.powerScore, 0) / teamsForDisplay.length
+);
+
+// Archetype color mapping
+const archetypeColors: Record<string, string> = {
+  'Win-Now': '#2e8743',
+  'Contender': '#1c497c',
+  'Retooling': '#d97706',
+  'Rebuilding': '#dc2626',
+};
+
+function fmtCap(v: number): string {
+  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+  return `$${v}`;
+}
+---
+
+<TheLeagueLayout title="Power Rankings | The League">
+  <main class="intel-page">
+
+    <!-- ===== HERO ===== -->
+    <header class="intel-hero">
+      <div class="intel-hero__eyebrow">
+        <span class="intel-tag">Competitive Intelligence</span>
+        <span class="intel-dot">&middot;</span>
+        <span class="intel-hero__date">{currentYear} Season</span>
+      </div>
+
+      <h1 class="intel-hero__title">Know the league<br>before the league knows you.</h1>
+
+      <p class="intel-hero__deck">
+        Every franchise scored, classified, and scouted. Cap flexibility, roster health,
+        contract security, and draft capital distilled into a single competitive intelligence
+        dashboard. The kind of data that used to require a spreadsheet, three browser tabs,
+        and the patience of a man who voluntarily manages a 16-team dynasty league.
+      </p>
+    </header>
+
+    <!-- ===== STATS STRIP ===== -->
+    <div class="intel-stats">
+      <div class="intel-stats__item">
+        <div class="intel-stats__value">{teamsForDisplay.length}</div>
+        <div class="intel-stats__label">Teams scouted</div>
+      </div>
+      <div class="intel-stats__item">
+        <div class="intel-stats__value">{avgPowerScore}</div>
+        <div class="intel-stats__label">Avg power score</div>
+      </div>
+      <div class="intel-stats__item">
+        <div class="intel-stats__value">{archetypeCounts['Win-Now'] ?? 0}</div>
+        <div class="intel-stats__label">Win-now teams</div>
+      </div>
+      <div class="intel-stats__item">
+        <div class="intel-stats__value">{archetypeCounts['Rebuilding'] ?? 0}</div>
+        <div class="intel-stats__label">Rebuilding</div>
+      </div>
+    </div>
+
+    <!-- ===== POWER RANKINGS TABLE ===== -->
+    <section class="intel-section">
+      <div class="section-header">
+        <h2 class="section-header__title">Power Rankings</h2>
+        <p class="section-header__sub">Composite score from production, cap, roster, contract, and draft metrics</p>
+      </div>
+
+      <div class="intel-table-wrap">
+        <table class="intel-table">
+          <thead>
+            <tr>
+              <th class="intel-th intel-th--rank">#</th>
+              <th class="intel-th intel-th--team">Team</th>
+              <th class="intel-th intel-th--archetype">Archetype</th>
+              <th class="intel-th intel-th--score">Power</th>
+              <th class="intel-th intel-th--component">Prod</th>
+              <th class="intel-th intel-th--component">Cap</th>
+              <th class="intel-th intel-th--component">Roster</th>
+              <th class="intel-th intel-th--component">Contract</th>
+              <th class="intel-th intel-th--component">Draft</th>
+            </tr>
+          </thead>
+          <tbody>
+            {teamsForDisplay.map((team, i) => (
+              <tr class="intel-row" data-franchise={team.franchiseId}>
+                <td class="intel-td intel-td--rank">{i + 1}</td>
+                <td class="intel-td intel-td--team">
+                  <div class="intel-team">
+                    <img
+                      src={team.teamIcon}
+                      alt=""
+                      class="intel-team__icon"
+                      width="28"
+                      height="28"
+                      loading="lazy"
+                    />
+                    <div class="intel-team__info">
+                      <span class="intel-team__name">{team.teamName}</span>
+                      <span class="intel-team__division">{team.division}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="intel-td intel-td--archetype">
+                  <span
+                    class="intel-archetype-badge"
+                    style={`--archetype-color: ${archetypeColors[team.archetype] ?? '#6b7280'}`}
+                  >
+                    {team.archetype}
+                  </span>
+                </td>
+                <td class="intel-td intel-td--score">
+                  <div class="intel-power">
+                    <span class="intel-power__value">{team.powerScore}</span>
+                    <div class="intel-power__bar">
+                      <div class="intel-power__fill" style={`width: ${team.powerScore}%`}></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="intel-td intel-td--component">{team.productionScore}</td>
+                <td class="intel-td intel-td--component">{team.capScore}</td>
+                <td class="intel-td intel-td--component">{team.rosterScore}</td>
+                <td class="intel-td intel-td--component">{team.contractScore}</td>
+                <td class="intel-td intel-td--component">{team.draftScore}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== TEAM INTEL CARDS ===== -->
+    <section class="intel-section">
+      <div class="section-header">
+        <h2 class="section-header__title">Franchise Scouting Reports</h2>
+        <p class="section-header__sub">Detailed competitive intelligence for every franchise</p>
+      </div>
+
+      <div class="intel-cards">
+        {teamsForDisplay.map((team, i) => (
+          <article class="intel-card" data-franchise={team.franchiseId}>
+            <div class="intel-card__header">
+              <div class="intel-card__rank">#{i + 1}</div>
+              <img
+                src={team.teamIcon}
+                alt=""
+                class="intel-card__icon"
+                width="36"
+                height="36"
+                loading="lazy"
+              />
+              <div class="intel-card__title-group">
+                <h3 class="intel-card__name">{team.teamName}</h3>
+                <div class="intel-card__meta">
+                  <span class="intel-card__division">{team.division}</span>
+                  <span class="intel-card__dot">&middot;</span>
+                  <span
+                    class="intel-archetype-badge intel-archetype-badge--sm"
+                    style={`--archetype-color: ${archetypeColors[team.archetype] ?? '#6b7280'}`}
+                  >
+                    {team.archetype}
+                  </span>
+                </div>
+              </div>
+              <div class="intel-card__power">
+                <span class="intel-card__power-value">{team.powerScore}</span>
+                <span class="intel-card__power-label">PWR</span>
+              </div>
+            </div>
+
+            <!-- Score Bars -->
+            <div class="intel-card__scores">
+              {[
+                { label: 'Production', value: team.productionScore },
+                { label: 'Cap', value: team.capScore },
+                { label: 'Roster', value: team.rosterScore },
+                { label: 'Contract', value: team.contractScore },
+                { label: 'Draft', value: team.draftScore },
+              ].map((s) => (
+                <div class="intel-score-bar">
+                  <span class="intel-score-bar__label">{s.label}</span>
+                  <div class="intel-score-bar__track">
+                    <div
+                      class="intel-score-bar__fill"
+                      style={`width: ${s.value}%`}
+                      data-value={s.value}
+                    ></div>
+                  </div>
+                  <span class="intel-score-bar__value">{s.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <!-- Key Metrics Grid -->
+            <div class="intel-card__metrics">
+              <div class="intel-metric">
+                <span class="intel-metric__value">{fmtCap(team.effectiveCapSpace)}</span>
+                <span class="intel-metric__label">Eff. Cap</span>
+              </div>
+              <div class="intel-metric">
+                <span class="intel-metric__value">{team.weightedAge.toFixed(1)}</span>
+                <span class="intel-metric__label">Wtd Age</span>
+              </div>
+              <div class="intel-metric">
+                <span class="intel-metric__value">{team.playersUnderContract}</span>
+                <span class="intel-metric__label">Signed</span>
+              </div>
+              <div class="intel-metric">
+                <span class="intel-metric__value">{team.expiringContracts}</span>
+                <span class="intel-metric__label">Expiring</span>
+              </div>
+              <div class="intel-metric">
+                <span class="intel-metric__value">{team.draftCapitalWeighted}</span>
+                <span class="intel-metric__label">Draft (wtd)</span>
+              </div>
+              <div class="intel-metric">
+                <span class="intel-metric__value">{team.avgContractLength.toFixed(1)}</span>
+                <span class="intel-metric__label">Avg Contract</span>
+              </div>
+            </div>
+
+            <!-- Highlights -->
+            {team.highlights.length > 0 && (
+              <div class="intel-card__highlights">
+                {team.highlights.map((h) => (
+                  <div class={`intel-highlight intel-highlight--${h.sentiment}`}>
+                    <span class="intel-highlight__label">{h.label}</span>
+                    <span class="intel-highlight__value">{h.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- ===== METHODOLOGY ===== -->
+    <section class="intel-section intel-methodology">
+      <div class="section-header">
+        <h2 class="section-header__title">Methodology</h2>
+        <p class="section-header__sub">How the power score is calculated</p>
+      </div>
+
+      <div class="intel-method-grid">
+        <div class="intel-method-card">
+          <div class="intel-method-card__weight">15%</div>
+          <div class="intel-method-card__content">
+            <h4 class="intel-method-card__title">Production</h4>
+            <p class="intel-method-card__body">Retention-weighted roster strength (60%) and cap efficiency (40%). Points scored is the ultimate test.</p>
+          </div>
+        </div>
+        <div class="intel-method-card">
+          <div class="intel-method-card__weight">15%</div>
+          <div class="intel-method-card__content">
+            <h4 class="intel-method-card__title">Cap Score</h4>
+            <p class="intel-method-card__body">Dead money exposure (60%) and effective cap space (40%). Cap space is a means, not an end — penalizes dead money, not spending.</p>
+          </div>
+        </div>
+        <div class="intel-method-card">
+          <div class="intel-method-card__weight">25%</div>
+          <div class="intel-method-card__content">
+            <h4 class="intel-method-card__title">Roster Score</h4>
+            <p class="intel-method-card__body">Salary-weighted age (40%), roster holes (30%), and positional balance (30%). Expensive + old is the risk, not age alone. Missing QB/TE penalized heavily.</p>
+          </div>
+        </div>
+        <div class="intel-method-card">
+          <div class="intel-method-card__weight">30%</div>
+          <div class="intel-method-card__content">
+            <h4 class="intel-method-card__title">Contract Score</h4>
+            <p class="intel-method-card__body">Top player retention (40%), average contract length (35%), and expiring exposure (25%). Contract control IS dynasty — locked-in cores win leagues.</p>
+          </div>
+        </div>
+        <div class="intel-method-card">
+          <div class="intel-method-card__weight">15%</div>
+          <div class="intel-method-card__content">
+            <h4 class="intel-method-card__title">Draft Score</h4>
+            <p class="intel-method-card__body">Round-weighted draft picks (1st=3x, 2nd=2x, 3rd=1x). First-rounders aren't third-rounders.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</TheLeagueLayout>
+
+<style>
+  /* ===========================
+     Shell
+  =========================== */
+  .intel-page {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+  }
+
+  /* ===========================
+     Hero
+  =========================== */
+  .intel-hero {
+    padding: 2.75rem 0 2.25rem;
+    margin-bottom: 2rem;
+    max-width: 68rem;
+  }
+
+  .intel-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .intel-tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+  }
+
+  .intel-dot {
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.75rem;
+  }
+
+  .intel-hero__date {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-weight: 500;
+  }
+
+  .intel-hero__title {
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 1.125rem;
+  }
+
+  .intel-hero__deck {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 64ch;
+    margin: 0;
+  }
+
+  /* ===========================
+     Stats Strip
+  =========================== */
+  .intel-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 3rem;
+  }
+
+  .intel-stats__item {
+    padding: 1rem 1.125rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .intel-stats__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary, #1c497c);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .intel-stats__label {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Sections
+  =========================== */
+  .intel-section {
+    margin-bottom: 3rem;
+  }
+
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-header__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    line-height: 1;
+  }
+
+  .section-header__sub {
+    margin: 0.3rem 0 0 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+  }
+
+  /* ===========================
+     Power Rankings Table
+  =========================== */
+  .intel-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .intel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .intel-th {
+    position: sticky;
+    top: 0;
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    white-space: nowrap;
+  }
+
+  .intel-th--rank { width: 2.5rem; text-align: center; }
+  .intel-th--team { min-width: 10rem; }
+  .intel-th--archetype { width: 6rem; }
+  .intel-th--score { width: 8rem; }
+  .intel-th--component { width: 4rem; text-align: center; }
+
+  .intel-row {
+    transition: background 0.1s ease;
+  }
+
+  .intel-row:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .intel-td {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    vertical-align: middle;
+  }
+
+  .intel-td--rank {
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.75rem;
+  }
+
+  .intel-td--component {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* Team cell */
+  .intel-team {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .intel-team__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .intel-team__info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .intel-team__name {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+
+  .intel-team__division {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Archetype badge */
+  .intel-archetype-badge {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--archetype-color, #6b7280);
+    background: color-mix(in srgb, var(--archetype-color, #6b7280) 10%, transparent);
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .intel-archetype-badge--sm {
+    font-size: 0.5625rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  /* Power score */
+  .intel-power {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .intel-power__value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+    min-width: 1.75rem;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .intel-power__bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 3rem;
+  }
+
+  .intel-power__fill {
+    height: 100%;
+    background: var(--color-primary, #1c497c);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  /* ===========================
+     Team Intel Cards
+  =========================== */
+  .intel-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .intel-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 1.125rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .intel-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .intel-card__rank {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-400, #9ca3af);
+    min-width: 1.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .intel-card__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .intel-card__title-group {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .intel-card__name {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+
+  .intel-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.125rem;
+  }
+
+  .intel-card__division {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .intel-card__dot {
+    color: var(--color-gray-300, #d1d5db);
+    font-size: 0.625rem;
+  }
+
+  .intel-card__power {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .intel-card__power-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary, #1c497c);
+    line-height: 1;
+  }
+
+  .intel-card__power-label {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* Score bars */
+  .intel-card__scores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .intel-score-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .intel-score-bar__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+    min-width: 4.5rem;
+  }
+
+  .intel-score-bar__track {
+    flex: 1;
+    height: 5px;
+    background: var(--color-gray-200, #e5e7eb);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .intel-score-bar__fill {
+    height: 100%;
+    background: var(--color-primary, #1c497c);
+    border-radius: 3px;
+  }
+
+  .intel-score-bar__value {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+    min-width: 1.5rem;
+    text-align: right;
+  }
+
+  /* Metrics grid */
+  .intel-card__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .intel-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 0.25rem;
+    background: white;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  .intel-metric__value {
+    font-size: 0.875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    line-height: 1;
+    margin-bottom: 0.2rem;
+  }
+
+  .intel-metric__label {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* Highlights */
+  .intel-card__highlights {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .intel-highlight {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .intel-highlight--positive {
+    background: color-mix(in srgb, #2e8743 8%, transparent);
+    border-left: 2px solid #2e8743;
+  }
+
+  .intel-highlight--negative {
+    background: color-mix(in srgb, #dc2626 6%, transparent);
+    border-left: 2px solid #dc2626;
+  }
+
+  .intel-highlight--neutral {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
+    border-left: 2px solid var(--color-primary, #1c497c);
+  }
+
+  .intel-highlight__label {
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .intel-highlight__value {
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* ===========================
+     Methodology
+  =========================== */
+  .intel-methodology {
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    padding-top: 2.5rem;
+  }
+
+  .intel-method-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+  }
+
+  .intel-method-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .intel-method-card__weight {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-primary, #1c497c);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .intel-method-card__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .intel-method-card__body {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* ===========================
+     Responsive
+  =========================== */
+  @media (max-width: 900px) {
+    .intel-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .intel-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .intel-method-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .intel-th--component {
+      display: none;
+    }
+
+    .intel-td--component {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .intel-page {
+      padding: 0 1rem 3rem;
+    }
+
+    .intel-hero__title {
+      font-size: clamp(1.5rem, 6vw, 2.25rem);
+    }
+
+    .intel-method-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .intel-card__metrics {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>
