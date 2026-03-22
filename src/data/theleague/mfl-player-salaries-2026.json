@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T06:57:13.615Z"
+    "fetchedAt": "2026-03-22T07:16:24.101Z"
   },
   "players": [
     {
@@ -4589,6 +4589,57 @@
       "depthChartAhead": null
     },
     {
+      "id": "15337",
+      "name": "Gray, Noah",
+      "position": "TE",
+      "salary": 1000000,
+      "franchiseId": "0005",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "KC",
+      "draftYear": 2021,
+      "draftTeam": "KCC",
+      "birthdate": 925448400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15337_thumb.jpg",
+      "externalIds": {
+        "mfl": "15337",
+        "sleeper": "7828",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "7828",
+        "fullName": "Noah Gray",
+        "team": "KC",
+        "age": 26,
+        "height": "75",
+        "weight": "240",
+        "number": 83,
+        "college": "Duke",
+        "birthDate": "1999-04-30",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "11244",
+          "name": "Kelce, Travis"
+        }
+      ]
+    },
+    {
       "id": "15798",
       "name": "Likely, Isaiah",
       "position": "TE",
@@ -5644,7 +5695,16 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11244",
+          "name": "Kelce, Travis"
+        },
+        {
+          "id": "15337",
+          "name": "Gray, Noah"
+        }
+      ]
     },
     {
       "id": "15109",
@@ -11613,6 +11673,52 @@
       "depthChartAhead": null
     },
     {
+      "id": "11244",
+      "name": "Kelce, Travis",
+      "position": "TE",
+      "salary": 4750000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "KC",
+      "draftYear": 2013,
+      "draftTeam": "KCC",
+      "birthdate": 623566800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/11244_thumb.jpg",
+      "externalIds": {
+        "mfl": "11244",
+        "sleeper": "1466",
+        "gsis": "00-0030506"
+      },
+      "sleeper": {
+        "id": "1466",
+        "fullName": "Travis Kelce",
+        "team": "KC",
+        "age": 36,
+        "height": "77",
+        "weight": "250",
+        "number": 87,
+        "college": "Cincinnati",
+        "birthDate": "1989-10-05",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 13,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0030506"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "15889",
       "name": "Okonkwo, Chigoziem",
       "position": "TE",
@@ -14415,6 +14521,52 @@
           "WR"
         ],
         "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "0531",
+      "name": "Ravens, Baltimore",
+      "position": "Def",
+      "salary": 1050000,
+      "franchiseId": "0016",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "BAL",
+      "draftYear": 1970,
+      "draftTeam": "BAL",
+      "birthdate": null,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/0531_thumb.jpg",
+      "externalIds": {
+        "mfl": "0531",
+        "sleeper": "BAL",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "BAL",
+        "fullName": null,
+        "team": "BAL",
+        "age": null,
+        "height": null,
+        "weight": null,
+        "number": null,
+        "college": null,
+        "birthDate": null,
+        "status": null,
+        "active": true,
+        "position": "DEF",
+        "depthChartPosition": null,
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "DEF"
+        ],
+        "experience": null,
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": null
