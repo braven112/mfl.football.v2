@@ -59,6 +59,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
@@ -824,11 +825,24 @@ Object.entries(playersFeeds).forEach(([path, mod]) => {
 // Build player data mapping from live rosters data
 // This ensures we show current roster assignments AND salary data (not frozen week 14)
 const liveRosterDataByPlayerId = {};
+
+// For the current league year, try Redis cache first (stale-while-revalidate).
+// This ensures contract changes on MFL are reflected within ~2 minutes without
+// needing a manual data sync.
+const cachedRosterPlayers = await getCachedRosters(currentLeagueYearStr, '13522');
+if (cachedRosterPlayers) {
+  liveRosterDataByPlayerId[currentLeagueYearStr] = cachedRosterPlayers;
+}
+
+// Load from static files for all seasons (fills in historical years,
+// and provides fallback for current year if Redis cache is empty)
 Object.entries(rostersFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
   const data = getModuleData(mod);
   const franchises = data?.rosters?.franchise ?? [];
   if (!season || !Array.isArray(franchises)) return;
+  // Skip current league year if we already have cached data from Redis
+  if (season === currentLeagueYearStr && cachedRosterPlayers) return;
   if (!liveRosterDataByPlayerId[season]) liveRosterDataByPlayerId[season] = {};
   franchises.forEach((franchise) => {
     const franchiseId = franchise.id;
@@ -848,12 +862,6 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
     });
   });
 });
-
-// MFL rosters API is the single source of truth for roster assignments.
-// Previously, transaction replay logic was used here to fix stale pre-rollover data,
-// but now that we fetch fresh MFL feeds directly, this is no longer needed.
-// The liveRosterDataByPlayerId map built above from mfl-feeds/*/rosters.json
-// already reflects the authoritative roster state from MFL.
 
 // Load MFL injury data for current season (dynamically determined week)
 const currentWeek = getCurrentWeek();
