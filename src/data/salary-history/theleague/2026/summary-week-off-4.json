@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-22T14-36-25.098Z",
+  "snapshot": "2026-03-22T15-16-43.028Z",
   "week": "off-4",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T14:36:25.365Z",
+    "fetchedAt": "2026-03-22T15:16:43.174Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-4).",
-    "generatedAt": "2026-03-22T14:36:25.365Z"
+    "generatedAt": "2026-03-22T15:16:43.174Z"
   },
   "positions": {
     "WR": {
@@ -665,14 +665,14 @@
       ]
     },
     "RB": {
-      "totalPlayers": 75,
+      "totalPlayers": 76,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
       "starterAverage": 3796472.57,
       "starterMedian": 3575000,
       "starterCount": 30,
-      "averageSalary": 1858265.06,
+      "averageSalary": 1844011.57,
       "medianSalary": 632225,
       "topPlayers": [
         {
@@ -878,6 +878,12 @@
           "name": "Swift, D'Andre",
           "salary": 825000,
           "franchiseId": "0013"
+        },
+        {
+          "id": "16757",
+          "name": "Vidal, Kimani",
+          "salary": 775000,
+          "franchiseId": "0004"
         },
         {
           "id": "17045",
@@ -1285,15 +1291,15 @@
       ]
     },
     "Def": {
-      "totalPlayers": 27,
+      "totalPlayers": 28,
       "top3Average": 1391500,
-      "top5Average": 1274800,
-      "top10Average": 1102667,
-      "starterAverage": 988830.94,
-      "starterMedian": 908105,
+      "top5Average": 1279800,
+      "top10Average": 1122321,
+      "starterAverage": 1010643.44,
+      "starterMedian": 952875,
       "starterCount": 16,
-      "averageSalary": 826600.74,
-      "medianSalary": 775000,
+      "averageSalary": 835472.14,
+      "medianSalary": 795875,
       "topPlayers": [
         {
           "id": "0523",
@@ -1318,6 +1324,12 @@
           "name": "Bills, Buffalo",
           "salary": 1149500,
           "franchiseId": "0005"
+        },
+        {
+          "id": "0518",
+          "name": "Eagles, Philadelphia",
+          "salary": 1075000,
+          "franchiseId": "0013"
         },
         {
           "id": "0531",
