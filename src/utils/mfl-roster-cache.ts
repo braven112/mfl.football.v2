@@ -14,6 +14,7 @@ const STALE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 type RedisClient = {
   get: <T>(key: string) => Promise<T | null>;
   set: (key: string, value: unknown, opts?: { ex?: number }) => Promise<unknown>;
+  del: (key: string) => Promise<unknown>;
 };
 
 let loggedMissingRedis = false;
@@ -105,6 +106,24 @@ function triggerBackgroundRefresh(season: string, leagueId: string): void {
   fetchAndCacheRosters(season, leagueId)
     .catch((err) => console.warn('[mfl-roster-cache] Background refresh failed:', err))
     .finally(() => refreshing.delete(key));
+}
+
+/**
+ * Invalidate the roster cache and immediately fetch fresh data from MFL.
+ * Call this after a contract write to MFL so the roster page reflects changes.
+ */
+export async function invalidateRosterCache(season: string, leagueId: string): Promise<void> {
+  const redis = await getRedis();
+  if (!redis) return;
+
+  const key = cacheKey(leagueId, season);
+  console.log(`[mfl-roster-cache] Invalidating cache: ${key}`);
+
+  // Delete the stale cache, then immediately re-fetch from MFL
+  await redis.del(key);
+
+  // Fetch fresh data right now (not in background — we want it ready for the next page load)
+  await fetchAndCacheRosters(season, leagueId);
 }
 
 async function fetchAndCacheRosters(season: string, leagueId: string): Promise<void> {

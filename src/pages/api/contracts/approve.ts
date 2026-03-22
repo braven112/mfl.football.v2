@@ -11,6 +11,8 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getMFLCookiesFromRequest } from '../../../utils/session';
 import { getDeclarationById, updateDeclaration } from '../../../utils/contract-storage';
 import { writeContractToMFL } from '../../../utils/mfl-contract-writer';
+import { invalidateRosterCache } from '../../../utils/mfl-roster-cache';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -105,6 +107,12 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       console.log('[approve] declaration updated to applied:', declarationId);
+
+      // Invalidate roster cache so the roster page reflects the contract change immediately
+      const season = String(getCurrentLeagueYear());
+      invalidateRosterCache(season, '13522').catch((err) =>
+        console.warn('[approve] roster cache invalidation failed:', err)
+      );
 
       return new Response(
         JSON.stringify({
