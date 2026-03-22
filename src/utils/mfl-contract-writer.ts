@@ -232,7 +232,7 @@ export async function writeContractToMFL(
       if (response.ok) {
         const text = await response.text();
         // MFL returns XML; check for error indicators
-        if (text.includes('error') || text.includes('Error')) {
+        if (text.includes('<error>') || text.includes('<error ')) {
           lastError = `MFL returned error response: ${text.slice(0, 200)}`;
           console.error(`[mfl-writer] attempt ${attempt + 1} failed:`, lastError);
         } else {
@@ -321,7 +321,7 @@ export async function writeMultipleContractsToMFL(
 
       if (response.ok) {
         const text = await response.text();
-        if (text.includes('error') || text.includes('Error')) {
+        if (text.includes('<error>') || text.includes('<error ')) {
           lastError = `MFL returned error response: ${text.slice(0, 200)}`;
           console.error(`[mfl-writer] batch attempt ${attempt + 1} failed:`, lastError);
         } else {

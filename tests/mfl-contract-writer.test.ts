@@ -175,6 +175,31 @@ describe('mfl-contract-writer', () => {
       expect(result.error).toContain('Failed after 3 attempts');
     }, 20000);
 
+    it('does not false-positive on success responses containing the word error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
+      });
+      // MFL returns 200 with "0 errors" in the success HTML — must not be treated as failure
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/html' }),
+        text: () => Promise.resolve('<html><body>Import complete. 1 player(s) processed, 0 errors.</body></html>'),
+      });
+
+      const { writeContractToMFL } = await import('../src/utils/mfl-contract-writer');
+      const result = await writeContractToMFL({
+        playerId: '14056',
+        salary: '500000',
+        contractYear: '3',
+        contractInfo: '',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.attempts).toBe(1);
+    });
+
     it('detects MFL error responses in otherwise OK HTTP responses', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
