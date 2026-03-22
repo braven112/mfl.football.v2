@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T14:20:51.148Z"
+    "fetchedAt": "2026-03-22T14:36:25.093Z"
   },
   "players": [
     {
@@ -3697,6 +3697,57 @@
         {
           "id": "15754",
           "name": "Olave, Chris"
+        }
+      ]
+    },
+    {
+      "id": "16164",
+      "name": "Bigsby, Tank",
+      "position": "RB",
+      "salary": 975000,
+      "franchiseId": "0004",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "PHI",
+      "draftYear": 2023,
+      "draftTeam": "JAC",
+      "birthdate": 999147600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16164_thumb.jpg",
+      "externalIds": {
+        "mfl": "16164",
+        "sleeper": "9225",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "9225",
+        "fullName": "Tank Bigsby",
+        "team": "PHI",
+        "age": 23,
+        "height": "71",
+        "weight": "215",
+        "number": 37,
+        "college": "Auburn",
+        "birthDate": "2002-08-30",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "13604",
+          "name": "Barkley, Saquon"
         }
       ]
     },
@@ -11040,6 +11091,52 @@
       "depthChartAhead": null
     },
     {
+      "id": "15979",
+      "name": "Dicker, Cameron",
+      "position": "PK",
+      "salary": 900000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "LAC",
+      "draftYear": 2022,
+      "draftTeam": "FA",
+      "birthdate": 957589200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15979_thumb.jpg",
+      "externalIds": {
+        "mfl": "15979",
+        "sleeper": "8259",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8259",
+        "fullName": "Cameron Dicker",
+        "team": "LAC",
+        "age": 25,
+        "height": "73",
+        "weight": "216",
+        "number": 11,
+        "college": "Texas",
+        "birthDate": "2000-05-06",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 4,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "14782",
       "name": "Love, Jordan",
       "position": "QB",
@@ -12303,6 +12400,10 @@
         {
           "id": "13604",
           "name": "Barkley, Saquon"
+        },
+        {
+          "id": "16164",
+          "name": "Bigsby, Tank"
         }
       ]
     },

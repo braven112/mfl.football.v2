@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-22T14-20-51.152Z",
+  "snapshot": "2026-03-22T14-36-25.098Z",
   "week": "off-4",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-22T14:20:51.456Z",
+    "fetchedAt": "2026-03-22T14:36:25.365Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-4).",
-    "generatedAt": "2026-03-22T14:20:51.456Z"
+    "generatedAt": "2026-03-22T14:36:25.365Z"
   },
   "positions": {
     "WR": {
@@ -665,15 +665,15 @@
       ]
     },
     "RB": {
-      "totalPlayers": 74,
+      "totalPlayers": 75,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
-      "starterAverage": 3795694.73,
+      "starterAverage": 3796472.57,
       "starterMedian": 3575000,
       "starterCount": 30,
-      "averageSalary": 1870201.07,
-      "medianSalary": 627233.75,
+      "averageSalary": 1858265.06,
+      "medianSalary": 632225,
       "topPlayers": [
         {
           "id": "13130",
@@ -848,6 +848,12 @@
           "name": "Johnson, Kaleb",
           "salary": 990000,
           "franchiseId": "0013"
+        },
+        {
+          "id": "16164",
+          "name": "Bigsby, Tank",
+          "salary": 975000,
+          "franchiseId": "0004"
         },
         {
           "id": "15749",
@@ -1122,15 +1128,15 @@
       ]
     },
     "PK": {
-      "totalPlayers": 23,
-      "top3Average": 1014440,
-      "top5Average": 865112.5,
-      "top10Average": 729056.25,
-      "starterAverage": 650499.22,
-      "starterMedian": 590000,
+      "totalPlayers": 24,
+      "top3Average": 1094440,
+      "top5Average": 920664,
+      "top10Average": 761556.25,
+      "starterAverage": 677530.47,
+      "starterMedian": 605000,
       "starterCount": 16,
-      "averageSalary": 591108.15,
-      "medianSalary": 550000,
+      "averageSalary": 603978.65,
+      "medianSalary": 557837.5,
       "topPlayers": [
         {
           "id": "16414",
@@ -1143,6 +1149,12 @@
           "name": "Butker, Harrison",
           "salary": 958320,
           "franchiseId": "0004"
+        },
+        {
+          "id": "15979",
+          "name": "Dicker, Cameron",
+          "salary": 900000,
+          "franchiseId": "0012"
         },
         {
           "id": "12956",
