@@ -291,6 +291,51 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       }, 4500);
     }
 
+    // --- Inline confirm system ---
+    // Replaces browser confirm() with an inline button swap.
+    // Returns a Promise<boolean> that resolves when the user confirms or cancels.
+    function inlineConfirm(btn, message) {
+      return new Promise((resolve) => {
+        const parent = btn.parentElement;
+        const originalDisplay = [];
+        // Hide siblings
+        for (const child of parent.children) {
+          originalDisplay.push(child.style.display);
+          child.style.display = 'none';
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'inline-confirm';
+
+        const msg = document.createElement('span');
+        msg.className = 'inline-confirm__msg';
+        msg.textContent = message;
+
+        const yesBtn = document.createElement('button');
+        yesBtn.className = 'action-btn inline-confirm__yes';
+        yesBtn.textContent = 'Yes';
+
+        const noBtn = document.createElement('button');
+        noBtn.className = 'action-btn inline-confirm__no';
+        noBtn.textContent = 'No';
+
+        wrap.append(msg, yesBtn, noBtn);
+        parent.appendChild(wrap);
+
+        function cleanup(result) {
+          wrap.remove();
+          let i = 0;
+          for (const child of parent.children) {
+            child.style.display = originalDisplay[i++] || '';
+          }
+          resolve(result);
+        }
+
+        yesBtn.addEventListener('click', () => cleanup(true), { once: true });
+        noBtn.addEventListener('click', () => cleanup(false), { once: true });
+      });
+    }
+
     const pendingList = document.getElementById('pendingList');
     const pendingCountEl = document.getElementById('pendingCount');
     const sectionCountEl = document.querySelector('.section__count');
@@ -385,7 +430,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     });
 
     async function handleApply(declarationId, playerName, btn) {
-      if (!confirm(`Apply contract change for ${playerName} to MFL?`)) return;
+      if (!await inlineConfirm(btn, `Apply ${playerName}?`)) return;
 
       btn.disabled = true;
       btn.textContent = 'Applying\u2026';
@@ -443,7 +488,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     });
 
     async function handleReapply(declarationId, playerName, btn) {
-      if (!confirm(`Reapply contract for ${playerName} to MFL?`)) return;
+      if (!await inlineConfirm(btn, `Reapply ${playerName}?`)) return;
 
       btn.disabled = true;
       btn.textContent = 'Applying\u2026';
@@ -481,7 +526,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     }
 
     async function handleDelete(declarationId, playerName, btn) {
-      if (!confirm(`Delete declaration for ${playerName}? This removes it from the database.`)) return;
+      if (!await inlineConfirm(btn, `Delete ${playerName}?`)) return;
 
       btn.disabled = true;
 
@@ -533,7 +578,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       if (!cards || cards.length === 0) return;
 
       const count = cards.length;
-      if (!confirm(`Apply all ${count} pending declarations to MFL?`)) return;
+      if (!await inlineConfirm(applyAllBtn, `Apply all ${count}?`)) return;
 
       applyAllBtn.disabled = true;
       applyAllBtn.textContent = 'Applying...';
@@ -654,7 +699,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     // Reconcile handler — auto-fixes stuck pending declarations
     const reconcileBtn = document.getElementById('reconcileBtn');
     reconcileBtn?.addEventListener('click', async () => {
-      if (!confirm('Check MFL and auto-mark any stuck pending declarations as applied?')) return;
+      if (!await inlineConfirm(reconcileBtn, 'Reconcile?')) return;
 
       reconcileBtn.disabled = true;
       reconcileBtn.textContent = 'Checking...';
@@ -686,7 +731,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     // Migrate handler — one-time Blob → Redis migration
     const migrateBtn = document.getElementById('migrateBtn');
     migrateBtn?.addEventListener('click', async () => {
-      if (!confirm('Migrate all declarations from Vercel Blob to Redis? This is safe to run multiple times.')) return;
+      if (!await inlineConfirm(migrateBtn, 'Migrate to Redis?')) return;
 
       migrateBtn.disabled = true;
       migrateBtn.textContent = 'Migrating...';
@@ -1463,6 +1508,46 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     }
     .toast--info {
       background: var(--color-info, #2563eb);
+    }
+
+    /* Inline confirm */
+    .inline-confirm {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      animation: inline-confirm-in 0.15s ease-out;
+    }
+
+    @keyframes inline-confirm-in {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .inline-confirm__msg {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-gray-700, #374151);
+      white-space: nowrap;
+    }
+
+    .inline-confirm__yes {
+      background: var(--color-danger, #dc2626);
+      color: #fff;
+      padding: 0.25rem 0.625rem;
+      font-size: 0.6875rem;
+    }
+    .inline-confirm__yes:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+
+    .inline-confirm__no {
+      background: var(--color-gray-200, #e5e7eb);
+      color: var(--color-gray-700, #374151);
+      padding: 0.25rem 0.625rem;
+      font-size: 0.6875rem;
+    }
+    .inline-confirm__no:hover:not(:disabled) {
+      background: var(--color-gray-300, #d1d5db);
     }
   </style>
 </TheLeagueLayout>
