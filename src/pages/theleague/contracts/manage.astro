@@ -232,6 +232,23 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
   </main>
 
   <script type="module">
+    // --- Toast notification system ---
+    const toastContainer = document.createElement('div');
+    toastContainer.id = 'toastContainer';
+    document.body.appendChild(toastContainer);
+
+    function showToast(message, variant = 'error') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast--${variant}`;
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('toast--visible'));
+      setTimeout(() => {
+        toast.classList.remove('toast--visible');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+      }, 4500);
+    }
+
     const pendingList = document.getElementById('pendingList');
     const pendingCountEl = document.getElementById('pendingCount');
     const sectionCountEl = document.querySelector('.section__count');
@@ -344,13 +361,13 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
           // Show specific error so user knows what went wrong
           const msg = data.error || 'Unknown error';
           if (res.status === 401) {
-            alert('Session expired. Please log in again via the sidebar, then retry.');
+            showToast('Session expired. Please log in again via the sidebar, then retry.');
           } else if (res.status === 403) {
-            alert('Commissioner access required. Please log in as commissioner via the sidebar.');
+            showToast('Commissioner access required. Please log in as commissioner via the sidebar.');
           } else if (res.status === 502) {
-            alert(`MFL write failed: ${msg}\n\nThis usually means your MFL session expired. Try logging out and back in via the sidebar.`);
+            showToast(`MFL write failed: ${msg}. This usually means your MFL session expired.`);
           } else {
-            alert(`Failed to apply: ${msg}`);
+            showToast(`Failed to apply: ${msg}`);
           }
           btn.disabled = false;
           btn.textContent = 'Apply';
@@ -365,7 +382,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         removeCard(card);
       } catch (err) {
         console.error('Apply error:', err);
-        alert('Network error. Please try again.');
+        showToast('Network error. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Apply';
       }
@@ -400,7 +417,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
 
         if (!res.ok) {
           const msg = data.error || 'Unknown error';
-          alert(`Failed to reapply: ${msg}`);
+          showToast(`Failed to reapply: ${msg}`);
           btn.disabled = false;
           btn.textContent = 'Reapply';
           return;
@@ -415,7 +432,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         }, 2000);
       } catch (err) {
         console.error('Reapply error:', err);
-        alert('Network error. Please try again.');
+        showToast('Network error. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Reapply';
       }
@@ -436,7 +453,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         const data = await res.json();
 
         if (!res.ok) {
-          alert(`Failed to delete: ${data.error || 'Unknown error'}`);
+          showToast(`Failed to delete: ${data.error || 'Unknown error'}`);
           btn.disabled = false;
           return;
         }
@@ -462,7 +479,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         }, 300);
       } catch (err) {
         console.error('Delete error:', err);
-        alert('Network error. Please try again.');
+        showToast('Network error. Please try again.');
         btn.disabled = false;
       }
     }
@@ -535,7 +552,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         const res = await fetch('/api/contracts/verify');
         if (!res.ok) {
           const data = await res.json();
-          alert(`Verify failed: ${data.error || res.statusText}`);
+          showToast(`Verify failed: ${data.error || res.statusText}`);
           verifyBtn.disabled = false;
           verifyBtn.textContent = 'Verify MFL';
           return;
@@ -571,7 +588,7 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         }, 3000);
       } catch (err) {
         console.error('Verify error:', err);
-        alert('Network error verifying MFL contracts.');
+        showToast('Network error verifying MFL contracts.');
         verifyBtn.disabled = false;
         verifyBtn.textContent = 'Verify MFL';
       }
@@ -605,19 +622,19 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         const data = await res.json();
 
         if (!res.ok) {
-          alert(`Reconcile failed: ${data.error || res.statusText}`);
+          showToast(`Reconcile failed: ${data.error || res.statusText}`);
           return;
         }
 
         if (data.reconciled > 0) {
-          alert(`Reconciled ${data.reconciled} declaration(s):\n${data.players.join('\n')}\n\nRefresh the page to see updates.`);
+          showToast(`Reconciled ${data.reconciled} declaration(s). Refresh to see updates.`, 'success');
           location.reload();
         } else {
-          alert(data.message);
+          showToast(data.message, 'info');
         }
       } catch (err) {
         console.error('Reconcile error:', err);
-        alert('Network error during reconcile.');
+        showToast('Network error during reconcile.');
       } finally {
         reconcileBtn.disabled = false;
         reconcileBtn.textContent = 'Reconcile';
@@ -637,15 +654,15 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         const data = await res.json();
 
         if (!res.ok) {
-          alert(`Migration failed: ${data.error || res.statusText}`);
+          showToast(`Migration failed: ${data.error || res.statusText}`);
           return;
         }
 
-        alert(`Migrated ${data.migrated} declaration(s) to Redis.\n\nRefresh the page to verify.`);
+        showToast(`Migrated ${data.migrated} declaration(s) to Redis. Refresh to verify.`, 'success');
         location.reload();
       } catch (err) {
         console.error('Migration error:', err);
-        alert('Network error during migration.');
+        showToast('Network error during migration.');
       } finally {
         migrateBtn.disabled = false;
         migrateBtn.textContent = 'Migrate to Redis';
@@ -1365,6 +1382,45 @@ const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
         transition: none;
         opacity: 0;
       }
+    }
+
+    /* Toast notifications */
+    #toastContainer {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      max-width: 22rem;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transform: translateX(1rem);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .toast--visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .toast--error {
+      background: var(--color-danger, #dc2626);
+    }
+    .toast--success {
+      background: var(--color-success, #16a34a);
+    }
+    .toast--info {
+      background: var(--color-info, #2563eb);
     }
   </style>
 </TheLeagueLayout>
