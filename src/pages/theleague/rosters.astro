@@ -5019,14 +5019,27 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   const buildYearsCellContent = (playerId, displayYears, teamId) => {
     const years = displayYears || 0;
 
+    // If the owner is viewing their own team, check new-acquisition eligibility first.
+    // Players within the 48-hour auction window can ALWAYS re-submit, even after
+    // a previous declaration has been submitted, approved, or applied.
+    const isOwner = isOwnerViewingTeam(teamId);
+    const elig = isOwner ? getPlayerEligibility(playerId, teamId) : null;
+    const hasActiveAcquisitionWindow = elig && !elig.isExpired && (elig.type === 'new-acquisition' || elig.type === 'rookie-override');
+
     // Check for local optimistic declaration
     const localDecl = localDeclarations[playerId];
     if (localDecl) {
+      if (hasActiveAcquisitionWindow) {
+        // Still within auction window — keep chip interactive so owner can change their mind
+        const badge = buildDeadlineBadge(elig);
+        const declYears = localDecl.years || years;
+        const statusClass = localDecl.status === 'approved' ? 'yrs-chip--approved' : 'yrs-chip--pending';
+        return '<button class="yrs-chip ' + statusClass + ' yrs-chip--eligible" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + declYears + '</span>' + badge + '</button>';
+      }
       if (localDecl.status === 'approved') {
         return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + localDecl.years + '</span><span class="yrs-chip__asterisk" style="color:#059669">*</span></span>';
       }
       // Pending: editable chip with deadline
-      const elig = getPlayerEligibility(playerId, teamId);
       const badge = buildDeadlineBadge(elig);
       return '<button class="yrs-chip yrs-chip--pending" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + localDecl.years + '</span>' + badge + '</button>';
     }
@@ -5034,19 +5047,24 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     // Check for existing server declaration
     const serverDecl = declarationsByPlayer[playerId];
     if (serverDecl) {
+      if (hasActiveAcquisitionWindow) {
+        // Still within auction window — keep chip interactive so owner can change their mind
+        const badge = buildDeadlineBadge(elig);
+        const declYears = serverDecl.requestedYears || years;
+        const statusClass = serverDecl.status === 'approved' ? 'yrs-chip--approved' : 'yrs-chip--pending';
+        return '<button class="yrs-chip ' + statusClass + ' yrs-chip--eligible" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + declYears + '</span>' + badge + '</button>';
+      }
       if (serverDecl.status === 'approved') {
         return '<span class="yrs-chip yrs-chip--approved"><span class="yrs-chip__value">' + serverDecl.requestedYears + '</span><span class="yrs-chip__asterisk" style="color:#059669">*</span></span>';
       }
       // Pending: editable chip with deadline
-      const elig = getPlayerEligibility(playerId, teamId);
       const badge = buildDeadlineBadge(elig);
       return '<button class="yrs-chip yrs-chip--pending" type="button" data-decl-player="' + playerId + '"><span class="yrs-chip__value">' + serverDecl.requestedYears + '</span>' + badge + '</button>';
     }
 
     // Check for eligibility (only if owner is viewing their own team)
-    if (!isOwnerViewingTeam(teamId)) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
+    if (!isOwner) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
-    const elig = getPlayerEligibility(playerId, teamId);
     if (!elig || elig.isExpired) return '<span class="yrs-chip"><span class="yrs-chip__value">' + years + '</span></span>';
 
     // Only rookie-override and new-acquisition get interactive yrs-chip buttons
