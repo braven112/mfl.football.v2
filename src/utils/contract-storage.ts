@@ -115,6 +115,43 @@ async function writeOneToRedis(declaration: ContractDeclaration): Promise<boolea
   }
 }
 
+// --- Vercel Blob write fallback (when Redis is unavailable) ---
+
+async function writeToBlobFallback(declarations: ContractDeclaration[]): Promise<boolean> {
+  try {
+    const { put } = await import('@vercel/blob');
+    await put('data/contract-declarations.json', JSON.stringify(declarations), {
+      access: 'public',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: 'application/json',
+    });
+    console.log('[contract-storage] Blob write fallback OK:', declarations.length, 'entries');
+    return true;
+  } catch (err) {
+    console.error('[contract-storage] Blob write fallback error:', err);
+    return false;
+  }
+}
+
+async function addViaBlobFallback(declaration: ContractDeclaration): Promise<boolean> {
+  const existing = await readFromBlobFallback();
+  existing.unshift(declaration);
+  return writeToBlobFallback(existing);
+}
+
+async function updateViaBlobFallback(
+  id: string,
+  updates: Partial<ContractDeclaration>,
+): Promise<ContractDeclaration | null> {
+  const all = await readFromBlobFallback();
+  const index = all.findIndex(d => d.id === id);
+  if (index === -1) return null;
+  all[index] = { ...all[index], ...updates };
+  const ok = await writeToBlobFallback(all);
+  return ok ? all[index] : null;
+}
+
 // --- Filesystem fallback for local dev ---
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -159,7 +196,12 @@ async function writeAllDeclarations(declarations: ContractDeclaration[]): Promis
   if (process.env.VERCEL) {
     // Bulk write all declarations to Redis hash
     const redis = await getRedis();
-    if (!redis) throw new Error('Redis not available');
+    if (!redis) {
+      // Redis unavailable — fall back to Blob
+      const ok = await writeToBlobFallback(declarations);
+      if (!ok) throw new Error('Failed to write declarations (both Redis and Blob failed)');
+      return;
+    }
 
     const fieldValues: Record<string, ContractDeclaration> = {};
     for (const d of declarations) {
@@ -225,7 +267,11 @@ export async function getDeclarationById(id: string): Promise<ContractDeclaratio
 export async function addDeclaration(declaration: ContractDeclaration): Promise<ContractDeclaration> {
   if (process.env.VERCEL) {
     const ok = await writeOneToRedis(declaration);
-    if (!ok) throw new Error('Failed to write declaration to Redis');
+    if (ok) return declaration;
+    // Redis unavailable — fall back to Blob
+    console.warn('[contract-storage] Redis write failed, falling back to Blob');
+    const blobOk = await addViaBlobFallback(declaration);
+    if (!blobOk) throw new Error('Failed to write declaration (both Redis and Blob failed)');
     return declaration;
   }
   const file = readDeclarationsFileSync();
@@ -241,7 +287,11 @@ export async function updateDeclaration(
 ): Promise<ContractDeclaration | null> {
   if (process.env.VERCEL) {
     const redis = await getRedis();
-    if (!redis) return null;
+    if (!redis) {
+      // Redis unavailable — fall back to Blob
+      console.warn('[contract-storage] Redis unavailable for update, falling back to Blob');
+      return updateViaBlobFallback(id, updates);
+    }
 
     // Read single declaration, update it, write it back — atomic per-declaration
     const existing = await redis.hget<ContractDeclaration>(REDIS_KEY, id);
