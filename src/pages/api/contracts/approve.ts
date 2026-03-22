@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    if (declaration.status !== 'pending') {
+    if (declaration.status !== 'pending' && declaration.status !== 'applied') {
       return new Response(
         JSON.stringify({
           error: `Cannot apply a declaration with status '${declaration.status}'`,
