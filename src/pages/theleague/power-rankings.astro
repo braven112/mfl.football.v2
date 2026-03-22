@@ -22,6 +22,8 @@ import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-
 import { computeTeamIntel, type TeamIntel } from '../../utils/intel-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber, formatCompactNumber } from '../../utils/formatters';
+import { getCachedRosters } from '../../utils/mfl-roster-cache';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 export const prerender = false;
 
@@ -104,17 +106,46 @@ const teamConfigs: TeamConfig[] = (leagueConfig.teams ?? []).map((team: any) => 
   division: team.division,
 }));
 
-const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
-  id: p.id,
-  name: p.name,
-  position: p.position ?? '',
-  salary: parseNumber(p.salary),
-  franchiseId: p.franchiseId ?? '',
-  status: p.status ?? 'ROSTER',
-  contractYear: p.contractYear ?? '0',
-  points: parseNumber(p.points),
-  birthdate: parseNumber(p.birthdate),
-}));
+// ---------------------------------------------------------------------------
+// Live roster data from Redis (stale-while-revalidate, ~2 min freshness)
+// ---------------------------------------------------------------------------
+const currentLeagueYear = String(getCurrentLeagueYear());
+const cachedRosterPlayers = await getCachedRosters(currentLeagueYear, '13522');
+
+// Build a lookup from static salary files for enrichment (name, position, points, birthdate)
+const staticPlayerById = new Map<string, any>(
+  (latestRoster.players ?? []).map((p: any) => [p.id, p])
+);
+
+// If we have live roster data from Redis, use it as the authoritative source
+// for salary, contract, franchise assignment, and status. Enrich with static
+// file data for fields MFL rosters API doesn't provide (name, position, points, birthdate).
+const players: SalaryPlayer[] = cachedRosterPlayers
+  ? Object.entries(cachedRosterPlayers).map(([id, live]) => {
+      const staticP = staticPlayerById.get(id) ?? {};
+      return {
+        id,
+        name: staticP.name ?? '',
+        position: staticP.position ?? '',
+        salary: parseNumber(live.salary),
+        franchiseId: live.franchiseId ?? '',
+        status: live.status ?? 'ROSTER',
+        contractYear: live.contractYear ?? '0',
+        points: parseNumber(staticP.points),
+        birthdate: parseNumber(staticP.birthdate),
+      };
+    })
+  : (latestRoster.players ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      position: p.position ?? '',
+      salary: parseNumber(p.salary),
+      franchiseId: p.franchiseId ?? '',
+      status: p.status ?? 'ROSTER',
+      contractYear: p.contractYear ?? '0',
+      points: parseNumber(p.points),
+      birthdate: parseNumber(p.birthdate),
+    }));
 
 // ---------------------------------------------------------------------------
 // Compute intel data
