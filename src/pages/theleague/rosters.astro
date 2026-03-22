@@ -5442,25 +5442,34 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     updateClearAllButton();
   };
 
-  // Submit window: ~NFL Week 12 (Nov 14) through Feb 15 each year
+  // Submit window: matches server-side offseason (Feb 15 - 3rd Sunday August @ 8:45 PM PT)
+  // plus team-option which is always available year-round
   const isInSubmitWindow = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const testDateStr = urlParams.get('testDate');
     const now = testDateStr ? new Date(testDateStr) : new Date();
-    const m = now.getMonth(); // 0-indexed: 10=Nov, 11=Dec, 0=Jan, 1=Feb
-    const d = now.getDate();
-    return (m === 10 && d >= 14) || m === 11 || m === 0 || (m === 1 && d <= 15);
+    const year = now.getFullYear();
+    const offseasonStart = new Date(year, 1, 15, 0, 0, 0, 0); // Feb 15
+    // 3rd Sunday in August at 8:45 PM PT
+    const aug1 = new Date(year, 7, 1);
+    const dayOfWeek = aug1.getDay();
+    const daysToFirstSunday = (7 - dayOfWeek) % 7 || 7;
+    const thirdSunday = new Date(year, 7, 1 + daysToFirstSunday + 14);
+    thirdSunday.setHours(20, 45, 0, 0);
+    return now >= offseasonStart && now <= thirdSunday;
   };
+  const hasTeamOptionActions = () => Object.values(contractActions).some(a => a.type === 'team-option');
 
   // Update clear all / submit tags/extensions button visibility
   const updateClearAllButton = () => {
     const clearAllBtn = document.getElementById('clearAllTagsBtn');
     const submitBtn = document.getElementById('submitFranchiseTagsBtn');
     const hasActions = Object.keys(contractActions).length > 0;
-    const hasFranchiseTags = Object.values(contractActions).some(a => a.type === 'franchise');
-    const hasVeteranExtensions = Object.values(contractActions).some(a => a.type === 'extension');
+    const submittableTypes = ['franchise', 'extension', 'team-option', 'rookie-extension'];
+    const hasSubmittableActions = Object.values(contractActions).some(a => submittableTypes.includes(a.type));
     if (clearAllBtn) clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
-    if (submitBtn) submitBtn.style.display = (hasFranchiseTags || hasVeteranExtensions) && isInSubmitWindow() ? 'inline-flex' : 'none';
+    // Show submit button if there are submittable actions AND (offseason window is open OR team-option actions exist)
+    if (submitBtn) submitBtn.style.display = hasSubmittableActions && (isInSubmitWindow() || hasTeamOptionActions()) ? 'inline-flex' : 'none';
   };
 
   // Clear all tags button event listener
@@ -5472,8 +5481,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // Submit tags/extensions handler
   const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn');
   submitFranchiseTagsBtn?.addEventListener('click', async () => {
+    const submittableTypes = ['franchise', 'extension', 'team-option', 'rookie-extension'];
     const actionsToSubmit = Object.values(contractActions).filter(
-      a => a.type === 'franchise' || a.type === 'extension'
+      a => submittableTypes.includes(a.type)
     );
     if (!actionsToSubmit.length) return;
 
@@ -5487,7 +5497,22 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     try {
       for (const action of actionsToSubmit) {
+        // Map sandbox action types to API declaration types
+        const typeMap = {
+          'franchise': 'franchise-tag',
+          'extension': 'veteran-extension',
+          'team-option': 'team-option',
+          'rookie-extension': 'rookie-extension',
+        };
+        const declType = typeMap[action.type] || action.type;
         const isFranchise = action.type === 'franchise';
+        const isTeamOption = action.type === 'team-option';
+        const isRookieExt = action.type === 'rookie-extension';
+
+        // Determine requestedContractInfo based on type
+        let requestedContractInfo = '';
+        if (isFranchise) requestedContractInfo = 'F';
+
         const res = await fetch('/api/contracts/declare', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5497,13 +5522,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             playerName: action.playerName,
             franchiseId,
             franchiseName,
-            type: isFranchise ? 'franchise-tag' : 'veteran-extension',
+            type: declType,
             currentYears: action.originalYears,
             currentSalary: action.originalSalary,
-            currentContractInfo: '',
+            currentContractInfo: isTeamOption ? 'TO' : (isRookieExt ? 'RC' : ''),
             requestedYears: isFranchise ? 1 : action.newYears,
             requestedSalary: action.newSalary,
-            requestedContractInfo: isFranchise ? 'F' : 'E',
+            requestedContractInfo,
           }),
         });
         const result = await res.json();
