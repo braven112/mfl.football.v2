@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-23T06:01:19.315Z"
+    "fetchedAt": "2026-03-23T06:32:37.593Z"
   },
   "players": [
     {
@@ -3108,6 +3108,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": "00-0034855"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13116",
+      "name": "Mahomes, Patrick",
+      "position": "QB",
+      "salary": 4775000,
+      "franchiseId": "0003",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "KC",
+      "draftYear": 2017,
+      "draftTeam": "KCC",
+      "birthdate": 811314000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13116_thumb.jpg",
+      "externalIds": {
+        "mfl": "13116",
+        "sleeper": "4046",
+        "gsis": "00-0033873"
+      },
+      "sleeper": {
+        "id": "4046",
+        "fullName": "Patrick Mahomes",
+        "team": "KC",
+        "age": 30,
+        "height": "74",
+        "weight": "225",
+        "number": 15,
+        "college": "Texas Tech",
+        "birthDate": "1995-09-17",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 9,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0033873"
       },
       "nflverse": null,
       "gamesPlayed": null,
@@ -12523,6 +12569,52 @@
       ]
     },
     {
+      "id": "14600",
+      "name": "Slye, Joey",
+      "position": "PK",
+      "salary": 450000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "TEN",
+      "draftYear": 2019,
+      "draftTeam": "FA",
+      "birthdate": 829112400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14600_thumb.jpg",
+      "externalIds": {
+        "mfl": "14600",
+        "sleeper": "6528",
+        "gsis": " 00-0035192"
+      },
+      "sleeper": {
+        "id": "6528",
+        "fullName": "Joey Slye",
+        "team": "TEN",
+        "age": 29,
+        "height": "71",
+        "weight": "213",
+        "number": 6,
+        "college": "Virginia Tech",
+        "birthDate": "1996-04-10",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035192"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
       "id": "15889",
       "name": "Okonkwo, Chigoziem",
       "position": "TE",
@@ -13578,7 +13670,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13116",
+          "name": "Mahomes, Patrick"
+        }
+      ]
     },
     {
       "id": "16190",
