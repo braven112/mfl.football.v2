@@ -6583,7 +6583,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (activityDataEl) {
         const activityMap = JSON.parse(activityDataEl.textContent || '{}');
         const lastSeenEls = document.querySelectorAll('[data-last-seen]');
-        const ts = activityMap[teamId] ? Number(activityMap[teamId]) : null;
+        const ts = activityMap[currentTeam] ? Number(activityMap[currentTeam]) : null;
         lastSeenEls.forEach((el) => {
           if (!ts) {
             el.style.display = 'none';
