@@ -279,8 +279,8 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
   .league_logo svg,
   .league_logo .header-logo-img {
-    width: 90px;
-    height: 100px;
+    height: 45px;
+    width: auto;
     display: block;
   }
 
@@ -348,13 +348,13 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
 
   .leaguename {
     font-weight: 700;
-    font-size: 2rem;
+    font-size: 1.5rem;
     letter-spacing: 0.01em;
     text-transform: uppercase;
   }
   @media (min-width: 640px) {
     .leaguename {
-      font-size: 2.5rem;
+      font-size: 1.75rem;
     }
   }
 
@@ -526,16 +526,9 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   }
 
   .nav-icon {
-    width: 40px;
-    height: 40px;
+    width: 24px;
+    height: 24px;
     fill: currentColor;
-  }
-
-  @media (min-width: 992px) {
-    .nav-icon {
-      width: 32px;
-      height: 32px;
-    }
   }
 
   .nav-icon:has(use[href*="icon-banknote"]) {
@@ -561,23 +554,15 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     }
   }
 
-  @media (max-width: 640px) {
-    .league_logo svg,
-    .league_logo .header-logo-img {
-      height: 3rem;
-      width: auto;
-    }
-  }
-
   @media (max-width: 360px) {
     .league_logo svg,
     .league_logo .header-logo-img {
-      height: 2rem;
+      height: 32px;
       width: auto;
     }
 
     .leaguename {
-      font-size: 2rem;
+      font-size: 1.25rem;
     }
   }
 </style>
