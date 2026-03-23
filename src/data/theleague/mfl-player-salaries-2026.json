@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-23T12:33:14.729Z"
+    "fetchedAt": "2026-03-23T13:00:12.811Z"
   },
   "players": [
     {
@@ -2318,6 +2318,57 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "14835",
+      "name": "Higgins, Tee",
+      "position": "WR",
+      "salary": 4525000,
+      "franchiseId": "0002",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "CIN",
+      "draftYear": 2020,
+      "draftTeam": "CIN",
+      "birthdate": 916635600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14835_thumb.jpg",
+      "externalIds": {
+        "mfl": "14835",
+        "sleeper": "6801",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "6801",
+        "fullName": "Tee Higgins",
+        "team": "CIN",
+        "age": 27,
+        "height": "76",
+        "weight": "220",
+        "number": 5,
+        "college": "Clemson",
+        "birthDate": "1999-01-18",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 6,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "15281",
+          "name": "Chase, Ja'Marr"
+        }
+      ]
     },
     {
       "id": "15768",
@@ -5344,6 +5395,10 @@
         {
           "id": "15281",
           "name": "Chase, Ja'Marr"
+        },
+        {
+          "id": "14835",
+          "name": "Higgins, Tee"
         }
       ]
     },
