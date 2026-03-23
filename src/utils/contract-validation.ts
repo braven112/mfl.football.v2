@@ -6,59 +6,76 @@
 import type { ContractValidationResult, ContractValidationError } from '../types/contracts';
 import type { DeclarationType } from '../types/contract-eligibility';
 
-// League season starts on February 15th
-const SEASON_START_MONTH = 2; // February (0-indexed would be 1, but JS uses 0-indexed, so 2 for March would be 2... actually Feb is 1)
-const SEASON_START_DAY = 15;
+/**
+ * Get the Pacific Time UTC offset in hours for a given month.
+ * PDT (UTC-7): March second Sunday through November first Sunday
+ * PST (UTC-8): November first Sunday through March second Sunday
+ *
+ * For window boundary checks, we only need month-level accuracy
+ * since boundaries fall well within DST or standard periods.
+ */
+function pacificOffsetForMonth(month: number): number {
+  // March (partially), Apr-Oct are PDT (UTC-7); Nov-Feb, early March are PST (UTC-8)
+  // Feb 15 is always PST; Aug 3rd Sunday is always PDT; Sept 1 is always PDT
+  return (month >= 3 && month <= 10) ? 7 : 8;
+}
 
 /**
- * Calculate the 3rd Sunday in August for the current year
- * Used for the offseason contract deadline
+ * Create a Date representing a specific Pacific Time moment as UTC.
+ * Converts "hour in PT" → correct UTC instant.
+ */
+function pacificDate(year: number, month: number, day: number, hour = 0, min = 0, sec = 0, ms = 0): Date {
+  const offset = pacificOffsetForMonth(month);
+  return new Date(Date.UTC(year, month, day, hour + offset, min, sec, ms));
+}
+
+/**
+ * Calculate the 3rd Sunday in August for the current year at 8:45 PM PT.
+ * Used for the offseason contract deadline.
  */
 function getThirdSundayInAugust(year: number): Date {
-  const august1 = new Date(year, 7, 1); // August is month 7 (0-indexed)
-  let dayOfWeek = august1.getDay();
+  const august1DayOfWeek = new Date(Date.UTC(year, 7, 1)).getUTCDay();
+  const daysToFirstSunday = (7 - august1DayOfWeek) % 7 || 7;
+  const thirdSundayDay = 1 + daysToFirstSunday + 14;
 
-  // Calculate first Sunday
-  const daysToFirstSunday = (7 - dayOfWeek) % 7 || 7;
-  const firstSunday = new Date(year, 7, 1 + daysToFirstSunday);
+  // August is always PDT (UTC-7): 8:45 PM PT = 3:45 AM+1 UTC
+  return pacificDate(year, 7, thirdSundayDay, 20, 45, 0, 0);
+}
 
-  // Third Sunday is 2 weeks later
-  const thirdSunday = new Date(firstSunday);
-  thirdSunday.setDate(thirdSunday.getDate() + 14);
-
-  // Set to 8:45 PM PT
-  thirdSunday.setHours(20, 45, 0, 0);
-
-  return thirdSunday;
+/**
+ * Get the current year in Pacific Time.
+ */
+function getPacificYear(now: Date): number {
+  return parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric' }).format(now));
 }
 
 /**
  * Check if current date is within offseason contract setting window
- * Offseason: February 15 - 3rd Sunday in August (or 3 weeks before first Sunday game, whichever is later) at 8:45pm PT
+ * Offseason: February 15 midnight PT - 3rd Sunday in August at 8:45pm PT
  */
 function isInOffseasonWindow(now: Date = new Date()): boolean {
-  const year = now.getFullYear();
+  const ptYear = getPacificYear(now);
 
-  // Season start: February 15 at midnight PT
-  const seasonStart = new Date(year, 1, 15, 0, 0, 0, 0); // Month 1 is February
+  // Feb 15 at midnight PT (always PST = UTC-8)
+  const seasonStart = pacificDate(ptYear, 1, 15);
 
-  // Season end: 3rd Sunday in August at 8:45 PM PT
-  const seasonEnd = getThirdSundayInAugust(year);
+  // 3rd Sunday in August at 8:45 PM PT (always PDT = UTC-7)
+  const seasonEnd = getThirdSundayInAugust(ptYear);
 
   return now >= seasonStart && now <= seasonEnd;
 }
 
 /**
  * Check if current date is within in-season window (Weeks 1-17)
- * For this simplified version, we'll assume in-season is Sept 1 - Feb 14
- * In production, you'd want to tie this to actual NFL schedule
+ * In-season: Sept 1 - Feb 14 (all boundaries in Pacific Time)
  */
 function isInSeasonWindow(now: Date = new Date()): boolean {
-  const year = now.getFullYear();
+  const ptYear = getPacificYear(now);
 
-  // In-season roughly: September 1 - February 14 (before season restarts)
-  const seasonStartDate = new Date(year, 8, 1, 0, 0, 0, 0); // Sept 1
-  const seasonEndDate = new Date(year + 1, 1, 14, 23, 59, 59, 999); // Feb 14 next year
+  // Sept 1 at midnight PT (always PDT = UTC-7)
+  const seasonStartDate = pacificDate(ptYear, 8, 1);
+  // Feb 14 at 11:59:59 PM PT next year (always PST = UTC-8)
+  const seasonEndDate = pacificDate(ptYear + 1, 1, 14, 23, 59, 59, 999);
 
   return now >= seasonStartDate && now <= seasonEndDate;
 }
