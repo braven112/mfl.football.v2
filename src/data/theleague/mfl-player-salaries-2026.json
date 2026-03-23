@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-23T16:53:19.346Z"
+    "fetchedAt": "2026-03-23T17:15:56.749Z"
   },
   "players": [
     {
@@ -1276,6 +1276,57 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "15284",
+      "name": "Waddle, Jaylen",
+      "position": "WR",
+      "salary": 5575000,
+      "franchiseId": "0001",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "DEN",
+      "draftYear": 2021,
+      "draftTeam": "MIA",
+      "birthdate": 911970000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15284_thumb.jpg",
+      "externalIds": {
+        "mfl": "15284",
+        "sleeper": "7526",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "7526",
+        "fullName": "Jaylen Waddle",
+        "team": "DEN",
+        "age": 27,
+        "height": "70",
+        "weight": "185",
+        "number": 17,
+        "college": "Alabama",
+        "birthDate": "1998-11-25",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "13630",
+          "name": "Sutton, Courtland"
+        }
+      ]
     },
     {
       "id": "14717",
@@ -2711,6 +2762,10 @@
           "name": "Sutton, Courtland"
         },
         {
+          "id": "15284",
+          "name": "Waddle, Jaylen"
+        },
+        {
           "id": "16189",
           "name": "Mims, Marvin"
         },
@@ -2816,6 +2871,10 @@
         {
           "id": "13630",
           "name": "Sutton, Courtland"
+        },
+        {
+          "id": "15284",
+          "name": "Waddle, Jaylen"
         },
         {
           "id": "16189",
@@ -14071,6 +14130,10 @@
         {
           "id": "13630",
           "name": "Sutton, Courtland"
+        },
+        {
+          "id": "15284",
+          "name": "Waddle, Jaylen"
         }
       ]
     },
