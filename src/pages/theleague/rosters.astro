@@ -7811,6 +7811,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           if (remaining <= 0) {
             document.getElementById('cdm-deadline-text').textContent = 'Deadline passed';
             deadlineEl.className = 'cdm-deadline cdm-deadline--critical';
+            const submitBtn = document.getElementById('cdm-submit');
+            if (submitBtn) {
+              submitBtn.disabled = true;
+              submitBtn.textContent = 'Deadline Passed';
+            }
             clearInterval(cdmDeadlineInterval);
             return;
           }

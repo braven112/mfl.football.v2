@@ -96,7 +96,18 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 5. Check for existing pending declaration — update it if found
+    // 5. Enforce deadline for time-limited declaration types
+    if (deadlineAt) {
+      const deadlineMs = new Date(deadlineAt).getTime();
+      if (!isNaN(deadlineMs) && Date.now() > deadlineMs) {
+        return new Response(
+          JSON.stringify({ error: 'Declaration deadline has passed' }),
+          { status: 400, headers: JSON_HEADERS },
+        );
+      }
+    }
+
+    // 6. Check for existing pending declaration — update it if found
     const existing = await getPendingDeclarationForPlayer(playerId, franchiseId);
     if (existing && existing.status === 'pending') {
       const updated = await updateDeclaration(existing.id, {
@@ -125,7 +136,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // 6. Type-specific validations
+    // 7. Type-specific validations
     if (type === 'franchise-tag') {
       const existingTag = await getTeamFranchiseTag(franchiseId, new Date().getFullYear());
       if (existingTag) {
@@ -147,7 +158,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // 7. Create declaration
+    // 8. Create declaration
     const declaration: ContractDeclaration = {
       id: generateDeclarationId(),
       type,
