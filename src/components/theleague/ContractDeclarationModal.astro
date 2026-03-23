@@ -992,6 +992,36 @@
     color: var(--color-error, #dc2626);
   }
 
+  /* Danger confirmation state (cut-real after first click) */
+  .cdm-action-options :global(.cdm-action-option--danger) {
+    border-left-color: var(--color-error, #dc2626);
+    background: color-mix(in srgb, var(--color-error, #dc2626) 10%, white);
+    animation: cdm-danger-pulse 0.3s ease;
+  }
+  .cdm-action-options :global(.cdm-action-option--danger .cdm-action-option__icon) {
+    background: var(--color-error, #dc2626);
+    color: white;
+  }
+  .cdm-action-options :global(.cdm-action-option--danger .cdm-action-option__label) {
+    color: var(--color-error, #dc2626);
+    font-weight: 700;
+  }
+  .cdm-action-options :global(.cdm-action-option--danger .cdm-action-option__desc) {
+    color: var(--color-error, #dc2626);
+  }
+  .cdm-action-options :global(.cdm-action-option--danger:hover) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 15%, white);
+  }
+  .cdm-action-options :global(.cdm-action-option--danger.loading) {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  @keyframes cdm-danger-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.015); }
+    100% { transform: scale(1); }
+  }
+
   /* Back-to-actions link within sub-views */
   .cdm-action-options :global(.cdm-action-back) {
     display: flex;
