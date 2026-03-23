@@ -5,8 +5,7 @@
  * with filesystem fallback for local development.
  *
  * Each declaration is stored as a separate Redis hash field keyed by ID,
- * eliminating the read-all/modify/write-all race condition that plagued
- * the previous Vercel Blob implementation.
+ * enabling atomic per-declaration writes without race conditions.
  */
 
 import type { ContractDeclaration, DeclarationStatus } from '../types/contracts';
@@ -114,44 +113,8 @@ function writeDeclarationsFileSync(file: DeclarationsFile): void {
 
 // --- Unified async read/write ---
 
-/** Read from Vercel Blob and migrate to Redis (runs once per cold start) */
-let _blobMigrated = false;
-async function migrateFromBlobIfNeeded(): Promise<void> {
-  if (_blobMigrated) return;
-  _blobMigrated = true;
-
-  try {
-    const { list: listBlobs } = await import('@vercel/blob');
-    const { blobs } = await listBlobs({ prefix: 'data/contract-declarations.json', limit: 1 });
-    if (blobs.length === 0) return;
-
-    const fetchUrl = blobs[0].downloadUrl || blobs[0].url;
-    const res = await fetch(fetchUrl, { cache: 'no-store' });
-    if (!res.ok) return;
-    const blobData = await res.json() as ContractDeclaration[];
-    if (blobData.length === 0) return;
-
-    // Read existing Redis data to find missing records
-    const redisData = await readFromRedis();
-    const redisIds = new Set(redisData.map(d => d.id));
-    const missing = blobData.filter(d => !redisIds.has(d.id));
-
-    if (missing.length > 0) {
-      const redis = await getRedis();
-      if (!redis) return;
-      const fieldValues: Record<string, ContractDeclaration> = {};
-      for (const d of missing) fieldValues[d.id] = d;
-      await redis.hset(REDIS_KEY, fieldValues);
-      console.log(`[contract-storage] Migrated ${missing.length} declarations from Blob to Redis`);
-    }
-  } catch (err) {
-    console.warn('[contract-storage] Blob migration skipped:', err);
-  }
-}
-
 async function readAllDeclarations(): Promise<ContractDeclaration[]> {
   if (process.env.VERCEL) {
-    await migrateFromBlobIfNeeded();
     return readFromRedis();
   }
   return readDeclarationsFileSync().declarations;
