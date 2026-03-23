@@ -114,8 +114,44 @@ function writeDeclarationsFileSync(file: DeclarationsFile): void {
 
 // --- Unified async read/write ---
 
+/** Read from Vercel Blob and migrate to Redis (runs once per cold start) */
+let _blobMigrated = false;
+async function migrateFromBlobIfNeeded(): Promise<void> {
+  if (_blobMigrated) return;
+  _blobMigrated = true;
+
+  try {
+    const { list: listBlobs } = await import('@vercel/blob');
+    const { blobs } = await listBlobs({ prefix: 'data/contract-declarations.json', limit: 1 });
+    if (blobs.length === 0) return;
+
+    const fetchUrl = blobs[0].downloadUrl || blobs[0].url;
+    const res = await fetch(fetchUrl, { cache: 'no-store' });
+    if (!res.ok) return;
+    const blobData = await res.json() as ContractDeclaration[];
+    if (blobData.length === 0) return;
+
+    // Read existing Redis data to find missing records
+    const redisData = await readFromRedis();
+    const redisIds = new Set(redisData.map(d => d.id));
+    const missing = blobData.filter(d => !redisIds.has(d.id));
+
+    if (missing.length > 0) {
+      const redis = await getRedis();
+      if (!redis) return;
+      const fieldValues: Record<string, ContractDeclaration> = {};
+      for (const d of missing) fieldValues[d.id] = d;
+      await redis.hset(REDIS_KEY, fieldValues);
+      console.log(`[contract-storage] Migrated ${missing.length} declarations from Blob to Redis`);
+    }
+  } catch (err) {
+    console.warn('[contract-storage] Blob migration skipped:', err);
+  }
+}
+
 async function readAllDeclarations(): Promise<ContractDeclaration[]> {
   if (process.env.VERCEL) {
+    await migrateFromBlobIfNeeded();
     return readFromRedis();
   }
   return readDeclarationsFileSync().declarations;
@@ -321,30 +357,3 @@ export async function getPendingDeclarationForPlayer(
   );
 }
 
-/**
- * Bulk import declarations into Redis.
- * Writes all declarations at once without reading first.
- */
-export async function bulkImportDeclarations(declarations: ContractDeclaration[]): Promise<boolean> {
-  if (!process.env.VERCEL) {
-    writeDeclarationsFileSync({
-      version: '1.0',
-      lastUpdated: new Date().toISOString(),
-      declarations,
-    });
-    return true;
-  }
-
-  const redis = await getRedis();
-  if (!redis) return false;
-
-  const fieldValues: Record<string, ContractDeclaration> = {};
-  for (const d of declarations) {
-    fieldValues[d.id] = d;
-  }
-  if (Object.keys(fieldValues).length > 0) {
-    await redis.hset(REDIS_KEY, fieldValues);
-  }
-  console.log('[contract-storage] Bulk imported', declarations.length, 'declarations to Redis');
-  return true;
-}
