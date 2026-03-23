@@ -105,7 +105,7 @@ const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfig, preferre
 // Division Champions by Year (previous year's defending champs)
 const championsByYear: Record<number, Record<string, string>> = {
   2025: {
-    'Northwest': 'Da Dangsters',
+    'Northwest': 'Vitside Mafia',
     'Southwest': 'Midwestside Connection',
     'Central': 'Bring The Pain',
     'East': 'Wascawy Wabbits',
@@ -196,9 +196,8 @@ const championsByYear: Record<number, Record<string, string>> = {
   },
 };
 
-// Get previous year's champions (defending champs for selected year)
-const previousYear = selectedYear - 1;
-const defendingChampions = championsByYear[previousYear] || {};
+// Get division champions for the selected year
+const defendingChampions = championsByYear[selectedYear] || {};
 ---
 
 <TheLeagueLayout title="Standings">
@@ -246,7 +245,7 @@ const defendingChampions = championsByYear[previousYear] || {};
               showDivisionHeader={true}
               divisionName={division.name}
               defendingChampion={defendingChampions[division.name]}
-              defendingChampionYear={previousYear}
+              defendingChampionYear={selectedYear}
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
             />
