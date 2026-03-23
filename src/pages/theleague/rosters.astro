@@ -8556,6 +8556,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const goToActionSelectStep = () => {
       cdmCurrentStep = 1;
       cdmFlowType = 'action-select';
+      cutConfirmed = false;
 
       const dot1 = document.getElementById('cdm-step-dot-1');
       const dot2 = document.getElementById('cdm-step-dot-2');
@@ -8989,8 +8990,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         ));
 
         actionOptions.appendChild(makeCdmActionBtn(
-          'cut-real', 'Cut Player', 'Coming soon',
-          null, true, 'icon-user-times'
+          'cut-real', 'Cut Player', 'Permanently release — cannot be undone',
+          () => executeCutPlayer(),
+          false, 'icon-user-times'
         ));
       }
 
@@ -9001,6 +9003,81 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         reviewPanel.classList.remove('panel-enter');
         void reviewPanel.offsetWidth;
         reviewPanel.classList.add('panel-enter');
+      }
+    };
+
+    // ----------------------------------------------------------------
+    // executeCutPlayer — inline confirm → API call to actually cut
+    // ----------------------------------------------------------------
+    let cutConfirmed = false;
+    const executeCutPlayer = async () => {
+      const cutBtn = document.querySelector('.cdm-action-option--cut-real');
+      if (!cutBtn) return;
+
+      // First click: transform to danger confirmation state
+      if (!cutConfirmed) {
+        cutConfirmed = true;
+        cutBtn.classList.add('cdm-action-option--danger');
+        const label = cutBtn.querySelector('.cdm-action-option__label');
+        const desc = cutBtn.querySelector('.cdm-action-option__desc');
+        if (label) label.textContent = 'Confirm Cut';
+        if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
+        return;
+      }
+
+      // Second click: execute the cut
+      const playerId = cdmPlayerData?.id;
+      if (!playerId) return;
+
+      // Loading state
+      cutBtn.disabled = true;
+      cutBtn.classList.add('loading');
+      const label = cutBtn.querySelector('.cdm-action-option__label');
+      const desc = cutBtn.querySelector('.cdm-action-option__desc');
+      if (label) label.textContent = 'Cutting...';
+      if (desc) desc.textContent = '';
+      cdmError.style.display = 'none';
+
+      // Disable the simulate button too
+      const simBtn = document.querySelector('.cdm-action-option--cut-simulate');
+      if (simBtn) simBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/cut-player', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: String(playerId) }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // Show success
+          const playerName = cdmPlayerData?._rawPlayer?.name || 'Player';
+          cutBtn.style.display = 'none';
+          if (simBtn) simBtn.style.display = 'none';
+          cdmSuccess.style.display = 'flex';
+          const successSpan = cdmSuccess.querySelector('span');
+          if (successSpan) successSpan.textContent = `${playerName} has been released.`;
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          cdmError.textContent = data.message || 'Failed to cut player. Please try again.';
+          cdmError.style.display = 'flex';
+          // Re-enable
+          cutBtn.disabled = false;
+          cutBtn.classList.remove('loading');
+          if (label) label.textContent = 'Confirm Cut';
+          if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
+          if (simBtn) simBtn.disabled = false;
+        }
+      } catch (err) {
+        cdmError.textContent = 'Network error. Please check your connection and try again.';
+        cdmError.style.display = 'flex';
+        cutBtn.disabled = false;
+        cutBtn.classList.remove('loading');
+        if (label) label.textContent = 'Confirm Cut';
+        if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
+        if (simBtn) simBtn.disabled = false;
       }
     };
 
