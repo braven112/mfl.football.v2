@@ -15,7 +15,8 @@
  * - Navigation drawer integration
  */
 
-import { ViewTransitions } from 'astro:transitions';
+import { ClientRouter } from 'astro:transitions';
+import { Font } from 'astro:assets';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
@@ -176,11 +177,9 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="The League" />
 		<link rel="apple-touch-icon" href="/assets/icons/pwa/apple-touch-icon.png" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Vend+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
-		<ViewTransitions />
+		<ClientRouter />
 	</head>
 	<body>
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
