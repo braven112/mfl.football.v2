@@ -48,6 +48,7 @@ import {
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser } from '../../utils/auth';
+import { getAllActivity, getActivityLevel, formatLastSeen, type ActivityLevel } from '../../utils/owner-activity';
 import fs from 'fs';
 import path from 'path';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
@@ -457,6 +458,9 @@ const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/playe
   eager: true,
 });
 const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/rosters.json', {
+  eager: true,
+});
+const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', {
   eager: true,
 });
 const getModuleData = (mod) =>
@@ -1565,10 +1569,14 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
 }
 
 // --- Contract eligibility data ---
-// Load transactions for the current league year
+// Load transactions for the current league year via import.meta.glob (bundled at build time)
+// so the data is always available in the Vercel serverless function.
 const eligibilityYear = getCurrentLeagueYear();
 const eligibilityYearStr = String(eligibilityYear);
-const eligTxData = loadFeedJson(eligibilityYearStr, 'transactions.json');
+const eligTxFeed = transactionsFeeds[Object.keys(transactionsFeeds).find(
+  (path) => extractFeedSeason(path) === eligibilityYearStr
+) ?? ''];
+const eligTxData = eligTxFeed ? getModuleData(eligTxFeed) : null;
 const eligRawTransactions = eligTxData?.transactions?.transaction
   ? (Array.isArray(eligTxData.transactions.transaction)
       ? eligTxData.transactions.transaction
@@ -2041,6 +2049,13 @@ const serializedConfig = JSON.stringify({
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+// Owner activity data for "last seen" indicators
+let ownerActivityMap: Record<string, number> = {};
+try { ownerActivityMap = await getAllActivity('13522'); } catch { /* Redis unavailable */ }
+const defaultLastSeen = ownerActivityMap[defaultTeamId] ?? null;
+const defaultActivityLevel = getActivityLevel(defaultLastSeen);
+const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 ---
 
 <TheLeagueLayout title="Team Rosters">
@@ -2060,6 +2075,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           </h2>
           <p data-team-meta>
             {teamLookup[defaultTeamId]?.division ?? 'Independent'}
+          </p>
+          <p
+            class="team-card__last-seen"
+            data-last-seen
+            data-level={defaultActivityLevel}
+            aria-label={`Last active: ${defaultLastSeenText}`}
+          >
+            <span class="last-seen-dot" aria-hidden="true"></span>
+            <span data-last-seen-text>{defaultLastSeenText}</span>
           </p>
         </div>
         <div class="team-card__actions">
@@ -3304,6 +3328,30 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     margin: 0;
     color: var(--color-gray-500, #6b7280);
   }
+
+  .team-card__last-seen {
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .last-seen-dot {
+    display: inline-block;
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  [data-level='active'] .last-seen-dot { background: var(--activity-green, #16a34a); }
+  [data-level='idle'] .last-seen-dot { background: var(--activity-yellow, #ca8a04); }
+  [data-level='dormant'] .last-seen-dot { background: var(--activity-red, #dc2626); }
+  [data-level='unknown'] .last-seen-dot { background: var(--activity-gray, #6b7280); }
+  .team-card__last-seen[data-level='unknown'] { display: none; }
 
   .roster-summary {
     display: grid;
@@ -4925,6 +4973,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 <script
   type="application/json"
+  id="owner-activity-data"
+  set:html={JSON.stringify(ownerActivityMap)}
+></script>
+
+<script
+  type="application/json"
   id="weekly-player-results"
   set:html={JSON.stringify(weeklyPlayerResults)}
 ></script>
@@ -6523,6 +6577,37 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       teamMetas.forEach((el) => {
         el.textContent = metaText;
       });
+
+      // Update last-seen indicator
+      const activityDataEl = document.getElementById('owner-activity-data');
+      if (activityDataEl) {
+        const activityMap = JSON.parse(activityDataEl.textContent || '{}');
+        const lastSeenEls = document.querySelectorAll('[data-last-seen]');
+        const ts = activityMap[currentTeam] ? Number(activityMap[currentTeam]) : null;
+        lastSeenEls.forEach((el) => {
+          if (!ts) {
+            el.style.display = 'none';
+            el.setAttribute('data-level', 'unknown');
+            return;
+          }
+          el.style.display = '';
+          const diffMs = Date.now() - ts;
+          const minutes = Math.floor(diffMs / 60000);
+          const hours = Math.floor(diffMs / 3600000);
+          const days = Math.floor(diffMs / 86400000);
+          let timeText = 'Just now';
+          if (minutes >= 1 && minutes < 60) timeText = `${minutes}m ago`;
+          else if (hours >= 1 && hours < 24) timeText = `${hours}h ago`;
+          else if (days >= 1 && days < 30) timeText = `${days}d ago`;
+          else if (days >= 30) timeText = `${Math.floor(days / 30)}mo ago`;
+          const textEl = el.querySelector('[data-last-seen-text]');
+          if (textEl) textEl.textContent = timeText;
+          const hoursAgo = diffMs / 3600000;
+          const level = hoursAgo < 24 ? 'active' : hoursAgo < 168 ? 'idle' : 'dormant';
+          el.setAttribute('data-level', level);
+          el.setAttribute('aria-label', `Last active: ${timeText}`);
+        });
+      }
     };
 
     const normalizeFranchiseId = (id) => {

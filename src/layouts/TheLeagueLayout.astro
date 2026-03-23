@@ -235,6 +235,22 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			}
 		</script>
 
+		<!-- Owner visit tracker — fire-and-forget beacon for logged-in users -->
+		<script>
+			const DEBOUNCE_KEY = 'mfl:lastTrackVisit';
+			const DEBOUNCE_MS = 60_000;
+			function trackVisit() {
+				try {
+					const last = Number(sessionStorage.getItem(DEBOUNCE_KEY) || '0');
+					if (Date.now() - last < DEBOUNCE_MS) return;
+					sessionStorage.setItem(DEBOUNCE_KEY, Date.now().toString());
+					const page = location.pathname.replace(/^\/theleague/, '') || '/';
+					navigator.sendBeacon(`/api/track-visit?page=${encodeURIComponent(page)}`);
+				} catch (_) {}
+			}
+			document.addEventListener('astro:page-load', trackVisit);
+		</script>
+
 		<!-- Navigation Drawer - outside page-wrapper for overlay behavior -->
 		<NavDrawer
 			sections={sections}

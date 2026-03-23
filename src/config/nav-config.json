@@ -228,6 +228,15 @@
           "external": false,
           "leagueOnly": "theleague",
           "description": "Worst contracts and roster efficiency by season"
+        },
+        {
+          "id": "owner-activity",
+          "label": "Owner Activity",
+          "icon": "goals",
+          "path": "/activity",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "See when each franchise owner last visited the site"
         }
       ]
     },
@@ -285,7 +294,8 @@
     "/import-rankings": "/import-rankings",
     "/cr": "/cr",
     "/about": "/about",
-    "/rules": "/rules"
+    "/rules": "/rules",
+    "/activity": "/activity"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-23T04-44-23.606Z",
+  "snapshot": "2026-03-23T17-15-56.753Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-23T04:44:23.599Z",
+    "fetchedAt": "2026-03-23T17:15:56.749Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-03-23T04:44:23.604Z"
+    "generatedAt": "2026-03-23T17:15:56.751Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 107,
+      "totalPlayers": 110,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
-      "top10Average": 8079204.37,
-      "starterAverage": 3649900.39,
-      "starterMedian": 2784292.5,
+      "top10Average": 8136704.37,
+      "starterAverage": 3812998.72,
+      "starterMedian": 3093150,
       "starterCount": 48,
-      "averageSalary": 1985005.22,
-      "medianSalary": 847000,
+      "averageSalary": 2029277.81,
+      "medianSalary": 862125,
       "topPlayers": [
         {
           "id": "15287",
@@ -74,6 +74,12 @@
           "franchiseId": "0008"
         },
         {
+          "id": "15284",
+          "name": "Waddle, Jaylen",
+          "salary": 5575000,
+          "franchiseId": "0001"
+        },
+        {
           "id": "13164",
           "name": "Kupp, Cooper",
           "salary": 5445000,
@@ -96,6 +102,12 @@
           "name": "Watson, Christian",
           "salary": 4750000,
           "franchiseId": "0013"
+        },
+        {
+          "id": "14835",
+          "name": "Higgins, Tee",
+          "salary": 4525000,
+          "franchiseId": "0002"
         },
         {
           "id": "13163",
@@ -392,6 +404,12 @@
           "franchiseId": "0002"
         },
         {
+          "id": "14122",
+          "name": "Slayton, Darius",
+          "salary": 725000,
+          "franchiseId": "0004"
+        },
+        {
           "id": "15786",
           "name": "Nailor, Jalen",
           "salary": 725000,
@@ -676,15 +694,15 @@
       ]
     },
     "RB": {
-      "totalPlayers": 77,
+      "totalPlayers": 81,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
-      "starterAverage": 3867305.9,
-      "starterMedian": 3575000,
+      "starterAverage": 4024756.82,
+      "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1860323.11,
-      "medianSalary": 632225,
+      "averageSalary": 1867529.38,
+      "medianSalary": 658845,
       "topPlayers": [
         {
           "id": "13130",
@@ -765,6 +783,12 @@
           "franchiseId": "0008"
         },
         {
+          "id": "14073",
+          "name": "Jacobs, Josh",
+          "salary": 4025000,
+          "franchiseId": "0014"
+        },
+        {
           "id": "15711",
           "name": "Walker III, Kenneth",
           "salary": 3806660,
@@ -793,6 +817,12 @@
           "name": "Mason, Jordan",
           "salary": 3100000,
           "franchiseId": "0006"
+        },
+        {
+          "id": "14085",
+          "name": "Pollard, Tony",
+          "salary": 2750000,
+          "franchiseId": "0002"
         },
         {
           "id": "16178",
@@ -895,6 +925,12 @@
           "name": "Swift, D'Andre",
           "salary": 825000,
           "franchiseId": "0013"
+        },
+        {
+          "id": "15716",
+          "name": "Robinson, Brian",
+          "salary": 800000,
+          "franchiseId": "0015"
         },
         {
           "id": "16757",
@@ -1143,6 +1179,12 @@
           "franchiseId": "0002"
         },
         {
+          "id": "14080",
+          "name": "Singletary, Devin",
+          "salary": 450000,
+          "franchiseId": "0004"
+        },
+        {
           "id": "13133",
           "name": "Perine, Samaje",
           "salary": 425000,
@@ -1151,15 +1193,15 @@
       ]
     },
     "PK": {
-      "totalPlayers": 24,
+      "totalPlayers": 26,
       "top3Average": 1094440,
       "top5Average": 920664,
       "top10Average": 761556.25,
       "starterAverage": 677530.47,
       "starterMedian": 605000,
       "starterCount": 16,
-      "averageSalary": 603978.65,
-      "medianSalary": 557837.5,
+      "averageSalary": 591172.6,
+      "medianSalary": 537500,
       "topPlayers": [
         {
           "id": "16414",
@@ -1294,8 +1336,20 @@
           "franchiseId": "0015"
         },
         {
+          "id": "14600",
+          "name": "Slye, Joey",
+          "salary": 450000,
+          "franchiseId": "0013"
+        },
+        {
           "id": "13303",
           "name": "Elliott, Jake",
+          "salary": 425000,
+          "franchiseId": "0005"
+        },
+        {
+          "id": "17424",
+          "name": "Smyth, Charlie",
           "salary": 425000,
           "franchiseId": "0005"
         },
@@ -1796,15 +1850,15 @@
       ]
     },
     "QB": {
-      "totalPlayers": 38,
-      "top3Average": 7133333.33,
-      "top5Average": 6080000,
-      "top10Average": 4695800,
-      "starterAverage": 3536892.19,
-      "starterMedian": 3300000,
+      "totalPlayers": 44,
+      "top3Average": 7408333.33,
+      "top5Average": 6495000,
+      "top10Average": 5275000,
+      "starterAverage": 4376767.19,
+      "starterMedian": 3887500,
       "starterCount": 16,
-      "averageSalary": 1877943.22,
-      "medianSalary": 902962.5,
+      "averageSalary": 2082087.33,
+      "medianSalary": 984000,
       "topPlayers": [
         {
           "id": "13589",
@@ -1819,6 +1873,12 @@
           "franchiseId": "0005"
         },
         {
+          "id": "14777",
+          "name": "Burrow, Joe",
+          "salary": 6075000,
+          "franchiseId": "0014"
+        },
+        {
           "id": "14779",
           "name": "Herbert, Justin",
           "salary": 5250000,
@@ -1831,6 +1891,18 @@
           "franchiseId": "0001"
         },
         {
+          "id": "13116",
+          "name": "Mahomes, Patrick",
+          "salary": 4775000,
+          "franchiseId": "0003"
+        },
+        {
+          "id": "15237",
+          "name": "Lawrence, Trevor",
+          "salary": 4200000,
+          "franchiseId": "0009"
+        },
+        {
           "id": "14056",
           "name": "Murray, Kyler",
           "salary": 4000000,
@@ -1841,6 +1913,12 @@
           "name": "Stafford, Matthew",
           "salary": 3775000,
           "franchiseId": "0012"
+        },
+        {
+          "id": "12620",
+          "name": "Prescott, Dak",
+          "salary": 3525000,
+          "franchiseId": "0015"
         },
         {
           "id": "12611",
@@ -1909,6 +1987,12 @@
           "franchiseId": "0007"
         },
         {
+          "id": "15241",
+          "name": "Jones, Mac",
+          "salary": 1000000,
+          "franchiseId": "0004"
+        },
+        {
           "id": "16582",
           "name": "Nix, Bo",
           "salary": 968000,
@@ -1948,6 +2032,12 @@
           "id": "15694",
           "name": "Willis, Malik",
           "salary": 695447.5,
+          "franchiseId": "0014"
+        },
+        {
+          "id": "15238",
+          "name": "Fields, Justin",
+          "salary": 675000,
           "franchiseId": "0014"
         },
         {

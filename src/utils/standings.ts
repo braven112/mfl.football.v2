@@ -577,6 +577,18 @@ export function getConferenceStandings(franchises: StandingsFranchise[], config:
   };
 }
 
+// Get division champions (first-place team in each division by overall record + tiebreakers)
+export function getDivisionChampions(franchises: StandingsFranchise[], config: LeagueConfig): Record<string, string> {
+  const divStandings = getDivisionStandings(franchises, config);
+  const champions: Record<string, string> = {};
+  for (const division of divStandings) {
+    if (division.teams.length > 0) {
+      champions[division.name] = division.teams[0].teamName;
+    }
+  }
+  return champions;
+}
+
 // Determine playoff status for seeding view
 export function getPlayoffSeeding(franchises: StandingsFranchise[], config: LeagueConfig): PlayoffSeeding {
   const league = getLeagueStandings(franchises, config);
