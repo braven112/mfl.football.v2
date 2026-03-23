@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-23T11:01:11.304Z"
+    "fetchedAt": "2026-03-23T11:26:55.811Z"
   },
   "players": [
     {
@@ -2268,6 +2268,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": "00-0030565"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "14085",
+      "name": "Pollard, Tony",
+      "position": "RB",
+      "salary": 2750000,
+      "franchiseId": "0002",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "TEN",
+      "draftYear": 2019,
+      "draftTeam": "DAL",
+      "birthdate": 862376400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14085_thumb.jpg",
+      "externalIds": {
+        "mfl": "14085",
+        "sleeper": "5967",
+        "gsis": " 00-0035261"
+      },
+      "sleeper": {
+        "id": "5967",
+        "fullName": "Tony Pollard",
+        "team": "TEN",
+        "age": 28,
+        "height": "72",
+        "weight": "209",
+        "number": 20,
+        "college": "Memphis",
+        "birthDate": "1997-04-30",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035261"
       },
       "nflverse": null,
       "gamesPlayed": null,
@@ -5589,7 +5635,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14085",
+          "name": "Pollard, Tony"
+        }
+      ]
     },
     {
       "id": "13319",
