@@ -49,14 +49,108 @@ let activityMap: Record<string, number> = {};
 let pageViewData: { dates: string[]; data: Record<string, Record<string, number>> } = { dates: [], data: {} };
 let globalPages: { page: string; count: number }[] = [];
 let ownerPages: Record<string, { page: string; count: number }[]> = {};
-try {
-	[activityMap, pageViewData, globalPages, ownerPages] = await Promise.all([
-		getAllActivity(leagueId),
-		getDailyPageViews(leagueId, 30),
-		getGlobalPagePopularity(leagueId),
-		getAllOwnerPagePopularity(leagueId, franchiseIds),
-	]);
-} catch { /* Redis unavailable */ }
+
+// Mock data for local development — ?mock=true enables it
+const useMock = Astro.url.searchParams.has('mock');
+
+if (useMock) {
+	// Seeded random for deterministic output
+	const seed = (s: number) => () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+
+	// Activity levels: some very active, some idle, some dormant
+	const activityProfiles: Record<string, { baseViews: number; lastSeenHoursAgo: number }> = {
+		'0001': { baseViews: 18, lastSeenHoursAgo: 0.5 },   // power user
+		'0002': { baseViews: 14, lastSeenHoursAgo: 2 },      // very active
+		'0003': { baseViews: 3, lastSeenHoursAgo: 72 },       // idle
+		'0004': { baseViews: 11, lastSeenHoursAgo: 4 },       // active
+		'0005': { baseViews: 7, lastSeenHoursAgo: 12 },       // active
+		'0006': { baseViews: 1, lastSeenHoursAgo: 240 },      // dormant
+		'0007': { baseViews: 5, lastSeenHoursAgo: 36 },       // idle
+		'0008': { baseViews: 16, lastSeenHoursAgo: 1 },       // power user
+		'0009': { baseViews: 9, lastSeenHoursAgo: 8 },        // active
+		'0010': { baseViews: 12, lastSeenHoursAgo: 3 },       // very active
+		'0011': { baseViews: 2, lastSeenHoursAgo: 168 },      // dormant
+		'0012': { baseViews: 6, lastSeenHoursAgo: 48 },       // idle
+		'0013': { baseViews: 8, lastSeenHoursAgo: 18 },       // active
+		'0014': { baseViews: 0, lastSeenHoursAgo: -1 },       // never seen
+		'0015': { baseViews: 4, lastSeenHoursAgo: 96 },       // idle
+		'0016': { baseViews: 10, lastSeenHoursAgo: 6 },       // active
+	};
+
+	// Last seen timestamps
+	for (const [fid, profile] of Object.entries(activityProfiles)) {
+		if (profile.lastSeenHoursAgo >= 0) {
+			activityMap[fid] = Date.now() - profile.lastSeenHoursAgo * 3600_000;
+		}
+	}
+
+	// Daily page views for 30 days
+	const dates: string[] = [];
+	for (let i = 29; i >= 0; i--) {
+		const d = new Date(); d.setDate(d.getDate() - i);
+		dates.push(d.toISOString().slice(0, 10));
+	}
+	const pvData: Record<string, Record<string, number>> = {};
+	for (const date of dates) {
+		pvData[date] = {};
+		for (const [fid, profile] of Object.entries(activityProfiles)) {
+			if (profile.baseViews === 0) continue;
+			const rng = seed(parseInt(fid) * 1000 + parseInt(date.replace(/-/g, '')));
+			// Add some variance: weekends are busier, recent days trend up
+			const dayOfWeek = new Date(date).getDay();
+			const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+			const recencyBoost = 1 + (dates.indexOf(date) / dates.length) * 0.5;
+			const weekendBoost = isWeekend ? 1.4 : 1;
+			const views = Math.max(0, Math.round(profile.baseViews * recencyBoost * weekendBoost * (0.3 + rng() * 1.4)));
+			if (views > 0) pvData[date][fid] = views;
+		}
+	}
+	pageViewData = { dates, data: pvData };
+
+	// Global page popularity
+	const pageWeights = [
+		{ page: '/rosters', weight: 320 },
+		{ page: '/players', weight: 185 },
+		{ page: '/trade-builder', weight: 142 },
+		{ page: '/standings', weight: 128 },
+		{ page: '/salary', weight: 97 },
+		{ page: '/league-summary', weight: 84 },
+		{ page: '/draft-predictor', weight: 72 },
+		{ page: '/playoffs', weight: 61 },
+		{ page: '/contracts/manage', weight: 55 },
+		{ page: '/calendar', weight: 43 },
+		{ page: '/dead-money', weight: 38 },
+		{ page: '/mvp', weight: 31 },
+		{ page: '/whats-new', weight: 27 },
+		{ page: '/activity', weight: 22 },
+		{ page: '/rules', weight: 14 },
+	];
+	globalPages = pageWeights.map(({ page, weight }) => ({ page, count: weight }));
+
+	// Per-owner page popularity
+	ownerPages = {};
+	for (const fid of franchiseIds) {
+		const profile = activityProfiles[fid];
+		if (!profile || profile.baseViews === 0) { ownerPages[fid] = []; continue; }
+		const rng = seed(parseInt(fid) * 7919);
+		ownerPages[fid] = pageWeights
+			.slice(0, 6 + Math.floor(rng() * 5))
+			.map(({ page, weight }) => ({
+				page,
+				count: Math.max(1, Math.round(weight * (profile.baseViews / 10) * (0.5 + rng()))),
+			}))
+			.sort((a, b) => b.count - a.count);
+	}
+} else {
+	try {
+		[activityMap, pageViewData, globalPages, ownerPages] = await Promise.all([
+			getAllActivity(leagueId),
+			getDailyPageViews(leagueId, 30),
+			getGlobalPagePopularity(leagueId),
+			getAllOwnerPagePopularity(leagueId, franchiseIds),
+		]);
+	} catch { /* Redis unavailable */ }
+}
 
 const globalTotal = globalPages.reduce((s, p) => s + p.count, 0);
 
