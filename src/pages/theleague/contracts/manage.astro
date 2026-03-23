@@ -7,6 +7,7 @@ import { getPendingDeclarations, getDeclarations } from '../../../utils/contract
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import leagueConfig from '../../../data/theleague.config.json';
 
 // Commissioner actions (Apply button) only show when commish-mode toggle is ON
 const user = getAuthUser(Astro.request);
@@ -17,8 +18,20 @@ const isCommishMode = isCommish && Astro.cookies.get('commish-mode')?.value === 
 const pending = await getPendingDeclarations();
 const allDeclarations = await getDeclarations();
 const appliedContracts = allDeclarations
-  .filter(d => d.status === 'applied')
-  .slice(0, 20);
+  .filter(d => d.status === 'applied');
+
+// Group applied contracts by league year (most recent year first)
+const teamIconMap = new Map(leagueConfig.teams.map((t: any) => [t.franchiseId, t.icon]));
+const teamNameMap = new Map(leagueConfig.teams.map((t: any) => [t.franchiseId, t.abbrev || t.nameShort || t.name]));
+const contractsByYear = new Map<number, typeof appliedContracts>();
+for (const d of appliedContracts) {
+  const refDate = new Date(d.reviewedAt || d.submittedAt);
+  const year = getCurrentLeagueYear(refDate);
+  if (!contractsByYear.has(year)) contractsByYear.set(year, []);
+  contractsByYear.get(year)!.push(d);
+}
+const sortedYears = [...contractsByYear.keys()].sort((a, b) => b - a);
+const currentYear = getCurrentLeagueYear();
 
 const declarationTypeLabels: Record<string, string> = {
   'new-acquisition': 'Contract Years',
@@ -182,7 +195,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
         )}
       </section>
 
-      <!-- Recent decisions -->
+      <!-- Applied contracts by year -->
       <section class="section" aria-labelledby="applied-contracts-heading">
         <div class="section__header-row">
           <h2 class="section__title" id="applied-contracts-heading">Applied Contracts</h2>
@@ -198,57 +211,84 @@ const getHeadshot = (playerId: string, espnId?: string) => {
             <p class="empty-state__text">No applied contracts yet</p>
           </div>
         ) : (
-          <ul class="recent-list" id="appliedList">
-            {appliedContracts.map(d => {
-              const pInfo = playerLookup[d.playerId];
-              const headshot = pInfo ? getHeadshot(d.playerId, pInfo.espnId) : undefined;
-              return (
-                <li class="recent-item" data-id={d.id} data-player-id={d.playerId} data-requested-years={d.requestedYears}>
-                  <div class="recent-item__player-cell">
-                    <PlayerCell
-                      name={d.playerName}
-                      headshot={headshot}
-                      position={pInfo?.position}
-                      nflTeam={pInfo?.team}
-                      size="compact"
-                    />
-                  </div>
-                  <span class="recent-item__detail">
-                    {d.currentYears}yr &rarr; {d.requestedYears}yr
-                  </span>
-                  <span class="recent-item__mfl-status" data-mfl-check={d.playerId}></span>
-                  <span class="recent-item__type">{declarationTypeLabels[d.type] || d.type}</span>
-                  {d.reviewedAt && (
-                    <span class="recent-item__date">
-                      {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  )}
-                  {isCommishMode && (
-                    <div class="action-btn-group">
-                      <button
-                        class="action-btn action-btn--reapply"
-                        data-action="reapply"
-                        data-id={d.id}
-                        data-player={d.playerName}
-                        aria-label={`Reapply declaration for ${d.playerName}`}
-                      >
-                        Reapply
-                      </button>
-                      <button
-                        class="action-btn action-btn--delete"
-                        data-action="delete"
-                        data-id={d.id}
-                        data-player={d.playerName}
-                        aria-label={`Delete declaration for ${d.playerName}`}
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          sortedYears.map(year => {
+            const yearContracts = contractsByYear.get(year)!;
+            return (
+              <div class="year-group" data-year={year}>
+                <h3 class="year-group__heading">
+                  {year}
+                  <span class="year-group__count">{yearContracts.length}</span>
+                  {year === currentYear && <span class="year-group__current">Current</span>}
+                </h3>
+                <ul class="recent-list" id={year === currentYear ? 'appliedList' : undefined}>
+                  {yearContracts.map(d => {
+                    const pInfo = playerLookup[d.playerId];
+                    const headshot = pInfo ? getHeadshot(d.playerId, pInfo.espnId) : undefined;
+                    const teamIcon = teamIconMap.get(d.franchiseId);
+                    const teamAbbrev = teamNameMap.get(d.franchiseId);
+                    const typeLabel = declarationTypeLabels[d.type] || d.type;
+                    return (
+                      <li class="recent-item" data-id={d.id} data-player-id={d.playerId} data-requested-years={d.requestedYears}>
+                        <div class="recent-item__player-cell">
+                          <PlayerCell
+                            name={d.playerName}
+                            headshot={headshot}
+                            position={pInfo?.position}
+                            nflTeam={pInfo?.team}
+                            size="compact"
+                          />
+                        </div>
+                        <div class="recent-item__info">
+                          <span class="recent-item__detail">
+                            {teamIcon && (
+                              <img
+                                src={teamIcon}
+                                alt={teamAbbrev || ''}
+                                class="recent-item__team-icon"
+                                loading="lazy"
+                              />
+                            )}
+                            {d.currentYears}yr &rarr; {d.requestedYears}yr
+                          </span>
+                          <span class="recent-item__meta">
+                            <span class="recent-item__type">{typeLabel}</span>
+                            {d.reviewedAt && (
+                              <span class="recent-item__date">
+                                {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <span class="recent-item__mfl-status" data-mfl-check={d.playerId}></span>
+                        {isCommishMode && (
+                          <div class="action-btn-group">
+                            <button
+                              class="action-btn action-btn--reapply"
+                              data-action="reapply"
+                              data-id={d.id}
+                              data-player={d.playerName}
+                              aria-label={`Reapply declaration for ${d.playerName}`}
+                            >
+                              Reapply
+                            </button>
+                            <button
+                              class="action-btn action-btn--delete"
+                              data-action="delete"
+                              data-id={d.id}
+                              data-player={d.playerName}
+                              aria-label={`Delete declaration for ${d.playerName}`}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })
         )}
       </section>
 
@@ -1116,7 +1156,57 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     }
 
     /* ================================================
-       Recent Decisions List (text-link style)
+       Year Group Headers
+       ================================================ */
+    .year-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .year-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .year-group__heading {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding-left: 0.625rem;
+      border-left: 2px solid var(--color-primary, #1c497c);
+      margin: 0 0 0.75rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .year-group__count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.375rem;
+      border-radius: 10px;
+      background: var(--color-gray-100, #f3f4f6);
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.625rem;
+      font-weight: 600;
+    }
+
+    .year-group__current {
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-success-dark, #166534);
+      background: var(--color-success-light, #dcfce7);
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+    }
+
+    /* ================================================
+       Applied Contracts List
        ================================================ */
     .recent-list {
       list-style: none;
@@ -1124,16 +1214,16 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
     }
 
     .recent-item {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
       align-items: center;
-      gap: 0.625rem;
-      padding: 0.625rem 0;
-      border-bottom: 1px solid var(--color-gray-100);
-      font-size: var(--font-size-sm);
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+      font-size: var(--font-size-sm, 0.875rem);
       color: var(--content-text-muted);
     }
 
@@ -1141,27 +1231,59 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       border-bottom: none;
     }
 
+    .recent-item__team-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+      object-fit: contain;
+      vertical-align: middle;
+      margin-right: 0.25rem;
+    }
+
     .recent-item__player-cell {
-      flex-shrink: 0;
       min-width: 0;
     }
 
+    .recent-item__info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.125rem;
+      white-space: nowrap;
+    }
+
     .recent-item__detail {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
       font-variant-numeric: tabular-nums;
-      font-weight: 400;
+      font-weight: 500;
+      font-size: 0.8125rem;
+    }
+
+    .recent-item__meta {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
     }
 
     .recent-item__type {
-      font-size: 0.7rem;
+      font-size: 0.625rem;
       text-transform: uppercase;
       letter-spacing: 0.03em;
-      color: var(--color-gray-400);
+      color: var(--color-gray-400, #9ca3af);
     }
 
     .recent-item__date {
-      margin-left: auto;
-      font-size: 0.75rem;
-      color: var(--color-gray-400);
+      font-size: 0.625rem;
+      color: var(--color-gray-400, #9ca3af);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .recent-item__meta .recent-item__type + .recent-item__date::before {
+      content: '·';
+      margin-right: 0.375rem;
+      color: var(--color-gray-300, #d1d5db);
     }
 
     /* ================================================
@@ -1405,6 +1527,30 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       .action-btn {
         width: 100%;
         text-align: center;
+      }
+
+      /* Applied contracts: compact mobile layout */
+      .recent-item {
+        grid-template-columns: 1fr auto;
+        gap: 0.25rem 0.375rem;
+      }
+
+      .recent-item__team-icon {
+        width: 16px;
+        height: 16px;
+      }
+
+      .recent-item__info {
+        align-self: center;
+      }
+
+      .recent-item__mfl-status {
+        grid-column: 2;
+      }
+
+      .action-btn-group {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
       }
     }
 
