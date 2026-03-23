@@ -195,13 +195,12 @@ export function isMFLRookie(
  * Used as the rookie contract override deadline (cutdown date).
  */
 function getAugustCutdownDate(year: number): Date {
-  // Use UTC arithmetic to find the 3rd Sunday, avoiding server-local TZ issues
-  const august1DayOfWeek = new Date(Date.UTC(year, 7, 1)).getUTCDay();
-  const daysToFirstSunday = (7 - august1DayOfWeek) % 7 || 7;
-  const thirdSundayDay = 1 + daysToFirstSunday + 14;
-
-  // 8:45 PM PT → convert to UTC (PDT in August = UTC-7)
-  return new Date(Date.UTC(year, 7, thirdSundayDay, 20 + 7, 45, 0, 0));
+  const august1 = new Date(year, 7, 1); // August is month 7
+  const dayOfWeek = august1.getDay();
+  const daysToFirstSunday = (7 - dayOfWeek) % 7 || 7;
+  const thirdSunday = new Date(year, 7, 1 + daysToFirstSunday + 14);
+  thirdSunday.setHours(20, 45, 0, 0); // 8:45 PM PT
+  return thirdSunday;
 }
 
 /** Salary averages used for franchise tag, extension, and team option calculations */

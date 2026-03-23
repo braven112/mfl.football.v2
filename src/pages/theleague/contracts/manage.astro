@@ -164,13 +164,13 @@ const getHeadshot = (playerId: string, espnId?: string) => {
                   )}
                   <div class="decl-card__field">
                     <span class="field__label">Submitted</span>
-                    <span class="field__value">{new Date(d.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' })}</span>
+                    <span class="field__value">{new Date(d.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   {d.deadlineAt && (
                     <div class="decl-card__field">
                       <span class="field__label">Deadline</span>
                       <span class="field__value deadline-value" data-deadline={d.deadlineAt}>
-                        {new Date(d.deadlineAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' })}
+                        {new Date(d.deadlineAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   )}
@@ -254,7 +254,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
                             <span class="recent-item__type">{typeLabel}</span>
                             {d.reviewedAt && (
                               <span class="recent-item__date">
-                                {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' })}
+                                {new Date(d.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </span>
                             )}
                           </span>
@@ -721,12 +721,10 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       }
     });
 
-    // Deadline countdown coloring — compare in Pacific Time
+    // Deadline countdown coloring
     document.querySelectorAll('[data-deadline]').forEach(el => {
       const deadline = new Date(el.dataset.deadline);
       const now = new Date();
-      // Both deadline and now are absolute timestamps (UTC internally),
-      // so the difference is timezone-agnostic
       const hoursLeft = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
 
       if (hoursLeft < 0) {
@@ -736,13 +734,6 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       } else if (hoursLeft < 12) {
         el.classList.add('deadline--warning');
       }
-
-      // Re-render deadline text in Pacific Time for consistency
-      const ptFormatted = deadline.toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-        timeZone: 'America/Los_Angeles'
-      });
-      el.textContent = ptFormatted;
     });
 
     // Reconcile handler — auto-fixes stuck pending declarations
