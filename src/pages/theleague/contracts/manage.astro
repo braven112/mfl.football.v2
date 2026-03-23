@@ -176,6 +176,15 @@ const getHeadshot = (playerId: string, espnId?: string) => {
                     >
                       Apply
                     </button>
+                    <button
+                      class="action-btn action-btn--dismiss"
+                      data-action="dismiss"
+                      data-id={d.id}
+                      data-player={d.playerName}
+                      aria-label={`Dismiss declaration for ${d.playerName}`}
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 )}
               </article>
@@ -448,15 +457,54 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       }, 500);
     }
 
-    // Event delegation for apply button
+    // Event delegation for pending card actions
     pendingList?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
 
       const declarationId = btn.dataset.id;
       const playerName = btn.dataset.player;
-      handleApply(declarationId, playerName, btn);
+      if (btn.dataset.action === 'dismiss') {
+        handleDismiss(declarationId, playerName, btn);
+      } else {
+        handleApply(declarationId, playerName, btn);
+      }
     });
+
+    async function handleDismiss(declarationId, playerName, btn) {
+      if (!await inlineConfirm(btn, `Dismiss ${playerName}?`)) return;
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/contracts/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ declarationId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast(`Failed to dismiss: ${data.error || 'Unknown error'}`);
+          btn.disabled = false;
+          return;
+        }
+
+        const card = btn.closest('.decl-card');
+        removeCard(card);
+        [pendingCountEl, sectionCountEl].forEach(el => {
+          if (!el) return;
+          const current = parseInt(el.textContent || '0', 10);
+          el.textContent = String(Math.max(0, current - 1));
+        });
+        showToast(`Dismissed ${playerName}`, 'success');
+      } catch (err) {
+        console.error('Dismiss error:', err);
+        showToast('Network error dismissing declaration.');
+        btn.disabled = false;
+      }
+    }
 
     async function handleApply(declarationId, playerName, btn) {
       if (!await inlineConfirm(btn, `Apply ${playerName}?`)) return;
@@ -1287,6 +1335,18 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     .action-btn--approve:hover:not(:disabled) {
       background: var(--color-primary-dark, #163d68);
       box-shadow: var(--shadow-btn-hover);
+    }
+
+    .action-btn--dismiss {
+      background: var(--color-gray-100, #f3f4f6);
+      color: var(--color-gray-600, #4b5563);
+      border: 1px solid var(--color-gray-200, #e5e7eb);
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+    }
+    .action-btn--dismiss:hover:not(:disabled) {
+      background: var(--color-gray-200, #e5e7eb);
+      border-color: var(--color-gray-300, #d1d5db);
     }
 
     .action-btn--reapply {
