@@ -244,7 +244,8 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 					const last = Number(sessionStorage.getItem(DEBOUNCE_KEY) || '0');
 					if (Date.now() - last < DEBOUNCE_MS) return;
 					sessionStorage.setItem(DEBOUNCE_KEY, Date.now().toString());
-					navigator.sendBeacon('/api/track-visit');
+					const page = location.pathname.replace(/^\/theleague/, '') || '/';
+					navigator.sendBeacon(`/api/track-visit?page=${encodeURIComponent(page)}`);
 				} catch (_) {}
 			}
 			document.addEventListener('astro:page-load', trackVisit);

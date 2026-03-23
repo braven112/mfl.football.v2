@@ -53,15 +53,27 @@ function todayISO(): string {
 	return new Date().toISOString().slice(0, 10);
 }
 
-/** Record a visit for a franchise (updates last-seen + increments daily page view count) */
-export async function recordVisit(leagueId: string, franchiseId: string): Promise<void> {
+function globalPageKey(leagueId: string): string {
+	return `pages:${leagueId}`;
+}
+
+function ownerPageKey(leagueId: string, franchiseId: string): string {
+	return `pages:${leagueId}:${franchiseId}`;
+}
+
+/** Record a visit for a franchise (updates last-seen, daily page view count, and page popularity) */
+export async function recordVisit(leagueId: string, franchiseId: string, page = '/'): Promise<void> {
 	const redis = await getRedis();
 	if (!redis) return;
 	const today = todayISO();
 	const pvKey = pageviewKey(leagueId, today);
+	// Normalize page path: strip query params, trailing slashes
+	const normalizedPage = page.split('?')[0].replace(/\/+$/, '') || '/';
 	await Promise.all([
 		redis.hset(redisKey(leagueId), { [franchiseId]: Date.now().toString() }),
 		redis.hincrby(pvKey, franchiseId, 1).then(() => redis.expire(pvKey, PAGEVIEW_TTL_SECONDS)),
+		redis.hincrby(globalPageKey(leagueId), normalizedPage, 1),
+		redis.hincrby(ownerPageKey(leagueId, franchiseId), normalizedPage, 1),
 	]);
 }
 
@@ -185,4 +197,51 @@ export async function getDailyPageViews(
 	}
 
 	return { dates, data };
+}
+
+/** Parse a Redis hash of string counts into a sorted array of { page, count } */
+function parsePageCounts(raw: Record<string, string> | null): { page: string; count: number }[] {
+	if (!raw) return [];
+	return Object.entries(raw)
+		.map(([page, val]) => ({ page, count: Number(val) || 0 }))
+		.filter((e) => e.count > 0)
+		.sort((a, b) => b.count - a.count);
+}
+
+/** Get global page popularity across all owners (sorted by most visited) */
+export async function getGlobalPagePopularity(
+	leagueId: string,
+): Promise<{ page: string; count: number }[]> {
+	const redis = await getRedis();
+	if (!redis) return [];
+	const raw = await redis.hgetall<Record<string, string>>(globalPageKey(leagueId));
+	return parsePageCounts(raw);
+}
+
+/** Get a single owner's page popularity (sorted by most visited) */
+export async function getOwnerPagePopularity(
+	leagueId: string,
+	franchiseId: string,
+): Promise<{ page: string; count: number }[]> {
+	const redis = await getRedis();
+	if (!redis) return [];
+	const raw = await redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, franchiseId));
+	return parsePageCounts(raw);
+}
+
+/** Get page popularity for ALL owners at once */
+export async function getAllOwnerPagePopularity(
+	leagueId: string,
+	franchiseIds: string[],
+): Promise<Record<string, { page: string; count: number }[]>> {
+	const redis = await getRedis();
+	if (!redis) return {};
+	const results = await Promise.all(
+		franchiseIds.map((id) => redis.hgetall<Record<string, string>>(ownerPageKey(leagueId, id))),
+	);
+	const out: Record<string, { page: string; count: number }[]> = {};
+	for (let i = 0; i < franchiseIds.length; i++) {
+		out[franchiseIds[i]] = parsePageCounts(results[i]);
+	}
+	return out;
 }
