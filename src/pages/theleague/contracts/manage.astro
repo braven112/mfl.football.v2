@@ -111,17 +111,6 @@ const getHeadshot = (playerId: string, espnId?: string) => {
             )}
           </div>
         )}
-        {isCommish && (
-          <div class="batch-actions">
-            <button
-              class="action-btn action-btn--verify"
-              id="migrateBtn"
-              aria-label="Migrate declarations from Blob to Redis"
-            >
-              Migrate to Redis
-            </button>
-          </div>
-        )}
 
         {pending.length === 0 ? (
           <div class="empty-state">
@@ -768,34 +757,6 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       }
     });
 
-    // Migrate handler — one-time Blob → Redis migration
-    const migrateBtn = document.getElementById('migrateBtn');
-    migrateBtn?.addEventListener('click', async () => {
-      if (!await inlineConfirm(migrateBtn, 'Migrate to Redis?')) return;
-
-      migrateBtn.disabled = true;
-      migrateBtn.textContent = 'Migrating...';
-
-      try {
-        const res = await fetch('/api/contracts/migrate-to-redis', { method: 'POST' });
-        const data = await res.json();
-
-        if (!res.ok) {
-          showToast(`Migration failed: ${data.error || res.statusText}`);
-          return;
-        }
-
-        showToast(`Migrated ${data.migrated} declaration(s) to Redis. Refresh to verify.`, 'success');
-        location.reload();
-      } catch (err) {
-        console.error('Migration error:', err);
-        showToast('Network error during migration.');
-      } finally {
-        migrateBtn.disabled = false;
-        migrateBtn.textContent = 'Migrate to Redis';
-      }
-    });
-
   </script>
 
   <style>
@@ -987,7 +948,8 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     .batch-actions {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: -0.5rem;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .action-btn--batch {
@@ -1317,13 +1279,13 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       cursor: not-allowed;
     }
 
-    /* Approve = Secondary (green = affirmative "go" action) */
+    /* Approve = Primary (navy) */
     .action-btn--approve {
-      background: var(--btn-secondary-bg, #2e8743);
-      color: var(--btn-secondary-text, #fff);
+      background: var(--color-primary, #1c497c);
+      color: #fff;
     }
     .action-btn--approve:hover:not(:disabled) {
-      background: var(--btn-secondary-bg-hover, #26743a);
+      background: var(--color-primary-dark, #163d68);
       box-shadow: var(--shadow-btn-hover);
     }
 
@@ -1679,7 +1641,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: var(--color-danger, #dc2626);
+      background: var(--color-primary, #1c497c);
       color: #fff;
       border: none;
       border-radius: 6px;
@@ -1691,7 +1653,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       transition: background-color var(--transition-fast, 0.15s ease);
     }
     :global(.inline-confirm__yes:hover:not(:disabled)) {
-      background: #b91c1c;
+      background: var(--color-primary-dark, #163d68);
     }
 
     :global(.inline-confirm__no) {
