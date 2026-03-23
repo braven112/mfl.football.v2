@@ -460,9 +460,6 @@ const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/playe
 const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/rosters.json', {
   eager: true,
 });
-const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', {
-  eager: true,
-});
 const getModuleData = (mod) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -1569,14 +1566,10 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
 }
 
 // --- Contract eligibility data ---
-// Load transactions for the current league year via import.meta.glob (bundled at build time)
-// so the data is always available in the Vercel serverless function.
+// Load transactions for the current league year
 const eligibilityYear = getCurrentLeagueYear();
 const eligibilityYearStr = String(eligibilityYear);
-const eligTxFeed = transactionsFeeds[Object.keys(transactionsFeeds).find(
-  (path) => extractFeedSeason(path) === eligibilityYearStr
-) ?? ''];
-const eligTxData = eligTxFeed ? getModuleData(eligTxFeed) : null;
+const eligTxData = loadFeedJson(eligibilityYearStr, 'transactions.json');
 const eligRawTransactions = eligTxData?.transactions?.transaction
   ? (Array.isArray(eligTxData.transactions.transaction)
       ? eligTxData.transactions.transaction
