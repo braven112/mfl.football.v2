@@ -1,4 +1,5 @@
 ---
+import { Font } from 'astro:assets';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import Footer from '../components/Footer.astro';
 
@@ -21,6 +22,7 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 		<link rel="icon" type="image/svg+xml" href="/assets/logos/theleague-logo.svg" />
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
+		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
 	</head>
 	<body>
