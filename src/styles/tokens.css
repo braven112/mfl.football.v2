@@ -16,7 +16,7 @@
      ======================================== */
 
   /* Font Families */
-  --font-family-base: 'Vend Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-base: var(--font-vend-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-mono: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
 
   /* Font Sizes - Fluid scale */
