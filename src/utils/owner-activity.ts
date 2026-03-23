@@ -12,6 +12,8 @@ export type ActivityLevel = 'active' | 'idle' | 'dormant' | 'unknown';
 type RedisClient = {
 	hgetall: <T = Record<string, string>>(key: string) => Promise<T | null>;
 	hset: (key: string, data: Record<string, unknown>) => Promise<unknown>;
+	hincrby: (key: string, field: string, increment: number) => Promise<number>;
+	expire: (key: string, seconds: number) => Promise<unknown>;
 };
 
 let _redis: RedisClient | null | undefined;
@@ -41,11 +43,26 @@ function redisKey(leagueId: string): string {
 	return `activity:${leagueId}`;
 }
 
-/** Record a visit for a franchise */
+const PAGEVIEW_TTL_SECONDS = 45 * 86_400; // 45 days
+
+function pageviewKey(leagueId: string, date: string): string {
+	return `pageviews:${leagueId}:${date}`;
+}
+
+function todayISO(): string {
+	return new Date().toISOString().slice(0, 10);
+}
+
+/** Record a visit for a franchise (updates last-seen + increments daily page view count) */
 export async function recordVisit(leagueId: string, franchiseId: string): Promise<void> {
 	const redis = await getRedis();
 	if (!redis) return;
-	await redis.hset(redisKey(leagueId), { [franchiseId]: Date.now().toString() });
+	const today = todayISO();
+	const pvKey = pageviewKey(leagueId, today);
+	await Promise.all([
+		redis.hset(redisKey(leagueId), { [franchiseId]: Date.now().toString() }),
+		redis.hincrby(pvKey, franchiseId, 1).then(() => redis.expire(pvKey, PAGEVIEW_TTL_SECONDS)),
+	]);
 }
 
 /** Get all franchise activity timestamps for a league */
@@ -120,4 +137,52 @@ export function formatLastSeenLong(timestampMs: number | null): string {
 	if (days === 1) return '1 day ago';
 	if (days < 30) return `${days} days ago`;
 	return `${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} ago`;
+}
+
+/** Date string for N days ago in YYYY-MM-DD format */
+function daysAgoISO(n: number): string {
+	const d = new Date();
+	d.setDate(d.getDate() - n);
+	return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Get daily page view counts for all franchises over the last N days.
+ * Returns { "YYYY-MM-DD": { franchiseId: count, ... }, ... }
+ * Days with no data are included as empty objects.
+ */
+export async function getDailyPageViews(
+	leagueId: string,
+	days = 30,
+): Promise<{ dates: string[]; data: Record<string, Record<string, number>> }> {
+	const redis = await getRedis();
+	const dates: string[] = [];
+	for (let i = days - 1; i >= 0; i--) {
+		dates.push(daysAgoISO(i));
+	}
+
+	if (!redis) {
+		const empty: Record<string, Record<string, number>> = {};
+		for (const d of dates) empty[d] = {};
+		return { dates, data: empty };
+	}
+
+	const results = await Promise.all(
+		dates.map((d) => redis.hgetall<Record<string, string>>(pageviewKey(leagueId, d))),
+	);
+
+	const data: Record<string, Record<string, number>> = {};
+	for (let i = 0; i < dates.length; i++) {
+		const raw = results[i];
+		const dayData: Record<string, number> = {};
+		if (raw) {
+			for (const [key, value] of Object.entries(raw)) {
+				const num = Number(value);
+				if (!isNaN(num)) dayData[key] = num;
+			}
+		}
+		data[dates[i]] = dayData;
+	}
+
+	return { dates, data };
 }
