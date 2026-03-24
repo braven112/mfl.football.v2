@@ -158,6 +158,64 @@ Tell them to paste this into MFL Commissioner → Appearance → Custom CSS URL.
 
 Remind them the URL goes live after the changes are deployed (pushed to main or preview deployment).
 
+## Promoting a Hardcoded Value to a Variable
+
+Sometimes a commissioner wants to change something that isn't a CSS variable yet — for example, a border width, a specific background color buried in a component partial, or a font size that's hardcoded in pixels. When this happens, don't just hack it for one skin. Promote it to a variable so every skin can control it going forward.
+
+### Process
+
+1. **Find the hardcoded value** in the source SCSS partial (e.g., `_rosters.scss`, `_standings.scss`, etc.). These files live in `src/assets/css/src/`.
+
+2. **Create a new CSS custom property** in the base variables file (`_variables.scss`):
+   - Add it to the `:root` block in the appropriate category section
+   - Use the naming convention: `--{category}-{property}` (e.g., `--roster-header-bg`, `--table-border-width`)
+   - Set the value to whatever it was hardcoded as (so existing skins don't change)
+   - Add a matching SCSS `$variable` wrapper below the `:root` block
+
+3. **Replace the hardcoded value** in the component partial with `var(--new-variable)` (or `$new-variable` if the partial uses SCSS variables).
+
+4. **Add the new variable to ALL existing skin variable files** — not just the one being built. Every `_variables-*.scss` file needs the new token added to its `:root` block and `$variable` wrapper section:
+   - `_variables.scss` (TheLeague light — the base, already done in step 2)
+   - `_variables-dark.scss`
+   - `_variables-afl.scss`
+   - Any other `_variables-*.scss` files that exist
+
+   For each skin, set the value to whatever makes sense for that skin's look. If unsure, use the same default value — the commissioner can always change it later.
+
+5. **Update `references/token-map.md`** with the new token: what it controls, which category it belongs to, and its default values.
+
+### Example
+
+Commissioner says: "I want the roster table header to have a different background than the default."
+
+The roster table header background is hardcoded as `#1c497c` in `_rosters.scss`:
+
+```scss
+// Before (hardcoded)
+.roster-header { background: #1c497c; }
+```
+
+Promote it:
+
+```scss
+// In _variables.scss :root block, under "Roster Page" section:
+--roster-header-bg: #1c497c;
+
+// In _variables.scss $variable wrappers:
+$roster-header-bg: var(--roster-header-bg);
+
+// In _rosters.scss (replace hardcoded value):
+.roster-header { background: var(--roster-header-bg); }
+
+// In _variables-dark.scss :root block:
+--roster-header-bg: #141516;
+
+// In _variables-afl.scss :root block:
+--roster-header-bg: #1c497c;
+```
+
+Now every skin can control this value, and the new skin can set it to whatever the commissioner wants.
+
 ## Reference
 
 - `references/token-map.md` — what every CSS custom property controls and which user input it maps to
