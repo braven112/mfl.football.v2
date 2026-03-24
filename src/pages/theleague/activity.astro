@@ -15,6 +15,7 @@ import {
 	type ActivityLevel,
 } from '../../utils/owner-activity';
 import { getTeamColor } from '../../utils/team-colors';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 
 const PAGE_NAMES: Record<string, string> = {
 	'/': 'Homepage',
@@ -152,6 +153,72 @@ if (useMock) {
 	} catch { /* Redis unavailable */ }
 }
 
+// ── Transaction data ──
+interface TxCounts { trades: number; freeAgents: number; auctionWins: number; total: number; }
+const txCountMap: Record<string, TxCounts> = {};
+const ensureFranchise = (id: string) => {
+	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, auctionWins: 0, total: 0 };
+};
+
+// import.meta.glob must be at the top level (Vite requirement)
+const txFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', { eager: true });
+
+if (useMock) {
+	// Mock transaction counts tied to activityProfiles intensity
+	const mockTxProfiles: Record<string, { trades: number; fa: number; auctions: number }> = {
+		'0001': { trades: 4, fa: 7, auctions: 12 },
+		'0002': { trades: 3, fa: 5, auctions: 9 },
+		'0003': { trades: 1, fa: 2, auctions: 3 },
+		'0004': { trades: 3, fa: 4, auctions: 8 },
+		'0005': { trades: 2, fa: 3, auctions: 6 },
+		'0006': { trades: 0, fa: 1, auctions: 1 },
+		'0007': { trades: 1, fa: 3, auctions: 4 },
+		'0008': { trades: 5, fa: 6, auctions: 11 },
+		'0009': { trades: 2, fa: 4, auctions: 7 },
+		'0010': { trades: 3, fa: 5, auctions: 10 },
+		'0011': { trades: 0, fa: 1, auctions: 2 },
+		'0012': { trades: 1, fa: 2, auctions: 5 },
+		'0013': { trades: 2, fa: 3, auctions: 6 },
+		'0014': { trades: 0, fa: 0, auctions: 0 },
+		'0015': { trades: 1, fa: 2, auctions: 3 },
+		'0016': { trades: 2, fa: 4, auctions: 8 },
+	};
+	for (const [fid, p] of Object.entries(mockTxProfiles)) {
+		txCountMap[fid] = { trades: p.trades, freeAgents: p.fa, auctionWins: p.auctions, total: p.trades + p.fa + p.auctions };
+	}
+} else {
+	const leagueYear = getCurrentLeagueYear();
+	const txFeedKey = Object.keys(txFeeds).find(p => p.includes(`/${leagueYear}/`));
+	const txMod: any = txFeedKey ? txFeeds[txFeedKey] : null;
+	const txData = txMod && typeof txMod === 'object' && 'default' in txMod ? txMod.default : txMod;
+	const rawTx: any[] = txData?.transactions?.transaction
+		? (Array.isArray(txData.transactions.transaction) ? txData.transactions.transaction : [txData.transactions.transaction])
+		: [];
+
+	for (const tx of rawTx) {
+		if (tx.type === 'TRADE') {
+			ensureFranchise(tx.franchise); ensureFranchise(tx.franchise2);
+			txCountMap[tx.franchise].trades++; txCountMap[tx.franchise].total++;
+			txCountMap[tx.franchise2].trades++; txCountMap[tx.franchise2].total++;
+		} else if (tx.type === 'FREE_AGENT') {
+			ensureFranchise(tx.franchise);
+			txCountMap[tx.franchise].freeAgents++; txCountMap[tx.franchise].total++;
+		} else if (tx.type === 'AUCTION_WON') {
+			ensureFranchise(tx.franchise);
+			txCountMap[tx.franchise].auctionWins++; txCountMap[tx.franchise].total++;
+		}
+	}
+}
+
+const txLeaderboard = leagueConfig.teams
+	.map((team: any) => ({
+		franchiseId: team.franchiseId,
+		name: chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }),
+		icon: team.icon,
+		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, auctionWins: 0, total: 0 },
+	}))
+	.sort((a, b) => b.counts.total - a.counts.total);
+
 const globalTotal = globalPages.reduce((s, p) => s + p.count, 0);
 
 interface TeamActivity {
@@ -272,7 +339,11 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 					<div class="popular-pages__owners">
 						<h3 class="popular-pages__heading">By Owner</h3>
 						<div class="owner-pages-accordion" id="ownerPagesAccordion">
-							{teams.map((team) => {
+							{[...teams].sort((a, b) => {
+							const aViews = (ownerPages[a.franchiseId] || []).reduce((s, p) => s + p.count, 0);
+							const bViews = (ownerPages[b.franchiseId] || []).reduce((s, p) => s + p.count, 0);
+							return bViews - aViews;
+						}).map((team) => {
 								const pages = ownerPages[team.franchiseId] || [];
 								if (pages.length === 0) return null;
 								return (
@@ -298,6 +369,48 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 				</div>
 			)}
 		</div>
+
+		<!-- Transaction Activity -->
+		<div class="section-header" style="margin-top:2rem">
+			<h2 class="section-header__title">Transaction Activity</h2>
+			<p class="section-header__sub">Trades, free agent moves, and auction wins this season</p>
+		</div>
+
+		{txLeaderboard.every(t => t.counts.total === 0) ? (
+			<div class="chart-empty">
+				<p>No transactions recorded yet this season.</p>
+			</div>
+		) : (
+			<table class="activity-table" aria-label="Transaction activity leaderboard">
+				<thead>
+					<tr>
+						<th scope="col" class="activity-table__th activity-table__th--rank">#</th>
+						<th scope="col" class="activity-table__th activity-table__th--team">Team</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">Trades</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">FA</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">Auctions</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">Total</th>
+					</tr>
+				</thead>
+				<tbody>
+					{txLeaderboard.map((team, i) => (
+						<tr class="activity-table__row">
+							<td class="activity-table__td activity-table__td--rank">{i + 1}</td>
+							<td class="activity-table__td activity-table__td--team">
+								<div class="activity-team">
+									<img src={team.icon} alt="" class="activity-team__icon" width="32" height="32" loading="lazy" />
+									<span class="activity-team__name">{team.name}</span>
+								</div>
+							</td>
+							<td class="activity-table__td activity-table__td--stat">{team.counts.trades}</td>
+							<td class="activity-table__td activity-table__td--stat">{team.counts.freeAgents}</td>
+							<td class="activity-table__td activity-table__td--stat">{team.counts.auctionWins}</td>
+							<td class="activity-table__td activity-table__td--stat">{team.counts.total}</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		)}
 
 		<!-- Last Seen Table -->
 		<div class="section-header" style="margin-top:2rem">
@@ -783,6 +896,17 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		font-variant-numeric: tabular-nums;
 		color: var(--color-gray-700, #374151);
 		white-space: nowrap;
+	}
+
+	.activity-table__th--stat {
+		text-align: right;
+		width: 5rem;
+	}
+
+	.activity-table__td--stat {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-gray-700, #374151);
 	}
 
 	/* ── Team cell ── */
