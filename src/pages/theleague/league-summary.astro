@@ -35,6 +35,11 @@ const draftResultsFeeds = import.meta.glob(
   { eager: true }
 );
 
+const playerFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true }
+);
+
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 
@@ -84,6 +89,27 @@ const draftResultsEntries = Object.entries(draftResultsFeeds)
 const draftResultsData = draftResultsEntries[0]?.data || null;
 const draftCapitalMap = getDraftCapitalFromDraftResults(draftResultsData);
 
+// Build player metadata lookup from raw MFL players feed so we can fill in
+// name/position for players in Redis that aren't in the static salary file yet.
+const playerFeedEntries = Object.entries(playerFeeds)
+  .map(([path, mod]) => ({
+    season: extractFeedSeason(path),
+    data: getModuleData(mod),
+  }))
+  .filter((item) => item.season === currentYear && item.data);
+
+const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
+const playerMetaById = new Map<string, { name: string; position: string }>();
+for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {
+  if (p?.id) {
+    // MFL names are "Last, First" — normalize to "Last, First" (matches salary file)
+    playerMetaById.set(p.id, {
+      name: p.name ?? `Player ${p.id}`,
+      position: p.position ?? '',
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Build team configs from league config
 // ---------------------------------------------------------------------------
@@ -130,9 +156,23 @@ if (cachedRosterPlayers) {
       existing.contractYear = cached.contractYear ?? existing.contractYear;
       existing.status = cached.status ?? existing.status;
       existing.franchiseId = cached.franchiseId ?? existing.franchiseId;
+    } else {
+      // Players in Redis but not in static file — look up metadata from raw feed
+      const meta = playerMetaById.get(playerId);
+      if (meta) {
+        players.push({
+          id: playerId,
+          name: meta.name,
+          position: meta.position,
+          salary: parseNumber(cached.salary),
+          franchiseId: cached.franchiseId ?? '',
+          status: cached.status ?? 'ROSTER',
+          contractYear: cached.contractYear ?? '1',
+          points: 0,
+          birthdate: 0,
+        });
+      }
     }
-    // Players in Redis but not in static file (newly signed) are skipped —
-    // we lack name/position/birthdate. They appear after the next sync cycle.
   }
 }
 
