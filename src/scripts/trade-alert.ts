@@ -415,11 +415,12 @@ function tamUpdateNavBell(totalCount: number) {
   }
 }
 
-/** Open the trade alert modal from the nav bell, or navigate to trade builder if no trades */
+/** Open the trade alert modal from the nav bell — shows trades or empty state */
 function tamOpenFromBell() {
   // Use the full trade list (not the dismiss-filtered one) so bell always shows all trades
   if (tamAllTrades.length > 0) {
     tamTrades = [...tamAllTrades];
+    tamEl('tam-empty-view')!.style.display = 'none';
     if (tamTrades.length === 1) {
       tamEl('tam-list-view')!.style.display = 'none';
       tamEl('tam-detail-view')!.style.display = 'flex';
@@ -429,11 +430,13 @@ function tamOpenFromBell() {
       tamEl('tam-list-view')!.style.display = 'flex';
       tamShowListView();
     }
-    tamOpen();
   } else {
-    // No trades — navigate to trade builder
-    window.location.href = '/theleague/trade-builder';
+    // No trades — show empty state with Trade Builder CTA
+    tamEl('tam-list-view')!.style.display = 'none';
+    tamEl('tam-detail-view')!.style.display = 'none';
+    tamEl('tam-empty-view')!.style.display = 'flex';
   }
+  tamOpen();
 }
 
 // ---- Event handlers (attached once) ----
