@@ -13,7 +13,13 @@ vi.mock('node:fs', () => ({
   unlinkSync: vi.fn(),
 }));
 
-// Mock global fetch
+// Mock mflFetch (used for write calls)
+const mockMflFetch = vi.fn();
+vi.mock('../src/utils/mfl-fetch', () => ({
+  mflFetch: (...args: unknown[]) => mockMflFetch(...args),
+}));
+
+// Mock global fetch (used for backup reads in createPreWriteBackup)
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
@@ -40,13 +46,13 @@ describe('mfl-contract-writer', () => {
 
   describe('writeContractToMFL', () => {
     it('succeeds on first attempt with valid response', async () => {
-      // Mock backup fetch
+      // Mock backup fetch (raw fetch for createPreWriteBackup)
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      // Mock write fetch
-      mockFetch.mockResolvedValueOnce({
+      // Mock write via mflFetch
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
       });
@@ -68,7 +74,7 @@ describe('mfl-contract-writer', () => {
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
       });
@@ -81,17 +87,17 @@ describe('mfl-contract-writer', () => {
         contractInfo: '',
       });
 
-      // The write call is the second fetch (first is backup)
-      const writeCall = mockFetch.mock.calls[1];
-      expect(writeCall[0]).toContain('APPEND=1');
+      // mflFetch receives an options object with url
+      const writeCall = mockMflFetch.mock.calls[0][0];
+      expect(writeCall.url).toContain('APPEND=1');
     });
 
-    it('sends correct XML in DATA parameter', async () => {
+    it('sends correct XML in body parameter', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
       });
@@ -104,20 +110,20 @@ describe('mfl-contract-writer', () => {
         contractInfo: 'RC',
       });
 
-      const writeCall = mockFetch.mock.calls[1];
-      const bodyStr = writeCall[1].body;
+      const writeCall = mockMflFetch.mock.calls[0][0];
+      const bodyStr = writeCall.body;
       expect(bodyStr).toContain('id%3D%2214056%22');
       expect(bodyStr).toContain('salary%3D%22500000%22');
       expect(bodyStr).toContain('contractYear%3D%223%22');
       expect(bodyStr).toContain('contractInfo%3D%22RC%22');
     });
 
-    it('uses MFL_USER_ID for auth', async () => {
+    it('uses MFL_USER_ID for auth via mflFetch', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
       });
@@ -130,8 +136,9 @@ describe('mfl-contract-writer', () => {
         contractInfo: '',
       });
 
-      const writeCall = mockFetch.mock.calls[1];
-      expect(writeCall[1].headers.Cookie).toBe('MFL_USER_ID=test_cookie_value; MFL_IS_COMMISH=test_commish_value');
+      const writeCall = mockMflFetch.mock.calls[0][0];
+      expect(writeCall.mflUserCookie).toBe('test_cookie_value');
+      expect(writeCall.mflCommishCookie).toBe('test_commish_value');
     });
 
     it('fails when MFL_USER_ID is not set', async () => {
@@ -147,7 +154,7 @@ describe('mfl-contract-writer', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('MFL_USER_ID');
+      expect(result.error).toContain('No MFL credentials');
       expect(result.attempts).toBe(0);
     });
 
@@ -157,10 +164,10 @@ describe('mfl-contract-writer', () => {
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      // 3 failed attempts
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
+      // 3 failed attempts via mflFetch
+      mockMflFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
+      mockMflFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
+      mockMflFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
 
       const { writeContractToMFL } = await import('../src/utils/mfl-contract-writer');
       const result = await writeContractToMFL({
@@ -180,16 +187,16 @@ describe('mfl-contract-writer', () => {
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      // MFL returns 200 but with error in body
-      mockFetch.mockResolvedValueOnce({
+      // MFL returns 200 but with error in body — 3 retries
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<error>Invalid league ID</error>'),
       });
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<error>Invalid league ID</error>'),
       });
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<error>Invalid league ID</error>'),
       });
@@ -213,7 +220,7 @@ describe('mfl-contract-writer', () => {
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
       });
@@ -226,8 +233,8 @@ describe('mfl-contract-writer', () => {
 
       expect(result.success).toBe(true);
 
-      const writeCall = mockFetch.mock.calls[1];
-      const bodyStr = writeCall[1].body;
+      const writeCall = mockMflFetch.mock.calls[0][0];
+      const bodyStr = writeCall.body;
       // Both player IDs should be in the same payload
       expect(bodyStr).toContain('14056');
       expect(bodyStr).toContain('15000');
@@ -263,8 +270,8 @@ describe('mfl-contract-writer', () => {
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
-      // Mock write fetch
-      mockFetch.mockResolvedValueOnce({
+      // Mock write via mflFetch
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
       });
