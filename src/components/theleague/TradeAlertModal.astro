@@ -66,13 +66,13 @@
         <!-- Two-column asset grid -->
         <div class="tam-assets-grid">
           <div class="tam-assets-col">
-            <h4 class="tam-assets-col__title tam-assets-col__title--receive">You Receive</h4>
+            <h4 class="tam-assets-col__title tam-assets-col__title--receive" id="tam-assets-receive-title">You Receive</h4>
             <ul class="tam-asset-list" id="tam-assets-receive" role="list">
               <!-- Populated by JS -->
             </ul>
           </div>
           <div class="tam-assets-col">
-            <h4 class="tam-assets-col__title tam-assets-col__title--give">You Give</h4>
+            <h4 class="tam-assets-col__title tam-assets-col__title--give" id="tam-assets-give-title">You Give</h4>
             <ul class="tam-asset-list" id="tam-assets-give" role="list">
               <!-- Populated by JS -->
             </ul>
@@ -744,6 +744,25 @@
 
   .tam-builder-link:hover {
     opacity: 0.8;
+  }
+
+  /* Commissioner: "Review Cap Impact" as primary CTA */
+  :global(.tam-builder-link--primary) {
+    display: flex !important;
+    justify-content: center;
+    text-decoration: none;
+    flex: 1;
+  }
+
+  /* Commissioner: Approve as secondary outline button */
+  :global(.tam-btn--approve-secondary) {
+    background: transparent;
+    border: 1px solid var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+
+  :global(.tam-btn--approve-secondary:hover:not(:disabled)) {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, white);
   }
 
   /* ================================================================
