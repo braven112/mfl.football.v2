@@ -1119,7 +1119,7 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       nflLogo: getNflLogoUrl(nflTeam),
       rosterSlot: normalizeStatus(player.status),
       byeWeek: nflByeWeeks[nflTeam] ?? null,
-      birthdate: player.birthdate ?? null,
+      birthdate: player.birthdate ?? (feedPlayer?.birthdate ? Number(feedPlayer.birthdate) : null),
       headshot,
       college: collegeName,
       collegeLogo: collegeAssets?.logo ?? null,
@@ -1148,7 +1148,6 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       tradeBait: tradeBaitPlayerIds.has(String(player.id)),
       contractInfo: liveData?.contractInfo || '',
     };
-
 
     return playerObj;
   });
@@ -1564,6 +1563,7 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
     for (const fa of need.topFreeAgents) {
       const feedPlayer = faPlayerFeed[fa.id];
       fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id || (espnCollegeIds as any).players?.[fa.id]?.espnCollegeId);
+      if (feedPlayer?.birthdate) fa.birthdate = Number(feedPlayer.birthdate);
     }
   }
 }
@@ -7635,6 +7635,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         nflLogo: player.nflLogo,
         contractYears: player.contractYears,
         gamesPlayed: player.gamesPlayed || null,
+        birthdate: player.birthdate || null,
       }));
 
       const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');

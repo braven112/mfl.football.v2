@@ -27,6 +27,7 @@ export interface Props {
     headshot: string;
     nflLogo: string;
     contractYears: number;
+    birthdate?: number | null;
   }>;
   salaryAverages?: Record<string, { positions?: Record<string, { top5Average?: number; top3Average?: number }> }>;
   season?: string;
@@ -171,7 +172,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
                   headshot={player.headshot}
                   position={player.position}
                   nflTeam={player.nflTeam}
-                  playerData={{ id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId }}
+                  playerData={{ id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId, birthdate: player.birthdate }}
                 />
               </td>
               <td data-label="Points" class="align-right">{(player.points ?? 0).toFixed(2)}</td>
@@ -373,7 +374,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
         tableHtml += `
           <tr>
             <td data-label="Player">
-              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam, playerData: { id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId } })}
+              ${buildPlayerCellHTML({ name: displayName, headshot: player.headshot, position: player.position, nflTeam: player.nflTeam, playerData: { id: player.id, name: displayName, position: player.position, nflTeam: player.nflTeam, salary: player.salary, contractYears: player.contractYears, points: player.points, franchiseId: player.franchiseId, birthdate: player.birthdate } })}
             </td>
             <td data-label="Points" class="align-right">${(player.points ?? 0).toFixed(2)}</td>
             <td data-label="${salaryYear} Salary" class="align-right salary-value-cell">${currencyFormatter.format(player.salary)}</td>
