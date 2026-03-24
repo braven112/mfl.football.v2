@@ -1,4 +1,9 @@
 ---
+// Catch-all 404 page — uses a dynamic route instead of Astro's static 404.astro
+// to work around a Vercel adapter bug where middleware rewrites get stamped
+// with 404 status. See: https://github.com/withastro/astro/issues/14423
+Astro.response.status = 404;
+
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
 ---
 
