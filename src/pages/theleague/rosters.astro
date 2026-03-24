@@ -498,9 +498,42 @@ const projectedScoresBySeason = {};
 const weeklyResultsRawBySeason = {};
 const fantasyPointsAllowedBySeason = {};
 
+// Fetch trade bait live from MFL so changes are reflected immediately on refresh
+// (the local JSON cache can't be updated on Vercel's read-only filesystem)
+const fetchLiveTradeBait = async (yr: string): Promise<string[] | null> => {
+  try {
+    const url = `https://api.myfantasyleague.com/${yr}/export?TYPE=tradeBait&L=13522&JSON=1`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    let entries = data?.tradeBaits?.tradeBait;
+    if (!entries) return [];
+    if (!Array.isArray(entries)) entries = [entries];
+    const ids: string[] = [];
+    for (const entry of entries) {
+      if (entry.willGiveUp) {
+        const playerIds = typeof entry.willGiveUp === 'string'
+          ? entry.willGiveUp.split(',').map((id: string) => id.trim()).filter(Boolean)
+          : [String(entry.willGiveUp)];
+        ids.push(...playerIds);
+      }
+    }
+    return ids;
+  } catch {
+    return null; // Fall back to cached file
+  }
+};
+
+// Fetch live trade bait for the current league year (where writes happen)
+const liveTradeBait = await fetchLiveTradeBait(currentLeagueYearStr);
+
 feedYears.forEach((yr) => {
-  const tb = loadFeedJson(yr, 'tradeBait.json');
-  if (tb) tradeBaitBySeason[yr] = new Set(tb);
+  if (yr === currentLeagueYearStr && liveTradeBait) {
+    tradeBaitBySeason[yr] = new Set(liveTradeBait);
+  } else {
+    const tb = loadFeedJson(yr, 'tradeBait.json');
+    if (tb) tradeBaitBySeason[yr] = new Set(tb);
+  }
   const ps = loadFeedJson(yr, 'projectedScores.json');
   if (ps) projectedScoresBySeason[yr] = ps;
   const wr = loadFeedJson(yr, 'weekly-results-raw.json');
