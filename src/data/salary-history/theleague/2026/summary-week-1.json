@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-24T00-50-23.484Z",
+  "snapshot": "2026-03-24T02-14-10.891Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-24T00:50:23.479Z",
+    "fetchedAt": "2026-03-24T02:14:10.886Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-03-24T00:50:23.482Z"
+    "generatedAt": "2026-03-24T02:14:10.889Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 110,
+      "totalPlayers": 111,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8136704.37,
-      "starterAverage": 3812998.72,
+      "starterAverage": 3850863.31,
       "starterMedian": 3093150,
       "starterCount": 48,
-      "averageSalary": 2029277.81,
-      "medianSalary": 862125,
+      "averageSalary": 2038023.05,
+      "medianSalary": 877250,
       "topPlayers": [
         {
           "id": "15287",
@@ -180,6 +180,12 @@
           "name": "Flowers, Zay",
           "salary": 3061300,
           "franchiseId": "0015"
+        },
+        {
+          "id": "14860",
+          "name": "Jennings, Jauan",
+          "salary": 3000000,
+          "franchiseId": "0007"
         },
         {
           "id": "17071",
@@ -1543,15 +1549,15 @@
       ]
     },
     "TE": {
-      "totalPlayers": 50,
+      "totalPlayers": 51,
       "top3Average": 4750000,
       "top5Average": 4584100.5,
       "top10Average": 3786237.25,
       "starterAverage": 2689908.19,
       "starterMedian": 2350000,
       "starterCount": 18,
-      "averageSalary": 1361343.55,
-      "medianSalary": 716922.5,
+      "averageSalary": 1347395.64,
+      "medianSalary": 658845,
       "topPlayers": [
         {
           "id": "13674",
@@ -1728,6 +1734,12 @@
           "franchiseId": "0014"
         },
         {
+          "id": "13192",
+          "name": "Njoku, David",
+          "salary": 650000,
+          "franchiseId": "0016"
+        },
+        {
           "id": "17107",
           "name": "Ferguson, Terrance",
           "salary": 605000,
@@ -1856,15 +1868,15 @@
       ]
     },
     "QB": {
-      "totalPlayers": 44,
+      "totalPlayers": 45,
       "top3Average": 7408333.33,
       "top5Average": 6495000,
       "top10Average": 5275000,
       "starterAverage": 4376767.19,
       "starterMedian": 3887500,
       "starterCount": 16,
-      "averageSalary": 2082087.33,
-      "medianSalary": 984000,
+      "averageSalary": 2045263.17,
+      "medianSalary": 968000,
       "topPlayers": [
         {
           "id": "13589",
@@ -2129,6 +2141,12 @@
           "name": "Howard, Will",
           "salary": 495000,
           "franchiseId": "0011"
+        },
+        {
+          "id": "15252",
+          "name": "Mills, Davis",
+          "salary": 425000,
+          "franchiseId": "0016"
         }
       ]
     }
