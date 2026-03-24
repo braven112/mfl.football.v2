@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-24T05:28:00.472Z"
+    "fetchedAt": "2026-03-24T06:17:54.462Z"
   },
   "players": [
     {
@@ -11865,7 +11865,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13299",
+          "name": "Kittle, George"
+        }
+      ]
     },
     {
       "id": "7836",
@@ -11978,6 +11983,52 @@
         "injuryStatus": null,
         "injuryBodyPart": null,
         "gsisId": "00-0026498"
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "13299",
+      "name": "Kittle, George",
+      "position": "TE",
+      "salary": 7000000,
+      "franchiseId": "0012",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "SF",
+      "draftYear": 2017,
+      "draftTeam": "SFO",
+      "birthdate": 750142800,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13299_thumb.jpg",
+      "externalIds": {
+        "mfl": "13299",
+        "sleeper": "4217",
+        "gsis": "00-0033288"
+      },
+      "sleeper": {
+        "id": "4217",
+        "fullName": "George Kittle",
+        "team": "SF",
+        "age": 32,
+        "height": "76",
+        "weight": "250",
+        "number": 85,
+        "college": "Iowa",
+        "birthDate": "1993-10-09",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 9,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0033288"
       },
       "nflverse": null,
       "gamesPlayed": null,

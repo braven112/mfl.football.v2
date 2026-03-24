@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-24T04-08-57.094Z",
+  "snapshot": "2026-03-24T06-17-54.467Z",
   "week": "off-5",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-24T04:08:57.267Z",
+    "fetchedAt": "2026-03-24T06:17:54.736Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-5).",
-    "generatedAt": "2026-03-24T04:08:57.267Z"
+    "generatedAt": "2026-03-24T06:17:54.736Z"
   },
   "positions": {
     "WR": {
@@ -1550,16 +1550,22 @@
       ]
     },
     "TE": {
-      "totalPlayers": 51,
-      "top3Average": 4750000,
-      "top5Average": 4584100.5,
-      "top10Average": 3786237.25,
-      "starterAverage": 2689908.19,
-      "starterMedian": 2350000,
+      "totalPlayers": 52,
+      "top3Average": 5583333.33,
+      "top5Average": 5142672,
+      "top10Average": 4266237.25,
+      "starterAverage": 3023241.53,
+      "starterMedian": 2637500,
       "starterCount": 18,
-      "averageSalary": 1347395.64,
-      "medianSalary": 658845,
+      "averageSalary": 1456099.57,
+      "medianSalary": 716922.5,
       "topPlayers": [
+        {
+          "id": "13299",
+          "name": "Kittle, George",
+          "salary": 7000000,
+          "franchiseId": "0012"
+        },
         {
           "id": "13674",
           "name": "Goedert, Dallas",
