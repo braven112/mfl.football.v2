@@ -4,6 +4,7 @@
  */
 
 import type { FantasyPlayer, StartingLineup, PlayerStatus, FantasyTeam } from '../types/matchup-previews';
+import { mflFetch } from './mfl-fetch';
 
 /**
  * MFL API configuration
@@ -442,8 +443,16 @@ export class MFLMatchupApiClient {
 
     try {
       // Step 1: Read current trade bait for all franchises
+      // Use mflFetch instead of makeRequest — MFL 302-redirects from api.myfantasyleague.com
+      // to www49.myfantasyleague.com, and Node.js undici strips Cookie headers on cross-origin
+      // redirects. mflFetch handles this by following redirects manually.
       const readUrl = this.buildUrl('tradeBait');
-      const response = await this.makeRequest<any>(readUrl);
+      const readResponse = await mflFetch({
+        url: readUrl,
+        method: 'GET',
+        mflUserCookie: this.config.mflUserId!,
+      });
+      const response = await readResponse.json() as any;
 
       // Step 2: Parse the current trade bait entries for this franchise
       // MFL returns single object (not array) when there's only one franchise with trade bait
@@ -489,14 +498,11 @@ export class MFLMatchupApiClient {
       params.set('WILL_GIVE_UP', currentPlayerIds.join(','));
       params.set('IN_EXCHANGE_FOR', '');
 
-      const importResponse = await fetch(importUrl, {
+      const importResponse = await mflFetch({
+        url: importUrl,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cookie': `MFL_USER_ID=${this.config.mflUserId}`,
-        },
+        mflUserCookie: this.config.mflUserId!,
         body: params.toString(),
-        redirect: 'follow',
       });
 
       // MFL returns HTTP 200 even for errors — check response body for error XML
