@@ -13,6 +13,7 @@ import {
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
+import { getCachedRosters } from '../../utils/mfl-roster-cache';
 
 export const prerender = false;
 
@@ -112,6 +113,28 @@ const players: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
   points: parseNumber(p.points),
   birthdate: parseNumber(p.birthdate),
 }));
+
+// ---------------------------------------------------------------------------
+// Overlay Redis-cached roster data for near-real-time freshness (SWR, ~2 min)
+// Same pattern as rosters.astro — static files are the baseline, Redis overlays
+// the latest salary/contract/status/franchise assignments on top.
+// ---------------------------------------------------------------------------
+const cachedRosterPlayers = await getCachedRosters(currentYear, '13522');
+if (cachedRosterPlayers) {
+  const playerById = new Map(players.map((p) => [p.id, p]));
+  for (const [playerId, cached] of Object.entries(cachedRosterPlayers)) {
+    const existing = playerById.get(playerId);
+    if (existing) {
+      // Update mutable roster fields from the fresher Redis data
+      existing.salary = parseNumber(cached.salary);
+      existing.contractYear = cached.contractYear ?? existing.contractYear;
+      existing.status = cached.status ?? existing.status;
+      existing.franchiseId = cached.franchiseId ?? existing.franchiseId;
+    }
+    // Players in Redis but not in static file (newly signed) are skipped —
+    // we lack name/position/birthdate. They appear after the next sync cycle.
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Compute summary data
