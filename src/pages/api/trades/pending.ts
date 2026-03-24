@@ -7,7 +7,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { mflFetch } from '../../../utils/mfl-fetch';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
@@ -95,20 +95,114 @@ function resolveAssets(
   return resolved;
 }
 
+// Build team name → franchiseId lookup for description parsing (module-level for reuse)
+const teamNameMap = new Map<string, string>();
+const teamLookup = new Map<string, { name: string; abbrev: string; nameShort: string; icon: string }>();
+for (const team of (leagueConfig as any).teams ?? []) {
+  if (team.name && team.franchiseId) {
+    teamNameMap.set(team.name.toLowerCase(), team.franchiseId);
+  }
+  if (team.franchiseId) {
+    teamLookup.set(team.franchiseId, {
+      name: team.name || '',
+      abbrev: team.abbrev || '',
+      nameShort: team.nameShort || '',
+      icon: team.icon || '',
+    });
+  }
+}
+
+/** Extract proposing franchise from MFL description like "Pacific Pigskins proposed a trade to ..." */
+function resolveProposer(t: any, userFranchiseId: string): string {
+  const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
+  if (offeredTo !== userFranchiseId) return userFranchiseId;
+  const desc: string = t.description || '';
+  const match = desc.match(/^(.+?)\s+proposed a trade to\s/i);
+  if (match) {
+    const fid = teamNameMap.get(match[1].trim().toLowerCase());
+    if (fid) return fid;
+  }
+  return '';
+}
+
+/** Parse raw MFL trade array into resolved trade objects */
+function processTrades(
+  tradeArray: any[],
+  userFranchiseId: string,
+  playerMap: Map<string, { name: string; position: string; team: string; espnId: string }>,
+) {
+  return tradeArray.map((t: any) => {
+    const offeredBy = resolveProposer(t, userFranchiseId);
+    const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
+    const willGiveUp = (t.will_give_up || t.franchise1_gave_up || '').replace(/,\s*$/, '');
+    const willReceive = (t.will_receive || t.franchise2_gave_up || '').replace(/,\s*$/, '');
+
+    const offeredByTeam = teamLookup.get(offeredBy);
+    const offeredToTeam = teamLookup.get(offeredTo);
+
+    return {
+      tradeId: t.trade_id || t.id || '',
+      offeredBy,
+      offeredTo,
+      willGiveUp,
+      willReceive,
+      timestamp: parseInt(t.timestamp || '0', 10),
+      expires: parseInt(t.expires || '0', 10),
+      comments: t.comments || '',
+      byCommish: t.by_commish === '1',
+      offeredByName: offeredByTeam?.name || `Team ${offeredBy}`,
+      offeredToName: offeredToTeam?.name || `Team ${offeredTo}`,
+      offeredByIcon: offeredByTeam?.icon || '',
+      offeredToIcon: offeredToTeam?.icon || '',
+      resolvedAssets: {
+        willGiveUp: resolveAssets(willGiveUp, playerMap, teamLookup),
+        willReceive: resolveAssets(willReceive, playerMap, teamLookup),
+      },
+    };
+  });
+}
+
+/** Fetch and parse pending trades from MFL */
+async function fetchMflTrades(
+  year: number,
+  leagueId: string,
+  mflCookie: string,
+  franchiseId?: string,
+): Promise<{ trades: any[] | null; error?: string }> {
+  let url = `https://api.myfantasyleague.com/${year}/export?TYPE=pendingTrades&L=${leagueId}&JSON=1`;
+  if (franchiseId) url += `&FRANCHISE_ID=${franchiseId}`;
+
+  const res = await mflFetch({ url, method: 'GET', mflUserCookie: mflCookie });
+  if (!res.ok) return { trades: null, error: `MFL HTTP ${res.status}` };
+
+  const text = await res.text();
+  let data: any;
+  try { data = JSON.parse(text); } catch { return { trades: null, error: 'Invalid JSON' }; }
+  if (data?.error) return { trades: null, error: 'MFL auth error' };
+
+  const pending = data?.pendingTrades;
+  const raw = pending?.pendingTrade ?? pending?.trade;
+  if (!raw) return { trades: [] };
+
+  return { trades: Array.isArray(raw) ? raw : [raw] };
+}
+
+const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
 
   if (!user) {
     return new Response(
       JSON.stringify({ success: false, message: 'Authentication required' }),
-      { status: 401, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      { status: 401, headers: JSON_HEADERS }
     );
   }
 
   if (!user.franchiseId) {
     return new Response(
       JSON.stringify({ success: false, message: 'No franchise associated with your account.' }),
-      { status: 403, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      { status: 403, headers: JSON_HEADERS }
     );
   }
 
@@ -116,146 +210,49 @@ export const GET: APIRoute = async ({ request }) => {
     const year = getCurrentLeagueYear();
     const leagueId = user.leagueId || '13522';
     const mflCookie = user.id;
-
-    const exportUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=pendingTrades&L=${leagueId}&JSON=1`;
-
-    const mflResponse = await mflFetch({
-      url: exportUrl,
-      method: 'GET',
-      mflUserCookie: mflCookie,
-    });
-
-    if (!mflResponse.ok) {
-      console.error('[trades/pending] MFL error:', mflResponse.status);
-      return new Response(
-        JSON.stringify({ success: false, message: 'Failed to fetch pending trades' }),
-        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-      );
-    }
-
-    const responseText = await mflResponse.text();
-
-    let data: any;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      console.error('[trades/pending] Failed to parse MFL response as JSON');
-      return new Response(
-        JSON.stringify({ success: false, message: 'Invalid response from MFL' }),
-        { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-      );
-    }
-
-    // Check for MFL error responses (auth failure, etc.)
-    if (data?.error) {
-      console.error('[trades/pending] MFL returned error:', JSON.stringify(data.error));
-      return new Response(
-        JSON.stringify({ success: false, message: 'MFL authentication error. Try logging out and back in.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-      );
-    }
-
-    // MFL uses "pendingTrade" (singular) as the key, NOT "trade"
-    // Empty state: { pendingTrades: "" } — guard against empty string
-    const pendingTrades = data?.pendingTrades;
-    const rawTrades = pendingTrades?.pendingTrade ?? pendingTrades?.trade;
-    if (!rawTrades) {
-      return new Response(
-        JSON.stringify({ success: true, trades: [] }),
-        { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-      );
-    }
-
-    // MFL returns single object (not array) when there's only one trade
-    const tradeArray = Array.isArray(rawTrades) ? rawTrades : [rawTrades];
-
-    // MFL pending trade fields differ from completed trade fields:
-    //   Pending: trade_id, offeredto, will_give_up, will_receive, description
-    //   Completed: id, franchise, franchise2, franchise1_gave_up, franchise2_gave_up
-    // MFL does NOT include the proposing franchise ID explicitly.
-    // We determine it by:
-    //   - If offeredto !== user → user proposed it
-    //   - If offeredto === user → parse proposer from description ("{TeamName} proposed a trade to ...")
-
-    // Build team name → franchiseId lookup for description parsing
-    const teamNameMap = new Map<string, string>();
-    for (const team of (leagueConfig as any).teams ?? []) {
-      if (team.name && team.franchiseId) {
-        teamNameMap.set(team.name.toLowerCase(), team.franchiseId);
-      }
-    }
-
-    /** Extract proposing franchise from MFL description like "Pacific Pigskins proposed a trade to ..." */
-    function resolveProposer(t: any, userFranchiseId: string): string {
-      const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
-      // If offered to someone else, the user is the proposer
-      if (offeredTo !== userFranchiseId) return userFranchiseId;
-      // If offered to the user, parse the proposer from the description
-      const desc: string = t.description || '';
-      const match = desc.match(/^(.+?)\s+proposed a trade to\s/i);
-      if (match) {
-        const proposerName = match[1].trim().toLowerCase();
-        const fid = teamNameMap.get(proposerName);
-        if (fid) return fid;
-      }
-      // Fallback: unknown proposer — return empty string (UI should handle gracefully)
-      return '';
-    }
-
-    // Build lookup maps for asset resolution
     const playerMap = loadPlayerMap(year);
-    const teamLookup = new Map<string, { name: string; abbrev: string; nameShort: string; icon: string }>();
-    for (const team of (leagueConfig as any).teams ?? []) {
-      if (team.franchiseId) {
-        teamLookup.set(team.franchiseId, {
-          name: team.name || '',
-          abbrev: team.abbrev || '',
-          nameShort: team.nameShort || '',
-          icon: team.icon || '',
-        });
-      }
+
+    // Fetch user's pending trades
+    const result = await fetchMflTrades(year, leagueId, mflCookie);
+    if (result.error) {
+      console.error('[trades/pending] MFL error:', result.error);
+      const status = result.error.includes('auth') ? 403 : 502;
+      return new Response(
+        JSON.stringify({ success: false, message: result.error }),
+        { status, headers: JSON_HEADERS }
+      );
     }
 
-    const trades = tradeArray.map((t: any) => {
-      const offeredBy = resolveProposer(t, user.franchiseId);
-      const offeredTo = (t.offeredto || t.franchise2 || '').padStart(4, '0');
-      const willGiveUp = (t.will_give_up || t.franchise1_gave_up || '').replace(/,\s*$/, '');
-      const willReceive = (t.will_receive || t.franchise2_gave_up || '').replace(/,\s*$/, '');
+    const trades = result.trades?.length
+      ? processTrades(result.trades, user.franchiseId, playerMap)
+      : [];
 
-      const offeredByTeam = teamLookup.get(offeredBy);
-      const offeredToTeam = teamLookup.get(offeredTo);
+    // Commissioner mode: also fetch ALL league trades for approval
+    const url = new URL(request.url);
+    const wantCommish = url.searchParams.get('commish') === '1';
+    let commishTrades: any[] = [];
 
-      return {
-        tradeId: t.trade_id || t.id || '',
-        offeredBy,
-        offeredTo,
-        willGiveUp,
-        willReceive,
-        timestamp: parseInt(t.timestamp || '0', 10),
-        expires: parseInt(t.expires || '0', 10),
-        comments: t.comments || '',
-        byCommish: t.by_commish === '1',
-        // Resolved fields for the trade alert modal
-        offeredByName: offeredByTeam?.name || `Team ${offeredBy}`,
-        offeredToName: offeredToTeam?.name || `Team ${offeredTo}`,
-        offeredByIcon: offeredByTeam?.icon || '',
-        offeredToIcon: offeredToTeam?.icon || '',
-        resolvedAssets: {
-          willGiveUp: resolveAssets(willGiveUp, playerMap, teamLookup),
-          willReceive: resolveAssets(willReceive, playerMap, teamLookup),
-        },
-      };
-    });
+    if (wantCommish && isCommissionerOrAdmin(user)) {
+      const commishResult = await fetchMflTrades(year, leagueId, mflCookie, '0000');
+      if (commishResult.trades?.length) {
+        // For commissioner trades, resolve proposer from description (not relative to user)
+        const allLeague = processTrades(commishResult.trades, user.franchiseId, playerMap);
+        // Filter out trades that involve the user's franchise (already in personal trades)
+        commishTrades = allLeague.filter(
+          (t: any) => t.offeredBy !== user.franchiseId && t.offeredTo !== user.franchiseId
+        );
+      }
+    }
 
     return new Response(
-      JSON.stringify({ success: true, trades, userFranchiseId: user.franchiseId }),
-      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      JSON.stringify({ success: true, trades, commishTrades, userFranchiseId: user.franchiseId }),
+      { status: 200, headers: JSON_HEADERS }
     );
   } catch (error) {
     console.error('[trades/pending] Error:', error);
     return new Response(
       JSON.stringify({ success: false, message: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      { status: 500, headers: JSON_HEADERS }
     );
   }
 };
