@@ -20,6 +20,7 @@ import { Font } from 'astro:assets';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
+import TradeAlertModal from '../components/theleague/TradeAlertModal.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getCurrentLeagueYear } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
@@ -264,6 +265,10 @@ const sections = getVisibleSections(league, myteam, adminFranchiseIds);
 			isCommissioner={isCommissioner}
 			isCommishMode={isCommishMode}
 		/>
+
+		<!-- Trade Alert Modal — global notification for pending received trades -->
+		<TradeAlertModal />
+		<script src="../scripts/trade-alert.ts"></script>
 
 		<!-- Navigation progress bar trigger -->
 		<script is:inline>
