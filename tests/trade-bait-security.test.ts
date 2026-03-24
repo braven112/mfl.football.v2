@@ -36,7 +36,7 @@ describe('write endpoint security', () => {
   const apiFiles = readTsFiles(apiDir);
 
   // Contracts are the ONLY endpoints allowed to use commish credentials
-  const COMMISH_ALLOWED = ['contracts/approve.ts', 'contracts/reject.ts'];
+  const COMMISH_ALLOWED = ['contracts/approve.ts', 'contracts/verify.ts'];
 
   const writeEndpoints = apiFiles.filter(({ file }) => {
     const rel = path.relative(apiDir, file);
