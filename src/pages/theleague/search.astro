@@ -1,7 +1,14 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { spriteUrl } from '../../utils/sprite-url';
-import pages from '../../data/page-directory.json';
+import allPages from '../../data/page-directory.json';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+
+const authUser = getAuthUser(Astro.request);
+const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
+
+// Filter out pages tagged "hidden" for non-admin users
+const pages = isAdmin ? allPages : allPages.filter(p => !p.tags.includes('hidden'));
 
 // Build search data server-side: title + description + tags joined into one lowercase string per entry
 const searchData: Record<string, string> = {};
