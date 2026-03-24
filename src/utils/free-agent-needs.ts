@@ -19,6 +19,8 @@ export interface FreeAgentPlayer {
   projectedScore: number;
   /** Headshot URL, set post-analysis by the page that has access to ESPN IDs */
   headshot?: string;
+  /** Unix timestamp (seconds), set post-analysis from MFL player feed */
+  birthdate?: number | null;
 }
 
 export interface PositionNeed {
