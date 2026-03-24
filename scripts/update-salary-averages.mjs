@@ -664,8 +664,20 @@ const detectLatestWeek = (weeklyPayload) => {
     weeklyPayload?.allWeeklyResults?.weeklyResults ??
       weeklyPayload?.weeklyResults
   );
+  // Only count weeks that have actual matchup data with scores.
+  // MFL can return week entries for a new season that carry over from the
+  // previous year (e.g. week 17 data on a brand-new 2026 league). Without
+  // this check the freeze logic triggers prematurely and locks the salary
+  // file on week 1 data for the entire offseason.
   return weeklyResults.reduce((max, entry) => {
     const value = Number.parseInt(entry?.week ?? entry?.weekNumber ?? entry?.W ?? 0, 10) || 0;
+    // Verify real matchup data exists (at least one franchise with a non-zero score)
+    const matchups = ensureArray(entry?.matchup);
+    const hasRealScores = matchups.some((m) => {
+      const franchises = ensureArray(m?.franchise);
+      return franchises.some((f) => Number.parseFloat(f?.score) > 0);
+    });
+    if (!hasRealScores) return max;
     return Math.max(max, value);
   }, 0);
 };
@@ -730,6 +742,18 @@ const run = async () => {
   const state = (await readSeasonState()) ?? {};
   const stateIsCurrentSeason = state?.season === season;
   let lockedWeek = stateIsCurrentSeason ? state?.frozenWeek ?? null : null;
+
+  // Safety check: if the season is "frozen" but detectedWeek is 0 (no real scores),
+  // the freeze was likely triggered erroneously by stale MFL data. Clear it.
+  if (lockedWeek && detectedWeek === 0) {
+    console.warn(
+      `[salary-averages] Season ${season} is frozen at week ${lockedWeek} but no scored ` +
+      `matchups detected — clearing stale freeze state.`
+    );
+    lockedWeek = null;
+    await writeSeasonState({ season: state?.season, frozenWeek: null, clearedAt: new Date().toISOString() });
+  }
+
   let effectiveWeek = lockedWeek ?? (freezeWeek && detectedWeek >= freezeWeek ? freezeWeek : detectedWeek);
   if (!Number.isFinite(effectiveWeek) || effectiveWeek <= 0) effectiveWeek = null;
 
