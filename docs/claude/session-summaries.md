@@ -253,3 +253,33 @@ When starting or ending a Claude session, add a new entry following this templat
 ```
 
 Update the [Session Index](#session-index) table at the top when adding new entries.
+
+---
+
+## Quick Reference — Architecture & Patterns
+
+### Stack
+- **Framework:** Astro 6.0.8 (SSR on Vercel)
+- **Styling:** SCSS with design tokens (`src/styles/tokens.css`), editorial design system
+- **Data:** MFL API + Redis cache (2-min SWR) + static JSON fallbacks
+- **Auth:** MFL cookies via `mflFetch()` (handles 302 redirect cookie stripping)
+- **Storage:** Redis (contracts, declarations — migrated from Vercel Blob)
+- **Fonts:** Vend Sans via Astro Fonts API (self-hosted)
+
+### Critical Patterns
+- **`mflFetch()`** — always use instead of raw `fetch()` for MFL API calls (handles redirect cookie issue where Node.js undici strips cookies on cross-origin 302s)
+- **Redis roster cache** overlays on static JSON for near-real-time data during auction
+- **Inline confirmation** (two-click) for destructive actions (cut player, reject trade, veto)
+- **`page-directory.json`** must be updated when adding new pages
+- Pages tagged `"hidden"` are admin-only on search page
+- Team colors are canonical in `theleague.config.json`, not hardcoded
+
+### Key Directories
+- `src/pages/theleague/` — all league pages
+- `src/pages/api/` — API routes (cut-player, trades/pending, contracts)
+- `src/components/theleague/` — Astro + React components
+- `src/styles/` — SCSS tokens, skins, editorial system
+- `src/utils/` — shared utilities (mfl-fetch, contract-storage, etc.)
+- `.claude/skills/` — Claude Code skills (build-skin, etc.)
+- `data/` — fantasy-expert knowledge base, MFL feed snapshots
+- `docs/claude/` — session summaries (this file)
