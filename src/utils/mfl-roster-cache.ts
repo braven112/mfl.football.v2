@@ -1,11 +1,16 @@
 /**
- * MFL Roster Cache — Stale-While-Revalidate via Upstash Redis
+ * MFL Roster Cache — Cache-with-TTL via Upstash Redis
  *
- * Serves roster data from Redis cache instantly, then refreshes from
- * MFL API in the background so the next request gets fresh data.
+ * Serves roster data from Redis cache when fresh (< 2 min old).
+ * When stale or missing, fetches live data from MFL API synchronously
+ * and updates the cache before returning.
+ *
+ * NOTE: Fire-and-forget background refreshes don't work on Vercel serverless
+ * because the runtime terminates the function after the response is sent.
+ * All refreshes are therefore awaited inline.
  *
  * Redis key: mfl:rosters:{leagueId}:{season}
- * TTL: 2 minutes before background refresh is triggered
+ * TTL: 2 minutes before a synchronous refresh is triggered
  * Fallback: returns null when Redis is unavailable (caller uses static files)
  */
 
@@ -56,12 +61,12 @@ interface CachedRosterPayload {
 }
 
 /** In-memory flag to prevent duplicate concurrent fetches within the same process */
-const refreshing = new Set<string>();
+const refreshing = new Map<string, Promise<Record<string, CachedRosterEntry> | null>>();
 
 /**
  * Get roster data from Redis cache.
- * Returns the player map if cached, or null on miss / Redis unavailable.
- * Triggers a background refresh if the data is stale.
+ * Returns the player map if cached and fresh, otherwise fetches from MFL
+ * synchronously and updates the cache before returning.
  */
 export async function getCachedRosters(
   season: string,
@@ -75,15 +80,19 @@ export async function getCachedRosters(
     const cached = await redis.get<CachedRosterPayload>(key);
 
     if (!cached?.players) {
-      // Cache miss — trigger a fetch so the next request has data
-      triggerBackgroundRefresh(season, leagueId);
-      return null;
+      // Cache miss — fetch synchronously so this request gets live data
+      console.log(`[mfl-roster-cache] Cache miss for ${key}, fetching synchronously`);
+      return await deduplicatedFetch(season, leagueId);
     }
 
-    // Check staleness and refresh in background if needed
+    // Check staleness
     const age = Date.now() - cached.fetchedAt;
     if (age > STALE_TTL_MS) {
-      triggerBackgroundRefresh(season, leagueId);
+      console.log(`[mfl-roster-cache] Stale data for ${key} (age: ${Math.round(age / 1000)}s), refreshing synchronously`);
+      // Fetch fresh data synchronously — awaiting ensures the refresh completes
+      // before the serverless function terminates
+      const fresh = await deduplicatedFetch(season, leagueId);
+      return fresh ?? cached.players; // Fall back to stale data if refresh fails
     }
 
     return cached.players;
@@ -94,18 +103,28 @@ export async function getCachedRosters(
 }
 
 /**
- * Fire-and-forget: fetch fresh roster data from MFL and write to Redis.
+ * Deduplicate concurrent fetches within the same process.
+ * If a fetch for the same key is already in-flight, piggyback on it.
  */
-function triggerBackgroundRefresh(season: string, leagueId: string): void {
+async function deduplicatedFetch(
+  season: string,
+  leagueId: string
+): Promise<Record<string, CachedRosterEntry> | null> {
   const key = cacheKey(leagueId, season);
-  if (refreshing.has(key)) return;
-  refreshing.add(key);
 
-  console.log(`[mfl-roster-cache] Background refresh: ${key}`);
+  const existing = refreshing.get(key);
+  if (existing) return existing;
 
-  fetchAndCacheRosters(season, leagueId)
-    .catch((err) => console.warn('[mfl-roster-cache] Background refresh failed:', err))
+  const promise = fetchAndCacheRosters(season, leagueId)
+    .then((players) => players)
+    .catch((err) => {
+      console.warn('[mfl-roster-cache] Fetch failed:', err);
+      return null;
+    })
     .finally(() => refreshing.delete(key));
+
+  refreshing.set(key, promise);
+  return promise;
 }
 
 /**
@@ -126,7 +145,10 @@ export async function invalidateRosterCache(season: string, leagueId: string): P
   await fetchAndCacheRosters(season, leagueId);
 }
 
-async function fetchAndCacheRosters(season: string, leagueId: string): Promise<void> {
+async function fetchAndCacheRosters(
+  season: string,
+  leagueId: string
+): Promise<Record<string, CachedRosterEntry>> {
   const url = `https://api.myfantasyleague.com/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
   const response = await fetch(url, {
     headers: { 'User-Agent': 'MFLFootball/2.0' },
@@ -164,10 +186,12 @@ async function fetchAndCacheRosters(season: string, leagueId: string): Promise<v
   }
 
   const redis = await getRedis();
-  if (!redis) return;
+  if (!redis) return players;
 
   const payload: CachedRosterPayload = { players, fetchedAt: Date.now() };
   // Store in Redis with a 1-hour hard expiry as a safety net
   await redis.set(cacheKey(leagueId, season), payload, { ex: 3600 });
   console.log(`[mfl-roster-cache] Cached ${Object.keys(players).length} players for ${leagueId}/${season}`);
+
+  return players;
 }
