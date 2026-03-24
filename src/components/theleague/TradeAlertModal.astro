@@ -1,0 +1,735 @@
+---
+/**
+ * TradeAlertModal — Global trade offer notification modal
+ *
+ * Pops up on page load when the authenticated owner has pending received trades.
+ * Two views:
+ *   1. List View — shows all pending offers, click one to drill in
+ *   2. Detail View — full trade breakdown with Accept / Reject / Dismiss
+ *
+ * Follows the CDM (ContractDeclarationModal) editorial design pattern.
+ * Static Astro shell populated entirely by client-side JS.
+ */
+---
+
+<div class="trade-alert-modal" id="trade-alert-modal" role="dialog" aria-modal="true" aria-label="Trade offers">
+  <div class="tam-overlay"></div>
+  <div class="tam-content">
+    <button class="tam-close" id="tam-close" aria-label="Close" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <!-- ============================================================
+         VIEW 1: Trade List (multiple offers)
+         ============================================================ -->
+    <div class="tam-view" id="tam-list-view">
+      <div class="tam-header">
+        <div class="tam-header__title-row">
+          <h3 class="tam-header__title">Trade Offers</h3>
+          <span class="tam-badge" id="tam-badge">0</span>
+        </div>
+        <p class="tam-header__sub">Review each offer before accepting</p>
+      </div>
+      <div class="tam-list-body" id="tam-list-body">
+        <!-- Populated by JS: trade summary cards -->
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW 2: Trade Detail (single offer)
+         ============================================================ -->
+    <div class="tam-view" id="tam-detail-view" style="display: none;">
+      <div class="tam-detail-header" id="tam-detail-header">
+        <button class="tam-back" id="tam-back" aria-label="Back to trade list" style="display: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="tam-detail-hero">
+          <img class="tam-detail-hero__icon" id="tam-counterparty-icon" src="" alt="" />
+          <div class="tam-detail-hero__info">
+            <span class="tam-detail-hero__label">Trade offer from</span>
+            <h3 class="tam-detail-hero__name" id="tam-counterparty-name">&mdash;</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="tam-detail-body" id="tam-detail-body">
+        <!-- Timestamp + expiry -->
+        <div class="tam-detail-meta" id="tam-detail-meta">
+          <span class="tam-detail-meta__time" id="tam-detail-time">&mdash;</span>
+          <span class="tam-detail-meta__expires" id="tam-detail-expires"></span>
+        </div>
+
+        <!-- Two-column asset grid -->
+        <div class="tam-assets-grid">
+          <div class="tam-assets-col">
+            <h4 class="tam-assets-col__title tam-assets-col__title--receive">You Receive</h4>
+            <ul class="tam-asset-list" id="tam-assets-receive" role="list">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+          <div class="tam-assets-col">
+            <h4 class="tam-assets-col__title tam-assets-col__title--give">You Give</h4>
+            <ul class="tam-asset-list" id="tam-assets-give" role="list">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="tam-comments" id="tam-comments" style="display: none;">
+          <h4 class="tam-section-title">Message</h4>
+          <p class="tam-comments__text" id="tam-comments-text"></p>
+        </div>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="tam-footer" id="tam-footer">
+        <div class="tam-footer__messages">
+          <div class="tam-error" id="tam-error" role="alert" style="display: none;"></div>
+          <div class="tam-success" id="tam-success" role="status" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <span id="tam-success-text">Trade accepted</span>
+          </div>
+        </div>
+        <!-- Confirmation prompt (hidden by default) -->
+        <div class="tam-confirm" id="tam-confirm" style="display: none;" aria-live="polite">
+          <span class="tam-confirm__msg" id="tam-confirm-msg">Accept this trade?</span>
+          <div class="tam-confirm__btns">
+            <button class="tam-btn tam-btn--confirm-yes" id="tam-confirm-yes">Confirm</button>
+            <button class="tam-btn tam-btn--confirm-no" id="tam-confirm-no">Cancel</button>
+          </div>
+        </div>
+        <!-- Primary actions -->
+        <div class="tam-footer__actions" id="tam-actions">
+          <button class="tam-btn tam-btn--accept" id="tam-accept">Accept</button>
+          <button class="tam-btn tam-btn--reject" id="tam-reject">Reject</button>
+          <button class="tam-btn tam-btn--dismiss" id="tam-dismiss">Dismiss</button>
+        </div>
+        <a class="tam-builder-link" id="tam-builder-link" href="/theleague/trade-builder">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+          View in Trade Builder
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Import shared player lockup styles for JS-rendered player cells */
+  @import '../../styles/player-cell.css';
+  /* ================================================================
+     Modal Shell — matches CDM pattern
+     ================================================================ */
+  .trade-alert-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .trade-alert-modal.active {
+    display: flex;
+  }
+
+  .tam-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+  }
+
+  .tam-content {
+    position: relative;
+    background: var(--color-white, #fff);
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: var(--shadow-xl, 0 8px 32px rgba(0, 0, 0, 0.12));
+    width: 100%;
+    max-width: 440px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: tam-enter 0.22s ease-out;
+  }
+
+  @keyframes tam-enter {
+    from { opacity: 0; transform: scale(0.97) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ================================================================
+     Close Button — matches CDM
+     ================================================================ */
+  .tam-close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    z-index: 2;
+    background: var(--color-gray-100, #f3f4f6);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .tam-close:hover {
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* ================================================================
+     View transitions
+     ================================================================ */
+  .tam-view {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tam-view.slide-in {
+    animation: tam-slide-in 0.2s ease-out;
+  }
+
+  @keyframes tam-slide-in {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .tam-view.slide-back {
+    animation: tam-slide-back 0.2s ease-out;
+  }
+
+  @keyframes tam-slide-back {
+    from { opacity: 0; transform: translateX(-24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ================================================================
+     LIST VIEW — Header
+     ================================================================ */
+  .tam-header {
+    padding: 1.5rem 1.75rem 1rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .tam-header__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tam-header__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  .tam-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tam-header__sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ================================================================
+     LIST VIEW — Trade summary cards
+     NOTE: :global() required because these elements are created by JS
+     ================================================================ */
+  .tam-list-body {
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  :global(.tam-list-card) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-white, #fff);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  :global(.tam-list-card:hover) {
+    border-color: var(--color-gray-200, #e5e7eb);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  :global(.tam-list-card__icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  :global(.tam-list-card__body) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global(.tam-list-card__team) {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  :global(.tam-list-card__summary) {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0.125rem 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.tam-list-card__time) {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.tam-list-card__arrow) {
+    flex-shrink: 0;
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Header
+     ================================================================ */
+  .tam-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.25rem 1.75rem 1rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .tam-back {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--color-gray-400, #9ca3af);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .tam-back:hover {
+    color: var(--color-gray-700, #374151);
+  }
+
+  .tam-detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .tam-detail-hero__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .tam-detail-hero__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .tam-detail-hero__name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Body
+     ================================================================ */
+  .tam-detail-body {
+    overflow-y: auto;
+    padding: 1rem 1.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .tam-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Asset grid
+     ================================================================ */
+  .tam-assets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .tam-assets-col__title {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.375rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .tam-assets-col__title--receive {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .tam-assets-col__title--give {
+    color: var(--color-error, #dc2626);
+  }
+
+  /* NOTE: :global() required because asset list items are created by JS */
+  :global(.tam-asset-list) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  :global(.tam-asset-item) {
+    font-size: 0.8125rem;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.3;
+  }
+
+  :global(.tam-asset-item__pos) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+    margin-left: 0.25rem;
+  }
+
+  :global(.tam-asset-item--empty) {
+    color: var(--color-gray-400, #9ca3af);
+    font-style: italic;
+  }
+
+  :global(.tam-asset-item--pick) {
+    color: var(--color-gray-600, #4b5563);
+    font-style: italic;
+  }
+
+  :global(.tam-asset-item--bbid) {
+    color: var(--color-gray-600, #4b5563);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Comments
+     ================================================================ */
+  .tam-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.5rem;
+  }
+
+  .tam-comments__text {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-style: italic;
+  }
+
+  /* ================================================================
+     Footer — matches CDM footer pattern
+     ================================================================ */
+  .tam-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.75rem 1.25rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    background: var(--color-white, #fff);
+    flex-shrink: 0;
+  }
+
+  .tam-footer__messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .tam-error {
+    font-size: 0.8125rem;
+    color: var(--color-error, #dc2626);
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, white);
+    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, white);
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  .tam-success {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-success-dark, #059669);
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--color-success, #10b981) 6%, white);
+    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, white);
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  /* ================================================================
+     Footer — Action buttons
+     ================================================================ */
+  .tam-footer__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tam-btn {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+  }
+
+  .tam-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .tam-btn--accept {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    flex: 1;
+  }
+
+  .tam-btn--accept:hover:not(:disabled) {
+    background: var(--color-primary-dark, #164066);
+  }
+
+  .tam-btn--reject {
+    background: transparent;
+    border: 1px solid var(--color-error, #dc2626);
+    color: var(--color-error, #dc2626);
+  }
+
+  .tam-btn--reject:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, white);
+  }
+
+  .tam-btn--dismiss {
+    background: transparent;
+    color: var(--color-gray-500, #6b7280);
+    padding: 0.625rem 0.5rem;
+  }
+
+  .tam-btn--dismiss:hover {
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* Confirmation prompt */
+  .tam-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    animation: tam-confirm-in 0.15s ease-out;
+  }
+
+  @keyframes tam-confirm-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tam-confirm__msg {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    flex: 1;
+  }
+
+  .tam-confirm__btns {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .tam-btn--confirm-yes {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .tam-btn--confirm-yes:hover {
+    background: var(--color-primary-dark, #164066);
+  }
+
+  .tam-btn--confirm-no {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.75rem;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .tam-btn--confirm-no:hover {
+    background: var(--color-gray-200, #e5e7eb);
+  }
+
+  /* ================================================================
+     Builder link
+     ================================================================ */
+  .tam-builder-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+    align-self: flex-start;
+  }
+
+  .tam-builder-link:hover {
+    opacity: 0.8;
+  }
+
+  /* ================================================================
+     Mobile — bottom-sheet pattern
+     ================================================================ */
+  @media (max-width: 600px) {
+    .trade-alert-modal {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .tam-content {
+      max-height: 92vh;
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      max-width: 100%;
+      animation: tam-slide-up 0.25s ease-out;
+    }
+
+    @keyframes tam-slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .tam-header {
+      padding: 1.25rem 1.25rem 0.875rem;
+    }
+
+    .tam-detail-header {
+      padding: 1rem 1.25rem 0.875rem;
+    }
+
+    .tam-detail-body {
+      padding: 0.875rem 1.25rem 1rem;
+    }
+
+    .tam-list-body {
+      padding: 0.5rem 0.75rem;
+    }
+
+    .tam-footer {
+      padding: 0.875rem 1.25rem 1.25rem;
+    }
+
+    .tam-detail-hero__icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .tam-detail-hero__name {
+      font-size: 1rem;
+    }
+  }
+
+  /* ================================================================
+     Reduced motion
+     ================================================================ */
+  @media (prefers-reduced-motion: reduce) {
+    .tam-content,
+    .tam-view.slide-in,
+    .tam-view.slide-back,
+    .tam-confirm {
+      animation: none;
+    }
+  }
+</style>

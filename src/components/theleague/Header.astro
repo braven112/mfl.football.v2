@@ -65,6 +65,13 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
       </ul>
     </nav>
     <div class="breadcrumb-actions">
+      <!-- Trade Alert — badge count populated by trade-alert.ts -->
+      <button class="breadcrumb-bell" id="nav-trade-bell" aria-label="Trade offers" type="button">
+        <svg viewBox="0 0 128 128" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-transactions-2`}></use>
+        </svg>
+        <span class="breadcrumb-bell__badge" id="nav-trade-bell-badge" style="display: none;">0</span>
+      </button>
       <a href={resolveLeaguePath("/theleague/search", hideLeaguePrefix)} class="breadcrumb-search-link" aria-label="Search all pages">
         <svg viewBox="0 0 512 512" aria-hidden="true">
           <use href={`${spriteUrl}#icon-search`}></use>
@@ -579,6 +586,54 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
     .nav-label {
       font-size: 0.6rem;
     }
+  }
+
+  /* Trade alert bell — matches breadcrumb-search-link */
+  .breadcrumb-bell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    transition: color 0.15s, background 0.15s;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .breadcrumb-bell:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .breadcrumb-bell svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  .breadcrumb-bell__badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 9999px;
+    background: var(--color-error, #dc2626);
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    pointer-events: none;
   }
 
   /* Responsive Styles */
