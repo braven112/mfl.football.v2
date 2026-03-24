@@ -1,242 +1,163 @@
 ---
 name: build-skin
-description: "Build a new MFL league CSS skin/theme from scratch. Use this skill whenever someone wants to create custom styling for their MyFantasyLeague (MFL) league pages — including colors, fonts, and light/dark mode. Trigger on: /build-skin, 'new skin', 'build a skin', 'league theme', 'MFL CSS', 'custom colors for my league', 'change the look of my MFL site', 'style my league', 'build a theme', 'create a theme', 'new MFL look', 'league styling', 'skin my league'. Even if the user just mentions wanting their MFL pages to look different or asks about CSS for MFL, use this skill."
+description: "Build a new MFL league CSS skin/theme. Use this skill whenever someone wants to create custom styling for their MyFantasyLeague (MFL) league pages — including colors, fonts, and light/dark mode. Trigger on: /build-skin, 'new skin', 'build a skin', 'league theme', 'MFL CSS', 'custom colors for my league', 'change the look of my MFL site', 'style my league', 'build a theme', 'create a theme', 'new MFL look', 'league styling', 'skin my league'. Even if the user just mentions wanting their MFL pages to look different or asks about CSS for MFL, use this skill."
 ---
 
 # MFL Skin Builder
 
-You are building a complete CSS skin for a MyFantasyLeague (MFL) league. The skin system uses SCSS with CSS custom properties (`:root` variables) that control every visual element of MFL's hosted pages — menus, tables, buttons, headers, footers, calendars, icons, and more.
+Build a new MFL CSS skin by copying an existing variables file, updating the colors/fonts, and compiling. The end result is a single `.css` file the commissioner plugs into their MFL league.
 
-The end result is a compiled CSS file hosted on Vercel that the commissioner plugs into their MFL league settings.
+## How MFL Skins Work
 
----
+Every skin has two files in `src/assets/css/src/`:
 
-## Overview
+1. **`_variables-{name}.scss`** — A `:root` block with CSS custom properties (colors, fonts, etc.) + SCSS `$variable` wrappers. This is the only file where skin-specific values live.
+2. **`{name}_main.scss`** — Entry file that imports fonts, reset, nav-tokens, all component partials, and the variables file. The component list is identical across all skins.
 
-You will:
-1. Interview the commissioner for their brand preferences
-2. Generate 4 SCSS files
-3. Compile them via the existing build system
-4. Provide the Vercel URL for the compiled CSS
+The build script (`scripts/build-themes.js`) compiles entry files to `public/assets/css/dist/{name}_main.css`.
 
----
+**Why it works:** All component partials internally load `_variables.scss` (TheLeague defaults). The skin's variables file is imported last in the main entry, so its `:root` block appears at the end of the compiled CSS and wins via cascade.
 
 ## Step 1: Interview
 
-Ask the commissioner for these inputs. Use AskUserQuestion to present them clearly:
+Ask the commissioner:
 
-### Required Inputs
+| Input | Example | Notes |
+|-------|---------|-------|
+| **Skin name** | `space-black` | kebab-case, used for filenames |
+| **Base theme** | `light` or `dark` | Which existing variables file to copy from |
+| **Accent color** | `#DC4405` | Buttons, secondary nav, calendar today, logo accent |
+| **Primary color** | `#051C2C` | Menus, headers, icons, links, footer (light mode) or headlines/icons (dark mode) |
+| **Headline font** | `Roboto Slab` | Google Fonts name |
+| **Body font** | `Roboto` | Google Fonts name |
 
-| Input | Format | Example | What it Controls |
-|-------|--------|---------|-----------------|
-| **Skin name** | kebab-case | `dynasty-kings` | File naming (e.g., `_variables-dynasty-kings.scss`) |
-| **Primary color** | Hex | `#1c497c` | Menus, headers, headings (h1-h6), icons, links, footer background, table headers, division headings |
-| **Accent color** | Hex | `#3c9950` | Buttons, secondary nav, calendar "today" highlight, logo accent, live scoring highlight |
-| **Headline font** | Google Fonts name | `Roboto Slab` | Section headings, page titles, SVG text |
-| **Body font** | Google Fonts name | `Roboto` | Body text, table cells, labels |
-| **Style** | `light` or `dark` | `light` | Controls background/text color inversion |
+## Step 2: Create the Variables File
 
-### Validation
+1. **Copy** the base variables file:
+   - Light base: `src/assets/css/src/_variables.scss`
+   - Dark base: `src/assets/css/src/_variables-dark.scss`
+2. **Save as** `src/assets/css/src/_variables-{name}.scss`
+3. **Update** the comment block at the top with the new skin name
+4. **Find and replace** the color values in the `:root` block. Read `references/token-map.md` to understand which tokens map to which user input. The key substitutions:
 
-- Skin name must be kebab-case (lowercase letters, numbers, hyphens only)
-- Colors must be valid hex (`#` + 3 or 6 hex chars)
-- Font names should be real Google Fonts — verify by constructing the Google Fonts URL and checking it loads
-- If any input is invalid, explain why and ask again
+**Accent color** — replace in these tokens:
+- `--accent-color`, `--dark-accent-color` (darken 10%)
+- `--button-bg-color`, `--button-bg-color-hover` (lighten 5%)
+- `--secondary-menu-bg-color`, `--secondary-menu-border-color`
+- `--today-bg-color`, `--today-border-color`
+- `--logo-secondary-color`, `--logo-secondary-text-color`
+- `--logo-name-primary-color`
+- `--caption-color`, `--headline-font-color`, `--h1-color` through `--h6-color` (dark mode only)
+- `--icon-color`, `--icon-color-hover`, `--icon-text-color` (dark mode only)
+- `--logo-main-color`, `--logo-text-color` (dark mode only)
 
-### Tips for the Commissioner
+**Primary color** — replace in these tokens:
+- `--primary-color`, `--secondary-color` (light mode only — dark mode uses #f7f7f7)
+- `--link-color`, `--link-color-hover`
+- `--menu-bg-color`, `--menu-bg-hover-color`, `--menu-border-color`
+- `--footer-bg-color`
+- `--table-header-color`
+- `--caption-color`, `--headline-font-color`, `--h1-color` through `--h6-color` (light mode only)
+- `--icon-color`, `--icon-color-hover`, `--icon-text-color` (light mode only)
+- `--header-icon-color`, `--header-icon-text-color`, `--header-icon-hover-color`
+- `--logo-main-color`, `--logo-text-color` (light mode only)
+- `--logo-name-secondary-color`
+- `--division-heading-color`, `--division-subheading-color`
 
-If they're unsure about colors, suggest they pick from their league logo or team colors. For fonts, suggest popular pairings:
-- **Classic**: Roboto Slab + Roboto
-- **Modern**: Inter + Inter
-- **Bold**: Oswald + Source Sans Pro
-- **Elegant**: Playfair Display + Lato
-- **Fun**: Bangers + Nunito
+**Fonts** — update these tokens:
+- `--headline-font`: user's headline font name (in quotes)
+- `--body-font`: user's body font name (in quotes)
 
----
+5. **Update the SCSS `$variable` wrappers** below the `:root` block to match (these are just `$var: var(--var);` lines — the structure stays the same, just make sure any new tokens added to `:root` have matching `$var` wrappers)
 
-## Step 2: Generate Files
+## Step 3: Create the Main Entry File
 
-Generate all 4 SCSS files in `src/assets/css/src/`. Read the reference files to understand the exact format:
+Save as `src/assets/css/src/{name}_main.scss`:
 
-1. **Read** `references/color-derivation.md` — this has every derivation rule
-2. **Read** `references/main-template.md` — this has the file templates
-3. **Read** `references/token-map.md` if you need to understand what a specific token controls
+```scss
+@use "./fonts-{name}";
+@use "./reset";
 
-### File 1: `_fonts-{name}.scss`
+//// Design Tokens (load before components)
+@use "./nav-tokens";
 
-A single Google Fonts `@import` line. Construct the URL from the font names:
+//// Alphabetical
+@use "./add-drop";
+@use "./alerts";
+@use "./auctions";
+@use "./calendar";
+@use "./chat";
+@use "./commish";
+@use "./constitution";
+@use "./custom-buttons";
+@use "./custom-message-board";
+@use "./draft";
+@use "./draft-grid";
+@use "./footer";
+@use "./franchise-icons";
+@use "./grid";
+@use "./header";
+//@use "./history";
+@use "./icons";
+@use "./injured-reserve";
+@use "./inputs";
+@use "./livescoring";
+@use "./livescoring-toshabman";
+@use "./login";
+@use "./message-board";
+@use "./mflmenu";
+@use "./mflsubmenu";
+@use "./mfltabs";
+@use "./misc";
+@use "./news";
+@use "./owner-setup";
+@use "./player-news";
+@use "./playoffs";
+@use "./playoff-projections";
+@use "./power-rank";
+@use "./rosters";
+@use "./salarycap";
+@use "./scrollbar";
+@use "./standings";
+@use "./submit-lineup";
+@use "./tables";
+@use "./tabs";
+@use "./theleague";
+@use "./top-players";
+@use "./transactions";
+
+//// Skin override — MUST be last (CSS cascade: last :root wins)
+@use "./variables-{name}";
+```
+
+**The last line is critical.** Without it, the skin's colors won't apply.
+
+## Step 4: Create the Fonts File
+
+Save as `src/assets/css/src/_fonts-{name}.scss`. For Google Fonts:
 
 ```scss
 @import url('https://fonts.googleapis.com/css2?family={Headline+Font}:wght@400..900&family={Body+Font}:wght@300..900&display=swap');
 ```
 
-Replace spaces in font names with `+`. Check whether each font supports variable weights (use `wght@min..max`) or fixed weights (use `wght@300;400;700`).
+For self-hosted fonts (like the dark theme's UFC Sans), use `@font-face` declarations instead. Check `_fonts-dark.scss` for an example.
 
-### File 2: `_variables-{name}.scss`
-
-This is the largest file — a complete `:root` block with all 60+ CSS custom properties, followed by SCSS `$variable` wrappers that reference them.
-
-**Structure:**
-1. Opening comment with skin name
-2. `:root { ... }` block with ALL tokens organized by category
-3. SCSS `$variable: var(--variable);` wrappers for each token
-
-Use `references/color-derivation.md` to determine every value:
-- Apply primary color to all "P" tokens
-- Apply accent color to all "A" tokens
-- Compute derived values (darken/lighten) for "D" tokens
-- Use the light or dark fixed values for "M" and "F" tokens
-
-**The `:root` block must include ALL of these categories in order:**
-1. Colors (primary, secondary, accent, dark-accent, text colors)
-2. Links (link-color, link-color-hover, add-color, drop-color)
-3. Alerts (danger, warning, success, info — text/bg/border each)
-4. Neutrals (grays, offwhites, lightgrays, white, codebg)
-5. Tables (oddtablerow, eventablerow, newposition-border, table-header)
-6. Page Backgrounds (primary-bg, pagebody-bg, report-bg, header-bg)
-7. Footer (bg, text, header-text)
-8. Borders (border-color)
-9. MFL Menu (bg, hover, border, text)
-10. Report Navigation (border, bg, text, link, icon, icon-hover, font-weight)
-11. Buttons (bg, hover, link)
-12. Scrollbar (bg, hover)
-13. Captions & Headlines (caption, headline-font-color, h1-h6)
-14. Icons (color, hover, text)
-15. Calendar (bg, eventablerow, border, text, today-bg, today-border, today-text)
-16. Logo (main, secondary, 3rd, 4th, text, secondary-text)
-17. Typography (headline-font, headline-font-weight, body-font, body-font-weight, svg-text-font-size)
-18. Border Radius (sm, default, lg, xl)
-19. Header Icons (color, text, hover)
-20. Logo Name (primary, secondary)
-21. Division Headings (heading, subheading, border)
-22. Roster Page (bg-base, bg-subtle, bg-practice, bg-practice-alt, bg-injured, bg-injured-alt, border-practice, border-injured)
-23. Homepage Messages (header bg/border/color, body bg/border/color — all `var()` refs)
-24. Live Scoring (highlight, border — `var()` refs)
-25. Container Header (bg — `var()` ref)
-26. Tabs (text, active-text, active-indicator, separator, hover — all `var()` refs)
-
-**After the `:root` block**, add the SCSS `$variable` wrappers. These follow the exact same pattern as the existing `_variables.scss` file — one `$variable: var(--variable);` line for each custom property. Copy the wrapper section structure from `_variables.scss` (read it if needed).
-
-### File 3: `_globals-{name}.scss`
-
-Short file that forwards the variables:
-
-```scss
-@forward "color-helpers";
-@forward "variables-{name}";
-
-:root {
-  --color-bg-base: {value};
-  --color-bg-subtle: {value};
-  --color-bg-practice: {value};
-  --color-bg-practice-alt: {value};
-  --color-bg-injured: {value};
-  --color-bg-injured-alt: {value};
-  --color-border-practice: {value};
-  --color-border-injured: {value};
-}
-```
-
-Values come from the "Roster Page" section in `references/color-derivation.md`.
-
-### File 4: `{name}_main.scss`
-
-The entry file. Copy the template from `references/main-template.md`, replacing `{name}` with the skin name.
-
-**CRITICAL:** The last `@use` line in the main entry MUST be `@use "./globals-{name}"`. This is what makes the skin's colors actually apply. Here's why: all component partials internally load `_globals.scss` → `_variables.scss`, which outputs the TheLeague default `:root` block. The skin's globals file outputs a second `:root` block at the end of the CSS, and CSS cascade (last `:root` wins) makes the skin's values override the defaults. Without this line, the skin would look identical to TheLeague regardless of the colors chosen.
-
-Optionally, add a body font-size override at the bottom if the commissioner wants a different base size:
-
-```scss
-// Optional: custom base font size
-body {
-  font-size: 14.25px;
-}
-```
-
----
-
-## Step 3: Build
-
-Run the build script to compile the SCSS:
+## Step 5: Build & Provide URL
 
 ```bash
 node scripts/build-themes.js
 ```
 
-This compiles ALL entry files (non-underscore `.scss` files) in `src/assets/css/src/` to `public/assets/css/dist/`. The new skin will appear as `public/assets/css/dist/{name}_main.css`.
-
-**Verify the build succeeded:**
-1. Check the output for `Compiled {name}_main.scss -> public/assets/css/dist/{name}_main.css`
-2. Verify the file exists and has reasonable size (should be 50-150KB)
-3. Spot-check a few values in the compiled CSS — search for the primary and accent hex colors to confirm they appear
-
-If the build fails, read the error message. Common issues:
-- Missing closing brace in the variables file
-- Typo in a `@use` or `@forward` path
-- Invalid SCSS syntax in font import URL
-
----
-
-## Step 4: Provide the Vercel URL
-
-After successful build, provide the commissioner with the URL where their CSS will be hosted once deployed:
+Verify `public/assets/css/dist/{name}_main.css` exists, then give the commissioner their URL:
 
 ```
 https://mflfootballv2.vercel.app/assets/css/dist/{name}_main.css
 ```
 
-**Tell the commissioner:**
+Tell them to paste this into MFL Commissioner → Appearance → Custom CSS URL.
 
-> Your new skin has been built! Once deployed, your CSS will be available at:
->
-> `https://mflfootballv2.vercel.app/assets/css/dist/{name}_main.css`
->
-> To use it in MFL:
-> 1. Go to your MFL league's Commissioner tools
-> 2. Navigate to **Appearance** → **Custom CSS URL**
-> 3. Paste the URL above
-> 4. Save — your league pages will now use the new skin
+Remind them the URL goes live after the changes are deployed (pushed to main or preview deployment).
 
-Also mention that they should deploy the changes (push to main or create a preview deployment) to make the CSS live at that URL.
+## Reference
 
----
-
-## Reference Files
-
-Read these as needed during generation:
-
-| File | When to Read |
-|------|-------------|
-| `references/token-map.md` | To understand what each CSS property controls |
-| `references/color-derivation.md` | To determine every token value from the user's inputs |
-| `references/main-template.md` | For the exact file templates and import lists |
-
-You can also read the existing skin files for reference if the templates aren't clear:
-- `src/assets/css/src/_variables.scss` — TheLeague light theme (canonical)
-- `src/assets/css/src/_variables-dark.scss` — Dark theme
-- `src/assets/css/src/_variables-afl.scss` — AFL theme (accent override example)
-- `src/assets/css/src/_globals.scss` — TheLeague globals
-- `src/assets/css/src/_globals-afl.scss` — AFL globals
-- `src/assets/css/src/_fonts.scss` — TheLeague fonts
-- `src/assets/css/src/_fonts-afl.scss` — AFL fonts
-- `src/assets/css/src/theleague_main.scss` — TheLeague main entry
-- `src/assets/css/src/afl_main.scss` — AFL main entry
-
----
-
-## Quality Checklist
-
-Before declaring the skin complete:
-
-- [ ] All 4 files created in `src/assets/css/src/`
-- [ ] Variables file has ALL 60+ tokens (don't skip any category)
-- [ ] `:root` block AND `$variable` wrappers both present in variables file
-- [ ] Globals file forwards the correct variables file name
-- [ ] Main entry file references the correct fonts file name
-- [ ] Main entry file has `@use "./globals-{name}"` as the LAST import (critical for CSS cascade)
-- [ ] Build succeeds with no errors
-- [ ] Compiled CSS exists in `public/assets/css/dist/`
-- [ ] Primary and accent colors appear in the compiled output
-- [ ] Font family names appear in the compiled output
-- [ ] Vercel URL provided to the commissioner
+- `references/token-map.md` — what every CSS custom property controls and which user input it maps to
