@@ -1,0 +1,420 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { spriteUrl } from '../../utils/sprite-url';
+import pages from '../../data/page-directory.json';
+
+// Build search data server-side: title + description + tags joined into one lowercase string per entry
+const searchData: Record<string, string> = {};
+for (const page of pages) {
+  searchData[page.id] = [page.title, page.description, ...page.tags, page.category].join(' ').toLowerCase();
+}
+
+const categories = [
+  { id: 'popular', label: 'Popular' },
+  { id: 'my-team', label: 'My Team' },
+  { id: 'reports', label: 'Reports' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'info', label: 'Info' },
+];
+
+const basePath = '/theleague';
+---
+
+<TheLeagueLayout title="Search | The League">
+  <section class="directory">
+    <header class="directory__header">
+      <div class="directory__title-row">
+        <h1 class="directory__title">Search</h1>
+        <span class="directory__count">{pages.length} pages</span>
+      </div>
+      <p class="directory__subtitle">Find any page on the site by name, category, or keyword.</p>
+
+      <div class="directory__search-bar">
+        <svg class="directory__search-icon" viewBox="0 0 512 512" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-search`}></use>
+        </svg>
+        <input
+          type="search"
+          class="directory__search"
+          placeholder="Search pages... (e.g. money, bracket, trade)"
+          autocomplete="off"
+        />
+      </div>
+    </header>
+
+    <nav class="directory__filters" aria-label="Filter by category">
+      {categories.map(cat => (
+        <button class="directory__chip" data-category={cat.id} type="button">
+          {cat.label}
+        </button>
+      ))}
+      <button class="directory__chip directory__chip--clear" type="button" style="display:none;">
+        &times; Clear
+      </button>
+    </nav>
+
+    <div class="directory__grid">
+      {pages.map(page => (
+        <a
+          href={`${basePath}${page.path}`}
+          class="directory__card"
+          data-search={searchData[page.id]}
+          data-category={page.category}
+          data-popularity={page.popularity}
+        >
+          <div class="directory__card-icon">
+            <svg viewBox="0 0 512 512" aria-hidden="true">
+              <use href={`${spriteUrl}#icon-${page.icon}`}></use>
+            </svg>
+          </div>
+          <div class="directory__card-content">
+            <div class="directory__card-title-row">
+              <h2 class="directory__card-title">{page.title}</h2>
+              {page.visibility === 'admin' && (
+                <span class="directory__admin-badge">Admin</span>
+              )}
+            </div>
+            <p class="directory__card-desc">{page.description}</p>
+            <div class="directory__card-tags">
+              {page.tags.slice(0, 4).map((tag: string) => (
+                <span class="directory__tag">{tag}</span>
+              ))}
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+
+    <p class="directory__no-results" style="display:none;">No pages match your search.</p>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .directory {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 3rem;
+  }
+
+  .directory__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .directory__title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .directory__title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #0f172a);
+  }
+
+  .directory__count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #94a3b8);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .directory__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #64748b);
+  }
+
+  .directory__search-bar {
+    position: relative;
+    margin-top: 0.75rem;
+    max-width: 480px;
+  }
+
+  .directory__search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    fill: var(--color-gray-400, #94a3b8);
+    pointer-events: none;
+  }
+
+  .directory__search {
+    width: 100%;
+    padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+    border: 2px solid var(--color-gray-100, #e2e8f0);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: var(--color-gray-900, #0f172a);
+    background: var(--color-white, #fff);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .directory__search:focus {
+    border-color: #3b82f6;
+  }
+
+  .directory__search::placeholder {
+    color: var(--color-gray-400, #94a3b8);
+  }
+
+  /* Category filter chips */
+  .directory__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .directory__chip {
+    padding: 0.35rem 0.85rem;
+    border: 2px solid var(--color-gray-100, #e2e8f0);
+    border-radius: 20px;
+    background: var(--color-white, #fff);
+    color: var(--color-gray-600, #475569);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .directory__chip:hover {
+    border-color: var(--color-gray-400, #94a3b8);
+    color: var(--color-gray-900, #0f172a);
+  }
+
+  .directory__chip.active {
+    background: var(--color-gray-900, #0f172a);
+    border-color: var(--color-gray-900, #0f172a);
+    color: var(--color-white, #fff);
+  }
+
+  .directory__chip--clear {
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .directory__chip--clear:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: var(--color-white, #fff);
+  }
+
+  /* Card grid */
+  .directory__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .directory__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    border: 1px solid var(--color-gray-100, #e2e8f0);
+    border-radius: 12px;
+    background: var(--color-white, #fff);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.15s, border-color 0.15s;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  }
+
+  .directory__card:hover {
+    border-color: var(--color-gray-200, #cbd5e1);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  .directory__card[hidden] {
+    display: none;
+  }
+
+  .directory__card-icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--color-gray-50, #f8fafc);
+  }
+
+  .directory__card-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .directory__card-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .directory__card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .directory__card-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #0f172a);
+    line-height: 1.3;
+  }
+
+  .directory__admin-badge {
+    flex-shrink: 0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+
+  .directory__card-desc {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #64748b);
+    line-height: 1.4;
+  }
+
+  .directory__card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+  }
+
+  .directory__tag {
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: var(--color-gray-50, #f1f5f9);
+    color: var(--color-gray-500, #64748b);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .directory__no-results {
+    text-align: center;
+    color: var(--color-gray-500, #64748b);
+    font-size: 0.9375rem;
+    padding: 2rem 0;
+  }
+
+  @media (max-width: 640px) {
+    .directory__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .directory__search-bar {
+      max-width: none;
+    }
+  }
+</style>
+
+<script>
+  const searchInput = document.querySelector('.directory__search') as HTMLInputElement;
+  const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>('.directory__card'));
+  const originalOrder = [...cards]; // preserve initial DOM order
+  const chips = document.querySelectorAll<HTMLButtonElement>('.directory__chip:not(.directory__chip--clear)');
+  const clearBtn = document.querySelector('.directory__chip--clear') as HTMLButtonElement;
+  const countEl = document.querySelector('.directory__count') as HTMLSpanElement;
+  const noResults = document.querySelector('.directory__no-results') as HTMLParagraphElement;
+  const grid = document.querySelector('.directory__grid') as HTMLElement;
+  const total = cards.length;
+  let activeCategory: string | null = null;
+
+  function filterAndSort() {
+    const query = searchInput?.value.trim().toLowerCase() || '';
+    let visible = 0;
+
+    // Filter cards
+    cards.forEach(card => {
+      const searchStr = card.dataset.search || '';
+      const cardCat = card.dataset.category || '';
+
+      const matchesSearch = !query || searchStr.includes(query);
+      const matchesCategory = !activeCategory || cardCat === activeCategory;
+
+      const show = matchesSearch && matchesCategory;
+      card.hidden = !show;
+      if (show) visible++;
+    });
+
+    // When searching, sort visible cards by popularity (descending)
+    // When not searching, restore original order
+    if (query) {
+      const sorted = cards
+        .filter(c => !c.hidden)
+        .sort((a, b) => {
+          const popA = parseInt(a.dataset.popularity || '0', 10);
+          const popB = parseInt(b.dataset.popularity || '0', 10);
+          return popB - popA;
+        });
+
+      sorted.forEach(card => grid.appendChild(card));
+      cards.filter(c => c.hidden).forEach(card => grid.appendChild(card));
+    } else {
+      originalOrder.forEach(card => grid.appendChild(card));
+    }
+
+    // Update count
+    const hasFilter = query || activeCategory;
+    if (countEl) {
+      countEl.textContent = hasFilter ? `${visible} of ${total} pages` : `${total} pages`;
+    }
+    if (noResults) {
+      noResults.style.display = visible === 0 ? 'block' : 'none';
+    }
+    if (clearBtn) {
+      clearBtn.style.display = hasFilter ? 'inline-block' : 'none';
+    }
+  }
+
+  function clearAll() {
+    activeCategory = null;
+    chips.forEach(c => c.classList.remove('active'));
+    if (searchInput) searchInput.value = '';
+    filterAndSort();
+  }
+
+  searchInput?.addEventListener('input', filterAndSort);
+  clearBtn?.addEventListener('click', clearAll);
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cat = chip.dataset.category || '';
+      if (activeCategory === cat) {
+        activeCategory = null;
+        chip.classList.remove('active');
+      } else {
+        chips.forEach(c => c.classList.remove('active'));
+        activeCategory = cat;
+        chip.classList.add('active');
+      }
+      filterAndSort();
+    });
+  });
+</script>

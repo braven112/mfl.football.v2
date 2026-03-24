@@ -215,6 +215,23 @@ docs/claude/insights/
 
 ---
 
+## Page Directory Registry
+
+**IMPORTANT:** When adding a new page to the site, you MUST also add an entry to `src/data/page-directory.json`.
+
+Each entry requires: `id`, `title`, `description`, `path`, `icon`, `category` (popular | my-team | reports | tools | info), `tags` (10+ synonyms), `visibility` (all | admin), and `popularity` (0-100).
+
+**Write tags generously** — include every word a user might type to find this page:
+- Primary function words (what the page does)
+- Synonyms (alternative words users might search)
+- Data types shown (chart, table, graph, list)
+- Actions available (edit, filter, sort, compare)
+- Related concepts and slang/casual terms
+
+The test `tests/page-directory-data.test.ts` enforces minimum 10 tags per entry and validates all fields.
+
+---
+
 ## What's New Changelog
 
 **IMPORTANT:** When completing a feature that adds a new page, new user-facing feature, or significant enhancement, you MUST update `src/data/whats-new.json`.

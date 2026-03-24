@@ -64,11 +64,18 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         </li>
       </ul>
     </nav>
-    <!-- Hamburger Menu Toggle (triggers NavDrawer in layout) -->
-    <NavToggleButton
-      ariaLabel="Toggle navigation menu"
-      controlsId="nav-drawer"
-    />
+    <div class="breadcrumb-actions">
+      <a href={resolveLeaguePath("/theleague/search", hideLeaguePrefix)} class="breadcrumb-search-link" aria-label="Search all pages">
+        <svg viewBox="0 0 512 512" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-search`}></use>
+        </svg>
+      </a>
+      <!-- Hamburger Menu Toggle (triggers NavDrawer in layout) -->
+      <NavToggleButton
+        ariaLabel="Toggle navigation menu"
+        controlsId="nav-drawer"
+      />
+    </div>
   </div>
 </div>
 
@@ -209,6 +216,33 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
   .breadcrumb-link:hover {
     color: #e2e8f0;
     text-decoration: underline;
+  }
+
+  .breadcrumb-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .breadcrumb-search-link {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .breadcrumb-search-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .breadcrumb-search-link svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
   }
 
   .theleague-header {
