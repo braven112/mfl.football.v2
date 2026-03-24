@@ -743,9 +743,46 @@ const run = async () => {
   const stateIsCurrentSeason = state?.season === season;
   let lockedWeek = stateIsCurrentSeason ? state?.frozenWeek ?? null : null;
 
+  // Cross-year offseason detection: when the league year has advanced (e.g. 2025→2026)
+  // but the previous season had a freeze, we're in the offseason of the new league year.
+  // Carry forward the freeze info so weekly offseason snapshots continue to be generated.
+  let crossYearOffseason = false;
+  if (!lockedWeek && !stateIsCurrentSeason && state?.frozenWeek && state?.frozenAt && detectedWeek === 0) {
+    const prevSeason = state.season;
+    const prevFrozenWeek = state.frozenWeek;
+    console.log(
+      `[salary-averages] New league year ${season} — previous season ${prevSeason} ` +
+      `was frozen at week ${prevFrozenWeek}. Continuing offseason snapshots.`
+    );
+    lockedWeek = prevFrozenWeek;
+    crossYearOffseason = true;
+    // Persist the freeze state for the new season so subsequent runs don't need to re-derive it
+    await writeSeasonState({
+      season,
+      frozenWeek: prevFrozenWeek,
+      frozenAt: state.frozenAt,
+      carriedFrom: prevSeason,
+    });
+  }
+
   // Safety check: if the season is "frozen" but detectedWeek is 0 (no real scores),
   // the freeze was likely triggered erroneously by stale MFL data. Clear it.
-  if (lockedWeek && detectedWeek === 0) {
+  // Skip this check during cross-year offseason — detectedWeek is expected to be 0
+  // (either detected this run via crossYearOffseason, or persisted via carriedFrom).
+  const isCarriedForwardFreeze = crossYearOffseason || !!state?.carriedFrom;
+
+  // When real games are detected in the new season, clear the carried-forward freeze
+  // so normal week-by-week tracking resumes from week 1.
+  if (lockedWeek && detectedWeek > 0 && isCarriedForwardFreeze) {
+    console.log(
+      `[salary-averages] New season ${season} has real scores (week ${detectedWeek}) — ` +
+      `clearing carried-forward freeze. Normal tracking resumes.`
+    );
+    lockedWeek = null;
+    await writeSeasonState({ season, frozenWeek: null, clearedAt: new Date().toISOString() });
+  }
+
+  if (lockedWeek && detectedWeek === 0 && !isCarriedForwardFreeze) {
     console.warn(
       `[salary-averages] Season ${season} is frozen at week ${lockedWeek} but no scored ` +
       `matchups detected — clearing stale freeze state.`
