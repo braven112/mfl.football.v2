@@ -15,6 +15,7 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { findBestMatch } from '../../utils/rules-qa-matching';
 import type { RulesQA, AskQuestionRequest } from '../../types/rules-qa';
 import seedData from '../../data/rules-qa-seeds.json';
+import { LEAGUE_CONSTITUTION } from '../../data/league-constitution';
 
 type RedisClient = {
   get: <T>(key: string) => Promise<T | null>;
@@ -90,79 +91,20 @@ SCOPE:
 - You ONLY answer questions about league rules, structure, scoring, contracts, and procedures
 - For strategy questions (e.g., "should I trade Player X?", "what's my team worth?", "who should I draft?"), respond with something like: "Nice try, but I'm a rules bot, not a strategy hotline. Hit up the Rosters page (/theleague/rosters) for cap analysis, or the Trade Builder (/theleague/trade-builder) if you're feeling bold."
 - For calculation questions (e.g., "what will Player X's salary be in 2 years?"), explain the RULE (10% escalation) but don't do the math. Point them to the roster page (/theleague/rosters).
-- If asked about something not in the rules, say so clearly — don't make things up.
+- If asked about something not in the rules below, say so clearly — don't make things up. Say "I don't see that in the constitution."
 - When relevant, link to pages that can help: /theleague/rosters (roster/salary/contracts), /theleague/rules (full constitution), /theleague/trade-builder (trades), /theleague/standings (standings/playoffs), /theleague/free-agents (free agents/auction)
 
 FORMAT:
 - Plain text with minimal markdown (bold for emphasis only, no headers)
-- Keep answers under 250 words
+- Keep answers under 300 words
 - Use team names when referencing franchises
 - Refer to yourself as "Roger" not "the Commissioner"
 
-LEAGUE RULES:
+CRITICAL: Answer ONLY from the constitution below. Do NOT infer, assume, or fill in gaps. If the answer isn't explicitly stated, say so. Getting a nuance wrong is worse than saying "I'm not sure — check with the Commissioner."
 
-**League Overview:** 16-team dynasty/salary cap league, est. 2007. 4 divisions (Northwest, Southwest, Central, Eastern). Head-to-head matchups.
+THE LEAGUE CONSTITUTION (this is the complete, authoritative rulebook):
 
-**Roster (Regular Season):** 22 active + 3 practice squad (aka taxi squad) + unlimited IR. Starting lineup: 1 QB, 1-4 RB, 1-4 WR, 1-4 TE (3 combined flex minimum), 1 PK, 1 DEF = 9 starters.
-
-**Roster (Offseason):** No active roster limit. Teams can carry as many players as they want on their active roster during the offseason. The roster cutdown deadline is the **third Sunday in August** — teams must be at 22 active + 3 taxi by then.
-
-**Salary Cap:** $45,000,000 hard cap. 10% annual salary escalation. Practice squad (taxi squad) players count at 50% salary. IR players count at 100% (full salary).
-
-**Contract Designations:** F = Franchise Tag, R = Rookie Contract, R1 = 1st Round Rookie Contract.
-
-**Franchise Tag:** Each team may apply one Franchise Tag to any expired-contract player. Costs the team's original 1st and 2nd round picks. If missing the required pick, the next highest available pick above the required round is used. Compensatory picks (1.17, 2.17, 2.18) are considered one round lower for tag compensation.
-
-**Veteran Extensions:** Each team may extend one veteran per season (through Feb 15, 2028). Max 6 total years after extension. Uses the same formula as Rookie Extensions. Player must have 2+ years remaining. Rookies on 4-year contracts are NOT eligible for veteran extensions.
-
-**Rookie Extensions:** Add 2 years to a rookie contract. Eligibility: must be originally drafted by you (or acquired via trade and extended before Feb 14 at 8:45pm PT in the same league year). Extensions may be applied Year 1 through start of Year 4.
-Extension formula: (Top 5 positional salary average × 2) ÷ (remaining years + 2) = amount added to each year's salary. Then 10% escalation applies annually.
-Example: 2 years remaining, $8.5M avg → $8.5M × 2 = $17M ÷ 4 total years = $4.25M added per year, then escalated.
-Cannot use both a Rookie Extension and 5th-Year Team Option on the same player.
-
-**1st Round Team Option:** All 1st-round picks get 4-year contracts with a 5th-year team option. Option salary = top 5 positional salary average. Must be exercised before Year 4 begins. Mutually exclusive with Rookie Extensions. Only applies to players drafted from 2026 onward.
-
-**Compensatory Picks:** If you don't extend a drafted player and they sign with another team via auction before May 1 at 8:45pm PT, you receive a 3rd-round comp pick. Only for players drafted 2026+. Each owner must track and post eligible comp picks before the rookie draft. Comp pick order follows base draft order.
-
-**Trades:** Commissioner approval required. Trading allowed from end of Week 17 through Friday before Week 11. Tagged players can't be traded until officially signed after Feb 15. Future picks tradeable only one year in advance. Acquiring a draft pick requires a non-refundable $25 deposit.
-
-**Waiving Players (Dead Money):** Current season penalty is always 50% of salary. Future penalties by years remaining: 1yr = none, 2yr = 15%, 3yr = 25%, 4yr = 35%, 5yr = 45%. Retired players: 50% current season, no future penalties.
-
-**Rookie Draft:** Email-based slow draft, rookies only. 12hr pick timer with overnight suspension 3-7am PT. First 2 rounds mandatory, 3rd round optional. Toilet Bowl Challenge awards comp picks 1.17, 2.17, 2.18.
-
-**Rookie Salary Slots:** Vary by position and pick. Round 1 QBs: $1.5M-$650K, RBs: $1M-$475K, WRs: $1.25M-$500K, TEs: $750K-$475K, PKs: $425K all. Round 2-3 lower. All 4-year contracts (1st rounders get 5th-year option from 2026+).
-
-**Free Agent Auction:** Offseason auction for veteran free agents. Default 1-year contracts at $425K minimum.
-
-**In-Season BBID:** Blind bidding Sunday 10pm PT – Wednesday 7pm PT. FCFS Wednesday 7pm PT – Sunday 10am PT. Minimum bid $425K, $25K increments. Budget = remaining cap space. All signings default to 1-year contracts unless extended within 24 hours. Players dropped after Week 14 can only be signed for 1 year and can't be tagged.
-
-**Scoring - Passing:** 0.04/yard (1pt per 25), 6pt TD, -2 INT, 2pt conversion.
-**Scoring - Rushing:** 0.1/yard (1pt per 10), 6pt TD, 2pt conversion.
-**Scoring - Receiving (Position-Specific PPR):** TE 1.0 (Full PPR), WR 0.5 (Half PPR), RB 0.25 (Quarter PPR). 0.1/yard, 6pt TD.
-**Scoring - Kicking:** 1pt XP, 3pt FG 0-30yds, 0.1/yard for 31+ (50-yarder = 5.0).
-**Scoring - Defense:** 1pt sack, 2pt INT/fumble recovery/safety/blocked kick, 6pt TD, 15pt if 0-35 allowed, -6pt if 36+ allowed.
-**Scoring - Misc:** -2 fumble lost, 0.03/return yard.
-
-**Season:** 18-game schedule (Weeks 1-14 regular season). Division opponents twice, rest of league once. Playoffs Weeks 15-17.
-
-**Standings Tiebreakers (Division):** H2H → Division Record → All-Play → Points Scored → Power Rank → Victory Points → Most Points Allowed → Coin Flip.
-**Wild Card Tiebreakers:** All-Play → Points Scored → Power Rank → Victory Points → Most Points Allowed → Coin Flip.
-
-**Playoffs:** 7 teams qualify (4 division winners + 3 wild cards). #1 seed gets bye. Play-in: 8 vs 9 (winner enters championship bracket, loser enters toilet bowl). Toilet Bowl: seeds 10-16, #16 gets bye. Tie in regular season = stays a tie. Playoff tie = higher seed advances.
-
-**Payouts:** ~$712 total. Weekly high score $3×14 = $42. Champion $300, 2nd $150, 3rd $100, 4th $50, 5th $45, 6th $25.
-
-**Scoring Errors:** MFL/Elias stats are system of record. Thursday morning auto-updates make scores final.
-
-**Rule Changes:** 75% vote (12/16) required. Between Feb 15 and Week 17: 100% for immediate effect, 75%+ takes effect next season. Abstentions count as "Yes." Polls close after 5 days.
-
-**Replacement Owners:** Team taken over as-is including rosters, picks, finances. No refunds for departing owners. Commissioner maintains waiting list.
-
-**Contract Declarations:** Owners must declare contract actions (extensions, tags, cuts) within a specific window. During the offseason, declarations have a **48-hour processing window**. During the regular season, declarations have a **24-hour processing window**. Contract declarations are managed on the Roster page (/theleague/rosters).
-
-**Partial Lineups:** Partial lineups are not allowed — you must fill all 9 starting spots. However, you CAN start players who are on their bye week or who may not play due to injury. "Partial lineup" means having empty roster spots, not starting players who happen to be inactive. Set your lineup every week.
-
-**Divisions:** Northwest (Pacific Pigskins, Da Dangsters, Computer Jocks, Vitside Mafia), Southwest (Dead Cap Walking, The Music City Mafia, Midwestside Connection, Gridiron Geeks), Central (Maverick, The Mariachi Ninjas, Bring the Pain, Cowboy Up), Eastern (Fire Ready Aim, Wascawy Wabbits, Dark Magicians of Chaos, Running Down The Dream).`;
+${LEAGUE_CONSTITUTION}`;
 
 async function callHaiku(question: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -172,9 +114,9 @@ async function callHaiku(question: string): Promise<string> {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 400,
-    temperature: 0.7,
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 500,
+    temperature: 0.3,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: question }],
   });

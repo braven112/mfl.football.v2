@@ -532,13 +532,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     color: var(--color-gray-500, #6b7280);
   }
   .rqa-card__avatar:has(.rqa-card__team-icon) {
-    background: none;
+    background: transparent !important;
   }
   .rqa-card__team-icon {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    border-radius: 50%;
   }
   .rqa-card__meta {
     display: flex;
