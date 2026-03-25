@@ -41,10 +41,10 @@ interface Props {
   onDeletePoll?: (ideaId: string) => void;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; icon: string }> = {
-  'rule-change': { label: 'Rule Change', icon: '📜' },
-  'website': { label: 'Website Suggestion', icon: '💻' },
-  'general': { label: 'General Discussion', icon: '💬' },
+const CATEGORY_LABELS: Record<string, { label: string; spriteId: string }> = {
+  'rule-change': { label: 'Rule Change', spriteId: 'icon-gavel' },
+  'website': { label: 'Website Suggestion', spriteId: 'icon-wrench' },
+  'general': { label: 'General Discussion', spriteId: 'icon-beer' },
 };
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
@@ -177,7 +177,7 @@ export default function IdeaDetail({
       {/* Idea header */}
       <div className="sb-detail__header">
         <div className="sb-detail__author-row">
-          <div className="sb-card__avatar">
+          <div className={`sb-card__avatar${teamIcon ? ' sb-card__avatar--has-icon' : ''}`}>
             {teamIcon ? (
               <img src={teamIcon} alt="" width="32" height="32" className="sb-card__team-icon" />
             ) : (
@@ -210,8 +210,8 @@ export default function IdeaDetail({
           <div className="sb-detail__badges-row">
             {idea.category && (
               <span className={`sb-cat sb-cat--${idea.category === 'rule-change' ? 'rule' : idea.category}`}>
-                {(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).icon}{' '}
-                {(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).label}
+                <svg className="sb-cat__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).spriteId}`} /></svg>
+                {' '}{(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).label}
               </span>
             )}
             {idea.websiteFields && (

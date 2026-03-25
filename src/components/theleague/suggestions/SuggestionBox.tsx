@@ -356,7 +356,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
       {/* Category filter pills */}
       {ideas.length > 0 && (
         <div className="sb-filter" role="radiogroup" aria-label="Filter by category">
-          {([['all', 'All'], ['rule-change', '📜 Rules'], ['website', '💻 Website'], ['general', '💬 General']] as const).map(([value, label]) => (
+          {([['all', 'All', ''], ['rule-change', 'Rules', 'icon-gavel'], ['website', 'Website', 'icon-wrench'], ['general', 'General', 'icon-beer']] as const).map(([value, label, spriteId]) => (
             <button
               key={value}
               type="button"
@@ -365,6 +365,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
               role="radio"
               aria-checked={categoryFilter === value}
             >
+              {spriteId && <svg className="sb-filter__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${spriteId}`} /></svg>}
               {label}
               <span className="sb-filter__count">
                 {value === 'all' ? ideas.length : ideas.filter(i => i.category === value).length}
