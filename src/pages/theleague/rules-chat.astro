@@ -2,12 +2,18 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import RulesChat from '../../components/theleague/rules-chat/RulesChat';
 import seedData from '../../data/rules-qa-seeds.json';
+import config from '../../data/theleague.config.json';
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
+const isAdmin = authUser ? isCommissionerOrAdmin(authUser) : false;
+const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) => ({
+  franchiseId: t.franchiseId,
+  icon: t.icon,
+}));
 ---
 
 <TheLeagueLayout title="Ask Roger">
@@ -31,6 +37,8 @@ const isAuthenticated = !!authUser;
           client:load
           preSeeded={seedData}
           isAuthenticated={isAuthenticated}
+          isAdmin={isAdmin}
+          teamIcons={teamIcons}
         />
       </div>
     </div>
@@ -523,10 +531,34 @@ const isAuthenticated = !!authUser;
     background: var(--color-gray-200, #e5e7eb);
     color: var(--color-gray-500, #6b7280);
   }
+  .rqa-card__team-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+  }
   .rqa-card__meta {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
+    flex: 1;
+  }
+  .rqa-card__delete {
+    margin-left: auto;
+    padding: 0.25rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm, 0.25rem);
+    color: var(--color-gray-400, #9ca3af);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .rqa-card:hover .rqa-card__delete { opacity: 1; }
+  .rqa-card__delete:hover {
+    color: var(--color-red-600, #dc2626);
+    border-color: var(--color-red-200, #fecaca);
+    background: var(--color-red-50, #fef2f2);
   }
   .rqa-card__asker {
     font-size: 0.75rem;

@@ -1,16 +1,17 @@
 /**
  * Rules Q&A API Endpoint — "Ask Roger"
  *
- * GET  /api/rules-qa — Load all Q&As (pre-seeded + dynamic)
- * POST /api/rules-qa — Submit a new question, get AI answer
+ * GET    /api/rules-qa — Load all Q&As (pre-seeded + dynamic)
+ * POST   /api/rules-qa — Submit a new question, get AI answer
+ * DELETE /api/rules-qa — Remove a Q&A by ID (admin only)
  *
- * Auth: Any logged-in owner.
+ * Auth: Any logged-in owner for GET/POST. Commissioner/admin for DELETE.
  * Storage: Upstash Redis via @upstash/redis, keyed by rules-qa:all.
  * AI: Anthropic Claude Haiku for rules answers.
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { findBestMatch } from '../../utils/rules-qa-matching';
 import type { RulesQA, AskQuestionRequest } from '../../types/rules-qa';
 import seedData from '../../data/rules-qa-seeds.json';
@@ -102,7 +103,9 @@ LEAGUE RULES:
 
 **League Overview:** 16-team dynasty/salary cap league, est. 2007. 4 divisions (Northwest, Southwest, Central, Eastern). Head-to-head matchups.
 
-**Roster:** 22 active + 3 practice squad (aka taxi squad) + 50 IR = 75 total capacity. Starting lineup: 1 QB, 1-4 RB, 1-4 WR, 1-4 TE (3 combined flex minimum), 1 PK, 1 DEF = 9 starters.
+**Roster (Regular Season):** 22 active + 3 practice squad (aka taxi squad) + unlimited IR. Starting lineup: 1 QB, 1-4 RB, 1-4 WR, 1-4 TE (3 combined flex minimum), 1 PK, 1 DEF = 9 starters.
+
+**Roster (Offseason):** No active roster limit. Teams can carry as many players as they want on their active roster during the offseason. The 22-active/3-taxi limits only apply during the regular season.
 
 **Salary Cap:** $45,000,000 hard cap. 10% annual salary escalation. Practice squad (taxi squad) players count at 50% salary. IR players count at 100% (full salary).
 
@@ -293,4 +296,49 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   return jsonResponse({ qa: newQA, wasDuplicate: false });
+};
+
+// ── DELETE: Remove a Q&A by ID (admin only) ──
+
+export const DELETE: APIRoute = async ({ request }) => {
+  const user = getAuthUser(request);
+  if (!user) {
+    return jsonResponse({ error: 'Authentication required' }, 401);
+  }
+  if (!isCommissionerOrAdmin(user)) {
+    return jsonResponse({ error: 'Admin access required' }, 403);
+  }
+
+  let body: { id?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Invalid request body' }, 400);
+  }
+
+  const id = body.id?.trim();
+  if (!id) {
+    return jsonResponse({ error: 'Missing Q&A id' }, 400);
+  }
+
+  const redis = await getRedis();
+  if (!redis) {
+    return jsonResponse({ error: 'Storage unavailable' }, 503);
+  }
+
+  try {
+    const existing = await redis.get<RulesQA[]>(REDIS_KEY);
+    if (!existing || !Array.isArray(existing)) {
+      return jsonResponse({ error: 'Q&A not found' }, 404);
+    }
+    const updated = existing.filter(qa => qa.id !== id);
+    if (updated.length === existing.length) {
+      return jsonResponse({ error: 'Q&A not found' }, 404);
+    }
+    await redis.set(REDIS_KEY, updated);
+    return jsonResponse({ deleted: true, id });
+  } catch (e) {
+    console.error('[rules-qa] Failed to delete from Redis:', e);
+    return jsonResponse({ error: 'Failed to delete' }, 500);
+  }
 };

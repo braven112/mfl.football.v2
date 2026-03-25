@@ -4,6 +4,9 @@ import type { RulesQA } from '../../../types/rules-qa';
 interface Props {
   qa: RulesQA;
   isNew?: boolean;
+  isAdmin?: boolean;
+  teamIcon?: string;
+  onDelete?: (id: string) => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -27,7 +30,6 @@ function renderAnswer(text: string): React.ReactNode[] {
   return paragraphs.map((para, i) => {
     const lines = para.split('\n');
     const content = lines.map((line, j) => {
-      // Strip list marker if present
       const isBullet = line.startsWith('- ');
       const cleanLine = isBullet ? line.slice(2) : line;
 
@@ -36,12 +38,10 @@ function renderAnswer(text: string): React.ReactNode[] {
       let key = 0;
 
       while (remaining.length > 0) {
-        // Match [text](url) links, **bold**, or *italic*
         const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
         const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
         const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/);
 
-        // Find the earliest match
         const candidates = [
           linkMatch && { type: 'link' as const, match: linkMatch, index: linkMatch.index! },
           boldMatch && { type: 'bold' as const, match: boldMatch, index: boldMatch.index! },
@@ -81,11 +81,8 @@ function renderAnswer(text: string): React.ReactNode[] {
   });
 }
 
-export default function QACard({ qa, isNew }: Props) {
+export default function QACard({ qa, isNew, teamIcon, onDelete }: Props) {
   const askerName = qa.askedBy?.teamName ?? 'League Office';
-  const askerInitials = qa.askedBy
-    ? qa.askedBy.teamName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'LO';
   const isLeagueOffice = !qa.askedBy;
 
   return (
@@ -96,14 +93,28 @@ export default function QACard({ qa, isNew }: Props) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
+          ) : teamIcon ? (
+            <img src={teamIcon} alt="" width="32" height="32" className="rqa-card__team-icon" />
           ) : (
-            <span>{askerInitials}</span>
+            <span>{qa.askedBy!.teamName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}</span>
           )}
         </div>
         <div className="rqa-card__meta">
           <span className="rqa-card__asker">{askerName}</span>
           <span className="rqa-card__time">{timeAgo(qa.createdAt)}</span>
         </div>
+        {onDelete && (
+          <button
+            className="rqa-card__delete"
+            onClick={() => onDelete(qa.id)}
+            title="Delete this Q&A"
+            aria-label="Delete this Q&A"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+          </button>
+        )}
       </div>
       <div className="rqa-card__question">{qa.question}</div>
       <div className="rqa-card__answer">{renderAnswer(qa.answer)}</div>

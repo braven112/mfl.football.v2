@@ -4,18 +4,33 @@ import { filterByRelevance, wordOverlapScore } from '../../../utils/rules-qa-mat
 import QACard from './QACard';
 import AskInput from './AskInput';
 
+interface TeamIcon {
+  franchiseId: string;
+  icon: string;
+}
+
 interface Props {
   preSeeded: RulesQA[];
   isAuthenticated: boolean;
+  isAdmin?: boolean;
+  teamIcons?: TeamIcon[];
 }
 
-export default function RulesChat({ preSeeded, isAuthenticated }: Props) {
+export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIcons }: Props) {
   const [allQAs, setAllQAs] = useState<RulesQA[]>(preSeeded);
   const [searchText, setSearchText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newId, setNewId] = useState<string | null>(null);
   const [dynamicLoaded, setDynamicLoaded] = useState(false);
+
+  const iconMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    if (teamIcons) {
+      for (const t of teamIcons) map[t.franchiseId] = t.icon;
+    }
+    return map;
+  }, [teamIcons]);
 
   // Fetch dynamic Q&As from Redis on mount
   useEffect(() => {
@@ -72,14 +87,11 @@ export default function RulesChat({ preSeeded, isAuthenticated }: Props) {
       }
 
       if (data.wasDuplicate) {
-        // Scroll to the existing answer
         setSearchText('');
         setError(null);
-        // Highlight the matched Q&A briefly
         setNewId(data.qa.id);
         setTimeout(() => setNewId(null), 3000);
       } else {
-        // Add new Q&A to the list
         setAllQAs(prev => [data.qa, ...prev]);
         setSearchText('');
         setNewId(data.qa.id);
@@ -91,6 +103,28 @@ export default function RulesChat({ preSeeded, isAuthenticated }: Props) {
       setIsLoading(false);
     }
   }, [isAuthenticated]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm('Delete this Q&A? This cannot be undone.')) return;
+
+    try {
+      const res = await fetch('/api/rules-qa', {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (res.ok) {
+        setAllQAs(prev => prev.filter(qa => qa.id !== id));
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete');
+      }
+    } catch {
+      setError('Failed to delete question.');
+    }
+  }, []);
 
   return (
     <div className="rqa">
@@ -128,7 +162,14 @@ export default function RulesChat({ preSeeded, isAuthenticated }: Props) {
           </div>
         ) : (
           displayedQAs.map(qa => (
-            <QACard key={qa.id} qa={qa} isNew={qa.id === newId} />
+            <QACard
+              key={qa.id}
+              qa={qa}
+              isNew={qa.id === newId}
+              isAdmin={isAdmin}
+              teamIcon={qa.askedBy ? iconMap[qa.askedBy.franchiseId] : undefined}
+              onDelete={isAdmin && !qa.isPreSeeded ? handleDelete : undefined}
+            />
           ))
         )}
       </div>
