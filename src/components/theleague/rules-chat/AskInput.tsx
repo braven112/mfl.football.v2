@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 
 interface Props {
   onSubmit: (question: string) => void;
@@ -11,6 +11,15 @@ interface Props {
 export default function AskInput({ onSubmit, isLoading, hasCloseMatch, searchText, onSearchChange }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const canSubmit = searchText.trim().length >= 10 && !hasCloseMatch && !isLoading;
+
+  const autoResize = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+  }, []);
+
+  useEffect(() => { autoResize(); }, [searchText, autoResize]);
 
   const handleSubmit = () => {
     if (!canSubmit) return;
