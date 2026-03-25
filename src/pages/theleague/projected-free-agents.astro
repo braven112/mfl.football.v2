@@ -325,7 +325,6 @@ const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
 // ── Serialize for client ──
 const playerDataJson = JSON.stringify(expiringPlayers);
 const posCountsJson = JSON.stringify(posCounts);
-const franchiseListJson = JSON.stringify(franchiseEntries);
 
 function formatSalary(salary: number): string {
   if (salary >= 1_000_000) return `$${(salary / 1_000_000).toFixed(2)}M`;
@@ -465,28 +464,42 @@ function formatSalary(salary: number): string {
     id="weekly-player-results"
     set:html={JSON.stringify(weeklyPlayerResults)}
   ></script>
+  <script
+    type="application/json"
+    id="pfa-player-data"
+    set:html={playerDataJson}
+  ></script>
+  <script
+    type="application/json"
+    id="pfa-pos-counts"
+    set:html={posCountsJson}
+  ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson }}>
+<script is:inline>
+(function() {
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
-  const players = JSON.parse(playerDataJson);
-  const posCounts = JSON.parse(posCountsJson);
+  var dataEl = document.getElementById('pfa-player-data');
+  var countsEl = document.getElementById('pfa-pos-counts');
+  if (!dataEl || !countsEl) return;
+  var players = JSON.parse(dataEl.textContent);
+  var posCounts = JSON.parse(countsEl.textContent);
 
-  let filteredPlayers = [...players];
-  let currentSort = 'projected';
-  let sortDirection = 'desc';
-  let activePosition = 'ALL';
-  let searchQuery = '';
-  let teamFilter = '';
+  var filteredPlayers = players.slice();
+  var currentSort = 'projected';
+  var sortDirection = 'desc';
+  var activePosition = 'ALL';
+  var searchQuery = '';
+  var teamFilter = '';
 
   // Rankings state
-  let rankingLookup = { byImport: new Map(), columns: [] };
-  let hasRankingColumns = false;
+  var rankingLookup = { byImport: new Map(), columns: [] };
+  var hasRankingColumns = false;
 
-  const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
+  var posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
-  const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+  var defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
   function buildOnerror(mflId, espnId) {
     const college = espnId ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + espnId + '.png' : null;
@@ -505,8 +518,8 @@ function formatSalary(salary: number): string {
   }
 
   function formatSalary(salary) {
-    if (salary >= 1_000_000) return '$' + (salary / 1_000_000).toFixed(2) + 'M';
-    if (salary >= 1_000) return '$' + (salary / 1_000).toFixed(0) + 'K';
+    if (salary >= 1000000) return '$' + (salary / 1000000).toFixed(2) + 'M';
+    if (salary >= 1000) return '$' + (salary / 1000).toFixed(0) + 'K';
     return '$' + salary;
   }
 
@@ -797,6 +810,7 @@ function formatSalary(salary: number): string {
   }
 
   document.addEventListener('astro:page-load', init);
+})();
 </script>
 
 <!-- Rankings integration: dynamically injects ranking columns from localStorage imports -->
@@ -1175,7 +1189,6 @@ function formatSalary(salary: number): string {
 
   /* ── Table ── */
   .pfa-table-wrapper {
-    overflow: hidden;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     background: white;
