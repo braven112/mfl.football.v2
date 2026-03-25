@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { TradeBuilderTeam, TradeBuilderPlayer } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-
-const DEFAULT_HEADSHOT = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+import { PlayerCell } from '../PlayerCell';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -226,32 +225,22 @@ function PlayerRow({
   player: TradeBuilderPlayer;
   onAdd: (id: string) => void;
 }) {
-  const isDef = player.position.toUpperCase() === 'DEF';
-  const avatarSrc = isDef && player.nflLogo ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
-
   return (
     <div className={`player-row${player.tradeBait ? ' player-row--trade-bait' : ''}`}>
-      <div className={`player-row__avatar${isDef ? ' player-row__avatar--def' : ''}`}>
-        <img
-          src={avatarSrc}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = DEFAULT_HEADSHOT; }}
-        />
-      </div>
-      <div className="player-row__info">
-        <span className="player-row__name">{player.name}</span>
-        <div className="player-row__meta">
-          {!isDef && player.nflLogo && (
-            <img src={player.nflLogo} alt="" className="player-row__nfl-logo" loading="lazy" decoding="async" />
-          )}
-          <span className="player-row__pos">{player.position}</span>
+      <PlayerCell
+        size="compact"
+        className="player-row__lockup"
+        name={player.name}
+        headshot={player.headshot}
+        position={player.position}
+        nflTeam={player.nflTeam}
+        nflLogo={player.nflLogo}
+        metaSlot={<>
           {player.isRookie && <span className="player-row__badge player-row__badge--rookie">R</span>}
           {player.isFranchiseTagged && <span className="player-row__badge player-row__badge--tag">F</span>}
           {player.tradeBait && <span className="player-row__trade-bait" title="On Trade Block">🏷️</span>}
-        </div>
-      </div>
+        </>}
+      />
       <div className="player-row__contract">
         <span className="player-row__salary">{formatCurrency(player.salary)}</span>
         <span className="player-row__years">{player.contractYears}yr</span>
@@ -284,58 +273,9 @@ function PlayerRow({
         .player-row--trade-bait:hover {
           background: var(--color-warning-light, #fef3c7);
         }
-        .player-row__avatar {
-          flex-shrink: 0;
-          width: 32px;
-          height: 32px;
-          border-radius: var(--radius-full, 9999px);
-          overflow: hidden;
-          background: var(--color-gray-100, #f3f4f6);
-          border: 1px solid var(--content-border, #e2e8f0);
-        }
-        .player-row__avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: top center;
-        }
-        .player-row__avatar--def img {
-          object-fit: contain;
-          object-position: center;
-        }
-        .player-row__info {
+        .player-row__lockup {
           flex: 1;
           min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 0.125rem;
-        }
-        .player-row__name {
-          font-weight: 600;
-          font-size: 0.8125rem;
-          color: var(--color-gray-900, #111827);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: 1.3;
-        }
-        .player-row__meta {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          font-size: 0.75rem;
-          color: var(--color-gray-600, #4b5563);
-        }
-        .player-row__nfl-logo {
-          width: 14px;
-          height: 14px;
-          object-fit: contain;
-          flex-shrink: 0;
-        }
-        .player-row__pos {
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 0.025em;
         }
         .player-row__contract {
           display: flex;
