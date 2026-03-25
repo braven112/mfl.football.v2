@@ -105,7 +105,7 @@ LEAGUE RULES:
 
 **Roster (Regular Season):** 22 active + 3 practice squad (aka taxi squad) + unlimited IR. Starting lineup: 1 QB, 1-4 RB, 1-4 WR, 1-4 TE (3 combined flex minimum), 1 PK, 1 DEF = 9 starters.
 
-**Roster (Offseason):** No active roster limit. Teams can carry as many players as they want on their active roster during the offseason. The 22-active/3-taxi limits only apply during the regular season.
+**Roster (Offseason):** No active roster limit. Teams can carry as many players as they want on their active roster during the offseason. The roster cutdown deadline is the **third Sunday in August** — teams must be at 22 active + 3 taxi by then.
 
 **Salary Cap:** $45,000,000 hard cap. 10% annual salary escalation. Practice squad (taxi squad) players count at 50% salary. IR players count at 100% (full salary).
 
