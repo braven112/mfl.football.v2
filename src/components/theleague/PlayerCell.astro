@@ -85,7 +85,7 @@ const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` :
 const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : (headshot ?? DEFAULT_HEADSHOT_URL);
 
 // NFL logo in meta row: DEF hides it, others show it
-const nflLogoUrl = isDef ? '' : (explicitNflLogo ?? teamLogoUrl);
+const nflLogoUrl = isDef ? '' : (explicitNflLogo || teamLogoUrl || '/assets/nfl-logos/NFL.svg');
 const showNflLogo = !!nflLogoUrl;
 
 const sizeClass = size === 'compact' ? 'player-cell--compact' : '';

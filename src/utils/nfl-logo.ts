@@ -80,6 +80,8 @@ const TEAM_CODE_MAP: Record<string, string> = {
   'SD':  'LAC', // San Diego Chargers (alt code)
   'RAM': 'LAR', // Rams (historical MFL code)
   'STL': 'LAR', // St. Louis Rams → LA Rams
+  'FA':  'NFL', // Free agent → NFL shield
+  'UFA': 'NFL', // Unrestricted free agent → NFL shield
 };
 
 /**

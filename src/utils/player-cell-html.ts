@@ -86,7 +86,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const teamLogo = normalized ? `/assets/nfl-logos/${normalized}.svg` : '';
 
   const avatarSrc = isDef && teamLogo ? teamLogo : (headshot || DEFAULT_HEADSHOT_URL);
-  const nflLogoUrl = isDef ? '' : teamLogo;
+  const nflLogoUrl = isDef ? '' : (teamLogo || '/assets/nfl-logos/NFL.svg');
 
   const sizeClass = size === 'compact' ? ' player-cell--compact' : '';
   const defClass = isDef ? ' player-cell__avatar--def' : '';
