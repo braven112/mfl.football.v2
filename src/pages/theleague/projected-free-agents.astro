@@ -1,0 +1,1364 @@
+---
+/**
+ * Projected Free Agents — Players in their final contract year
+ *
+ * Shows all rostered players with contractYear === "1" who will become
+ * free agents after the current season. Includes salary, stats, and
+ * user-imported rankings.
+ *
+ * Data freshness: SSR with Redis cache overlay (~2 min SWR).
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import { positionOrder } from '../../constants/roster-constants';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
+import { getCachedRosters } from '../../utils/mfl-roster-cache';
+import { chooseTeamName } from '../../utils/team-names';
+import '../../styles/player-cell.css';
+import leagueConfig from '../../data/theleague.config.json';
+
+const currentYear = getCurrentLeagueYear();
+const currentSeasonYear = getCurrentSeasonYear();
+
+// ── Load MFL data feeds ──
+const playerModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true }
+);
+const rostersModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/rosters.json',
+  { eager: true }
+);
+const projectedScoresModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
+  { eager: true }
+);
+const lastYearWeeklyModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/weekly-results-raw.json',
+  { eager: true }
+);
+const nflScheduleModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/nflSchedule.json',
+  { eager: true }
+);
+const fpaModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/fantasyPointsAllowed.json',
+  { eager: true }
+);
+const leagueModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/league.json',
+  { eager: true }
+);
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const findForYear = (modules: Record<string, any>, yr: number) => {
+  const key = Object.keys(modules).find(k => k.includes(`/${yr}/`));
+  return key ? getModuleData(modules[key]) : null;
+};
+
+const playersData = findForYear(playerModules, currentYear);
+const rostersData = findForYear(rostersModules, currentYear);
+const projectedScoresData = findForYear(projectedScoresModules, currentYear);
+
+// ── Build franchise lookup ──
+const teams = (leagueConfig as any).teams ?? [];
+const franchiseMap = new Map<string, { name: string; nameShort: string; icon: string; color: string }>();
+for (const t of teams) {
+  franchiseMap.set(t.franchiseId, {
+    name: t.name,
+    nameShort: chooseTeamName({
+      fullName: t.name,
+      nameMedium: t.nameMedium,
+      nameShort: t.nameShort,
+      abbrev: t.abbrev,
+    }, 'short'),
+    icon: t.icon || '',
+    color: t.color || '#374151',
+  });
+}
+const franchiseEntries = teams.map((t: any) => ({
+  id: t.franchiseId,
+  name: t.name,
+  nameShort: chooseTeamName({
+    fullName: t.name,
+    nameMedium: t.nameMedium,
+    nameShort: t.nameShort,
+    abbrev: t.abbrev,
+  }, 'short'),
+  icon: t.icon || '',
+}));
+
+// ── MFL team code normalization ──
+const MFL_TEAM_CODE_MAP: Record<string, string> = {
+  GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO',
+  SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
+  BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
+};
+function normalizeMflTeam(code: string): string {
+  if (!code) return 'FA';
+  return MFL_TEAM_CODE_MAP[code] || code;
+}
+
+// ── Build projected scores lookup ──
+const projectedMap = new Map<string, number>();
+if (projectedScoresData?.projectedScores?.playerScore) {
+  const scores = Array.isArray(projectedScoresData.projectedScores.playerScore)
+    ? projectedScoresData.projectedScores.playerScore
+    : [projectedScoresData.projectedScores.playerScore];
+  for (const s of scores) {
+    if (s?.id && s?.score) {
+      const score = parseFloat(s.score);
+      if (score > 0) projectedMap.set(s.id, score);
+    }
+  }
+}
+
+// ── Build last season stats ──
+const lastSeasonYear = getCurrentSeasonYear();
+const lastYearData = findForYear(lastYearWeeklyModules, lastSeasonYear);
+const lastYrPtsMap = new Map<string, number>();
+const lastYrGamesMap = new Map<string, number>();
+if (Array.isArray(lastYearData)) {
+  for (const weekPayload of lastYearData) {
+    const matchups = weekPayload?.weeklyResults?.matchup;
+    if (!matchups) continue;
+    const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
+    for (const m of matchupArr) {
+      const franchises = m?.franchise ? (Array.isArray(m.franchise) ? m.franchise : [m.franchise]) : [];
+      for (const f of franchises) {
+        const players = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
+        for (const p of players) {
+          if (!p?.id || !p?.score) continue;
+          const score = parseFloat(p.score);
+          if (!isNaN(score) && score > 0) {
+            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
+            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
+          }
+        }
+      }
+    }
+  }
+}
+
+// ── Build MFL player info lookup ──
+const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
+const playerInfoMap = new Map<string, any>();
+if (playersData?.players?.player) {
+  for (const p of playersData.players.player) {
+    if (!p?.id || !p?.name || !p?.position) continue;
+    if (!fantasyPositions.has(p.position)) continue;
+    playerInfoMap.set(p.id, p);
+  }
+}
+
+// ── Build expiring contract player list ──
+interface ProjectedFARow {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  headshot: string;
+  espnId: string | null;
+  franchiseId: string;
+  franchiseName: string;
+  franchiseIcon: string;
+  salary: number;
+  age: number | null;
+  projected: number | null;
+  lastYrPts: number | null;
+  games: number | null;
+  ppg: number | null;
+  birthdate: number | null;
+  draftYear: number | null;
+}
+
+function buildPlayerRow(
+  playerId: string,
+  info: any,
+  salary: number,
+  franchiseId: string,
+): ProjectedFARow | null {
+  const pos = info.position === 'Def' ? 'DEF' : info.position;
+  const nameParts = info.name.split(', ');
+  const displayName = nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : info.name;
+  const team = normalizeMflTeam(info.team || '');
+
+  let age: number | null = null;
+  if (info.birthdate && pos !== 'DEF') {
+    const birthTimestamp = parseInt(info.birthdate, 10);
+    if (birthTimestamp > 0) {
+      age = Math.floor((now - birthTimestamp) / (365.25 * 24 * 60 * 60));
+    }
+  }
+
+  const lastYrPts = lastYrPtsMap.has(playerId) ? Math.round((lastYrPtsMap.get(playerId)!) * 10) / 10 : null;
+  const gamesPlayed = lastYrGamesMap.get(playerId) ?? null;
+  const ppg = (lastYrPts && gamesPlayed && gamesPlayed > 0)
+    ? Math.round((lastYrPts / gamesPlayed) * 10) / 10
+    : null;
+
+  const fInfo = franchiseMap.get(franchiseId);
+
+  const headshot = info.espn_id
+    ? `https://a.espncdn.com/i/headshots/nfl/players/full/${info.espn_id}.png`
+    : `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+
+  return {
+    id: playerId,
+    name: displayName,
+    position: pos,
+    nflTeam: team,
+    headshot,
+    espnId: info.espn_id || null,
+    franchiseId,
+    franchiseName: fInfo?.nameShort || franchiseId,
+    franchiseIcon: fInfo?.icon || '',
+    salary,
+    age,
+    projected: projectedMap.get(playerId) ?? null,
+    lastYrPts,
+    games: gamesPlayed,
+    ppg,
+    birthdate: info.birthdate ? parseInt(info.birthdate, 10) : null,
+    draftYear: info.draft_year ? parseInt(info.draft_year, 10) : null,
+  };
+}
+
+const expiringPlayers: ProjectedFARow[] = [];
+const now = Date.now() / 1000;
+
+// Collect from static roster data
+if (rostersData?.rosters?.franchise) {
+  const franchises = Array.isArray(rostersData.rosters.franchise)
+    ? rostersData.rosters.franchise
+    : [rostersData.rosters.franchise];
+  for (const franchise of franchises) {
+    const rosterPlayers = franchise?.player
+      ? (Array.isArray(franchise.player) ? franchise.player : [franchise.player])
+      : [];
+    for (const rp of rosterPlayers) {
+      if (!rp?.id) continue;
+      const contractYear = rp.contractYear ? parseInt(rp.contractYear, 10) : 0;
+      if (contractYear !== 1) continue;
+
+      const info = playerInfoMap.get(rp.id);
+      if (!info) continue;
+
+      const salary = rp.salary ? parseFloat(rp.salary) : 0;
+      if (salary <= 0) continue;
+
+      const row = buildPlayerRow(rp.id, info, salary, franchise.id);
+      if (row) expiringPlayers.push(row);
+    }
+  }
+}
+
+// ── Overlay Redis cache for near-real-time freshness ──
+try {
+  const cached = await getCachedRosters(String(currentYear), '13522');
+  if (cached) {
+    const existingIds = new Set(expiringPlayers.map(p => p.id));
+    for (const [playerId, entry] of Object.entries(cached)) {
+      const contractYear = entry.contractYear ? parseInt(entry.contractYear, 10) : 0;
+
+      if (contractYear === 1 && !existingIds.has(playerId)) {
+        const info = playerInfoMap.get(playerId);
+        if (!info) continue;
+        const salary = entry.salary ? parseFloat(entry.salary) : 0;
+        if (salary <= 0) continue;
+        const row = buildPlayerRow(playerId, info, salary, entry.franchiseId);
+        if (row) expiringPlayers.push(row);
+      } else if (contractYear !== 1 && existingIds.has(playerId)) {
+        const idx = expiringPlayers.findIndex(p => p.id === playerId);
+        if (idx !== -1) expiringPlayers.splice(idx, 1);
+      } else if (contractYear === 1 && existingIds.has(playerId)) {
+        const existing = expiringPlayers.find(p => p.id === playerId);
+        if (existing) {
+          const salary = entry.salary ? parseFloat(entry.salary) : existing.salary;
+          if (salary > 0) existing.salary = salary;
+          if (entry.franchiseId) {
+            existing.franchiseId = entry.franchiseId;
+            const fInfo = franchiseMap.get(entry.franchiseId);
+            if (fInfo) {
+              existing.franchiseName = fInfo.nameShort;
+              existing.franchiseIcon = fInfo.icon;
+            }
+          }
+        }
+      }
+    }
+  }
+} catch (_) { /* Redis unavailable — use static data */ }
+
+// ── Sort by projected points descending ──
+expiringPlayers.sort((a, b) => (b.projected ?? -1) - (a.projected ?? -1));
+
+// ── Compute summary metrics ──
+const totalPlayers = expiringPlayers.length;
+const totalSalary = expiringPlayers.reduce((sum, p) => sum + p.salary, 0);
+const avgAge = (() => {
+  const withAge = expiringPlayers.filter(p => p.age !== null);
+  if (withAge.length === 0) return null;
+  return Math.round((withAge.reduce((sum, p) => sum + p.age!, 0) / withAge.length) * 10) / 10;
+})();
+
+// Position counts
+const posCounts: Record<string, number> = { ALL: totalPlayers };
+for (const p of expiringPlayers) {
+  posCounts[p.position] = (posCounts[p.position] || 0) + 1;
+}
+
+// ── Build weekly player results for modal ──
+const nflScheduleData = findForYear(nflScheduleModules, lastSeasonYear);
+const fpaData = findForYear(fpaModules, lastSeasonYear);
+const leagueData = findForYear(leagueModules, lastSeasonYear);
+const playersDataForSeason = findForYear(playerModules, lastSeasonYear) || playersData;
+const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
+  ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
+  : {};
+
+// ── Serialize for client ──
+const playerDataJson = JSON.stringify(expiringPlayers);
+const posCountsJson = JSON.stringify(posCounts);
+const franchiseListJson = JSON.stringify(franchiseEntries);
+
+function formatSalary(salary: number): string {
+  if (salary >= 1_000_000) return `$${(salary / 1_000_000).toFixed(2)}M`;
+  if (salary >= 1_000) return `$${(salary / 1_000).toFixed(0)}K`;
+  return `$${salary}`;
+}
+---
+
+<TheLeagueLayout title="Projected Free Agents | TheLeague">
+  <div class="pfa-page">
+    <!-- Hero -->
+    <div class="pfa-hero">
+      <div class="hero-top">
+        <div class="hero-title-group">
+          <h1 class="hero-title">Projected Free Agents</h1>
+          <span class="hero-subtitle">{currentYear} players in their final contract year</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="pfa-metrics">
+      <div class="metric-card">
+        <span class="metric-card__value">{totalPlayers}</span>
+        <span class="metric-card__label">Expiring Contracts</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-card__value">{formatSalary(totalSalary)}</span>
+        <span class="metric-card__label">Total Salary Expiring</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-card__value">{avgAge ?? '—'}</span>
+        <span class="metric-card__label">Average Age</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="pfa-controls">
+      <div class="pfa-controls__search">
+        <svg class="pfa-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="search"
+          id="pfa-search"
+          class="pfa-search__input"
+          placeholder="Search player name..."
+          autocomplete="off"
+        />
+      </div>
+
+      <nav class="pfa-positions" id="pos-tabs">
+        <button class="pos-pill active" data-pos="ALL">
+          All
+          <span class="pos-pill__count" id="count-ALL">{posCounts.ALL || 0}</span>
+        </button>
+        {positionOrder.map(pos => (
+          <button class="pos-pill" data-pos={pos}>
+            {pos === 'PK' ? 'K' : pos}
+            <span class="pos-pill__count" id={`count-${pos}`}>{posCounts[pos] || 0}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div class="pfa-controls__team">
+        <div class="pfa-team-dropdown" id="team-dropdown">
+          <button type="button" class="pfa-team-dropdown__trigger" id="team-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="pfa-team-dropdown__label">All Teams</span>
+            <svg class="pfa-team-dropdown__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <ul class="pfa-team-dropdown__list" id="team-dropdown-list" role="listbox" tabindex="-1">
+            <li class="pfa-team-dropdown__item pfa-team-dropdown__item--active" role="option" data-value="" aria-selected="true">
+              <span class="pfa-team-dropdown__item-name">All Teams</span>
+            </li>
+            {franchiseEntries.map((t: any) => (
+              <li class="pfa-team-dropdown__item" role="option" data-value={t.id} aria-selected="false">
+                {t.icon && <img src={t.icon} alt="" class="pfa-team-dropdown__icon" loading="lazy" decoding="async" />}
+                <span class="pfa-team-dropdown__item-name">{t.nameShort}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="pfa-toolbar">
+      <span class="pfa-showing" aria-live="polite">
+        Showing <strong id="showing-count">{totalPlayers}</strong> of <strong id="total-count">{totalPlayers}</strong>
+      </span>
+    </div>
+
+    <!-- Table -->
+    <div class="pfa-table-wrapper">
+      <table class="pfa-table" id="pfa-table">
+        <thead>
+          <tr>
+            <th class="sortable col-rank" data-sort="rank">
+              <div class="th-content">#</div>
+            </th>
+            <th class="sortable col-player" data-sort="name">
+              <div class="th-content">Player</div>
+            </th>
+            <th class="sortable col-team" data-sort="team">
+              <div class="th-content">Team</div>
+            </th>
+            <th class="sortable col-salary" data-sort="salary">
+              <div class="th-content">Salary</div>
+            </th>
+            <th class="sortable col-age" data-sort="age">
+              <div class="th-content">Age</div>
+            </th>
+            <th class="sortable col-projected" data-sort="projected">
+              <div class="th-content">Proj</div>
+            </th>
+            <th class="sortable col-lastyr col-hide-mobile" data-sort="lastYrPts">
+              <div class="th-content">Last Yr</div>
+            </th>
+            <th class="sortable col-ppg col-hide-mobile" data-sort="ppg">
+              <div class="th-content">PPG</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="pfa-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div class="pfa-empty" id="pfa-empty" style="display: none;">
+      <p>No expiring contracts found matching your filters.</p>
+    </div>
+  </div>
+  <PlayerDetailsModal />
+
+  <script
+    type="application/json"
+    id="weekly-player-results"
+    set:html={JSON.stringify(weeklyPlayerResults)}
+  ></script>
+</TheLeagueLayout>
+
+<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson }}>
+  // All data is server-rendered from MFL feeds — not user input.
+  // escapeAttr() is applied to all interpolated values for safety.
+  const players = JSON.parse(playerDataJson);
+  const posCounts = JSON.parse(posCountsJson);
+
+  let filteredPlayers = [...players];
+  let currentSort = 'projected';
+  let sortDirection = 'desc';
+  let activePosition = 'ALL';
+  let searchQuery = '';
+  let teamFilter = '';
+
+  // Rankings state
+  let rankingLookup = { byImport: new Map(), columns: [] };
+  let hasRankingColumns = false;
+
+  const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
+
+  const defaultHeadshot = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
+
+  function buildOnerror(mflId, espnId) {
+    const college = espnId ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + espnId + '.png' : null;
+    const mfl = mflId ? 'https://www49.myfantasyleague.com/player_photos_big_2014/' + mflId + '_thumb.jpg' : null;
+    if (college && mfl) {
+      return "this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='" + defaultHeadshot + "'};this.src='" + mfl + "'};this.src='" + college + "'";
+    }
+    if (college) {
+      return "this.onerror=function(){this.onerror=null;this.src='" + defaultHeadshot + "'};this.src='" + college + "'";
+    }
+    return "this.onerror=null;this.src='" + defaultHeadshot + "'";
+  }
+
+  function escapeAttr(s) {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function formatSalary(salary) {
+    if (salary >= 1_000_000) return '$' + (salary / 1_000_000).toFixed(2) + 'M';
+    if (salary >= 1_000) return '$' + (salary / 1_000).toFixed(0) + 'K';
+    return '$' + salary;
+  }
+
+  function sortPlayers() {
+    filteredPlayers.sort(function(a, b) {
+      var aVal, bVal;
+      if (currentSort === 'name') {
+        return sortDirection === 'asc'
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      }
+      if (currentSort === 'team') {
+        return sortDirection === 'asc'
+          ? a.franchiseName.localeCompare(b.franchiseName)
+          : b.franchiseName.localeCompare(a.franchiseName);
+      }
+      if (currentSort === 'position') {
+        aVal = posOrder[a.position] || 99;
+        bVal = posOrder[b.position] || 99;
+      } else if (currentSort.indexOf('ranking_') === 0) {
+        var impId = currentSort.replace('ranking_', '');
+        var map = rankingLookup.byImport.get(impId);
+        aVal = map ? (map.get(a.id) || Infinity) : Infinity;
+        bVal = map ? (map.get(b.id) || Infinity) : Infinity;
+      } else {
+        aVal = a[currentSort];
+        bVal = b[currentSort];
+        if (aVal == null) aVal = -Infinity;
+        if (bVal == null) bVal = -Infinity;
+      }
+      if (aVal === bVal) return 0;
+      return sortDirection === 'asc' ? (aVal < bVal ? -1 : 1) : (aVal > bVal ? -1 : 1);
+    });
+  }
+
+  function filterPlayers() {
+    filteredPlayers = players.filter(function(p) {
+      if (activePosition !== 'ALL' && p.position !== activePosition) return false;
+      if (searchQuery && p.name.toLowerCase().indexOf(searchQuery.toLowerCase()) === -1) return false;
+      if (teamFilter && p.franchiseId !== teamFilter) return false;
+      return true;
+    });
+    sortPlayers();
+    render();
+  }
+
+  function buildRow(p, index) {
+    var isDef = p.position === 'DEF';
+    var nflLogo = (p.nflTeam && p.nflTeam !== 'FA')
+      ? '/assets/nfl-logos/' + p.nflTeam + '.svg'
+      : '/assets/nfl-logos/NFL.svg';
+    var avatarSrc = isDef ? nflLogo : p.headshot;
+    var avatarClass = isDef ? ' player-cell__avatar--def' : '';
+
+    var modalData = escapeAttr(JSON.stringify({
+      id: p.id,
+      espnId: p.espnId,
+      name: p.name,
+      position: p.position,
+      nflTeam: p.nflTeam,
+      salary: p.salary,
+      contractYears: 1,
+      birthdate: p.birthdate,
+      draftYear: p.draftYear,
+      franchiseId: p.franchiseId,
+    }));
+
+    // Rankings cells
+    var rankingCells = '';
+    if (hasRankingColumns) {
+      for (var ci = 0; ci < rankingLookup.columns.length; ci++) {
+        var col = rankingLookup.columns[ci];
+        var map = rankingLookup.byImport.get(col.importId);
+        var rank = map ? map.get(p.id) : null;
+        var cls = col.isComposite ? 'col-ranking col-ranking-composite' : (col.isAverage ? 'col-ranking col-ranking-avg' : 'col-ranking');
+        rankingCells += '<td class="' + cls + ' col-group--rankings col-hide-mobile">' + (rank != null ? rank : '\u2014') + '</td>';
+      }
+    }
+
+    var teamIconHtml = p.franchiseIcon
+      ? '<img src="' + escapeAttr(p.franchiseIcon) + '" alt="" class="pfa-team-icon" loading="lazy" decoding="async" />'
+      : '';
+
+    var metaLogoHtml = isDef
+      ? ''
+      : '<img src="' + escapeAttr(nflLogo) + '" alt="' + escapeAttr(p.nflTeam) + '" class="player-meta__logo" loading="lazy" decoding="async" />';
+
+    return '<tr>'
+      + '<td class="cell-rank">' + (index + 1) + '</td>'
+      + '<td class="cell-player">'
+        + '<div class="player-cell">'
+          + '<div class="player-cell__avatar' + avatarClass + '">'
+            + '<img src="' + escapeAttr(avatarSrc) + '" alt="' + escapeAttr(p.name) + '" loading="lazy" decoding="async" onerror="' + escapeAttr(buildOnerror(p.id, p.espnId)) + '" />'
+          + '</div>'
+          + '<div class="player-cell__info">'
+            + '<strong class="player-cell__name player-cell__name--clickable" data-player-modal="' + modalData + '" title="View player details">' + escapeAttr(p.name) + '</strong>'
+            + '<div class="player-meta">' + metaLogoHtml + '<span class="player-meta__pos">' + escapeAttr(p.position) + '</span></div>'
+          + '</div>'
+        + '</div>'
+      + '</td>'
+      + '<td class="cell-team">'
+        + '<div class="cell-team-inner">'
+          + teamIconHtml
+          + '<span class="pfa-team-name">' + escapeAttr(p.franchiseName) + '</span>'
+        + '</div>'
+      + '</td>'
+      + '<td class="cell-salary">' + formatSalary(p.salary) + '</td>'
+      + '<td class="cell-age">' + (p.age != null ? p.age : '\u2014') + '</td>'
+      + '<td class="cell-projected">' + (p.projected != null ? p.projected.toFixed(1) : '\u2014') + '</td>'
+      + '<td class="cell-lastyr col-hide-mobile">' + (p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '\u2014') + '</td>'
+      + '<td class="cell-ppg col-hide-mobile">' + (p.ppg != null ? p.ppg.toFixed(1) : '\u2014') + '</td>'
+      + rankingCells
+    + '</tr>';
+  }
+
+  function render() {
+    var tbody = document.getElementById('pfa-tbody');
+    var emptyEl = document.getElementById('pfa-empty');
+    var showingEl = document.getElementById('showing-count');
+    if (!tbody) return;
+
+    if (showingEl) showingEl.textContent = String(filteredPlayers.length);
+
+    if (filteredPlayers.length === 0) {
+      tbody.textContent = '';
+      if (emptyEl) emptyEl.style.display = '';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    // Build all rows then set once — data is from server-side MFL feeds, escaped via escapeAttr
+    var html = '';
+    for (var i = 0; i < filteredPlayers.length; i++) {
+      html += buildRow(filteredPlayers[i], i);
+    }
+    tbody.innerHTML = html; // eslint-disable-line -- server-rendered MFL data, all values escaped
+
+    // Update sort indicators
+    var allTh = document.querySelectorAll('.pfa-table th.sortable');
+    for (var ti = 0; ti < allTh.length; ti++) {
+      var th = allTh[ti];
+      var arrow = th.querySelector('.sort-arrow');
+      if (arrow) arrow.remove();
+      var sortKey = th.dataset.sort || (th.dataset.rankingCol ? th.dataset.sort : '');
+      if (sortKey === currentSort) {
+        var span = document.createElement('span');
+        span.className = 'sort-arrow';
+        span.textContent = sortDirection === 'asc' ? '\u25B2' : '\u25BC';
+        var thContent = th.querySelector('.th-content');
+        if (thContent) thContent.appendChild(span);
+      }
+    }
+  }
+
+  function init() {
+    // Position pills
+    var pills = document.querySelectorAll('#pos-tabs .pos-pill');
+    for (var pi = 0; pi < pills.length; pi++) {
+      pills[pi].addEventListener('click', function() {
+        var allPills = document.querySelectorAll('#pos-tabs .pos-pill');
+        for (var j = 0; j < allPills.length; j++) allPills[j].classList.remove('active');
+        this.classList.add('active');
+        activePosition = this.dataset.pos || 'ALL';
+        filterPlayers();
+      });
+    }
+
+    // Search
+    var searchTimer;
+    var searchInput = document.getElementById('pfa-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+          searchQuery = e.target.value.trim();
+          filterPlayers();
+        }, 200);
+      });
+    }
+
+    // Team filter — custom dropdown
+    var teamDropdown = document.getElementById('team-dropdown');
+    var teamTrigger = document.getElementById('team-dropdown-trigger');
+    var teamList = document.getElementById('team-dropdown-list');
+    if (teamDropdown && teamTrigger && teamList) {
+      teamTrigger.addEventListener('click', function() {
+        var isOpen = teamDropdown.classList.toggle('open');
+        teamTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      teamList.addEventListener('click', function(e) {
+        var item = e.target.closest('.pfa-team-dropdown__item');
+        if (!item) return;
+        var val = item.dataset.value;
+        teamFilter = val || '';
+
+        // Update active state
+        var items = teamList.querySelectorAll('.pfa-team-dropdown__item');
+        for (var ti = 0; ti < items.length; ti++) {
+          items[ti].classList.remove('pfa-team-dropdown__item--active');
+          items[ti].setAttribute('aria-selected', 'false');
+        }
+        item.classList.add('pfa-team-dropdown__item--active');
+        item.setAttribute('aria-selected', 'true');
+
+        // Update trigger label with icon + name
+        var icon = item.querySelector('.pfa-team-dropdown__icon');
+        var name = item.querySelector('.pfa-team-dropdown__item-name');
+        var label = teamTrigger.querySelector('.pfa-team-dropdown__label');
+        if (label) {
+          label.innerHTML = (icon ? '<img src="' + escapeAttr(icon.src) + '" alt="" class="pfa-team-dropdown__trigger-icon" />' : '')
+            + escapeAttr(name ? name.textContent : 'All Teams');
+        }
+
+        teamDropdown.classList.remove('open');
+        teamTrigger.setAttribute('aria-expanded', 'false');
+        filterPlayers();
+      });
+
+      // Close on outside click
+      document.addEventListener('click', function(e) {
+        if (!teamDropdown.contains(e.target)) {
+          teamDropdown.classList.remove('open');
+          teamTrigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    // Sort headers
+    var sortHeaders = document.querySelectorAll('.pfa-table th.sortable');
+    for (var si = 0; si < sortHeaders.length; si++) {
+      sortHeaders[si].addEventListener('click', function() {
+        var sortKey = this.dataset.sort;
+        if (!sortKey) return;
+        if (sortKey === currentSort) {
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort = sortKey;
+          if (sortKey.indexOf('ranking_') === 0) {
+            sortDirection = 'asc';
+          } else {
+            sortDirection = (sortKey === 'name' || sortKey === 'team') ? 'asc' : 'desc';
+          }
+        }
+        sortPlayers();
+        render();
+      });
+    }
+
+    // Player modal triggers (delegated)
+    var tbody = document.getElementById('pfa-tbody');
+    if (tbody) {
+      tbody.addEventListener('click', function(e) {
+        var target = e.target.closest('[data-player-modal]');
+        if (!target) return;
+        try {
+          var data = JSON.parse(target.dataset.playerModal);
+          if (window.openPlayerDetailsModal) window.openPlayerDetailsModal(data);
+        } catch (_) {}
+      });
+    }
+
+    // Custom event bridge for rankings integration
+    document.addEventListener('rankings:set-lookup', function(e) {
+      var detail = e.detail;
+      if (detail.lookup) {
+        rankingLookup = detail.lookup;
+        hasRankingColumns = !!detail.hasColumns;
+      }
+    });
+    document.addEventListener('rankings:refilter', function() { filterPlayers(); });
+    document.addEventListener('rankings:refresh-table', function() {
+      sortPlayers();
+      render();
+    });
+    document.addEventListener('rankings:set-sort', function(e) {
+      var detail = e.detail;
+      currentSort = detail.key;
+      sortDirection = detail.dir;
+    });
+    document.addEventListener('rankings:get-sort', function(e) {
+      e.detail.currentSort = currentSort;
+      e.detail.descDefaults = new Set(['projected', 'lastYrPts', 'ppg', 'salary', 'age']);
+    });
+
+    // Initial render
+    filterPlayers();
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<!-- Rankings integration: dynamically injects ranking columns from localStorage imports -->
+<script>
+  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+
+  let unsubscribe: (() => void) | null = null;
+
+  function emit(name: string, detail?: Record<string, unknown>) {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail ?? {} }));
+  }
+
+  function getSortState(): { currentSort: string } {
+    const detail: Record<string, unknown> = {};
+    document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
+    return { currentSort: detail.currentSort as string };
+  }
+
+  function injectRankingColumns() {
+    const lookup = buildRankingLookup();
+    const limitedColumns = lookup.columns.slice(0, 8);
+    const limitedLookup = { ...lookup, columns: limitedColumns };
+
+    emit('rankings:set-lookup', { lookup: limitedLookup, hasColumns: limitedColumns.length > 0 });
+
+    // Remove any previously injected ranking <th> elements
+    document.querySelectorAll('.pfa-table th[data-ranking-col]').forEach(th => th.remove());
+
+    if (limitedColumns.length === 0) {
+      emit('rankings:refilter');
+      return;
+    }
+
+    const headerRow = document.querySelector('.pfa-table thead tr');
+    if (!headerRow) return;
+
+    // Insert after PPG header
+    const anchorTh = headerRow.querySelector('[data-sort="ppg"]');
+    if (!anchorTh) return;
+
+    const columnsReversed = [...limitedColumns].reverse();
+    for (const col of columnsReversed) {
+      const th = document.createElement('th');
+      th.className = 'sortable col-num col-group--rankings col-hide-mobile';
+      th.dataset.sort = `ranking_${col.importId}`;
+      th.dataset.rankingCol = 'true';
+
+      if ((col as any).isComposite) {
+        th.classList.add('col-ranking-composite');
+        th.title = 'My Rank — weighted composite';
+      } else if ((col as any).isAverage) {
+        th.classList.add('col-ranking-avg');
+        th.title = 'Average Rank';
+      } else {
+        th.title = `${col.fullName} (${col.playerCount} players)`;
+      }
+
+      const thContent = document.createElement('div');
+      thContent.className = 'th-content';
+      thContent.textContent = col.header;
+      th.appendChild(thContent);
+
+      th.addEventListener('click', () => {
+        const sortKey = `ranking_${col.importId}`;
+        const { currentSort } = getSortState();
+        if (sortKey === currentSort) {
+          const arrow = th.querySelector('.sort-arrow');
+          const wasAsc = arrow && arrow.textContent === '\u25B2';
+          emit('rankings:set-sort', { key: sortKey, dir: wasAsc ? 'desc' : 'asc' });
+        } else {
+          emit('rankings:set-sort', { key: sortKey, dir: 'asc' });
+        }
+        emit('rankings:refresh-table');
+      });
+
+      anchorTh.after(th);
+    }
+
+    emit('rankings:refilter');
+  }
+
+  function initRankings() {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+
+    injectRankingColumns();
+
+    unsubscribe = onRankingsChanged(() => {
+      injectRankingColumns();
+    });
+  }
+
+  document.addEventListener('astro:page-load', initRankings);
+</script>
+
+<style is:global>
+  /* ── Page layout ── */
+  .pfa-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem 3rem;
+  }
+
+  /* Use compact player lockups to match standard table density */
+  .pfa-table .player-cell {
+    --player-avatar-size: 32px;
+    --player-name-size: 0.8125rem;
+    --player-meta-size: 0.75rem;
+    --player-logo-size: 14px;
+    --player-gap: 0.5rem;
+  }
+
+  /* ── Hero ── */
+  .pfa-hero {
+    padding: 2rem 0 1.25rem;
+  }
+
+  .hero-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  .hero-subtitle {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.25rem;
+    display: block;
+  }
+
+  /* ── Metrics ── */
+  .pfa-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .metric-card {
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+    text-align: center;
+  }
+
+  .metric-card__value {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.2;
+  }
+
+  .metric-card__label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    margin-top: 0.25rem;
+  }
+
+  /* ── Controls ── */
+  .pfa-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .pfa-controls__search {
+    position: relative;
+    flex: 1 1 200px;
+    max-width: 280px;
+  }
+
+  .pfa-search__icon {
+    position: absolute;
+    left: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-gray-400, #9ca3af);
+    pointer-events: none;
+  }
+
+  .pfa-search__input {
+    width: 100%;
+    padding: 0.5rem 0.625rem 0.5rem 2rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    background: var(--primary-content-bg-color, #ffffff);
+    color: var(--color-gray-900, #111827);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .pfa-search__input:focus {
+    border-color: var(--color-primary, #1c497c);
+    box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.1);
+  }
+
+  .pfa-positions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .pos-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3125rem 0.625rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 9999px;
+    background: var(--primary-content-bg-color, #ffffff);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .pos-pill:hover {
+    border-color: var(--color-gray-300, #d1d5db);
+    color: var(--color-gray-700, #374151);
+  }
+
+  .pos-pill.active {
+    background: var(--color-primary, #1c497c);
+    border-color: var(--color-primary, #1c497c);
+    color: #ffffff;
+  }
+
+  .pos-pill__count {
+    font-size: 0.625rem;
+    opacity: 0.7;
+  }
+
+  .pfa-controls__team {
+    flex: 0 0 auto;
+  }
+
+  /* ── Custom team dropdown ── */
+  .pfa-team-dropdown {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .pfa-team-dropdown__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    background: var(--primary-content-bg-color, #ffffff);
+    color: var(--color-gray-900, #111827);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s;
+  }
+
+  .pfa-team-dropdown__trigger:hover {
+    border-color: var(--color-gray-300, #d1d5db);
+  }
+
+  .pfa-team-dropdown.open .pfa-team-dropdown__trigger {
+    border-color: var(--color-primary, #1c497c);
+    box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.1);
+  }
+
+  .pfa-team-dropdown__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .pfa-team-dropdown__trigger-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .pfa-team-dropdown__chevron {
+    flex-shrink: 0;
+    color: var(--color-gray-400, #9ca3af);
+    transition: transform 0.15s;
+  }
+
+  .pfa-team-dropdown.open .pfa-team-dropdown__chevron {
+    transform: rotate(180deg);
+  }
+
+  .pfa-team-dropdown__list {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 100%;
+    max-height: 320px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 20;
+    padding: 0.25rem 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .pfa-team-dropdown.open .pfa-team-dropdown__list {
+    display: block;
+  }
+
+  .pfa-team-dropdown__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4375rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s;
+  }
+
+  .pfa-team-dropdown__item:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .pfa-team-dropdown__item--active {
+    background: var(--color-gray-50, #f9fafb);
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+  }
+
+  .pfa-team-dropdown__icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .pfa-team-dropdown__item-name {
+    flex: 1;
+  }
+
+  /* ── Toolbar ── */
+  .pfa-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .pfa-showing {
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ── Table ── */
+  .pfa-table-wrapper {
+    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: white;
+    border-radius: 0.5rem;
+  }
+
+  .pfa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .pfa-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0.5rem 0.5rem;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .pfa-table thead th .th-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .pfa-table thead th:hover {
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .sort-arrow {
+    font-size: 0.5rem;
+    margin-left: 0.125rem;
+  }
+
+  .pfa-table tbody tr {
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    transition: background 0.1s;
+  }
+
+  .pfa-table tbody tr:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .pfa-table tbody td {
+    padding: 0.5rem 0.5rem;
+    vertical-align: middle;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .col-rank {
+    width: 2rem;
+    text-align: center;
+  }
+
+  .cell-rank {
+    text-align: center;
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .col-player {
+    min-width: 160px;
+  }
+
+  .pfa-table tbody td.cell-team {
+    vertical-align: middle;
+  }
+
+  .cell-team-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .pfa-team-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .pfa-team-name {
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .cell-salary {
+    font-weight: 500;
+  }
+
+  .cell-projected {
+    font-weight: 500;
+  }
+
+  .col-group--rankings {
+    text-align: center;
+  }
+
+  /* ── Empty state ── */
+  .pfa-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.875rem;
+  }
+
+  /* ── Mobile responsive ── */
+  @media (max-width: 640px) {
+    .pfa-metrics {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .metric-card {
+      padding: 0.625rem 0.5rem;
+    }
+
+    .metric-card__value {
+      font-size: 1rem;
+    }
+
+    .col-hide-mobile {
+      display: none;
+    }
+
+    .pfa-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .pfa-controls__search {
+      max-width: none;
+    }
+
+    .pfa-positions {
+      justify-content: center;
+    }
+
+    .pfa-controls__team {
+      width: 100%;
+    }
+
+    .pfa-team-dropdown__trigger {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .pfa-team-dropdown__list {
+      left: 0;
+      right: 0;
+    }
+
+    .col-team {
+      display: none;
+    }
+
+    .cell-team {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .pfa-page {
+      padding: 0 0.5rem 2rem;
+    }
+
+    .cell-age,
+    .col-age {
+      display: none;
+    }
+  }
+</style>
