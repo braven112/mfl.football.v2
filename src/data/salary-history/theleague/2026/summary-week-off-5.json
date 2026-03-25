@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-25T08-22-01.133Z",
+  "snapshot": "2026-03-25T08-41-37.537Z",
   "week": "off-5",
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-25T08:22:01.326Z",
+    "fetchedAt": "2026-03-25T08:41:37.641Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-5).",
-    "generatedAt": "2026-03-25T08:22:01.326Z"
+    "generatedAt": "2026-03-25T08:41:37.641Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 113,
+      "totalPlayers": 115,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
-      "starterAverage": 3961592.47,
+      "starterAverage": 3969613.31,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 2065004.94,
+      "averageSalary": 2047135.29,
       "medianSalary": 877250,
       "topPlayers": [
         {
@@ -289,6 +289,12 @@
           "name": "Pittman, Michael",
           "salary": 1677500,
           "franchiseId": "0010"
+        },
+        {
+          "id": "12801",
+          "name": "Hill, Tyreek",
+          "salary": 1650000,
+          "franchiseId": "0003"
         },
         {
           "id": "16617",
@@ -709,19 +715,25 @@
           "name": "Horn, Jimmy",
           "salary": 467500,
           "franchiseId": "0015"
+        },
+        {
+          "id": "15759",
+          "name": "Metchie, John",
+          "salary": 425000,
+          "franchiseId": "0003"
         }
       ]
     },
     "RB": {
-      "totalPlayers": 82,
+      "totalPlayers": 83,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
-      "starterAverage": 4024756.82,
+      "starterAverage": 4047045.15,
       "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1853900.97,
-      "medianSalary": 659422.5,
+      "averageSalary": 1853251.56,
+      "medianSalary": 660000,
       "topPlayers": [
         {
           "id": "13130",
@@ -866,6 +878,12 @@
           "name": "Harvey, RJ",
           "salary": 1980000,
           "franchiseId": "0003"
+        },
+        {
+          "id": "15259",
+          "name": "Stevenson, Rhamondre",
+          "salary": 1800000,
+          "franchiseId": "0004"
         },
         {
           "id": "17043",
