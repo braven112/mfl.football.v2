@@ -1,8 +1,8 @@
 import React from 'react';
 import type { TradeBuilderPlayer, RookieExtensionSim } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
+import { PlayerCell } from '../PlayerCell';
 
-const DEFAULT_HEADSHOT = 'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
 interface Props {
   player: TradeBuilderPlayer;
@@ -17,8 +17,6 @@ export default function PlayerCard({
   onRemove,
   onSimulateExtension,
 }: Props) {
-  const isDef = player.position.toUpperCase() === 'DEF';
-  const avatarSrc = isDef && player.nflLogo ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
   const statusLabel =
     player.normalizedStatus === 'PRACTICE'
       ? 'TAXI'
@@ -29,30 +27,18 @@ export default function PlayerCard({
   return (
     <div className={`player-card${player.tradeBait ? ' player-card--trade-bait' : ''}`}>
       <div className="player-card__header">
-        <div className={`player-card__avatar${isDef ? ' player-card__avatar--def' : ''}`}>
-          <img
-            src={avatarSrc}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = DEFAULT_HEADSHOT; }}
-          />
-        </div>
-        <div className="player-card__info">
-          <span className="player-card__name">{player.name}</span>
-          <div className="player-card__meta">
-            {!isDef && player.nflLogo && (
-              <img src={player.nflLogo} alt="" className="player-card__nfl-logo" loading="lazy" decoding="async" />
-            )}
-            <span className="player-card__pos">{player.position}</span>
-            {statusLabel && (
-              <span className="player-card__status">{statusLabel}</span>
-            )}
-            {player.tradeBait && (
-              <span className="player-card__trade-bait" title="On Trade Block">🏷️</span>
-            )}
-          </div>
-        </div>
+        <PlayerCell
+          className="player-card__lockup"
+          name={player.name}
+          headshot={player.headshot}
+          position={player.position}
+          nflTeam={player.nflTeam}
+          nflLogo={player.nflLogo}
+          metaSlot={<>
+            {statusLabel && <span className="player-card__status">{statusLabel}</span>}
+            {player.tradeBait && <span className="player-card__trade-bait" title="On Trade Block">🏷️</span>}
+          </>}
+        />
         <button
           className="player-card__remove"
           onClick={onRemove}
@@ -142,59 +128,9 @@ export default function PlayerCard({
           align-items: center;
           gap: 0.625rem;
         }
-        .player-card__avatar {
-          flex-shrink: 0;
-          width: 40px;
-          height: 40px;
-          border-radius: var(--radius-full, 9999px);
-          overflow: hidden;
-          background: var(--color-gray-100, #f3f4f6);
-          border: 1px solid var(--content-border, #e2e8f0);
-        }
-        .player-card__avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: top center;
-        }
-        .player-card__avatar--def img {
-          object-fit: contain;
-          object-position: center;
-        }
-        .player-card__info {
+        .player-card__lockup {
           flex: 1;
           min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 0.125rem;
-        }
-        .player-card__name {
-          display: block;
-          font-weight: 600;
-          font-size: 0.9375rem;
-          color: var(--color-gray-900, #111827);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: 1.3;
-        }
-        .player-card__meta {
-          display: flex;
-          align-items: center;
-          gap: 0.3rem;
-          font-size: 0.8125rem;
-          color: var(--color-gray-600, #4b5563);
-        }
-        .player-card__nfl-logo {
-          width: 16px;
-          height: 16px;
-          object-fit: contain;
-          flex-shrink: 0;
-        }
-        .player-card__pos {
-          font-weight: 500;
-          text-transform: uppercase;
-          letter-spacing: 0.025em;
         }
         .player-card__status {
           margin-left: 0.25rem;

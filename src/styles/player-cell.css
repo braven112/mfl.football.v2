@@ -61,6 +61,8 @@
 .player-cell__avatar--def {
   border: 0;
   background: transparent;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .player-cell__avatar--def img {
