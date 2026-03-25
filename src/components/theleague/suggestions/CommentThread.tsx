@@ -113,7 +113,7 @@ function CommentNode({
     <div className="sb-thread__node" style={{ marginLeft: effectiveDepth > 0 ? '1.5rem' : 0 }}>
       <div className={`sb-thread__comment${isDeleted ? ' sb-thread__comment--deleted' : ''}`}>
         <div className="sb-thread__header">
-          <div className="sb-thread__avatar">
+          <div className={`sb-thread__avatar${teamIcon ? ' sb-thread__avatar--has-icon' : ''}`}>
             {teamIcon ? (
               <img src={teamIcon} alt="" width="24" height="24" className="sb-thread__team-icon" />
             ) : (

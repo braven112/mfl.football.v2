@@ -25,10 +25,10 @@ function timeAgo(dateStr: string): string {
   return `${months}mo ago`;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; icon: string; className: string }> = {
-  'rule-change': { label: 'Rule Change', icon: '📜', className: 'sb-cat--rule' },
-  'website': { label: 'Website', icon: '💻', className: 'sb-cat--website' },
-  'general': { label: 'General', icon: '💬', className: 'sb-cat--general' },
+const CATEGORY_LABELS: Record<string, { label: string; spriteId: string; className: string }> = {
+  'rule-change': { label: 'Rule Change', spriteId: 'icon-gavel', className: 'sb-cat--rule' },
+  'website': { label: 'Website', spriteId: 'icon-wrench', className: 'sb-cat--website' },
+  'general': { label: 'General', spriteId: 'icon-beer', className: 'sb-cat--general' },
 };
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
@@ -53,7 +53,7 @@ export default function IdeaCard({ idea, teamIcon, isAdmin, isOwner, onSelect, o
       onKeyDown={e => { if (e.key === 'Enter') onSelect(idea.id); }}
     >
       <div className="sb-card__header">
-        <div className="sb-card__avatar">
+        <div className={`sb-card__avatar${teamIcon ? ' sb-card__avatar--has-icon' : ''}`}>
           {teamIcon ? (
             <img src={teamIcon} alt="" width="32" height="32" className="sb-card__team-icon" />
           ) : (
@@ -94,7 +94,7 @@ export default function IdeaCard({ idea, teamIcon, isAdmin, isOwner, onSelect, o
       <h3 className="sb-card__title">
         {idea.category && (
           <span className={`sb-cat ${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).className}`}>
-            <span aria-hidden="true">{(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).icon}</span>
+            <svg className="sb-cat__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).spriteId}`} /></svg>
             {' '}{(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).label}
           </span>
         )}

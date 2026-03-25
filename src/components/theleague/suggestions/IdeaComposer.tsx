@@ -22,10 +22,10 @@ interface Props {
   submitLabel?: string;
 }
 
-const CATEGORY_OPTIONS: { value: IdeaCategory; label: string; icon: string }[] = [
-  { value: 'rule-change', label: 'Rule Change', icon: '📜' },
-  { value: 'website', label: 'Website Suggestion', icon: '💻' },
-  { value: 'general', label: 'General Discussion', icon: '💬' },
+const CATEGORY_OPTIONS: { value: IdeaCategory; label: string; spriteId: string }[] = [
+  { value: 'rule-change', label: 'Rule Change', spriteId: 'icon-gavel' },
+  { value: 'website', label: 'Website Suggestion', spriteId: 'icon-wrench' },
+  { value: 'general', label: 'General Discussion', spriteId: 'icon-beer' },
 ];
 
 export default function IdeaComposer({ onSubmit, initialTitle, initialBody, initialCategory, onCancel, submitLabel }: Props) {
@@ -138,7 +138,7 @@ export default function IdeaComposer({ onSubmit, initialTitle, initialBody, init
                 aria-checked={category === opt.value}
                 disabled={isSubmitting}
               >
-                <span className="sb-category-pill__icon" aria-hidden="true">{opt.icon}</span>
+                <svg className="sb-category-pill__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${opt.spriteId}`} /></svg>
                 {opt.label}
               </button>
             ))}
