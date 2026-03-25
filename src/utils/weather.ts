@@ -117,7 +117,7 @@ export async function fetchLiveWeather(teamCode: string): Promise<WeatherData | 
 
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${stadium.lat}&longitude=${stadium.lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return null;
 
     const data = await response.json();

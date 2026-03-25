@@ -152,6 +152,7 @@ async function fetchAndCacheRosters(
   const url = `https://api.myfantasyleague.com/${season}/export?TYPE=rosters&L=${leagueId}&JSON=1`;
   const response = await fetch(url, {
     headers: { 'User-Agent': 'MFLFootball/2.0' },
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!response.ok) {

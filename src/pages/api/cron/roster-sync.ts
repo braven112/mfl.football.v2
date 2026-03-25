@@ -41,6 +41,7 @@ export const GET: APIRoute = async ({ request }) => {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({ ref: 'main' }),
     },
   );

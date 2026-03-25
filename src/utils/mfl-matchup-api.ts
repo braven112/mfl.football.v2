@@ -148,7 +148,7 @@ export class MFLMatchupApiClient {
       headers['Cookie'] = `MFL_USER_ID=${this.config.mflUserId}`;
     }
 
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
 
     if (!response.ok) {
       throw new Error(`MFL API error: ${response.status} ${response.statusText}`);
@@ -562,6 +562,7 @@ export class MFLMatchupApiClient {
           'Cookie': `MFL_USER_ID=${this.config.mflUserId}`,
         },
         body: params.toString(),
+        signal: AbortSignal.timeout(8000),
       });
 
       return response.ok;

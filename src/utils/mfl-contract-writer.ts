@@ -84,6 +84,7 @@ export async function createPreWriteBackup(): Promise<string | null> {
         Cookie: `MFL_USER_ID=${MFL_USER_ID}`,
       },
       redirect: 'follow',
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
@@ -153,6 +154,7 @@ export async function fetchMFLSalaries(): Promise<Record<string, { salary: strin
     const response = await fetch(url, {
       headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},
       redirect: 'follow',
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) return null;

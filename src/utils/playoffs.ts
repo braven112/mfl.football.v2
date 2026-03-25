@@ -154,7 +154,7 @@ export async function fetchPlayoffBrackets(
   host = DEFAULT_HOST
 ) {
   const url = buildMflUrl(year, 'playoffBrackets', { L: leagueId }, host);
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
   if (!response.ok) {
     throw new Error(`Failed to fetch playoffBrackets: ${response.status}`);
   }
@@ -177,7 +177,7 @@ export async function fetchPlayoffBracket(
   host = DEFAULT_HOST
 ) {
   const url = buildMflUrl(year, 'playoffBracket', { L: leagueId, BRACKET_ID: bracketId }, host);
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
   if (!response.ok) {
     throw new Error(`Failed to fetch playoffBracket ${bracketId}: ${response.status}`);
   }
@@ -191,7 +191,7 @@ export async function fetchWeeklyResults(
   host = DEFAULT_HOST
 ): Promise<WeeklyScoreboard | null> {
   const url = buildMflUrl(year, 'weeklyResults', { L: leagueId, W: week }, host);
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
   if (!response.ok) return null;
   const data = await response.json();
   const results = data?.weeklyResults;
@@ -227,7 +227,7 @@ export async function fetchLiveScoring(
   host = DEFAULT_HOST
 ): Promise<LiveScoreboard | null> {
   const url = buildMflUrl(year, 'liveScoring', { L: leagueId, W: week }, host);
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
   if (!response.ok) return null;
 
   const data = await response.json();

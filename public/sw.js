@@ -88,15 +88,37 @@ async function cacheFirst(request) {
 }
 
 /**
- * Network-first strategy: try network, fall back to offline page.
+ * Network-first strategy with stale fallback.
+ * 1. Try network — cache successful HTML for future fallback
+ * 2. On server 5xx — serve stale cached version if available
+ * 3. On network failure — serve stale cached version if available
+ * 4. Last resort — offline page
  */
 async function networkFirstWithOfflineFallback(request) {
   try {
     const response = await fetch(request, { cache: 'no-cache' });
+
+    if (response.ok) {
+      // Cache successful HTML for stale fallback
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+      return response;
+    }
+
+    // Server returned 5xx — try stale cache before passing error through
+    if (response.status >= 500) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+    }
+
     return response;
   } catch {
-    const cached = await caches.match(OFFLINE_URL);
-    return cached || new Response('Offline', {
+    // Network failure — serve stale cached version if available
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    const offlinePage = await caches.match(OFFLINE_URL);
+    return offlinePage || new Response('Offline', {
       status: 503,
       headers: { 'Content-Type': 'text/plain' },
     });

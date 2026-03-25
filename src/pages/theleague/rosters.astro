@@ -144,7 +144,7 @@ const fetchLiveWeather = async (teamCode: string): Promise<{ temperature: number
 
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${stadium.lat}&longitude=${stadium.lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return null;
 
     const data = await response.json();
@@ -272,7 +272,7 @@ const loadLiveOddsData = async (week: number) => {
   const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${espnWeek}&seasontype=${seasonType}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) {
       throw new Error(`ESPN API returned ${response.status}`);
     }
@@ -303,7 +303,10 @@ const loadLiveOddsData = async (week: number) => {
         }
       }
     });
-    await Promise.all(weatherPromises);
+    await Promise.race([
+      Promise.all(weatherPromises),
+      new Promise(resolve => setTimeout(resolve, 6000)),
+    ]);
 
     // Cache the result even if empty (valid during playoffs when only some teams play)
     liveOddsCache.data = oddsData;
@@ -2085,7 +2088,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 // Owner activity data for "last seen" indicators
 let ownerActivityMap: Record<string, number> = {};
-try { ownerActivityMap = await getAllActivity('13522'); } catch { /* Redis unavailable */ }
+try {
+  ownerActivityMap = await Promise.race([
+    getAllActivity('13522'),
+    new Promise<Record<string, number>>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 3000)),
+  ]);
+} catch { /* Redis unavailable or timed out */ }
 const defaultLastSeen = ownerActivityMap[defaultTeamId] ?? null;
 const defaultActivityLevel = getActivityLevel(defaultLastSeen);
 const defaultLastSeenText = formatLastSeen(defaultLastSeen);

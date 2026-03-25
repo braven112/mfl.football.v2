@@ -105,6 +105,7 @@ export async function authenticateWithMFL(
           headers,
           body: method === 'POST' ? body : undefined,
           redirect: 'manual',
+          signal: AbortSignal.timeout(8000),
         });
 
         // Collect Set-Cookie from every hop
@@ -130,7 +131,7 @@ export async function authenticateWithMFL(
         loginResponse = res;
         break;
       }
-      loginResponse ??= await fetch(url, { method, redirect: 'follow' });
+      loginResponse ??= await fetch(url, { method, redirect: 'follow', signal: AbortSignal.timeout(8000) });
     }
 
     loginText = await loginResponse!.text();
@@ -144,7 +145,7 @@ export async function authenticateWithMFL(
       let url = `${loginUrl}?${loginParams.toString()}`;
       const maxHops = 3;
       for (let hop = 0; hop <= maxHops; hop++) {
-        const res = await fetch(url, { method: 'GET', redirect: 'manual' });
+        const res = await fetch(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(8000) });
         const hopCookies = res.headers.getSetCookie?.() ?? [];
         allSetCookies.push(...hopCookies);
         if (res.status >= 300 && res.status < 400) {
@@ -344,6 +345,7 @@ export async function validateMFLSession(
         L: leagueId,
         JSON: '1',
       }).toString(),
+      signal: AbortSignal.timeout(8000),
     });
 
     return response.ok || response.status !== 401;

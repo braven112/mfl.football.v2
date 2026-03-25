@@ -9,6 +9,7 @@ export default defineConfig({
     webAnalytics: {
       enabled: true,
     },
+    maxDuration: 30,
   }),
   integrations: [react()],
   fonts: [
@@ -21,11 +22,5 @@ export default defineConfig({
       fallbacks: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
     },
   ],
-  experimental: {
-    queuedRendering: {
-      enabled: true,
-      poolSize: 3000,
-      contentCache: true,
-    },
-  },
+  experimental: {},
 });

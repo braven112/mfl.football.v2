@@ -169,7 +169,7 @@ export async function loadLiveOddsData(
   const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${espnWeek}&seasontype=${seasonType}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) {
       throw new Error(`ESPN API returned ${response.status}`);
     }

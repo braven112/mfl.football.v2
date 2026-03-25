@@ -23,6 +23,8 @@ interface MflFetchOptions {
   body?: string;
   /** If true, collect Set-Cookie headers from all redirect hops */
   collectSetCookies?: boolean;
+  /** Timeout per redirect hop in ms (default: 10000) */
+  timeoutMs?: number;
 }
 
 export interface MflFetchResult {
@@ -40,7 +42,7 @@ export interface MflFetchResult {
 export async function mflFetch(opts: MflFetchOptions): Promise<Response>;
 export async function mflFetch(opts: MflFetchOptions & { collectSetCookies: true }): Promise<MflFetchResult>;
 export async function mflFetch(opts: MflFetchOptions): Promise<Response | MflFetchResult> {
-  const { mflUserCookie, mflCommishCookie, collectSetCookies } = opts;
+  const { mflUserCookie, mflCommishCookie, collectSetCookies, timeoutMs = 10_000 } = opts;
   let url = opts.url;
   let method = opts.method;
   let body: string | undefined = opts.body;
@@ -68,6 +70,7 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response | MflFet
       headers,
       body: method === 'POST' ? body : undefined,
       redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     // Collect Set-Cookie headers from every hop
