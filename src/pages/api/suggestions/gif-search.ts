@@ -68,8 +68,9 @@ export const GET: APIRoute = async ({ request }) => {
 
     const results = data.data.map(g => ({
       id: g.id,
-      url: g.images.original.url,
-      preview: g.images.fixed_width_small?.url || g.images.fixed_width?.url || g.images.original.url,
+      // Use stable embed URL format — original.url can 404 due to long encoded paths
+      url: `https://media.giphy.com/media/${g.id}/giphy.gif`,
+      preview: g.images.fixed_width_small?.url || g.images.fixed_width?.url || `https://media.giphy.com/media/${g.id}/giphy.gif`,
       alt: g.title || '',
     }));
 
