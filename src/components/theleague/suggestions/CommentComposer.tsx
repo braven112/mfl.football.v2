@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import ImageUploader from './ImageUploader';
+import GifPicker from './GifPicker';
 import ImageGallery from './ImageGallery';
 
 interface Props {
@@ -69,6 +70,10 @@ export default function CommentComposer({ onSubmit, placeholder, onCancel }: Pro
       <div className="sb-comment-composer__actions">
         <ImageUploader
           onUpload={url => setImageUrls(prev => [...prev, url])}
+          disabled={isSubmitting}
+        />
+        <GifPicker
+          onSelect={url => setImageUrls(prev => [...prev, url])}
           disabled={isSubmitting}
         />
         {onCancel && (

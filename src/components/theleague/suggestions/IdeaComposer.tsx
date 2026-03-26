@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { IdeaCategory, WebsiteFields, WebsiteSuggestionType } from '../../../types/suggestions';
 import ImageUploader from './ImageUploader';
+import GifPicker from './GifPicker';
 import ImageGallery from './ImageGallery';
 
 interface SubmitData {
@@ -256,6 +257,10 @@ export default function IdeaComposer({ onSubmit, initialTitle, initialBody, init
           <div className="sb-composer__actions">
             <ImageUploader
               onUpload={url => setImageUrls(prev => [...prev, url])}
+              disabled={isSubmitting}
+            />
+            <GifPicker
+              onSelect={url => setImageUrls(prev => [...prev, url])}
               disabled={isSubmitting}
             />
             {onCancel && (
