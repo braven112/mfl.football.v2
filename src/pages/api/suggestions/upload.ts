@@ -44,6 +44,12 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'File too large. Maximum 5MB.' }, 400);
   }
 
+  // Check for Blob token
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error('[suggestions] BLOB_READ_WRITE_TOKEN not set');
+    return json({ error: 'Image uploads are not configured. Contact the commissioner.' }, 503);
+  }
+
   try {
     const { put } = await import('@vercel/blob');
     const ext = file.name.split('.').pop() || 'jpg';
@@ -56,7 +62,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ url: blob.url });
   } catch (err) {
-    console.error('[suggestions] Upload failed:', err);
-    return json({ error: 'Upload failed' }, 500);
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[suggestions] Upload failed:', message, err);
+    return json({ error: `Upload failed: ${message}` }, 500);
   }
 };
