@@ -24,14 +24,14 @@ interface Props {
 }
 
 const CATEGORY_OPTIONS: { value: IdeaCategory; label: string; spriteId: string }[] = [
-  { value: 'rule-change', label: 'Rule Change', spriteId: 'icon-gavel' },
-  { value: 'website', label: 'Website Suggestion', spriteId: 'icon-wrench' },
   { value: 'general', label: 'General Discussion', spriteId: 'icon-beer' },
+  { value: 'website', label: 'Website Suggestion', spriteId: 'icon-wrench' },
+  { value: 'rule-change', label: 'Rule Change', spriteId: 'icon-gavel' },
 ];
 
 export default function IdeaComposer({ onSubmit, initialTitle, initialBody, initialCategory, onCancel, submitLabel }: Props) {
   const [title, setTitle] = useState(initialTitle ?? '');
-  const [category, setCategory] = useState<IdeaCategory>(initialCategory ?? 'rule-change');
+  const [category, setCategory] = useState<IdeaCategory>(initialCategory ?? 'general');
   const [body, setBody] = useState(initialBody ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expanded, setExpanded] = useState(!!(initialTitle || initialBody));
