@@ -1,0 +1,54 @@
+---
+/**
+ * ScheftnerPostCard — Individual post in the Scheftner feed.
+ *
+ * Renders differently based on tier:
+ *   - breaking: Full card with analysis block and left accent
+ *   - standard: Compact card with body text
+ *   - minor: One-liner (rendered by parent in collapsed group)
+ */
+import type { ScheftnerPost } from '../../types/scheftner';
+import { formatRelativeTime } from '../../utils/scheftner-feed';
+import ScheftnerReactionBar from './ScheftnerReactionBar.tsx';
+
+interface Props {
+  post: ScheftnerPost;
+  isAuthenticated?: boolean;
+  now?: Date;
+}
+
+const { post, isAuthenticated = false, now } = Astro.props;
+const relTime = formatRelativeTime(post.timestamp, now);
+const tierClass = `sf-post sf-post--${post.tier}`;
+---
+
+<article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? ''}>
+  <img class="sf-avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
+
+  <div class="sf-post__content">
+    <div class="sf-post__header">
+      <span class="sf-post__name">Claude Schefter</span>
+      <span class="sf-post__handle">@schefter</span>
+      <time class="sf-post__time" datetime={post.timestamp}>{relTime}</time>
+    </div>
+
+    <div class="sf-post__body" set:html={post.body} />
+
+    {post.analysis && (
+      <div class="sf-post__analysis">
+        <div class="sf-post__analysis-label">Scheftner's Take</div>
+        <Fragment set:html={post.analysis} />
+      </div>
+    )}
+
+    {post.link && (
+      <a href={post.link} class="sf-post__link">{post.linkLabel ?? 'View details'}</a>
+    )}
+
+    <ScheftnerReactionBar
+      client:visible
+      postId={post.id}
+      isAuthenticated={isAuthenticated}
+    />
+  </div>
+</article>

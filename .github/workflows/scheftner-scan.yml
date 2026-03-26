@@ -1,0 +1,48 @@
+name: Scheftner Scan
+
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: scheftner-scan
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run Scheftner scanner
+        env:
+          MFL_HOST: ${{ vars.MFL_HOST }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/scheftner-scan.mjs
+
+      - name: Commit and push feed updates
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No new Scheftner posts."
+            exit 0
+          fi
+
+          git config user.name "Scheftner Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/theleague/scheftner-feed.json data/afl-fantasy/scheftner-feed.json
+          git commit -m "chore: scheftner scan — new transaction posts"
+          git pull --rebase origin main
+          git push
