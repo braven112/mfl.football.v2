@@ -9,6 +9,7 @@ interface SubmitData {
   body: string;
   category: IdeaCategory;
   websiteFields?: WebsiteFields;
+  imageUrls?: string[];
 }
 
 interface TeamIcon {

@@ -584,6 +584,30 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     line-height: 1.5;
     margin: 0 0 0.5rem 0;
   }
+  .sb-card__images {
+    display: flex;
+    gap: 0.375rem;
+    margin: 0.375rem 0;
+  }
+  .sb-card__thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--radius-sm, 0.25rem);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+  .sb-card__more-images {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+  }
   .sb-card__footer {
     display: flex;
     align-items: center;

@@ -111,6 +111,18 @@ export default function IdeaCard({ idea, teamIcon, isAdmin, isOwner, onSelect, o
           : idea.body.length > 160 ? idea.body.slice(0, 160) + '...' : idea.body}
       </p>
 
+      {/* Image thumbnails */}
+      {idea.images && idea.images.length > 0 && (
+        <div className="sb-card__images">
+          {idea.images.slice(0, 3).map((img, i) => (
+            <img key={img.url} src={img.url} alt="" className="sb-card__thumb" loading="lazy" />
+          ))}
+          {idea.images.length > 3 && (
+            <span className="sb-card__more-images">+{idea.images.length - 3}</span>
+          )}
+        </div>
+      )}
+
       <div className="sb-card__footer">
         <span className="sb-card__comments">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
