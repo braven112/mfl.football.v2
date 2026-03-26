@@ -1,4 +1,33 @@
 {
   "weekOf": "2026-03-23",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-03-25",
+      "type": "bug-fix",
+      "summary": "Comment image uploads now work — images were being dropped between the composer and the API, so uploads appeared to succeed but images never showed on the posted comment",
+      "impact": "user",
+      "area": "other"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "style-tweak",
+      "summary": "Team icons on The Board no longer have a blue circle background — they now match the transparent style used on Ask Roger",
+      "impact": "user",
+      "area": "other"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "bug-fix",
+      "summary": "Image uploads no longer fail with a 413 error on large photos — images are now auto-compressed client-side before uploading via Vercel Blob's direct upload",
+      "impact": "user",
+      "area": "other"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "style-tweak",
+      "summary": "Category icons on The Board now use SVG sprite icons (beer, gavel, wrench) instead of plain emoji text",
+      "impact": "user",
+      "area": "other"
+    }
+  ]
 }
