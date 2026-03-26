@@ -27,15 +27,23 @@ export default function ImageUploader({ onUpload, disabled }: Props) {
         body: form,
       });
 
+      // Handle non-JSON responses (e.g., Vercel auth redirects, 500 HTML pages)
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setError(`Upload failed (${res.status})`);
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Upload failed');
+        setError(data.error || `Upload failed (${res.status})`);
         return;
       }
 
       onUpload(data.url);
-    } catch {
-      setError('Upload failed');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Upload failed: ${msg}`);
     } finally {
       setUploading(false);
       // Reset input so same file can be re-selected
