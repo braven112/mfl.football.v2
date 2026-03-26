@@ -189,7 +189,7 @@ export async function deleteComment(ideaId: string, commentId: string): Promise<
 
 // ── Rate Limiting ──
 
-const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_MAX = 50;
 const RATE_LIMIT_WINDOW = 3600; // 1 hour
 
 export async function checkRateLimit(franchiseId: string): Promise<{ allowed: boolean; count: number }> {
