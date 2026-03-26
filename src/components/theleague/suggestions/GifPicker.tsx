@@ -80,7 +80,6 @@ export default function GifPicker({ onSelect, disabled }: Props) {
   }, [search]);
 
   const handleSelect = useCallback((gif: GifResult) => {
-    console.log('[GifPicker] selected:', gif.url);
     onSelect(gif.url);
     setOpen(false);
     setQuery('');
