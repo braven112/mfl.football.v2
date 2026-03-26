@@ -22,12 +22,12 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     <div class="sb-main">
       <header class="sb-hero">
         <div class="sb-hero__icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 12 18.469c-1.006 0-1.924-.44-2.55-1.14l-.234-.229z"/>
+          <svg class="sb-hero__svg" aria-hidden="true">
+            <use href="/assets/icons/sprite.svg#icon-commenting"></use>
           </svg>
         </div>
         <div class="sb-hero__text">
-          <div class="sb-section-title">Suggestion Box</div>
+          <div class="sb-section-title">The Board</div>
           <p class="sb-hero__sub">Got an idea to make the league better? Drop it here. Other owners can discuss, react, and the Commissioner will weigh in.</p>
         </div>
       </header>
@@ -49,8 +49,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
         <!-- About card -->
         <div class="sb-about-card">
           <div class="sb-about-card__icon-wrap">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-              <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 12 18.469c-1.006 0-1.924-.44-2.55-1.14l-.234-.229z"/>
+            <svg class="sb-about-card__svg" aria-hidden="true">
+              <use href="/assets/icons/sprite.svg#icon-commenting"></use>
             </svg>
           </div>
           <div class="sb-about-card__title">The Board</div>
@@ -75,6 +75,25 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
             Keep it constructive. This isn't the place to litigate last week's waiver wire dispute — that's what the group chat is for.
           </p>
         </div>
+
+        <!-- Ask Roger promo -->
+        <a href="/theleague/rules-chat" class="sb-promo">
+          <img
+            src="/assets/commissioner-avatar.webp?v=5"
+            alt="Roger — AI Rules Expert"
+            class="sb-promo__avatar"
+            width="40"
+            height="40"
+            loading="lazy"
+          />
+          <div class="sb-promo__body">
+            <div class="sb-promo__title">Got a rules question?</div>
+            <p class="sb-promo__text">Ask Roger — our AI rules expert — for a faster answer than waiting on The Board.</p>
+          </div>
+          <svg class="sb-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </a>
       </div>
     </aside>
   </div>
@@ -118,6 +137,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     align-items: center;
     justify-content: center;
     color: var(--color-primary, #1c497c);
+  }
+  .sb-hero__svg {
+    width: 28px;
+    height: 28px;
+    fill: currentColor;
   }
   .sb-section-title {
     font-size: 0.75rem;
@@ -173,6 +197,11 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     color: var(--color-primary, #1c497c);
     margin: 0 auto 0.75rem;
   }
+  .sb-about-card__svg {
+    width: 32px;
+    height: 32px;
+    fill: currentColor;
+  }
   .sb-about-card__title {
     font-size: 1rem;
     font-weight: 700;
@@ -225,6 +254,55 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     line-height: 1.55;
     color: var(--color-gray-500, #6b7280);
     margin: 0;
+  }
+
+  /* ── Ask Roger Promo ── */
+  .sb-promo {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-lg, 0.5rem);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .sb-promo:hover {
+    border-color: var(--color-gray-200, #e5e7eb);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  .sb-promo__avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+  }
+  .sb-promo__body {
+    flex: 1;
+    min-width: 0;
+  }
+  .sb-promo__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.3;
+  }
+  .sb-promo__text {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+    margin: 0.125rem 0 0;
+  }
+  .sb-promo__arrow {
+    color: var(--color-gray-300, #d1d5db);
+    min-width: 16px;
+    transition: color 0.15s;
+  }
+  .sb-promo:hover .sb-promo__arrow {
+    color: var(--color-primary, #1c497c);
   }
 
   /* ── Mobile ── */

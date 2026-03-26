@@ -12,7 +12,7 @@ interface Props {
   userFranchiseId?: string;
   isAuthenticated: boolean;
   ideaLocked?: boolean;
-  onAddComment: (body: string, parentId?: string) => Promise<boolean>;
+  onAddComment: (body: string, parentId?: string, imageUrls?: string[]) => Promise<boolean>;
   onEditComment: (commentId: string, body: string) => Promise<boolean>;
   onDeleteComment: (commentId: string) => void;
   onCommentReaction?: (commentId: string, emoji: string) => void;
@@ -79,7 +79,7 @@ function CommentNode({
   userFranchiseId?: string;
   isAuthenticated: boolean;
   ideaLocked?: boolean;
-  onAddComment: (body: string, parentId?: string) => Promise<boolean>;
+  onAddComment: (body: string, parentId?: string, imageUrls?: string[]) => Promise<boolean>;
   onEditComment: (commentId: string, body: string) => Promise<boolean>;
   onDeleteComment: (commentId: string) => void;
   onCommentReaction?: (commentId: string, emoji: string) => void;
@@ -93,8 +93,8 @@ function CommentNode({
   const isDeleted = !!comment.deletedAt;
   const teamIcon = iconMap[comment.author.franchiseId];
 
-  const handleReply = async (body: string) => {
-    const ok = await onAddComment(body, comment.id);
+  const handleReply = async (body: string, imageUrls?: string[]) => {
+    const ok = await onAddComment(body, comment.id, imageUrls);
     if (ok) setReplyOpen(false);
     return ok;
   };

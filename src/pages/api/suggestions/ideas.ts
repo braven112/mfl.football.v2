@@ -47,6 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Invalid request body' }, 400);
   }
 
+  console.log('[suggestions] POST idea body keys:', Object.keys(body), 'imageUrls:', body.imageUrls?.length ?? 0);
+
   const title = body.title?.trim();
   const bodyText = body.body?.trim();
   const validCategories: IdeaCategory[] = ['rule-change', 'website', 'general'];
@@ -116,6 +118,8 @@ export const POST: APIRoute = async ({ request }) => {
     lastActivityAt: now,
     createdAt: now,
   };
+
+  console.log('[suggestions] Saving idea with', idea.images.length, 'images:', idea.images.map(i => i.url));
 
   const ok = await saveIdea(idea);
   if (!ok) return json({ error: 'Failed to save idea' }, 500);
