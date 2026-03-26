@@ -42,8 +42,9 @@ export const POST: APIRoute = async ({ params, request }) => {
     return json({ error: 'Invalid request body' }, 400);
   }
 
-  const commentBody = body.body?.trim();
-  if (!commentBody || commentBody.length < 1) {
+  const commentBody = body.body?.trim() ?? '';
+  const hasImages = Array.isArray(body.imageUrls) && body.imageUrls.length > 0;
+  if (!commentBody && !hasImages) {
     return json({ error: 'Comment cannot be empty' }, 400);
   }
   if (commentBody.length > 3000) {
