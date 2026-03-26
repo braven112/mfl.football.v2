@@ -16,30 +16,11 @@ import {
 } from '../../utils/owner-activity';
 import { getTeamColor } from '../../utils/team-colors';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import pageDirectory from '../../data/page-directory.json';
 
-const PAGE_NAMES: Record<string, string> = {
-	'/': 'Homepage',
-	'/rosters': 'Rosters',
-	'/players': 'Free Agents',
-	'/standings': 'Standings',
-	'/playoffs': 'Playoffs',
-	'/salary': 'Salary Analytics',
-	'/salary-history': 'Salary History',
-	'/salary-archive': 'Salary Archive',
-	'/mvp': 'MVPs',
-	'/dead-money': 'Dead Money',
-	'/league-summary': 'League Summary',
-	'/trade-builder': 'Trade Builder',
-	'/draft-predictor': 'Draft Order',
-	'/calendar': 'Calendar',
-	'/whats-new': "What's New",
-	'/import-rankings': 'Import Rankings',
-	'/cr': 'Custom Rankings',
-	'/activity': 'Owner Activity',
-	'/contracts/manage': 'Contracts',
-	'/rules': 'Rules',
-	'/about': 'About',
-};
+const PAGE_NAMES: Record<string, string> = Object.fromEntries(
+	pageDirectory.map((p: { path: string; title: string }) => [p.path, p.title])
+);
 function pageName(path: string): string {
 	return PAGE_NAMES[path] || path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Homepage';
 }
