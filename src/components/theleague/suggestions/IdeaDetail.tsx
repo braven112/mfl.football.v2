@@ -345,13 +345,6 @@ export default function IdeaDetail({
           </div>
         )}
 
-        {isAuthenticated && !idea.locked && (
-          <CommentComposer
-            onSubmit={(body, imageUrls) => handleAddComment(body, undefined, imageUrls)}
-            placeholder="Share your thoughts..."
-          />
-        )}
-
         <CommentThread
           comments={comments}
           iconMap={iconMap}
@@ -365,6 +358,13 @@ export default function IdeaDetail({
           onDeleteComment={onDeleteComment}
           onCommentReaction={onCommentReaction}
         />
+
+        {isAuthenticated && !idea.locked && (
+          <CommentComposer
+            onSubmit={(body, imageUrls) => handleAddComment(body, undefined, imageUrls)}
+            placeholder="Share your thoughts..."
+          />
+        )}
       </div>
     </div>
   );
