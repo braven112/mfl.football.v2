@@ -59,6 +59,13 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
           <div class="rqa-roger-card__name">Roger</div>
           <div class="rqa-roger-card__role">AI Rules Expert</div>
           <p class="rqa-roger-card__bio">He's read the constitution cover to cover — all 27 sections, every footnote, and the fine print about compensatory picks that even the Commissioner forgot about.</p>
+          <a href="/theleague/rules" class="rqa-roger-card__cta">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Read the Rulebook
+          </a>
         </div>
 
         <!-- Disclaimer -->
@@ -200,6 +207,25 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     line-height: 1.5;
     color: var(--color-gray-400, #9ca3af);
     margin: 0.75rem 0 0 0;
+  }
+  .rqa-roger-card__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  .rqa-roger-card__cta:hover {
+    background: var(--color-primary-dark, #164066);
+    text-decoration: none;
   }
 
   /* Sidebar sections */
