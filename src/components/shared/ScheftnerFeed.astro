@@ -1,0 +1,91 @@
+---
+/**
+ * ScheftnerFeed — Server-rendered list of Scheftner posts.
+ *
+ * All posts render as full cards. Breaking-tier posts get a left accent
+ * and analysis block; standard and minor posts are regular cards with
+ * varying levels of energy in the copy.
+ *
+ * Posts beyond initialLimit are hidden via CSS and revealed by
+ * the "Load more" button in batches of PAGE_SIZE.
+ */
+import type { ScheftnerPost } from '../../types/scheftner';
+import ScheftnerPostCard from './ScheftnerPostCard.astro';
+
+interface Props {
+  posts: ScheftnerPost[];
+  isAuthenticated?: boolean;
+  /** Max posts to show initially (for pagination) */
+  initialLimit?: number;
+}
+
+const { posts, isAuthenticated = false, initialLimit = 25 } = Astro.props;
+const now = new Date();
+---
+
+<div class="sf-feed sf-feed--page" data-initial-limit={initialLimit}>
+  {posts.length === 0 ? (
+    <div class="sf-empty">
+      <div class="sf-empty__icon">🎙️</div>
+      <p class="sf-empty__text">No news yet. Schefter is on assignment.</p>
+    </div>
+  ) : (
+    posts.map((post, i) => (
+      <div class:list={['sf-feed__item', { 'sf-feed__item--hidden': i >= initialLimit }]} data-feed-index={i}>
+        <ScheftnerPostCard
+          post={post}
+          isAuthenticated={isAuthenticated}
+          now={now}
+        />
+      </div>
+    ))
+  )}
+
+  {posts.length > initialLimit && (
+    <div class="sf-load-more">
+      <button class="sf-load-more__btn" data-load-more>
+        Load more
+      </button>
+    </div>
+  )}
+</div>
+
+<script>
+  function initLoadMore() {
+    const feed = document.querySelector('.sf-feed--page');
+    if (!feed) return;
+
+    const btn = feed.querySelector('[data-load-more]') as HTMLButtonElement | null;
+    if (!btn) return;
+
+    const PAGE_SIZE = 25;
+    const initialLimit = parseInt(feed.getAttribute('data-initial-limit') ?? '25', 10);
+    let visibleCount = initialLimit;
+
+    btn.addEventListener('click', () => {
+      const items = feed.querySelectorAll('.sf-feed__item--hidden');
+      let revealed = 0;
+
+      items.forEach((item) => {
+        if (revealed >= PAGE_SIZE) return;
+        item.classList.remove('sf-feed__item--hidden');
+        revealed++;
+      });
+
+      visibleCount += revealed;
+      const remaining = feed.querySelectorAll('.sf-feed__item--hidden').length;
+
+      if (remaining === 0) {
+        btn.closest('.sf-load-more')?.remove();
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initLoadMore);
+</script>
+
+<style>
+  .sf-feed__item--hidden {
+    display: none;
+  }
+</style>

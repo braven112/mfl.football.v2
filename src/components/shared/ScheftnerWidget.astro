@@ -1,0 +1,44 @@
+---
+/**
+ * ScheftnerWidget — Compact homepage widget showing last N posts.
+ * Headlines + timestamps only, no reactions.
+ * Links to the full news page.
+ */
+import type { ScheftnerPost } from '../../types/scheftner';
+import { formatRelativeTime } from '../../utils/scheftner-feed';
+import '../../styles/scheftner-feed.css';
+
+interface Props {
+  posts: ScheftnerPost[];
+  league: 'theleague' | 'afl';
+  allNewsLink: string;
+}
+
+const { posts, allNewsLink } = Astro.props;
+const now = new Date();
+---
+
+<section class="sf-widget">
+  <div class="sf-widget__header">
+    <h2 class="sf-widget__title">The Scheftner Report</h2>
+    <a href={allNewsLink} class="sf-widget__view-all">View all →</a>
+  </div>
+
+  {posts.length === 0 ? (
+    <p class="sf-empty__text" style="text-align: center; padding: 1rem 0; font-size: 0.8125rem;">
+      No news yet.
+    </p>
+  ) : (
+    <div class="sf-widget__list">
+      {posts.map(post => (
+        <div class="sf-widget__item">
+          <span class="sf-widget__headline">{post.headline}</span>
+          <time class="sf-widget__item-time" datetime={post.timestamp}>
+            {formatRelativeTime(post.timestamp, now)}
+          </time>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
+

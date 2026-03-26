@@ -1,0 +1,52 @@
+---
+/**
+ * The Scheftner Report — AFL Fantasy News Feed
+ * Thin wrapper around the shared feed components for the AFL league.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import ScheftnerFeed from '../../components/shared/ScheftnerFeed.astro';
+import { getAuthUser } from '../../utils/auth';
+import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
+import '../../styles/scheftner-feed.css';
+
+// AFL feed data lives in data/ (not src/data/)
+let feed: FeedType = { lastScanTimestamp: '', lastProcessedMflTimestamp: '0', posts: [] };
+try {
+  const raw = await import('../../../data/afl-fantasy/scheftner-feed.json');
+  feed = raw.default as FeedType;
+} catch {
+  // Feed not yet populated
+}
+
+const authUser = getAuthUser(Astro.request);
+const isAuthenticated = !!authUser;
+---
+
+<TheLeagueLayout title="The Scheftner Report">
+  <main class="sf-news-page">
+    <div class="sf-news-card">
+      <div class="sf-page-header">
+        <div class="sf-page-header__persona">
+          <img class="sf-page-header__avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="48" height="48" />
+          <div>
+            <h1 class="sf-page-header__name">Claude Schefter</h1>
+            <div class="sf-page-header__handle">@schefter</div>
+          </div>
+        </div>
+        <p class="sf-page-header__bio">
+          League insider. Beat reporter. Breaking trades and calling out overpays.
+        </p>
+      </div>
+
+      <div data-feed-container>
+        <ScheftnerFeed
+          posts={feed.posts}
+          isAuthenticated={isAuthenticated}
+          initialLimit={25}
+        />
+      </div>
+    </div>
+  </main>
+</TheLeagueLayout>
