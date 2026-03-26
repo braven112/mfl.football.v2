@@ -113,6 +113,24 @@ export default function IdeaComposer({ onSubmit, initialTitle, initialBody, init
 
   return (
     <div className="sb-composer" onKeyDown={handleKeyDown}>
+      {/* Category picker — shown first so users pick a type before writing */}
+      <div className="sb-composer__categories" role="radiogroup" aria-label="Idea category">
+        {CATEGORY_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            className={`sb-category-pill${category === opt.value ? ' sb-category-pill--active' : ''}`}
+            onClick={() => setCategory(opt.value)}
+            role="radio"
+            aria-checked={category === opt.value}
+            disabled={isSubmitting}
+          >
+            <svg className="sb-category-pill__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${opt.spriteId}`} /></svg>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <input
         className="sb-composer__title"
         type="text"
@@ -127,24 +145,6 @@ export default function IdeaComposer({ onSubmit, initialTitle, initialBody, init
 
       {expanded && (
         <>
-          {/* Category picker */}
-          <div className="sb-composer__categories" role="radiogroup" aria-label="Idea category">
-            {CATEGORY_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                className={`sb-category-pill${category === opt.value ? ' sb-category-pill--active' : ''}`}
-                onClick={() => setCategory(opt.value)}
-                role="radio"
-                aria-checked={category === opt.value}
-                disabled={isSubmitting}
-              >
-                <svg className="sb-category-pill__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${opt.spriteId}`} /></svg>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
           {isWebsite ? (
             /* ── Structured Website Suggestion Form ── */
             <div className="sb-ws-form">
