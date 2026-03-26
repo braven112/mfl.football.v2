@@ -27,7 +27,7 @@ interface Props {
   onBack: () => void;
   onEdit: (id: string, title: string, body: string) => Promise<boolean>;
   onDelete: (id: string) => void;
-  onAddComment: (ideaId: string, body: string, parentId?: string) => Promise<boolean>;
+  onAddComment: (ideaId: string, body: string, parentId?: string, imageUrls?: string[]) => Promise<boolean>;
   onEditComment: (commentId: string, body: string) => Promise<boolean>;
   onDeleteComment: (commentId: string) => void;
   onIdeaReaction: (ideaId: string, emoji: string) => void;
@@ -160,8 +160,8 @@ export default function IdeaDetail({
     if (ok) setEditing(false);
   };
 
-  const handleAddComment = async (body: string, parentId?: string) => {
-    return onAddComment(idea.id, body, parentId);
+  const handleAddComment = async (body: string, parentId?: string, imageUrls?: string[]) => {
+    return onAddComment(idea.id, body, parentId, imageUrls);
   };
 
   return (
@@ -347,7 +347,7 @@ export default function IdeaDetail({
 
         {isAuthenticated && !idea.locked && (
           <CommentComposer
-            onSubmit={body => handleAddComment(body)}
+            onSubmit={(body, imageUrls) => handleAddComment(body, undefined, imageUrls)}
             placeholder="Share your thoughts..."
           />
         )}
