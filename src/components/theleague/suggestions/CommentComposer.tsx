@@ -13,6 +13,7 @@ export default function CommentComposer({ onSubmit, placeholder, onCancel }: Pro
   const [body, setBody] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const autoResize = useCallback(() => {
@@ -29,8 +30,11 @@ export default function CommentComposer({ onSubmit, placeholder, onCancel }: Pro
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
+    setError(null);
+    const submitImageUrls = imageUrls.length > 0 ? imageUrls : undefined;
+    console.log('[CommentComposer] submitting:', { body: body.trim(), imageUrls: submitImageUrls });
     try {
-      const ok = await onSubmit(body.trim(), imageUrls.length > 0 ? imageUrls : undefined);
+      const ok = await onSubmit(body.trim(), submitImageUrls);
       if (ok) {
         setBody('');
         setImageUrls([]);

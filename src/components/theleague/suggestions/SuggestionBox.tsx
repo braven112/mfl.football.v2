@@ -136,13 +136,16 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
   }, []);
 
   const handleAddComment = useCallback(async (ideaId: string, body: string, parentId?: string, imageUrls?: string[]) => {
+    const payload = { ideaId, body, parentId, imageUrls };
+    console.log('[SuggestionBox] addComment payload:', payload);
     const res = await fetch(`/api/suggestions/ideas/${ideaId}/comments`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ideaId, body, parentId, imageUrls }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
+    console.log('[SuggestionBox] addComment response:', res.status, data);
     if (res.ok && data.comment) {
       setSelectedComments(prev => [...prev, data.comment]);
       // Update comment count
