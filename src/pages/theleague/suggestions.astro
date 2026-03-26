@@ -101,11 +101,14 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 
 <style>
   /* ── 2-Column Blog Layout (matches Ask Roger) ── */
+  main {
+    padding: var(--padding-md) var(--padding-lg) var(--padding-lg);
+  }
+
   .sb-page {
     display: grid;
     grid-template-columns: 1fr 260px;
     gap: 1.5rem;
-    padding: var(--padding-md) var(--padding-lg) var(--padding-lg);
     align-items: start;
   }
 
