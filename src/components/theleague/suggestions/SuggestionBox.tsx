@@ -149,6 +149,11 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
       setIdeas(prev => prev.map(i =>
         i.id === ideaId ? { ...i, commentCount: (i.commentCount || 0) + 1, lastActivityAt: new Date().toISOString() } : i
       ));
+      // Scroll to the new comment after render
+      setTimeout(() => {
+        const el = document.querySelector('.sb-thread__node:last-child');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
     }
     return res.ok;
   }, []);
