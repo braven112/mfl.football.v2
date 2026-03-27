@@ -1,10 +1,11 @@
 ---
 /**
  * ScheftnerWidget — Compact homepage widget showing last N posts.
- * Headlines + timestamps only, no reactions.
+ * Headlines + timestamps with author avatar, no reactions.
  * Links to the full news page.
  */
 import type { ScheftnerPost } from '../../types/scheftner';
+import { getAuthor, getAuthorAvatar } from '../../types/scheftner';
 import { formatRelativeTime } from '../../utils/scheftner-feed';
 import '../../styles/scheftner-feed.css';
 
@@ -18,9 +19,9 @@ const { posts, allNewsLink } = Astro.props;
 const now = new Date();
 ---
 
-<section class="sf-widget">
+<section class="sf-widget" aria-labelledby="sf-widget-title">
   <div class="sf-widget__header">
-    <h2 class="sf-widget__title">The Scheftner Report</h2>
+    <h2 class="sf-widget__title" id="sf-widget-title">League News</h2>
     <a href={allNewsLink} class="sf-widget__view-all">View all →</a>
   </div>
 
@@ -30,15 +31,17 @@ const now = new Date();
     </p>
   ) : (
     <div class="sf-widget__list">
-      {posts.map(post => (
-        <div class="sf-widget__item">
-          <span class="sf-widget__headline">{post.headline}</span>
-          <time class="sf-widget__item-time" datetime={post.timestamp}>
-            {formatRelativeTime(post.timestamp, now)}
-          </time>
-        </div>
-      ))}
+      {posts.map(post => {
+        const author = getAuthor(post.authorId);
+        const avatarSrc = getAuthorAvatar(author);
+        return (
+          <div class="sf-widget__item">
+            <img class="sf-widget__avatar" src={avatarSrc} alt="" aria-hidden="true" width="18" height="18" loading="lazy" />
+            <span class="sf-widget__headline">{post.headline}</span>
+            <time class="sf-widget__item-time" datetime={post.timestamp}>{formatRelativeTime(post.timestamp, now)}</time>
+          </div>
+        );
+      })}
     </div>
   )}
 </section>
-

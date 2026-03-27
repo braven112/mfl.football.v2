@@ -531,17 +531,292 @@ async function scanLeague(league) {
   return newPosts.length;
 }
 
+// ── ESPN Integration ──
+// NOTE: Parsing logic mirrors src/utils/espn-feed.ts but duplicated here because
+// this .mjs script runs directly via Node without a TypeScript build step.
+// If the ESPN API structure changes, update BOTH files.
+
+// All ESPN contributors to poll
+const ESPN_CONTRIBUTORS = [
+  { slug: 'adam-schefter', authorId: 'adam-schefter' },
+  { slug: 'mel-kiper-jr', authorId: 'mel-kiper' },
+  { slug: 'field-yates', authorId: 'field-yates' },
+  { slug: 'jeremy-fowler', authorId: 'jeremy-fowler' },
+  { slug: 'dan-graziano', authorId: 'dan-graziano' },
+  { slug: 'ben-solak', authorId: 'ben-solak' },
+  { slug: 'matt-miller', authorId: 'matt-miller' },
+  { slug: 'jordan-reid', authorId: 'jordan-reid' },
+  { slug: 'kalyn-kahler', authorId: 'kalyn-kahler' },
+  { slug: 'lindsey-thiry', authorId: 'lindsey-thiry' },
+];
+
+async function fetchEspnPosts(contributorSlug = 'adam-schefter') {
+  const url = `https://site.web.api.espn.com/apis/v2/flex?contributor=${contributorSlug}&limit=10&pubkey=contributor-page`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log(`  ESPN API returned ${res.status} — skipping`);
+      return [];
+    }
+    const data = await res.json();
+    const articles = [];
+
+    // Navigate: columns[middlecolumn].items[contributor-page].feed.{0,1,2,...}
+    const middle = (data.columns || []).find(c => c.name === 'middlecolumn');
+    const contribItem = (middle?.items || []).find(i => i.type === 'contributor-page');
+    const feed = contribItem?.feed || {};
+
+    for (const key of Object.keys(feed)) {
+      if (!/^\d+$/.test(key)) continue;
+      const item = feed[key];
+      const id = item.id;
+      const headline = item.descriptions?.headline || item.descriptions?.title;
+      const body = item.payload || headline || '';
+      const published = item.dates?.created;
+      const webLink = (item.links || []).find(l => l.rels?.includes('web'));
+
+      if (id && headline && published) {
+        articles.push({
+          id,
+          headline,
+          body,
+          published,
+          link: webLink?.href || `https://www.espn.com/contributor/${contributorSlug}/${id}`,
+        });
+      }
+    }
+
+    return articles;
+  } catch (err) {
+    console.log(`  ESPN fetch error: ${err.message}`);
+    return [];
+  }
+}
+
+function truncateAtSentence(text, maxLen) {
+  if (text.length <= maxLen) return text;
+  const chunk = text.slice(0, maxLen);
+  const lastPeriod = Math.max(chunk.lastIndexOf('. '), chunk.lastIndexOf('! '), chunk.lastIndexOf('? '));
+  if (lastPeriod > maxLen * 0.4) return chunk.slice(0, lastPeriod + 1);
+  const lastSpace = chunk.lastIndexOf(' ');
+  return chunk.slice(0, lastSpace > 0 ? lastSpace : maxLen) + '...';
+}
+
+function espnToPost(article, leagueSlug, authorId = 'adam-schefter') {
+  return {
+    id: `espn_${article.id}`,
+    timestamp: article.published,
+    type: 'external',
+    tier: 'standard',
+    headline: article.headline,
+    body: truncateAtSentence(article.body, 200),
+    link: article.link,
+    linkLabel: 'Read on ESPN →',
+    authorId,
+    franchiseIds: [],
+    league: leagueSlug,
+  };
+}
+
+async function scanEspn(league) {
+  console.log(`\n=== Scanning ESPN for ${league.slug} ===`);
+
+  const feed = await loadFeed(league.feedPath);
+  const watermark = feed.lastEspnTimestamp || '1970-01-01T00:00:00Z';
+  console.log(`  ESPN watermark: ${watermark}`);
+
+  const watermarkDate = new Date(watermark);
+  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  let allNewArticles = [];
+
+  // Poll all ESPN contributors
+  for (const contributor of ESPN_CONTRIBUTORS) {
+    const articles = await fetchEspnPosts(contributor.slug);
+    const newOnes = articles.filter(a => {
+      const pubDate = new Date(a.published);
+      return pubDate > watermarkDate && !feed.posts.some(p => p.id === `espn_${a.id}`);
+    });
+    if (newOnes.length > 0) {
+      console.log(`  ${contributor.slug}: ${newOnes.length} new`);
+      allNewArticles.push(...newOnes.map(a => ({ ...a, authorId: contributor.authorId })));
+    }
+  }
+
+  console.log(`  Total new ESPN articles: ${allNewArticles.length}`);
+  if (allNewArticles.length === 0) return 0;
+
+  // Sort oldest first
+  allNewArticles.sort((a, b) => new Date(a.published).getTime() - new Date(b.published).getTime());
+
+  const newPosts = allNewArticles.map(a => espnToPost(a, leagueSlug, a.authorId));
+
+  // Prepend new posts (newest first) and update watermark
+  feed.posts = [...newPosts.reverse(), ...feed.posts];
+  feed.lastEspnTimestamp = new Date(
+    Math.max(...allNewArticles.map(a => new Date(a.published).getTime()))
+  ).toISOString();
+
+  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  console.log(`  Wrote ${newPosts.length} ESPN posts. Feed total: ${feed.posts.length}`);
+  return newPosts.length;
+}
+
+// ── Ask Roger: Event Reminders ──
+// Commissioner Roger posts reminders at: 14 days, 7 days, 2 days, day-of.
+// Event tiers determine which touches fire: major=all 4, standard=7d+dayof, minor=dayof only.
+
+const REMINDER_TOUCHES = [
+  { id: '14d', daysOut: 14, minTier: 'major', postTier: 'standard' },
+  { id: '7d', daysOut: 7, minTier: 'standard', postTier: 'standard' },
+  { id: '2d', daysOut: 2, minTier: 'major', postTier: 'breaking' },
+  { id: 'dayof', daysOut: 0, minTier: 'minor', postTier: 'breaking' },
+];
+
+const TIER_RANK = { major: 3, standard: 2, minor: 1 };
+
+// ── Roger Template Pools ──
+
+const ROGER_14D = [
+  { h: '{event} — two weeks out', b: 'Mark your calendars. {name} is 14 days away. I shouldn\'t have to tell you this, but here we are.' },
+  { h: '{event} in two weeks', b: 'This is your two-week heads up for {name}. Start planning now or don\'t — I\'ll remind you again either way.' },
+  { h: 'Two weeks until {event}', b: 'Just a friendly reminder that {name} is coming up. "Friendly" is doing a lot of heavy lifting in that sentence.' },
+  { h: '{event} is 14 days away', b: 'Consider this your save-the-date for {name}. I know half of you won\'t read this until the day before.' },
+  { h: 'Heads up: {event} approaching', b: '{name} hits in two weeks. You\'ve been warned. No extensions, no exceptions, no excuses.' },
+  { h: 'The {event} countdown begins', b: 'We\'re officially two weeks from {name}. If you\'re not thinking about this yet, you\'re already behind.' },
+];
+
+const ROGER_7D = [
+  { h: 'One week until {event}', b: 'This is your one-week warning for {name}. If you haven\'t started preparing, I admire your confidence.' },
+  { h: '{event} — 7 days', b: '{name} is next week. Get your house in order. I will not be fielding "I didn\'t know" messages after the fact.' },
+  { h: '{event} is one week away', b: 'Seven days until {name}. This is the part where smart owners make their moves and everyone else panics later.' },
+  { h: 'Week out: {event}', b: 'We\'re a week from {name}. I\'ve done my part. The rest is on you. Literally.' },
+  { h: '{event} next week', b: '{name} lands next week. Some of you are prepared. The rest of you know who you are.' },
+  { h: 'T-minus 7 days: {event}', b: 'One week to {name}. I\'ll send one more reminder. After that, you\'re on your own.' },
+];
+
+const ROGER_2D = [
+  { h: '{event} — 2 days away', b: 'This is your second-to-last reminder about {name}. There will be exactly one more, and then I wash my hands of it.' },
+  { h: '{event} is in 48 hours', b: '{name} hits in two days. Whatever you need to do, do it now. Not tomorrow. Now.' },
+  { h: 'Final countdown: {event}', b: 'Two days until {name}. If you miss this, that\'s between you and your roster.' },
+  { h: '{event} — almost here', b: '{name} is practically knocking on the door. Last chance to get ready before it walks in uninvited.' },
+  { h: 'Two days: {event}', b: 'I\'m telling you now so you can\'t tell me later that nobody told you. {name}. Two days.' },
+  { h: '{event}: crunch time', b: '48 hours until {name}. Some of you will be ready. The rest will be in my DMs asking for an extension. The answer is no.' },
+];
+
+const ROGER_DAYOF = [
+  { h: 'TODAY: {event}', b: 'It\'s here. {name} is today. No more reminders. No more warnings. Handle your business.' },
+  { h: '{event} — it\'s go time', b: '{name} is happening right now. If you\'re reading this and haven\'t acted yet, close this and go.' },
+  { h: '{event} is LIVE', b: '{name} kicks off today. You\'ve had weeks of notice. Make it count.' },
+  { h: 'Game day: {event}', b: '{name} is officially underway. Good luck to those who prepared. Thoughts and prayers to those who didn\'t.' },
+  { h: '{event} has arrived', b: 'The day is here. {name}. Everything you\'ve been putting off? That bill comes due today.' },
+  { h: 'Right now: {event}', b: '{name} is live. I\'ve reminded you four times. My conscience is clear.' },
+];
+
+const ROGER_TEMPLATES = {
+  '14d': ROGER_14D,
+  '7d': ROGER_7D,
+  '2d': ROGER_2D,
+  'dayof': ROGER_DAYOF,
+};
+
+function pickRogerTemplate(touchId, eventId) {
+  const pool = ROGER_TEMPLATES[touchId];
+  // Deterministic selection based on event ID hash
+  const hash = eventId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return pool[hash % pool.length];
+}
+
+async function scanEventReminders(league) {
+  console.log(`\n=== Scanning event reminders for ${league.slug} ===`);
+
+  // Only TheLeague gets Ask Roger posts (AFL has different calendar)
+  if (league.slug !== 'theleague') {
+    console.log('  Skipping — Ask Roger is TheLeague only');
+    return 0;
+  }
+
+  // Read resolved events
+  const eventsPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
+  let eventsData;
+  try {
+    eventsData = JSON.parse(await fs.readFile(eventsPath, 'utf8'));
+  } catch {
+    console.log('  No resolved-events.json found. Run: node scripts/compute-league-events.mjs');
+    return 0;
+  }
+
+  const feed = await loadFeed(league.feedPath);
+  const now = new Date();
+  const newPosts = [];
+
+  for (const event of eventsData.events) {
+    if (event.isPast) continue;
+
+    for (const touch of REMINDER_TOUCHES) {
+      // Check if this event tier qualifies for this touch
+      if ((TIER_RANK[event.tier] || 0) < (TIER_RANK[touch.minTier] || 0)) continue;
+
+      // Check if we're in the right window (within 1 day of the target)
+      const targetDays = touch.daysOut;
+      if (event.daysUntil > targetDays + 1 || event.daysUntil < targetDays - 1) continue;
+
+      // Day-of: only fire when daysUntil is 0 or -1 (still same day)
+      if (touch.id === 'dayof' && event.daysUntil > 1) continue;
+
+      const postId = `roger_${event.id}_${touch.id}`;
+
+      // Dedup: skip if already posted
+      if (feed.posts.some(p => p.id === postId)) continue;
+
+      const template = pickRogerTemplate(touch.id, event.id);
+      const headline = template.h.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name);
+      const body = template.b.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name);
+
+      newPosts.push({
+        id: postId,
+        timestamp: now.toISOString(),
+        type: 'ask-roger',
+        tier: touch.postTier,
+        headline,
+        body,
+        link: '/theleague/calendar',
+        linkLabel: 'View calendar',
+        authorId: 'roger',
+        franchiseIds: [],
+        league: 'theleague',
+      });
+
+      console.log(`  [${touch.id}] ${headline}`);
+    }
+  }
+
+  if (newPosts.length === 0) {
+    console.log('  No reminders due');
+    return 0;
+  }
+
+  feed.posts = [...newPosts.reverse(), ...feed.posts];
+  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  console.log(`  Wrote ${newPosts.length} reminder posts. Feed total: ${feed.posts.length}`);
+  return newPosts.length;
+}
+
 // Run
 console.log('🎙️ Scheftner Scanner starting...');
 let totalPosts = 0;
 
 for (const league of LEAGUES) {
   try {
+    // Scan MFL transactions
     totalPosts += await scanLeague(league);
+    // Scan ESPN Adam Schefter
+    totalPosts += await scanEspn(league);
+    // Scan event reminders (Ask Roger)
+    totalPosts += await scanEventReminders(league);
   } catch (err) {
     console.error(`  Error scanning ${league.slug}:`, err.message);
   }
 }
 
 console.log(`\n✅ Done. Generated ${totalPosts} new posts.`);
-process.exit(totalPosts > 0 ? 0 : 0);
+process.exit(0);

@@ -15,11 +15,16 @@ export function getFeedPosts(
   options?: {
     limit?: number;
     franchiseId?: string;
+    authorId?: string;
     type?: ScheftnerPost['type'];
     transactionSubType?: string;
   },
 ): ScheftnerPost[] {
   let posts = feed.posts;
+
+  if (options?.authorId) {
+    posts = posts.filter(p => (p.authorId ?? 'claude') === options.authorId);
+  }
 
   if (options?.franchiseId) {
     posts = posts.filter(p => p.franchiseIds.includes(options.franchiseId!));

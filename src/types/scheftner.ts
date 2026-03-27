@@ -1,9 +1,136 @@
 // ── Scheftner Report Types ──
 
+// ── Author System ──
+
+/** A news feed author/contributor */
+export interface ScheftnerAuthor {
+  id: string;
+  name: string;
+  handle: string;
+  /** Avatar filename — resolved to /assets/scheftner/{avatar} or /assets/{avatar} */
+  avatar: string;
+  bio: string;
+  /** True for external sources (ESPN, etc.) — posts link out instead of showing inline */
+  external?: boolean;
+}
+
+/** Known authors — keyed by authorId */
+export const SCHEFTNER_AUTHORS: Record<string, ScheftnerAuthor> = {
+  claude: {
+    id: 'claude',
+    name: 'Claude Schefter',
+    handle: '@schefter',
+    avatar: 'claude-schefter-avatar.webp',
+    bio: 'League insider. Beat reporter. I\'m told I have the best sources in the building. Breaking trades, grading picks, and calling out overpays since 2026.',
+  },
+  'adam-schefter': {
+    id: 'adam-schefter',
+    name: 'Adam Schefter',
+    handle: '@AdamSchefter',
+    avatar: 'adam-schefter-avatar.webp',
+    bio: 'ESPN Senior NFL Insider. Host of The Adam Schefter Podcast.',
+    external: true,
+  },
+  'mel-kiper': {
+    id: 'mel-kiper',
+    name: 'Mel Kiper Jr.',
+    handle: '@MelKiperESPN',
+    avatar: 'mel-kiper-avatar.webp',
+    bio: 'ESPN NFL Draft Analyst. Big board season is year-round.',
+    external: true,
+  },
+  'field-yates': {
+    id: 'field-yates',
+    name: 'Field Yates',
+    handle: '@FieldYates',
+    avatar: 'field-yates-avatar.webp',
+    bio: 'ESPN NFL Insider.',
+    external: true,
+  },
+  'jeremy-fowler': {
+    id: 'jeremy-fowler',
+    name: 'Jeremy Fowler',
+    handle: '@JFowlerESPN',
+    avatar: 'jeremy-fowler-avatar.webp',
+    bio: 'ESPN Senior NFL National Reporter.',
+    external: true,
+  },
+  'dan-graziano': {
+    id: 'dan-graziano',
+    name: 'Dan Graziano',
+    handle: '@DanGraziano',
+    avatar: 'dan-graziano-avatar.webp',
+    bio: 'ESPN Senior NFL National Reporter.',
+    external: true,
+  },
+  'ben-solak': {
+    id: 'ben-solak',
+    name: 'Ben Solak',
+    handle: '@BenSolak',
+    avatar: 'ben-solak-avatar.webp',
+    bio: 'ESPN NFL Analyst.',
+    external: true,
+  },
+  'matt-miller': {
+    id: 'matt-miller',
+    name: 'Matt Miller',
+    handle: '@MattMillerNFL',
+    avatar: 'matt-miller-avatar.webp',
+    bio: 'ESPN NFL Draft Analyst.',
+    external: true,
+  },
+  'jordan-reid': {
+    id: 'jordan-reid',
+    name: 'Jordan Reid',
+    handle: '@JReidNFL',
+    avatar: 'jordan-reid-avatar.webp',
+    bio: 'ESPN NFL Draft Analyst.',
+    external: true,
+  },
+  'kalyn-kahler': {
+    id: 'kalyn-kahler',
+    name: 'Kalyn Kahler',
+    handle: '@KalynKahler',
+    avatar: 'kalyn-kahler-avatar.webp',
+    bio: 'ESPN NFL Reporter.',
+    external: true,
+  },
+  'lindsey-thiry': {
+    id: 'lindsey-thiry',
+    name: 'Lindsey Thiry',
+    handle: '@LindseyThiry',
+    avatar: 'lindsey-thiry-avatar.webp',
+    bio: 'ESPN NFL Reporter.',
+    external: true,
+  },
+  roger: {
+    id: 'roger',
+    name: 'Commissioner Roger',
+    handle: '@askroger',
+    avatar: 'commissioner-avatar.webp',
+    bio: 'League commissioner. Keeper of deadlines. Yes, I sent this reminder. No, I won\'t send another one.',
+  },
+};
+
+/** Resolve an authorId to its author config, defaulting to Claude */
+export function getAuthor(authorId?: string): ScheftnerAuthor {
+  return SCHEFTNER_AUTHORS[authorId ?? 'claude'] ?? SCHEFTNER_AUTHORS.claude;
+}
+
+/** Resolve avatar path for an author.
+ * Internal authors (Claude, Roger) live in /assets/. ESPN contributors in /assets/scheftner/. */
+export function getAuthorAvatar(author: ScheftnerAuthor): string {
+  if (author.external) return `/assets/scheftner/${author.avatar}`;
+  return `/assets/${author.avatar}`;
+}
+
+// ── Post Types ──
+
 /** Post types — MVP ships 'transaction' only; others architected for Phase 2 */
 export type ScheftnerPostType =
   | 'transaction'
   | 'article'
+  | 'external'
   | 'milestone'
   | 'power-ranking'
   | 'matchup-preview'
@@ -20,6 +147,9 @@ export type TransactionSubType =
 /** Visual treatment and content depth */
 export type PostTier = 'breaking' | 'standard' | 'minor';
 
+/** Feed category for filtering */
+export type ScheftnerCategory = 'transactions' | 'articles';
+
 /** A single Scheftner feed post */
 export interface ScheftnerPost {
   /** Unique ID: sf_{timestamp}_{hash} */
@@ -30,14 +160,22 @@ export interface ScheftnerPost {
   type: ScheftnerPostType;
   /** Transaction sub-type (only when type === 'transaction') */
   transactionSubType?: TransactionSubType;
+  /** Feed category for filtering (defaults to 'transactions') */
+  category?: ScheftnerCategory;
   /** Visual/content tier */
   tier: PostTier;
   /** Short headline (~60 chars, for card display and widget) */
   headline: string;
-  /** Post body (may contain HTML for bold/italic) */
+  /** Post body — excerpt for articles, full text for transactions */
   body: string;
   /** Scheftner hot take / trade grade (breaking tier only) */
   analysis?: string;
+  /** Full article content — array of HTML paragraph strings (articles only) */
+  content?: string[];
+  /** Featured image path relative to /assets/scheftner/ (articles only) */
+  image?: string;
+  /** Image alt text (articles only) */
+  imageAlt?: string;
   /** Franchise IDs involved (for "my team" filtering) */
   franchiseIds: string[];
   /** Player IDs involved (for linking to player modals) */
@@ -46,6 +184,8 @@ export interface ScheftnerPost {
   link?: string;
   /** Link CTA label */
   linkLabel?: string;
+  /** Author ID — defaults to 'claude' for backward compatibility */
+  authorId?: string;
   /** MFL transaction timestamp (Unix epoch string, for dedup) */
   sourceTimestamp?: string;
   /** League slug for multi-league support */
@@ -58,12 +198,14 @@ export interface ScheftnerFeed {
   lastScanTimestamp: string;
   /** MFL transaction timestamp watermark — only process newer transactions */
   lastProcessedMflTimestamp: string;
+  /** ESPN article timestamp watermark — only process newer articles */
+  lastEspnTimestamp?: string;
   /** All posts, newest first */
   posts: ScheftnerPost[];
 }
 
-/** Fixed reaction emoji set */
-export const SCHEFTNER_REACTIONS = ['🔥', '💰', '💩', '🏆', '📉', '💯', '🤔', '😂', '📈', '💉'] as const;
+/** Fixed reaction emoji set — ❤️ is the primary "like" action */
+export const SCHEFTNER_REACTIONS = ['❤️', '🔥', '💰', '💩', '🏆', '📉', '💯', '🤔', '😂', '📈', '💉'] as const;
 export type ScheftnerReaction = (typeof SCHEFTNER_REACTIONS)[number];
 
 /** Emoji → array of franchiseIds who reacted */

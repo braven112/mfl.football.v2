@@ -1,15 +1,21 @@
 ---
 /**
- * The Scheftner Report — TheLeague News Feed
+ * League News — Multi-source feed
  *
- * Bluesky-style social feed of league transactions, articles,
- * and hot takes from Claude Schefter.
+ * Bluesky-style social feed combining league transactions from Claude Schefter
+ * with real NFL news from ESPN's Adam Schefter.
+ *
+ * Filters:
+ *   ?source=claude   — League news only (shows Claude Schefter profile)
+ *   ?source=nfl      — NFL news only (shows Adam Schefter profile)
+ *   (default)        — All sources, mixed timeline
  */
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import ScheftnerFeed from '../../components/shared/ScheftnerFeed.astro';
 import { getAuthUser } from '../../utils/auth';
+import { getAuthor, getAuthorAvatar, SCHEFTNER_AUTHORS } from '../../types/scheftner';
 import feedData from '../../data/theleague/scheftner-feed.json';
 import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
 import '../../styles/scheftner-feed.css';
@@ -17,28 +23,86 @@ import '../../styles/scheftner-feed.css';
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 const feed = feedData as FeedType;
+
+// Source filter via ?source=claude|nfl|events
+const sourceParam = Astro.url.searchParams.get('source');
+const validSources = ['claude', 'nfl', 'events'] as const;
+type SourceFilter = typeof validSources[number];
+const activeSource: SourceFilter | null = validSources.includes(sourceParam as SourceFilter)
+  ? (sourceParam as SourceFilter)
+  : null;
+
+// ESPN external authors (all external: true authors)
+const espnAuthorIds = new Set(
+  Object.values(SCHEFTNER_AUTHORS).filter(a => a.external).map(a => a.id)
+);
+
+// Filter posts by source
+const filteredPosts = (() => {
+  if (!activeSource) return feed.posts;
+  if (activeSource === 'claude') return feed.posts.filter(p => (p.authorId ?? 'claude') === 'claude');
+  if (activeSource === 'nfl') return feed.posts.filter(p => espnAuthorIds.has(p.authorId ?? ''));
+  if (activeSource === 'events') return feed.posts.filter(p => (p.authorId ?? '') === 'roger');
+  return feed.posts;
+})();
+
+// Show profile header when filtered to a single-author source
+const singleAuthorSources: Record<string, string> = { claude: 'claude', events: 'roger' };
+const profileAuthor = activeSource && singleAuthorSources[activeSource]
+  ? getAuthor(singleAuthorSources[activeSource])
+  : null;
+const profileAvatar = profileAuthor ? getAuthorAvatar(profileAuthor) : null;
+
+// Build filter tab URLs
+const basePath = '/theleague/news';
+const tabs = [
+  { label: 'All', href: basePath, active: !activeSource },
+  { label: 'League News', href: `${basePath}?source=claude`, active: activeSource === 'claude' },
+  { label: 'NFL News', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' },
+  { label: 'Events', href: `${basePath}?source=events`, active: activeSource === 'events' },
+];
 ---
 
-<TheLeagueLayout title="The Scheftner Report">
+<TheLeagueLayout title="League News">
   <main class="sf-news-page">
     <div class="sf-news-card">
-      <div class="sf-page-header">
-        <div class="sf-page-header__persona">
-          <img class="sf-page-header__avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="48" height="48" />
-          <div>
-            <h1 class="sf-page-header__name">Claude Schefter</h1>
-            <div class="sf-page-header__handle">@schefter</div>
+      {/* Profile header — shown when filtered to a single source */}
+      {profileAuthor ? (
+        <div class="sf-page-header">
+          <div class="sf-page-header__persona">
+            <img class="sf-page-header__avatar" src={profileAvatar} alt="" aria-hidden="true" width="48" height="48" />
+            <div>
+              <h1 class="sf-page-header__name">{profileAuthor.name}</h1>
+              <div class="sf-page-header__handle">{profileAuthor.handle}</div>
+            </div>
           </div>
+          <p class="sf-page-header__bio">{profileAuthor.bio}</p>
         </div>
-        <p class="sf-page-header__bio">
-          League insider. Beat reporter. I'm told I have the best sources in the building.
-          Breaking trades, grading picks, and calling out overpays since 2026.
-        </p>
-      </div>
+      ) : (
+        <div class="sf-page-header sf-page-header--feed">
+          <h1 class="sf-page-header__name">League News</h1>
+          <p class="sf-page-header__bio">
+            League transactions, breaking NFL news, and hot takes — all in one feed.
+          </p>
+        </div>
+      )}
+
+      {/* Source filter tabs */}
+      <nav class="sf-source-tabs" aria-label="Filter news by source">
+        {tabs.map(tab => (
+          <a
+            href={tab.href}
+            class={`sf-source-tab${tab.active ? ' sf-source-tab--active' : ''}`}
+            {...(tab.active ? { 'aria-current': 'page' } : {})}
+          >
+            {tab.label}
+          </a>
+        ))}
+      </nav>
 
       <div data-feed-container>
         <ScheftnerFeed
-          posts={feed.posts}
+          posts={filteredPosts}
           isAuthenticated={isAuthenticated}
           initialLimit={25}
         />

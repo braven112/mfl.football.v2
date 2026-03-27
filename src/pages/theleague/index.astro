@@ -13,9 +13,6 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import whatsNewData from '../../data/whats-new.json';
 import { spriteUrl } from '../../utils/sprite-url';
-import ScheftnerWidget from '../../components/shared/ScheftnerWidget.astro';
-import scheftnerFeedData from '../../data/theleague/scheftner-feed.json';
-import type { ScheftnerFeed } from '../../types/scheftner';
 
 export const prerender = false;
 
@@ -133,14 +130,6 @@ const pages = {
     )}
 
     <WhatsNext demoDate={effectiveDate} />
-
-    {(scheftnerFeedData as ScheftnerFeed).posts.length > 0 && (
-      <ScheftnerWidget
-        posts={(scheftnerFeedData as ScheftnerFeed).posts.slice(0, 5)}
-        league="theleague"
-        allNewsLink={r('/theleague/news')}
-      />
-    )}
 
     {Object.entries(pages).map(([category, items]) => (
       <section class="page-category">

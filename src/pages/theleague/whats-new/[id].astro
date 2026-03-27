@@ -18,6 +18,9 @@ import {
   getAdjacentEntries,
 } from '../../../utils/whats-new-helpers';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import ScheftnerWidget from '../../../components/shared/ScheftnerWidget.astro';
+import type { ScheftnerFeed as FeedType } from '../../../types/scheftner';
+import scheftnerFeedData from '../../../data/theleague/scheftner-feed.json';
 
 export const prerender = false;
 
@@ -209,6 +212,17 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
             </div>
           </div>
 
+          <!-- League News widget -->
+          {(scheftnerFeedData as FeedType).posts.length > 0 && (
+            <div class="wn-detail__release-card">
+              <ScheftnerWidget
+                posts={(scheftnerFeedData as FeedType).posts.slice(0, 4)}
+                league="theleague"
+                allNewsLink={r('/theleague/news')}
+              />
+            </div>
+          )}
+
           <!-- More Updates card (prev/next) -->
           {(prev || next) && (
             <nav class="wn-detail__nav-card" aria-label="Previous and next entries">
@@ -262,8 +276,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   .wn-detail {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl, 2rem);
-    padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem);
+    gap: var(--spacing-md, 1rem);
+    padding: var(--spacing-md, 1rem) var(--spacing-md, 1rem);
     margin: 0 auto;
   }
 

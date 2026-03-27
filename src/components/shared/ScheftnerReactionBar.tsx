@@ -3,9 +3,13 @@ import { SCHEFTNER_REACTIONS } from '../../types/scheftner';
 
 /** Human-readable emoji names for screen readers */
 const EMOJI_LABELS: Record<string, string> = {
-  '🔥': 'fire', '💰': 'money', '💩': 'poop', '🏆': 'trophy', '📉': 'down trend',
-  '💯': 'hundred', '🤔': 'thinking', '😂': 'laughing', '📈': 'up trend', '💉': 'injection',
+  '❤️': 'like', '🔥': 'fire', '💰': 'money', '💩': 'poop', '🏆': 'trophy',
+  '📉': 'down trend', '💯': 'hundred', '🤔': 'thinking', '😂': 'laughing',
+  '📈': 'up trend', '💉': 'injection',
 };
+
+/** The primary "like" emoji — always visible */
+const LIKE_EMOJI = '❤️';
 
 interface Props {
   postId: string;
@@ -118,11 +122,32 @@ export default function ScheftnerReactionBar({
     }
   }, [postId, reactions, userReaction, isAuthenticated, loading]);
 
-  const activeEmojis = SCHEFTNER_REACTIONS.filter(e => (reactions[e] ?? 0) > 0);
-  const inactiveEmojis = SCHEFTNER_REACTIONS.filter(e => !activeEmojis.includes(e));
+  const likeCount = reactions[LIKE_EMOJI] ?? 0;
+  const isLiked = userReaction === LIKE_EMOJI;
+
+  // Other active emojis (excluding like, which has its own button)
+  const activeEmojis = SCHEFTNER_REACTIONS.filter(e => e !== LIKE_EMOJI && (reactions[e] ?? 0) > 0);
+  // Picker shows all non-like emojis
+  const pickerEmojis = SCHEFTNER_REACTIONS.filter(e => e !== LIKE_EMOJI);
 
   return (
     <div className="sf-reactions">
+      {/* Like button — always visible */}
+      <button
+        type="button"
+        className={`sf-reaction-like${isLiked ? ' sf-reaction-like--active' : ''}`}
+        onClick={() => handleToggle(LIKE_EMOJI)}
+        disabled={!isAuthenticated || loading}
+        aria-label={`Like, ${likeCount} like${likeCount === 1 ? '' : 's'}`}
+        aria-pressed={isLiked}
+      >
+        <svg className="sf-reaction-like__icon" width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+        {likeCount > 0 && <span className="sf-reaction-like__count">{likeCount}</span>}
+      </button>
+
+      {/* Other active emoji reactions */}
       {activeEmojis.map(emoji => (
         <button
           key={emoji}
@@ -138,6 +163,7 @@ export default function ScheftnerReactionBar({
         </button>
       ))}
 
+      {/* Emoji picker for additional reactions */}
       {isAuthenticated && (
         <div className="sf-reaction-add-wrap">
           <button
@@ -159,12 +185,27 @@ export default function ScheftnerReactionBar({
           </button>
 
           {pickerOpen && (
-            <div ref={pickerRef} className="sf-reaction-picker" role="group" aria-label="Choose a reaction">
-              {[...inactiveEmojis, ...activeEmojis].map(emoji => (
+            <div
+              ref={pickerRef}
+              className="sf-reaction-picker"
+              role="toolbar"
+              aria-label="Choose a reaction"
+              onKeyDown={(e) => {
+                const btns = Array.from(pickerRef.current?.querySelectorAll('button') ?? []) as HTMLButtonElement[];
+                const idx = btns.indexOf(e.target as HTMLButtonElement);
+                if (idx === -1) return;
+                let next = -1;
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (idx + 1) % btns.length;
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (idx - 1 + btns.length) % btns.length;
+                if (next >= 0) { e.preventDefault(); btns[next].focus(); }
+              }}
+            >
+              {pickerEmojis.map((emoji, i) => (
                 <button
                   key={emoji}
                   type="button"
                   className={`sf-reaction-picker__btn${emoji === userReaction ? ' sf-reaction-picker__btn--active' : ''}`}
+                  tabIndex={i === 0 ? 0 : -1}
                   onClick={() => {
                     handleToggle(emoji);
                     setPickerOpen(false);
