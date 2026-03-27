@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-27T04-40-50.435Z",
+  "snapshot": "2026-03-27T05-25-16.942Z",
   "week": "off-5",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-27T04:40:50.872Z",
+    "fetchedAt": "2026-03-27T05:25:17.358Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-5).",
-    "generatedAt": "2026-03-27T04:40:50.872Z"
+    "generatedAt": "2026-03-27T05:25:17.358Z"
   },
   "positions": {
     "WR": {
@@ -1405,16 +1405,22 @@
       ]
     },
     "Def": {
-      "totalPlayers": 30,
-      "top3Average": 1396500,
-      "top5Average": 1309800,
-      "top10Average": 1163200,
-      "starterAverage": 1053143.44,
-      "starterMedian": 995000,
+      "totalPlayers": 31,
+      "top3Average": 1613166.67,
+      "top5Average": 1454900,
+      "top10Average": 1253900,
+      "starterAverage": 1119284.06,
+      "starterMedian": 1025000,
       "starterCount": 16,
-      "averageSalary": 853940.67,
-      "medianSalary": 824312.5,
+      "averageSalary": 886878.06,
+      "medianSalary": 831875,
       "topPlayers": [
+        {
+          "id": "0512",
+          "name": "Chiefs, Kansas City",
+          "salary": 1875000,
+          "franchiseId": "0010"
+        },
         {
           "id": "0523",
           "name": "Packers, Green Bay",
