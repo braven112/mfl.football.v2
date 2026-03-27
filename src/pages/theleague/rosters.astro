@@ -64,6 +64,7 @@ import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
+import LineupContainer from '../../components/theleague/lineup/LineupContainer';
 
 // Weather icon mapping based on condition text
 const getWeatherIcon = (displayValue: string | undefined): string => {
@@ -2097,6 +2098,41 @@ try {
 const defaultLastSeen = ownerActivityMap[defaultTeamId] ?? null;
 const defaultActivityLevel = getActivityLevel(defaultLastSeen);
 const defaultLastSeenText = formatLastSeen(defaultLastSeen);
+
+// ─── Lineup Container Data ───
+// Build serialized player data for the LineupContainer React component.
+// Only when user is viewing their own team and is authenticated.
+const isOwnTeam = isLoggedIn && userFranchiseId === defaultTeamId;
+const lineupPlayers = isOwnTeam
+  ? (initialTeamData?.players ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      position: p.position === 'Def' ? 'DEF' : p.position,
+      nflTeam: p.nflTeam ?? p.team ?? '',
+      headshot: p.headshot ?? null,
+      projectedPoints: typeof p.projectedPoints === 'number' ? p.projectedPoints : parseFloat(p.projectedPoints) || 0,
+      opponent: p.gameOdds?.opponent ?? p.opponent ?? null,
+      isHome: p.gameOdds?.isHome ?? false,
+      spread: p.gameOdds?.spread ?? null,
+      overUnder: p.gameOdds?.overUnder ?? null,
+      avgRecent: typeof p.avgRecent === 'number' ? p.avgRecent : parseFloat(p.avgRecent) || null,
+      avgSeason: typeof p.avgSeason === 'number' ? p.avgSeason : parseFloat(p.avgSeason) || null,
+      kickoffTime: null, // TODO: Add from NFL schedule data
+      isLocked: false,
+      injuryStatus: p.injuryStatus ?? null,
+      byeWeek: p.byeWeek ?? null,
+      rosterStatus: (() => {
+        const slot = p.rosterSlot ?? p.status ?? 'ACTIVE';
+        if (slot === 'PRACTICE' || slot === 'TAXI_SQUAD') return 'TAXI_SQUAD';
+        if (slot === 'INJURED' || slot === 'INJURED_RESERVE') return 'INJURED_RESERVE';
+        return 'ROSTER';
+      })(),
+    }))
+  : [];
+const lineupPlayersJson = JSON.stringify(lineupPlayers);
+// Start with empty starters — LineupContainer will auto-optimize on mount
+const lineupStarterIdsJson = JSON.stringify([]);
+const mflFallbackUrl = `https://www.myfantasyleague.com/${getCurrentLeagueYear()}/options?L=13522&O=02`;
 ---
 
 <TheLeagueLayout title="Team Rosters">
@@ -2602,6 +2638,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         </span>
       </div>
       </div>
+
+      {/* Submit Lineup — shown in Coach Mode when viewing own team */}
+      {isOwnTeam && (
+        <div id="lineupContainer" class="lineup-mount" style="display: none;">
+          <LineupContainer
+            client:load
+            playersJson={lineupPlayersJson}
+            starterIdsJson={lineupStarterIdsJson}
+            currentWeek={currentWeekNum}
+            maxWeek={17}
+            isOwnTeam={isOwnTeam}
+            mflFallbackUrl={mflFallbackUrl}
+            teamName={teamsList.find(t => t.id === defaultTeamId)?.name}
+          />
+        </div>
+      )}
 
       <!-- Cap Subtotals Card -->
       <div class="chart-card chart-card--sub">
@@ -5747,6 +5799,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       // Handle trend weeks visibility separately
       updateTrendWeeksVisibility(mode);
+
+      // Show/hide lineup container in coach mode (only present when viewing own team)
+      const lineupMount = document.getElementById('lineupContainer');
+      const rosterTableCard = document.querySelector('.roster-table-card:not(.roster-table-card--sub)');
+      if (lineupMount) {
+        const userFranchise = config.authUser?.franchiseId;
+        const isOwnTeamNow = userFranchise && currentTeam === userFranchise;
+        const showLineup = mode === 'coach' && isOwnTeamNow;
+        lineupMount.style.display = showLineup ? 'block' : 'none';
+        // Hide the table when lineup is showing in coach mode for own team
+        if (rosterTableCard) {
+          (rosterTableCard as HTMLElement).style.display = showLineup ? 'none' : '';
+        }
+      }
 
       // Save preference
       localStorage.setItem('rosterViewMode', mode);
@@ -9379,6 +9445,19 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       // Handle trend weeks visibility separately
       updateTrendWeeksVisibility(currentMode);
+
+      // Show/hide lineup container based on coach mode + own team
+      const lineupMount = document.getElementById('lineupContainer');
+      const userFranchise = config.authUser?.franchiseId;
+      const isOwnTeamNow = userFranchise && currentTeam === userFranchise;
+      const rosterTableCard = document.querySelector('.roster-table-card:not(.roster-table-card--sub)');
+      if (lineupMount) {
+        const showLineup = currentMode === 'coach' && isOwnTeamNow;
+        lineupMount.style.display = showLineup ? 'block' : 'none';
+        if (rosterTableCard) {
+          (rosterTableCard as HTMLElement).style.display = showLineup ? 'none' : '';
+        }
+      }
 
       renderDeadMoney(seasonData, currentTeam);
 

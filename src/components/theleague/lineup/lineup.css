@@ -1,0 +1,685 @@
+/**
+ * Submit Lineup — CSS
+ * All tokens prefixed with --lineup-* referencing global design tokens with fallbacks.
+ * Mobile-first, editorial design standard.
+ */
+
+/* ──────────── Design Tokens ──────────── */
+
+.lineup-container {
+  --lineup-slot-font-size: 0.6875rem;
+  --lineup-slot-color: var(--color-gray-500, #6b7280);
+  --lineup-row-padding-x: 0.75rem;
+  --lineup-row-padding-y: 0.625rem;
+  --lineup-row-gap: 0.5rem;
+  --lineup-row-min-height: 3.5rem;
+  --lineup-row-border: 1px solid var(--color-gray-100, #f3f4f6);
+  --lineup-selected-border-color: var(--color-primary, #1c497c);
+  --lineup-swap-size: 2.75rem;
+  --lineup-swap-color: var(--color-gray-400, #9ca3af);
+  --lineup-swap-hover-bg: var(--color-gray-100, #f3f4f6);
+  --lineup-swap-hover-color: var(--color-primary, #1c497c);
+  --lineup-proj-size: 0.875rem;
+  --lineup-proj-weight: 600;
+  --lineup-proj-color: var(--color-gray-700, #374151);
+  --lineup-flash-color: rgba(34, 197, 94, 0.15);
+  --lineup-error-flash-color: rgba(239, 68, 68, 0.1);
+  --lineup-selected-bg-start: rgba(28, 73, 124, 0.06);
+  --lineup-selected-bg-end: rgba(28, 73, 124, 0.02);
+  --lineup-doubtful-bg: var(--color-orange-50, #fff7ed);
+  --lineup-doubtful-color: var(--color-orange-800, #9a3412);
+  --lineup-success-bg: var(--color-success-light, #f0fdf4);
+  --lineup-success-border: var(--color-success, #22c55e);
+  --lineup-success-color: var(--color-success, #22c55e);
+  --lineup-eligible-bg: rgba(28, 73, 124, 0.03);
+  --lineup-eligible-hover-bg: rgba(28, 73, 124, 0.06);
+  --lineup-player-avatar-size: 1.75rem;
+  --lineup-player-name-size: 0.8125rem;
+  --lineup-player-name-weight: 600;
+  --lineup-player-meta-size: 0.6875rem;
+  --lineup-bench-pos-size: 0.625rem;
+  --lineup-dimmed-opacity: 0.35;
+  --lineup-transition-fast: 0.15s ease;
+  --lineup-transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ──────────── Header ──────────── */
+
+.lineup-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem var(--lineup-row-padding-x);
+  border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+}
+
+.lineup-header__left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lineup-header__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.lineup-header__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lineup-slot-color);
+}
+
+.lineup-header__total {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-800, #1f2937);
+}
+
+.lineup-header__opponent {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-500, #6b7280);
+}
+
+/* ──────────── Week Selector ──────────── */
+
+.lineup-week-selector {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lineup-week-selector__select {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid var(--color-gray-200, #e5e7eb);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--primary-content-bg-color, #ffffff);
+  color: var(--color-gray-700, #374151);
+  min-height: 2.75rem;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.lineup-week-selector__chevron {
+  position: absolute;
+  right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-gray-400, #9ca3af);
+  pointer-events: none;
+}
+
+/* ──────────── Optimize Row ──────────── */
+
+.lineup-optimize-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem var(--lineup-row-padding-x);
+  border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+}
+
+.lineup-optimize-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--color-primary, #1c497c);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-radius: var(--radius-sm, 0.25rem);
+  cursor: pointer;
+  min-height: 2.75rem;
+  transition: background var(--lineup-transition-fast);
+}
+
+.lineup-optimize-btn:hover {
+  background: var(--color-primary-dark, #153a63);
+}
+
+.lineup-optimize-btn:active {
+  transform: scale(0.97);
+}
+
+.lineup-optimize-btn--undo {
+  background: var(--color-gray-100, #f3f4f6);
+  color: var(--color-gray-600, #4b5563);
+}
+
+.lineup-optimize-btn--undo:hover {
+  background: var(--color-gray-200, #e5e7eb);
+}
+
+.lineup-optimize-btn svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+/* ──────────── Section Title (Editorial Standard) ──────────── */
+
+.lineup-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--lineup-selected-border-color);
+  color: var(--color-gray-700, #374151);
+  margin: 1.25rem 0 0.5rem var(--lineup-row-padding-x);
+}
+
+/* ──────────── Player Row ──────────── */
+
+.lineup-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto auto;
+  align-items: center;
+  gap: var(--lineup-row-gap);
+  padding: var(--lineup-row-padding-y) var(--lineup-row-padding-x);
+  border-bottom: var(--lineup-row-border);
+  min-height: var(--lineup-row-min-height);
+  transition: background-color var(--lineup-transition-fast);
+}
+
+.lineup-row:hover {
+  background: var(--color-gray-50, #f9fafb);
+}
+
+/* Slot label (QB, RB, FLEX, etc.) */
+.lineup-slot {
+  font-size: var(--lineup-slot-font-size);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lineup-slot-color);
+  text-align: center;
+  line-height: 1;
+}
+
+/* Projected points */
+.lineup-proj {
+  font-size: var(--lineup-proj-size);
+  font-weight: var(--lineup-proj-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--lineup-proj-color);
+  text-align: right;
+  min-width: 2.5rem;
+}
+
+/* Opponent info (hidden on mobile) */
+.lineup-col-opponent,
+.lineup-col-ou,
+.lineup-col-trend,
+.lineup-col-avg {
+  display: none;
+  font-size: 0.75rem;
+  color: var(--color-gray-500, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────── Swap Button ──────────── */
+
+.lineup-swap-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--lineup-swap-size);
+  height: var(--lineup-swap-size);
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--lineup-swap-color);
+  cursor: pointer;
+  transition: all var(--lineup-transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.lineup-swap-btn:hover,
+.lineup-swap-btn:focus-visible {
+  background: var(--lineup-swap-hover-bg);
+  color: var(--lineup-swap-hover-color);
+}
+
+.lineup-swap-btn:focus-visible {
+  outline: 2px solid var(--lineup-selected-border-color);
+  outline-offset: 2px;
+}
+
+.lineup-swap-btn:active {
+  transform: scale(0.92);
+}
+
+.lineup-swap-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* ──────────── Selected State ──────────── */
+
+.lineup-row--selected {
+  background: linear-gradient(
+    90deg,
+    var(--lineup-selected-bg-start) 0%,
+    var(--lineup-selected-bg-end) 100%
+  );
+  border-left: 3px solid var(--lineup-selected-border-color);
+  padding-left: calc(var(--lineup-row-padding-x) - 3px);
+}
+
+.lineup-row--selected .lineup-swap-btn {
+  background: var(--lineup-selected-border-color);
+  color: white;
+  transform: rotate(90deg);
+}
+
+/* ──────────── Dimmed State (ineligible during swap) ──────────── */
+
+.lineup-row--dimmed {
+  opacity: var(--lineup-dimmed-opacity);
+  pointer-events: none;
+}
+
+/* ──────────── Swap Confirmation Flash ──────────── */
+
+@keyframes lineup-swap-flash {
+  0% { background-color: var(--lineup-flash-color); }
+  100% { background-color: transparent; }
+}
+
+.lineup-row--just-swapped {
+  animation: lineup-swap-flash 0.4s ease-out;
+}
+
+/* ──────────── Changed Indicator ──────────── */
+
+.lineup-row--changed {
+  border-left: 3px solid var(--color-warning, #eab308);
+  padding-left: calc(var(--lineup-row-padding-x) - 3px);
+}
+
+/* ──────────── Locked Player (game started) ──────────── */
+
+.lineup-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--lineup-swap-size);
+  height: var(--lineup-swap-size);
+  color: var(--color-gray-400, #9ca3af);
+  cursor: not-allowed;
+  flex-shrink: 0;
+}
+
+.lineup-lock svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* ──────────── BYE State ──────────── */
+
+.lineup-row--bye {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    var(--color-gray-50, #f9fafb) 4px,
+    var(--color-gray-50, #f9fafb) 8px
+  );
+}
+
+.lineup-bye-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-gray-500, #6b7280);
+  background: var(--color-gray-100, #f3f4f6);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-xs, 0.125rem);
+}
+
+/* ──────────── Empty Slot ──────────── */
+
+.lineup-row--empty {
+  border: 1px dashed var(--color-gray-300, #d1d5db);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--color-gray-50, #f9fafb);
+  margin: 0.25rem var(--lineup-row-padding-x);
+}
+
+.lineup-empty-label {
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: var(--color-gray-400, #9ca3af);
+}
+
+/* ──────────── Player Cell (compact lineup row) ──────────── */
+
+.lineup-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.lineup-player-cell__avatar {
+  width: var(--lineup-player-avatar-size);
+  height: var(--lineup-player-avatar-size);
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-gray-100, #f3f4f6);
+}
+
+.lineup-player-cell__avatar--def {
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+.lineup-player-cell__name {
+  font-size: var(--lineup-player-name-size);
+  font-weight: var(--lineup-player-name-weight);
+  color: var(--color-gray-800, #1f2937);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineup-player-cell__meta {
+  font-size: var(--lineup-player-meta-size);
+  color: var(--color-gray-500, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.lineup-slot--bench {
+  font-size: var(--lineup-bench-pos-size);
+}
+
+/* ──────────── Injury Badges ──────────── */
+
+.lineup-injury-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: var(--radius-xs, 0.125rem);
+  margin-left: 0.375rem;
+  line-height: 1.4;
+}
+
+.lineup-injury-badge--Q {
+  background: var(--color-warning-light, #fefce8);
+  color: var(--color-warning-dark, #854d0e);
+}
+
+.lineup-injury-badge--D {
+  background: var(--lineup-doubtful-bg);
+  color: var(--lineup-doubtful-color);
+}
+
+.lineup-injury-badge--O,
+.lineup-injury-badge--IR {
+  background: var(--color-error-light, #fef2f2);
+  color: var(--color-error-dark, #b91c1c);
+}
+
+/* ──────────── Validation Warning ──────────── */
+
+.lineup-warning,
+.lineup-validation-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem var(--lineup-row-padding-x);
+  background: var(--color-warning-light, #fefce8);
+  border: 1px solid var(--color-warning-border, #fde047);
+  border-radius: var(--radius-sm, 0.25rem);
+  font-size: 0.8125rem;
+  color: var(--color-warning-dark, #854d0e);
+}
+
+.lineup-warning svg {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-warning, #eab308);
+}
+
+/* ──────────── Bottom Action Bar ──────────── */
+
+.lineup-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  background: var(--primary-content-bg-color, #ffffff);
+  border-top: 1px solid var(--color-gray-200, #e5e7eb);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0.75rem 1rem;
+}
+
+.lineup-action-bar--error {
+  background: var(--color-error-light, #fef2f2);
+  border-top-color: var(--color-error, #dc2626);
+}
+
+.lineup-action-bar--success {
+  background: var(--lineup-success-bg);
+  border-top-color: var(--lineup-success-border);
+}
+
+.lineup-action-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lineup-action-bar__btn {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-gray-600, #4b5563);
+  background: none;
+  border: 1px solid var(--color-gray-300, #d1d5db);
+  border-radius: var(--radius-sm, 0.25rem);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  min-height: 2.75rem;
+  transition: all var(--lineup-transition-fast);
+}
+
+.lineup-action-bar__btn:hover:not(:disabled) {
+  background: var(--color-gray-50, #f9fafb);
+  border-color: var(--color-gray-400, #9ca3af);
+}
+
+.lineup-action-bar__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lineup-action-bar__btn--primary {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: white;
+  background: var(--color-primary, #1c497c);
+  border-color: var(--color-primary, #1c497c);
+  padding: 0.625rem 1.25rem;
+  min-height: 3rem;
+}
+
+.lineup-action-bar__btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-dark, #153a63);
+  border-color: var(--color-primary-dark, #153a63);
+}
+
+.lineup-action-bar__center {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-gray-500, #6b7280);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lineup-action-bar__center--error {
+  color: var(--color-error-dark, #b91c1c);
+}
+
+/* Spinner */
+.lineup-action-bar__spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--color-gray-300, #d1d5db);
+  border-top-color: var(--color-primary, #1c497c);
+  border-radius: 50%;
+  animation: lineup-spin 0.6s linear infinite;
+}
+
+/* Check mark */
+.lineup-action-bar__check {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--lineup-success-color);
+}
+
+@keyframes lineup-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ──────────── Error Fallback Banner ──────────── */
+
+.lineup-fallback-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem var(--lineup-row-padding-x);
+  background: var(--color-error-light, #fef2f2);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm, 0.25rem);
+  font-size: 0.8125rem;
+  color: var(--color-error-dark, #b91c1c);
+}
+
+.lineup-fallback-banner a {
+  color: var(--color-primary, #1c497c);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* ──────────── Responsive: Tablet (640px+) ──────────── */
+
+@media (min-width: 640px) {
+  .lineup-row {
+    grid-template-columns: 3rem 1fr 7rem auto auto;
+  }
+
+  .lineup-col-opponent {
+    display: block;
+  }
+}
+
+/* ──────────── Responsive: Desktop (1024px+) ──────────── */
+
+@media (min-width: 1024px) {
+  .lineup-row {
+    grid-template-columns: 3rem 1fr 7rem 3.5rem 3.5rem 3.5rem auto auto;
+  }
+
+  .lineup-col-ou,
+  .lineup-col-trend,
+  .lineup-col-avg {
+    display: block;
+  }
+}
+
+/* ──────────── Reduced Motion ──────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .lineup-row--just-swapped {
+    animation: none;
+    background-color: rgba(34, 197, 94, 0.1);
+    transition: background-color 0.01s;
+  }
+
+  .lineup-swap-btn:active {
+    transform: none;
+  }
+
+  .lineup-row--selected .lineup-swap-btn {
+    transform: none;
+  }
+
+  .lineup-action-bar {
+    transition: none;
+  }
+
+  .lineup-action-bar__spinner {
+    animation-duration: 1.5s;
+  }
+}
+
+/* ──────────── Eligible Target (bench player during swap) ──────────── */
+
+.lineup-row--eligible-target {
+  background: var(--lineup-eligible-bg);
+  border-left: 2px solid var(--color-primary, #1c497c);
+  padding-left: calc(var(--lineup-row-padding-x) - 2px);
+}
+
+.lineup-row--eligible-target:hover {
+  background: var(--lineup-eligible-hover-bg);
+}
+
+/* ──────────── Section Container ──────────── */
+
+.lineup-section {
+  margin-bottom: 0.25rem;
+}
+
+/* ──────────── Screen Reader Only ──────────── */
+
+.sr-only,
+.lineup-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ──────────── Lineup Mount (Astro integration) ──────────── */
+
+.lineup-mount {
+  background: var(--primary-content-bg-color, #ffffff);
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid var(--color-gray-200, #e5e7eb);
+  overflow: hidden;
+}

@@ -539,6 +539,62 @@ export class MFLMatchupApiClient {
   }
 
   /**
+   * Submit lineup to MFL (requires authentication).
+   * Uses mflFetch to handle MFL's cookie-stripping redirect.
+   *
+   * @param starterIds - Comma-separated player IDs (exactly 9 for TheLeague)
+   * @param week - Week number (no default — must be explicit)
+   * @returns { success, error? }
+   */
+  async setLineup(
+    starterIds: string[],
+    week: number,
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.mflUserId) {
+      return { success: false, error: 'Authentication required for lineup submission' };
+    }
+
+    try {
+      const importUrl = `${this.baseUrl}/${this.config.year}/import`;
+      const params = new URLSearchParams();
+      params.set('TYPE', 'lineup');
+      params.set('L', this.config.leagueId);
+      params.set('W', String(week));
+      params.set('STARTERS', starterIds.join(','));
+      // Do NOT send FRANCHISE_ID for regular owners — identity comes from cookie
+
+      const response = await mflFetch({
+        url: importUrl,
+        method: 'POST',
+        mflUserCookie: this.config.mflUserId,
+        body: params.toString(),
+        timeoutMs: 10_000,
+      });
+
+      const responseText = await response.text();
+
+      // MFL returns HTTP 200 even on errors — check body for error indicators
+      if (responseText.includes('<error>')) {
+        const errorMatch = responseText.match(/<error>(.*?)<\/error>/);
+        return { success: false, error: errorMatch?.[1] || 'Unknown MFL error' };
+      }
+
+      // HTML response typically means auth failure
+      if (responseText.includes('<html') || responseText.includes('<HTML')) {
+        return { success: false, error: 'Authentication failed — please sign in again' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to set lineup:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to set lineup',
+      };
+    }
+  }
+
+  /**
    * Submit IR move for a player (requires authentication)
    */
   async movePlayerToIR(playerId: string, franchiseId: string): Promise<boolean> {
