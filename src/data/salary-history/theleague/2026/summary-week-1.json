@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-27T17-17-22.197Z",
+  "snapshot": "2026-03-27T17-42-24.588Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,9 +15,9 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-27T17:17:22.193Z",
+    "fetchedAt": "2026-03-27T17:42:24.583Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-03-27T17:17:22.196Z"
+    "generatedAt": "2026-03-27T17:42:24.586Z"
   },
   "positions": {
     "WR": {
@@ -724,15 +724,15 @@
       ]
     },
     "RB": {
-      "totalPlayers": 83,
+      "totalPlayers": 84,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
       "starterAverage": 4047045.15,
       "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1853251.56,
-      "medianSalary": 660000,
+      "averageSalary": 1836248.57,
+      "medianSalary": 659422.5,
       "topPlayers": [
         {
           "id": "13130",
@@ -1229,6 +1229,12 @@
         {
           "id": "13133",
           "name": "Perine, Samaje",
+          "salary": 425000,
+          "franchiseId": "0004"
+        },
+        {
+          "id": "15254",
+          "name": "Harris, Najee",
           "salary": 425000,
           "franchiseId": "0004"
         }
