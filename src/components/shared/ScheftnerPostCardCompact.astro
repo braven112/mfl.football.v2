@@ -60,22 +60,21 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
     )}
 
     <div class="sfc-post__actions">
+      <ScheftnerReplyThread
+        client:idle
+        postId={post.id}
+        postHeadline={post.headline}
+        postAuthorId={post.authorId}
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        userTeamName={userTeamName}
+        userTeamIcon={userTeamIcon}
+      />
       <ScheftnerReactionBar
         client:visible
         postId={post.id}
         isAuthenticated={isAuthenticated}
       />
     </div>
-
-    <ScheftnerReplyThread
-      client:idle
-      postId={post.id}
-      postHeadline={post.headline}
-      postAuthorId={post.authorId}
-      isAuthenticated={isAuthenticated}
-      userFranchiseId={userFranchiseId}
-      userTeamName={userTeamName}
-      userTeamIcon={userTeamIcon}
-    />
   </div>
 </article>
