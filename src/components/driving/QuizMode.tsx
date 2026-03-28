@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { QuizQuestion, QuizState } from '../../types/driving-chat';
 
 interface Props {
@@ -17,6 +17,14 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
   });
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the result/explanation after answering
+  useEffect(() => {
+    if (quiz.isRevealed && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [quiz.isRevealed]);
 
   const fetchQuestion = useCallback(async () => {
     setLoadingQuiz(true);
@@ -142,6 +150,7 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
 
           {quiz.isRevealed && (
             <div
+              ref={resultRef}
               className={`dc-quiz__result${quiz.selectedAnswer === q.correctIndex ? ' dc-quiz__result--correct' : ' dc-quiz__result--wrong'}`}
               role="status"
               aria-live="polite"
