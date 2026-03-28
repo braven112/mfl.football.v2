@@ -950,6 +950,112 @@ https://api.myfantasyleague.com/2025/export?TYPE=salaryAdjustments&L=13522&JSON=
 
 ### I. Import Endpoints (Write Operations)
 
+#### `lineup` (Import) — WRITE ENDPOINT
+**Purpose:** Set the weekly starting lineup for a franchise. Completely overwrites any previously submitted lineup for that week.
+
+**Endpoint:**
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=lineup&L={LEAGUE_ID}
+```
+
+**Parameters (POST body, `application/x-www-form-urlencoded`):**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `TYPE` | Yes | Must be `lineup` |
+| `L` | Yes | League ID |
+| `W` | Yes | Week number (e.g., `14`) |
+| `STARTERS` | Yes | Comma-separated MFL player IDs — see format below |
+| `COMMENTS` | No | Short message saved with lineup submission |
+| `TIEBREAKERS` | No | For leagues using tiebreaker players only |
+| `BACKUPS` | No | Deprecated — no longer supported |
+| `FRANCHISE_ID` | No | Commissioner-only: act on behalf of another franchise |
+
+**Authentication:** Owner — requires `MFL_USER_ID` cookie. ALWAYS use `mflFetch()` from `src/utils/mfl-fetch.ts`, never raw `fetch()`, because `api.myfantasyleague.com` 302-redirects to `www49` and Node.js undici strips the Cookie header on cross-origin redirects.
+
+**STARTERS Format:**
+Comma-separated MFL player IDs, no position slot designations needed:
+```
+STARTERS=13592,13604,15255,14836,14974,13674,17104,11936,0532
+```
+MFL resolves position slots automatically. There is no "FLEX" or "OP" token in the STARTERS value — just player IDs.
+
+**Defense (DEF) player IDs:**
+Team defenses use a 4-digit ID with leading zero, e.g.:
+- `0532` = Houston Texans Defense
+- `0520` = Washington Commanders Defense
+- `0504` = New England Patriots Defense
+
+These are retrieved via `TYPE=players&DETAILS=1` where `position: "Def"`.
+
+**TheLeague (13522) Starter Requirements:**
+- Total: exactly 9 starters
+- QB: exactly 1
+- RB: 1–4
+- WR: 1–4
+- TE: 1–4
+- PK: exactly 1
+- Def: exactly 1
+- (The RB/WR/TE flex slots fill the remaining spots to reach 9)
+
+**Example Request:**
+```
+POST https://api.myfantasyleague.com/2026/import?TYPE=lineup&L=13522
+Content-Type: application/x-www-form-urlencoded
+Cookie: MFL_USER_ID={cookie}
+
+TYPE=lineup&L=13522&W=14&STARTERS=13592,13604,15255,14836,14974,13674,17104,11936,0532
+```
+
+**Response Format:**
+MFL returns HTTP 200 for both success and failure — must inspect body:
+```xml
+<!-- Success -->
+<status>OK</status>
+
+<!-- Failure -->
+<error>Some error description here</error>
+```
+Guard against HTML responses (login redirect when auth fails) and `<error>` tags.
+
+**Key Insights (added 2026-03-28):**
+- **Destructive overwrite** — submitting a lineup replaces any previously set lineup for that week
+- **No slot designations** — just send player IDs, MFL resolves positions automatically
+- **FLEX is implicit** — for TheLeague's flex-style roster (1-4 RB/WR/TE), just send 9 valid player IDs with the right position mix
+- **Future weeks are supported** — the `W` parameter accepts future week numbers; lineups lock when the first game of that week kicks off
+- **No dedicated read endpoint** — use `weeklyResults?W={week}` for submitted lineups (gives `starters` field as comma-separated IDs); the `rosters` endpoint does NOT show starter/bench distinction
+- **Commissioner impersonation** — pass `FRANCHISE_ID` in POST body and send both `MFL_USER_ID` + `MFL_IS_COMMISH` cookies
+- **Redirect behavior** — `api.myfantasyleague.com/import` POST does NOT redirect (unlike GET exports). The `mflFetch` utility handles this safely either way.
+
+**Reading Current Lineups:**
+The `weeklyResults` export is the only way to see submitted lineups via API:
+```
+GET https://api.myfantasyleague.com/{YEAR}/export?TYPE=weeklyResults&L=13522&W={week}&JSON=1
+```
+Response franchise object:
+```json
+{
+  "id": "0001",
+  "score": "82.62",
+  "starters": "13592,13604,15255,14836,14974,13674,17104,11936,0507,",
+  "nonstarters": "16617,16080,16610,16632,0513,11232,16778,13424,12658,16432,16642,",
+  "optimal": "17104,0507,11936,13592,13604,14836,13674,16610,15255,",
+  "player": [
+    { "id": "13592", "score": "8.08", "status": "starter", "shouldStart": "1" },
+    { "id": "16617", "score": "0.00", "status": "nonstarter", "shouldStart": "0" }
+  ]
+}
+```
+Note: `weeklyResults` only has data after the week is processed. For a live/current week, it may show partial scores.
+
+**Related:**
+- `src/utils/mfl-fetch.ts` — required for authenticated writes
+- `src/pages/api/move-to-ir.ts` — canonical simple write pattern
+- `src/pages/api/trades/submit.ts` — canonical mflFetch write pattern
+- `data/theleague/mfl-feeds/2025/league.json` → `starters` object for roster slot requirements
+
+---
+
 #### `moveToIR` (via /freeagency endpoint)
 **Purpose:** Move player to Injured Reserve
 
