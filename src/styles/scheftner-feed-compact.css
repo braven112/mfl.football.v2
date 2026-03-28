@@ -177,12 +177,23 @@
   border-radius: var(--radius-sm, 0.25rem);
 }
 
-/* ── Post Actions (reactions + reply toggle) ── */
+/* ── Post Actions (reply toggle + reactions on same line) ── */
 .sfc-post__actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.375rem;
+  flex-wrap: wrap;
+}
+
+/* Reply thread wrapper — toggle stays inline, expanded content spans full width */
+.sfc-post__actions .sfc-reply-thread {
+  display: contents;
+}
+
+.sfc-post__actions .sfc-replies {
+  flex-basis: 100%;
+  order: 99;
 }
 
 /* ── Reply Toggle Button ── */
