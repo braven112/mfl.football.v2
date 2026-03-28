@@ -11,7 +11,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { mflFetch } from '../../utils/mfl-fetch';
-import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeek } from '../../utils/current-week';
 
 const MFL_LEAGUE_ID = '13522';
@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ request }) => {
       return json({ error: 'Invalid week.' }, 400);
     }
 
-    const year = getCurrentSeasonYear();
+    const year = getCurrentLeagueYear();
 
     // Fetch rosters from MFL to get current starters
     const rostersUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`;
