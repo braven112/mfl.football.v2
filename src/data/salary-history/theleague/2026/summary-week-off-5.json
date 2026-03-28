@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-03-28T10-47-39.779Z",
+  "snapshot": "2026-03-28T11-17-22.562Z",
   "week": "off-5",
   "metadata": {
     "leagueId": "13522",
@@ -15,10 +15,10 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-03-28T10:47:39.955Z",
+    "fetchedAt": "2026-03-28T11:17:22.717Z",
     "isOffseason": true,
     "description": "Offseason salary snapshot (off-5).",
-    "generatedAt": "2026-03-28T10:47:39.955Z"
+    "generatedAt": "2026-03-28T11:17:22.717Z"
   },
   "positions": {
     "WR": {
@@ -1411,16 +1411,22 @@
       ]
     },
     "Def": {
-      "totalPlayers": 31,
-      "top3Average": 1613166.67,
-      "top5Average": 1454900,
-      "top10Average": 1253900,
-      "starterAverage": 1119284.06,
-      "starterMedian": 1025000,
+      "totalPlayers": 32,
+      "top3Average": 1970833.33,
+      "top5Average": 1717900,
+      "top10Average": 1407400,
+      "starterAverage": 1225104.38,
+      "starterMedian": 1062500,
       "starterCount": 16,
-      "averageSalary": 886878.06,
-      "medianSalary": 831875,
+      "averageSalary": 938069.38,
+      "medianSalary": 853437.5,
       "topPlayers": [
+        {
+          "id": "0511",
+          "name": "Broncos, Denver",
+          "salary": 2525000,
+          "franchiseId": "0008"
+        },
         {
           "id": "0512",
           "name": "Chiefs, Kansas City",
