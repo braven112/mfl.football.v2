@@ -99,6 +99,7 @@ function gradeColor(grade: string): string {
           {post.grades!.map((g: AuctionGrade) => (
             <div class="sf-grade-card" style={`--grade-accent: ${g.color || '#666'};`}>
               <div class="sf-grade-card__header">
+                <img class="sf-grade-card__icon" src={`/assets/theleague/icons/${g.franchiseId}.png`} alt="" width="36" height="36" />
                 <div class="sf-grade-card__team">
                   <span class="sf-grade-card__team-name">{g.teamName}</span>
                   <span class="sf-grade-card__headline">{g.headline}</span>
@@ -354,16 +355,22 @@ function gradeColor(grade: string): string {
     border: 1px solid var(--sf-border, #e5e7eb);
     border-radius: var(--radius-md, 0.5rem);
     overflow: hidden;
-    border-left: 3px solid var(--grade-accent, #666);
   }
 
   .sf-grade-card__header {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
     gap: 0.75rem;
     padding: 1rem 1rem 0.625rem;
     background: var(--color-gray-50, #f9fafb);
+    border-bottom: 2px solid var(--grade-accent, #666);
+  }
+
+  .sf-grade-card__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
   }
 
   .sf-grade-card__team {
@@ -371,6 +378,7 @@ function gradeColor(grade: string): string {
     flex-direction: column;
     gap: 0.125rem;
     min-width: 0;
+    flex: 1;
   }
 
   .sf-grade-card__team-name {
@@ -544,6 +552,11 @@ function gradeColor(grade: string): string {
 
     .sf-grade-card__header {
       padding: 0.75rem 0.75rem 0.5rem;
+    }
+
+    .sf-grade-card__icon {
+      width: 28px;
+      height: 28px;
     }
 
     .sf-grade-card__body {
