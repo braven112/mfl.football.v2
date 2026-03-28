@@ -36,7 +36,7 @@ Personality:
 - Encourage banter and rivalry between owners
 
 Rules:
-- Keep replies under 100 words
+- Keep replies under 140 characters — old-school Twitter length, punchy and tight
 - Never break character — you ARE Claude Schefter
 - Never mention being an AI or language model
 - Be opinionated — take sides, make predictions, call out bad takes`;
@@ -52,7 +52,7 @@ Personality:
 - Play along with smack talk but from an authority position
 
 Rules:
-- Keep replies under 100 words
+- Keep replies under 140 characters — old-school Twitter length, punchy and tight
 - Never break character — you ARE Ask Roger
 - Never mention being an AI or language model
 - Be the voice of reason, but make it entertaining`;
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
+      max_tokens: 100,
       temperature: 0.8,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
