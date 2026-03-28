@@ -15,11 +15,14 @@ import ScheftnerPostCard from './ScheftnerPostCard.astro';
 interface Props {
   posts: ScheftnerPost[];
   isAuthenticated?: boolean;
+  userFranchiseId?: string;
+  userTeamName?: string;
+  userTeamIcon?: string;
   /** Max posts to show initially (for pagination) */
   initialLimit?: number;
 }
 
-const { posts, isAuthenticated = false, initialLimit = 25 } = Astro.props;
+const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, initialLimit = 25 } = Astro.props;
 const now = new Date();
 ---
 
@@ -35,6 +38,9 @@ const now = new Date();
         <ScheftnerPostCard
           post={post}
           isAuthenticated={isAuthenticated}
+          userFranchiseId={userFranchiseId}
+          userTeamName={userTeamName}
+          userTeamIcon={userTeamIcon}
           now={now}
         />
       </div>

@@ -19,10 +19,28 @@ import { getAuthor, getAuthorAvatar, SCHEFTNER_AUTHORS } from '../../types/schef
 import feedData from '../../data/theleague/scheftner-feed.json';
 import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
 import '../../styles/scheftner-feed.css';
+import '../../styles/scheftner-feed-compact.css';
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
+const userFranchiseId = authUser?.franchiseId;
 const feed = feedData as FeedType;
+
+// Resolve team info for reply composer avatar
+let userTeamName: string | undefined;
+let userTeamIcon: string | undefined;
+
+if (userFranchiseId) {
+  try {
+    const config = await import('../../data/theleague.config.json');
+    const teams = config.default?.teams ?? config.teams ?? [];
+    const team = teams.find((t: { franchiseId: string }) => t.franchiseId === userFranchiseId);
+    if (team) {
+      userTeamName = team.name;
+      userTeamIcon = team.icon;
+    }
+  } catch { /* fallback gracefully */ }
+}
 
 // Source filter via ?source=claude|nfl|events
 const sourceParam = Astro.url.searchParams.get('source');
@@ -104,6 +122,9 @@ const tabs = [
         <ScheftnerFeed
           posts={filteredPosts}
           isAuthenticated={isAuthenticated}
+          userFranchiseId={userFranchiseId}
+          userTeamName={userTeamName}
+          userTeamIcon={userTeamIcon}
           initialLimit={25}
         />
       </div>
