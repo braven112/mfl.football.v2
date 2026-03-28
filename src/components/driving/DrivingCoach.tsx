@@ -31,11 +31,31 @@ export default function DrivingCoach() {
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  const announcerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (only if near bottom)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const body = chatBodyRef.current;
+    if (!body) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    const isNearBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 80;
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
+
+  // Announce mode changes to screen readers (C3)
+  useEffect(() => {
+    if (announcerRef.current) {
+      announcerRef.current.textContent = mode === 'chat'
+        ? 'Switched to Ask Billy chat mode'
+        : 'Switched to Quiz Mode';
+      const timer = setTimeout(() => { if (announcerRef.current) announcerRef.current.textContent = ''; }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [mode]);
 
   const generateId = () => 'msg_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
@@ -94,11 +114,15 @@ export default function DrivingCoach() {
 
   return (
     <div className="dc">
+      {/* Screen reader announcer for mode changes */}
+      <div ref={announcerRef} className="dc-visually-hidden" role="status" aria-live="polite" aria-atomic="true" />
+
       {/* Mode switcher */}
       <div className="dc__modes">
         <button
           className={`dc__mode-btn${mode === 'chat' ? ' dc__mode-btn--active' : ''}`}
           onClick={() => setMode('chat')}
+          aria-pressed={mode === 'chat'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -108,6 +132,7 @@ export default function DrivingCoach() {
         <button
           className={`dc__mode-btn${mode === 'quiz' ? ' dc__mode-btn--active' : ''}`}
           onClick={() => setMode('quiz')}
+          aria-pressed={mode === 'quiz'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3m.08 4h.01"/>
@@ -121,7 +146,7 @@ export default function DrivingCoach() {
         <div className="dc__main">
           {mode === 'chat' ? (
             <>
-              <div className="dc__chat-body" ref={chatBodyRef}>
+              <div className="dc__chat-body" ref={chatBodyRef} role="log" aria-label="Chat messages" aria-live="polite">
                 {messages.map((msg, i) => (
                   <ChatMessage
                     key={msg.id}
@@ -130,13 +155,13 @@ export default function DrivingCoach() {
                   />
                 ))}
                 {isLoading && (
-                  <div className="dc-msg dc-msg--assistant dc-msg--loading">
+                  <div className="dc-msg dc-msg--assistant" role="status" aria-label="Billy is typing">
                     <div className="dc-msg__avatar">
                       <img src="/assets/driving/billy-avatar.png" alt="Billy" width="36" height="36" />
                     </div>
                     <div className="dc-msg__bubble">
                       <span className="dc-msg__name">Billy</span>
-                      <div className="dc-msg__typing">
+                      <div className="dc-msg__typing" aria-hidden="true">
                         <span></span><span></span><span></span>
                       </div>
                     </div>
@@ -163,10 +188,10 @@ export default function DrivingCoach() {
         </div>
 
         {/* Sidebar */}
-        <aside className="dc__sidebar">
+        <aside className="dc__sidebar" aria-label="Study tools and resources">
           <div className="dc__billy-card">
             <img src="/assets/driving/billy-avatar.png" alt="Billy the driving coach" className="dc__billy-img" />
-            <h3 className="dc__billy-name">Billy</h3>
+            <h2 className="dc__billy-name">Billy</h2>
             <p className="dc__billy-title">Your Driving Coach</p>
             <p className="dc__billy-desc">
               Part horse, part crab, 100% committed to getting you that Washington State driver's license. 🏎️
@@ -180,7 +205,7 @@ export default function DrivingCoach() {
           />
 
           <div className="dc__test-info">
-            <h3 className="dc__info-title">WA Knowledge Test</h3>
+            <h2 className="dc__info-title">WA Knowledge Test</h2>
             <div className="dc__info-stats">
               <div className="dc__info-stat">
                 <span className="dc__info-stat-value">40</span>
@@ -198,12 +223,14 @@ export default function DrivingCoach() {
           </div>
 
           <div className="dc__resources">
-            <h3 className="dc__info-title">Resources</h3>
-            <a href="https://dol.wa.gov/driver-licenses-and-permits/driver-training-and-testing/driver-guides/washington-state-driver-guide-text-only" target="_blank" rel="noopener" className="dc__resource-link">
+            <h2 className="dc__info-title">Resources</h2>
+            <a href="https://dol.wa.gov/driver-licenses-and-permits/driver-training-and-testing/driver-guides/washington-state-driver-guide-text-only" target="_blank" rel="noopener noreferrer" className="dc__resource-link">
               📖 Official WA Driver Guide
+              <span className="dc-visually-hidden"> (opens in a new tab)</span>
             </a>
-            <a href="https://dol.wa.gov/driver-licenses-and-permits/driver-training-and-testing/practice-knowledge-test" target="_blank" rel="noopener" className="dc__resource-link">
+            <a href="https://dol.wa.gov/driver-licenses-and-permits/driver-training-and-testing/practice-knowledge-test" target="_blank" rel="noopener noreferrer" className="dc__resource-link">
               📝 DOL Practice Test
+              <span className="dc-visually-hidden"> (opens in a new tab)</span>
             </a>
           </div>
         </aside>

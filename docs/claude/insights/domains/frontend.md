@@ -242,3 +242,50 @@ Future franchise rebrandings just need a new history entry added to the config.
 ```
 
 **Evidence:** `src/pages/theleague/salary.astro` — editorial table with JS-injected player rows.
+
+---
+
+## 2026-03-27 - Server-Only Data Files Are Safe from Client Bundle (API Routes)
+
+**Context:** Performance review of the `/driving` Billy chatbot page. Key question: does `wa-driver-guide.ts` (~19KB) or `driving-quiz-bank.ts` (~33KB) land in the client JavaScript bundle?
+
+**Insight:** Files imported exclusively by API routes (`src/pages/api/*.ts`) are compiled as pure server-side Node/Edge functions by Astro + Vercel. They never enter the client bundle regardless of file size. Vite's module graph treats API routes as separate server entry points with no client-side chunk. This can be verified by tracing the import graph: if a module's only importers are `src/pages/api/` files, it is server-only.
+
+**Evidence:** `src/data/wa-driver-guide.ts` is only imported by `src/pages/api/driving-chat.ts`. `src/data/driving-quiz-bank.ts` is only imported by the same file. Neither appears in client chunks.
+
+**Recommendation:** When auditing data file bundle risk, check the importer list. API route imports = server-only, always. The risk pattern to watch for is a data file imported by BOTH an API route AND a React component — in that case, the full file lands in the client bundle even if the component only uses a subset of the data.
+
+---
+
+## 2026-03-27 - Inline CSS Blocks Cannot Be Cached Independently of HTML
+
+**Context:** `/driving` page has 863 lines of CSS in a single `<style is:global>` block inside the `.astro` file.
+
+**Insight:** CSS inside Astro `<style>` tags (including `is:global`) is emitted as a `<style>` tag in the HTML response, not as a separate file. This means it travels with the HTML on every request and cannot be cached independently. Extracting large CSS to a static file (SCSS or `.css` imported in frontmatter) causes Astro to emit a `<link rel="stylesheet" href="/_astro/file.hash.css">` with a content-hashed URL — making it immutable and cacheable for as long as the content doesn't change.
+
+**Rule of thumb:** Any standalone-page `<style>` block over ~100 lines is a candidate for extraction. Pages that could be prerendered benefit especially because the CDN caches the full HTML (CSS included), partially mitigating the issue — but separately-cached CSS still wins on repeat visits.
+
+**Evidence:** `src/pages/driving.astro` lines 36–899 (863-line inline block). Pattern fix: create `src/styles/driving.css`, import in frontmatter.
+
+---
+
+## 2026-03-27 - Static Page Shells Can Be Prerendered Even When API Routes Are SSR
+
+**Context:** `/driving` uses `prerender = false`, but the page shell HTML is 100% static (no auth, no SSR data). All dynamism lives in the `/api/driving-chat` API route.
+
+**Insight:** `prerender = true` on a page shell and a server-rendered API route are fully independent in Astro + Vercel. The page HTML can be served from CDN edge (prerendered) while the API function runs on Node/Edge at request time. A standalone chatbot, tool, or form page that uses `client:load` for all interactivity almost always qualifies for `prerender = true` on the shell — the interactive content is handled by React hydration + API calls, not by SSR.
+
+**Decision rule:** If a page's frontmatter has zero runtime data fetches (no `Astro.request`, no auth checks, no dynamic Astro.props), it should be `prerender = true`. The presence of an API route on the same page is irrelevant.
+
+**Evidence:** `src/pages/driving.astro` — 35 lines of markup, all static. `src/pages/api/driving-chat.ts` — server function, unaffected by page prerender setting.
+
+---
+
+## 2026-03-27 - In-Memory Rate Limiting Is Non-Functional on Vercel Serverless
+
+**Context:** `src/pages/api/driving-chat.ts` uses a module-level `Map<string, { count: number; resetAt: number }>` for IP-based rate limiting.
+
+**Insight:** Vercel serverless functions are stateless — each invocation may run in a fresh instance with no shared memory. Module-level state (Maps, variables set at module scope) persists only within a single warm instance. Under any meaningful traffic, the rate limiting Map will be empty on most requests, making the rate limit effectively non-functional. This is a correctness issue, not a performance issue. Production rate limiting for Vercel deployments requires an external store (Redis via Upstash, KV, or similar) or Vercel's built-in edge middleware rate limiting.
+
+**Recommendation:** Document the limitation with a comment, or implement rate limiting at the edge middleware layer (`middleware.ts`) using `Astro.locals` + an external KV store.
+

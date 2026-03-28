@@ -16,9 +16,11 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
     topicFilter: null,
   });
   const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
 
   const fetchQuestion = useCallback(async () => {
     setLoadingQuiz(true);
+    setQuizError(null);
     try {
       const res = await fetch('/api/driving-chat', {
         method: 'POST',
@@ -35,7 +37,7 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
         }));
       }
     } catch {
-      // silently fail — user can retry
+      setQuizError('Couldn\'t load a question. Check your connection and try again.');
     } finally {
       setLoadingQuiz(false);
     }
@@ -73,12 +75,14 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
         <div className="dc-quiz__score">
           <span className="dc-quiz__score-label">Score</span>
           <span className="dc-quiz__score-value">
-            {quiz.score.correct}/{quiz.score.total}
-            {quiz.score.total > 0 && (
-              <span className="dc-quiz__score-pct">
-                {' '}({Math.round((quiz.score.correct / quiz.score.total) * 100)}%)
-              </span>
-            )}
+            {quiz.score.total > 0 ? (
+              <>
+                {quiz.score.correct}/{quiz.score.total}
+                <span className="dc-quiz__score-pct">
+                  {' '}({Math.round((quiz.score.correct / quiz.score.total) * 100)}%)
+                </span>
+              </>
+            ) : '—'}
           </span>
           {quiz.score.total > 0 && (
             <span className="dc-quiz__score-note">
@@ -91,23 +95,32 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
           onClick={fetchQuestion}
           disabled={loadingQuiz}
         >
-          {loadingQuiz ? 'Loading...' : q ? 'Next Question →' : '🎯 Start Quiz'}
+          {loadingQuiz ? 'Loading...' : q ? (quiz.isRevealed ? 'Next Question →' : 'Skip →') : '🎯 Start Quiz'}
         </button>
       </div>
+
+      {quizError && (
+        <div className="dc-quiz__error" role="alert">⚠️ {quizError}</div>
+      )}
 
       {q ? (
         <div className="dc-quiz__question-card">
           <div className="dc-quiz__topic-badge">{q.source}</div>
           <p className="dc-quiz__question-text">{q.question}</p>
-          <div className="dc-quiz__options">
+          <div className="dc-quiz__options" role="group" aria-label="Answer options">
             {q.options.map((opt, i) => {
               let className = 'dc-quiz__option';
+              let ariaLabel = opt;
               if (quiz.isRevealed) {
-                if (i === q.correctIndex) className += ' dc-quiz__option--correct';
-                else if (i === quiz.selectedAnswer) className += ' dc-quiz__option--wrong';
-                else className += ' dc-quiz__option--dimmed';
-              } else if (i === quiz.selectedAnswer) {
-                className += ' dc-quiz__option--selected';
+                if (i === q.correctIndex) {
+                  className += ' dc-quiz__option--correct';
+                  ariaLabel = `${opt} — Correct answer`;
+                } else if (i === quiz.selectedAnswer) {
+                  className += ' dc-quiz__option--wrong';
+                  ariaLabel = `${opt} — Your answer, incorrect`;
+                } else {
+                  className += ' dc-quiz__option--dimmed';
+                }
               }
 
               return (
@@ -116,6 +129,7 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
                   className={className}
                   onClick={() => handleAnswer(i)}
                   disabled={quiz.isRevealed}
+                  aria-label={ariaLabel}
                 >
                   <span className="dc-quiz__option-letter">
                     {String.fromCharCode(65 + i)}
@@ -127,7 +141,12 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
           </div>
 
           {quiz.isRevealed && (
-            <div className={`dc-quiz__result${quiz.selectedAnswer === q.correctIndex ? ' dc-quiz__result--correct' : ' dc-quiz__result--wrong'}`}>
+            <div
+              className={`dc-quiz__result${quiz.selectedAnswer === q.correctIndex ? ' dc-quiz__result--correct' : ' dc-quiz__result--wrong'}`}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               <p className="dc-quiz__result-icon">
                 {quiz.selectedAnswer === q.correctIndex ? '🎯 Nailed it!' : '💡 Not quite — here\'s why:'}
               </p>

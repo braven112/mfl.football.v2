@@ -144,6 +144,44 @@ export const QUIZ_BANK: QuizQuestion[] = [
     source: 'Right of Way — Intersections',
   },
 
+  // ── Intersections & Turns ──
+  {
+    id: 'inter-01',
+    topic: 'intersections',
+    question: 'When making a left turn at an intersection with no arrow signal, you should:',
+    options: ['Turn quickly before oncoming traffic arrives', 'Enter the intersection, wait for a gap in oncoming traffic, then complete the turn', 'Wait behind the stop line until all oncoming traffic clears', 'Honk to signal oncoming traffic to let you through'],
+    correctIndex: 1,
+    explanation: 'On a green light with no arrow, you may enter the intersection and wait for a safe gap in oncoming traffic to complete your left turn. If the light turns yellow/red while you\'re in the intersection, complete the turn — don\'t back up!',
+    source: 'Intersections — Left Turns',
+  },
+  {
+    id: 'inter-02',
+    topic: 'intersections',
+    question: 'When can you legally make a U-turn in Washington?',
+    options: ['Anywhere as long as it\'s safe', 'Only at intersections with a green light, unless a sign prohibits it', 'Only where there\'s a "U-turn allowed" sign', 'Never on a highway'],
+    correctIndex: 1,
+    explanation: 'U-turns are legal at intersections with a green light unless a "No U-Turn" sign is posted. Never make a U-turn on a curve, hill, freeway, or anywhere you can\'t see 500+ feet in both directions.',
+    source: 'Intersections — U-Turns',
+  },
+  {
+    id: 'inter-03',
+    topic: 'intersections',
+    question: 'At a T-intersection (where your road ends), who has the right of way?',
+    options: ['The driver on the terminating road (you)', 'Traffic on the through road', 'Whoever arrives first', 'The driver turning right'],
+    correctIndex: 1,
+    explanation: 'Traffic on the through (continuing) road always has the right of way at a T-intersection. If your road ends at the T, you must yield to all traffic on the cross street before turning.',
+    source: 'Intersections — T-Intersections',
+  },
+  {
+    id: 'inter-04',
+    topic: 'intersections',
+    question: 'You are turning right on a red light. You must:',
+    options: ['Yield to pedestrians only', 'Come to a complete stop, yield to all traffic and pedestrians, then turn if safe', 'Slow down and turn when traffic clears', 'Wait for the light to turn green'],
+    correctIndex: 1,
+    explanation: 'Right on red requires a COMPLETE stop first (treat it like a stop sign), then yield to ALL traffic and pedestrians before turning. Some intersections have "No Turn on Red" signs — always check! Left on red is only allowed from a one-way street onto another one-way street.',
+    source: 'Intersections — Right on Red',
+  },
+
   // ── Speed Limits ──
   {
     id: 'speed-01',

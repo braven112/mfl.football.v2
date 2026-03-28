@@ -46,6 +46,7 @@ export default function ChatInput({ onSubmit, isLoading, placeholder = 'Ask Bill
           onInput={handleInput}
           disabled={isLoading}
           aria-label="Type your driving question"
+          aria-describedby="dc-chat-input-hint"
         />
         <button
           className="dc-input__send"
@@ -65,7 +66,7 @@ export default function ChatInput({ onSubmit, isLoading, placeholder = 'Ask Bill
           )}
         </button>
       </div>
-      <p className="dc-input__hint">Press Enter to send · Shift+Enter for new line</p>
+      <p id="dc-chat-input-hint" className="dc-input__hint">Press Enter to send · Shift+Enter for new line</p>
     </div>
   );
 }

@@ -39,7 +39,13 @@ function renderContent(text: string): React.ReactNode[] {
         if (earliest.index > 0) parts.push(remaining.slice(0, earliest.index));
 
         if (earliest.type === 'link') {
-          parts.push(<a key={key++} href={earliest.match[2]} target="_blank" rel="noopener">{earliest.match[1]}</a>);
+          const url = earliest.match[2];
+          const isSafeUrl = /^https?:\/\//i.test(url) || url.startsWith('/');
+          if (isSafeUrl) {
+            parts.push(<a key={key++} href={url} target="_blank" rel="noopener noreferrer">{earliest.match[1]}</a>);
+          } else {
+            parts.push(<span key={key++}>{earliest.match[1]}</span>);
+          }
         } else if (earliest.type === 'bold') {
           parts.push(<strong key={key++}>{earliest.match[1]}</strong>);
         } else {

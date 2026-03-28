@@ -41,7 +41,7 @@ export type DrivingTopic = {
 };
 
 export interface DrivingChatRequest {
-  message: string;
+  message?: string;
   mode: 'chat' | 'quiz';
   /** For quiz mode: topic filter */
   topic?: string;

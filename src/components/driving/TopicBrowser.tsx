@@ -10,7 +10,7 @@ interface Props {
 export default function TopicBrowser({ topics, onSelectTopic, activeTopic }: Props) {
   return (
     <div className="dc-topics">
-      <h3 className="dc-topics__title">Study Topics</h3>
+      <h2 className="dc-topics__title">Study Topics</h2>
       <div className="dc-topics__grid">
         {topics.map(topic => (
           <button

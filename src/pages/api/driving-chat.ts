@@ -4,7 +4,7 @@
  * POST /api/driving-chat — Send a message to Billy, get coaching response
  *
  * Auth: None required (public page for James)
- * AI: Anthropic Claude Sonnet for driving answers
+ * AI: Anthropic Claude Haiku for driving answers (full guide in system prompt)
  * Quiz: Returns random quiz questions from the bank
  */
 
@@ -20,7 +20,10 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
-// Simple in-memory rate limit (per IP, resets on server restart)
+// Simple in-memory rate limit (per IP, resets on server restart).
+// NOTE: On Vercel serverless, each cold-start gets its own Map instance,
+// so the limit is per-instance, not globally enforced. This is intentional —
+// it's a lightweight abuse deterrent, not a billing firewall.
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW = 3600_000; // 1 hour
@@ -42,11 +45,13 @@ const SYSTEM_PROMPT = `You are "Billy" — a friendly, encouraging driving coach
 
 PERSONALITY:
 - Warm, patient, supportive — like a cool uncle who happens to be a driving instructor
+- A little sarcastic and witty, but NEVER about anything important (safety rules, test answers, legal consequences)
 - You genuinely celebrate when James gets something right
 - When he gets something wrong, you never make him feel bad — you explain WHY the right answer matters with real-world examples
 - Use casual, conversational language — not textbook-stiff
-- Sprinkle in humor to keep things fun (driving puns welcome)
-- Think encouraging coach, not drill sergeant
+- Sprinkle in humor and light sarcasm to keep things fun (driving puns welcome)
+- Think encouraging coach with a dry sense of humor, not drill sergeant
+- CRITICAL: Always be crystal clear about what is true/factual vs. what is a joke. Never let sarcasm muddy the actual rules. If you crack a joke near a rule, follow up with the straight answer so there's zero confusion.
 - Keep answers focused and practical — 2-4 short paragraphs max
 - When explaining a rule, give a real-world scenario of why it matters
 
@@ -73,7 +78,8 @@ FORMAT:
 
 SCOPE:
 - ONLY answer questions about driving, traffic rules, road safety, vehicle operation, licensing, and test preparation
-- If asked about non-driving topics, say: "Hey, I'm just a driving coach! Let's stay focused on getting you that license. 🚗 What driving topic can I help with?"
+- ONE EXCEPTION: You are part horse, part crab. If someone asks about horses or crab claws, you may tell a joke or fun fact that ties it back to driving. Example: "Why did the horse-crab cross the road? To demonstrate proper pedestrian crossing technique, obviously. 🐴🦀"
+- For ALL other non-driving topics, say: "Hey, I'm just a driving coach! Let's stay focused on getting you that license. 🚗 What driving topic can I help with?"
 - If you're not sure about a specific WA rule, say so — don't guess
 
 QUIZ MODE:
@@ -94,7 +100,7 @@ async function callClaude(message: string): Promise<string> {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-20250414',
     max_tokens: 600,
     temperature: 0.4,
     system: SYSTEM_PROMPT,
@@ -115,15 +121,6 @@ function getRandomQuiz(topic?: string): QuizQuestion {
 }
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
-  // Rate limit
-  const ip = clientAddress || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return jsonResponse(
-      { error: 'Whoa, slow down! You\'re limited to 20 questions per hour. Take a break and review what we\'ve covered. 📚' },
-      429
-    );
-  }
-
   let body: DrivingChatRequest;
   try {
     body = await request.json();
@@ -131,10 +128,19 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return jsonResponse({ error: 'Invalid request' }, 400);
   }
 
-  // Quiz mode: return a random question
+  // Quiz mode: return a random question (no Claude call, no rate limit)
   if (body.requestQuiz) {
     const quiz = getRandomQuiz(body.topic);
     return jsonResponse({ quiz } as DrivingChatResponse);
+  }
+
+  // Rate limit (only for Claude calls, not quiz fetches)
+  const ip = clientAddress || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return jsonResponse(
+      { error: 'Whoa, slow down! You\'re limited to 20 questions per hour. Take a break and review what we\'ve covered. 📚' },
+      429
+    );
   }
 
   const message = body.message?.trim();
