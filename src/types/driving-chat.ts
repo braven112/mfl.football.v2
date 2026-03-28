@@ -47,6 +47,8 @@ export interface DrivingChatRequest {
   topic?: string;
   /** For quiz: request next question */
   requestQuiz?: boolean;
+  /** IDs of already-seen questions to avoid repeats */
+  seenIds?: string[];
 }
 
 export interface DrivingChatResponse {

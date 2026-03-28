@@ -17,6 +17,7 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
   });
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
+  const [seenIds, setSeenIds] = useState<string[]>([]);
   const resultRef = useRef<HTMLDivElement>(null);
 
   // Scroll to the result/explanation after answering
@@ -33,10 +34,15 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
       const res = await fetch('/api/driving-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestQuiz: true, topic: topicFilter, mode: 'quiz' }),
+        body: JSON.stringify({ requestQuiz: true, topic: topicFilter, mode: 'quiz', seenIds }),
       });
       const data = await res.json();
       if (data.quiz) {
+        setSeenIds(prev => {
+          const next = [...prev, data.quiz.id];
+          // Reset when we've seen all questions (server will also reset)
+          return next;
+        });
         setQuiz(prev => ({
           ...prev,
           currentQuestion: data.quiz,
@@ -49,7 +55,7 @@ export default function QuizMode({ onAskBilly, isLoading, topicFilter }: Props) 
     } finally {
       setLoadingQuiz(false);
     }
-  }, [topicFilter]);
+  }, [topicFilter, seenIds]);
 
   const handleAnswer = useCallback((index: number) => {
     if (quiz.isRevealed || !quiz.currentQuestion) return;

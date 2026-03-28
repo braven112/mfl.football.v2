@@ -112,11 +112,21 @@ async function callClaude(message: string): Promise<string> {
   return content.text;
 }
 
-function getRandomQuiz(topic?: string): QuizQuestion {
+function getRandomQuiz(topic?: string, excludeIds?: string[]): QuizQuestion {
   const pool = topic
     ? QUIZ_BANK.filter(q => q.topic === topic)
     : QUIZ_BANK;
   const bank = pool.length > 0 ? pool : QUIZ_BANK;
+
+  // Filter out recently seen questions
+  if (excludeIds && excludeIds.length > 0) {
+    const unseen = bank.filter(q => !excludeIds.includes(q.id));
+    // If all questions have been seen, reset (allow repeats)
+    if (unseen.length > 0) {
+      return unseen[Math.floor(Math.random() * unseen.length)];
+    }
+  }
+
   return bank[Math.floor(Math.random() * bank.length)];
 }
 
@@ -130,7 +140,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   // Quiz mode: return a random question (no Claude call, no rate limit)
   if (body.requestQuiz) {
-    const quiz = getRandomQuiz(body.topic);
+    const quiz = getRandomQuiz(body.topic, body.seenIds);
     return jsonResponse({ quiz } as DrivingChatResponse);
   }
 
