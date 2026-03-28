@@ -711,7 +711,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         `;
       }
       if (player.streak) {
-        gameHtml += `<span class="lineup-streak" title="${player.streak}-week hot streak">🔥</span>`;
+        gameHtml += `<span class="lineup-streak" title="${esc(String(player.streak))}-week hot streak">🔥</span>`;
       }
 
       let lockHtml = '';
@@ -1299,7 +1299,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #fff;
+    color: var(--text-on-colored, #fff);
   }
   .lineup-slot__pos--qb  { background: var(--lineup-pos-qb); }
   .lineup-slot__pos--rb  { background: var(--lineup-pos-rb); }
@@ -1522,7 +1522,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-submit--ready {
     background: var(--lineup-submit-ready);
-    color: #fff;
+    color: var(--text-on-colored, #fff);
   }
   .lineup-submit--ready:hover { filter: brightness(1.05); }
   .lineup-submit--ready:active { transform: scale(0.98); }
@@ -1536,19 +1536,19 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-submit--loading {
     background: var(--lineup-submit-ready);
-    color: #fff;
+    color: var(--text-on-colored, #fff);
     opacity: 0.8;
     pointer-events: none;
   }
 
   .lineup-submit--error {
     background: var(--lineup-submit-error);
-    color: #fff;
+    color: var(--text-on-colored, #fff);
   }
 
   .lineup-submit--success {
     background: var(--lineup-submit-success);
-    color: #fff;
+    color: var(--text-on-colored, #fff);
     animation: lineup-submit-success 0.4s ease-out;
   }
 
@@ -1751,7 +1751,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     left: 50%;
     transform: translateX(-50%) translateY(20px);
     background: var(--color-gray-800, #1f2937);
-    color: #fff;
+    color: var(--text-on-colored, #fff);
     padding: 0.5rem 1rem;
     border-radius: var(--radius-full, 9999px);
     font-size: 0.8125rem;
