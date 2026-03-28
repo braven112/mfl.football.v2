@@ -4,9 +4,9 @@
  *
  * Renders full-length articles from the Scheftner feed.
  * Follows the What's New editorial pattern with author card and metadata.
- * Prerendered at build time from article posts in scheftner-feed.json.
+ * Server-rendered so the theleague.us middleware rewrite works correctly
+ * (prerendered static files bypass middleware on Vercel).
  */
-export const prerender = true;
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import ScheftnerReactionBar from '../../../components/shared/ScheftnerReactionBar.tsx';
@@ -16,20 +16,13 @@ import feedData from '../../../data/theleague/scheftner-feed.json';
 import type { ScheftnerFeed, ScheftnerPost, AuctionGrade } from '../../../types/scheftner';
 import '../../../styles/scheftner-feed.css';
 
-export function getStaticPaths() {
-  const feed = feedData as ScheftnerFeed;
-  const articles = feed.posts.filter(p => p.type === 'article' && (p.content || p.grades));
-  return articles.map(post => ({
-    params: { id: post.id },
-    props: { post },
-  }));
-}
+const { id } = Astro.params;
+const feed = feedData as ScheftnerFeed;
+const post = feed.posts.find(p => p.type === 'article' && p.id === id && (p.content || p.grades));
 
-interface Props {
-  post: ScheftnerPost;
+if (!post) {
+  return Astro.redirect('/theleague/news');
 }
-
-const { post } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const imagePath = post.image ? `/assets/scheftner/${post.image}` : null;
