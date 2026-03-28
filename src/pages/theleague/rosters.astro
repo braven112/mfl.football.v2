@@ -2222,6 +2222,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             Submit Tags/Extensions
           </button>
 
+          {isLoggedIn && userFranchiseId && (
+            <a href="/theleague/lineup" class="lineup-cta" title="Set your starting lineup">
+              <svg class="lineup-cta__icon" width="16" height="16" aria-hidden="true"><use href={`${spriteUrl}#icon-clipboard`}></use></svg>
+              Set Lineup
+            </a>
+          )}
+
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
               <svg class="mode-icon"><use href={`${spriteUrl}#icon-banknote`}></use></svg> GM
@@ -4691,6 +4698,28 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   .trend-arrow--down {
     color: var(--color-error, #dc2626);
+  }
+
+  /* Set Lineup CTA */
+  .lineup-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--btn-primary-text, #fff);
+    background: var(--btn-primary-bg, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    min-height: 44px;
+    transition: background 0.15s ease;
+  }
+  .lineup-cta:hover {
+    background: var(--btn-primary-bg-hover, #164066);
+  }
+  .lineup-cta__icon {
+    fill: currentColor;
   }
 
   /* Coach Mode Toggle */
