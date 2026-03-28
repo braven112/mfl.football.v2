@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Recompute league events
+        run: node scripts/compute-league-events.mjs
+
       - name: Run Scheftner scanner
         env:
           MFL_HOST: ${{ vars.MFL_HOST }}
@@ -42,7 +45,7 @@ jobs:
 
           git config user.name "Scheftner Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/scheftner-feed.json data/afl-fantasy/scheftner-feed.json
+          git add src/data/theleague/scheftner-feed.json data/afl-fantasy/scheftner-feed.json src/data/theleague/resolved-events.json
           git commit -m "chore: scheftner scan — new transaction posts"
           git pull --rebase origin main
           git push

@@ -662,7 +662,7 @@ async function scanEspn(league) {
 }
 
 // ── Ask Roger: Event Reminders ──
-// Commissioner Roger posts reminders at: 14 days, 7 days, 2 days, day-of.
+// Ask Roger posts reminders at: 14 days, 7 days, 2 days, day-of.
 // Event tiers determine which touches fire: major=all 4, standard=7d+dayof, minor=dayof only.
 
 const REMINDER_TOUCHES = [
@@ -677,21 +677,21 @@ const TIER_RANK = { major: 3, standard: 2, minor: 1 };
 // ── Roger Template Pools ──
 
 const ROGER_14D = [
-  { h: '{event} — two weeks out', b: 'Mark your calendars. {name} is 14 days away. I shouldn\'t have to tell you this, but here we are.' },
-  { h: '{event} in two weeks', b: 'This is your two-week heads up for {name}. Start planning now or don\'t — I\'ll remind you again either way.' },
-  { h: 'Two weeks until {event}', b: 'Just a friendly reminder that {name} is coming up. "Friendly" is doing a lot of heavy lifting in that sentence.' },
-  { h: '{event} is 14 days away', b: 'Consider this your save-the-date for {name}. I know half of you won\'t read this until the day before.' },
-  { h: 'Heads up: {event} approaching', b: '{name} hits in two weeks. You\'ve been warned. No extensions, no exceptions, no excuses.' },
-  { h: 'The {event} countdown begins', b: 'We\'re officially two weeks from {name}. If you\'re not thinking about this yet, you\'re already behind.' },
+  { h: '{event} — {days} days out', b: 'Mark your calendars. {name} is {days} days away. I shouldn\'t have to tell you this, but here we are.' },
+  { h: '{event} in {days} days', b: 'This is your {days}-day heads up for {name}. Start planning now or don\'t — I\'ll remind you again either way.' },
+  { h: '{days} days until {event}', b: 'Just a friendly reminder that {name} is coming up. "Friendly" is doing a lot of heavy lifting in that sentence.' },
+  { h: '{event} is {days} days away', b: 'Consider this your save-the-date for {name}. I know half of you won\'t read this until the day before.' },
+  { h: 'Heads up: {event} approaching', b: '{name} hits in {days} days. You\'ve been warned. No extensions, no exceptions, no excuses.' },
+  { h: 'The {event} countdown begins', b: 'We\'re officially {days} days from {name}. If you\'re not thinking about this yet, you\'re already behind.' },
 ];
 
 const ROGER_7D = [
   { h: 'One week until {event}', b: 'This is your one-week warning for {name}. If you haven\'t started preparing, I admire your confidence.' },
-  { h: '{event} — 7 days', b: '{name} is next week. Get your house in order. I will not be fielding "I didn\'t know" messages after the fact.' },
-  { h: '{event} is one week away', b: 'Seven days until {name}. This is the part where smart owners make their moves and everyone else panics later.' },
+  { h: '{event} — {days} days', b: '{name} is next week. Get your house in order. I will not be fielding "I didn\'t know" messages after the fact.' },
+  { h: '{event} is one week away', b: '{days} days until {name}. This is the part where smart owners make their moves and everyone else panics later.' },
   { h: 'Week out: {event}', b: 'We\'re a week from {name}. I\'ve done my part. The rest is on you. Literally.' },
   { h: '{event} next week', b: '{name} lands next week. Some of you are prepared. The rest of you know who you are.' },
-  { h: 'T-minus 7 days: {event}', b: 'One week to {name}. I\'ll send one more reminder. After that, you\'re on your own.' },
+  { h: 'T-minus {days} days: {event}', b: 'One week to {name}. I\'ll send one more reminder. After that, you\'re on your own.' },
 ];
 
 const ROGER_2D = [
@@ -769,8 +769,9 @@ async function scanEventReminders(league) {
       if (feed.posts.some(p => p.id === postId)) continue;
 
       const template = pickRogerTemplate(touch.id, event.id);
-      const headline = template.h.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name);
-      const body = template.b.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name);
+      const days = String(event.daysUntil);
+      const headline = template.h.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
+      const body = template.b.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
 
       newPosts.push({
         id: postId,

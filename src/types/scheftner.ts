@@ -105,10 +105,10 @@ export const SCHEFTNER_AUTHORS: Record<string, ScheftnerAuthor> = {
   },
   roger: {
     id: 'roger',
-    name: 'Commissioner Roger',
+    name: 'Ask Roger',
     handle: '@askroger',
     avatar: 'commissioner-avatar.webp',
-    bio: 'League commissioner. Keeper of deadlines. Yes, I sent this reminder. No, I won\'t send another one.',
+    bio: 'AI rules expert and deadline enforcer. He\'s read the constitution so you don\'t have to. His dates are probably right — check the calendar to be sure.',
   },
 };
 
