@@ -486,6 +486,92 @@ This looks correct — it sends `FRANCHISE_ID` when the client provides a non-`0
 
 ---
 
+## 2026-03-28 - Lineup Import (setStarters) API: Complete Specification
+
+**Context:** Researching the lineup submission API for a lineup management feature (TheLeague, L=13522).
+
+**Insight:** MFL has a `lineup` import endpoint that is the correct write path for setting a franchise's weekly starters. Here is the full confirmed specification:
+
+### Write Endpoint
+```
+POST https://api.myfantasyleague.com/{YEAR}/import?TYPE=lineup
+(Handles redirect to www49 automatically via mflFetch)
+```
+
+**Parameters (POST body, application/x-www-form-urlencoded):**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `TYPE` | Yes | Must be `lineup` |
+| `L` | Yes | League ID (e.g., `13522`) |
+| `W` | Yes | Week number (integer, e.g., `14`) |
+| `STARTERS` | Yes | Comma-separated list of MFL player IDs (see format below) |
+| `COMMENTS` | No | Short message saved with the lineup submission |
+| `TIEBREAKERS` | No | Tiebreaker player IDs (only for leagues using tiebreaker rules) |
+| `BACKUPS` | No | Deprecated — no longer supported |
+| `FRANCHISE_ID` | No | Commissioner-only: act on behalf of another franchise |
+
+**Authentication:** Owner (requires `MFL_USER_ID` cookie). Use `mflFetch()` from `src/utils/mfl-fetch.ts` — do NOT use raw `fetch()` because `api.myfantasyleague.com` 302-redirects to `www49` and Node.js undici strips the Cookie header on cross-origin redirects.
+
+**STARTERS format:** Comma-separated MFL player IDs. There is NO position slot designation — MFL figures out which slot each player fills based on their position and league roster settings. Example: `"13592,13604,15255,14836,14974,13674,17104,11936,0532,"` (trailing comma is present in MFL's own data but probably not required on submit).
+
+**Defense player IDs:** Team defenses use a 4-digit numeric ID with a leading zero, e.g., `0532` for the Texans. These are returned by `TYPE=players` with `position: "Def"`. They are NOT regular player IDs — the format is always `0{NNN}`.
+
+**TheLeague starter count:** Exactly 9 starters required (`starters.count: "9"`). Positions: 1 QB, 1-4 RB, 1-4 WR, 1-4 TE, 1 PK, 1 Def (flexible RB/WR/TE slots fill the remaining spots to reach 9).
+
+### Read Endpoint (GET current lineup)
+There is no dedicated `myLineup` or `startingLineups` export. To read the current/submitted lineup use one of:
+
+1. **`weeklyResults`** (best for submitted lineups): `TYPE=weeklyResults&W={week}`
+   - Response: franchise objects with `starters` (comma-separated IDs), `nonstarters`, `optimal`, and a `player` array where each player has `{ id, score, status: "starter"|"nonstarter", shouldStart: "0"|"1" }`
+   - Only available AFTER the week has been processed/played
+
+2. **`rosters`** with `W={week}` parameter: `TYPE=rosters&W={week}`
+   - Returns all rostered players but NO starter/bench distinction — the roster response only has `status: "ROSTER"|"INJURED_RESERVE"|"TAXI_SQUAD"`, not whether they're starting
+   - Use this to know what players are available to slot
+
+3. **MFL web options O=06**: `https://www49.myfantasyleague.com/{YEAR}/options?L=13522&O=06`
+   - Viewing page shows submitted lineups for all franchises with timestamps
+
+**Key finding: No GET-before-SET needed.** The `lineup` import completely overwrites whatever was previously set. You just submit the full list of 9 starter IDs.
+
+### FLEX Logic
+MFL handles FLEX automatically. TheLeague's starters config says:
+- QB: exactly 1
+- RB: 1-4 (min 1, max 4)
+- WR: 1-4 (min 1, max 4)
+- TE: 1-4 (min 1, max 4)
+- PK: exactly 1
+- Def: exactly 1
+
+As long as you submit 9 player IDs where each position constraint is satisfied, MFL assigns the slots. You do NOT pass slot names like "FLEX" — just player IDs in any order.
+
+### Response Format
+MFL API documentation does not explicitly document the success/failure response format for `lineup`. Based on the pattern from other write endpoints:
+- **Success:** `<status>OK</status>` (XML) or HTTP 200 with status body
+- **Error:** `<error>...</error>` wrapper with description
+- Always HTTP 200 even for errors — must check body content for `<error>` tag
+
+### Future Weeks
+The `W` parameter accepts any week number. MFL does not document explicit restrictions on setting lineups for future weeks. In practice, lineups lock when the first game of a given week's slate kicks off (NFL game time).
+
+### Commissioner Impersonation
+Supported via `FRANCHISE_ID` parameter in the POST body. Requires both `MFL_USER_ID` AND `MFL_IS_COMMISH` cookies for commissioner-level auth (same pattern as other commissioner write operations).
+
+**Evidence:**
+- MFL API details page: `https://www49.myfantasyleague.com/2025/api_info?STATE=details&L=13522`
+- Live `weeklyResults` W=1, W=14, W=17 responses confirm `starters` field format (comma-separated IDs with trailing comma)
+- Defense player IDs confirmed via `TYPE=players` lookup (e.g., `0532`=Texans, `0520`=Commanders, `0504`=Patriots)
+- TheLeague starter count confirmed from `data/theleague/mfl-feeds/2025/league.json` starters object
+- Write pattern confirmed from `trades/submit.ts`, `move-to-ir.ts`, `tradeBait` import
+
+**Related files:**
+- `src/utils/mfl-fetch.ts` — use for all authenticated writes
+- `src/pages/api/move-to-ir.ts` — canonical simple write pattern
+- `src/pages/api/trades/submit.ts` — canonical mflFetch write pattern
+
+---
+
 ## 2026-03-19 - Auction Timing: What MFL Provides vs What It Doesn't
 
 **Context:** Researching how to determine auction end time and bid-level timestamps for league 13522's 2026 auction (March 15-21, 2026)
