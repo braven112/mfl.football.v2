@@ -12,7 +12,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { getCurrentLeagueYear } from '../../utils/league-year';
-import { getCurrentWeek } from '../../utils/current-week';
+import { getCurrentWeekForYear } from '../../utils/current-week';
 
 const MFL_LEAGUE_ID = '13522';
 
@@ -99,7 +99,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     const url = new URL(request.url);
     const weekParam = url.searchParams.get('week');
-    const week = weekParam ? parseInt(weekParam, 10) : getCurrentWeek();
+    const week = weekParam ? parseInt(weekParam, 10) : getCurrentWeekForYear(getCurrentLeagueYear());
 
     if (isNaN(week) || week < 1 || week > 22) {
       return json({ error: 'Invalid week.' }, 400);
