@@ -100,12 +100,19 @@ export default function DrivingCoach() {
   }, [mode]);
 
   const handleTopicSelect = useCallback((topicId: string) => {
-    setActiveTopic(prev => prev === topicId ? null : topicId);
-    const topic = DRIVING_TOPICS.find(t => t.id === topicId);
+    // If clicking the already-active topic, advance to the next one
+    let nextTopicId = topicId;
+    if (topicId === activeTopic) {
+      const currentIndex = DRIVING_TOPICS.findIndex(t => t.id === topicId);
+      const nextIndex = (currentIndex + 1) % DRIVING_TOPICS.length;
+      nextTopicId = DRIVING_TOPICS[nextIndex].id;
+    }
+    setActiveTopic(nextTopicId);
+    const topic = DRIVING_TOPICS.find(t => t.id === nextTopicId);
     if (topic && mode === 'chat') {
       sendMessage(`Tell me the key things I need to know about "${topic.label}" for the WA driver's license test.`);
     }
-  }, [mode, sendMessage]);
+  }, [mode, sendMessage, activeTopic]);
 
   const handleQuizAskBilly = useCallback((message: string) => {
     setMode('chat');
