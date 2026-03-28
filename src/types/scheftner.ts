@@ -150,6 +150,31 @@ export type PostTier = 'breaking' | 'standard' | 'minor';
 /** Feed category for filtering */
 export type ScheftnerCategory = 'transactions' | 'articles';
 
+/** A single auction grade entry (enriched by deterministic data + AI commentary) */
+export interface AuctionGrade {
+  /** Franchise ID */
+  franchiseId: string;
+  /** Letter grade: A+ through F */
+  grade: string;
+  /** Punchy 5-8 word summary */
+  headline: string;
+  /** 2-3 sentence HTML explanation */
+  body: string;
+  /** Deterministic fields (enriched post-generation) */
+  teamName?: string;
+  abbrev?: string;
+  color?: string;
+  auctionSpend?: number;
+  auctionSpendDisplay?: string;
+  playerCount?: number;
+  holesBefore?: string[];
+  holesRemaining?: string[];
+  holesFilled?: string[];
+  postCapSpace?: number;
+  postCapSpaceDisplay?: string;
+  pickups?: Array<{ name: string; position: string; salary: string }>;
+}
+
 /** A single Scheftner feed post */
 export interface ScheftnerPost {
   /** Unique ID: sf_{timestamp}_{hash} */
@@ -172,6 +197,10 @@ export interface ScheftnerPost {
   analysis?: string;
   /** Full article content — array of HTML paragraph strings (articles only) */
   content?: string[];
+  /** Intro paragraphs for grade-card articles (rendered before grades) */
+  intro?: string[];
+  /** Auction grade entries (grade-card articles only) */
+  grades?: AuctionGrade[];
   /** Featured image path relative to /assets/scheftner/ (articles only) */
   image?: string;
   /** Image alt text (articles only) */
