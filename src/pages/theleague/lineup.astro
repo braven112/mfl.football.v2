@@ -40,13 +40,15 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 const MFL_LEAGUE_ID = '13522';
 const mflBase = `https://api.myfantasyleague.com/${seasonYear}/export`;
 
-// Parallel data fetches
-const [rostersRes, projRes, weeklyRes, fpaRes, playersRes] = await Promise.all([
-  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+// Parallel data fetches (all 7 run concurrently to avoid waterfall)
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes] = await Promise.all([
+  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=fantasyPointsAllowed&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=players&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  loadLiveOdds(week),
+  fetch(`${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
 const rostersData = rostersRes?.ok ? await rostersRes.json() : null;
@@ -54,8 +56,6 @@ const projData = projRes?.ok ? await projRes.json() : null;
 const weeklyData = weeklyRes?.ok ? await weeklyRes.json() : null;
 const fpaData = fpaRes?.ok ? await fpaRes.json() : null;
 const playersData = playersRes?.ok ? await playersRes.json() : null;
-
-const liveOdds = await loadLiveOdds(week);
 
 // ---------------------------------------------------------------------------
 // Build player map
@@ -253,13 +253,9 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   };
 });
 
-// Fetch current starters from MFL (myStarters export gives the actual lineup)
+// Parse starters from the parallel fetch
 const starterIds = new Set<string>();
 try {
-  const startersRes = await fetch(
-    `${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`,
-    { signal: AbortSignal.timeout(8000) }
-  );
   if (startersRes?.ok) {
     const startersData = await startersRes.json();
     const rawStarters = startersData?.myStarters?.player;
