@@ -17,14 +17,18 @@ import type { ScheftnerPost } from '../../types/scheftner';
 import { getAuthor, getAuthorAvatar } from '../../types/scheftner';
 import { formatRelativeTime } from '../../utils/scheftner-feed';
 import ScheftnerReactionBar from './ScheftnerReactionBar.tsx';
+import ScheftnerReplyThread from './ScheftnerReplyThread.tsx';
 
 interface Props {
   post: ScheftnerPost;
   isAuthenticated?: boolean;
+  userFranchiseId?: string;
+  userTeamName?: string;
+  userTeamIcon?: string;
   now?: Date;
 }
 
-const { post, isAuthenticated = false, now } = Astro.props;
+const { post, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, now } = Astro.props;
 const relTime = formatRelativeTime(post.timestamp, now);
 const author = getAuthor(post.authorId);
 const avatarSrc = getAuthorAvatar(author);
@@ -79,10 +83,22 @@ const tierClass = `sf-post ${isArticle ? 'sf-post--article' : isExternal ? 'sf-p
       </a>
     )}
 
-    <ScheftnerReactionBar
-      client:visible
-      postId={post.id}
-      isAuthenticated={isAuthenticated}
-    />
+    <div class="sfc-post__actions">
+      <ScheftnerReplyThread
+        client:idle
+        postId={post.id}
+        postHeadline={post.headline}
+        postAuthorId={post.authorId}
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        userTeamName={userTeamName}
+        userTeamIcon={userTeamIcon}
+      />
+      <ScheftnerReactionBar
+        client:visible
+        postId={post.id}
+        isAuthenticated={isAuthenticated}
+      />
+    </div>
   </div>
 </article>
