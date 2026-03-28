@@ -1,0 +1,134 @@
+---
+/**
+ * New Homepage Prototype
+ *
+ * 2-column layout: flexible left column + 380px right sidebar with compact feed.
+ * Admin-only, accessible at /theleague/new-hp by direct URL.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import ScheftnerFeedCompact from '../../components/shared/ScheftnerFeedCompact.astro';
+import { getAuthUser } from '../../utils/auth';
+import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
+import feedData from '../../data/theleague/scheftner-feed.json';
+import '../../styles/scheftner-feed.css';
+import '../../styles/scheftner-feed-compact.css';
+
+const authUser = getAuthUser(Astro.request);
+const isAuthenticated = !!authUser;
+const userFranchiseId = authUser?.franchiseId;
+
+const feed = feedData as FeedType;
+const compactPosts = feed.posts.slice(0, 30);
+
+// Resolve team info for reply composer avatar
+let userTeamName: string | undefined;
+let userTeamIcon: string | undefined;
+
+if (userFranchiseId) {
+  try {
+    const config = await import('../../data/theleague.config.json');
+    const teams = config.default?.teams ?? config.teams ?? [];
+    const team = teams.find((t: { franchiseId: string }) => t.franchiseId === userFranchiseId);
+    if (team) {
+      userTeamName = team.name;
+      userTeamIcon = team.icon;
+    }
+  } catch { /* fallback gracefully */ }
+}
+---
+
+<TheLeagueLayout title="Home">
+  <div class="hp2">
+    <section class="hp2__main" aria-labelledby="hp2-dashboard-heading">
+      <h2 id="hp2-dashboard-heading" class="hp2__section-title">Dashboard</h2>
+      <div class="hp2__placeholder">
+        <p class="hp2__placeholder-text">Dashboard widgets coming soon.</p>
+      </div>
+    </section>
+
+    <aside class="hp2__sidebar" aria-label="Scheftner Report feed">
+      <ScheftnerFeedCompact
+        posts={compactPosts}
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        userTeamName={userTeamName}
+        userTeamIcon={userTeamIcon}
+      />
+    </aside>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .hp2 {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .hp2__main {
+    min-width: 0;
+  }
+
+  .hp2__section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 1rem;
+    line-height: 1;
+  }
+
+  .hp2__placeholder {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px dashed var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 3rem 2rem;
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hp2__placeholder-text {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  .hp2__sidebar {
+    position: sticky;
+    top: calc(var(--header-height, 3.5rem) + 1rem);
+    max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sf-border, #e5e7eb) transparent;
+  }
+
+  @media (max-width: 1024px) {
+    .hp2 {
+      grid-template-columns: 1fr 320px;
+      gap: 1rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .hp2 {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .hp2__sidebar {
+      position: static;
+      max-height: none;
+      overflow-y: visible;
+    }
+  }
+</style>

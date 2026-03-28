@@ -1,0 +1,103 @@
+---
+/**
+ * ScheftnerFeedCompact — Compact feed for sidebar usage.
+ *
+ * Shows 10 posts initially with "Show more" pagination.
+ * Section header with editorial left-border accent.
+ */
+import type { ScheftnerPost } from '../../types/scheftner';
+import ScheftnerPostCardCompact from './ScheftnerPostCardCompact.astro';
+
+interface Props {
+  posts: ScheftnerPost[];
+  isAuthenticated?: boolean;
+  userFranchiseId?: string;
+  userTeamName?: string;
+  userTeamIcon?: string;
+  initialLimit?: number;
+}
+
+const {
+  posts,
+  isAuthenticated = false,
+  userFranchiseId,
+  userTeamName,
+  userTeamIcon,
+  initialLimit = 10,
+} = Astro.props;
+
+const now = new Date();
+---
+
+<section class="sfc-feed" aria-label="Latest league news">
+  <div class="sfc-feed__header">
+    <h2 class="sfc-feed__title">Scheftner Report</h2>
+    <a href="/theleague/news" class="sfc-feed__view-all">View all <span aria-hidden="true">→</span></a>
+  </div>
+
+  {posts.length === 0 ? (
+    <div class="sfc-empty">No news yet. Schefter is on assignment.</div>
+  ) : (
+    <div class="sfc-feed__list" data-initial-limit={initialLimit}>
+      {posts.map((post, i) => (
+        <div class:list={['sfc-feed__item', { 'sfc-feed__item--hidden': i >= initialLimit }]} data-feed-index={i}>
+          <ScheftnerPostCardCompact
+            post={post}
+            isAuthenticated={isAuthenticated}
+            userFranchiseId={userFranchiseId}
+            userTeamName={userTeamName}
+            userTeamIcon={userTeamIcon}
+            now={now}
+          />
+        </div>
+      ))}
+    </div>
+  )}
+
+  {posts.length > initialLimit && (
+    <div class="sfc-load-more">
+      <button class="sfc-load-more__btn" data-sfc-load-more>
+        Show more
+      </button>
+    </div>
+  )}
+</section>
+
+<script>
+  function initCompactLoadMore() {
+    const feed = document.querySelector('.sfc-feed');
+    if (!feed) return;
+
+    const btn = feed.querySelector('[data-sfc-load-more]') as HTMLButtonElement | null;
+    if (!btn) return;
+
+    const list = feed.querySelector('.sfc-feed__list');
+    if (!list) return;
+
+    const PAGE_SIZE = 5;
+    const initialLimit = parseInt(list.getAttribute('data-initial-limit') ?? '10', 10);
+    let showing = initialLimit;
+
+    btn.addEventListener('click', () => {
+      const items = list.querySelectorAll('.sfc-feed__item');
+      const nextLimit = showing + PAGE_SIZE;
+
+      items.forEach((item, i) => {
+        if (i < nextLimit) {
+          item.classList.remove('sfc-feed__item--hidden');
+        }
+      });
+
+      showing = nextLimit;
+
+      if (showing >= items.length) {
+        // Focus the first newly-revealed item before removing button
+        const firstNew = items[nextLimit - PAGE_SIZE];
+        if (firstNew instanceof HTMLElement) firstNew.focus({ preventScroll: true });
+        btn.parentElement?.remove();
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initCompactLoadMore);
+</script>

@@ -1,0 +1,81 @@
+---
+/**
+ * ScheftnerPostCardCompact — Compact post card for sidebar feed.
+ *
+ * Smaller text, 3-line body clamp, no analysis blocks or article images.
+ * Renders reactions + reply thread toggle.
+ */
+import type { ScheftnerPost } from '../../types/scheftner';
+import { getAuthor, getAuthorAvatar } from '../../types/scheftner';
+import { formatRelativeTime } from '../../utils/scheftner-feed';
+import ScheftnerReactionBar from './ScheftnerReactionBar.tsx';
+import ScheftnerReplyThread from './ScheftnerReplyThread.tsx';
+
+interface Props {
+  post: ScheftnerPost;
+  isAuthenticated?: boolean;
+  userFranchiseId?: string;
+  userTeamName?: string;
+  userTeamIcon?: string;
+  now?: Date;
+}
+
+const {
+  post,
+  isAuthenticated = false,
+  userFranchiseId,
+  userTeamName,
+  userTeamIcon,
+  now,
+} = Astro.props;
+
+const relTime = formatRelativeTime(post.timestamp, now);
+const author = getAuthor(post.authorId);
+const avatarSrc = getAuthorAvatar(author);
+const isExternal = post.type === 'external';
+const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}`;
+---
+
+<article class={tierClass} data-post-id={post.id} aria-label={`${author.name}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
+  <img class="sfc-avatar" src={avatarSrc} alt="" aria-hidden="true" width="32" height="32" loading="lazy" />
+
+  <div class="sfc-post__content">
+    <div class="sfc-post__header">
+      <span class="sfc-post__name">{author.name}</span>
+      <span class="sfc-post__handle">{author.handle}</span>
+      <time class="sfc-post__time" datetime={post.timestamp}>{relTime}</time>
+    </div>
+
+    <div class="sfc-post__body" set:html={post.body} />
+
+    {post.link && (
+      <a
+        href={post.link}
+        class="sfc-post__link"
+        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      >
+        {post.linkLabel ?? (isExternal ? 'Read on ESPN →' : 'Read more')}
+        {isExternal && <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">(opens in new tab)</span>}
+      </a>
+    )}
+
+    <div class="sfc-post__actions">
+      <ScheftnerReactionBar
+        client:visible
+        postId={post.id}
+        isAuthenticated={isAuthenticated}
+      />
+    </div>
+
+    <ScheftnerReplyThread
+      client:idle
+      postId={post.id}
+      postHeadline={post.headline}
+      postAuthorId={post.authorId}
+      isAuthenticated={isAuthenticated}
+      userFranchiseId={userFranchiseId}
+      userTeamName={userTeamName}
+      userTeamIcon={userTeamIcon}
+    />
+  </div>
+</article>

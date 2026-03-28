@@ -1,0 +1,472 @@
+/* ── Scheftner Feed Compact ──
+ * Compact variant for sidebar usage.
+ * CSS namespace: --sfc-*
+ * Extends --sf-* tokens from scheftner-feed.css
+ */
+
+:root {
+  --sfc-avatar-size: 2rem;
+  --sfc-body-size: 0.8125rem;
+  --sfc-name-size: 0.8125rem;
+  --sfc-handle-size: 0.75rem;
+  --sfc-time-size: 0.75rem;
+  --sfc-post-padding-x: 0.75rem;
+  --sfc-post-padding-y: 0.625rem;
+  --sfc-post-gap: 0.625rem;
+  --sfc-body-lines: 3;
+
+  --sfc-reply-indent: 2.625rem;
+  --sfc-reply-avatar-size: 1.5rem;
+  --sfc-reply-body-size: 0.8125rem;
+  --sfc-reply-thread-line: var(--sf-border, #e5e7eb);
+  --sfc-reply-ai-bg: var(--sf-analysis-bg, var(--color-gray-50, #f9fafb));
+  --sfc-reply-ai-accent: var(--sf-accent, var(--color-primary, #1c497c));
+  --sfc-typing-dot-color: var(--sf-text-secondary, #6b7280);
+}
+
+/* ── Feed Container ── */
+.sfc-feed {
+  background: var(--sf-bg, #fff);
+  border: 1px solid var(--sf-border, #e5e7eb);
+  border-radius: var(--radius-lg, 0.75rem);
+  overflow: hidden;
+}
+
+.sfc-feed__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem var(--sfc-post-padding-x);
+  border-bottom: 1px solid var(--sf-border, #e5e7eb);
+}
+
+.sfc-feed__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--color-primary, #1c497c);
+  margin: 0;
+  line-height: 1;
+}
+
+.sfc-feed__view-all {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sf-link-color, var(--color-primary, #1c497c));
+  text-decoration: none;
+}
+
+.sfc-feed__view-all:hover {
+  text-decoration: underline;
+}
+
+.sfc-feed__view-all:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+.sfc-feed__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sfc-feed__item {
+  border-bottom: 1px solid var(--sf-border, #e5e7eb);
+}
+
+.sfc-feed__item:last-child {
+  border-bottom: none;
+}
+
+.sfc-feed__item--hidden {
+  display: none;
+}
+
+/* ── Compact Post Card ── */
+.sfc-post {
+  display: flex;
+  gap: var(--sfc-post-gap);
+  padding: var(--sfc-post-padding-y) var(--sfc-post-padding-x);
+  transition: background 0.15s ease;
+}
+
+.sfc-post:hover {
+  background: var(--sf-hover-bg, var(--color-gray-50, #f9fafb));
+}
+
+.sfc-post--breaking {
+  border-left: 3px solid var(--sf-accent, var(--color-primary, #1c497c));
+}
+
+.sfc-avatar {
+  flex-shrink: 0;
+  width: var(--sfc-avatar-size);
+  height: var(--sfc-avatar-size);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.sfc-post__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sfc-post__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.sfc-post__name {
+  font-size: var(--sfc-name-size);
+  font-weight: 600;
+  color: var(--sf-text-primary, #0f1419);
+  white-space: nowrap;
+}
+
+.sfc-post__handle {
+  font-size: var(--sfc-handle-size);
+  color: var(--sf-text-secondary, #6b7280);
+  white-space: nowrap;
+}
+
+.sfc-post__time {
+  font-size: var(--sfc-time-size);
+  color: var(--sf-text-secondary, #6b7280);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sfc-post__time::before {
+  content: '·';
+  margin: 0 0.1875rem;
+}
+
+.sfc-post__body {
+  font-size: var(--sfc-body-size);
+  line-height: 1.45;
+  color: var(--sf-text-body, #1f2937);
+  margin-top: 0.1875rem;
+  display: -webkit-box;
+  -webkit-line-clamp: var(--sfc-body-lines);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sfc-post__link {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sf-link-color, var(--color-primary, #1c497c));
+  text-decoration: none;
+}
+
+.sfc-post__link:hover {
+  text-decoration: underline;
+}
+
+.sfc-post__link:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+/* ── Post Actions (reactions + reply toggle) ── */
+.sfc-post__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+/* ── Reply Toggle Button ── */
+.sfc-reply-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--sf-border, #e5e7eb);
+  background: transparent;
+  color: var(--sf-text-secondary, #6b7280);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  min-height: 2rem;
+}
+
+.sfc-reply-toggle:hover {
+  color: var(--sf-accent, #1c497c);
+  background: var(--sf-reaction-active-bg);
+}
+
+.sfc-reply-toggle:focus-visible {
+  outline: 2px solid var(--sf-accent, #1c497c);
+  outline-offset: 2px;
+}
+
+.sfc-reply-toggle__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.sfc-reply-toggle__count {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Reply Thread ── */
+.sfc-replies {
+  position: relative;
+  margin-left: calc(var(--sfc-avatar-size) / 2);
+  padding-left: calc(var(--sfc-reply-indent) - var(--sfc-avatar-size) / 2);
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Vertical thread connector line */
+.sfc-replies::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--sfc-reply-thread-line);
+  border-radius: 1px;
+}
+
+/* ── Individual Reply ── */
+.sfc-reply {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+}
+
+.sfc-reply__avatar {
+  flex-shrink: 0;
+  width: var(--sfc-reply-avatar-size);
+  height: var(--sfc-reply-avatar-size);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.sfc-reply__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sfc-reply__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.sfc-reply__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sf-text-primary, #0f1419);
+  white-space: nowrap;
+}
+
+.sfc-reply__handle {
+  font-size: 0.75rem;
+  color: var(--sf-text-secondary, #6b7280);
+  white-space: nowrap;
+}
+
+.sfc-reply__time {
+  font-size: 0.75rem;
+  color: var(--sf-text-secondary, #6b7280);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sfc-reply__time::before {
+  content: '·';
+  margin: 0 0.1875rem;
+}
+
+.sfc-reply__body {
+  font-size: var(--sfc-reply-body-size);
+  line-height: 1.4;
+  color: var(--sf-text-body, #1f2937);
+  margin-top: 0.125rem;
+}
+
+/* AI reply accent background */
+.sfc-reply--ai .sfc-reply__content {
+  background: var(--sfc-reply-ai-bg);
+  padding: 0.375rem 0.625rem;
+  border-radius: 0 var(--radius-sm, 0.25rem) var(--radius-sm, 0.25rem) 0;
+  border-left: 2px solid var(--sfc-reply-ai-accent);
+}
+
+.sfc-reply--roger .sfc-reply__content {
+  border-left-color: var(--color-secondary, #2e8743);
+}
+
+/* ── Typing Indicator ── */
+.sfc-typing {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+}
+
+.sfc-typing__content {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.sfc-typing__text {
+  font-size: 0.75rem;
+  color: var(--sf-text-secondary, #6b7280);
+  font-style: italic;
+}
+
+.sfc-typing__dots {
+  display: inline-flex;
+  gap: 0.1875rem;
+}
+
+.sfc-typing__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--sfc-typing-dot-color);
+  animation: sfc-typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.sfc-typing__dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.sfc-typing__dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes sfc-typing-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Reply Composer ── */
+.sfc-composer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0 0.25rem;
+  align-items: flex-start;
+}
+
+.sfc-composer__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--sf-border, #e5e7eb);
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--sf-text-body, #1f2937);
+  background: var(--sf-bg, #fff);
+  resize: none;
+  line-height: 1.4;
+  max-height: 5rem;
+  overflow-y: auto;
+}
+
+.sfc-composer__input::placeholder {
+  color: var(--sf-text-secondary, #6b7280);
+}
+
+.sfc-composer__input:focus-visible {
+  outline: 2px solid var(--sf-accent, #1c497c);
+  outline-offset: 2px;
+  border-color: var(--sf-accent, #1c497c);
+  box-shadow: 0 0 0 2px rgba(28, 73, 124, 0.15);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sf-accent, #1c497c) 15%, transparent);
+}
+
+.sfc-composer__submit {
+  flex-shrink: 0;
+  padding: 0.375rem 0.75rem;
+  background: var(--btn-primary-bg, #1c497c);
+  color: var(--btn-primary-text, #fff);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  min-height: 2rem;
+}
+
+.sfc-composer__submit:hover {
+  background: var(--btn-primary-bg-hover, #164066);
+}
+
+.sfc-composer__submit:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+}
+
+.sfc-composer__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Load More ── */
+.sfc-load-more {
+  padding: 0.5rem var(--sfc-post-padding-x);
+  text-align: center;
+  border-top: 1px solid var(--sf-border, #e5e7eb);
+}
+
+.sfc-load-more__btn {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sf-link-color, var(--color-primary, #1c497c));
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.375rem 0.75rem;
+}
+
+.sfc-load-more__btn:hover {
+  text-decoration: underline;
+}
+
+.sfc-load-more__btn:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+}
+
+/* ── Empty State ── */
+.sfc-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--sf-text-secondary, #6b7280);
+  font-size: 0.8125rem;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .sfc-typing__dot {
+    animation: none;
+  }
+}
