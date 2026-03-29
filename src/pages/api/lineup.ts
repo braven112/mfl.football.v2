@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // MFL lineup import endpoint
     const url = `https://api.myfantasyleague.com/${year}/import`;
-    const postBody = `TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE_ID=${user.franchiseId}&W=${week}&STARTERS=${starterList}`;
+    const postBody = `TYPE=lineup&L=${MFL_LEAGUE_ID}&W=${week}&STARTERS=${starterList}`;
 
     const response = await mflFetch({
       url,
