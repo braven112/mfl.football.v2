@@ -277,20 +277,24 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
   const isChampionship = phase === 'championship';
   const titlePrefix = isChampionship ? 'Championship' : getGameWindowLabel(gameWindow);
 
-  // Find user's matchup
-  const userMatchup = userFranchiseId
-    ? matchups.find(m => m.home === userFranchiseId || m.away === userFranchiseId)
-    : null;
+  // Find ALL user matchups (supports doubleheader weeks)
+  const userMatchups = userFranchiseId
+    ? matchups.filter(m => m.home === userFranchiseId || m.away === userFranchiseId)
+    : [];
 
-  // Other matchups (excluding user's)
-  const otherMatchups = matchups.filter(m => m !== userMatchup);
+  // Other matchups (excluding all of the user's games)
+  const userMatchupSet = new Set(userMatchups);
+  const otherMatchups = matchups.filter(m => !userMatchupSet.has(m));
 
-  // Sort others by interest and take top 3
-  const interestingMatchups = sortByInterest(otherMatchups, scores).slice(0, 3);
+  // Sort others by interest and take enough to fill the compact grid
+  const maxCompact = Math.max(0, 3 - (userMatchups.length > 0 ? userMatchups.length - 1 : 0));
+  const interestingMatchups = sortByInterest(otherMatchups, scores).slice(0, maxCompact);
 
-  // If no user matchup, promote the most interesting to featured
-  const featured = userMatchup ?? interestingMatchups.shift() ?? null;
-  const compact = userMatchup ? interestingMatchups : interestingMatchups;
+  // If no user matchups, promote the most interesting to featured
+  const featured = userMatchups.length > 0
+    ? userMatchups
+    : [interestingMatchups.shift()].filter(Boolean) as MatchupPairing[];
+  const compact = userMatchups.length > 0 ? interestingMatchups : interestingMatchups;
 
   if (matchups.length === 0) {
     return (
@@ -319,27 +323,28 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
 
       <div className="lsh__matchups" aria-live="polite">
         {/* Championship: single head-to-head */}
-        {isChampionship && featured && (
+        {isChampionship && featured.length > 0 && (
           <>
             <span className="lsh__champ-label">The League Championship — Week {week}</span>
             <ChampionshipLayout
-              matchup={featured}
+              matchup={featured[0]}
               teams={teams}
               scores={scores}
             />
           </>
         )}
 
-        {/* Regular / Playoffs: featured + compact */}
-        {!isChampionship && featured && (
+        {/* Regular / Playoffs: featured matchup(s) + compact */}
+        {!isChampionship && featured.map((m, i) => (
           <MatchupCard
-            matchup={featured}
+            key={`featured-${m.home}-${m.away}`}
+            matchup={m}
             teams={teams}
             scores={scores}
             isFeatured={true}
-            userFranchiseId={userFranchiseId}
+            userFranchiseId={i === 0 ? userFranchiseId : undefined}
           />
-        )}
+        ))}
 
         {!isChampionship && compact.length > 0 && (
           <div className="lsh__compact-grid">
