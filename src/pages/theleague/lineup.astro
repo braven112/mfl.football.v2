@@ -38,6 +38,7 @@ const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || 
 const week = Math.max(1, Math.min(22, requestedWeek));
 
 const MFL_LEAGUE_ID = '13522';
+const isOffseason = leagueYear > seasonYear;
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
 // Parallel data fetches (all 7 run concurrently to avoid waterfall)
@@ -226,9 +227,9 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
     if (weeklyScores[w] !== undefined) recentScores.push({ week: w, score: weeklyScores[w] });
   }
 
-  // Game lock status
+  // Game lock status — offseason means no games have started
   const gameIdx = gameIndexByTeam.get(nflTeam) ?? null;
-  const gameLocked = gameIdx !== null && schedule[gameIdx].status !== 'pre';
+  const gameLocked = !isOffseason && gameIdx !== null && schedule[gameIdx].status !== 'pre';
 
   const streak = computeStreak(weeklyScores, currentWeek);
 
