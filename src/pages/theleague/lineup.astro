@@ -402,17 +402,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                     />
                   </div>
                 ) : (
-                  <div class="lineup-slot__empty-lockup">
-                    <div class={`lineup-slot__empty-avatar lineup-slot__empty-avatar--${slot.position.toLowerCase()}`}>
-                      {slot.position}
-                    </div>
-                    <div class="lineup-slot__empty-text">
-                      <span class="lineup-slot__empty-name">Tap to set</span>
-                      <span class="lineup-slot__empty-meta">
-                        <span class={`lineup-slot__pos-dot lineup-slot__pos-dot--${slot.position.toLowerCase()}`}></span>
-                        {slot.position}
-                      </span>
-                    </div>
+                  <div class="lineup-slot__player lineup-slot__player--empty">
+                    <PlayerCell
+                      name="Tap to set"
+                      headshot="/assets/nfl-logos/NFL.svg"
+                      position={slot.position}
+                      nflTeam=""
+                      size="default"
+                    />
                   </div>
                 )}
                 {player && (
@@ -704,18 +701,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       btn.disabled = slot.locked;
 
       if (!player) {
-        const posLower = esc(slot.position.toLowerCase());
-        btn.innerHTML = `
-          <div class="lineup-slot__empty-lockup">
-            <div class="lineup-slot__empty-avatar lineup-slot__empty-avatar--${posLower}">${esc(slot.position)}</div>
-            <div class="lineup-slot__empty-text">
-              <span class="lineup-slot__empty-name">Tap to set</span>
-              <span class="lineup-slot__empty-meta">
-                <span class="lineup-slot__pos-dot lineup-slot__pos-dot--${posLower}"></span>
-                ${esc(slot.position)}
-              </span>
-            </div>
-          </div>`;
+        const emptyCell = buildPlayerCellHTML({
+          name: 'Tap to set',
+          headshot: '/assets/nfl-logos/NFL.svg',
+          position: slot.position,
+          nflTeam: '',
+          size: 'default',
+        });
+        btn.innerHTML = `<div class="lineup-slot__player lineup-slot__player--empty">${emptyCell}</div>`;
         return;
       }
 
@@ -1327,75 +1320,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     transform: scale(0.98);
   }
 
-  /* Position badge */
-  /* Empty slot — player lockup style */
-  .lineup-slot__empty-lockup {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    flex: 1;
+  /* Empty slot — subdued player lockup using standard PlayerCell */
+  .lineup-slot__player--empty {
+    opacity: 0.5;
   }
-
-  .lineup-slot__empty-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-full, 9999px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-on-colored, #fff);
-    flex-shrink: 0;
-    opacity: 0.7;
-  }
-  .lineup-slot__empty-avatar--qb   { background: var(--lineup-pos-qb); }
-  .lineup-slot__empty-avatar--rb   { background: var(--lineup-pos-rb); }
-  .lineup-slot__empty-avatar--wr   { background: var(--lineup-pos-wr); }
-  .lineup-slot__empty-avatar--te   { background: var(--lineup-pos-te); }
-  .lineup-slot__empty-avatar--flex { background: var(--lineup-pos-flex); }
-  .lineup-slot__empty-avatar--pk   { background: var(--lineup-pos-pk); }
-  .lineup-slot__empty-avatar--def  { background: var(--lineup-pos-def); }
-
-  .lineup-slot__empty-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  .lineup-slot__empty-name {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-gray-400, #9ca3af);
+  .lineup-slot__player--empty .player-cell__name {
     font-style: italic;
+    font-weight: 400;
   }
-
-  .lineup-slot__empty-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-gray-400, #9ca3af);
-  }
-
-  .lineup-slot__pos-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: var(--radius-full, 9999px);
-    flex-shrink: 0;
-  }
-  .lineup-slot__pos-dot--qb   { background: var(--lineup-pos-qb); }
-  .lineup-slot__pos-dot--rb   { background: var(--lineup-pos-rb); }
-  .lineup-slot__pos-dot--wr   { background: var(--lineup-pos-wr); }
-  .lineup-slot__pos-dot--te   { background: var(--lineup-pos-te); }
-  .lineup-slot__pos-dot--flex { background: var(--lineup-pos-flex); }
-  .lineup-slot__pos-dot--pk   { background: var(--lineup-pos-pk); }
-  .lineup-slot__pos-dot--def  { background: var(--lineup-pos-def); }
 
   .lineup-slot__player {
     flex: 1;
