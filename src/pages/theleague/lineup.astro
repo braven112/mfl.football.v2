@@ -14,7 +14,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
-import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerHeadshot } from '../../constants/roster-constants';
@@ -32,17 +32,15 @@ if (!user?.franchiseId) {
 // Core data loading
 // ---------------------------------------------------------------------------
 const leagueYear = getCurrentLeagueYear();
-const seasonYear = getCurrentSeasonYear();
 const currentWeek = getCurrentWeekForYear(leagueYear);
 const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || currentWeek;
 const week = Math.max(1, Math.min(22, requestedWeek));
 
 const MFL_LEAGUE_ID = '13522';
-const isOffseason = leagueYear > seasonYear;
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
-// Parallel data fetches (all 7 run concurrently to avoid waterfall)
-const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes] = await Promise.all([
+// Parallel data fetches (all 8 run concurrently to avoid waterfall)
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes] = await Promise.all([
   fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
@@ -50,6 +48,7 @@ const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes
   fetch(`${mflBase}?TYPE=players&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   loadLiveOdds(week),
   fetch(`${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
 const rostersData = rostersRes?.ok ? await rostersRes.json() : null;
@@ -57,6 +56,20 @@ const projData = projRes?.ok ? await projRes.json() : null;
 const weeklyData = weeklyRes?.ok ? await weeklyRes.json() : null;
 const fpaData = fpaRes?.ok ? await fpaRes.json() : null;
 const playersData = playersRes?.ok ? await playersRes.json() : null;
+const nflSchedData = nflSchedRes?.ok ? await nflSchedRes.json() : null;
+
+// Build kickoff map from MFL schedule (source of truth for game locks)
+const nowEpoch = Math.floor(Date.now() / 1000);
+const kickoffByTeam = new Map<string, number>();
+const rawMatchups = nflSchedData?.nflSchedule?.matchup;
+const matchups = Array.isArray(rawMatchups) ? rawMatchups : rawMatchups ? [rawMatchups] : [];
+for (const game of matchups) {
+  const kickoff = parseInt(game.kickoff, 10) || 0;
+  const teams = Array.isArray(game.team) ? game.team : game.team ? [game.team] : [];
+  for (const t of teams) {
+    if (t.id) kickoffByTeam.set(t.id, kickoff);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Build player map
@@ -227,9 +240,10 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
     if (weeklyScores[w] !== undefined) recentScores.push({ week: w, score: weeklyScores[w] });
   }
 
-  // Game lock status — offseason means no games have started
+  // Game lock status — use MFL kickoff times (source of truth)
   const gameIdx = gameIndexByTeam.get(nflTeam) ?? null;
-  const gameLocked = !isOffseason && gameIdx !== null && schedule[gameIdx].status !== 'pre';
+  const kickoff = kickoffByTeam.get(nflTeam) ?? 0;
+  const gameLocked = kickoff > 0 && nowEpoch >= kickoff;
 
   const streak = computeStreak(weeklyScores, currentWeek);
 
