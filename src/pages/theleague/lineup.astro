@@ -770,6 +770,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         return p.eligibleSlots.includes(slot.position);
       });
 
+      if (eligible.length === 0) {
+        console.warn('[CDM] No eligible players for slot:', slot.position, '| roster:', data.roster.length,
+          '| sample:', data.roster.slice(0, 5).map((p: any) => ({ name: p.name, pos: p.position, slots: p.eligibleSlots, locked: p.gameLocked })));
+      }
+
       eligible.sort((a: any, b: any) => (b.projection ?? 0) - (a.projection ?? 0));
 
       cdmThead.innerHTML = `<tr>
@@ -1116,7 +1121,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   </script>
 </TheLeagueLayout>
 
-<style>
+<style is:global>
   /* ===================================================================
      Lineup Page — Design Tokens
      =================================================================== */
