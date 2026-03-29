@@ -1324,6 +1324,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   .lineup-slot__player--empty {
     opacity: 0.5;
   }
+  .lineup-slot__player--empty .player-cell__avatar {
+    display: none;
+  }
   .lineup-slot__player--empty .player-cell__name {
     font-style: italic;
     font-weight: 400;
