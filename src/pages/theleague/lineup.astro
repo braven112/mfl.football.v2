@@ -1304,18 +1304,23 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   /* Position badge */
   .lineup-slot__pos {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 44px;
     min-width: 44px;
-    height: 36px;
-    border-radius: var(--radius-sm, 0.25rem);
+    height: 44px;
+    border-radius: var(--radius-md, 0.5rem);
     font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-on-colored, #fff);
+  }
+
+  /* Only show position avatar on empty slots */
+  .lineup-slot--empty .lineup-slot__pos {
+    display: flex;
   }
   .lineup-slot__pos--qb  { background: var(--lineup-pos-qb); }
   .lineup-slot__pos--rb  { background: var(--lineup-pos-rb); }
