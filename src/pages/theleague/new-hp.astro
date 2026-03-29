@@ -12,7 +12,9 @@ import ScheftnerFeedCompact from '../../components/shared/ScheftnerFeedCompact.a
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, resolveHeroContent } from '../../utils/hero-resolver';
+import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
@@ -35,11 +37,16 @@ const testDateParam = Astro.url.searchParams.get('testDate');
 const effectiveDate = parseTestDate(testDateParam);
 const testMode = !!testDateParam;
 
-// Resolve hero state (the new state machine)
+// Check draft completion for early UDFA window transition
+const leagueYear = getCurrentLeagueYear();
+const draftComplete = isDraftComplete(leagueYear);
+
+// Resolve hero state (the new state machine) and enrich with off-season data
 const hideLeaguePrefix = false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const timeline = getWhatsNextTimeline(effectiveDate);
-const heroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline);
+const rawHeroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline, draftComplete);
+const heroState = await enrichHeroState(rawHeroState);
 
 // Load team config (used for reply composer + live scoring)
 let userTeamName: string | undefined;
@@ -109,6 +116,7 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
         resolveLeaguePath={r}
         spriteUrl={spriteUrl}
         liveScoring={liveScoring}
+        userFranchiseId={userFranchiseId}
       />
       {testMode && (
         <div class="hp2__debug">

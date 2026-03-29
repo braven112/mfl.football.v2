@@ -92,7 +92,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
 }
 
 /** Total days the full Auction Hero is displayed */
-const AUCTION_HERO_TOTAL_DAYS = 30;
+const AUCTION_HERO_TOTAL_DAYS = 13;
 
 /**
  * Get the Monday before the 3rd Thursday of March (auction hero start).
@@ -562,14 +562,22 @@ function isTaggedShowcase(referenceDate: Date): boolean {
   return referenceDate >= showcaseStart && referenceDate < auctionStart;
 }
 
-/** Check if in the UDFA free agent window (after draft hero → +7 days) */
-function isUDFAWindow(referenceDate: Date): boolean {
+/** Check if in the UDFA free agent window (after draft hero → +7 days, or during draft period if draft complete) */
+function isUDFAWindow(referenceDate: Date, draftComplete?: boolean): boolean {
   const year = referenceDate.getFullYear();
   const draftHeroStart = getDraftHeroStart(year);
 
   const draftHeroEnd = new Date(draftHeroStart);
   draftHeroEnd.setDate(draftHeroEnd.getDate() + DRAFT_HERO_TOTAL_DAYS);
   draftHeroEnd.setHours(23, 59, 59, 999);
+
+  // If draft is complete during the draft hero period, start UDFA window early
+  if (draftComplete && isDraftHeroPeriod(referenceDate)) {
+    const udfaEnd = new Date(draftHeroEnd);
+    udfaEnd.setDate(udfaEnd.getDate() + 7);
+    udfaEnd.setHours(23, 59, 59, 999);
+    return referenceDate <= udfaEnd;
+  }
 
   const udfaEnd = new Date(draftHeroEnd);
   udfaEnd.setDate(udfaEnd.getDate() + 7);
@@ -703,6 +711,7 @@ export function resolveHeroState(
   testMode: boolean = false,
   entries?: WhatsNewEntry[],
   timeline?: WhatsNextTimeline,
+  draftComplete?: boolean,
 ): HeroState {
   const now = referenceDate ?? new Date();
   const week = getCurrentNFLWeek(now) ?? undefined;
@@ -773,8 +782,8 @@ export function resolveHeroState(
     );
   }
 
-  // --- P0: Draft Hero (existing) ---
-  if (isDraftHeroPeriod(now)) {
+  // --- P0: Draft Hero (existing — skipped when draft is complete) ---
+  if (isDraftHeroPeriod(now) && !draftComplete) {
     const live = isDraftLive(now);
     const year = now.getFullYear();
     return buildState(
@@ -857,7 +866,7 @@ export function resolveHeroState(
   }
 
   // --- P1: UDFA Free Agent Window ---
-  if (isUDFAWindow(now)) {
+  if (isUDFAWindow(now, draftComplete)) {
     return buildState('udfa-window', 'P1', 'isUDFAWindow', now, testMode, {
       fallbackHero: {
         source: 'event',

@@ -61,6 +61,48 @@ export interface HeroState {
     leagueYear: number;
     draftStartFormatted: string;
   };
+  /** Champion-specific props (only when phase is 'champion-crowned') */
+  championProps?: {
+    winnerFranchiseId: string;
+    winnerName: string;
+    winnerIcon: string;
+    winnerColor: string;
+    loserFranchiseId: string;
+    loserName: string;
+    winnerScore: number;
+    loserScore: number;
+    leagueYear: number;
+  };
+  /** Tagged player showcase props (only when phase is 'tagged-showcase') */
+  taggedShowcaseProps?: {
+    taggedPlayers: Array<{
+      playerId: string;
+      playerName: string;
+      position: string;
+      nflTeam: string;
+      headshot: string;
+      franchiseId: string;
+      franchiseName: string;
+      franchiseIcon: string;
+    }>;
+  };
+  /** Cut watch props (only when phase is 'cut-watch') */
+  cutWatchProps?: {
+    overLimitTeams: Array<{
+      franchiseId: string;
+      franchiseName: string;
+      franchiseIcon: string;
+      activeCount: number;
+      cutCandidates: Array<{
+        playerId: string;
+        playerName: string;
+        position: string;
+        salary: number;
+      }>;
+    }>;
+    deadlineDate: string;
+    daysUntilDeadline: number;
+  };
   /** Metadata for debugging and display */
   metadata: {
     /** NFL week number (1-17) */

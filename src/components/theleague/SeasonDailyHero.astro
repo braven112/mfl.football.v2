@@ -14,6 +14,13 @@ import HeroBanner from './HeroBanner.astro';
 import LiveScoringHero from '../shared/LiveScoringHero';
 import '../../styles/live-scoring-hero.css';
 
+// Off-season hero components
+import ChampionCrownedHero from './ChampionCrownedHero.astro';
+import TagExtensionHero from './TagExtensionHero.astro';
+import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
+import CutWatchHero from './CutWatchHero.astro';
+import UDFAHero from './UDFAHero.astro';
+
 // Daily rotation stub components (Phases C-D)
 import StandingsHeroStub from './hero-stubs/StandingsHeroStub.astro';
 import RecapHeroStub from './hero-stubs/RecapHeroStub.astro';
@@ -37,9 +44,11 @@ export interface Props {
     initialScores?: Record<string, number>;
     initialRemaining?: Record<string, number>;
   };
+  /** User's franchise ID for champion celebration detection */
+  userFranchiseId?: string;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId } = Astro.props;
 
 const phase = state.phase;
 const slot = state.slot;
@@ -88,8 +97,52 @@ const fallback = state.fallbackHero;
 {slot === 'article' && <ArticleHeroStub />}
 {slot === 'game-day-preview' && <GameDayPreviewHeroStub />}
 
-{/* Fallback phases: trade-deadline, champion-crowned, tag-window, etc. render via HeroBanner */}
-{!slot && !state.auctionProps && !state.draftProps && fallback && (
+{/* Off-season heroes: dedicated components */}
+{phase === 'champion-crowned' && state.championProps && (
+  <ChampionCrownedHero
+    championProps={state.championProps}
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+    userFranchiseId={userFranchiseId}
+  />
+)}
+
+{phase === 'tag-window' && (
+  <TagExtensionHero
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+    referenceDate={state.metadata.referenceDate}
+  />
+)}
+
+{phase === 'tagged-showcase' && (
+  <TaggedPlayerShowcaseHero
+    taggedShowcaseProps={state.taggedShowcaseProps}
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+  />
+)}
+
+{phase === 'udfa-window' && (
+  <UDFAHero
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+  />
+)}
+
+{phase === 'cut-watch' && (
+  <CutWatchHero
+    cutWatchProps={state.cutWatchProps}
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+  />
+)}
+
+{/* Fallback phases: trade-deadline, offseason-fallback, etc. render via HeroBanner */}
+{!slot && !state.auctionProps && !state.draftProps
+  && !state.championProps && !state.taggedShowcaseProps && !state.cutWatchProps
+  && phase !== 'tag-window' && phase !== 'udfa-window'
+  && fallback && (
   <HeroBanner
     title={fallback.title}
     summary={fallback.summary}

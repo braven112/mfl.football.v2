@@ -1,0 +1,383 @@
+---
+/**
+ * CutWatchHero — Roster deadline hero (Jul 15 → Aug 16). Identifies teams
+ * over the 22-player active roster limit, highlights their most expensive
+ * marginal players as likely cuts, and shows a countdown to the deadline.
+ */
+import type { HeroState } from '../../types/hero-state';
+import { formatSalary } from '../../utils/formatters';
+
+export interface Props {
+  cutWatchProps?: HeroState['cutWatchProps'];
+  resolveLeaguePath: (path: string) => string;
+  spriteUrl: string;
+}
+
+const { cutWatchProps, resolveLeaguePath: r, spriteUrl } = Astro.props;
+const overLimitTeams = cutWatchProps?.overLimitTeams ?? [];
+const deadlineDate = cutWatchProps?.deadlineDate ?? '';
+const daysUntilDeadline = cutWatchProps?.daysUntilDeadline ?? 0;
+const hasOverLimit = overLimitTeams.length > 0;
+const displayTeams = overLimitTeams.slice(0, 4);
+const moreCount = Math.max(0, overLimitTeams.length - 4);
+const isDeadlineDay = daysUntilDeadline === 0;
+---
+
+<section class="cut-hero" aria-label="Cut Watch — Roster Deadline">
+  <div class="cut-hero__columns">
+    <div class="cut-hero__left">
+      <div class="cut-hero__text">
+        <div class="cut-hero__eyebrow">
+          <span class="cut-hero__badge">Cut Watch</span>
+        </div>
+        <h2 class="cut-hero__title">Roster Deadline Approaching</h2>
+        <p class="cut-hero__summary">
+          Teams must cut to 22 active players by {deadlineDate}. Who's on the bubble?
+        </p>
+      </div>
+
+      <div class="cut-hero__countdown-row">
+        {isDeadlineDay ? (
+          <div class="cut-hero__countdown cut-hero__countdown--urgent">
+            <svg class="cut-hero__countdown-icon" aria-hidden="true">
+              <use href={`${spriteUrl}#icon-clock`}></use>
+            </svg>
+            <span>Deadline today</span>
+          </div>
+        ) : (
+          <div class="cut-hero__countdown">
+            <span class="cut-hero__countdown-number">{daysUntilDeadline}</span>
+            <span class="cut-hero__countdown-label">day{daysUntilDeadline !== 1 ? 's' : ''} until rosters lock</span>
+          </div>
+        )}
+      </div>
+
+      <a href={r('/theleague/rosters')} class="cut-hero__cta">
+        <svg class="cut-hero__cta-icon" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-scissors`}></use>
+        </svg>
+        <span>View Full Rosters</span>
+        <span class="cut-hero__cta-arrow" aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+
+    <div class="cut-hero__teams">
+      <h3 class="cut-hero__teams-title">
+        {hasOverLimit ? 'Over the Limit' : 'Roster Status'}
+      </h3>
+
+      {hasOverLimit ? (
+        <ul class="cut-hero__team-list">
+          {displayTeams.map((team) => (
+            <li class="cut-hero__team-row">
+              <div class="cut-hero__team-info">
+                {team.franchiseIcon && (
+                  <img
+                    src={team.franchiseIcon}
+                    alt=""
+                    class="cut-hero__team-icon"
+                    width="24"
+                    height="24"
+                    loading="eager"
+                  />
+                )}
+                <span class="cut-hero__team-name">{team.franchiseName}</span>
+                <span class="cut-hero__team-count">{team.activeCount} active</span>
+              </div>
+              {team.cutCandidates.length > 0 && (
+                <div class="cut-hero__candidates">
+                  <span class="cut-hero__candidates-label">Likely cuts:</span>
+                  {team.cutCandidates.slice(0, 3).map((c, i) => (
+                    <span class="cut-hero__candidate">
+                      {c.playerName.split(', ').reverse().join(' ')}{i < Math.min(team.cutCandidates.length, 3) - 1 ? ',' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+          {moreCount > 0 && (
+            <li class="cut-hero__more">
+              <a href={r('/theleague/rosters')} class="cut-hero__more-link">
+                and {moreCount} more team{moreCount !== 1 ? 's' : ''} &rarr;
+              </a>
+            </li>
+          )}
+        </ul>
+      ) : (
+        <p class="cut-hero__all-clear">
+          All teams are at or below the 22-player active limit. Looking good.
+        </p>
+      )}
+    </div>
+  </div>
+</section>
+
+<style>
+  .cut-hero {
+    padding: 0.5rem 0 1rem;
+  }
+
+  .cut-hero__columns {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .cut-hero__left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .cut-hero__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cut-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .cut-hero__badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 12%, var(--color-gray-100, #f3f4f6));
+    color: var(--color-error, #dc2626);
+  }
+
+  .cut-hero__title {
+    font-size: clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem);
+    font-weight: 800;
+    color: var(--color-dark, #0f1e2e);
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .cut-hero__summary {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 54ch;
+    margin: 0;
+  }
+
+  /* Countdown */
+  .cut-hero__countdown-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .cut-hero__countdown {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cut-hero__countdown-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-error, #dc2626);
+    line-height: 1;
+  }
+
+  .cut-hero__countdown-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cut-hero__countdown--urgent {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-error, #dc2626);
+  }
+
+  .cut-hero__countdown-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+  }
+
+  /* CTA */
+  .cut-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .cut-hero__cta:hover {
+    filter: brightness(0.92);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
+  }
+
+  .cut-hero__cta:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .cut-hero__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  .cut-hero__cta-arrow {
+    font-size: 1rem;
+    transition: transform 0.15s ease;
+  }
+
+  .cut-hero__cta:hover .cut-hero__cta-arrow {
+    transform: translateX(2px);
+  }
+
+  /* Right column: team list */
+  .cut-hero__teams {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cut-hero__teams-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-error, #dc2626);
+    margin: 0;
+  }
+
+  .cut-hero__team-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cut-hero__team-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .cut-hero__team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .cut-hero__team-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .cut-hero__team-name {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-700, #374151);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cut-hero__team-count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-error, #dc2626);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  .cut-hero__candidates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-left: 2.25rem;
+  }
+
+  .cut-hero__candidates-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .cut-hero__candidate {
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .cut-hero__more {
+    text-align: center;
+  }
+
+  .cut-hero__more-link {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+  }
+
+  .cut-hero__more-link:hover {
+    text-decoration: underline;
+  }
+
+  .cut-hero__all-clear {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+    padding: 0.5rem 0;
+  }
+
+  @media (max-width: 768px) {
+    .cut-hero__columns {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .cut-hero__title {
+      font-size: clamp(1.5rem, 5vw + 0.5rem, 2rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cut-hero__cta,
+    .cut-hero__cta-arrow {
+      transition: none;
+    }
+  }
+</style>

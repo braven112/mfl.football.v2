@@ -79,12 +79,12 @@ describe('isAuctionHeroPeriod', () => {
     expect(isAuctionHeroPeriod(new Date(2026, 2, 19, 12, 0))).toBe(true);
   });
 
-  it('should return true on day 30 (April 15)', () => {
-    expect(isAuctionHeroPeriod(new Date(2026, 3, 15, 12, 0))).toBe(true);
+  it('should return true on day 13 (March 29)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 29, 12, 0))).toBe(true);
   });
 
-  it('should return false on day 31 (April 16)', () => {
-    expect(isAuctionHeroPeriod(new Date(2026, 3, 16))).toBe(false);
+  it('should return false on day 14 (March 30)', () => {
+    expect(isAuctionHeroPeriod(new Date(2026, 2, 30))).toBe(false);
   });
 
   it('should return false in January (well outside window)', () => {

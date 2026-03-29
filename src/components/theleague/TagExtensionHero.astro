@@ -1,0 +1,267 @@
+---
+/**
+ * TagExtensionHero — Countdown hero for the franchise tag & extension window
+ * (Jan 8 → Feb 14). Shows days remaining until the tagging deadline, explains
+ * the tag/extension mechanics, and links to the roster page.
+ */
+export interface Props {
+  resolveLeaguePath: (path: string) => string;
+  spriteUrl: string;
+  referenceDate: Date;
+}
+
+const { resolveLeaguePath: r, spriteUrl, referenceDate } = Astro.props;
+
+const deadlineYear = referenceDate.getFullYear();
+const deadline = new Date(deadlineYear, 1, 14, 23, 59, 59, 999); // Feb 14 end of day
+const daysRemaining = Math.max(0, Math.ceil((deadline.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24)));
+const isDeadlineDay = daysRemaining === 0;
+const deadlineFormatted = deadline.toLocaleDateString('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric',
+});
+---
+
+<section class="tag-hero" aria-label="Franchise Tags & Extensions">
+  <div class="tag-hero__columns">
+    <div class="tag-hero__left">
+      <div class="tag-hero__text">
+        <div class="tag-hero__eyebrow">
+          <span class="tag-hero__badge">Offseason</span>
+        </div>
+        <h2 class="tag-hero__title">Franchise Tags & Extensions</h2>
+        <p class="tag-hero__summary">
+          Protect your core. Tag players to retain exclusive negotiating rights. Extend
+          contracts before they hit the open market. The deadline is {deadlineFormatted}.
+        </p>
+      </div>
+
+      <div class="tag-hero__countdown-row">
+        {isDeadlineDay ? (
+          <div class="tag-hero__countdown tag-hero__countdown--urgent">
+            <svg class="tag-hero__countdown-icon" aria-hidden="true">
+              <use href={`${spriteUrl}#icon-clock`}></use>
+            </svg>
+            <span>Deadline today</span>
+          </div>
+        ) : (
+          <div class="tag-hero__countdown">
+            <span class="tag-hero__countdown-number">{daysRemaining}</span>
+            <span class="tag-hero__countdown-label">day{daysRemaining !== 1 ? 's' : ''} remaining</span>
+          </div>
+        )}
+      </div>
+
+      <a href={r('/theleague/rosters')} class="tag-hero__cta">
+        <svg class="tag-hero__cta-icon" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-tag`}></use>
+        </svg>
+        <span>Manage Your Roster</span>
+        <span class="tag-hero__cta-arrow" aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+
+    <div class="tag-hero__info">
+      <h3 class="tag-hero__info-title">How It Works</h3>
+      <ul class="tag-hero__info-list">
+        <li><strong>Franchise Tag:</strong> Pay 120% of current salary or top-3 position average (whichever is higher)</li>
+        <li><strong>Extension:</strong> Lock in a player beyond their current contract at a calculated rate</li>
+        <li><strong>Team Option:</strong> Pick up the next year at 110% escalation</li>
+        <li><strong>Deadline:</strong> {deadlineFormatted} — tags and extensions must be filed before the new league year</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .tag-hero {
+    padding: 0.5rem 0 1rem;
+  }
+
+  .tag-hero__columns {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .tag-hero__left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .tag-hero__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tag-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tag-hero__badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--cat-preseason, #60a5fa) 15%, var(--color-gray-100, #f3f4f6));
+    color: var(--cat-preseason, #60a5fa);
+  }
+
+  .tag-hero__title {
+    font-size: clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem);
+    font-weight: 800;
+    color: var(--color-dark, #0f1e2e);
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .tag-hero__summary {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 54ch;
+    margin: 0;
+  }
+
+  .tag-hero__countdown-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .tag-hero__countdown {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tag-hero__countdown-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--cat-preseason, #60a5fa);
+    line-height: 1;
+  }
+
+  .tag-hero__countdown-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .tag-hero__countdown--urgent {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-error, #dc2626);
+  }
+
+  .tag-hero__countdown-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+  }
+
+  .tag-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .tag-hero__cta:hover {
+    filter: brightness(0.92);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
+  }
+
+  .tag-hero__cta:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .tag-hero__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  .tag-hero__cta-arrow {
+    font-size: 1rem;
+    transition: transform 0.15s ease;
+  }
+
+  .tag-hero__cta:hover .tag-hero__cta-arrow {
+    transform: translateX(2px);
+  }
+
+  /* Right column: info panel */
+  .tag-hero__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tag-hero__info-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500, #6b7280);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--cat-preseason, #60a5fa);
+    margin: 0;
+  }
+
+  .tag-hero__info-list {
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .tag-hero__info-list li {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.5;
+  }
+
+  .tag-hero__info-list li strong {
+    color: var(--color-gray-700, #374151);
+  }
+
+  @media (max-width: 768px) {
+    .tag-hero__columns {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .tag-hero__title {
+      font-size: clamp(1.5rem, 5vw + 0.5rem, 2rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tag-hero__cta,
+    .tag-hero__cta-arrow {
+      transition: none;
+    }
+  }
+</style>

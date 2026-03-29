@@ -1,0 +1,242 @@
+---
+/**
+ * TaggedPlayerShowcaseHero — Displays franchise-tagged players during the
+ * tag showcase window (Feb 15 → auction start). Shows 1-6 tagged players
+ * using the PlayerCell pattern with franchise attribution. Gracefully
+ * handles empty state when no tags have been filed.
+ */
+import type { HeroState } from '../../types/hero-state';
+import PlayerCell from './PlayerCell.astro';
+
+export interface Props {
+  taggedShowcaseProps?: HeroState['taggedShowcaseProps'];
+  resolveLeaguePath: (path: string) => string;
+  spriteUrl: string;
+}
+
+const { taggedShowcaseProps, resolveLeaguePath: r, spriteUrl } = Astro.props;
+const taggedPlayers = taggedShowcaseProps?.taggedPlayers ?? [];
+const hasPlayers = taggedPlayers.length > 0;
+
+// Layout class based on player count
+const gridClass = taggedPlayers.length <= 2
+  ? 'tagged-hero__grid--large'
+  : taggedPlayers.length <= 4
+    ? 'tagged-hero__grid--medium'
+    : 'tagged-hero__grid--compact';
+---
+
+<section class="tagged-hero" aria-label="Tagged Players Showcase">
+  <div class="tagged-hero__header">
+    <div class="tagged-hero__eyebrow">
+      <span class="tagged-hero__badge">Tag Showcase</span>
+    </div>
+    <h2 class="tagged-hero__title">Tagged Players &mdash; Open for Offers</h2>
+    {hasPlayers ? (
+      <p class="tagged-hero__summary">
+        These franchise-tagged players can be poached. Make an offer before the matching period ends.
+      </p>
+    ) : (
+      <p class="tagged-hero__summary">
+        No franchise tags filed yet. Check back as teams make their moves before the auction.
+      </p>
+    )}
+  </div>
+
+  {hasPlayers && (
+    <div class={`tagged-hero__grid ${gridClass}`}>
+      {taggedPlayers.slice(0, 6).map((player) => (
+        <div class="tagged-hero__card">
+          <PlayerCell
+            name={player.playerName}
+            headshot={player.headshot}
+            position={player.position}
+            nflTeam={player.nflTeam}
+            size={taggedPlayers.length > 4 ? 'compact' : 'default'}
+          />
+          <div class="tagged-hero__franchise">
+            {player.franchiseIcon && (
+              <img
+                src={player.franchiseIcon}
+                alt=""
+                class="tagged-hero__franchise-icon"
+                width="16"
+                height="16"
+                loading="eager"
+              />
+            )}
+            <span class="tagged-hero__franchise-name">Tagged by {player.franchiseName}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <a href={r('/theleague/rosters')} class="tagged-hero__cta">
+    <svg class="tagged-hero__cta-icon" aria-hidden="true">
+      <use href={`${spriteUrl}#icon-target`}></use>
+    </svg>
+    <span>{hasPlayers ? 'View Roster Details' : 'View All Rosters'}</span>
+    <span class="tagged-hero__cta-arrow" aria-hidden="true">&rarr;</span>
+  </a>
+</section>
+
+<style>
+  .tagged-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 0.5rem 0 1rem;
+  }
+
+  .tagged-hero__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tagged-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tagged-hero__badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--cat-free-agency, #2e8743) 15%, var(--color-gray-100, #f3f4f6));
+    color: var(--cat-free-agency, #2e8743);
+  }
+
+  .tagged-hero__title {
+    font-size: clamp(1.5rem, 2.5vw + 0.5rem, 2.25rem);
+    font-weight: 800;
+    color: var(--color-dark, #0f1e2e);
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .tagged-hero__summary {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 54ch;
+    margin: 0;
+  }
+
+  /* Player grid — adaptive layout */
+  .tagged-hero__grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .tagged-hero__grid--large {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+
+  .tagged-hero__grid--medium {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tagged-hero__grid--compact {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .tagged-hero__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .tagged-hero__franchise {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding-left: 0.25rem;
+  }
+
+  .tagged-hero__franchise-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .tagged-hero__franchise-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .tagged-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .tagged-hero__cta:hover {
+    filter: brightness(0.92);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
+  }
+
+  .tagged-hero__cta:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .tagged-hero__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  .tagged-hero__cta-arrow {
+    font-size: 1rem;
+    transition: transform 0.15s ease;
+  }
+
+  .tagged-hero__cta:hover .tagged-hero__cta-arrow {
+    transform: translateX(2px);
+  }
+
+  @media (max-width: 768px) {
+    .tagged-hero__grid--medium,
+    .tagged-hero__grid--compact {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .tagged-hero__grid--medium,
+    .tagged-hero__grid--compact,
+    .tagged-hero__grid--large {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tagged-hero__cta,
+    .tagged-hero__cta-arrow {
+      transition: none;
+    }
+  }
+</style>
