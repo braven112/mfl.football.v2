@@ -1,0 +1,91 @@
+---
+/**
+ * SeasonDailyHero — Routing wrapper for the context-aware hero system.
+ *
+ * Pure conditional renderer: receives a fully-resolved HeroState from the page
+ * frontmatter and routes to the correct sub-component. Contains zero data-fetching
+ * logic and zero business logic about which slot to show.
+ */
+import type { HeroState } from '../../types/hero-state';
+import AuctionHero from './AuctionHero.astro';
+import DraftHero from './DraftHero.astro';
+import HeroBanner from './HeroBanner.astro';
+
+// Daily rotation stub components
+import LiveScoringHeroStub from './hero-stubs/LiveScoringHeroStub.astro';
+import StandingsHeroStub from './hero-stubs/StandingsHeroStub.astro';
+import RecapHeroStub from './hero-stubs/RecapHeroStub.astro';
+import WaiverWireHeroStub from './hero-stubs/WaiverWireHeroStub.astro';
+import ArticleHeroStub from './hero-stubs/ArticleHeroStub.astro';
+import GameDayPreviewHeroStub from './hero-stubs/GameDayPreviewHeroStub.astro';
+
+export interface Props {
+  /** Fully resolved hero state from the page frontmatter */
+  state: HeroState;
+  /** Path resolver from layout (needed by AuctionHero/DraftHero) */
+  resolveLeaguePath: (path: string) => string;
+  /** Sprite URL (needed by AuctionHero/DraftHero) */
+  spriteUrl: string;
+}
+
+const { state, resolveLeaguePath, spriteUrl } = Astro.props;
+
+const phase = state.phase;
+const slot = state.slot;
+const fallback = state.fallbackHero;
+---
+
+{/* P0: Auction hero — delegate to existing component */}
+{(phase === 'auction-preview' || phase === 'auction-live') && state.auctionProps && (
+  <AuctionHero
+    leagueYear={state.auctionProps.leagueYear}
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+    live={state.auctionProps.live}
+  />
+)}
+
+{/* P0: Draft hero — delegate to existing component */}
+{(phase === 'draft-announced' || phase === 'draft-live') && state.draftProps && (
+  <DraftHero
+    leagueYear={state.draftProps.leagueYear}
+    resolveLeaguePath={resolveLeaguePath}
+    spriteUrl={spriteUrl}
+    live={state.draftProps.live}
+    draftStartFormatted={state.draftProps.draftStartFormatted}
+  />
+)}
+
+{/* Daily rotation slots (regular-season, playoffs, championship) */}
+{slot === 'live-scoring' && <LiveScoringHeroStub />}
+{slot === 'standings' && <StandingsHeroStub />}
+{slot === 'recap' && <RecapHeroStub />}
+{slot === 'waiver-wire' && <WaiverWireHeroStub />}
+{slot === 'article' && <ArticleHeroStub />}
+{slot === 'game-day-preview' && <GameDayPreviewHeroStub />}
+
+{/* Fallback phases: trade-deadline, champion-crowned, tag-window, etc. render via HeroBanner */}
+{!slot && !state.auctionProps && !state.draftProps && fallback && (
+  <HeroBanner
+    title={fallback.title}
+    summary={fallback.summary}
+    link={fallback.link}
+    linkLabel={fallback.linkLabel}
+    icon={fallback.icon}
+    accentColor={fallback.accentColor}
+    variant="editorial"
+    isActive={fallback.isActive}
+    isUrgent={fallback.isUrgent}
+    kicker={fallback.kicker}
+    kickerDate={fallback.kickerDate}
+  />
+)}
+
+{/* Defensive empty-state: ensures the section landmark is never silently empty */}
+{!slot && !state.auctionProps && !state.draftProps && !fallback && (
+  <div class="hero-stub">
+    <div class="hero-stub__body">
+      <p class="hero-stub__desc">League updates coming soon.</p>
+    </div>
+  </div>
+)}

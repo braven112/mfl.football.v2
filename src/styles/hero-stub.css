@@ -1,0 +1,68 @@
+/**
+ * Shared styles for hero stub placeholder components.
+ * Used by all 6 daily rotation stubs during Phase A.
+ * Will be removed when real hero components replace stubs in later phases.
+ */
+
+.hero-stub {
+  background: var(--content-bg, #fff);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: 1.5rem 2rem;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hero-stub__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--color-primary, #1c497c);
+  margin: 0;
+  line-height: 1;
+}
+
+.hero-stub__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+
+.hero-stub__icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--color-gray-400, #9ca3af);
+  fill: currentColor;
+}
+
+.hero-stub__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-gray-700, #374151);
+  margin: 0;
+}
+
+.hero-stub__desc {
+  font-size: 0.8125rem;
+  color: var(--color-gray-500, #6b7280);
+  max-width: 40ch;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .hero-stub {
+    padding: 1rem 1.25rem;
+    min-height: 140px;
+  }
+}

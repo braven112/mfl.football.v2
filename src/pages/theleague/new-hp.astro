@@ -9,9 +9,16 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import ScheftnerFeedCompact from '../../components/shared/ScheftnerFeedCompact.astro';
+import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
 import { getAuthUser } from '../../utils/auth';
+import { resolveHeroState, parseTestDate, resolveHeroContent } from '../../utils/hero-resolver';
+import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { spriteUrl } from '../../utils/sprite-url';
 import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
+import type { WhatsNewEntry } from '../../types/whats-new';
 import feedData from '../../data/theleague/scheftner-feed.json';
+import whatsNewData from '../../data/whats-new.json';
 import '../../styles/scheftner-feed.css';
 import '../../styles/scheftner-feed-compact.css';
 
@@ -21,6 +28,17 @@ const userFranchiseId = authUser?.franchiseId;
 
 const feed = feedData as FeedType;
 const compactPosts = feed.posts.slice(0, 30);
+
+// Support ?testDate=YYYY-MM-DD or ?testDate=YYYY-MM-DDTHH:MM for testing hero states
+const testDateParam = Astro.url.searchParams.get('testDate');
+const effectiveDate = parseTestDate(testDateParam);
+const testMode = !!testDateParam;
+
+// Resolve hero state (the new state machine)
+const hideLeaguePrefix = false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+const timeline = getWhatsNextTimeline(effectiveDate);
+const heroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline);
 
 // Resolve team info for reply composer avatar
 let userTeamName: string | undefined;
@@ -41,14 +59,21 @@ if (userFranchiseId) {
 
 <TheLeagueLayout title="Home">
   <div class="hp2">
-    <section class="hp2__main" aria-labelledby="hp2-dashboard-heading">
-      <h2 id="hp2-dashboard-heading" class="hp2__section-title">Dashboard</h2>
-      <div class="hp2__placeholder">
-        <p class="hp2__placeholder-text">Dashboard widgets coming soon.</p>
-      </div>
+    <section class="hp2__main" aria-labelledby="hp2-hero-heading">
+      <h2 id="hp2-hero-heading" class="visually-hidden">League Overview</h2>
+      <SeasonDailyHero
+        state={heroState}
+        resolveLeaguePath={r}
+        spriteUrl={spriteUrl}
+      />
+      {testMode && (
+        <div class="hp2__debug">
+          <code>Phase: {heroState.phase} | Slot: {heroState.slot ?? 'none'} | Priority: {heroState.priority} | Resolved by: {heroState.metadata.resolvedBy}</code>
+        </div>
+      )}
     </section>
 
-    <aside class="hp2__sidebar" aria-label="Scheftner Report feed">
+    <aside class="hp2__sidebar" aria-label="Scheftner Report feed" tabindex="0">
       <ScheftnerFeedCompact
         posts={compactPosts}
         isAuthenticated={isAuthenticated}
@@ -72,37 +97,30 @@ if (userFranchiseId) {
     min-width: 0;
   }
 
-  .hp2__section-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-gray-900, #111827);
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--color-primary, #1c497c);
-    margin: 0 0 1rem;
-    line-height: 1;
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
-  .hp2__placeholder {
+  .hp2__debug {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
     background: var(--color-gray-50, #f9fafb);
     border: 1px dashed var(--content-border, #e2e8f0);
-    border-radius: var(--radius-lg, 0.75rem);
-    padding: 3rem 2rem;
-    text-align: center;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .hp2__placeholder-text {
-    font-size: 0.875rem;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.6875rem;
     color: var(--color-gray-500, #6b7280);
-    margin: 0;
   }
 
   .hp2__sidebar {
+    min-width: 0;
     position: sticky;
     top: calc(var(--header-height, 3.5rem) + 1rem);
     max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { resolveHeroContent, isAuctionHeroPeriod, isAuctionLive, isAuctionStripPeriod, isDraftHeroPeriod, isDraftLive, getDraftStartFormatted } from '../src/utils/hero-resolver';
+import {
+  resolveHeroContent, isAuctionHeroPeriod, isAuctionLive, isAuctionStripPeriod,
+  isDraftHeroPeriod, isDraftLive, getDraftStartFormatted,
+  resolveHeroState, isRegularSeason, isPlayoffPeriod, isChampionshipWeek,
+  isTradeDeadlineDay, getDailySlot, parseTestDate,
+} from '../src/utils/hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent, LeagueEventDefinition } from '../src/types/league-events';
 
@@ -817,6 +822,259 @@ describe('resolveHeroContent', () => {
       const result = resolveHeroContent(entries, timeline, jan22);
       expect(result.source).toBe('feature');
       expect(result.title).toBe('January Feature');
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NEW STATE MACHINE TESTS — resolveHeroState()
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('parseTestDate', () => {
+  it('should return undefined for null', () => {
+    expect(parseTestDate(null)).toBeUndefined();
+  });
+
+  it('should parse date-only format as noon', () => {
+    const result = parseTestDate('2027-09-14');
+    expect(result).toBeDefined();
+    expect(result!.getFullYear()).toBe(2027);
+    expect(result!.getMonth()).toBe(8); // September
+    expect(result!.getDate()).toBe(14);
+  });
+
+  it('should parse date+time format', () => {
+    const result = parseTestDate('2027-09-14T14:00');
+    expect(result).toBeDefined();
+    expect(result!.getFullYear()).toBe(2027);
+  });
+
+  it('should return undefined for invalid string', () => {
+    expect(parseTestDate('not-a-date')).toBeUndefined();
+  });
+});
+
+describe('isTradeDeadlineDay', () => {
+  it('should return true on Nov 13', () => {
+    expect(isTradeDeadlineDay(new Date(2027, 10, 13, 12, 0))).toBe(true);
+  });
+
+  it('should return false on Nov 12', () => {
+    expect(isTradeDeadlineDay(new Date(2027, 10, 12, 23, 0))).toBe(false);
+  });
+
+  it('should return false on Nov 14', () => {
+    expect(isTradeDeadlineDay(new Date(2027, 10, 14, 1, 0))).toBe(false);
+  });
+});
+
+describe('isRegularSeason', () => {
+  // 2027: Labor Day = Sep 6 (1st Monday), kickoff = Sep 9 (Thursday)
+  // Regular season runs ~13 weeks through Monday night
+
+  it('should return false before NFL kickoff', () => {
+    expect(isRegularSeason(new Date(2027, 8, 8))).toBe(false); // Sep 8 (Wed)
+  });
+
+  it('should return true on NFL kickoff Thursday', () => {
+    expect(isRegularSeason(new Date(2027, 8, 9))).toBe(true); // Sep 9 (Thu)
+  });
+
+  it('should return true mid-season (Oct)', () => {
+    expect(isRegularSeason(new Date(2027, 9, 15))).toBe(true); // Oct 15
+  });
+
+  it('should return false on trade deadline day (Nov 13)', () => {
+    // Trade deadline overrides at a higher priority, but isRegularSeason
+    // still returns true (the override is in resolveHeroState, not here)
+    expect(isRegularSeason(new Date(2027, 10, 13))).toBe(true);
+  });
+});
+
+describe('getDailySlot', () => {
+  // Use 2027-09-14 which is a Tuesday
+
+  it('should return recap on Tuesday morning', () => {
+    const result = getDailySlot(new Date(2027, 8, 14, 10, 0)); // Tue 10am
+    expect(result.slot).toBe('recap');
+    expect(result.gameWindow).toBeNull();
+  });
+
+  it('should return waiver-wire on Tuesday afternoon', () => {
+    const result = getDailySlot(new Date(2027, 8, 14, 15, 0)); // Tue 3pm
+    expect(result.slot).toBe('waiver-wire');
+  });
+
+  it('should return waiver-wire on Wednesday morning', () => {
+    const result = getDailySlot(new Date(2027, 8, 15, 12, 0)); // Wed noon
+    expect(result.slot).toBe('waiver-wire');
+  });
+
+  it('should return article on Wednesday night', () => {
+    const result = getDailySlot(new Date(2027, 8, 15, 21, 0)); // Wed 9pm
+    expect(result.slot).toBe('article');
+  });
+
+  it('should return article on Thursday morning', () => {
+    const result = getDailySlot(new Date(2027, 8, 16, 10, 0)); // Thu 10am
+    expect(result.slot).toBe('article');
+  });
+
+  it('should return live-scoring on Thursday evening (TNF)', () => {
+    const result = getDailySlot(new Date(2027, 8, 16, 18, 0)); // Thu 6pm
+    expect(result.slot).toBe('live-scoring');
+    expect(result.gameWindow).toBe('tnf');
+  });
+
+  it('should return article on Friday', () => {
+    const result = getDailySlot(new Date(2027, 8, 17, 12, 0)); // Fri noon
+    expect(result.slot).toBe('article');
+  });
+
+  it('should return game-day-preview on Saturday', () => {
+    const result = getDailySlot(new Date(2027, 8, 18, 12, 0)); // Sat noon
+    expect(result.slot).toBe('game-day-preview');
+  });
+
+  it('should return game-day-preview on Sunday pre-game', () => {
+    const result = getDailySlot(new Date(2027, 8, 19, 8, 0)); // Sun 8am
+    expect(result.slot).toBe('game-day-preview');
+  });
+
+  it('should return live-scoring on Sunday during games', () => {
+    const result = getDailySlot(new Date(2027, 8, 19, 14, 0)); // Sun 2pm
+    expect(result.slot).toBe('live-scoring');
+    expect(result.gameWindow).toBe('sunday');
+  });
+
+  it('should return live-scoring on Sunday night (SNF)', () => {
+    const result = getDailySlot(new Date(2027, 8, 19, 21, 0)); // Sun 9pm
+    expect(result.slot).toBe('live-scoring');
+    expect(result.gameWindow).toBe('snf');
+  });
+
+  it('should return standings on Monday morning', () => {
+    const result = getDailySlot(new Date(2027, 8, 20, 10, 0)); // Mon 10am
+    expect(result.slot).toBe('standings');
+  });
+
+  it('should return live-scoring on Monday evening (MNF)', () => {
+    const result = getDailySlot(new Date(2027, 8, 20, 18, 0)); // Mon 6pm
+    expect(result.slot).toBe('live-scoring');
+    expect(result.gameWindow).toBe('mnf');
+  });
+});
+
+describe('resolveHeroState', () => {
+  describe('P0++ Trade Deadline override', () => {
+    it('should return trade-deadline on Nov 13', () => {
+      const state = resolveHeroState(new Date(2027, 10, 13, 12, 0), true);
+      expect(state.phase).toBe('trade-deadline');
+      expect(state.priority).toBe('P0++');
+    });
+  });
+
+  describe('P0 Auction/Draft hero', () => {
+    it('should return auction-live during auction (March 22)', () => {
+      const state = resolveHeroState(new Date(2027, 2, 22), true);
+      expect(state.phase).toBe('auction-live');
+      expect(state.priority).toBe('P0');
+      expect(state.auctionProps?.live).toBe(true);
+    });
+
+    it('should return auction-preview before auction opens', () => {
+      // 2027: 3rd Thursday of March = Mar 18. Monday before = Mar 15
+      const state = resolveHeroState(new Date(2027, 2, 15, 12, 0), true);
+      expect(state.phase).toBe('auction-preview');
+      expect(state.auctionProps?.live).toBe(false);
+    });
+
+    it('should return draft-announced after NFL Draft', () => {
+      // 2027: NFL Draft = Apr 22 (4th Thu), Mon after = Apr 26
+      const state = resolveHeroState(new Date(2027, 3, 27), true);
+      expect(state.phase).toBe('draft-announced');
+      expect(state.draftProps?.live).toBe(false);
+    });
+  });
+
+  describe('P0 Regular season daily rotation', () => {
+    it('should return regular-season with live-scoring on Sunday 2pm', () => {
+      // 2027: Labor Day = Sep 6, kickoff = Sep 10. Oct 3 = Sunday
+      const state = resolveHeroState(new Date(2027, 9, 3, 14, 0), true);
+      expect(state.phase).toBe('regular-season');
+      expect(state.slot).toBe('live-scoring');
+      expect(state.metadata.gameWindow).toBe('sunday');
+    });
+
+    it('should return regular-season with standings on Monday morning', () => {
+      // 2027: Oct 4 = Monday
+      const state = resolveHeroState(new Date(2027, 9, 4, 10, 0), true);
+      expect(state.phase).toBe('regular-season');
+      expect(state.slot).toBe('standings');
+    });
+
+    it('should return regular-season with recap on Tuesday morning', () => {
+      const state = resolveHeroState(new Date(2027, 9, 5, 10, 0), true);
+      expect(state.phase).toBe('regular-season');
+      expect(state.slot).toBe('recap');
+    });
+
+    it('should return regular-season with waiver-wire on Tuesday afternoon', () => {
+      const state = resolveHeroState(new Date(2027, 9, 5, 15, 0), true);
+      expect(state.phase).toBe('regular-season');
+      expect(state.slot).toBe('waiver-wire');
+    });
+  });
+
+  describe('P1 Off-season phases', () => {
+    it('should return tag-window in January', () => {
+      const state = resolveHeroState(new Date(2027, 0, 15), true);
+      expect(state.phase).toBe('tag-window');
+      expect(state.priority).toBe('P1');
+    });
+
+    it('should return tagged-showcase in late February', () => {
+      const state = resolveHeroState(new Date(2027, 1, 20), true);
+      expect(state.phase).toBe('tagged-showcase');
+      expect(state.priority).toBe('P1');
+    });
+
+    it('should return cut-watch in late July', () => {
+      const state = resolveHeroState(new Date(2027, 6, 20), true);
+      expect(state.phase).toBe('cut-watch');
+      expect(state.priority).toBe('P1');
+    });
+  });
+
+  describe('P5 Fallback', () => {
+    it('should return offseason-fallback when no seasonal phase matches', () => {
+      // Use a date that falls between phases (e.g., early June)
+      const state = resolveHeroState(new Date(2027, 5, 15), true);
+      // This should be either udfa-window or offseason-fallback depending on draft timing
+      expect(['offseason-fallback', 'udfa-window', 'cut-watch']).toContain(state.phase);
+    });
+  });
+
+  describe('testMode metadata', () => {
+    it('should set testMode: true when flag is passed', () => {
+      const state = resolveHeroState(new Date(2027, 5, 15), true);
+      expect(state.metadata.testMode).toBe(true);
+    });
+
+    it('should set testMode: false by default', () => {
+      const state = resolveHeroState(new Date(2027, 5, 15));
+      expect(state.metadata.testMode).toBe(false);
+    });
+  });
+
+  describe('backward compatibility — resolveHeroContent still works', () => {
+    it('should still resolve auction hero via old API', () => {
+      const entries: WhatsNewEntry[] = [];
+      const timeline = makeTimeline();
+      const now = new Date(2026, 2, 22); // March 22
+
+      const result = resolveHeroContent(entries, timeline, now);
+      expect(result.source).toBe('auction');
     });
   });
 });

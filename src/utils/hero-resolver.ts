@@ -1,22 +1,25 @@
 /**
  * Hero Resolver - Automated Homepage Marketing Engine
  *
- * Determines what content to display in the hero banner on the homepage.
- * Walks a priority table top-to-bottom and returns the first match.
+ * Two resolver systems:
  *
- * Priority (highest to lowest):
- * 0a. Auction hero window (Monday before auction → 30 days) — always wins
- * 0b. Draft hero window (Monday after NFL Draft → 30 days) — always wins
- * 1. New feature announcement (≤7 days old, random pick if multiple)
- * 2. Urgent league event (within urgencyDays)
- * 3. Active league event (happening now)
- * 4. Upcoming league event (within 7 days)
- * 5. Default fallback: newest What's New article (any age)
+ * 1. resolveHeroContent() — Original waterfall resolver for index.astro (backward compat)
+ * 2. resolveHeroState() — New state machine for new-hp.astro with time/day awareness
+ *
+ * State machine priority (highest to lowest):
+ * P0++  Trade Deadline Day (24h override)
+ * P0    Championship / Champion Crowned / Auction / Draft / Daily Rotation / Playoffs
+ * P1    Tag Window / Tagged Showcase / UDFA / Cut Watch
+ * P2    Fresh feature announcement (≤7 days)
+ * P3    Urgent league event
+ * P4    Active league event
+ * P5    Fallback (latest article / What's New)
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
+import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from '../types/hero-state';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
 
@@ -359,4 +362,570 @@ function findUpcomingEvent(timeline: WhatsNextTimeline): ResolvedLeagueEvent | n
     return timeline.next;
   }
   return null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NEW STATE MACHINE — resolveHeroState()
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** PT timezone for all time-of-day calculations */
+const PT_TIMEZONE = 'America/Los_Angeles';
+
+/**
+ * Extract hour, minute, and day-of-week from a Date in Pacific Time.
+ * Uses Intl.DateTimeFormat for reliable timezone conversion.
+ */
+function getPTComponents(date: Date): { hour: number; minute: number; dayOfWeek: number; month: number; day: number; year: number } {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: PT_TIMEZONE,
+    hour: 'numeric', minute: 'numeric',
+    weekday: 'short', month: 'numeric', day: 'numeric', year: 'numeric',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find(p => p.type === type)?.value ?? '';
+
+  const hour = parseInt(get('hour'), 10);
+  const minute = parseInt(get('minute'), 10);
+  const month = parseInt(get('month'), 10);
+  const day = parseInt(get('day'), 10);
+  const year = parseInt(get('year'), 10);
+
+  // Map weekday abbreviation to number (0=Sun, 1=Mon, ..., 6=Sat)
+  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const dayOfWeek = weekdayMap[get('weekday')] ?? 0;
+
+  return { hour, minute, dayOfWeek, month, day, year };
+}
+
+/** Convert hour:minute to minutes since midnight for easy comparison */
+function toMinutes(hour: number, minute: number): number {
+  return hour * 60 + minute;
+}
+
+// ── Season Phase Detection Helpers ──
+
+/** Get the NFL kickoff date (Thursday after Labor Day) for a given season year */
+function getKickoffDate(year: number): Date {
+  const laborDay = getNthDayOfMonth(year, 8, 1, 1); // 1st Monday of September
+  const kickoff = new Date(laborDay);
+  kickoff.setDate(kickoff.getDate() + 3); // Thursday = Monday + 3
+  kickoff.setHours(0, 0, 0, 0);
+  return kickoff;
+}
+
+/**
+ * Check if the reference date is during the NFL regular season.
+ * Regular season: NFL kickoff Thursday → end of Week 14 (~Dec 13).
+ * NFL kickoff is the Thursday after Labor Day (1st Mon of Sep).
+ */
+export function isRegularSeason(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+  const kickoff = getKickoffDate(year);
+
+  // End of regular season (Week 14) ≈ 13 weeks after kickoff + 3 days (through Monday)
+  // That's approximately the 2nd Sunday of December + 1 day (through Monday night)
+  const regularSeasonEnd = new Date(kickoff);
+  regularSeasonEnd.setDate(regularSeasonEnd.getDate() + (13 * 7) + 4); // 13 weeks + through Monday
+  regularSeasonEnd.setHours(23, 59, 59, 999);
+
+  // Also check: must not be trade deadline day (that overrides)
+  return referenceDate >= kickoff && referenceDate <= regularSeasonEnd;
+}
+
+/**
+ * Check if the reference date is during the playoff period.
+ * Playoffs: Week 15 Thursday → Week 16 Monday night.
+ */
+export function isPlayoffPeriod(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+  const kickoff = getKickoffDate(year);
+
+  // Playoffs start = Week 15 Thursday = kickoff + 14 weeks
+  const playoffStart = new Date(kickoff);
+  playoffStart.setDate(playoffStart.getDate() + (14 * 7));
+  playoffStart.setHours(0, 0, 0, 0);
+
+  // Playoffs end = Week 16 Monday night (2 weeks of playoffs)
+  const playoffEnd = new Date(playoffStart);
+  playoffEnd.setDate(playoffEnd.getDate() + (2 * 7)); // Through end of Week 16 Thursday + games
+  playoffEnd.setHours(23, 59, 59, 999);
+
+  return referenceDate >= playoffStart && referenceDate <= playoffEnd;
+}
+
+/**
+ * Check if the reference date is during championship week.
+ * Championship: Week 17 Thursday → Monday night final.
+ */
+export function isChampionshipWeek(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+
+  // Check current year's season championship
+  if (checkChampionshipForYear(year, referenceDate)) return true;
+  // Check previous year's season championship (covers early January dates
+  // when the championship spans Dec→Jan across calendar years)
+  if (checkChampionshipForYear(year - 1, referenceDate)) return true;
+  return false;
+}
+
+/** Internal helper: check if referenceDate falls in the championship week for a given season year */
+function checkChampionshipForYear(seasonYear: number, referenceDate: Date): boolean {
+  const kickoff = getKickoffDate(seasonYear);
+
+  // Championship = Week 17 Thursday = kickoff + 16 weeks
+  const champStart = new Date(kickoff);
+  champStart.setDate(champStart.getDate() + (16 * 7));
+  champStart.setHours(0, 0, 0, 0);
+
+  // Championship ends Monday night (+4 days from Thursday, end of day)
+  const champEnd = new Date(champStart);
+  champEnd.setDate(champEnd.getDate() + 4);
+  champEnd.setHours(23, 59, 59, 999);
+
+  return referenceDate >= champStart && referenceDate <= champEnd;
+}
+
+/**
+ * Check if today is trade deadline day (Nov 13).
+ * This is the highest priority override — beats everything for 24 hours.
+ */
+export function isTradeDeadlineDay(referenceDate: Date): boolean {
+  const { month, day } = getPTComponents(referenceDate);
+  return month === 11 && day === 13;
+}
+
+/**
+ * Check if the reference date is in the champion crowned period.
+ * After championship Monday night → +7 days.
+ */
+function isChampionCrownedPeriod(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+  const kickoff = getKickoffDate(year);
+
+  // Championship Monday night end
+  const champStart = new Date(kickoff);
+  champStart.setDate(champStart.getDate() + (16 * 7));
+  const champMondayEnd = new Date(champStart);
+  champMondayEnd.setDate(champMondayEnd.getDate() + 4);
+  champMondayEnd.setHours(23, 59, 59, 999);
+
+  // Champion crowned period: day after championship → +7 days
+  const crownedStart = new Date(champMondayEnd);
+  crownedStart.setDate(crownedStart.getDate() + 1);
+  crownedStart.setHours(0, 0, 0, 0);
+
+  const crownedEnd = new Date(crownedStart);
+  crownedEnd.setDate(crownedEnd.getDate() + 7);
+  crownedEnd.setHours(23, 59, 59, 999);
+
+  // Also check previous year's championship (for early January dates)
+  const prevKickoff = getKickoffDate(year - 1);
+  const prevChampStart = new Date(prevKickoff);
+  prevChampStart.setDate(prevChampStart.getDate() + (16 * 7));
+  const prevChampMondayEnd = new Date(prevChampStart);
+  prevChampMondayEnd.setDate(prevChampMondayEnd.getDate() + 4);
+  prevChampMondayEnd.setHours(23, 59, 59, 999);
+
+  const prevCrownedStart = new Date(prevChampMondayEnd);
+  prevCrownedStart.setDate(prevCrownedStart.getDate() + 1);
+  prevCrownedStart.setHours(0, 0, 0, 0);
+  const prevCrownedEnd = new Date(prevCrownedStart);
+  prevCrownedEnd.setDate(prevCrownedEnd.getDate() + 7);
+  prevCrownedEnd.setHours(23, 59, 59, 999);
+
+  return (referenceDate >= crownedStart && referenceDate <= crownedEnd)
+    || (referenceDate >= prevCrownedStart && referenceDate <= prevCrownedEnd);
+}
+
+/** Check if in the tag & extension window (after champion crowned → Feb 14) */
+function isTagWindow(referenceDate: Date): boolean {
+  const { month, day, year } = getPTComponents(referenceDate);
+
+  // Tag window: Jan 8 → Feb 14 (approximate, after champion crowned hero expires)
+  // We use a fixed date range since champion crowned varies slightly
+  const tagStart = new Date(year, 0, 8); // Jan 8
+  const tagEnd = new Date(year, 1, 14, 23, 59, 59, 999); // Feb 14 end of day
+
+  return referenceDate >= tagStart && referenceDate <= tagEnd
+    && !isChampionCrownedPeriod(referenceDate); // Champion crowned takes priority
+}
+
+/** Check if in the tagged player showcase period (Feb 15 → auction start) */
+function isTaggedShowcase(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+
+  const showcaseStart = new Date(year, 1, 15); // Feb 15
+  const auctionStart = getAuctionHeroStart(year);
+
+  return referenceDate >= showcaseStart && referenceDate < auctionStart;
+}
+
+/** Check if in the UDFA free agent window (after draft hero → +7 days) */
+function isUDFAWindow(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const draftHeroStart = getDraftHeroStart(year);
+
+  const draftHeroEnd = new Date(draftHeroStart);
+  draftHeroEnd.setDate(draftHeroEnd.getDate() + DRAFT_HERO_TOTAL_DAYS);
+  draftHeroEnd.setHours(23, 59, 59, 999);
+
+  const udfaEnd = new Date(draftHeroEnd);
+  udfaEnd.setDate(udfaEnd.getDate() + 7);
+  udfaEnd.setHours(23, 59, 59, 999);
+
+  return referenceDate > draftHeroEnd && referenceDate <= udfaEnd;
+}
+
+/** Check if in the cut watch period (~Jul 15 → Aug 16) */
+function isCutWatch(referenceDate: Date): boolean {
+  const { year } = getPTComponents(referenceDate);
+
+  const cutStart = new Date(year, 6, 15); // Jul 15
+  const faCloses = getNthDayOfMonth(year, 7, 0, 3); // 3rd Sunday of August
+  faCloses.setHours(23, 59, 59, 999);
+
+  return referenceDate >= cutStart && referenceDate <= faCloses;
+}
+
+// ── Daily Slot Routing ──
+
+/**
+ * Determine which daily hero slot to show based on day-of-week and time-of-day (PT).
+ *
+ * Schedule:
+ * Monday:    <5:15pm → standings, 5:15pm-11pm → live-scoring (MNF), 11pm+ → live-scoring
+ * Tuesday:   <2pm → recap, 2pm+ → waiver-wire
+ * Wednesday: <8pm → waiver-wire, 8pm+ → article
+ * Thursday:  <5:15pm → article, 5:15pm-11pm → live-scoring (TNF), 11pm+ → article
+ * Friday:    All day → article
+ * Saturday:  All day → game-day-preview
+ * Sunday:    <10am → game-day-preview, 10am-8:30pm → live-scoring, 8:30pm+ → live-scoring
+ */
+export function getDailySlot(referenceDate: Date): { slot: DailySlot; gameWindow: GameWindow } {
+  const { hour, minute, dayOfWeek } = getPTComponents(referenceDate);
+  const mins = toMinutes(hour, minute);
+
+  switch (dayOfWeek) {
+    case 0: // Sunday
+      if (mins < 600) return { slot: 'game-day-preview', gameWindow: null };          // before 10am
+      if (mins < 1230) return { slot: 'live-scoring', gameWindow: 'sunday' };          // 10am-8:30pm
+      return { slot: 'live-scoring', gameWindow: 'snf' };                              // 8:30pm+
+
+    case 1: // Monday
+      if (mins < 1035) return { slot: 'standings', gameWindow: null };                 // before 5:15pm
+      if (mins < 1380) return { slot: 'live-scoring', gameWindow: 'mnf' };             // 5:15pm-11pm
+      return { slot: 'live-scoring', gameWindow: 'mnf' };                              // 11pm+ (post-game)
+
+    case 2: // Tuesday
+      if (mins < 840) return { slot: 'recap', gameWindow: null };                      // before 2pm
+      return { slot: 'waiver-wire', gameWindow: null };                                // 2pm+
+
+    case 3: // Wednesday
+      if (mins < 1200) return { slot: 'waiver-wire', gameWindow: null };               // before 8pm
+      return { slot: 'article', gameWindow: null };                                    // 8pm+
+
+    case 4: // Thursday
+      if (mins < 1035) return { slot: 'article', gameWindow: null };                   // before 5:15pm
+      if (mins < 1380) return { slot: 'live-scoring', gameWindow: 'tnf' };             // 5:15pm-11pm
+      return { slot: 'article', gameWindow: null };                                    // 11pm+ (post-TNF)
+
+    case 5: // Friday
+      return { slot: 'article', gameWindow: null };
+
+    case 6: // Saturday
+      return { slot: 'game-day-preview', gameWindow: null };
+
+    default:
+      return { slot: 'article', gameWindow: null };
+  }
+}
+
+/**
+ * Determine if a game is currently live based on the game window.
+ * Live = within a known game window time range.
+ */
+function isGameLive(referenceDate: Date): boolean {
+  const { hour, minute, dayOfWeek } = getPTComponents(referenceDate);
+  const mins = toMinutes(hour, minute);
+
+  switch (dayOfWeek) {
+    case 0: // Sunday: 10am-8:30pm PT
+      return mins >= 600 && mins < 1230;
+    case 1: // Monday: 5:15pm-11pm PT
+      return mins >= 1035 && mins < 1380;
+    case 4: // Thursday: 5:15pm-11pm PT
+      return mins >= 1035 && mins < 1380;
+    default:
+      return false;
+  }
+}
+
+// ── State Machine ──
+
+/** Helper to build a HeroState with common defaults */
+function buildState(
+  phase: SeasonPhase,
+  priority: HeroPriority,
+  resolvedBy: string,
+  referenceDate: Date,
+  testMode: boolean,
+  overrides?: Partial<HeroState>,
+): HeroState {
+  return {
+    phase,
+    priority,
+    metadata: {
+      gameWindow: null,
+      isLive: false,
+      referenceDate,
+      testMode,
+      resolvedBy,
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * Resolve the hero state for the new homepage.
+ *
+ * This is the new state machine that supports time-of-day awareness,
+ * day-of-week routing, and the full seasonal calendar.
+ *
+ * @param referenceDate - Current date (defaults to now, overridable via ?testDate)
+ * @param testMode - Whether ?testDate was used
+ * @param entries - Optional What's New entries for fallback resolution
+ * @param timeline - Optional WhatsNext timeline for fallback resolution
+ */
+export function resolveHeroState(
+  referenceDate?: Date,
+  testMode: boolean = false,
+  entries?: WhatsNewEntry[],
+  timeline?: WhatsNextTimeline,
+): HeroState {
+  const now = referenceDate ?? new Date();
+
+  // --- P0++: Trade Deadline Day (24h override) ---
+  if (isTradeDeadlineDay(now)) {
+    return buildState('trade-deadline', 'P0++', 'isTradeDeadlineDay', now, testMode, {
+      fallbackHero: {
+        source: 'event',
+        title: 'Trade Deadline',
+        summary: 'Make your moves before midnight PT. After today, rosters are locked for trades.',
+        link: '/theleague/trade-builder',
+        linkLabel: 'Open Trade Builder',
+        icon: 'handshake',
+        accentColor: 'var(--color-error, #dc2626)',
+        kicker: 'Trade Deadline — Today',
+        isUrgent: true,
+      },
+    });
+  }
+
+  // --- P0: Championship Week ---
+  if (isChampionshipWeek(now)) {
+    const { slot, gameWindow } = getDailySlot(now);
+    return buildState('championship', 'P0', 'isChampionshipWeek', now, testMode, {
+      slot,
+      metadata: {
+        gameWindow,
+        isLive: isGameLive(now),
+        referenceDate: now,
+        testMode,
+        resolvedBy: 'isChampionshipWeek',
+      },
+    });
+  }
+
+  // --- P0: Champion Crowned ---
+  if (isChampionCrownedPeriod(now)) {
+    return buildState('champion-crowned', 'P0', 'isChampionCrownedPeriod', now, testMode, {
+      fallbackHero: {
+        source: 'event',
+        title: 'League Champion',
+        summary: 'The season is over. A new champion has been crowned.',
+        link: '/theleague/playoffs',
+        linkLabel: 'View Championship Recap',
+        icon: 'trophy',
+        accentColor: 'var(--color-warning, #d97706)',
+        kicker: 'Champion Crowned',
+        isActive: true,
+      },
+    });
+  }
+
+  // --- P0: Auction Hero (existing) ---
+  if (isAuctionHeroPeriod(now)) {
+    const live = isAuctionLive(now);
+    const year = now.getFullYear();
+    return buildState(
+      live ? 'auction-live' : 'auction-preview',
+      'P0', 'isAuctionHeroPeriod', now, testMode,
+      {
+        auctionProps: {
+          live,
+          leagueYear: year,
+        },
+      },
+    );
+  }
+
+  // --- P0: Draft Hero (existing) ---
+  if (isDraftHeroPeriod(now)) {
+    const live = isDraftLive(now);
+    const year = now.getFullYear();
+    return buildState(
+      live ? 'draft-live' : 'draft-announced',
+      'P0', 'isDraftHeroPeriod', now, testMode,
+      {
+        draftProps: {
+          live,
+          leagueYear: year,
+          draftStartFormatted: getDraftStartFormatted(year),
+        },
+      },
+    );
+  }
+
+  // --- P0: Regular Season Daily Rotation ---
+  if (isRegularSeason(now) && !isTradeDeadlineDay(now)) {
+    const { slot, gameWindow } = getDailySlot(now);
+    return buildState('regular-season', 'P0', 'isRegularSeason', now, testMode, {
+      slot,
+      metadata: {
+        gameWindow,
+        isLive: isGameLive(now),
+        referenceDate: now,
+        testMode,
+        resolvedBy: 'isRegularSeason',
+      },
+    });
+  }
+
+  // --- P0: Playoff Period ---
+  if (isPlayoffPeriod(now)) {
+    const { slot, gameWindow } = getDailySlot(now);
+    return buildState('playoffs', 'P0', 'isPlayoffPeriod', now, testMode, {
+      slot,
+      metadata: {
+        gameWindow,
+        isLive: isGameLive(now),
+        referenceDate: now,
+        testMode,
+        resolvedBy: 'isPlayoffPeriod',
+      },
+    });
+  }
+
+  // --- P1: Tag & Extension Window ---
+  if (isTagWindow(now)) {
+    return buildState('tag-window', 'P1', 'isTagWindow', now, testMode, {
+      fallbackHero: {
+        source: 'event',
+        title: 'Franchise Tags & Extensions',
+        summary: 'Protect your core. Tag players to retain exclusive rights. Extend contracts before they hit the open market.',
+        link: '/theleague/rosters',
+        linkLabel: 'Manage Your Roster',
+        icon: 'tag',
+        accentColor: 'var(--cat-preseason, #60a5fa)',
+        kicker: 'Offseason',
+        isActive: true,
+      },
+    });
+  }
+
+  // --- P1: Tagged Player Showcase ---
+  if (isTaggedShowcase(now)) {
+    return buildState('tagged-showcase', 'P1', 'isTaggedShowcase', now, testMode, {
+      fallbackHero: {
+        source: 'event',
+        title: 'Tagged Players — Open for Offers',
+        summary: 'These franchise-tagged players can be poached. Make an offer before the matching period ends.',
+        link: '/theleague/rosters',
+        linkLabel: 'View Roster Details',
+        icon: 'target',
+        accentColor: 'var(--cat-free-agency, #2e8743)',
+        kicker: 'Tag Showcase',
+        isActive: true,
+      },
+    });
+  }
+
+  // --- P1: UDFA Free Agent Window ---
+  if (isUDFAWindow(now)) {
+    return buildState('udfa-window', 'P1', 'isUDFAWindow', now, testMode, {
+      fallbackHero: {
+        source: 'event',
+        title: 'Undrafted Free Agents Available',
+        summary: 'The draft is over but the bargains aren\'t. Undrafted rookies are now free agents.',
+        link: '/theleague/free-agents',
+        linkLabel: 'Browse Free Agents',
+        icon: 'binoculars',
+        accentColor: 'var(--cat-draft, #7c3aed)',
+        kicker: 'UDFA Window',
+        isActive: true,
+      },
+    });
+  }
+
+  // --- P1: Cut Watch ---
+  if (isCutWatch(now)) {
+    return buildState('cut-watch', 'P1', 'isCutWatch', now, testMode, {
+      fallbackHero: {
+        source: 'event',
+        title: 'Cut Watch — Roster Deadline',
+        summary: 'Teams must cut to 22 active players. Who\'s on the bubble?',
+        link: '/theleague/rosters',
+        linkLabel: 'View Full Rosters',
+        icon: 'scissors',
+        accentColor: 'var(--color-error, #dc2626)',
+        kicker: 'Cut Watch',
+        isUrgent: true,
+      },
+    });
+  }
+
+  // --- P2-P5: Fallback through existing resolver ---
+  if (entries && timeline) {
+    const fallback = resolveHeroContent(entries, timeline, now);
+    const priority: HeroPriority = fallback.source === 'feature' ? 'P2' :
+      fallback.source === 'event' ? (fallback.isUrgent ? 'P3' : fallback.isActive ? 'P4' : 'P4') : 'P5';
+    return buildState('offseason-fallback', priority, 'resolveHeroContent-fallback', now, testMode, {
+      fallbackHero: fallback,
+    });
+  }
+
+  // Ultimate fallback
+  return buildState('offseason-fallback', 'P5', 'ultimate-fallback', now, testMode, {
+    fallbackHero: {
+      source: 'default',
+      title: "What's New",
+      summary: 'See all the latest features, tools, and improvements we\'ve shipped.',
+      link: '/theleague/whats-new',
+      linkLabel: 'View all updates',
+      icon: 'star',
+      accentColor: 'var(--color-primary, #1c497c)',
+      kicker: "What's New",
+    },
+  });
+}
+
+/**
+ * Parse a testDate string that supports both date-only and date+time formats.
+ * Formats: "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM"
+ */
+export function parseTestDate(testDateParam: string | null): Date | undefined {
+  if (!testDateParam) return undefined;
+
+  // Try ISO-like format with time: "2027-09-14T14:00"
+  if (testDateParam.includes('T')) {
+    const parsed = new Date(testDateParam);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+
+  // Date-only format: "2027-09-14" → interpret as noon PT to avoid day-boundary issues
+  const dateOnly = new Date(testDateParam + 'T12:00:00');
+  if (!isNaN(dateOnly.getTime())) return dateOnly;
+
+  return undefined;
 }
