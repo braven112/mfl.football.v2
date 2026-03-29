@@ -413,7 +413,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                       <>
                         <div class="lineup-slot__opp">
                           <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt={oppTeam} class="lineup-slot__opp-logo" width="16" height="16" />
-                          <span class="lineup-slot__opp-code">{isHome ? `vs` : `@`}{oppTeam}</span>
+                          <span class="lineup-slot__opp-code"><span class="lineup-slot__opp-prefix">{isHome ? `vs` : `@`}</span> {oppTeam}</span>
                         </div>
                         {player.projection != null && (
                           <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
@@ -716,7 +716,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         gameHtml = `
           <div class="lineup-slot__opp">
             <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="lineup-slot__opp-logo" width="16" height="16" />
-            <span class="lineup-slot__opp-code">${isHome ? 'vs' : '@'}${esc(oppTeam)}</span>
+            <span class="lineup-slot__opp-code"><span class="lineup-slot__opp-prefix">${isHome ? 'vs' : '@'}</span> ${esc(oppTeam)}</span>
           </div>
           ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
         `;
@@ -1360,6 +1360,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     text-transform: uppercase;
   }
 
+  .lineup-slot__opp-prefix {
+    text-transform: lowercase;
+    font-weight: 400;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
   .lineup-slot__proj {
     font-size: 0.875rem;
     font-weight: 700;
@@ -1400,7 +1406,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   }
 
   .lineup-slot--swapped .lineup-slot__card {
-    box-shadow: inset 3px 0 0 var(--lineup-slot-swapped-accent);
+    /* No left border accent — keep cards clean */
   }
 
   .lineup-slot--locked .lineup-slot__card {
