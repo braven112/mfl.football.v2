@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import type { MatchupPairing } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 
 export const prerender = false;
@@ -32,6 +33,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     const scores: Record<string, number> = {};
     const remaining: Record<string, number> = {};
+    const matchups: MatchupPairing[] = [];
 
     // Process live scoring data (regular matchups)
     if (liveScoreResponse.ok) {
@@ -43,14 +45,23 @@ export const GET: APIRoute = async ({ url }) => {
           ? data.liveScoring.franchise
           : [data.liveScoring.franchise];
       } else if (data?.liveScoring?.matchup) {
-        const matchups = Array.isArray(data.liveScoring.matchup)
+        const rawMatchups = Array.isArray(data.liveScoring.matchup)
           ? data.liveScoring.matchup
           : [data.liveScoring.matchup];
 
-        franchises = matchups.flatMap((matchup: any) => {
-          if (!matchup?.franchise) return [];
-          return Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
-        });
+        for (const matchup of rawMatchups) {
+          if (!matchup?.franchise) continue;
+          const teams = Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
+          franchises.push(...teams);
+
+          // Extract matchup pairing
+          if (teams.length >= 2 && teams[0]?.id && teams[1]?.id) {
+            matchups.push({
+              home: String(teams[0].id),
+              away: String(teams[1].id),
+            });
+          }
+        }
       }
 
       franchises.forEach((team: any) => {
@@ -94,17 +105,23 @@ export const GET: APIRoute = async ({ url }) => {
           const games = weekRound.playoffGame;
           const gamesArray = Array.isArray(games) ? games : [games];
 
-          // Extract scores from playoff games
+          // Extract scores and pairings from playoff games
           gamesArray.forEach((game: any) => {
-            if (game.home?.franchise_id && game.home?.points) {
-              const homeId = String(game.home.franchise_id);
+            const homeId = game.home?.franchise_id ? String(game.home.franchise_id) : null;
+            const awayId = game.away?.franchise_id ? String(game.away.franchise_id) : null;
+
+            if (homeId && game.home?.points) {
               scores[homeId] = Number(game.home.points) || 0;
-              remaining[homeId] = 0; // Playoff games don't have live time remaining
+              remaining[homeId] = 0;
             }
-            if (game.away?.franchise_id && game.away?.points) {
-              const awayId = String(game.away.franchise_id);
+            if (awayId && game.away?.points) {
               scores[awayId] = Number(game.away.points) || 0;
               remaining[awayId] = 0;
+            }
+
+            // Extract playoff matchup pairing
+            if (homeId && awayId) {
+              matchups.push({ home: homeId, away: awayId });
             }
           });
         }
@@ -116,6 +133,7 @@ export const GET: APIRoute = async ({ url }) => {
         week: Number(week),
         scores,
         remaining,
+        matchups,
       }),
       {
         status: 200,
@@ -133,6 +151,7 @@ export const GET: APIRoute = async ({ url }) => {
         week: Number(week),
         scores: {},
         remaining: {},
+        matchups: [],
       }),
       {
         status: 500,

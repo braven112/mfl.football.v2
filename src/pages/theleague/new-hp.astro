@@ -17,6 +17,7 @@ import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
 import type { WhatsNewEntry } from '../../types/whats-new';
+import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import feedData from '../../data/theleague/scheftner-feed.json';
 import whatsNewData from '../../data/whats-new.json';
 import '../../styles/scheftner-feed.css';
@@ -40,20 +41,62 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const timeline = getWhatsNextTimeline(effectiveDate);
 const heroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline);
 
-// Resolve team info for reply composer avatar
+// Load team config (used for reply composer + live scoring)
 let userTeamName: string | undefined;
 let userTeamIcon: string | undefined;
+let allTeams: any[] = [];
 
-if (userFranchiseId) {
-  try {
-    const config = await import('../../data/theleague.config.json');
-    const teams = config.default?.teams ?? config.teams ?? [];
-    const team = teams.find((t: { franchiseId: string }) => t.franchiseId === userFranchiseId);
+try {
+  const config = await import('../../data/theleague.config.json');
+  allTeams = config.default?.teams ?? config.teams ?? [];
+  if (userFranchiseId) {
+    const team = allTeams.find((t: { franchiseId: string }) => t.franchiseId === userFranchiseId);
     if (team) {
       userTeamName = team.name;
       userTeamIcon = team.icon;
     }
-  } catch { /* fallback gracefully */ }
+  }
+} catch { /* fallback gracefully */ }
+
+// Fetch live scoring data when slot is 'live-scoring'
+let liveScoring: {
+  week: number;
+  userFranchiseId?: string;
+  matchups: MatchupPairing[];
+  teams: Record<string, TeamInfo>;
+  initialScores?: Record<string, number>;
+  initialRemaining?: Record<string, number>;
+} | undefined;
+
+if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
+  try {
+    const liveUrl = new URL(`/api/live-scoring?week=${heroState.metadata.week}`, Astro.url);
+    const liveRes = await fetch(liveUrl);
+    const liveData = liveRes.ok ? await liveRes.json() : null;
+
+    // Build teams map from config
+    const teamsMap: Record<string, TeamInfo> = {};
+    for (const t of allTeams) {
+      teamsMap[t.franchiseId] = {
+        franchiseId: t.franchiseId,
+        name: t.name,
+        nameMedium: t.nameMedium,
+        nameShort: t.nameShort,
+        abbrev: t.abbrev,
+        color: t.color ?? '',
+        icon: t.icon,
+      };
+    }
+
+    liveScoring = {
+      week: heroState.metadata.week,
+      userFranchiseId,
+      matchups: liveData?.matchups ?? [],
+      teams: teamsMap,
+      initialScores: liveData?.scores,
+      initialRemaining: liveData?.remaining,
+    };
+  } catch { /* live scoring is best-effort */ }
 }
 ---
 
@@ -65,10 +108,11 @@ if (userFranchiseId) {
         state={heroState}
         resolveLeaguePath={r}
         spriteUrl={spriteUrl}
+        liveScoring={liveScoring}
       />
       {testMode && (
         <div class="hp2__debug">
-          <code>Phase: {heroState.phase} | Slot: {heroState.slot ?? 'none'} | Priority: {heroState.priority} | Resolved by: {heroState.metadata.resolvedBy}</code>
+          <code>Phase: {heroState.phase} | Slot: {heroState.slot ?? 'none'} | Week: {heroState.metadata.week ?? 'n/a'} | Window: {heroState.metadata.gameWindow ?? 'none'} | Live: {heroState.metadata.isLive} | Priority: {heroState.priority} | Resolved by: {heroState.metadata.resolvedBy}</code>
         </div>
       )}
     </section>

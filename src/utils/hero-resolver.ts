@@ -22,6 +22,7 @@ import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-eve
 import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from '../types/hero-state';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
+import { getCurrentNFLWeek } from './current-week';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
 function formatKickerDate(dateStr: string): string {
@@ -704,6 +705,7 @@ export function resolveHeroState(
   timeline?: WhatsNextTimeline,
 ): HeroState {
   const now = referenceDate ?? new Date();
+  const week = getCurrentNFLWeek(now) ?? undefined;
 
   // --- P0++: Trade Deadline Day (24h override) ---
   if (isTradeDeadlineDay(now)) {
@@ -728,6 +730,7 @@ export function resolveHeroState(
     return buildState('championship', 'P0', 'isChampionshipWeek', now, testMode, {
       slot,
       metadata: {
+        week,
         gameWindow,
         isLive: isGameLive(now),
         referenceDate: now,
@@ -793,6 +796,7 @@ export function resolveHeroState(
     return buildState('regular-season', 'P0', 'isRegularSeason', now, testMode, {
       slot,
       metadata: {
+        week,
         gameWindow,
         isLive: isGameLive(now),
         referenceDate: now,
@@ -808,6 +812,7 @@ export function resolveHeroState(
     return buildState('playoffs', 'P0', 'isPlayoffPeriod', now, testMode, {
       slot,
       metadata: {
+        week,
         gameWindow,
         isLive: isGameLive(now),
         referenceDate: now,

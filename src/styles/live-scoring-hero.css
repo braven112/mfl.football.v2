@@ -1,0 +1,356 @@
+/**
+ * Live Scoring Hero — CSS
+ * Token namespace: --lsh-*
+ * Used by LiveScoringHero.tsx React island during game windows.
+ */
+
+/* ── Tokens ── */
+:root {
+  --lsh-bg: var(--content-bg, #fff);
+  --lsh-border: var(--content-border, #e2e8f0);
+  --lsh-radius: var(--radius-lg, 0.75rem);
+  --lsh-live-color: #dc2626;
+  --lsh-final-color: var(--color-success, #16a34a);
+  --lsh-next-color: var(--color-gray-500, #6b7280);
+  --lsh-accent: var(--color-primary, #1c497c);
+  --lsh-score-size: 1.5rem;
+  --lsh-score-size-compact: 1.125rem;
+  --lsh-score-size-champ: 2rem;
+  --lsh-icon-size: 32px;
+  --lsh-icon-size-compact: 24px;
+  --lsh-icon-size-champ: 48px;
+}
+
+/* ── Container ── */
+.lsh {
+  background: var(--lsh-bg);
+  border: 1px solid var(--lsh-border);
+  border-radius: var(--lsh-radius);
+  padding: 1.5rem 2rem;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Header Row ── */
+.lsh__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lsh__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--lsh-accent);
+  margin: 0;
+  line-height: 1;
+}
+
+/* ── Status Badge ── */
+.lsh__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--radius-full, 9999px);
+  line-height: 1;
+}
+
+.lsh__badge--live {
+  background: color-mix(in srgb, var(--lsh-live-color) 12%, transparent);
+  color: var(--lsh-live-color);
+}
+
+.lsh__badge--final {
+  background: color-mix(in srgb, var(--lsh-final-color) 12%, transparent);
+  color: var(--lsh-final-color);
+}
+
+.lsh__badge--next {
+  background: var(--color-gray-100, #f3f4f6);
+  color: var(--lsh-next-color);
+  font-weight: 600;
+}
+
+/* Pulsing dot for LIVE */
+.lsh__pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lsh-live-color);
+  animation: lsh-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lsh-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Game Window Label ── */
+.lsh__window {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-gray-400, #9ca3af);
+  margin: 0;
+}
+
+/* ── Matchup Cards ── */
+.lsh__matchups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Featured matchup (user's team) */
+.lsh__featured {
+  border: 2px solid var(--lsh-accent);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1rem 1.25rem;
+  background: color-mix(in srgb, var(--lsh-accent) 4%, var(--lsh-bg));
+  position: relative;
+}
+
+.lsh__featured-badge {
+  position: absolute;
+  top: -0.5rem;
+  right: 0.75rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lsh-accent);
+  background: var(--lsh-bg);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  border: 1px solid var(--lsh-accent);
+  line-height: 1.2;
+}
+
+/* Compact matchup grid */
+.lsh__compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.lsh__compact {
+  border: 1px solid var(--lsh-border);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.625rem 0.75rem;
+  background: var(--lsh-bg);
+}
+
+/* ── Matchup Row (shared between featured & compact) ── */
+.lsh__matchup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lsh__matchup-row + .lsh__matchup-row {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-gray-100, #f3f4f6);
+}
+
+/* Compact rows are tighter */
+.lsh__compact .lsh__matchup-row + .lsh__matchup-row {
+  margin-top: 0.375rem;
+  padding-top: 0.375rem;
+}
+
+.lsh__team {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.lsh__team-icon {
+  width: var(--lsh-icon-size);
+  height: var(--lsh-icon-size);
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.lsh__compact .lsh__team-icon {
+  width: var(--lsh-icon-size-compact);
+  height: var(--lsh-icon-size-compact);
+}
+
+.lsh__team-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-gray-900, #111827);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lsh__compact .lsh__team-name {
+  font-size: 0.8125rem;
+}
+
+.lsh__team-name--winner {
+  font-weight: 700;
+}
+
+.lsh__score {
+  font-size: var(--lsh-score-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-900, #111827);
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.lsh__compact .lsh__score {
+  font-size: var(--lsh-score-size-compact);
+  min-width: 2.75rem;
+}
+
+.lsh__score--leading {
+  color: var(--lsh-accent);
+}
+
+/* ── VS separator ── */
+.lsh__vs {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-gray-400, #9ca3af);
+  text-align: center;
+  letter-spacing: 0.04em;
+  padding: 0 0.5rem;
+}
+
+/* ── Championship Variant ── */
+.lsh__championship {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.lsh__champ-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.lsh__champ-icon {
+  width: var(--lsh-icon-size-champ);
+  height: var(--lsh-icon-size-champ);
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.lsh__champ-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-gray-900, #111827);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.lsh__champ-score {
+  font-size: var(--lsh-score-size-champ);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-900, #111827);
+}
+
+.lsh__champ-score--leading {
+  color: var(--lsh-accent);
+}
+
+.lsh__champ-vs {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-gray-400, #9ca3af);
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.lsh__champ-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-warning, #d97706);
+  margin-bottom: 0.25rem;
+}
+
+/* ── Empty / Loading ── */
+.lsh__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  color: var(--color-gray-500, #6b7280);
+  font-size: 0.8125rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .lsh {
+    padding: 1rem 1.25rem;
+    min-height: 140px;
+  }
+
+  .lsh__compact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lsh__championship {
+    gap: 1rem;
+    padding: 1rem 0.5rem;
+  }
+
+  .lsh__champ-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .lsh__champ-score {
+    font-size: 1.5rem;
+  }
+
+  .lsh__team-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .lsh__score {
+    font-size: 1.25rem;
+  }
+}

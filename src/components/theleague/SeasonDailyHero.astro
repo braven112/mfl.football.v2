@@ -7,12 +7,14 @@
  * logic and zero business logic about which slot to show.
  */
 import type { HeroState } from '../../types/hero-state';
+import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import AuctionHero from './AuctionHero.astro';
 import DraftHero from './DraftHero.astro';
 import HeroBanner from './HeroBanner.astro';
+import LiveScoringHero from '../shared/LiveScoringHero';
+import '../../styles/live-scoring-hero.css';
 
-// Daily rotation stub components
-import LiveScoringHeroStub from './hero-stubs/LiveScoringHeroStub.astro';
+// Daily rotation stub components (Phases C-D)
 import StandingsHeroStub from './hero-stubs/StandingsHeroStub.astro';
 import RecapHeroStub from './hero-stubs/RecapHeroStub.astro';
 import WaiverWireHeroStub from './hero-stubs/WaiverWireHeroStub.astro';
@@ -26,9 +28,18 @@ export interface Props {
   resolveLeaguePath: (path: string) => string;
   /** Sprite URL (needed by AuctionHero/DraftHero) */
   spriteUrl: string;
+  /** Live scoring data (only when slot === 'live-scoring') */
+  liveScoring?: {
+    week: number;
+    userFranchiseId?: string;
+    matchups: MatchupPairing[];
+    teams: Record<string, TeamInfo>;
+    initialScores?: Record<string, number>;
+    initialRemaining?: Record<string, number>;
+  };
 }
 
-const { state, resolveLeaguePath, spriteUrl } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring } = Astro.props;
 
 const phase = state.phase;
 const slot = state.slot;
@@ -57,7 +68,20 @@ const fallback = state.fallbackHero;
 )}
 
 {/* Daily rotation slots (regular-season, playoffs, championship) */}
-{slot === 'live-scoring' && <LiveScoringHeroStub />}
+{slot === 'live-scoring' && liveScoring && (
+  <LiveScoringHero
+    client:load
+    week={liveScoring.week}
+    phase={state.phase as 'regular-season' | 'playoffs' | 'championship'}
+    gameWindow={state.metadata.gameWindow}
+    isLive={state.metadata.isLive}
+    userFranchiseId={liveScoring.userFranchiseId}
+    matchups={liveScoring.matchups}
+    teams={liveScoring.teams}
+    initialScores={liveScoring.initialScores}
+    initialRemaining={liveScoring.initialRemaining}
+  />
+)}
 {slot === 'standings' && <StandingsHeroStub />}
 {slot === 'recap' && <RecapHeroStub />}
 {slot === 'waiver-wire' && <WaiverWireHeroStub />}
