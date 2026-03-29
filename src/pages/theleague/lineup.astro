@@ -1306,29 +1306,33 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   .lineup-slot__pos {
     display: none;
     align-items: center;
-    justify-content: center;
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    border-radius: var(--radius-md, 0.5rem);
-    font-size: 0.6875rem;
-    font-weight: 700;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--text-on-colored, #fff);
+    color: var(--color-gray-500, #6b7280);
   }
 
-  /* Only show position avatar on empty slots */
+  .lineup-slot__pos::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full, 9999px);
+    flex-shrink: 0;
+  }
+
+  /* Only show position label on empty slots */
   .lineup-slot--empty .lineup-slot__pos {
     display: flex;
   }
-  .lineup-slot__pos--qb  { background: var(--lineup-pos-qb); }
-  .lineup-slot__pos--rb  { background: var(--lineup-pos-rb); }
-  .lineup-slot__pos--wr  { background: var(--lineup-pos-wr); }
-  .lineup-slot__pos--te  { background: var(--lineup-pos-te); }
-  .lineup-slot__pos--flex { background: var(--lineup-pos-flex); }
-  .lineup-slot__pos--pk  { background: var(--lineup-pos-pk); }
-  .lineup-slot__pos--def { background: var(--lineup-pos-def); }
+  .lineup-slot__pos--qb::before  { background: var(--lineup-pos-qb); }
+  .lineup-slot__pos--rb::before  { background: var(--lineup-pos-rb); }
+  .lineup-slot__pos--wr::before  { background: var(--lineup-pos-wr); }
+  .lineup-slot__pos--te::before  { background: var(--lineup-pos-te); }
+  .lineup-slot__pos--flex::before { background: var(--lineup-pos-flex); }
+  .lineup-slot__pos--pk::before  { background: var(--lineup-pos-pk); }
+  .lineup-slot__pos--def::before { background: var(--lineup-pos-def); }
 
   .lineup-slot__player {
     flex: 1;
