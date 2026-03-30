@@ -827,15 +827,24 @@ const HIGH_VALUE_CATEGORIES = new Set([
   'NFL Trades', 'NFL trades', 'NFL Combine', 'NFL combine',
 ]);
 
-// Keywords in headlines that signal relevant news (case-insensitive match)
-const RELEVANCE_KEYWORDS = [
-  /\btrade[ds]?\b/i, /\btrading\b/i, /\bsign(?:s|ed|ing)?\b/i,
-  /\breleased?\b/i, /\bcut(?:s|ting)?\b/i, /\bsuspend(?:s|ed)?\b/i,
-  /\bretir(?:e[ds]?|ing|ement)\b/i, /\brule change/i, /\bdraft\b/i,
-  /\bauction\b/i, /\bfree agent/i, /\bcontract\b/i, /\bextension\b/i,
-  /\bholdout\b/i, /\binjur(?:y|ed|ies)\b/i, /\btorn\b/i, /\bACL\b/,
-  /\bIR\b/, /\bPUP\b/, /\barrested?\b/i, /\bcharged?\b/i,
-  /\bvoted?\b/i, /\bapproved?\b/i, /\bowner(?:s|ship)?\b/i,
+// Tier A: Completed actions — worth +2, pass threshold alone
+const KEYWORDS_HIGH = [
+  /\btraded\b/i,                              // completed trade
+  /\breleased?\b/i, /\bcuts?\b/i,             // roster moves
+  /\bsuspend(?:s|ed)\b/i,                     // discipline
+  /\bretir(?:e[ds]?|ement)\b/i,               // retirement
+  /\brule change/i, /\bnew rule/i,            // league policy
+  /\barrested?\b/i, /\bcharged?\b/i,          // legal
+  /\bfined?\b/i, /\bbanned?\b/i,              // discipline
+];
+
+// Tier B: Process/discussion words — worth +1, need a second signal to pass
+const KEYWORDS_LOW = [
+  /\btrade\b/i, /\btrading\b/i,               // discussions/rumors, not completed
+  /\binjur(?:y|ed|ies)\b/i, /\btorn\b/i,      // injury news
+  /\bACL\b/, /\bPUP\b/,
+  /\bfree agent/i,
+  /\bexercis(?:e[ds]?|ing) .{0,20}option/i,
 ];
 
 /** Build a set of player names from rosters for headline matching */
@@ -863,6 +872,9 @@ async function loadRosteredPlayerNames(league) {
       'Hall', 'King', 'Green', 'Baker', 'Carter', 'Evans', 'Turner', 'Parker',
       'Collins', 'Edwards', 'Howard', 'Cooper', 'Reed', 'Bailey', 'Ward', 'Gray',
       'Hunter', 'Henry', 'Ross', 'Graham', 'Long', 'Price', 'Gordon',
+      // 5-char common names
+      'Grant', 'Scott', 'Bruce', 'Craig', 'Cross', 'Floyd', 'Lloyd', 'Perry',
+      'Dixon', 'Burke', 'Stone', 'Chase', 'Brady', 'Woods', 'Mills', 'Byrd',
     ]);
 
     // Build name set: full names + distinctive last names for matching
@@ -879,8 +891,8 @@ async function loadRosteredPlayerNames(league) {
         : p.name;
       const lastName = commaIdx > 0 ? p.name.slice(0, commaIdx).trim() : p.name.split(' ').pop();
       names.full.add(fullName);
-      // Only use last name if 6+ chars and not a common name that causes false positives
-      if (lastName.length >= 6 && !LAST_NAME_BLOCKLIST.has(lastName)) {
+      // Only use last name if 5+ chars and not a common name that causes false positives
+      if (lastName.length >= 5 && !LAST_NAME_BLOCKLIST.has(lastName)) {
         names.last.add(lastName);
       }
     }
@@ -907,25 +919,17 @@ function scoreArticle(article, rosteredNames) {
     reasons.push('draft');
   }
 
-  // +3: Mentions a rostered player (full name match)
+  // +3: Rostered player full name in headline
   for (const name of rosteredNames.full) {
-    if (text.includes(name)) {
+    if (headline.includes(name)) {
       score += 3;
       reasons.push(`rostered:${name}`);
       break;
     }
   }
 
-  // +2: Mentions a rostered player (last name match, less certain)
-  if (score < 3) { // Don't double-count with full name match
-    for (const last of rosteredNames.last) {
-      if (text.includes(last)) {
-        score += 2;
-        reasons.push(`lastName:${last}`);
-        break;
-      }
-    }
-  }
+  // Last-name matching intentionally removed — too many collisions between
+  // rostered players and coaches/executives with the same last name.
 
   // +2: High-value ESPN category
   if (categories.some(c => HIGH_VALUE_CATEGORIES.has(c))) {
@@ -933,10 +937,15 @@ function scoreArticle(article, rosteredNames) {
     reasons.push('category');
   }
 
-  // +2: Relevance keywords in headline (trades, signings, rule changes, etc.)
-  if (RELEVANCE_KEYWORDS.some(re => re.test(headline))) {
+  // +2: Tier A keyword — completed transaction/event (passes alone)
+  if (KEYWORDS_HIGH.some(re => re.test(headline))) {
     score += 2;
-    reasons.push('keyword');
+    reasons.push('keyword-high');
+  }
+  // +1: Tier B keyword — discussion/process word (needs another signal)
+  else if (KEYWORDS_LOW.some(re => re.test(headline))) {
+    score += 1;
+    reasons.push('keyword-low');
   }
 
   // +2: Known reporter byline — always meets threshold on its own
@@ -1019,9 +1028,12 @@ async function scanNflWire(league) {
 
       const isDraft = (a.categories ?? []).some(
         c => c.description === 'NFL Draft' || c.description === 'NFL draft'
-      );
+      ) || /\bdraft\b/i.test(a.headline ?? '');
 
-      const authorId = BYLINE_TO_AUTHOR[a.byline] ?? 'nfl-wire';
+      // Draft content → nfl-draft persona; known byline → their persona; else nfl-wire
+      const authorId = isDraft
+        ? (BYLINE_TO_AUTHOR[a.byline] ?? 'nfl-draft')
+        : (BYLINE_TO_AUTHOR[a.byline] ?? 'nfl-wire');
 
       return {
         id: `wire_${a.id}`,

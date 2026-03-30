@@ -115,7 +115,15 @@ export const SCHEFTER_AUTHORS: Record<string, SchefterAuthor> = {
     name: 'NFL Wire',
     handle: '@NFLWire',
     avatar: 'nfl-wire-avatar.webp',
-    bio: 'The latest from around the league. Draft intel, free agency moves, and everything that moves the needle.',
+    bio: 'The latest from around the league. Free agency moves, transactions, and everything that moves the needle.',
+    external: true,
+  },
+  'nfl-draft': {
+    id: 'nfl-draft',
+    name: 'NFL Draft',
+    handle: '@NFLDraft',
+    avatar: 'nfl-draft-avatar.webp',
+    bio: 'Draft intel, big boards, scouting reports, and prospect news. The offseason\'s most important feed.',
     external: true,
   },
   'doc-rivers': {
