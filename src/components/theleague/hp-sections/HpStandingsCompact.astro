@@ -7,6 +7,7 @@ import { chooseTeamName } from '../../../utils/team-names';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getContextualRows } from '../../../utils/homepage-dashboard';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
 import config from '../../../data/theleague.config.json';
 
@@ -45,6 +46,7 @@ const hasGamesPlayed = franchises.some((f: any) => parseFloat(f.pf) > 0);
 
 interface StandingRow {
   id: string;
+  rank: number;
   name: string;
   record: string;
   wins: number;
@@ -75,6 +77,7 @@ if (hasGamesPlayed) {
 
       return {
         id: f.id,
+        rank: 0,
         name: displayName,
         record,
         wins: w,
@@ -101,6 +104,7 @@ if (hasGamesPlayed) {
 
       return {
         id: ts.franchiseId,
+        rank: 0,
         name: displayName,
         record: '--',
         wins: 0,
@@ -113,6 +117,43 @@ if (hasGamesPlayed) {
     .sort((a, b) => b.capSpace - a.capSpace);
 }
 
+rows = rows.map((row, index) => ({
+  ...row,
+  rank: index + 1,
+}));
+
+const contextual = getContextualRows(rows, userFranchiseId, 2, 6);
+const displayRows = contextual.rows;
+const userRow = userFranchiseId ? rows.find((row) => row.id === userFranchiseId) : undefined;
+const teamAbove = userRow && userRow.rank > 1 ? rows[userRow.rank - 2] : undefined;
+const teamBelow = userRow && userRow.rank < rows.length ? rows[userRow.rank] : undefined;
+
+function formatOrdinal(value: number): string {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  const mod10 = value % 10;
+  if (mod10 === 1) return `${value}st`;
+  if (mod10 === 2) return `${value}nd`;
+  if (mod10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
+
+const subtitle = userRow
+  ? hasGamesPlayed
+    ? teamAbove && teamBelow
+      ? `You are ${formatOrdinal(userRow.rank)} of ${rows.length}, between ${teamAbove.name} and ${teamBelow.name}.`
+      : userRow.rank === 1
+        ? `You are ${formatOrdinal(userRow.rank)} of ${rows.length} and currently leading the league.`
+        : `You are ${formatOrdinal(userRow.rank)} of ${rows.length} with one team directly above you.`
+    : teamAbove && teamBelow
+      ? `You are ${formatOrdinal(userRow.rank)} of ${rows.length} in cap space, between ${teamAbove.name} and ${teamBelow.name}.`
+      : userRow.rank === 1
+        ? `You currently lead the league in cap space.`
+        : `You are ${formatOrdinal(userRow.rank)} of ${rows.length} in cap space.`
+  : hasGamesPlayed
+    ? 'Showing the teams nearest the top of the current race.'
+    : 'Showing the current cap-space leaders.';
+
 const formatCap = (v: number) => {
   const prefix = v < 0 ? '-' : '';
   return `${prefix}$${formatCompactNumber(Math.abs(v))}`;
@@ -121,9 +162,12 @@ const formatCap = (v: number) => {
 
 <section class="hp-standings" aria-label="League standings">
   <div class="hp-standings__header">
-    <h3 class="hp-standings__section-title">
-      {hasGamesPlayed ? 'Standings' : 'Cap Space Rankings'}
-    </h3>
+    <div class="hp-standings__section-header">
+      <h3 class="hp-standings__section-title">
+        {hasGamesPlayed ? 'Standings' : 'Cap Space Rankings'}
+      </h3>
+      <p class="hp-standings__sub">{subtitle}</p>
+    </div>
     <a href={r('/theleague/standings')} class="hp-standings__cta">
       Full standings
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
@@ -148,9 +192,9 @@ const formatCap = (v: number) => {
         </tr>
       </thead>
       <tbody>
-        {rows.map((row, i) => (
+        {displayRows.map((row) => (
           <tr class:list={['hp-standings__row', { 'hp-standings__row--user': row.isUser }]}>
-            <td class="hp-standings__td hp-standings__td--rank">{i + 1}</td>
+            <td class="hp-standings__td hp-standings__td--rank">{row.rank}</td>
             <td class="hp-standings__td hp-standings__td--team">
               <span class="hp-standings__team-indicator" style={`background: ${row.color}`} aria-hidden="true"></span>
               <span class={row.isUser ? 'hp-standings__team-name--bold' : ''}>{row.name}</span>
@@ -187,9 +231,15 @@ const formatCap = (v: number) => {
 
   .hp-standings__header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 1rem;
+  }
+
+  .hp-standings__section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
   }
 
   .hp-standings__section-title {
@@ -197,11 +247,15 @@ const formatCap = (v: number) => {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--dh-accent);
     margin: 0;
     line-height: 1;
     color: var(--color-gray-700, #374151);
+  }
+
+  .hp-standings__sub {
+    margin: 0.375rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
   }
 
   .hp-standings__cta {
@@ -256,6 +310,10 @@ const formatCap = (v: number) => {
 
   .hp-standings__row--user {
     background: var(--dh-highlight-bg);
+  }
+
+  .hp-standings__row--user .hp-standings__td:first-child {
+    box-shadow: inset 3px 0 0 var(--dh-accent);
   }
 
   .hp-standings__row--user:hover {
@@ -319,6 +377,11 @@ const formatCap = (v: number) => {
   @media (max-width: 640px) {
     .hp-standings {
       padding: 1.25rem;
+    }
+
+    .hp-standings__header {
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .hp-standings__th--pf,

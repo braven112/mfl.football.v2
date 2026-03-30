@@ -14,10 +14,10 @@ import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
 import WhatsNext from '../../components/theleague/WhatsNext.astro';
 import HpTeamSnapshot from '../../components/theleague/hp-sections/HpTeamSnapshot.astro';
 import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandingsCompact.astro';
-import HpContractIntel from '../../components/theleague/hp-sections/HpContractIntel.astro';
+import HpUnsignedFaCard from '../../components/theleague/hp-sections/HpUnsignedFaCard.astro';
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
 import { getAuthUser } from '../../utils/auth';
-import { resolveHeroState, parseTestDate, resolveHeroContent, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
+import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
@@ -26,13 +26,15 @@ import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-help
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import { SALARY_YEARS } from '../../utils/salary-calculations';
-import { computeLeagueSummary, parseSalaryAdjustment, type SalaryPlayer, type TeamConfig } from '../../utils/league-summary-utils';
+import { computeLeagueSummary, type SalaryPlayer, type TeamConfig } from '../../utils/league-summary-utils';
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { parseNumber } from '../../utils/formatters';
+import { resolveUnsignedFaAlerts, type DashboardPlayerContext } from '../../utils/homepage-dashboard';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
+import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types/contract-eligibility';
 import feedData from '../../data/theleague/schefter-feed.json';
 import whatsNewData from '../../data/whats-new.json';
 import leagueConfig from '../../data/theleague.config.json';
@@ -86,7 +88,7 @@ try {
 } catch { /* fallback gracefully */ }
 
 // ---------------------------------------------------------------------------
-// Homepage sections data: team summaries for snapshot, standings, contract intel
+// Homepage sections data: team summaries, standings context, unsigned FA alerts
 // ---------------------------------------------------------------------------
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -103,6 +105,7 @@ const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', 
 const salaryAdjustmentFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/salaryAdjustments.json', { eager: true });
 const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', { eager: true });
 const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', { eager: true });
+const transactionFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', { eager: true });
 
 const rosterEntries = Object.entries(rosterModules)
   .map(([path, mod]) => ({ season: extractSeason(path), data: getModuleData(mod) }))
@@ -126,9 +129,38 @@ const playerFeedEntries = Object.entries(playerFeeds)
   .map(([path, mod]) => ({ season: extractFeedSeason(path), data: getModuleData(mod) }))
   .filter((item) => item.season === currentSalaryYear && item.data);
 const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
+
+const transactionEntries = Object.entries(transactionFeeds)
+  .map(([path, mod]) => ({ season: extractFeedSeason(path), data: getModuleData(mod) }))
+  .filter((item) => item.season === currentSalaryYear && item.data);
+const rawTransactions: MFLRawTransaction[] = transactionEntries[0]?.data?.transactions?.transaction
+  ? Array.isArray(transactionEntries[0].data.transactions.transaction)
+    ? transactionEntries[0].data.transactions.transaction
+    : [transactionEntries[0].data.transactions.transaction]
+  : [];
+
 const playerMetaById = new Map<string, { name: string; position: string }>();
+const eligibilityPlayersById = new Map<string, MFLPlayerInfo>();
+const playerDisplayById = new Map<string, DashboardPlayerContext>();
 for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {
-  if (p?.id) playerMetaById.set(p.id, { name: p.name ?? `Player ${p.id}`, position: p.position ?? '' });
+  if (!p?.id) continue;
+  playerMetaById.set(p.id, { name: p.name ?? `Player ${p.id}`, position: p.position ?? '' });
+  eligibilityPlayersById.set(p.id, {
+    id: p.id,
+    name: p.name ?? `Player ${p.id}`,
+    position: p.position ?? '',
+    team: p.team ?? '',
+    status: p.status,
+    draft_year: p.draft_year,
+  });
+  if (!playerDisplayById.has(p.id)) {
+    playerDisplayById.set(p.id, {
+      id: p.id,
+      name: p.name ?? `Player ${p.id}`,
+      position: p.position ?? '',
+      nflTeam: p.team ?? '',
+    });
+  }
 }
 
 const teamConfigs: TeamConfig[] = (leagueConfig.teams ?? []).map((team: any) => ({
@@ -141,7 +173,22 @@ const teamConfigs: TeamConfig[] = (leagueConfig.teams ?? []).map((team: any) => 
   division: team.division,
 }));
 
-const salaryPlayers: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
+interface HomeSalaryPlayer extends SalaryPlayer {
+  contractInfo: string;
+  headshot?: string;
+  nflTeam?: string;
+}
+
+const salaryPlayers: HomeSalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => {
+  playerDisplayById.set(p.id, {
+    id: p.id,
+    name: p.name,
+    position: p.position ?? '',
+    nflTeam: p.team ?? '',
+    headshot: p.headshot,
+  });
+
+  return {
   id: p.id,
   name: p.name,
   position: p.position ?? '',
@@ -149,9 +196,13 @@ const salaryPlayers: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) 
   franchiseId: p.franchiseId ?? '',
   status: p.status ?? 'ROSTER',
   contractYear: p.contractYear ?? '0',
+  contractInfo: p.contractInfo ?? '',
+  headshot: p.headshot,
+  nflTeam: p.team ?? '',
   points: parseNumber(p.points),
   birthdate: parseNumber(p.birthdate),
-}));
+  };
+});
 
 // Overlay Redis-cached roster data for near-real-time freshness
 const cachedRosterPlayers = await getCachedRosters(currentSalaryYear, '13522');
@@ -162,6 +213,7 @@ if (cachedRosterPlayers) {
     if (existing) {
       existing.salary = parseNumber(cached.salary);
       existing.contractYear = cached.contractYear ?? existing.contractYear;
+      existing.contractInfo = cached.contractInfo ?? existing.contractInfo;
       existing.status = cached.status ?? existing.status;
       existing.franchiseId = cached.franchiseId ?? existing.franchiseId;
     } else {
@@ -171,7 +223,8 @@ if (cachedRosterPlayers) {
           id: playerId, name: meta.name, position: meta.position,
           salary: parseNumber(cached.salary), franchiseId: cached.franchiseId ?? '',
           status: cached.status ?? 'ROSTER', contractYear: cached.contractYear ?? '1',
-          points: 0, birthdate: 0,
+          contractInfo: cached.contractInfo ?? '',
+          points: 0, birthdate: 0, nflTeam: eligibilityPlayersById.get(playerId)?.team ?? '',
         });
       }
     }
@@ -179,6 +232,26 @@ if (cachedRosterPlayers) {
 }
 
 const teamSummaries = computeLeagueSummary(salaryPlayers, rawAdjustments, draftCapitalMap, teamConfigs);
+const userRosterPlayers: RosterPlayer[] = userFranchiseId
+  ? salaryPlayers
+    .filter((player) => player.franchiseId === userFranchiseId)
+    .map((player) => ({
+      id: player.id,
+      salary: String(player.salary),
+      contractYear: player.contractYear,
+      contractInfo: player.contractInfo ?? '',
+      status: player.status,
+    }))
+  : [];
+const unsignedFaAlerts = resolveUnsignedFaAlerts({
+  franchiseId: userFranchiseId,
+  rosterPlayers: userRosterPlayers,
+  rawTransactions,
+  playersMap: eligibilityPlayersById,
+  playerContextById: playerDisplayById,
+  currentYear: parseInt(currentSalaryYear, 10),
+  referenceDate: now,
+});
 
 // Fetch live scoring data when slot is 'live-scoring'
 let liveScoring: {
@@ -306,17 +379,19 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         userTeamIcon={userTeamIcon}
       />
 
+      <HpUnsignedFaCard
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        alerts={unsignedFaAlerts}
+        referenceDate={now}
+      />
+
       <WhatsNext demoDate={effectiveDate} maxCards={2} />
 
       <HpStandingsCompact
         userFranchiseId={userFranchiseId}
         teamSummaries={teamSummaries}
         referenceDate={effectiveDate}
-      />
-
-      <HpContractIntel
-        players={salaryPlayers}
-        userFranchiseId={userFranchiseId}
       />
 
       <HpQuickLinks isAuthenticated={isAuthenticated} />
@@ -359,8 +434,8 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
     min-width: 0;
   }
 
-  .hp2__main > :not(:first-child) {
-    margin-top: 0.75rem;
+  .hp2__main > :global(:not(:first-child)) {
+    margin-top: 2rem;
   }
 
   .visually-hidden {
@@ -500,15 +575,18 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
     }
 
     const label = document.getElementById('demo-label');
-    const prevBtn = document.getElementById('demo-prev') as HTMLButtonElement;
-    const nextBtn = document.getElementById('demo-next') as HTMLButtonElement;
-    if (!label || !prevBtn || !nextBtn) return;
+    const prevBtn = document.getElementById('demo-prev');
+    const nextBtn = document.getElementById('demo-next');
+    if (!(label instanceof HTMLElement) || !(prevBtn instanceof HTMLButtonElement) || !(nextBtn instanceof HTMLButtonElement)) return;
+    const labelEl = label;
+    const prevButton = prevBtn;
+    const nextButton = nextBtn;
 
     function update() {
       const stop = stops[currentIdx];
-      label.textContent = `${currentIdx + 1}/${stops.length} — ${stop.label}`;
-      prevBtn.disabled = currentIdx === 0;
-      nextBtn.disabled = currentIdx === stops.length - 1;
+      labelEl.textContent = `${currentIdx + 1}/${stops.length} — ${stop.label}`;
+      prevButton.disabled = currentIdx === 0;
+      nextButton.disabled = currentIdx === stops.length - 1;
     }
 
     function navigate(idx: number) {
@@ -518,11 +596,11 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
       window.location.href = url.toString();
     }
 
-    prevBtn.addEventListener('click', () => {
+    prevButton.addEventListener('click', () => {
       if (currentIdx > 0) navigate(currentIdx - 1);
     });
 
-    nextBtn.addEventListener('click', () => {
+    nextButton.addEventListener('click', () => {
       if (currentIdx < stops.length - 1) navigate(currentIdx + 1);
     });
 

@@ -1,0 +1,363 @@
+---
+/**
+ * HpUnsignedFaCard — Homepage action card for recent pickups
+ * that are still on the default 1-year contract.
+ */
+import PlayerCell from '../PlayerCell.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { formatCompactNumber } from '../../../utils/formatters';
+import { getContractWindow } from '../../../utils/contract-validation';
+import type { UnsignedFaAlert } from '../../../utils/homepage-dashboard';
+
+interface Props {
+  isAuthenticated: boolean;
+  userFranchiseId?: string;
+  alerts?: UnsignedFaAlert[];
+  referenceDate?: Date;
+}
+
+const {
+  isAuthenticated,
+  userFranchiseId,
+  alerts = [],
+  referenceDate = new Date(),
+} = Astro.props;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+const visibleAlerts = alerts.slice(0, 4);
+const hiddenCount = Math.max(0, alerts.length - visibleAlerts.length);
+const contractWindow = getContractWindow(referenceDate);
+const windowLabel = contractWindow.windowType === 'in-season'
+  ? '24-hour in-season window'
+  : '48-hour offseason window';
+
+const deadlineFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+function formatAmount(value?: number): string {
+  if (!value || value <= 0) return 'Default 1yr';
+  return `$${formatCompactNumber(value)}`;
+}
+
+function formatTimeLeft(hoursRemaining: number): string {
+  if (hoursRemaining >= 24) {
+    const days = Math.floor(hoursRemaining / 24);
+    const hours = Math.ceil(hoursRemaining - (days * 24));
+    return hours > 0 ? `${days}d ${hours}h left` : `${days}d left`;
+  }
+
+  if (hoursRemaining >= 1) {
+    return `${Math.ceil(hoursRemaining)}h left`;
+  }
+
+  return `${Math.max(1, Math.ceil(hoursRemaining * 60))}m left`;
+}
+
+function formatDeadline(deadlineTimestamp: number): string {
+  return deadlineFormatter.format(new Date(deadlineTimestamp * 1000));
+}
+
+function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
+  if (type === 'BBID_WAIVER') return 'Waiver';
+  if (type === 'AUCTION_WON') return 'Auction';
+  return 'FA Add';
+}
+---
+
+{isAuthenticated && userFranchiseId ? (
+  <section class="hp-fa" aria-label="Unsigned free agent adds">
+    <div class="hp-fa__header">
+      <div class="hp-fa__section-header">
+        <h3 class="hp-fa__title">Unsigned FA Adds</h3>
+        <p class="hp-fa__sub">Recent pickups still sitting on the default 1-year deal.</p>
+      </div>
+      <a href={r('/theleague/contracts/manage')} class="hp-fa__cta">
+        Manage contracts
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    {visibleAlerts.length > 0 ? (
+      <>
+        <p class="hp-fa__summary">
+          {alerts.length === 1
+            ? '1 pickup can still be moved off the default 1-year contract.'
+            : `${alerts.length} pickups can still be moved off the default 1-year contract.`}
+        </p>
+        <ul class="hp-fa__list" role="list">
+          {visibleAlerts.map((alert) => (
+            <li class:list={['hp-fa__item', { 'hp-fa__item--urgent': alert.urgent }]}>
+              <div class="hp-fa__player">
+                <PlayerCell
+                  name={alert.name}
+                  headshot={alert.headshot}
+                  position={alert.position}
+                  nflTeam={alert.nflTeam}
+                  size="compact"
+                />
+              </div>
+              <div class="hp-fa__details">
+                <div class="hp-fa__meta-top">
+                  <span class:list={['hp-fa__type', `hp-fa__type--${alert.acquisitionType.toLowerCase()}`]}>
+                    {getPickupLabel(alert.acquisitionType)}
+                  </span>
+                  <span class="hp-fa__amount">
+                    {formatAmount(alert.bidAmount ?? alert.salary)}
+                  </span>
+                </div>
+                <p class="hp-fa__meta-line">
+                  Default 1yr until {formatDeadline(alert.deadlineTimestamp)}
+                </p>
+                <p class:list={['hp-fa__meta-line', 'hp-fa__meta-line--deadline', { 'hp-fa__meta-line--urgent': alert.urgent }]}>
+                  {formatTimeLeft(alert.hoursRemaining)}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {hiddenCount > 0 && (
+          <p class="hp-fa__more">
+            {hiddenCount} more pending in Manage contracts.
+          </p>
+        )}
+      </>
+    ) : (
+      <p class="hp-fa__empty">
+        {contractWindow.inWindow
+          ? `No unsigned additions are currently inside the ${windowLabel}.`
+          : 'Contract declarations are currently closed.'}
+      </p>
+    )}
+  </section>
+) : (
+  <section class="hp-fa hp-fa--guest" aria-label="Unsigned free agent adds">
+    <div class="hp-fa__guest-copy">
+      <h3 class="hp-fa__guest-title">Unsigned FA Adds</h3>
+      <p class="hp-fa__guest-desc">Log in to see recent pickups that still need contract years declared.</p>
+    </div>
+    <a href={r('/theleague/login')} class="hp-fa__guest-btn">Log in</a>
+  </section>
+)}
+
+<style>
+  .hp-fa {
+    --dh-accent: var(--color-primary, #1c497c);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .hp-fa__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hp-fa__section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+  }
+
+  .hp-fa__title,
+  .hp-fa__guest-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hp-fa__sub {
+    margin: 0.35rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .hp-fa__cta,
+  .hp-fa__guest-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: gap 0.15s ease;
+  }
+
+  .hp-fa__cta:hover,
+  .hp-fa__cta:focus-visible,
+  .hp-fa__guest-btn:hover,
+  .hp-fa__guest-btn:focus-visible {
+    gap: 0.5rem;
+  }
+
+  .hp-fa__cta:focus-visible,
+  .hp-fa__guest-btn:focus-visible {
+    outline: 2px solid var(--dh-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  .hp-fa__summary,
+  .hp-fa__more,
+  .hp-fa__empty,
+  .hp-fa__guest-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .hp-fa__list {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .hp-fa__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+
+  .hp-fa__item--urgent {
+    box-shadow: inset 3px 0 0 var(--color-red-600, #dc2626);
+  }
+
+  .hp-fa__player {
+    min-width: 0;
+  }
+
+  .hp-fa__details {
+    min-width: 9rem;
+    text-align: right;
+  }
+
+  .hp-fa__meta-top {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .hp-fa__type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem 0.4rem;
+    border-radius: 999px;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .hp-fa__type--free_agent {
+    background: color-mix(in srgb, var(--dh-accent) 10%, white);
+    color: var(--dh-accent);
+  }
+
+  .hp-fa__type--bbid_waiver {
+    background: color-mix(in srgb, var(--color-secondary, #2e8743) 12%, white);
+    color: var(--color-secondary, #2e8743);
+  }
+
+  .hp-fa__type--auction_won {
+    background: color-mix(in srgb, var(--color-amber-500, #d97706) 14%, white);
+    color: var(--color-amber-700, #b45309);
+  }
+
+  .hp-fa__amount {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hp-fa__meta-line {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hp-fa__meta-line--deadline {
+    margin-top: 0.15rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hp-fa__meta-line--urgent {
+    color: var(--color-red-600, #dc2626);
+  }
+
+  .hp-fa__more {
+    margin-top: 0.875rem;
+  }
+
+  .hp-fa--guest {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .hp-fa__guest-copy {
+    min-width: 0;
+  }
+
+  .hp-fa__guest-title {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+  }
+
+  .hp-fa__guest-desc {
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .hp-fa {
+      padding: 1.25rem;
+    }
+
+    .hp-fa__header,
+    .hp-fa--guest,
+    .hp-fa__item {
+      grid-template-columns: 1fr;
+      display: grid;
+    }
+
+    .hp-fa__details {
+      min-width: 0;
+      text-align: left;
+    }
+
+    .hp-fa__meta-top {
+      justify-content: flex-start;
+    }
+  }
+</style>
