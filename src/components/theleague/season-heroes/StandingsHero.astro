@@ -1,0 +1,349 @@
+---
+/**
+ * StandingsHero — Monday standings snapshot for the homepage hero.
+ *
+ * Shows top 6 teams sorted by wins with record, points for, and streak.
+ * Highlights the logged-in user's team with an accent background.
+ * Falls back to StandingsHeroStub if no games have been played.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { chooseTeamName } from '../../../utils/team-names';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import StandingsHeroStub from '../hero-stubs/StandingsHeroStub.astro';
+import config from '../../../data/theleague.config.json';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+  userFranchiseId?: string;
+}
+
+const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+
+const year = getCurrentSeasonYear(state.metadata.referenceDate);
+let standingsData: any;
+try {
+  standingsData = await import(`../../../../data/theleague/mfl-feeds/${year}/standings.json`);
+} catch {
+  standingsData = null;
+}
+
+const franchises = standingsData?.leagueStandings?.franchise ?? standingsData?.default?.leagueStandings?.franchise ?? [];
+
+// Check if any games have been played
+const hasGamesPlayed = franchises.some((f: any) => parseFloat(f.pf) > 0);
+
+// Build team lookup from config
+const teams = config.teams ?? [];
+const teamMap = new Map(teams.map((t: any) => [t.franchiseId, t]));
+
+// Parse W-L-T record and sort
+interface StandingRow {
+  id: string;
+  name: string;
+  record: string;
+  wins: number;
+  pf: string;
+  streak: string;
+  isUser: boolean;
+  color: string;
+}
+
+const rows: StandingRow[] = franchises
+  .map((f: any) => {
+    const team = teamMap.get(f.id);
+    const record = f.h2hwlt ?? '0-0-0';
+    const [w] = record.split('-').map(Number);
+    const pf = parseFloat(f.pf || '0').toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const displayName = team
+      ? chooseTeamName({
+          fullName: team.name,
+          nameMedium: team.nameMedium,
+          nameShort: team.nameShort,
+          abbrev: team.abbrev,
+        }, 'default')
+      : f.fname ?? f.id;
+
+    return {
+      id: f.id,
+      name: displayName,
+      record,
+      wins: w,
+      pf,
+      streak: f.strk === '-' ? '--' : f.strk,
+      isUser: f.id === userFranchiseId,
+      color: team?.color ?? 'var(--color-primary, #1c497c)',
+    };
+  })
+  .sort((a: StandingRow, b: StandingRow) => b.wins - a.wins || parseFloat(b.pf.replace(/,/g, '')) - parseFloat(a.pf.replace(/,/g, '')))
+  .slice(0, 6);
+
+// Check if user is in the top 6, if not add them at the end
+const userInTop = rows.some(r => r.isUser);
+let userRow: StandingRow | undefined;
+if (userFranchiseId && !userInTop) {
+  const allRows: StandingRow[] = franchises.map((f: any) => {
+    const team = teamMap.get(f.id);
+    const record = f.h2hwlt ?? '0-0-0';
+    const [w] = record.split('-').map(Number);
+    const pf = parseFloat(f.pf || '0').toLocaleString('en-US', { maximumFractionDigits: 1 });
+    const displayName = team
+      ? chooseTeamName({
+          fullName: team.name,
+          nameMedium: team.nameMedium,
+          nameShort: team.nameShort,
+          abbrev: team.abbrev,
+        }, 'default')
+      : f.fname ?? f.id;
+    return {
+      id: f.id,
+      name: displayName,
+      record,
+      wins: w,
+      pf,
+      streak: f.strk === '-' ? '--' : f.strk,
+      isUser: f.id === userFranchiseId,
+      color: team?.color ?? 'var(--color-primary, #1c497c)',
+    };
+  }).sort((a: StandingRow, b: StandingRow) => b.wins - a.wins || parseFloat(b.pf.replace(/,/g, '')) - parseFloat(a.pf.replace(/,/g, '')));
+
+  const userIdx = allRows.findIndex(r => r.isUser);
+  if (userIdx >= 0) {
+    userRow = { ...allRows[userIdx] };
+  }
+}
+---
+
+{hasGamesPlayed ? (
+  <section class="standings-hero" aria-label="League Standings">
+    <div class="standings-hero__header">
+      <h3 class="standings-hero__section-title">Standings</h3>
+      <a href={r('/theleague/standings')} class="standings-hero__cta">
+        View Full Standings
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="standings-hero__table-wrap">
+      <table class="standings-hero__table" role="table">
+        <thead>
+          <tr>
+            <th class="standings-hero__th standings-hero__th--rank">#</th>
+            <th class="standings-hero__th standings-hero__th--team">Team</th>
+            <th class="standings-hero__th standings-hero__th--record">Record</th>
+            <th class="standings-hero__th standings-hero__th--pf">PF</th>
+            <th class="standings-hero__th standings-hero__th--streak">Strk</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr class:list={['standings-hero__row', { 'standings-hero__row--user': row.isUser }]}>
+              <td class="standings-hero__td standings-hero__td--rank">{i + 1}</td>
+              <td class="standings-hero__td standings-hero__td--team">
+                <span class="standings-hero__team-indicator" style={`background: ${row.color}`} aria-hidden="true"></span>
+                <span class={row.isUser ? 'standings-hero__team-name--bold' : ''}>{row.name}</span>
+              </td>
+              <td class="standings-hero__td standings-hero__td--record">{row.record}</td>
+              <td class="standings-hero__td standings-hero__td--pf">{row.pf}</td>
+              <td class="standings-hero__td standings-hero__td--streak">{row.streak}</td>
+            </tr>
+          ))}
+          {userRow && (
+            <Fragment>
+              <tr class="standings-hero__row standings-hero__row--separator" aria-hidden="true">
+                <td colspan="5"><span class="standings-hero__ellipsis">&middot;&middot;&middot;</span></td>
+              </tr>
+              <tr class="standings-hero__row standings-hero__row--user">
+                <td class="standings-hero__td standings-hero__td--rank">
+                  {franchises.map((f: any) => f.id).sort((a: string, b: string) => {
+                    const fa = franchises.find((x: any) => x.id === a);
+                    const fb = franchises.find((x: any) => x.id === b);
+                    const wa = parseInt((fa?.h2hwlt ?? '0').split('-')[0]);
+                    const wb = parseInt((fb?.h2hwlt ?? '0').split('-')[0]);
+                    return wb - wa;
+                  }).indexOf(userRow!.id) + 1}
+                </td>
+                <td class="standings-hero__td standings-hero__td--team">
+                  <span class="standings-hero__team-indicator" style={`background: ${userRow!.color}`} aria-hidden="true"></span>
+                  <span class="standings-hero__team-name--bold">{userRow!.name}</span>
+                </td>
+                <td class="standings-hero__td standings-hero__td--record">{userRow!.record}</td>
+                <td class="standings-hero__td standings-hero__td--pf">{userRow!.pf}</td>
+                <td class="standings-hero__td standings-hero__td--streak">{userRow!.streak}</td>
+              </tr>
+            </Fragment>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </section>
+) : (
+  <StandingsHeroStub />
+)}
+
+<style>
+  .standings-hero {
+    --dh-accent: var(--color-primary, #1c497c);
+    --dh-highlight-bg: color-mix(in srgb, var(--dh-accent) 6%, transparent);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .standings-hero__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .standings-hero__section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .standings-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .standings-hero__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .standings-hero__table-wrap {
+    overflow-x: auto;
+  }
+
+  .standings-hero__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .standings-hero__th {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0 0.5rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    white-space: nowrap;
+  }
+
+  .standings-hero__th--rank { width: 2rem; text-align: center; }
+  .standings-hero__th--record,
+  .standings-hero__th--pf,
+  .standings-hero__th--streak { text-align: right; }
+
+  .standings-hero__row {
+    transition: background 0.1s ease;
+  }
+
+  .standings-hero__row:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .standings-hero__row--user {
+    background: var(--dh-highlight-bg);
+  }
+
+  .standings-hero__row--user:hover {
+    background: color-mix(in srgb, var(--dh-accent) 10%, transparent);
+  }
+
+  .standings-hero__row--separator {
+    pointer-events: none;
+  }
+
+  .standings-hero__row--separator td {
+    padding: 0.125rem 0;
+    text-align: center;
+    border: none;
+  }
+
+  .standings-hero__ellipsis {
+    font-size: 0.75rem;
+    color: var(--color-gray-300, #d1d5db);
+    letter-spacing: 0.15em;
+  }
+
+  .standings-hero__td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .standings-hero__td--rank {
+    text-align: center;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 0.75rem;
+    font-weight: 600;
+    width: 2rem;
+  }
+
+  .standings-hero__td--team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .standings-hero__team-indicator {
+    width: 3px;
+    height: 1rem;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .standings-hero__team-name--bold {
+    font-weight: 700;
+  }
+
+  .standings-hero__td--record {
+    text-align: right;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .standings-hero__td--pf {
+    text-align: right;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .standings-hero__td--streak {
+    text-align: right;
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.8125rem;
+  }
+
+  @media (max-width: 640px) {
+    .standings-hero {
+      padding: 1.25rem;
+    }
+
+    .standings-hero__th--streak,
+    .standings-hero__td--streak {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,224 @@
+---
+/**
+ * RecapHero — Tuesday AM weekly recap hero.
+ *
+ * Shows the most recent recap article from the Scheftner feed with
+ * headline stats. Falls back to RecapHeroStub if no recap article exists.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import type { ScheftnerFeed, ScheftnerPost } from '../../../types/scheftner';
+import { getAuthor, getAuthorAvatar } from '../../../types/scheftner';
+import RecapHeroStub from '../hero-stubs/RecapHeroStub.astro';
+import feedData from '../../../data/theleague/scheftner-feed.json';
+
+export interface Props {
+  state: HeroState;
+}
+
+const { state } = Astro.props;
+const feed = feedData as ScheftnerFeed;
+
+// Find the most recent recap article (within 7 days)
+const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+const recentArticles = feed.posts.filter(
+  p => p.type === 'article' && new Date(p.timestamp).getTime() > sevenDaysAgo
+);
+
+const recap = recentArticles.find(p => /recap|review|results|week\s+\d+/i.test(p.headline))
+  ?? recentArticles[0];
+
+const author = recap ? getAuthor(recap.authorId) : null;
+const avatarUrl = author ? getAuthorAvatar(author) : null;
+
+const formattedDate = recap
+  ? new Date(recap.timestamp).toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    })
+  : '';
+
+const excerpt = recap?.body
+  ? (recap.body.length > 220 ? recap.body.slice(0, 220).replace(/\s+\S*$/, '') + '...' : recap.body)
+  : '';
+---
+
+{recap ? (
+  <section class="recap-hero" aria-label="Weekly Recap">
+    <div class="recap-hero__header">
+      <h3 class="recap-hero__section-title">Weekly Recap</h3>
+      <time class="recap-hero__date">{formattedDate}</time>
+    </div>
+
+    <div class="recap-hero__layout">
+      {recap.image && (
+        <div class="recap-hero__image-wrap">
+          <img
+            src={`/assets/scheftner/${recap.image}`}
+            alt={recap.imageAlt ?? recap.headline}
+            class="recap-hero__image"
+            loading="eager"
+          />
+        </div>
+      )}
+      <div class="recap-hero__content">
+        <h4 class="recap-hero__headline">{recap.headline}</h4>
+        <p class="recap-hero__excerpt">{excerpt}</p>
+        <div class="recap-hero__footer">
+          {author && avatarUrl && (
+            <div class="recap-hero__author">
+              <img src={avatarUrl} alt="" class="recap-hero__avatar" width="24" height="24" />
+              <span class="recap-hero__author-name">{author.name}</span>
+            </div>
+          )}
+          {recap.link && (
+            <a href={recap.link} class="recap-hero__cta">
+              Read full recap
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+) : (
+  <RecapHeroStub />
+)}
+
+<style>
+  .recap-hero {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .recap-hero__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .recap-hero__section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .recap-hero__date {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-weight: 500;
+  }
+
+  .recap-hero__layout {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .recap-hero__image-wrap {
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+  }
+
+  .recap-hero__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .recap-hero__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .recap-hero__headline {
+    font-size: clamp(1rem, 1.25vw + 0.5rem, 1.35rem);
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .recap-hero__excerpt {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .recap-hero__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.25rem;
+  }
+
+  .recap-hero__author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .recap-hero__avatar {
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+  }
+
+  .recap-hero__author-name {
+    font-weight: 500;
+  }
+
+  .recap-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .recap-hero__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .recap-hero__layout:not(:has(.recap-hero__image-wrap)) {
+    grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 640px) {
+    .recap-hero {
+      padding: 1.25rem;
+    }
+
+    .recap-hero__layout {
+      grid-template-columns: 1fr;
+    }
+
+    .recap-hero__image-wrap {
+      max-height: 140px;
+    }
+  }
+</style>

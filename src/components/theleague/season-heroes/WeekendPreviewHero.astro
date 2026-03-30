@@ -1,0 +1,18 @@
+---
+/**
+ * WeekendPreviewHero — Friday article slot.
+ *
+ * Thin wrapper around ArticleHero that selects "weekend-preview" type.
+ * Exists to keep the SeasonDailyHero router's intent readable.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import ArticleHero from './ArticleHero.astro';
+
+export interface Props {
+  state: HeroState;
+}
+
+const { state } = Astro.props;
+---
+
+<ArticleHero state={state} articleType="weekend-preview" />

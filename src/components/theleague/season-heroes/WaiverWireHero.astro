@@ -1,0 +1,348 @@
+---
+/**
+ * WaiverWireHero — Tuesday PM through Wednesday 8pm PT hero.
+ *
+ * Shows top 3 projected free agents (unrostered players) with a countdown
+ * timer to the Wednesday 8pm PT waiver deadline.
+ * Falls back to WaiverWireHeroStub if no projection data is available.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import PlayerCell from '../PlayerCell.astro';
+import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+}
+
+const { state, resolveLeaguePath: r } = Astro.props;
+
+const year = getCurrentSeasonYear(state.metadata.referenceDate);
+
+let projData: any, playersData: any, rostersData: any;
+try {
+  [projData, playersData, rostersData] = await Promise.all([
+    import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
+    import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
+    import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
+  ]);
+} catch {
+  projData = null;
+}
+
+const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
+const hasData = Array.isArray(rawScores) && rawScores.length > 0;
+
+// Build lookups
+const playerMap = new Map<string, any>();
+const allPlayers = playersData?.players?.player ?? playersData?.default?.players?.player ?? [];
+for (const p of allPlayers) {
+  playerMap.set(p.id, p);
+}
+
+const ownedIds = new Set<string>();
+const allFranchises = rostersData?.rosters?.franchise ?? rostersData?.default?.rosters?.franchise ?? [];
+for (const f of allFranchises) {
+  const players = Array.isArray(f.player) ? f.player : f.player ? [f.player] : [];
+  for (const p of players) {
+    ownedIds.add(p.id);
+  }
+}
+
+// Find top 3 unrostered players by projected score
+interface FreeAgentRow {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  headshot: string;
+  projection: number;
+  projDisplay: string;
+}
+
+const freeAgents: FreeAgentRow[] = [];
+if (hasData) {
+  const scored = rawScores
+    .filter((s: any) => !ownedIds.has(s.id) && parseFloat(s.score) > 0)
+    .map((s: any) => ({ id: s.id, score: parseFloat(s.score) }))
+    .sort((a: any, b: any) => b.score - a.score)
+    .slice(0, 3);
+
+  for (const s of scored) {
+    const player = playerMap.get(s.id);
+    if (!player) continue;
+    // Parse "Last, First" name format
+    const [last, first] = (player.name ?? '').split(', ');
+    const displayName = first ? `${first} ${last}` : player.name;
+    const position = player.position?.replace(/^TM/, 'DEF') ?? '';
+
+    freeAgents.push({
+      id: s.id,
+      name: displayName,
+      position,
+      nflTeam: player.team ?? '',
+      headshot: `https://sleepercdn.com/content/nfl/players/thumb/${player.stats_global_id}.jpg`,
+      projection: s.score,
+      projDisplay: s.score.toFixed(1),
+    });
+  }
+}
+
+// Compute waiver lock time (next Wednesday 8pm PT) for countdown
+// PT offset: PST = UTC-8, PDT = UTC-7. We pass an ISO string and let the client handle it.
+const ref = state.metadata.referenceDate;
+const ptFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
+  hour: 'numeric', minute: 'numeric', hour12: false,
+});
+const ptParts = ptFormatter.formatToParts(ref);
+const getPart = (type: Intl.DateTimeFormatPartTypes) => ptParts.find(p => p.type === type)?.value ?? '';
+const ptDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(getPart('weekday'));
+const ptMonth = parseInt(getPart('month'));
+const ptDate = parseInt(getPart('day'));
+const ptYear = parseInt(getPart('year'));
+
+// Days until next Wednesday (3)
+let daysUntilWed = (3 - ptDay + 7) % 7;
+if (daysUntilWed === 0) {
+  // It's Wednesday — check if before or after 8pm
+  const ptHour = parseInt(getPart('hour'));
+  if (ptHour >= 20) daysUntilWed = 7; // past deadline, next week
+}
+
+// Build the lock date in PT then convert to a rough ISO for the client
+// The client will parse this and count down
+const lockDatePT = new Date(ptYear, ptMonth - 1, ptDate + daysUntilWed, 20, 0, 0);
+// Approximate UTC by adding 7-8 hours (we use 7 for PDT as a reasonable default during NFL season)
+const lockDateUTC = new Date(lockDatePT.getTime() + 7 * 60 * 60 * 1000);
+const lockIso = lockDateUTC.toISOString();
+
+const week = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week ?? '?';
+---
+
+{hasData && freeAgents.length > 0 ? (
+  <section class="ww-hero" aria-label="Waiver Wire">
+    <div class="ww-hero__header">
+      <div class="ww-hero__title-row">
+        <h3 class="ww-hero__section-title">Waiver Wire</h3>
+        <span class="ww-hero__week-badge">Week {week}</span>
+      </div>
+      <div class="ww-hero__countdown-row">
+        <span class="ww-hero__countdown-label">Locks in</span>
+        <span class="ww-hero__countdown" data-lock={lockIso} aria-live="polite">--:--:--</span>
+      </div>
+    </div>
+
+    <div class="ww-hero__subhead">
+      <span class="ww-hero__subhead-text">Top projected free agents</span>
+    </div>
+
+    <ol class="ww-hero__list">
+      {freeAgents.map((fa, i) => (
+        <li class="ww-hero__item">
+          <span class="ww-hero__rank">{i + 1}</span>
+          <div class="ww-hero__player">
+            <PlayerCell
+              name={fa.name}
+              headshot={fa.headshot}
+              position={fa.position}
+              nflTeam={fa.nflTeam}
+              size="compact"
+            />
+          </div>
+          <span class="ww-hero__proj">{fa.projDisplay}</span>
+        </li>
+      ))}
+    </ol>
+
+    <div class="ww-hero__footer">
+      <a href={r('/theleague/players')} class="ww-hero__cta">
+        See All Free Agents
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+  </section>
+) : (
+  <WaiverWireHeroStub />
+)}
+
+<script>
+  const el = document.querySelector<HTMLElement>('.ww-hero__countdown[data-lock]');
+  if (el) {
+    const lock = new Date(el.dataset.lock!).getTime();
+    function update() {
+      const diff = lock - Date.now();
+      if (diff <= 0) {
+        el!.textContent = 'Closed';
+        return;
+      }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1000);
+      el!.textContent = `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+    }
+    update();
+    setInterval(update, 1000);
+  }
+</script>
+
+<style>
+  .ww-hero {
+    --dh-accent: var(--cat-free-agency, #2e8743);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .ww-hero__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .ww-hero__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .ww-hero__section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .ww-hero__week-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dh-accent);
+    background: color-mix(in srgb, var(--dh-accent) 10%, transparent);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full, 9999px);
+  }
+
+  .ww-hero__countdown-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .ww-hero__countdown-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .ww-hero__countdown {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--dh-accent);
+    letter-spacing: 0.02em;
+  }
+
+  .ww-hero__subhead {
+    margin-bottom: 0.75rem;
+  }
+
+  .ww-hero__subhead-text {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+
+  .ww-hero__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ww-hero__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+
+  .ww-hero__item:last-child {
+    border-bottom: none;
+  }
+
+  .ww-hero__rank {
+    width: 1.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-300, #d1d5db);
+    flex-shrink: 0;
+  }
+
+  .ww-hero__player {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ww-hero__proj {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--dh-accent);
+    flex-shrink: 0;
+    min-width: 2.5rem;
+    text-align: right;
+  }
+
+  .ww-hero__footer {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .ww-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .ww-hero__cta:hover {
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .ww-hero {
+      padding: 1.25rem;
+    }
+
+    .ww-hero__header {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+</style>

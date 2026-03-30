@@ -1,0 +1,429 @@
+---
+/**
+ * MatchupPreviewHero — Saturday/Sunday pre-game personalized Sunday Ticket guide.
+ *
+ * Groups NFL games by time slot (1pm ET, 4pm ET, SNF). For each slot, shows
+ * games where the logged-in user has rostered players, with broadcast channel.
+ * Falls back to top games by projected score when unauthenticated.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import GameDayPreviewHeroStub from '../hero-stubs/GameDayPreviewHeroStub.astro';
+import broadcastData from '../../../../data/theleague/broadcast-mappings.json';
+
+export interface Props {
+  state: HeroState;
+  resolveLeaguePath: (path: string) => string;
+  userFranchiseId?: string;
+}
+
+const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+
+const year = getCurrentSeasonYear(state.metadata.referenceDate);
+
+let scheduleData: any, projData: any, playersData: any, rostersData: any;
+try {
+  [scheduleData, projData, playersData, rostersData] = await Promise.all([
+    import(`../../../../data/theleague/mfl-feeds/${year}/nflSchedule.json`),
+    import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
+    import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
+    import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
+  ]);
+} catch {
+  scheduleData = null;
+}
+
+// Get the correct week's games from nflSchedule
+const rawSchedule = scheduleData?.fullNflSchedule?.nflSchedule
+  ?? scheduleData?.default?.fullNflSchedule?.nflSchedule ?? [];
+
+const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
+const hasProjections = Array.isArray(rawScores) && rawScores.length > 0;
+const projWeek = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week;
+
+// Find the upcoming week's schedule (match projectedScores week)
+// nflSchedule is an array indexed by week (0-based: index 0 = week 1)
+const weekIdx = projWeek ? parseInt(projWeek) - 1 : -1;
+const weekGames = (weekIdx >= 0 && weekIdx < rawSchedule.length)
+  ? (rawSchedule[weekIdx]?.matchup ?? [])
+  : [];
+
+// Build player → NFL team lookup
+const allPlayers = playersData?.players?.player ?? playersData?.default?.players?.player ?? [];
+const playerTeamMap = new Map<string, string>();
+for (const p of allPlayers) {
+  playerTeamMap.set(p.id, p.team ?? '');
+}
+
+// Build projection lookup
+const projMap = new Map<string, number>();
+if (hasProjections) {
+  for (const s of rawScores) {
+    projMap.set(s.id, parseFloat(s.score));
+  }
+}
+
+// Find user's rostered player IDs and their NFL teams
+const allFranchises = rostersData?.rosters?.franchise ?? rostersData?.default?.rosters?.franchise ?? [];
+const userPlayerIds = new Set<string>();
+const userNflTeams = new Set<string>();
+
+if (userFranchiseId) {
+  const userFranchise = allFranchises.find((f: any) => f.id === userFranchiseId);
+  if (userFranchise) {
+    const players = Array.isArray(userFranchise.player) ? userFranchise.player : userFranchise.player ? [userFranchise.player] : [];
+    for (const p of players) {
+      userPlayerIds.add(p.id);
+      const team = playerTeamMap.get(p.id);
+      if (team) userNflTeams.add(team);
+    }
+  }
+}
+
+// Parse games and group by time slot
+interface GameInfo {
+  kickoff: number;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: string;
+  awayScore: string;
+  channel: string;
+  timeSlot: string;
+  hasUserPlayers: boolean;
+  userPlayerCount: number;
+  totalProjected: number;
+}
+
+function getTimeSlotLabel(kickoffEpoch: number): string {
+  const d = new Date(kickoffEpoch * 1000);
+  const etHour = parseInt(d.toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }));
+  const dow = d.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+
+  if (dow === 'Thu') return 'Thursday Night';
+  if (dow === 'Mon') return 'Monday Night';
+  if (dow === 'Sun' && etHour >= 20) return 'Sunday Night';
+  if (dow === 'Sun' && etHour >= 16) return '4:25 PM ET';
+  if (dow === 'Sat') return 'Saturday';
+  return '1:00 PM ET';
+}
+
+function getChannel(kickoffEpoch: number): string {
+  const d = new Date(kickoffEpoch * 1000);
+  const etHour = parseInt(d.toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }));
+  const dow = d.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+
+  if (dow === 'Thu') return 'Prime Video';
+  if (dow === 'Mon') return 'ESPN';
+  if (dow === 'Sun' && etHour >= 20) return 'NBC';
+  if (dow === 'Sun' && etHour >= 16) return 'CBS/FOX';
+  if (dow === 'Sat') return 'NFL Network';
+  return 'CBS/FOX';
+}
+
+const games: GameInfo[] = weekGames.map((m: any) => {
+  const kickoff = parseInt(m.kickoff ?? '0');
+  const teams = m.team ?? [];
+  const home = teams.find((t: any) => t.isHome === '1') ?? teams[1];
+  const away = teams.find((t: any) => t.isHome === '0') ?? teams[0];
+  const homeId = home?.id ?? '';
+  const awayId = away?.id ?? '';
+
+  const hasUserPlayers = userNflTeams.has(homeId) || userNflTeams.has(awayId);
+
+  // Count user's players in this game
+  let userPlayerCount = 0;
+  let totalProjected = 0;
+  if (userFranchiseId) {
+    for (const pid of userPlayerIds) {
+      const pTeam = playerTeamMap.get(pid);
+      if (pTeam === homeId || pTeam === awayId) {
+        userPlayerCount++;
+        totalProjected += projMap.get(pid) ?? 0;
+      }
+    }
+  } else {
+    // No auth — use total game projected score for ranking
+    for (const [pid, score] of projMap) {
+      const pTeam = playerTeamMap.get(pid);
+      if (pTeam === homeId || pTeam === awayId) {
+        totalProjected += score;
+      }
+    }
+  }
+
+  return {
+    kickoff,
+    homeTeam: homeId,
+    awayTeam: awayId,
+    homeScore: home?.score ?? '0',
+    awayScore: away?.score ?? '0',
+    channel: getChannel(kickoff),
+    timeSlot: getTimeSlotLabel(kickoff),
+    hasUserPlayers,
+    userPlayerCount,
+    totalProjected,
+  };
+}).filter((g: GameInfo) => g.kickoff > 0);
+
+// Filter and sort
+const relevantGames = userFranchiseId
+  ? games.filter((g: GameInfo) => g.hasUserPlayers).sort((a: GameInfo, b: GameInfo) => b.userPlayerCount - a.userPlayerCount)
+  : games.sort((a: GameInfo, b: GameInfo) => b.totalProjected - a.totalProjected);
+
+const displayGames = relevantGames.slice(0, 6);
+
+// Group by time slot
+const slotGroups = new Map<string, GameInfo[]>();
+for (const g of displayGames) {
+  const existing = slotGroups.get(g.timeSlot) ?? [];
+  existing.push(g);
+  slotGroups.set(g.timeSlot, existing);
+}
+
+const hasGames = displayGames.length > 0;
+
+// US broadcast channels from mappings
+const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
+---
+
+{hasGames ? (
+  <section class="matchup-hero" aria-label="Matchup Preview">
+    <div class="matchup-hero__header">
+      <div class="matchup-hero__title-group">
+        <h3 class="matchup-hero__section-title">Your Sunday Ticket</h3>
+        {userFranchiseId && (
+          <span class="matchup-hero__personalized">Personalized</span>
+        )}
+      </div>
+      <a href={r('/theleague/matchups')} class="matchup-hero__cta">
+        Full Preview
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="matchup-hero__slots">
+      {[...slotGroups.entries()].map(([slot, slotGames]) => (
+        <div class="matchup-hero__slot">
+          <div class="matchup-hero__slot-header">
+            <span class="matchup-hero__slot-label">{slot}</span>
+          </div>
+          <div class="matchup-hero__games">
+            {slotGames.map((game) => (
+              <div class="matchup-hero__game">
+                <div class="matchup-hero__teams">
+                  <div class="matchup-hero__team">
+                    <img
+                      src={`/assets/nfl-logos/${normalizeTeamCode(game.awayTeam)}.svg`}
+                      alt={game.awayTeam}
+                      class="matchup-hero__team-logo"
+                      width="24"
+                      height="24"
+                    />
+                    <span class="matchup-hero__team-code">{normalizeTeamCode(game.awayTeam)}</span>
+                  </div>
+                  <span class="matchup-hero__at" aria-hidden="true">@</span>
+                  <div class="matchup-hero__team">
+                    <img
+                      src={`/assets/nfl-logos/${normalizeTeamCode(game.homeTeam)}.svg`}
+                      alt={game.homeTeam}
+                      class="matchup-hero__team-logo"
+                      width="24"
+                      height="24"
+                    />
+                    <span class="matchup-hero__team-code">{normalizeTeamCode(game.homeTeam)}</span>
+                  </div>
+                </div>
+                <div class="matchup-hero__game-meta">
+                  <span class="matchup-hero__channel">{game.channel}</span>
+                  {userFranchiseId && game.userPlayerCount > 0 && (
+                    <span class="matchup-hero__player-count">{game.userPlayerCount} player{game.userPlayerCount !== 1 ? 's' : ''}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {!userFranchiseId && (
+      <p class="matchup-hero__login-hint">Log in to see games with your players.</p>
+    )}
+  </section>
+) : (
+  <GameDayPreviewHeroStub />
+)}
+
+<style>
+  .matchup-hero {
+    --dh-accent: var(--color-primary, #1c497c);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .matchup-hero__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .matchup-hero__title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .matchup-hero__section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .matchup-hero__personalized {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dh-accent);
+    background: color-mix(in srgb, var(--dh-accent) 10%, transparent);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+  }
+
+  .matchup-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .matchup-hero__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .matchup-hero__slots {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .matchup-hero__slot-header {
+    margin-bottom: 0.375rem;
+  }
+
+  .matchup-hero__slot-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .matchup-hero__games {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .matchup-hero__game {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .matchup-hero__teams {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .matchup-hero__team {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .matchup-hero__team-logo {
+    flex-shrink: 0;
+  }
+
+  .matchup-hero__team-code {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .matchup-hero__at {
+    font-size: 0.6875rem;
+    color: var(--color-gray-300, #d1d5db);
+    font-weight: 500;
+  }
+
+  .matchup-hero__game-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .matchup-hero__channel {
+    color: var(--color-gray-400, #9ca3af);
+    font-weight: 600;
+  }
+
+  .matchup-hero__player-count {
+    color: var(--dh-accent);
+    font-weight: 700;
+    background: color-mix(in srgb, var(--dh-accent) 8%, transparent);
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+  }
+
+  .matchup-hero__login-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    text-align: center;
+    font-style: italic;
+  }
+
+  @media (max-width: 640px) {
+    .matchup-hero {
+      padding: 1.25rem;
+    }
+
+    .matchup-hero__games {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .matchup-hero__games {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

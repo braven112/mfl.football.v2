@@ -14,19 +14,20 @@ import HeroBanner from './HeroBanner.astro';
 import LiveScoringHero from '../shared/LiveScoringHero';
 import '../../styles/live-scoring-hero.css';
 
-// Off-season hero components
+// Off-season hero components (Phase C)
 import ChampionCrownedHero from './ChampionCrownedHero.astro';
 import TagExtensionHero from './TagExtensionHero.astro';
 import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
 import CutWatchHero from './CutWatchHero.astro';
 import UDFAHero from './UDFAHero.astro';
 
-// Daily rotation stub components (Phases C-D)
-import StandingsHeroStub from './hero-stubs/StandingsHeroStub.astro';
-import RecapHeroStub from './hero-stubs/RecapHeroStub.astro';
-import WaiverWireHeroStub from './hero-stubs/WaiverWireHeroStub.astro';
-import ArticleHeroStub from './hero-stubs/ArticleHeroStub.astro';
-import GameDayPreviewHeroStub from './hero-stubs/GameDayPreviewHeroStub.astro';
+// Daily rotation — real components (Phase D)
+import StandingsHero from './season-heroes/StandingsHero.astro';
+import RecapHero from './season-heroes/RecapHero.astro';
+import WaiverWireHero from './season-heroes/WaiverWireHero.astro';
+import ArticleHero from './season-heroes/ArticleHero.astro';
+import WeekendPreviewHero from './season-heroes/WeekendPreviewHero.astro';
+import MatchupPreviewHero from './season-heroes/MatchupPreviewHero.astro';
 
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
@@ -44,15 +45,23 @@ export interface Props {
     initialScores?: Record<string, number>;
     initialRemaining?: Record<string, number>;
   };
-  /** User's franchise ID for champion celebration detection */
+  /** Logged-in user's franchise ID (for personalized heroes) */
   userFranchiseId?: string;
+  /** Whether the user is authenticated */
+  isAuthenticated?: boolean;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated } = Astro.props;
 
 const phase = state.phase;
 const slot = state.slot;
 const fallback = state.fallbackHero;
+
+// Article slot disambiguation: Friday → weekend preview, else → waiver pickup report
+const ptWeekday = slot === 'article'
+  ? new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(state.metadata.referenceDate)
+  : undefined;
+const isFridayArticle = ptWeekday === 'Fri';
 ---
 
 {/* P0: Auction hero — delegate to existing component */}
@@ -91,11 +100,12 @@ const fallback = state.fallbackHero;
     initialRemaining={liveScoring.initialRemaining}
   />
 )}
-{slot === 'standings' && <StandingsHeroStub />}
-{slot === 'recap' && <RecapHeroStub />}
-{slot === 'waiver-wire' && <WaiverWireHeroStub />}
-{slot === 'article' && <ArticleHeroStub />}
-{slot === 'game-day-preview' && <GameDayPreviewHeroStub />}
+{slot === 'standings' && <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
+{slot === 'recap' && <RecapHero state={state} />}
+{slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} />}
+{slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
+{slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}
+{slot === 'game-day-preview' && <MatchupPreviewHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
 
 {/* Off-season heroes: dedicated components */}
 {phase === 'champion-crowned' && state.championProps && (

@@ -1,0 +1,245 @@
+---
+/**
+ * ArticleHero — Featured Scheftner article display for the homepage hero.
+ *
+ * Shows the most recent matching article from the Scheftner feed.
+ * Used for waiver pickup reports (Wed night → Thu), weekend previews (Fri),
+ * and generic article slots. Falls back to ArticleHeroStub if no match.
+ */
+import type { HeroState } from '../../../types/hero-state';
+import type { ScheftnerFeed, ScheftnerPost } from '../../../types/scheftner';
+import { getAuthor, getAuthorAvatar } from '../../../types/scheftner';
+import ArticleHeroStub from '../hero-stubs/ArticleHeroStub.astro';
+import feedData from '../../../data/theleague/scheftner-feed.json';
+
+export interface Props {
+  state: HeroState;
+  articleType?: 'waiver-pickup' | 'weekend-preview' | 'generic';
+}
+
+const { state, articleType = 'generic' } = Astro.props;
+
+const feed = feedData as ScheftnerFeed;
+
+// Find matching article based on type
+function findArticle(posts: ScheftnerPost[], type: string): ScheftnerPost | undefined {
+  const articles = posts.filter(p => p.type === 'article');
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const recent = articles.filter(p => new Date(p.timestamp).getTime() > sevenDaysAgo);
+  const pool = recent.length > 0 ? recent : articles.slice(0, 5);
+
+  if (type === 'waiver-pickup') {
+    const match = pool.find(p =>
+      /waiver|pickup|claim/i.test(p.headline)
+    );
+    return match ?? pool[0];
+  }
+
+  if (type === 'weekend-preview') {
+    const match = pool.find(p =>
+      /preview|weekend|storyline|watch/i.test(p.headline)
+    );
+    return match ?? pool[0];
+  }
+
+  return pool[0];
+}
+
+const article = findArticle(feed.posts, articleType);
+
+const author = article ? getAuthor(article.authorId) : null;
+const avatarUrl = author ? getAuthorAvatar(author) : null;
+
+const kickerLabels: Record<string, string> = {
+  'waiver-pickup': 'Waiver Report',
+  'weekend-preview': 'Weekend Preview',
+  'generic': 'Scheftner Report',
+};
+const kicker = kickerLabels[articleType] ?? 'Scheftner Report';
+
+const formattedDate = article
+  ? new Date(article.timestamp).toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    })
+  : '';
+
+// Truncate body to ~200 chars for excerpt
+const excerpt = article?.body
+  ? (article.body.length > 200 ? article.body.slice(0, 200).replace(/\s+\S*$/, '') + '...' : article.body)
+  : '';
+---
+
+{article ? (
+  <section class="article-hero" aria-label={kicker}>
+    <div class="article-hero__layout">
+      {article.image && (
+        <div class="article-hero__image-wrap">
+          <img
+            src={`/assets/scheftner/${article.image}`}
+            alt={article.imageAlt ?? article.headline}
+            class="article-hero__image"
+            loading="eager"
+          />
+        </div>
+      )}
+      <div class="article-hero__content">
+        <div class="article-hero__eyebrow">
+          <span class="article-hero__kicker">{kicker}</span>
+          <span class="article-hero__dot" aria-hidden="true">&middot;</span>
+          <time class="article-hero__date">{formattedDate}</time>
+        </div>
+        <h3 class="article-hero__headline">{article.headline}</h3>
+        <p class="article-hero__excerpt">{excerpt}</p>
+        <div class="article-hero__footer">
+          {author && avatarUrl && (
+            <div class="article-hero__author">
+              <img src={avatarUrl} alt="" class="article-hero__avatar" width="24" height="24" />
+              <span class="article-hero__author-name">{author.name}</span>
+            </div>
+          )}
+          {article.link && (
+            <a href={article.link} class="article-hero__cta">
+              {article.linkLabel ?? 'Read full article'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+) : (
+  <ArticleHeroStub />
+)}
+
+<style>
+  .article-hero {
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+    overflow: hidden;
+  }
+
+  .article-hero__layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .article-hero__image-wrap {
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+  }
+
+  .article-hero__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .article-hero__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .article-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .article-hero__kicker {
+    color: var(--color-primary, #1c497c);
+  }
+
+  .article-hero__headline {
+    font-size: clamp(1.125rem, 1.5vw + 0.5rem, 1.5rem);
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .article-hero__excerpt {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .article-hero__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.25rem;
+  }
+
+  .article-hero__author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .article-hero__avatar {
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+  }
+
+  .article-hero__author-name {
+    font-weight: 500;
+  }
+
+  .article-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .article-hero__cta:hover {
+    gap: 0.5rem;
+  }
+
+  /* No image → single column */
+  .article-hero__layout:not(:has(.article-hero__image-wrap)) {
+    grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 640px) {
+    .article-hero {
+      padding: 1.25rem;
+    }
+
+    .article-hero__layout {
+      grid-template-columns: 1fr;
+    }
+
+    .article-hero__image-wrap {
+      max-height: 140px;
+    }
+  }
+</style>
