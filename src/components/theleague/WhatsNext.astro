@@ -17,9 +17,11 @@ interface Props {
   excludeEventId?: string;
   /** Override date for demo/testing purposes */
   demoDate?: Date;
+  /** Maximum number of event cards to show (default: 3) */
+  maxCards?: number;
 }
 
-const { excludeEventId, demoDate } = Astro.props;
+const { excludeEventId, demoDate, maxCards = 3 } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
 const timeline = excludeEventId
@@ -36,8 +38,8 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
     </div>
     <div class="whats-next__grid">
       {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}
-      {timeline.next && <WhatsNextCard event={timeline.next} position="next" />}
-      {timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" />}
+      {maxCards >= 2 && timeline.next && <WhatsNextCard event={timeline.next} position="next" />}
+      {maxCards >= 3 && timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" />}
     </div>
   </section>
 )}
