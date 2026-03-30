@@ -1,14 +1,14 @@
 /**
- * Scheftner Reply Storage
+ * Schefter Reply Storage
  *
  * Stores replies in Upstash Redis using one hash per post.
- * Key: scheftner:replies:{postId}
- * Fields: replyId → JSON(ScheftnerReply)
+ * Key: schefter:replies:{postId}
+ * Fields: replyId → JSON(SchefterReply)
  *
  * Follows the suggestions-storage.ts pattern.
  */
 
-import type { ScheftnerReply } from '../types/scheftner-replies';
+import type { SchefterReply } from '../types/schefter-replies';
 
 type RedisClient = {
   hget: <T>(key: string, field: string) => Promise<T | null>;
@@ -20,8 +20,8 @@ type RedisClient = {
 };
 
 const KEYS = {
-  repliesPrefix: 'scheftner:replies:',
-  ratePrefix: 'scheftner:reply-rate:',
+  repliesPrefix: 'schefter:replies:',
+  ratePrefix: 'schefter:reply-rate:',
 } as const;
 
 let _redis: RedisClient | null | undefined;
@@ -41,7 +41,7 @@ async function getRedis(): Promise<RedisClient | null> {
     _redis = new Redis({ url, token }) as unknown as RedisClient;
     return _redis;
   } catch (err) {
-    console.warn('[scheftner-replies] Redis unavailable:', err);
+    console.warn('[schefter-replies] Redis unavailable:', err);
     _redis = null;
     return null;
   }
@@ -52,37 +52,37 @@ export function generateReplyId(): string {
 }
 
 /** Get all replies for a post, sorted chronologically */
-export async function getRepliesForPost(postId: string): Promise<ScheftnerReply[]> {
+export async function getRepliesForPost(postId: string): Promise<SchefterReply[]> {
   const redis = await getRedis();
   if (!redis) return [];
 
   try {
-    const all = await redis.hgetall<ScheftnerReply>(`${KEYS.repliesPrefix}${postId}`);
+    const all = await redis.hgetall<SchefterReply>(`${KEYS.repliesPrefix}${postId}`);
     if (!all || Object.keys(all).length === 0) return [];
     const replies = Object.values(all);
     replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     return replies;
   } catch (err) {
-    console.error('[scheftner-replies] Failed to read replies:', err);
+    console.error('[schefter-replies] Failed to read replies:', err);
     return [];
   }
 }
 
 /** Get a single reply by ID */
-export async function getReplyById(postId: string, replyId: string): Promise<ScheftnerReply | null> {
+export async function getReplyById(postId: string, replyId: string): Promise<SchefterReply | null> {
   const redis = await getRedis();
   if (!redis) return null;
 
   try {
-    return await redis.hget<ScheftnerReply>(`${KEYS.repliesPrefix}${postId}`, replyId);
+    return await redis.hget<SchefterReply>(`${KEYS.repliesPrefix}${postId}`, replyId);
   } catch (err) {
-    console.error('[scheftner-replies] Failed to read reply:', err);
+    console.error('[schefter-replies] Failed to read reply:', err);
     return null;
   }
 }
 
 /** Save a reply to Redis */
-export async function saveReply(reply: ScheftnerReply): Promise<boolean> {
+export async function saveReply(reply: SchefterReply): Promise<boolean> {
   const redis = await getRedis();
   if (!redis) return false;
 
@@ -90,7 +90,7 @@ export async function saveReply(reply: ScheftnerReply): Promise<boolean> {
     await redis.hset(`${KEYS.repliesPrefix}${reply.postId}`, { [reply.id]: reply });
     return true;
   } catch (err) {
-    console.error('[scheftner-replies] Failed to save reply:', err);
+    console.error('[schefter-replies] Failed to save reply:', err);
     return false;
   }
 }

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Scheftner Weekly Articles — Central Entry Point
+ * Schefter Weekly Articles — Central Entry Point
  *
- * Generates automated Scheftner articles by type. Each article type follows
+ * Generates automated Schefter articles by type. Each article type follows
  * the same pipeline: load data → build fact sheet → AI voice → validate → feed append.
  *
  * ALL data is pre-resolved by deterministic fact sheet builders.
  * The AI only adds voice/commentary — it never interprets raw data.
  *
  * Usage:
- *   node scripts/scheftner-weekly-articles.mjs --type weekly-recap [--week 3] [--year 2026] [--dry-run]
+ *   node scripts/schefter-weekly-articles.mjs --type weekly-recap [--week 3] [--year 2026] [--dry-run]
  *
  * Article types:
  *   weekly-recap        Week N recap (Tuesday)
@@ -22,7 +22,7 @@
  *   team-grades         Pre-season roster grades (manual)
  *
  * Environment:
- *   ANTHROPIC_API_KEY — Required for Scheftner voice generation
+ *   ANTHROPIC_API_KEY — Required for Schefter voice generation
  */
 
 import { promises as fs } from 'node:fs';
@@ -62,7 +62,7 @@ function parseArgs() {
   }
 
   if (!opts.type || !VALID_TYPES.includes(opts.type)) {
-    console.error(`Usage: node scripts/scheftner-weekly-articles.mjs --type <type> [--week N] [--year N] [--dry-run]`);
+    console.error(`Usage: node scripts/schefter-weekly-articles.mjs --type <type> [--week N] [--year N] [--dry-run]`);
     console.error(`Valid types: ${VALID_TYPES.join(', ')}`);
     process.exit(1);
   }
@@ -100,7 +100,7 @@ async function main() {
   const opts = parseArgs();
   const { type, dryRun } = opts;
 
-  console.log(`\n🎙️ Scheftner Article Generator — ${type}\n`);
+  console.log(`\n🎙️ Schefter Article Generator — ${type}\n`);
 
   // Step 1: Resolve year + week
   const year = opts.year ?? getSeasonYear();
@@ -169,7 +169,7 @@ async function main() {
   }
 
   // Step 8: Call Anthropic API
-  console.log('  Generating Scheftner article...');
+  console.log('  Generating Schefter article...');
   const systemPrompt = mod.getSystemPrompt();
   const userPrompt = mod.getUserPrompt(factSheet);
   const aiOutput = await callAnthropic(systemPrompt, userPrompt, mod.config.maxTokens);

@@ -1,5 +1,5 @@
 /**
- * Feed writer — dedup check + append article posts to the Scheftner feed.
+ * Feed writer — dedup check + append article posts to the Schefter feed.
  */
 
 import { promises as fs } from 'node:fs';

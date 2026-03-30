@@ -1,18 +1,18 @@
 ---
 /**
- * ScheftnerPostCardCompact — Compact post card for sidebar feed.
+ * SchefterPostCardCompact — Compact post card for sidebar feed.
  *
  * Smaller text, 3-line body clamp, no analysis blocks or article images.
  * Renders reactions + reply thread toggle.
  */
-import type { ScheftnerPost } from '../../types/scheftner';
-import { getAuthor, getAuthorAvatar } from '../../types/scheftner';
-import { formatRelativeTime } from '../../utils/scheftner-feed';
-import ScheftnerReactionBar from './ScheftnerReactionBar.tsx';
-import ScheftnerReplyThread from './ScheftnerReplyThread.tsx';
+import type { SchefterPost } from '../../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../../types/schefter';
+import { formatRelativeTime } from '../../utils/schefter-feed';
+import SchefterReactionBar from './SchefterReactionBar.tsx';
+import SchefterReplyThread from './SchefterReplyThread.tsx';
 
 interface Props {
-  post: ScheftnerPost;
+  post: SchefterPost;
   isAuthenticated?: boolean;
   userFranchiseId?: string;
   userTeamName?: string;
@@ -60,7 +60,7 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
     )}
 
     <div class="sfc-post__actions">
-      <ScheftnerReplyThread
+      <SchefterReplyThread
         client:idle
         postId={post.id}
         postHeadline={post.headline}
@@ -70,7 +70,7 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
         userTeamName={userTeamName}
         userTeamIcon={userTeamIcon}
       />
-      <ScheftnerReactionBar
+      <SchefterReactionBar
         client:visible
         postId={post.id}
         isAuthenticated={isAuthenticated}

@@ -1,19 +1,19 @@
-// ── Scheftner Reply Types ──
+// ── Schefter Reply Types ──
 
-/** A reply to a Scheftner feed post */
-export interface ScheftnerReply {
+/** A reply to a Schefter feed post */
+export interface SchefterReply {
   id: string;
   postId: string;
   parentId: string | null;
   body: string;
-  author: ScheftnerReplyAuthor;
+  author: SchefterReplyAuthor;
   createdAt: string;
 }
 
-export type ScheftnerReplyAuthorType = 'owner' | 'ai';
+export type SchefterReplyAuthorType = 'owner' | 'ai';
 
-export interface ScheftnerReplyAuthor {
-  type: ScheftnerReplyAuthorType;
+export interface SchefterReplyAuthor {
+  type: SchefterReplyAuthorType;
   /** Franchise ID for owner replies */
   franchiseId?: string;
   /** Display name — team name for owners, character name for AI */
@@ -34,7 +34,7 @@ export interface CreateReplyRequest {
 
 /** Response from the reply API */
 export interface ReplyListResponse {
-  replies: ScheftnerReply[];
+  replies: SchefterReply[];
 }
 
 /** Request body for AI reply generation */

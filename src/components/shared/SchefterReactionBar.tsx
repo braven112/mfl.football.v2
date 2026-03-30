@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { SCHEFTNER_REACTIONS } from '../../types/scheftner';
+import { SCHEFTER_REACTIONS } from '../../types/schefter';
 
 /** Human-readable emoji names for screen readers */
 const EMOJI_LABELS: Record<string, string> = {
@@ -18,7 +18,7 @@ interface Props {
   isAuthenticated?: boolean;
 }
 
-export default function ScheftnerReactionBar({
+export default function SchefterReactionBar({
   postId,
   initialReactions = {},
   initialUserReaction = null,
@@ -34,7 +34,7 @@ export default function ScheftnerReactionBar({
   // Fetch initial reaction state when component becomes visible
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/scheftner-reactions?postId=${encodeURIComponent(postId)}`)
+    fetch(`/api/schefter-reactions?postId=${encodeURIComponent(postId)}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (cancelled || !data) return;
@@ -100,7 +100,7 @@ export default function ScheftnerReactionBar({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/scheftner-reactions', {
+      const res = await fetch('/api/schefter-reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, reaction: emoji }),
@@ -126,9 +126,9 @@ export default function ScheftnerReactionBar({
   const isLiked = userReaction === LIKE_EMOJI;
 
   // Other active emojis (excluding like, which has its own button)
-  const activeEmojis = SCHEFTNER_REACTIONS.filter(e => e !== LIKE_EMOJI && (reactions[e] ?? 0) > 0);
+  const activeEmojis = SCHEFTER_REACTIONS.filter(e => e !== LIKE_EMOJI && (reactions[e] ?? 0) > 0);
   // Picker shows all non-like emojis
-  const pickerEmojis = SCHEFTNER_REACTIONS.filter(e => e !== LIKE_EMOJI);
+  const pickerEmojis = SCHEFTER_REACTIONS.filter(e => e !== LIKE_EMOJI);
 
   return (
     <div className="sf-reactions">

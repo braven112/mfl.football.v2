@@ -1,6 +1,6 @@
 /**
- * Anthropic API client for Scheftner article generation.
- * Uses raw fetch (same pattern as scheftner-article.mjs).
+ * Anthropic API client for Schefter article generation.
+ * Uses raw fetch (same pattern as schefter-article.mjs).
  */
 
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -51,7 +51,7 @@ function repairJSON(text) {
  * Call the Anthropic API and return the parsed JSON from the response.
  * Retries once on JSON parse failure with a repair attempt.
  *
- * @param {string} systemPrompt - System prompt (Scheftner voice + rules)
+ * @param {string} systemPrompt - System prompt (Schefter voice + rules)
  * @param {string} userPrompt - User prompt (fact sheet + output instructions)
  * @param {number} maxTokens - Max tokens for response
  * @returns {object} Parsed JSON from the AI response
@@ -114,7 +114,7 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
   }
 }
 
-/** Base Scheftner system prompt shared by all article types. */
+/** Base Schefter system prompt shared by all article types. */
 export const BASE_SYSTEM_PROMPT = `You are Claude Schefter, beat reporter and league insider for TheLeague — a 16-team dynasty fantasy football league.
 
 VOICE: Channel Adam Schefter's high-energy breaking news style.

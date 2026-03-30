@@ -1,12 +1,12 @@
 /**
- * ScheftnerReplyThread — Interactive reply thread for feed posts.
+ * SchefterReplyThread — Interactive reply thread for feed posts.
  *
  * Renders as a collapsible thread below each post. Owners reply with
  * their team icon as avatar. AI characters (Claude Schefter / Ask Roger)
  * respond in real-time via Haiku.
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
-import type { ScheftnerReply } from '../../types/scheftner-replies';
+import type { SchefterReply } from '../../types/schefter-replies';
 
 interface Props {
   postId: string;
@@ -35,7 +35,7 @@ const CHAT_ICON = (
   </svg>
 );
 
-export default function ScheftnerReplyThread({
+export default function SchefterReplyThread({
   postId,
   postHeadline,
   postAuthorId,
@@ -48,7 +48,7 @@ export default function ScheftnerReplyThread({
   const defaultAiName = isRogerPost ? 'Ask Roger' : 'Claude Schefter';
   const defaultAiAvatar = isRogerPost ? '/assets/commissioner-avatar.webp' : '/assets/claude-schefter-avatar.webp';
 
-  const [replies, setReplies] = useState<ScheftnerReply[]>([]);
+  const [replies, setReplies] = useState<SchefterReply[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [aiTyping, setAiTyping] = useState(false);
@@ -65,7 +65,7 @@ export default function ScheftnerReplyThread({
   // Fetch replies on mount so count badge shows immediately
   const fetchReplies = useCallback(async () => {
     try {
-      const res = await fetch(`/api/scheftner-replies/${postId}`);
+      const res = await fetch(`/api/schefter-replies/${postId}`);
       if (res.ok) {
         const data = await res.json();
         setReplies(data.replies ?? []);
@@ -93,7 +93,7 @@ export default function ScheftnerReplyThread({
 
     // Optimistic insert
     const tempId = `temp-${Date.now()}`;
-    const optimisticReply: ScheftnerReply = {
+    const optimisticReply: SchefterReply = {
       id: tempId,
       postId,
       parentId: null,
@@ -112,7 +112,7 @@ export default function ScheftnerReplyThread({
 
     try {
       // 1. Submit user reply
-      const replyRes = await fetch(`/api/scheftner-replies/${postId}`, {
+      const replyRes = await fetch(`/api/schefter-replies/${postId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body }),
@@ -133,7 +133,7 @@ export default function ScheftnerReplyThread({
       setAiTypingAvatar(defaultAiAvatar);
       setAiTyping(true);
 
-      const aiRes = await fetch(`/api/scheftner-replies/${postId}/ai-reply`, {
+      const aiRes = await fetch(`/api/schefter-replies/${postId}/ai-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userReplyId: savedReply.id }),

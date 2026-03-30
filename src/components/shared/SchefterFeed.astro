@@ -1,6 +1,6 @@
 ---
 /**
- * ScheftnerFeed — Server-rendered list of Scheftner posts.
+ * SchefterFeed — Server-rendered list of Schefter posts.
  *
  * All posts render as full cards. Breaking-tier posts get a left accent
  * and analysis block; standard and minor posts are regular cards with
@@ -9,11 +9,11 @@
  * Posts beyond initialLimit are hidden via CSS and revealed by
  * the "Load more" button in batches of PAGE_SIZE.
  */
-import type { ScheftnerPost } from '../../types/scheftner';
-import ScheftnerPostCard from './ScheftnerPostCard.astro';
+import type { SchefterPost } from '../../types/schefter';
+import SchefterPostCard from './SchefterPostCard.astro';
 
 interface Props {
-  posts: ScheftnerPost[];
+  posts: SchefterPost[];
   isAuthenticated?: boolean;
   userFranchiseId?: string;
   userTeamName?: string;
@@ -35,7 +35,7 @@ const now = new Date();
   ) : (
     posts.map((post, i) => (
       <div class:list={['sf-feed__item', { 'sf-feed__item--hidden': i >= initialLimit }]} data-feed-index={i}>
-        <ScheftnerPostCard
+        <SchefterPostCard
           post={post}
           isAuthenticated={isAuthenticated}
           userFranchiseId={userFranchiseId}

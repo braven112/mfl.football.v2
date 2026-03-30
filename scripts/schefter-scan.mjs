@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Scheftner Transaction Scanner
+ * Schefter Transaction Scanner
  *
- * Scans MFL for new transactions and generates Scheftner feed posts.
- * Runs hourly via GitHub Actions or manually: node scripts/scheftner-scan.mjs
+ * Scans MFL for new transactions and generates Schefter feed posts.
+ * Runs hourly via GitHub Actions or manually: node scripts/schefter-scan.mjs
  *
  * For breaking-tier posts (trades, high-value auctions), calls the Anthropic API
- * to generate Scheftner-voiced commentary. Standard/minor posts use templates.
+ * to generate Schefter-voiced commentary. Standard/minor posts use templates.
  *
  * Environment variables:
  *   ANTHROPIC_API_KEY — Required for breaking-tier AI commentary
@@ -26,14 +26,14 @@ const LEAGUES = [
   {
     slug: 'theleague',
     leagueId: '13522',
-    feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'scheftner-feed.json'),
+    feedPath: path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'src', 'data', 'theleague.config.json'),
   },
   {
     slug: 'afl',
     leagueId: '19621',
-    feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'scheftner-feed.json'),
+    feedPath: path.join(projectRoot, 'data', 'afl-fantasy', 'schefter-feed.json'),
     playersPath: (year) => path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'players.json'),
     configPath: path.join(projectRoot, 'data', 'afl-fantasy', 'afl.config.json'),
   },
@@ -172,7 +172,7 @@ function generateTradePost(raw, players, teams, leagueSlug) {
   };
 }
 
-// Template pools for varied Scheftner voice — 30+ options per tier
+// Template pools for varied Schefter voice — 30+ options per tier
 const BREAKING_AUCTION_TEMPLATES = [
   (tm, p, s) => ({ headline: `${tm} land ${p} at ${s}`, body: `I'm told ${tm} went all-in for ${p} at ${s}. A statement move.` }),
   (tm, p, s) => ({ headline: `${tm} win auction for ${p} at ${s}`, body: `League sources tell me ${tm} outbid the field to land ${p} at ${s}. Bold investment.` }),
@@ -365,7 +365,7 @@ async function generateBreakingCommentary(post, raw) {
         messages: [
           {
             role: 'user',
-            content: `Write a breaking news post about this transaction:\n\n${post.body}\n\nProvide:\n1. A punchy body (2-3 sentences, Scheftner voice)\n2. A "Scheftner's Take" analysis (1-2 sentences, grade the trade if applicable)\n\nFormat as JSON: {"body": "...", "analysis": "..."}`,
+            content: `Write a breaking news post about this transaction:\n\n${post.body}\n\nProvide:\n1. A punchy body (2-3 sentences, Schefter voice)\n2. A "Schefter's Take" analysis (1-2 sentences, grade the trade if applicable)\n\nFormat as JSON: {"body": "...", "analysis": "..."}`,
           },
         ],
       }),
@@ -803,7 +803,7 @@ async function scanEventReminders(league) {
 }
 
 // Run
-console.log('🎙️ Scheftner Scanner starting...');
+console.log('🎙️ Schefter Scanner starting...');
 let totalPosts = 0;
 
 for (const league of LEAGUES) {

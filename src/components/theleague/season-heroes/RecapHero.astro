@@ -2,21 +2,21 @@
 /**
  * RecapHero — Tuesday AM weekly recap hero.
  *
- * Shows the most recent recap article from the Scheftner feed with
+ * Shows the most recent recap article from the Schefter feed with
  * headline stats. Falls back to RecapHeroStub if no recap article exists.
  */
 import type { HeroState } from '../../../types/hero-state';
-import type { ScheftnerFeed, ScheftnerPost } from '../../../types/scheftner';
-import { getAuthor, getAuthorAvatar } from '../../../types/scheftner';
+import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import RecapHeroStub from '../hero-stubs/RecapHeroStub.astro';
-import feedData from '../../../data/theleague/scheftner-feed.json';
+import feedData from '../../../data/theleague/schefter-feed.json';
 
 export interface Props {
   state: HeroState;
 }
 
 const { state } = Astro.props;
-const feed = feedData as ScheftnerFeed;
+const feed = feedData as SchefterFeed;
 
 // Find the most recent recap article (within 7 days)
 const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -52,7 +52,7 @@ const excerpt = recap?.body
       {recap.image && (
         <div class="recap-hero__image-wrap">
           <img
-            src={`/assets/scheftner/${recap.image}`}
+            src={`/assets/schefter/${recap.image}`}
             alt={recap.imageAlt ?? recap.headline}
             class="recap-hero__image"
             loading="eager"

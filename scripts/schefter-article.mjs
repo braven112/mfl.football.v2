@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Scheftner Article Generator — Auction Grades Edition
+ * Schefter Article Generator — Auction Grades Edition
  *
- * Generates auction grade cards for the Scheftner Report feed.
+ * Generates auction grade cards for the Schefter Report feed.
  * Analyzes pre-auction rosters to identify lineup holes, then grades
  * each team on how well they filled those holes at auction.
  *
  * ALL data is pre-resolved by this script — the AI only adds voice/commentary.
  * The AI never reads raw MFL data files or interprets IDs.
  *
- * Usage: node scripts/scheftner-article.mjs --type auction-recap
+ * Usage: node scripts/schefter-article.mjs --type auction-recap
  *
  * Environment:
- *   ANTHROPIC_API_KEY — Required for Scheftner voice generation
+ *   ANTHROPIC_API_KEY — Required for Schefter voice generation
  */
 
 import { promises as fs } from 'node:fs';
@@ -377,7 +377,7 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars, about grading the auction)",
   "excerpt": "2-3 sentence teaser for the feed card. Hook the reader. Mention grades.",
-  "intro": ["<p>Opening paragraph — set the scene, Scheftner energy, explain you're grading every team.</p>", "<p>Optional second intro paragraph.</p>"],
+  "intro": ["<p>Opening paragraph — set the scene, Schefter energy, explain you're grading every team.</p>", "<p>Optional second intro paragraph.</p>"],
   "grades": [
     {
       "franchiseId": "0001",
@@ -491,7 +491,7 @@ function enrichGrades(article, data) {
 // ── Main ──
 
 async function main() {
-  console.log('🎙️ Scheftner Auction Grades Generator\n');
+  console.log('🎙️ Schefter Auction Grades Generator\n');
 
   // Step 1: Resolve all data (deterministic)
   console.log('Step 1: Resolving auction + roster data...');
@@ -510,7 +510,7 @@ async function main() {
   console.log('  Fact sheet written to scripts/auction-fact-sheet.txt');
 
   // Step 3: Generate grades (AI)
-  console.log('\nStep 3: Generating Scheftner grades...');
+  console.log('\nStep 3: Generating Schefter grades...');
   const article = await generateArticle(factSheet, data);
   console.log(`  Headline: ${article.headline}`);
   console.log(`  Grades: ${article.grades?.length ?? 0} teams`);

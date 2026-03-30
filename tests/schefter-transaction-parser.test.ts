@@ -14,8 +14,8 @@ import {
   formatSalaryCompact,
   type PlayerInfo,
   type TeamInfo,
-} from '../src/utils/scheftner-transaction-parser';
-import type { MFLRawTransaction } from '../src/types/scheftner';
+} from '../src/utils/schefter-transaction-parser';
+import type { MFLRawTransaction } from '../src/types/schefter';
 
 // ── Test Fixtures ──
 
@@ -360,7 +360,7 @@ describe('generateHeadline', () => {
 // ── transactionToPost ──
 
 describe('transactionToPost', () => {
-  it('creates a valid ScheftnerPost from a trade', () => {
+  it('creates a valid SchefterPost from a trade', () => {
     const parsed = parseTransaction({
       type: 'TRADE', franchise: '0009', franchise2: '0010', timestamp: '1487525890',
       transaction: '', franchise1_gave_up: '7836,', franchise2_gave_up: '10695,',

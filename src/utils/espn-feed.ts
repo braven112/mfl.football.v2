@@ -4,10 +4,10 @@
  * Endpoint: site.web.api.espn.com/apis/v2/flex?contributor=adam-schefter
  * No auth required. Returns JSON with headline, body, date, and link.
  *
- * Used by scripts/scheftner-scan.mjs to merge ESPN posts into the feed.
+ * Used by scripts/schefter-scan.mjs to merge ESPN posts into the feed.
  */
 
-import type { ScheftnerPost } from '../types/scheftner';
+import type { SchefterPost } from '../types/schefter';
 
 /** ESPN API base URL for contributor content */
 const ESPN_CONTRIBUTOR_URL =
@@ -99,10 +99,10 @@ function parseEspnItem(item: Record<string, unknown>): EspnArticle | null {
 }
 
 /**
- * Convert an ESPN article to a ScheftnerPost.
+ * Convert an ESPN article to a SchefterPost.
  * These are type: 'external' with authorId: 'adam-schefter'.
  */
-export function espnToScheftnerPost(article: EspnArticle, league: 'theleague' | 'afl' = 'theleague'): ScheftnerPost {
+export function espnToSchefterPost(article: EspnArticle, league: 'theleague' | 'afl' = 'theleague'): SchefterPost {
   // Truncate body for feed display (first ~200 chars at sentence boundary)
   const excerpt = truncateAtSentence(article.body, 200);
 

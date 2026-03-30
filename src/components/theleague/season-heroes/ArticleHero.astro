@@ -1,16 +1,16 @@
 ---
 /**
- * ArticleHero — Featured Scheftner article display for the homepage hero.
+ * ArticleHero — Featured Schefter article display for the homepage hero.
  *
- * Shows the most recent matching article from the Scheftner feed.
+ * Shows the most recent matching article from the Schefter feed.
  * Used for waiver pickup reports (Wed night → Thu), weekend previews (Fri),
  * and generic article slots. Falls back to ArticleHeroStub if no match.
  */
 import type { HeroState } from '../../../types/hero-state';
-import type { ScheftnerFeed, ScheftnerPost } from '../../../types/scheftner';
-import { getAuthor, getAuthorAvatar } from '../../../types/scheftner';
+import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import ArticleHeroStub from '../hero-stubs/ArticleHeroStub.astro';
-import feedData from '../../../data/theleague/scheftner-feed.json';
+import feedData from '../../../data/theleague/schefter-feed.json';
 
 export interface Props {
   state: HeroState;
@@ -19,10 +19,10 @@ export interface Props {
 
 const { state, articleType = 'generic' } = Astro.props;
 
-const feed = feedData as ScheftnerFeed;
+const feed = feedData as SchefterFeed;
 
 // Find matching article based on type
-function findArticle(posts: ScheftnerPost[], type: string): ScheftnerPost | undefined {
+function findArticle(posts: SchefterPost[], type: string): SchefterPost | undefined {
   const articles = posts.filter(p => p.type === 'article');
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
@@ -54,9 +54,9 @@ const avatarUrl = author ? getAuthorAvatar(author) : null;
 const kickerLabels: Record<string, string> = {
   'waiver-pickup': 'Waiver Report',
   'weekend-preview': 'Weekend Preview',
-  'generic': 'Scheftner Report',
+  'generic': 'Schefter Report',
 };
-const kicker = kickerLabels[articleType] ?? 'Scheftner Report';
+const kicker = kickerLabels[articleType] ?? 'Schefter Report';
 
 const formattedDate = article
   ? new Date(article.timestamp).toLocaleDateString('en-US', {
@@ -76,7 +76,7 @@ const excerpt = article?.body
       {article.image && (
         <div class="article-hero__image-wrap">
           <img
-            src={`/assets/scheftner/${article.image}`}
+            src={`/assets/schefter/${article.image}`}
             alt={article.imageAlt ?? article.headline}
             class="article-hero__image"
             loading="eager"

@@ -1,15 +1,15 @@
 ---
 /**
- * ScheftnerFeedCompact — Compact feed for sidebar usage.
+ * SchefterFeedCompact — Compact feed for sidebar usage.
  *
  * Shows 10 posts initially with "Show more" pagination.
  * Section header with editorial left-border accent.
  */
-import type { ScheftnerPost } from '../../types/scheftner';
-import ScheftnerPostCardCompact from './ScheftnerPostCardCompact.astro';
+import type { SchefterPost } from '../../types/schefter';
+import SchefterPostCardCompact from './SchefterPostCardCompact.astro';
 
 interface Props {
-  posts: ScheftnerPost[];
+  posts: SchefterPost[];
   isAuthenticated?: boolean;
   userFranchiseId?: string;
   userTeamName?: string;
@@ -31,7 +31,7 @@ const now = new Date();
 
 <section class="sfc-feed" aria-label="Latest league news">
   <div class="sfc-feed__header">
-    <h2 class="sfc-feed__title">Scheftner Report</h2>
+    <h2 class="sfc-feed__title">Schefter Report</h2>
     <a href="/theleague/news" class="sfc-feed__view-all">View all <span aria-hidden="true">→</span></a>
   </div>
 
@@ -41,7 +41,7 @@ const now = new Date();
     <div class="sfc-feed__list" data-initial-limit={initialLimit}>
       {posts.map((post, i) => (
         <div class:list={['sfc-feed__item', { 'sfc-feed__item--hidden': i >= initialLimit }]} data-feed-index={i}>
-          <ScheftnerPostCardCompact
+          <SchefterPostCardCompact
             post={post}
             isAuthenticated={isAuthenticated}
             userFranchiseId={userFranchiseId}

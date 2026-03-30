@@ -18,9 +18,9 @@ import {
   getAdjacentEntries,
 } from '../../../utils/whats-new-helpers';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import ScheftnerWidget from '../../../components/shared/ScheftnerWidget.astro';
-import type { ScheftnerFeed as FeedType } from '../../../types/scheftner';
-import scheftnerFeedData from '../../../data/theleague/scheftner-feed.json';
+import SchefterWidget from '../../../components/shared/SchefterWidget.astro';
+import type { SchefterFeed as FeedType } from '../../../types/schefter';
+import schefterFeedData from '../../../data/theleague/schefter-feed.json';
 
 export const prerender = false;
 
@@ -213,10 +213,10 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
           </div>
 
           <!-- League News widget -->
-          {(scheftnerFeedData as FeedType).posts.length > 0 && (
+          {(schefterFeedData as FeedType).posts.length > 0 && (
             <div class="wn-detail__release-card">
-              <ScheftnerWidget
-                posts={(scheftnerFeedData as FeedType).posts.slice(0, 4)}
+              <SchefterWidget
+                posts={(schefterFeedData as FeedType).posts.slice(0, 4)}
                 league="theleague"
                 allNewsLink={r('/theleague/news')}
               />

@@ -1,4 +1,4 @@
-name: Scheftner Articles
+name: Schefter Articles
 
 on:
   schedule:
@@ -33,7 +33,7 @@ on:
         type: string
 
 concurrency:
-  group: scheftner-articles
+  group: schefter-articles
   cancel-in-progress: true
 
 permissions:
@@ -93,7 +93,7 @@ jobs:
             WEEK_ARG="--week $WEEK_OVERRIDE"
           fi
           echo "Generating: $ARTICLE_TYPE"
-          node scripts/scheftner-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+          node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
 
       - name: Commit and push
         if: steps.resolve.outputs.type != ''
@@ -105,9 +105,9 @@ jobs:
             exit 0
           fi
 
-          git config user.name "Scheftner Bot"
+          git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/scheftner-feed.json
-          git commit -m "chore: scheftner article — $ARTICLE_TYPE"
+          git add src/data/theleague/schefter-feed.json
+          git commit -m "chore: schefter article — $ARTICLE_TYPE"
           git pull --rebase origin main
           git push

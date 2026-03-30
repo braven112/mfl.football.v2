@@ -1,5 +1,5 @@
 /**
- * Scheftner Transaction Parser
+ * Schefter Transaction Parser
  *
  * Parses raw MFL transactions into structured data, classifies tiers,
  * and generates headlines/bodies for Claude Schefter's feed posts.
@@ -12,8 +12,8 @@ import type {
   ParsedDraftPick,
   PostTier,
   TransactionSubType,
-  ScheftnerPost,
-} from '../types/scheftner';
+  SchefterPost,
+} from '../types/schefter';
 
 /** Transaction types we skip entirely (noise) */
 const SKIP_TYPES = new Set(['AUCTION_BID', 'AUCTION_INIT', 'IR', 'TAXI']);
@@ -513,7 +513,7 @@ export function generatePostId(timestamp: string): string {
 }
 
 /**
- * Convert a parsed transaction into a ScheftnerPost.
+ * Convert a parsed transaction into a SchefterPost.
  * For breaking-tier posts, body/analysis will be placeholder —
  * the scanner script fills these in via Anthropic API.
  */
@@ -521,7 +521,7 @@ export function transactionToPost(
   parsed: ParsedTransaction,
   teams: Map<string, TeamInfo>,
   league: 'theleague' | 'afl',
-): ScheftnerPost {
+): SchefterPost {
   const tier = classifyTier(parsed);
   const headline = generateHeadline(parsed, teams);
   const body = tier === 'minor'
@@ -536,7 +536,7 @@ export function transactionToPost(
     ...parsed.playersGivenUp.map(p => p.playerId),
   ];
 
-  const post: ScheftnerPost = {
+  const post: SchefterPost = {
     id: generatePostId(parsed.timestamp),
     timestamp: new Date(parseInt(parsed.timestamp, 10) * 1000).toISOString(),
     type: 'transaction',

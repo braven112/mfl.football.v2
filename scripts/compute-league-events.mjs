@@ -3,7 +3,7 @@
  * Compute League Events
  *
  * Resolves all league event definitions into concrete dates for the current year.
- * Outputs a JSON file that the scheftner scanner can read without importing TypeScript.
+ * Outputs a JSON file that the schefter scanner can read without importing TypeScript.
  *
  * Run: node scripts/compute-league-events.mjs
  * Output: src/data/theleague/resolved-events.json

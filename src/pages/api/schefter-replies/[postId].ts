@@ -1,20 +1,20 @@
 /**
- * Scheftner Feed — Replies API
+ * Schefter Feed — Replies API
  *
- * GET  /api/scheftner-replies/{postId}  — Get all replies for a post
- * POST /api/scheftner-replies/{postId}  — Create a reply (auth required)
+ * GET  /api/schefter-replies/{postId}  — Get all replies for a post
+ * POST /api/schefter-replies/{postId}  — Create a reply (auth required)
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
-import type { ScheftnerReply, CreateReplyRequest } from '../../../types/scheftner-replies';
+import type { SchefterReply, CreateReplyRequest } from '../../../types/schefter-replies';
 import {
   getRepliesForPost,
   saveReply,
   generateReplyId,
   checkReplyRateLimit,
   resolveTeamInfo,
-} from '../../../utils/scheftner-replies-storage';
+} from '../../../utils/schefter-replies-storage';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 
   const teamInfo = await resolveTeamInfo(user.franchiseId);
 
-  const reply: ScheftnerReply = {
+  const reply: SchefterReply = {
     id: generateReplyId(),
     postId,
     parentId: body.parentId ?? null,

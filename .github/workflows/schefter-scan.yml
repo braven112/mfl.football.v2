@@ -1,4 +1,4 @@
-name: Scheftner Scan
+name: Schefter Scan
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: scheftner-scan
+  group: schefter-scan
   cancel-in-progress: true
 
 permissions:
@@ -30,22 +30,22 @@ jobs:
       - name: Recompute league events
         run: node scripts/compute-league-events.mjs
 
-      - name: Run Scheftner scanner
+      - name: Run Schefter scanner
         env:
           MFL_HOST: ${{ vars.MFL_HOST }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node scripts/scheftner-scan.mjs
+        run: node scripts/schefter-scan.mjs
 
       - name: Commit and push feed updates
         run: |
           if [ -z "$(git status --porcelain)" ]; then
-            echo "No new Scheftner posts."
+            echo "No new Schefter posts."
             exit 0
           fi
 
-          git config user.name "Scheftner Bot"
+          git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/theleague/scheftner-feed.json data/afl-fantasy/scheftner-feed.json src/data/theleague/resolved-events.json
-          git commit -m "chore: scheftner scan — new transaction posts"
+          git add src/data/theleague/schefter-feed.json data/afl-fantasy/schefter-feed.json src/data/theleague/resolved-events.json
+          git commit -m "chore: schefter scan — new transaction posts"
           git pull --rebase origin main
           git push

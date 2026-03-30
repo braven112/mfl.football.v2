@@ -1,13 +1,13 @@
 /**
- * Scheftner Feed — Reactions API
+ * Schefter Feed — Reactions API
  *
- * GET  /api/scheftner-reactions?postId={id}  — Get reaction counts + user's reaction
- * POST /api/scheftner-reactions              — Toggle a reaction (auth required)
+ * GET  /api/schefter-reactions?postId={id}  — Get reaction counts + user's reaction
+ * POST /api/schefter-reactions              — Toggle a reaction (auth required)
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { getReactions, toggleReaction, isValidReaction } from '../../utils/scheftner-reactions';
+import { getReactions, toggleReaction, isValidReaction } from '../../utils/schefter-reactions';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {

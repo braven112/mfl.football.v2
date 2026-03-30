@@ -1,20 +1,20 @@
 ---
 /**
- * The Scheftner Report — AFL Fantasy News Feed
+ * The Schefter Report — AFL Fantasy News Feed
  * Thin wrapper around the shared feed components for the AFL league.
  */
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import ScheftnerFeed from '../../components/shared/ScheftnerFeed.astro';
+import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import { getAuthUser } from '../../utils/auth';
-import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
-import '../../styles/scheftner-feed.css';
+import type { SchefterFeed as FeedType } from '../../types/schefter';
+import '../../styles/schefter-feed.css';
 
 // AFL feed data lives in data/ (not src/data/)
 let feed: FeedType = { lastScanTimestamp: '', lastProcessedMflTimestamp: '0', posts: [] };
 try {
-  const raw = await import('../../../data/afl-fantasy/scheftner-feed.json');
+  const raw = await import('../../../data/afl-fantasy/schefter-feed.json');
   feed = raw.default as FeedType;
 } catch {
   // Feed not yet populated
@@ -24,7 +24,7 @@ const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 ---
 
-<TheLeagueLayout title="The Scheftner Report">
+<TheLeagueLayout title="The Schefter Report">
   <main class="sf-news-page">
     <div class="sf-news-card">
       <div class="sf-page-header">
@@ -41,7 +41,7 @@ const isAuthenticated = !!authUser;
       </div>
 
       <div data-feed-container>
-        <ScheftnerFeed
+        <SchefterFeed
           posts={feed.posts}
           isAuthenticated={isAuthenticated}
           initialLimit={25}

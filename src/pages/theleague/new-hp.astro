@@ -8,7 +8,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import ScheftnerFeedCompact from '../../components/shared/ScheftnerFeedCompact.astro';
+import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
 import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
 import { getAuthUser } from '../../utils/auth';
@@ -20,13 +20,13 @@ import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
-import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
+import type { SchefterFeed as FeedType } from '../../types/schefter';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
-import feedData from '../../data/theleague/scheftner-feed.json';
+import feedData from '../../data/theleague/schefter-feed.json';
 import whatsNewData from '../../data/whats-new.json';
-import '../../styles/scheftner-feed.css';
-import '../../styles/scheftner-feed-compact.css';
+import '../../styles/schefter-feed.css';
+import '../../styles/schefter-feed-compact.css';
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
@@ -206,8 +206,8 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
       )}
     </section>
 
-    <aside class="hp2__sidebar" aria-label="Scheftner Report feed" tabindex="0">
-      <ScheftnerFeedCompact
+    <aside class="hp2__sidebar" aria-label="Schefter Report feed" tabindex="0">
+      <SchefterFeedCompact
         posts={compactPosts}
         isAuthenticated={isAuthenticated}
         userFranchiseId={userFranchiseId}

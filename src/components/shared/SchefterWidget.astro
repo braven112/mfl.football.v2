@@ -1,16 +1,16 @@
 ---
 /**
- * ScheftnerWidget — Compact homepage widget showing last N posts.
+ * SchefterWidget — Compact homepage widget showing last N posts.
  * Headlines + timestamps with author avatar, no reactions.
  * Links to the full news page.
  */
-import type { ScheftnerPost } from '../../types/scheftner';
-import { getAuthor, getAuthorAvatar } from '../../types/scheftner';
-import { formatRelativeTime } from '../../utils/scheftner-feed';
-import '../../styles/scheftner-feed.css';
+import type { SchefterPost } from '../../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../../types/schefter';
+import { formatRelativeTime } from '../../utils/schefter-feed';
+import '../../styles/schefter-feed.css';
 
 interface Props {
-  posts: ScheftnerPost[];
+  posts: SchefterPost[];
   league: 'theleague' | 'afl';
   allNewsLink: string;
 }

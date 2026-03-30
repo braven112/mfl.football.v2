@@ -1,6 +1,6 @@
 /**
- * Shared data loading and formatting utilities for Scheftner articles.
- * Extracted from scheftner-article.mjs and scheftner-scan.mjs.
+ * Shared data loading and formatting utilities for Schefter articles.
+ * Extracted from schefter-article.mjs and schefter-scan.mjs.
  */
 
 import { promises as fs } from 'node:fs';
@@ -110,7 +110,7 @@ export async function loadLeague(dataDir) {
 
 /** Feed path for TheLeague. */
 export function getFeedPath(projectRoot) {
-  return path.join(projectRoot, 'src', 'data', 'theleague', 'scheftner-feed.json');
+  return path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
 }
 
 /** Format a player for display — DEF-aware. */

@@ -1,23 +1,23 @@
 ---
 /**
- * Scheftner Article Detail Page
+ * Schefter Article Detail Page
  *
- * Renders full-length articles from the Scheftner feed.
+ * Renders full-length articles from the Schefter feed.
  * Follows the What's New editorial pattern with author card and metadata.
  * Server-rendered so the theleague.us middleware rewrite works correctly
  * (prerendered static files bypass middleware on Vercel).
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import ScheftnerReactionBar from '../../../components/shared/ScheftnerReactionBar.tsx';
-import { formatRelativeTime } from '../../../utils/scheftner-feed';
+import SchefterReactionBar from '../../../components/shared/SchefterReactionBar.tsx';
+import { formatRelativeTime } from '../../../utils/schefter-feed';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import feedData from '../../../data/theleague/scheftner-feed.json';
-import type { ScheftnerFeed, ScheftnerPost, AuctionGrade } from '../../../types/scheftner';
-import '../../../styles/scheftner-feed.css';
+import feedData from '../../../data/theleague/schefter-feed.json';
+import type { SchefterFeed, SchefterPost, AuctionGrade } from '../../../types/schefter';
+import '../../../styles/schefter-feed.css';
 
 const { id } = Astro.params;
-const feed = feedData as ScheftnerFeed;
+const feed = feedData as SchefterFeed;
 const post = feed.posts.find(p => p.type === 'article' && p.id === id && (p.content || p.grades));
 
 if (!post) {
@@ -25,7 +25,7 @@ if (!post) {
 }
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
-const imagePath = post.image ? `/assets/scheftner/${post.image}` : null;
+const imagePath = post.image ? `/assets/schefter/${post.image}` : null;
 const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
   year: 'numeric', month: 'long', day: 'numeric',
 });
@@ -41,7 +41,7 @@ function gradeColor(grade: string): string {
 }
 ---
 
-<TheLeagueLayout title={`${post.headline} — The Scheftner Report`}>
+<TheLeagueLayout title={`${post.headline} — The Schefter Report`}>
   <main class="sf-article">
 
     <!-- Back link -->
@@ -49,7 +49,7 @@ function gradeColor(grade: string): string {
       <svg class="sf-article__back-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M10 3L5 8l5 5" />
       </svg>
-      The Scheftner Report
+      The Schefter Report
     </a>
 
     <div class="sf-article__card">
@@ -162,7 +162,7 @@ function gradeColor(grade: string): string {
 
       <!-- Reactions -->
       <div class="sf-article__reactions">
-        <ScheftnerReactionBar
+        <SchefterReactionBar
           client:visible
           postId={post.id}
           isAuthenticated={false}
@@ -172,7 +172,7 @@ function gradeColor(grade: string): string {
       <!-- Back to feed -->
       <div class="sf-article__footer">
         <a href={r('/theleague/news')} class="sf-article__footer-link">
-          ← More from The Scheftner Report
+          ← More from The Schefter Report
         </a>
       </div>
     </div>

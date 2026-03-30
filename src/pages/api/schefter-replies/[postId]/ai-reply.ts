@@ -1,7 +1,7 @@
 /**
- * Scheftner Feed — AI Reply Generator
+ * Schefter Feed — AI Reply Generator
  *
- * POST /api/scheftner-replies/{postId}/ai-reply
+ * POST /api/schefter-replies/{postId}/ai-reply
  *
  * Generates a reply from Claude Schefter or Ask Roger using Haiku.
  * Called after a user posts a reply to trigger an AI response.
@@ -9,14 +9,14 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../../utils/auth';
-import type { ScheftnerReply, AiReplyRequest } from '../../../../types/scheftner-replies';
+import type { SchefterReply, AiReplyRequest } from '../../../../types/schefter-replies';
 import {
   getReplyById,
   saveReply,
   generateReplyId,
-} from '../../../../utils/scheftner-replies-storage';
-import { getAuthor, getAuthorAvatar } from '../../../../types/scheftner';
-import type { ScheftnerPost } from '../../../../types/scheftner';
+} from '../../../../utils/schefter-replies-storage';
+import { getAuthor, getAuthorAvatar } from '../../../../types/schefter';
+import type { SchefterPost } from '../../../../types/schefter';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -58,18 +58,18 @@ Rules:
 - Be the voice of reason, but make it entertaining`;
 
 /** Find the original post from the feed data */
-async function findPost(postId: string): Promise<ScheftnerPost | null> {
+async function findPost(postId: string): Promise<SchefterPost | null> {
   try {
-    const feedModule = await import('../../../../data/theleague/scheftner-feed.json');
+    const feedModule = await import('../../../../data/theleague/schefter-feed.json');
     const feed = feedModule.default ?? feedModule;
-    return (feed.posts ?? []).find((p: ScheftnerPost) => p.id === postId) ?? null;
+    return (feed.posts ?? []).find((p: SchefterPost) => p.id === postId) ?? null;
   } catch {
     return null;
   }
 }
 
 /** Decide which AI character responds */
-function chooseCharacter(post: ScheftnerPost | null): 'claude' | 'roger' {
+function chooseCharacter(post: SchefterPost | null): 'claude' | 'roger' {
   if (post?.authorId === 'roger') return 'roger';
   if (post?.type === 'ask-roger') return 'roger';
   return 'claude';
@@ -137,7 +137,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const author = getAuthor(character);
     const avatarUrl = getAuthorAvatar(author);
 
-    const aiReply: ScheftnerReply = {
+    const aiReply: SchefterReply = {
       id: generateReplyId(),
       postId,
       parentId: userReply.id,

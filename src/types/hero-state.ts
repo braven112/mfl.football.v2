@@ -31,7 +31,7 @@ export type DailySlot =
   | 'standings'          // Monday pre-game
   | 'recap'              // Tuesday AM
   | 'waiver-wire'        // Tuesday PM → Wednesday 8pm
-  | 'article'            // Scheftner articles (waiver pickups, weekend preview)
+  | 'article'            // Schefter articles (waiver pickups, weekend preview)
   | 'game-day-preview';  // Saturday, Sunday pre-game
 
 /** Which NFL game window is active */

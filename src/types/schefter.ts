@@ -1,13 +1,13 @@
-// ── Scheftner Report Types ──
+// ── Schefter Report Types ──
 
 // ── Author System ──
 
 /** A news feed author/contributor */
-export interface ScheftnerAuthor {
+export interface SchefterAuthor {
   id: string;
   name: string;
   handle: string;
-  /** Avatar filename — resolved to /assets/scheftner/{avatar} or /assets/{avatar} */
+  /** Avatar filename — resolved to /assets/schefter/{avatar} or /assets/{avatar} */
   avatar: string;
   bio: string;
   /** True for external sources (ESPN, etc.) — posts link out instead of showing inline */
@@ -15,7 +15,7 @@ export interface ScheftnerAuthor {
 }
 
 /** Known authors — keyed by authorId */
-export const SCHEFTNER_AUTHORS: Record<string, ScheftnerAuthor> = {
+export const SCHEFTER_AUTHORS: Record<string, SchefterAuthor> = {
   claude: {
     id: 'claude',
     name: 'Claude Schefter',
@@ -113,21 +113,21 @@ export const SCHEFTNER_AUTHORS: Record<string, ScheftnerAuthor> = {
 };
 
 /** Resolve an authorId to its author config, defaulting to Claude */
-export function getAuthor(authorId?: string): ScheftnerAuthor {
-  return SCHEFTNER_AUTHORS[authorId ?? 'claude'] ?? SCHEFTNER_AUTHORS.claude;
+export function getAuthor(authorId?: string): SchefterAuthor {
+  return SCHEFTER_AUTHORS[authorId ?? 'claude'] ?? SCHEFTER_AUTHORS.claude;
 }
 
 /** Resolve avatar path for an author.
- * Internal authors (Claude, Roger) live in /assets/. ESPN contributors in /assets/scheftner/. */
-export function getAuthorAvatar(author: ScheftnerAuthor): string {
-  if (author.external) return `/assets/scheftner/${author.avatar}`;
+ * Internal authors (Claude, Roger) live in /assets/. ESPN contributors in /assets/schefter/. */
+export function getAuthorAvatar(author: SchefterAuthor): string {
+  if (author.external) return `/assets/schefter/${author.avatar}`;
   return `/assets/${author.avatar}`;
 }
 
 // ── Post Types ──
 
 /** Post types — MVP ships 'transaction' only; others architected for Phase 2 */
-export type ScheftnerPostType =
+export type SchefterPostType =
   | 'transaction'
   | 'article'
   | 'external'
@@ -148,7 +148,7 @@ export type TransactionSubType =
 export type PostTier = 'breaking' | 'standard' | 'minor';
 
 /** Feed category for filtering */
-export type ScheftnerCategory = 'transactions' | 'articles';
+export type SchefterCategory = 'transactions' | 'articles';
 
 /** A single auction grade entry (enriched by deterministic data + AI commentary) */
 export interface AuctionGrade {
@@ -175,25 +175,25 @@ export interface AuctionGrade {
   pickups?: Array<{ name: string; position: string; salary: string }>;
 }
 
-/** A single Scheftner feed post */
-export interface ScheftnerPost {
+/** A single Schefter feed post */
+export interface SchefterPost {
   /** Unique ID: sf_{timestamp}_{hash} */
   id: string;
   /** ISO 8601 timestamp */
   timestamp: string;
   /** Post classification */
-  type: ScheftnerPostType;
+  type: SchefterPostType;
   /** Transaction sub-type (only when type === 'transaction') */
   transactionSubType?: TransactionSubType;
   /** Feed category for filtering (defaults to 'transactions') */
-  category?: ScheftnerCategory;
+  category?: SchefterCategory;
   /** Visual/content tier */
   tier: PostTier;
   /** Short headline (~60 chars, for card display and widget) */
   headline: string;
   /** Post body — excerpt for articles, full text for transactions */
   body: string;
-  /** Scheftner hot take / trade grade (breaking tier only) */
+  /** Schefter hot take / trade grade (breaking tier only) */
   analysis?: string;
   /** Full article content — array of HTML paragraph strings (articles only) */
   content?: string[];
@@ -201,7 +201,7 @@ export interface ScheftnerPost {
   intro?: string[];
   /** Auction grade entries (grade-card articles only) */
   grades?: AuctionGrade[];
-  /** Featured image path relative to /assets/scheftner/ (articles only) */
+  /** Featured image path relative to /assets/schefter/ (articles only) */
   image?: string;
   /** Image alt text (articles only) */
   imageAlt?: string;
@@ -222,7 +222,7 @@ export interface ScheftnerPost {
 }
 
 /** The full feed file structure */
-export interface ScheftnerFeed {
+export interface SchefterFeed {
   /** ISO timestamp of last agent scan */
   lastScanTimestamp: string;
   /** MFL transaction timestamp watermark — only process newer transactions */
@@ -230,20 +230,20 @@ export interface ScheftnerFeed {
   /** ESPN article timestamp watermark — only process newer articles */
   lastEspnTimestamp?: string;
   /** All posts, newest first */
-  posts: ScheftnerPost[];
+  posts: SchefterPost[];
 }
 
 /** Fixed reaction emoji set — ❤️ is the primary "like" action */
-export const SCHEFTNER_REACTIONS = ['❤️', '🔥', '💰', '💩', '🏆', '📉', '💯', '🤔', '😂', '📈', '💉'] as const;
-export type ScheftnerReaction = (typeof SCHEFTNER_REACTIONS)[number];
+export const SCHEFTER_REACTIONS = ['❤️', '🔥', '💰', '💩', '🏆', '📉', '💯', '🤔', '😂', '📈', '💉'] as const;
+export type SchefterReaction = (typeof SCHEFTER_REACTIONS)[number];
 
 /** Emoji → array of franchiseIds who reacted */
-export interface ScheftnerReactionMap {
+export interface SchefterReactionMap {
   [emoji: string]: string[];
 }
 
 /** API response for reactions on a single post */
-export interface ScheftnerReactionResponse {
+export interface SchefterReactionResponse {
   reactions: Record<string, number>;
   userReaction: string | null;
 }

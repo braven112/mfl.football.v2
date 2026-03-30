@@ -1,25 +1,25 @@
 /**
- * Scheftner Feed Utilities
+ * Schefter Feed Utilities
  *
- * Read/write helpers for the Scheftner feed JSON files.
+ * Read/write helpers for the Schefter feed JSON files.
  * Feed files live at:
- *   - src/data/theleague/scheftner-feed.json
- *   - data/afl-fantasy/scheftner-feed.json
+ *   - src/data/theleague/schefter-feed.json
+ *   - data/afl-fantasy/schefter-feed.json
  */
 
-import type { ScheftnerFeed, ScheftnerPost } from '../types/scheftner';
+import type { SchefterFeed, SchefterPost } from '../types/schefter';
 
 /** Get posts for a league, optionally filtered */
 export function getFeedPosts(
-  feed: ScheftnerFeed,
+  feed: SchefterFeed,
   options?: {
     limit?: number;
     franchiseId?: string;
     authorId?: string;
-    type?: ScheftnerPost['type'];
+    type?: SchefterPost['type'];
     transactionSubType?: string;
   },
-): ScheftnerPost[] {
+): SchefterPost[] {
   let posts = feed.posts;
 
   if (options?.authorId) {
@@ -46,11 +46,11 @@ export function getFeedPosts(
 }
 
 /** Group minor posts by date for collapsed display */
-export function groupMinorPosts(posts: ScheftnerPost[]): {
+export function groupMinorPosts(posts: SchefterPost[]): {
   date: string;
-  posts: ScheftnerPost[];
+  posts: SchefterPost[];
 }[] {
-  const groups = new Map<string, ScheftnerPost[]>();
+  const groups = new Map<string, SchefterPost[]>();
 
   for (const post of posts) {
     if (post.tier !== 'minor') continue;
@@ -84,6 +84,6 @@ export function formatRelativeTime(isoTimestamp: string, now?: Date): string {
 }
 
 /** Check if a sourceTimestamp already exists in the feed (dedup) */
-export function isDuplicatePost(feed: ScheftnerFeed, sourceTimestamp: string): boolean {
+export function isDuplicatePost(feed: SchefterFeed, sourceTimestamp: string): boolean {
   return feed.posts.some(p => p.sourceTimestamp === sourceTimestamp);
 }
