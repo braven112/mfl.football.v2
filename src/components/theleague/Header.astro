@@ -49,7 +49,7 @@ const year = (Astro.props.year || envYear).toString();
 // Construct the MFL homepage URL using the context-aware league object.
 // This ensures the correct host and leagueId are always used.
 const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
-const submitLineupUrl = `https://${league.host}/${year}/lineup?L=${league.leagueId}`;
+const submitLineupUrl = '/theleague/lineup';
 const addDropUrl = `https://${league.host}/${year}/add_drop?L=${league.leagueId}`;
 const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 ---
@@ -133,11 +133,11 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
             </svg>
             <span class="nav-label">{isAFL ? "Rosters" : "Roster/Salary"}</span>
           </a>
-          <a href={submitLineupUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Submit lineup">
+          <a href={submitLineupUrl} class="nav-icon-link" title="Set Lineup">
             <svg class="nav-icon" aria-hidden="true">
               <use href={`${spriteUrl}#icon-lineup`}></use>
             </svg>
-            <span class="nav-label">Submit lineup</span>
+            <span class="nav-label">Set Lineup</span>
           </a>
           <a href={addDropUrl} class="nav-icon-link" target="_blank" rel="noopener noreferrer" title="Add/drop">
             <svg class="nav-icon" aria-hidden="true">
