@@ -35,8 +35,9 @@ export const POST: APIRoute = async ({ request }) => {
     const body = await request.json();
     const { week, starters } = body as { week?: number; starters?: string[] };
 
-    if (!week || !Array.isArray(starters) || starters.length !== 9) {
-      return json({ error: 'Invalid lineup: must provide week and exactly 9 starter IDs.' }, 400);
+    const weekNum = typeof week === 'number' ? Math.floor(week) : NaN;
+    if (isNaN(weekNum) || weekNum < 1 || weekNum > 22 || !Array.isArray(starters) || starters.length !== 9) {
+      return json({ error: 'Invalid lineup: must provide week (1-22) and exactly 9 starter IDs.' }, 400);
     }
 
     // Validate all IDs are numeric strings (MFL player IDs)
@@ -49,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // MFL lineup import endpoint
     const url = `https://api.myfantasyleague.com/${year}/import`;
-    const postBody = `TYPE=lineup&L=${MFL_LEAGUE_ID}&W=${week}&STARTERS=${starterList}`;
+    const postBody = `TYPE=lineup&L=${MFL_LEAGUE_ID}&W=${weekNum}&STARTERS=${starterList}`;
 
     const response = await mflFetch({
       url,

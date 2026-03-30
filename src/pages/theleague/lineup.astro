@@ -17,7 +17,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
 
 // ---------------------------------------------------------------------------
@@ -119,14 +119,6 @@ const SLOT_ELIGIBILITY: Record<string, string[]> = {
   FLEX: ['RB', 'WR', 'TE'],
   PK: ['PK'],
   DEF: ['DEF'],
-};
-
-// Bye weeks (2025 season)
-const nflByeWeeks: Record<string, number> = {
-  ARI: 8, ATL: 5, BAL: 7, BUF: 7, CAR: 14, CHI: 5, CIN: 10, CLE: 9,
-  DAL: 10, DEN: 12, DET: 8, GB: 5, HOU: 6, IND: 11, JAX: 6, KC: 12,
-  LV: 11, LAC: 9, LAR: 14, MIA: 13, MIN: 13, NE: 14, NO: 12, NYG: 11,
-  NYJ: 13, PHI: 8, PIT: 9, SF: 6, SEA: 10, TB: 13, TEN: 5, WAS: 7,
 };
 
 // ESPN ID sources — feed file has espn_id for ~1800 players, college IDs covers ~90 rookies
@@ -694,7 +686,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         const age = Date.now() - new Date(draft.savedAt).getTime();
         if (age > 24 * 60 * 60 * 1000) return;
         draft.slots.forEach((s: { index: number; playerId: string | null }) => {
-          if (currentSlots[s.index]) currentSlots[s.index].playerId = s.playerId;
+          if (typeof s.index === 'number' && s.index >= 0 && s.index < currentSlots.length
+              && (!s.playerId || rosterMap.has(s.playerId))) {
+            currentSlots[s.index].playerId = s.playerId;
+          }
         });
       } catch {}
     }
