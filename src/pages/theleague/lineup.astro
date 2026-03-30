@@ -17,7 +17,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { getPlayerHeadshot, resolveEspnId } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
 
 // ---------------------------------------------------------------------------
@@ -129,9 +129,9 @@ const nflByeWeeks: Record<string, number> = {
   NYJ: 13, PHI: 8, PIT: 9, SF: 6, SEA: 10, TB: 13, TEN: 5, WAS: 7,
 };
 
-// ESPN ID lookup from feed
+// ESPN college ID fallback (rookies without NFL headshots)
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
-const espnLookup = (espnCollegeIds as any)?.players ?? {};
+const espnCollegeMap = (espnCollegeIds as any)?.players ?? {};
 
 // ---------------------------------------------------------------------------
 // Build LineupPlayer array
@@ -215,7 +215,7 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   const pd = playerMap.get(rp.id);
   const nflTeam = normalizeTeamCode(pd?.team || '');
   const position = (pd?.position || 'N/A').replace(/^Def$/i, 'DEF').replace(/^K$/i, 'PK');
-  const espnId = espnLookup[rp.id]?.espnCollegeId || null;
+  const espnId = resolveEspnId(rp.id, pd, espnCollegeMap);
   const headshot = getPlayerHeadshot(rp.id, espnId);
   const proj = projMap.get(rp.id) ?? null;
   const isBye = nflByeWeeks[nflTeam] === week;

@@ -54,6 +54,26 @@ export function getCollegeHeadshot(espnId: string): string {
 }
 
 /**
+ * Resolve the best ESPN ID for a player from available data sources.
+ *
+ * Priority:
+ *   1. MFL player feed `espn_id` (covers ~1800 players — the primary source)
+ *   2. College ID mapping `espnCollegeId` (covers ~90 rookies without NFL headshots)
+ *
+ * @param mflId - MFL player ID
+ * @param playerData - Player object from MFL players API/feed (has `espn_id` field)
+ * @param collegeIdMap - Map of MFL ID → { espnCollegeId } from espn-college-ids.json
+ * @returns ESPN ID string or null
+ */
+export function resolveEspnId(
+  mflId: string,
+  playerData?: { espn_id?: string } | null,
+  collegeIdMap?: Record<string, { espnCollegeId?: string }> | null,
+): string | null {
+  return playerData?.espn_id || collegeIdMap?.[mflId]?.espnCollegeId || null;
+}
+
+/**
  * Get player headshot URL, preferring ESPN high-quality images when available.
  * Falls back to MFL photo, then to default placeholder.
  * @param mflId - MFL player ID
