@@ -802,6 +802,625 @@ async function scanEventReminders(league) {
   return newPosts.length;
 }
 
+// ── NFL Wire: General NFL News ──
+// Fetches from ESPN's public NFL news API. Produces content year-round
+// (free agency, draft, OTAs, etc.). External posts link to ESPN.
+// Uses relevance scoring to filter out low-value beat writer articles.
+
+// Route articles to existing ESPN author personas when byline matches
+const BYLINE_TO_AUTHOR = {
+  'Mel Kiper Jr.': 'mel-kiper',
+  'Jordan Reid': 'jordan-reid',
+  'Matt Miller': 'matt-miller',
+  'Kalyn Kahler': 'kalyn-kahler',
+  'Field Yates': 'field-yates',
+  'Dan Graziano': 'dan-graziano',
+  'Ben Solak': 'ben-solak',
+  'Lindsey Thiry': 'lindsey-thiry',
+  'Adam Schefter': 'adam-schefter',
+  'Jeremy Fowler': 'jeremy-fowler',
+};
+
+// High-value ESPN category topics (always include)
+const HIGH_VALUE_CATEGORIES = new Set([
+  'NFL Draft', 'NFL draft', 'NFL Free Agency', 'NFL free agency',
+  'NFL Trades', 'NFL trades', 'NFL Combine', 'NFL combine',
+]);
+
+// Keywords in headlines that signal relevant news (case-insensitive match)
+const RELEVANCE_KEYWORDS = [
+  /\btrade[ds]?\b/i, /\btrading\b/i, /\bsign(?:s|ed|ing)?\b/i,
+  /\breleased?\b/i, /\bcut(?:s|ting)?\b/i, /\bsuspend(?:s|ed)?\b/i,
+  /\bretir(?:e[ds]?|ing|ement)\b/i, /\brule change/i, /\bdraft\b/i,
+  /\bauction\b/i, /\bfree agent/i, /\bcontract\b/i, /\bextension\b/i,
+  /\bholdout\b/i, /\binjur(?:y|ed|ies)\b/i, /\btorn\b/i, /\bACL\b/,
+  /\bIR\b/, /\bPUP\b/, /\barrested?\b/i, /\bcharged?\b/i,
+  /\bvoted?\b/i, /\bapproved?\b/i, /\bowner(?:s|ship)?\b/i,
+];
+
+/** Build a set of player names from rosters for headline matching */
+async function loadRosteredPlayerNames(league) {
+  try {
+    const now = new Date();
+    const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+    const players = await loadPlayers(league.playersPath(year));
+
+    const rostersPath = league.slug === 'afl'
+      ? path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'rosters.json')
+      : path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'rosters.json');
+    const rostersRaw = JSON.parse(await fs.readFile(rostersPath, 'utf8'));
+    const franchises = rostersRaw?.rosters?.franchise ?? [];
+    const rosteredIds = new Set();
+    for (const f of franchises) {
+      const pList = f.player ?? [];
+      const arr = Array.isArray(pList) ? pList : [pList];
+      for (const p of arr) rosteredIds.add(p.id);
+    }
+    // Common last names and words that cause false positives in headlines
+    const LAST_NAME_BLOCKLIST = new Set([
+      'Brown', 'Moore', 'Smith', 'Allen', 'Wilson', 'Adams', 'Johnson', 'Davis',
+      'Jones', 'Thomas', 'White', 'Harris', 'Martin', 'Lewis', 'Young', 'Walker',
+      'Hall', 'King', 'Green', 'Baker', 'Carter', 'Evans', 'Turner', 'Parker',
+      'Collins', 'Edwards', 'Howard', 'Cooper', 'Reed', 'Bailey', 'Ward', 'Gray',
+      'Hunter', 'Henry', 'Ross', 'Graham', 'Long', 'Price', 'Gordon',
+    ]);
+
+    // Build name set: full names + distinctive last names for matching
+    const names = { full: new Set(), last: new Set() };
+    for (const id of rosteredIds) {
+      const p = players.get(id);
+      if (!p?.name) continue;
+      // Skip DEF positions — their "names" are team names (Browns, 49ers, etc.)
+      if (p.position === 'Def' || p.position === 'DEF') continue;
+      // MFL names are "Last, First" format
+      const commaIdx = p.name.indexOf(',');
+      const fullName = commaIdx > 0
+        ? `${p.name.slice(commaIdx + 1).trim()} ${p.name.slice(0, commaIdx).trim()}`
+        : p.name;
+      const lastName = commaIdx > 0 ? p.name.slice(0, commaIdx).trim() : p.name.split(' ').pop();
+      names.full.add(fullName);
+      // Only use last name if 6+ chars and not a common name that causes false positives
+      if (lastName.length >= 6 && !LAST_NAME_BLOCKLIST.has(lastName)) {
+        names.last.add(lastName);
+      }
+    }
+    return names;
+  } catch (err) {
+    console.log(`  Could not load rostered names: ${err.message}`);
+    return { full: new Set(), last: new Set() };
+  }
+}
+
+/** Score an article for relevance. Higher = more relevant. Threshold: 2+ to publish. */
+function scoreArticle(article, rosteredNames) {
+  let score = 0;
+  const reasons = [];
+  const headline = article.headline ?? article.title ?? '';
+  const desc = article.description ?? '';
+  const text = `${headline} ${desc}`;
+  const categories = (article.categories ?? []).map(c => c.description);
+
+  // +3: Draft content (always valuable)
+  if (categories.some(c => c === 'NFL Draft' || c === 'NFL draft') ||
+      /\bdraft\b/i.test(headline)) {
+    score += 3;
+    reasons.push('draft');
+  }
+
+  // +3: Mentions a rostered player (full name match)
+  for (const name of rosteredNames.full) {
+    if (text.includes(name)) {
+      score += 3;
+      reasons.push(`rostered:${name}`);
+      break;
+    }
+  }
+
+  // +2: Mentions a rostered player (last name match, less certain)
+  if (score < 3) { // Don't double-count with full name match
+    for (const last of rosteredNames.last) {
+      if (text.includes(last)) {
+        score += 2;
+        reasons.push(`lastName:${last}`);
+        break;
+      }
+    }
+  }
+
+  // +2: High-value ESPN category
+  if (categories.some(c => HIGH_VALUE_CATEGORIES.has(c))) {
+    score += 2;
+    reasons.push('category');
+  }
+
+  // +2: Relevance keywords in headline (trades, signings, rule changes, etc.)
+  if (RELEVANCE_KEYWORDS.some(re => re.test(headline))) {
+    score += 2;
+    reasons.push('keyword');
+  }
+
+  // +2: Known reporter byline — always meets threshold on its own
+  if (BYLINE_TO_AUTHOR[article.byline]) {
+    score += 2;
+    reasons.push(`reporter:${article.byline}`);
+  }
+
+  return { score, reasons };
+}
+
+async function scanNflWire(league) {
+  console.log(`\n=== Scanning NFL Wire for ${league.slug} ===`);
+
+  const feed = await loadFeed(league.feedPath);
+  const watermark = feed.lastNflWireTimestamp || '1970-01-01T00:00:00Z';
+  console.log(`  NFL Wire watermark: ${watermark}`);
+
+  const watermarkDate = new Date(watermark);
+  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+
+  try {
+    // Load rostered player names for relevance scoring
+    const rosteredNames = await loadRosteredPlayerNames(league);
+    console.log(`  Rostered player names loaded: ${rosteredNames.full.size} full, ${rosteredNames.last.size} last`);
+
+    const url = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=25';
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log(`  NFL Wire API returned ${res.status} — skipping`);
+      return 0;
+    }
+
+    const data = await res.json();
+    const articles = data.articles ?? [];
+    console.log(`  ESPN returned ${articles.length} articles`);
+
+    const newArticles = articles.filter(a => {
+      const pubDate = new Date(a.published);
+      const articleId = `wire_${a.id ?? ''}`;
+      return pubDate > watermarkDate && !feed.posts.some(p => p.id === articleId);
+    });
+
+    console.log(`  New articles: ${newArticles.length}`);
+    if (newArticles.length === 0) return 0;
+
+    // Score and filter articles — threshold of 2+ to publish
+    const RELEVANCE_THRESHOLD = 2;
+    const scored = newArticles.map(a => ({
+      article: a,
+      ...scoreArticle(a, rosteredNames),
+    }));
+
+    const relevant = scored.filter(s => s.score >= RELEVANCE_THRESHOLD);
+    const skipped = scored.filter(s => s.score < RELEVANCE_THRESHOLD);
+
+    console.log(`  Relevance scoring: ${relevant.length} pass (≥${RELEVANCE_THRESHOLD}), ${skipped.length} filtered out`);
+    for (const s of scored) {
+      const mark = s.score >= RELEVANCE_THRESHOLD ? '✓' : '✗';
+      console.log(`    ${mark} [${s.score}] ${s.reasons.join(', ') || 'no signals'} — ${(s.article.headline ?? '').substring(0, 60)}`);
+    }
+
+    if (relevant.length === 0) {
+      // Still advance watermark so we don't re-evaluate these articles
+      feed.lastNflWireTimestamp = new Date(
+        Math.max(...newArticles.map(a => new Date(a.published).getTime()))
+      ).toISOString();
+      await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+      console.log(`  No relevant articles — watermark advanced.`);
+      return 0;
+    }
+
+    // Sort oldest first so newest end up at top after prepend
+    relevant.sort((a, b) => new Date(a.article.published).getTime() - new Date(b.article.published).getTime());
+
+    const newPosts = relevant.map(({ article: a }) => {
+      const headline = a.headline ?? a.title ?? 'NFL News';
+      const body = truncateAtSentence(a.description ?? headline, 200);
+      const link = a.links?.web?.href ?? a.links?.api?.news?.href ?? '';
+
+      const isDraft = (a.categories ?? []).some(
+        c => c.description === 'NFL Draft' || c.description === 'NFL draft'
+      );
+
+      const authorId = BYLINE_TO_AUTHOR[a.byline] ?? 'nfl-wire';
+
+      return {
+        id: `wire_${a.id}`,
+        timestamp: a.published,
+        type: 'external',
+        tier: 'standard',
+        headline,
+        body,
+        link,
+        linkLabel: isDraft ? 'Read draft analysis →' : 'Read on ESPN →',
+        authorId,
+        franchiseIds: [],
+        league: leagueSlug,
+      };
+    });
+
+    feed.posts = [...newPosts.reverse(), ...feed.posts];
+    feed.lastNflWireTimestamp = new Date(
+      Math.max(...newArticles.map(a => new Date(a.published).getTime()))
+    ).toISOString();
+
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    console.log(`  Wrote ${newPosts.length} NFL Wire posts. Feed total: ${feed.posts.length}`);
+    return newPosts.length;
+  } catch (err) {
+    console.log(`  NFL Wire fetch error: ${err.message}`);
+    return 0;
+  }
+}
+
+// ── Doc Rivers: Injury Reporter ──
+// Fetches injury data from ESPN's per-team injuries API.
+// Only generates posts when a player's status CHANGES (snapshot diffing).
+// Rostered fantasy players get higher tiers.
+
+// ESPN team IDs for all 32 NFL teams
+const ESPN_TEAM_IDS = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+  17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 33, 34,
+];
+
+// Doc Rivers template pools — direct, no-nonsense medical correspondent
+const INJURY_TEMPLATES_BREAKING = [
+  (p) => `Major update: ${p.name} (${p.nflTeam}) is now listed as ${p.status}. ${p.detail ? `Dealing with ${p.detail.toLowerCase()}.` : ''} If he's on your roster, it's time for Plan B.`,
+  (p) => `This is a big one. ${p.name} has been moved to ${p.status}${p.detail ? ` with ${p.detail.toLowerCase()}` : ''}. Fantasy managers, adjust accordingly.`,
+  (p) => `Confirmed: ${p.name} (${p.position}, ${p.nflTeam}) → ${p.status}.${p.detail ? ` ${p.detail}.` : ''} This changes lineup calculations across the league.`,
+  (p) => `${p.name} officially ${p.status}.${p.detail ? ` ${p.detail}.` : ''} If you were counting on him this week, you need a new plan. Now.`,
+  (p) => `Breaking from the medical tent: ${p.name} (${p.nflTeam}) is ${p.status}.${p.detail ? ` Diagnosis: ${p.detail.toLowerCase()}.` : ''} Fantasy impact is significant.`,
+];
+
+const INJURY_TEMPLATES_STANDARD = [
+  (p) => `${p.name} (${p.position}, ${p.nflTeam}) now listed as ${p.status}.${p.detail ? ` ${p.detail}.` : ''} Monitor through the week.`,
+  (p) => `Injury update: ${p.name} (${p.nflTeam}) — ${p.status}.${p.detail ? ` Dealing with ${p.detail.toLowerCase()}.` : ''} Keep an eye on practice reports.`,
+  (p) => `${p.name} has been moved to ${p.status}.${p.detail ? ` ${p.detail}.` : ''} Not ideal, but not panic time yet.`,
+  (p) => `Status change for ${p.name} (${p.nflTeam}): now ${p.status}.${p.detail ? ` ${p.detail}.` : ''} Watch the injury report closely.`,
+  (p) => `${p.name} (${p.position}, ${p.nflTeam}) → ${p.status}.${p.detail ? ` ${p.detail}.` : ''} Could go either way by game day.`,
+];
+
+const INJURY_TEMPLATES_MINOR = [
+  (p) => `${p.name} (${p.nflTeam}) — ${p.status}${p.detail ? ` (${p.detail.toLowerCase()})` : ''}.`,
+  (p) => `${p.name} listed as ${p.status}${p.detail ? ` with ${p.detail.toLowerCase()}` : ''}.`,
+];
+
+async function fetchEspnInjuries() {
+  const allInjuries = new Map(); // espnId → { name, position, nflTeam, status, detail }
+
+  // Fetch all 32 teams in parallel
+  const results = await Promise.allSettled(
+    ESPN_TEAM_IDS.map(async (teamId) => {
+      const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries?team=${teamId}`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+
+      const data = await res.json();
+      const teamData = data.team;
+      const teamAbbrev = teamData?.abbreviation ?? '';
+      const injuries = [];
+
+      for (const group of (data.injuries ?? [])) {
+        for (const entry of (group.entries ?? [])) {
+          const athlete = entry.athlete;
+          if (!athlete?.id) continue;
+          injuries.push({
+            espnId: String(athlete.id),
+            name: athlete.displayName ?? athlete.fullName ?? 'Unknown',
+            position: athlete.position?.abbreviation ?? '',
+            nflTeam: teamAbbrev,
+            status: entry.status ?? entry.type ?? 'Unknown',
+            detail: entry.details?.detail ?? entry.details?.type ?? '',
+          });
+        }
+      }
+      return injuries;
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      for (const inj of result.value) {
+        allInjuries.set(inj.espnId, inj);
+      }
+    }
+  }
+
+  return allInjuries;
+}
+
+/** Load all rostered player IDs for a league to determine fantasy relevance */
+async function loadRosteredPlayerIds(league) {
+  const year = new Date().getFullYear();
+  const rostersPath = league.slug === 'afl'
+    ? path.join(projectRoot, 'data', 'afl-fantasy', 'mfl-feeds', String(year), 'rosters.json')
+    : path.join(projectRoot, 'data', 'theleague', 'mfl-feeds', String(year), 'rosters.json');
+
+  try {
+    const raw = JSON.parse(await fs.readFile(rostersPath, 'utf8'));
+    const franchises = raw?.rosters?.franchise ?? [];
+    const playerToFranchise = new Map(); // playerId → franchiseId
+    for (const f of (Array.isArray(franchises) ? franchises : [franchises])) {
+      const players = f.player ?? [];
+      for (const p of (Array.isArray(players) ? players : [players])) {
+        if (p.id) playerToFranchise.set(p.id, f.id);
+      }
+    }
+    return playerToFranchise;
+  } catch {
+    console.log('  Could not load rosters for injury cross-reference');
+    return new Map();
+  }
+}
+
+/** Load MFL players to map ESPN names → MFL player IDs */
+async function loadPlayerNameIndex(league) {
+  const year = new Date().getFullYear();
+  const players = await loadPlayers(league.playersPath(year));
+  const nameIndex = new Map();
+  for (const [id, p] of players) {
+    // MFL names are "LastName, FirstName" — normalize to "FirstName LastName"
+    const parts = p.name.split(', ');
+    const normalized = parts.length === 2 ? `${parts[1]} ${parts[0]}` : p.name;
+    nameIndex.set(normalized.toLowerCase(), { id, ...p });
+  }
+  return nameIndex;
+}
+
+async function scanInjuries(league) {
+  console.log(`\n=== Scanning Injuries (Doc Rivers) for ${league.slug} ===`);
+
+  // Season guard: check if there are upcoming NFL games
+  try {
+    const sbRes = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
+    if (sbRes.ok) {
+      const sbData = await sbRes.json();
+      if (!sbData.events || sbData.events.length === 0) {
+        console.log('  No upcoming NFL games — skipping injury scan (offseason)');
+        return 0;
+      }
+    }
+  } catch {
+    // If scoreboard check fails, proceed with scan anyway
+  }
+
+  const feed = await loadFeed(league.feedPath);
+  const previousSnapshot = feed.lastInjurySnapshot ?? {};
+  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+
+  // Fetch current injury data from ESPN
+  const currentInjuries = await fetchEspnInjuries();
+  console.log(`  ESPN injuries: ${currentInjuries.size} players`);
+
+  if (currentInjuries.size === 0) {
+    console.log('  No injury data returned — skipping');
+    return 0;
+  }
+
+  // Load roster data for fantasy relevance
+  const rosteredPlayers = await loadRosteredPlayerIds(league);
+  const nameIndex = await loadPlayerNameIndex(league);
+
+  // Diff against previous snapshot
+  const statusChanges = [];
+  for (const [espnId, inj] of currentInjuries) {
+    const prevStatus = previousSnapshot[espnId];
+    if (prevStatus !== inj.status) {
+      // Find MFL player by name match
+      const mflPlayer = nameIndex.get(inj.name.toLowerCase());
+      const franchiseId = mflPlayer ? rosteredPlayers.get(mflPlayer.id) : null;
+
+      statusChanges.push({
+        ...inj,
+        mflId: mflPlayer?.id,
+        franchiseId,
+        isRostered: !!franchiseId,
+        prevStatus: prevStatus ?? null,
+      });
+    }
+  }
+
+  console.log(`  Status changes detected: ${statusChanges.length}`);
+  if (statusChanges.length === 0) {
+    // Update snapshot even with no changes (capture new players)
+    const newSnapshot = {};
+    for (const [espnId, inj] of currentInjuries) {
+      newSnapshot[espnId] = inj.status;
+    }
+    feed.lastInjurySnapshot = newSnapshot;
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    return 0;
+  }
+
+  // Classify tiers and generate posts
+  const HIGH_VALUE_STATUSES = new Set(['Out', 'Injured Reserve', 'IR', 'Suspended']);
+  const MEDIUM_STATUSES = new Set(['Questionable', 'Doubtful']);
+  const newPosts = [];
+
+  for (const change of statusChanges) {
+    let tier = 'minor';
+    let templates = INJURY_TEMPLATES_MINOR;
+
+    if (change.isRostered && HIGH_VALUE_STATUSES.has(change.status)) {
+      tier = 'breaking';
+      templates = INJURY_TEMPLATES_BREAKING;
+    } else if (change.isRostered && MEDIUM_STATUSES.has(change.status)) {
+      tier = 'standard';
+      templates = INJURY_TEMPLATES_STANDARD;
+    } else if (HIGH_VALUE_STATUSES.has(change.status)) {
+      tier = 'standard';
+      templates = INJURY_TEMPLATES_STANDARD;
+    }
+
+    // Skip minor non-rostered injuries to avoid feed spam
+    if (tier === 'minor' && !change.isRostered) continue;
+
+    const template = pickTemplate(templates, change.espnId);
+    const body = template(change);
+    const headline = `${change.name} (${change.nflTeam}) → ${change.status}`;
+
+    const post = {
+      id: `inj_${change.espnId}_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'injury',
+      tier,
+      headline,
+      body,
+      authorId: 'doc-rivers',
+      franchiseIds: change.franchiseId ? [change.franchiseId] : [],
+      playerIds: change.mflId ? [change.mflId] : [],
+      league: leagueSlug,
+    };
+
+    newPosts.push(post);
+    console.log(`  [${tier}] ${headline}`);
+  }
+
+  if (newPosts.length > 0) {
+    feed.posts = [...newPosts.reverse(), ...feed.posts];
+  }
+
+  // Update snapshot
+  const newSnapshot = {};
+  for (const [espnId, inj] of currentInjuries) {
+    newSnapshot[espnId] = inj.status;
+  }
+  feed.lastInjurySnapshot = newSnapshot;
+
+  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  console.log(`  Wrote ${newPosts.length} injury posts. Feed total: ${feed.posts.length}`);
+  return newPosts.length;
+}
+
+// ── Vegas Vic: Odds & Lines ──
+// Fetches weekly opening lines from ESPN Scoreboard API.
+// Posts once per NFL week when lines first appear. Season-only.
+
+// Vegas Vic template pools — confident, numbers-focused, slightly cocky
+const ODDS_TEMPLATES = [
+  (g) => `${g.away} at ${g.home}: ${g.spread}, O/U ${g.overUnder}. The book is talking.`,
+  (g) => `Opening number: ${g.home} ${g.spread} vs ${g.away}. Over/under sits at ${g.overUnder}.`,
+  (g) => `${g.away} at ${g.home} — line opens at ${g.spread}, total ${g.overUnder}. Market will move. Get in early.`,
+  (g) => `${g.home} ${g.spread} hosting ${g.away}. O/U: ${g.overUnder}. Sharp money hasn't spoken yet.`,
+];
+
+function getCurrentNFLWeekForOdds() {
+  const now = new Date();
+  const seasonYear = now.getFullYear();
+  const seasonConfigs = {
+    2024: new Date('2024-09-05T20:20:00-04:00'),
+    2025: new Date('2025-09-04T20:20:00-04:00'),
+    2026: new Date('2026-09-10T20:20:00-04:00'),
+  };
+
+  let week1Start = seasonConfigs[seasonYear];
+  if (!week1Start) {
+    const sept1 = new Date(seasonYear, 8, 1);
+    const dayOfWeek = sept1.getDay();
+    const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
+    week1Start = new Date(seasonYear, 8, 1 + daysUntilThursday, 20, 20);
+  }
+
+  if (now < week1Start) return 0; // Offseason
+  const msSinceStart = now.getTime() - week1Start.getTime();
+  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(weeksSinceStart + 1, 22);
+}
+
+async function scanOdds(league) {
+  console.log(`\n=== Scanning Odds (Vegas Vic) for ${league.slug} ===`);
+
+  const currentWeek = getCurrentNFLWeekForOdds();
+  if (currentWeek === 0) {
+    console.log('  Offseason — no NFL games. Skipping odds scan.');
+    return 0;
+  }
+
+  const feed = await loadFeed(league.feedPath);
+  const lastWeek = feed.lastOddsWeek ?? 0;
+  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+
+  if (lastWeek >= currentWeek) {
+    console.log(`  Already posted Week ${currentWeek} odds. Skipping.`);
+    return 0;
+  }
+
+  // Fetch scoreboard for current week
+  const seasonType = currentWeek <= 18 ? 2 : 3;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${currentWeek}&seasontype=${seasonType}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log(`  ESPN scoreboard returned ${res.status} — skipping`);
+      return 0;
+    }
+
+    const data = await res.json();
+    const events = data.events ?? [];
+
+    if (events.length === 0) {
+      console.log('  No games found for this week — skipping');
+      return 0;
+    }
+
+    console.log(`  Found ${events.length} games for Week ${currentWeek}`);
+
+    const newPosts = [];
+
+    for (const event of events) {
+      const comp = event.competitions?.[0];
+      if (!comp) continue;
+
+      const homeTeam = comp.competitors?.find(c => c.homeAway === 'home');
+      const awayTeam = comp.competitors?.find(c => c.homeAway === 'away');
+      if (!homeTeam || !awayTeam) continue;
+
+      const odds = comp.odds?.[0];
+      if (!odds) continue; // No odds available for this game
+
+      const spread = odds.details || 'N/A';
+      const overUnder = odds.overUnder ? `${odds.overUnder}` : 'N/A';
+
+      if (spread === 'N/A' && overUnder === 'N/A') continue;
+
+      const home = homeTeam.team?.abbreviation ?? 'HOME';
+      const away = awayTeam.team?.abbreviation ?? 'AWAY';
+      const homeFull = homeTeam.team?.shortDisplayName ?? home;
+      const awayFull = awayTeam.team?.shortDisplayName ?? away;
+
+      const template = pickTemplate(ODDS_TEMPLATES, event.id);
+      const body = template({ home: homeFull, away: awayFull, spread, overUnder });
+
+      newPosts.push({
+        id: `odds_wk${currentWeek}_${event.id}`,
+        timestamp: new Date().toISOString(),
+        type: 'odds',
+        tier: 'standard',
+        headline: `Week ${currentWeek}: ${away} at ${home} — ${spread}`,
+        body,
+        authorId: 'vegas-vic',
+        franchiseIds: [],
+        league: leagueSlug,
+      });
+    }
+
+    if (newPosts.length === 0) {
+      console.log('  No games with odds data — skipping');
+      return 0;
+    }
+
+    feed.posts = [...newPosts.reverse(), ...feed.posts];
+    feed.lastOddsWeek = currentWeek;
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    console.log(`  Wrote ${newPosts.length} odds posts for Week ${currentWeek}. Feed total: ${feed.posts.length}`);
+    return newPosts.length;
+  } catch (err) {
+    console.log(`  Odds fetch error: ${err.message}`);
+    return 0;
+  }
+}
+
 // Run
 console.log('🎙️ Schefter Scanner starting...');
 let totalPosts = 0;
@@ -810,10 +1429,16 @@ for (const league of LEAGUES) {
   try {
     // Scan MFL transactions
     totalPosts += await scanLeague(league);
-    // Scan ESPN Adam Schefter
+    // Scan ESPN contributors
     totalPosts += await scanEspn(league);
     // Scan event reminders (Ask Roger)
     totalPosts += await scanEventReminders(league);
+    // Scan NFL Wire (general NFL news)
+    totalPosts += await scanNflWire(league);
+    // Scan injuries (Doc Rivers)
+    totalPosts += await scanInjuries(league);
+    // Scan odds (Vegas Vic)
+    totalPosts += await scanOdds(league);
   } catch (err) {
     console.error(`  Error scanning ${league.slug}:`, err.message);
   }

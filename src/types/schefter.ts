@@ -110,6 +110,28 @@ export const SCHEFTER_AUTHORS: Record<string, SchefterAuthor> = {
     avatar: 'commissioner-avatar.webp',
     bio: 'AI rules expert and deadline enforcer. He\'s read the constitution so you don\'t have to. His dates are probably right — check the calendar to be sure.',
   },
+  'nfl-wire': {
+    id: 'nfl-wire',
+    name: 'NFL Wire',
+    handle: '@NFLWire',
+    avatar: 'nfl-wire-avatar.webp',
+    bio: 'The latest from around the league. Draft intel, free agency moves, and everything that moves the needle.',
+    external: true,
+  },
+  'doc-rivers': {
+    id: 'doc-rivers',
+    name: 'Doc Rivers',
+    handle: '@DocRivers',
+    avatar: 'doc-rivers-avatar.webp',
+    bio: 'League medical correspondent. If your guy tweaked something in practice, I already know about it. Fantasy-relevant injury intel, no sugarcoating.',
+  },
+  'vegas-vic': {
+    id: 'vegas-vic',
+    name: 'Vegas Vic',
+    handle: '@VegasVic',
+    avatar: 'vegas-vic-avatar.webp',
+    bio: 'Weekly lines, spreads, and over/unders for every NFL matchup. Not financial advice. Okay, maybe a little.',
+  },
 };
 
 /** Resolve an authorId to its author config, defaulting to Claude */
@@ -135,7 +157,9 @@ export type SchefterPostType =
   | 'power-ranking'
   | 'matchup-preview'
   | 'board'
-  | 'ask-roger';
+  | 'ask-roger'
+  | 'injury'
+  | 'odds';
 
 /** MFL transaction sub-types we care about */
 export type TransactionSubType =
@@ -229,6 +253,12 @@ export interface SchefterFeed {
   lastProcessedMflTimestamp: string;
   /** ESPN article timestamp watermark — only process newer articles */
   lastEspnTimestamp?: string;
+  /** NFL Wire news timestamp watermark — only process newer articles */
+  lastNflWireTimestamp?: string;
+  /** Injury snapshot — playerId → last known status, for change detection */
+  lastInjurySnapshot?: Record<string, string>;
+  /** Last NFL week we posted opening odds for */
+  lastOddsWeek?: number;
   /** All posts, newest first */
   posts: SchefterPost[];
 }

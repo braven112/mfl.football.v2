@@ -42,30 +42,36 @@ if (userFranchiseId) {
   } catch { /* fallback gracefully */ }
 }
 
-// Source filter via ?source=claude|nfl|events
+// Source filter via ?source=claude|nfl|events|wire|injuries|odds
 const sourceParam = Astro.url.searchParams.get('source');
-const validSources = ['claude', 'nfl', 'events'] as const;
+const validSources = ['claude', 'nfl', 'events', 'wire', 'injuries', 'odds'] as const;
 type SourceFilter = typeof validSources[number];
 const activeSource: SourceFilter | null = validSources.includes(sourceParam as SourceFilter)
   ? (sourceParam as SourceFilter)
   : null;
 
-// ESPN external authors (all external: true authors)
+// ESPN external authors (excluding nfl-wire which has its own tab)
 const espnAuthorIds = new Set(
-  Object.values(SCHEFTER_AUTHORS).filter(a => a.external).map(a => a.id)
+  Object.values(SCHEFTER_AUTHORS).filter(a => a.external && a.id !== 'nfl-wire').map(a => a.id)
 );
 
 // Filter posts by source
 const filteredPosts = (() => {
   if (!activeSource) return feed.posts;
   if (activeSource === 'claude') return feed.posts.filter(p => (p.authorId ?? 'claude') === 'claude');
-  if (activeSource === 'nfl') return feed.posts.filter(p => espnAuthorIds.has(p.authorId ?? ''));
+  if (activeSource === 'nfl') return feed.posts.filter(p => espnAuthorIds.has(p.authorId ?? '') && !p.id.startsWith('wire_'));
   if (activeSource === 'events') return feed.posts.filter(p => (p.authorId ?? '') === 'roger');
+  if (activeSource === 'wire') return feed.posts.filter(p => p.id.startsWith('wire_'));
+  if (activeSource === 'injuries') return feed.posts.filter(p => p.authorId === 'doc-rivers');
+  if (activeSource === 'odds') return feed.posts.filter(p => p.authorId === 'vegas-vic');
   return feed.posts;
 })();
 
 // Show profile header when filtered to a single-author source
-const singleAuthorSources: Record<string, string> = { claude: 'claude', events: 'roger' };
+const singleAuthorSources: Record<string, string> = {
+  claude: 'claude', events: 'roger', wire: 'nfl-wire',
+  injuries: 'doc-rivers', odds: 'vegas-vic',
+};
 const profileAuthor = activeSource && singleAuthorSources[activeSource]
   ? getAuthor(singleAuthorSources[activeSource])
   : null;
@@ -76,7 +82,10 @@ const basePath = '/theleague/news';
 const tabs = [
   { label: 'All', href: basePath, active: !activeSource },
   { label: 'League News', href: `${basePath}?source=claude`, active: activeSource === 'claude' },
+  { label: 'NFL Wire', href: `${basePath}?source=wire`, active: activeSource === 'wire' },
   { label: 'NFL News', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' },
+  { label: 'Injuries', href: `${basePath}?source=injuries`, active: activeSource === 'injuries' },
+  { label: 'Odds', href: `${basePath}?source=odds`, active: activeSource === 'odds' },
   { label: 'Events', href: `${basePath}?source=events`, active: activeSource === 'events' },
 ];
 ---
