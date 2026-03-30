@@ -467,7 +467,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         <span class="count-display"><strong id="bench-count">{roster.length - slots.filter(s => s.playerId).length}</strong> players</span>
       </div>
       <ul class="lineup-bench-list" id="lineup-bench-list">
-        {roster.filter(p => !usedPlayerIds.has(p.id)).map(player => (
+        {roster.filter(p => !usedPlayerIds.has(p.id)).sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1)).map(player => (
           <li class={`lineup-bench-row ${player.gameLocked ? 'lineup-bench-row--locked' : ''}`}
               data-player-id={player.id}>
             <div class="lineup-bench-row__player">
