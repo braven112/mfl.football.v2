@@ -10,8 +10,9 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import ScheftnerFeedCompact from '../../components/shared/ScheftnerFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
+import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
 import { getAuthUser } from '../../utils/auth';
-import { resolveHeroState, parseTestDate, resolveHeroContent } from '../../utils/hero-resolver';
+import { resolveHeroState, parseTestDate, resolveHeroContent, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear } from '../../utils/league-year';
@@ -47,6 +48,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const timeline = getWhatsNextTimeline(effectiveDate);
 const rawHeroState = resolveHeroState(effectiveDate, testMode, whatsNewData as WhatsNewEntry[], timeline, draftComplete);
 const heroState = await enrichHeroState(rawHeroState);
+
+// Auction strip: show after full auction hero ends, through 3rd Sunday of August
+const now = effectiveDate ?? new Date();
+const isAuctionHeroActive = heroState.phase === 'auction-preview' || heroState.phase === 'auction-live';
+const showAuctionStrip = !isAuctionHeroActive && isAuctionStripPeriod(now);
+const stripVariant = showAuctionStrip && isPostDraftPeriod(now) ? 'auction-udfa' as const : 'auction' as const;
 
 // Load team config (used for reply composer + live scoring)
 let userTeamName: string | undefined;
@@ -119,6 +126,14 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
         userFranchiseId={userFranchiseId}
         isAuthenticated={isAuthenticated}
       />
+      {showAuctionStrip && (
+        <AuctionStrip
+          leagueYear={leagueYear}
+          resolveLeaguePath={r}
+          spriteUrl={spriteUrl}
+          variant={stripVariant}
+        />
+      )}
       {testMode && (
         <div class="hp2__debug">
           <code>Phase: {heroState.phase} | Slot: {heroState.slot ?? 'none'} | Week: {heroState.metadata.week ?? 'n/a'} | Window: {heroState.metadata.gameWindow ?? 'none'} | Live: {heroState.metadata.isLive} | Priority: {heroState.priority} | Resolved by: {heroState.metadata.resolvedBy}</code>
@@ -148,6 +163,10 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
 
   .hp2__main {
     min-width: 0;
+  }
+
+  .hp2__main > :not(:first-child) {
+    margin-top: 0.75rem;
   }
 
   .visually-hidden {

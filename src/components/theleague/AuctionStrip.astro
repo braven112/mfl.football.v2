@@ -17,6 +17,8 @@ export interface Props {
   resolveLeaguePath: (path: string) => string;
   /** Cache-busted sprite URL */
   spriteUrl: string;
+  /** Messaging variant — 'auction-udfa' adds undrafted rookie callout */
+  variant?: 'auction' | 'auction-udfa';
 }
 
 const {
@@ -25,7 +27,10 @@ const {
   leagueId = '13522',
   resolveLeaguePath: r,
   spriteUrl,
+  variant = 'auction',
 } = Astro.props;
+
+const showUdfaNote = variant === 'auction-udfa';
 
 const mflBase = `https://${mflHost}/${leagueYear}/options?L=${leagueId}`;
 
@@ -51,9 +56,10 @@ const secondaryLinks: StripLink[] = [
 ];
 ---
 
-<div class="auction-strip" role="region" aria-label="Free Agent Auction quick links">
+<div class="auction-strip" role="region" aria-label={showUdfaNote ? 'Free Agent Auction quick links — undrafted rookies available' : 'Free Agent Auction quick links'}>
   <div class="auction-strip__inner">
     <span class="auction-strip__title">Free Agent Auction</span>
+    {showUdfaNote && <span class="auction-strip__udfa-note">+ Undrafted rookies available</span>}
 
     <nav class="auction-strip__nav" aria-label="Auction tools">
       <a
@@ -147,6 +153,15 @@ const secondaryLinks: StripLink[] = [
     color: var(--color-gray-700, #374151);
     padding-left: 0.625rem;
     border-left: 2px solid var(--cat-free-agency, #2e8743);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── UDFA note (post-draft variant) ── */
+  .auction-strip__udfa-note {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--cat-draft, #7c3aed);
     white-space: nowrap;
     flex-shrink: 0;
   }

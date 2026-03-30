@@ -586,6 +586,25 @@ function isUDFAWindow(referenceDate: Date, draftComplete?: boolean): boolean {
   return referenceDate > draftHeroEnd && referenceDate <= udfaEnd;
 }
 
+/**
+ * Check if the rookie draft hero window has ended (post-draft period).
+ * Used by AuctionStrip to add UDFA messaging once undrafted rookies
+ * enter the free agent pool. Runs from draft hero end through FA close.
+ */
+export function isPostDraftPeriod(referenceDate: Date): boolean {
+  const year = referenceDate.getFullYear();
+  const draftHeroStart = getDraftHeroStart(year);
+
+  const draftHeroEnd = new Date(draftHeroStart);
+  draftHeroEnd.setDate(draftHeroEnd.getDate() + DRAFT_HERO_TOTAL_DAYS);
+  draftHeroEnd.setHours(23, 59, 59, 999);
+
+  const faCloses = getNthDayOfMonth(year, 7, 0, 3); // 3rd Sunday of August
+  faCloses.setHours(23, 59, 59, 999);
+
+  return referenceDate > draftHeroEnd && referenceDate <= faCloses;
+}
+
 /** Check if in the cut watch period (~Jul 15 → Aug 16) */
 function isCutWatch(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
