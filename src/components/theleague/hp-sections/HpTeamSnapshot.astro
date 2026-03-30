@@ -1,0 +1,289 @@
+---
+/**
+ * HpTeamSnapshot — Personal team dashboard card for the homepage.
+ * Shows cap space, roster count, and expiring contracts for the logged-in user.
+ * Guests see a login prompt instead.
+ */
+import { spriteUrl } from '../../../utils/sprite-url';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { formatCompactNumber } from '../../../utils/formatters';
+import { SALARY_CAP, ROSTER_LIMIT } from '../../../utils/salary-calculations';
+import type { TeamSummary } from '../../../utils/league-summary-utils';
+
+interface Props {
+  isAuthenticated: boolean;
+  userFranchiseId?: string;
+  teamSummaries?: TeamSummary[];
+  userTeamName?: string;
+  userTeamIcon?: string;
+}
+
+const { isAuthenticated, userFranchiseId, teamSummaries, userTeamName, userTeamIcon } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+// Find the user's team summary
+const userSummary = userFranchiseId
+  ? teamSummaries?.find(t => t.franchiseId === userFranchiseId)
+  : undefined;
+
+// Extract current-year metrics (index 0)
+const capSpace = userSummary?.metrics.capSpace?.[0] ?? 0;
+const playersUnderContract = userSummary?.metrics.playersUnderContract?.[0] ?? 0;
+const expiringContracts = userSummary?.metrics.expiringContracts?.[0] ?? 0;
+const draftPicks = userSummary?.metrics.draftCapital?.[0] ?? 0;
+
+const capPct = Math.round((1 - capSpace / SALARY_CAP) * 100);
+const isOverCap = capSpace < 0;
+
+interface MetricDef {
+  label: string;
+  value: string;
+  sub: string;
+  href: string;
+  icon: string;
+}
+
+const metrics: MetricDef[] = [
+  {
+    label: 'Cap Space',
+    value: `$${formatCompactNumber(Math.abs(capSpace))}`,
+    sub: isOverCap ? 'over cap' : `${capPct}% used`,
+    href: r('/theleague/rosters'),
+    icon: 'banknote',
+  },
+  {
+    label: 'Roster',
+    value: `${playersUnderContract}`,
+    sub: `of ${ROSTER_LIMIT} slots`,
+    href: r('/theleague/rosters'),
+    icon: 'users',
+  },
+  {
+    label: 'Expiring',
+    value: `${expiringContracts}`,
+    sub: expiringContracts === 1 ? 'contract' : 'contracts',
+    href: r('/theleague/projected-free-agents'),
+    icon: 'clock',
+  },
+  {
+    label: 'Draft Picks',
+    value: `${draftPicks}`,
+    sub: 'owned',
+    href: r('/theleague/draft-predictor'),
+    icon: 'draft-podium',
+  },
+];
+---
+
+{isAuthenticated && userSummary ? (
+  <section class="hp-snapshot" aria-label="My team snapshot">
+    <div class="hp-snapshot__header">
+      <div class="hp-snapshot__team">
+        {userTeamIcon && (
+          <img src={userTeamIcon} alt="" class="hp-snapshot__team-icon" width="24" height="24" loading="lazy" />
+        )}
+        <h3 class="hp-snapshot__title">My Team</h3>
+      </div>
+      <a href={r('/theleague/rosters')} class="hp-snapshot__cta">
+        Full roster
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+    <div class="hp-snapshot__grid">
+      {metrics.map(m => (
+        <a href={m.href} class="hp-snapshot__card">
+          <span class="hp-snapshot__card-value">{m.value}</span>
+          <span class="hp-snapshot__card-label">{m.label}</span>
+          <span class="hp-snapshot__card-sub">{m.sub}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+) : (
+  <section class="hp-snapshot hp-snapshot--guest" aria-label="Team dashboard">
+    <div class="hp-snapshot__guest-inner">
+      <svg class="hp-snapshot__guest-icon" width="24" height="24" aria-hidden="true">
+        <use href={`${spriteUrl}#icon-shield`} />
+      </svg>
+      <div class="hp-snapshot__guest-text">
+        <p class="hp-snapshot__guest-heading">Your team at a glance</p>
+        <p class="hp-snapshot__guest-desc">Log in to see your cap space, roster status, and expiring contracts.</p>
+      </div>
+      <a href={r('/theleague/login')} class="hp-snapshot__guest-btn">Log in</a>
+    </div>
+  </section>
+)}
+
+<style>
+  .hp-snapshot {
+    --dh-accent: var(--color-primary, #1c497c);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .hp-snapshot__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .hp-snapshot__team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hp-snapshot__team-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .hp-snapshot__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hp-snapshot__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .hp-snapshot__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .hp-snapshot__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .hp-snapshot__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.875rem 0.5rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.15s ease;
+  }
+
+  .hp-snapshot__card:hover {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .hp-snapshot__card-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.2;
+  }
+
+  .hp-snapshot__card-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .hp-snapshot__card-sub {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Guest state */
+  .hp-snapshot--guest {
+    padding: 1.25rem 2rem;
+  }
+
+  .hp-snapshot__guest-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .hp-snapshot__guest-icon {
+    flex-shrink: 0;
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  .hp-snapshot__guest-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hp-snapshot__guest-heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    margin: 0;
+  }
+
+  .hp-snapshot__guest-desc {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0.25rem 0 0;
+  }
+
+  .hp-snapshot__guest-btn {
+    flex-shrink: 0;
+    padding: 0.375rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--dh-accent);
+    border-radius: var(--radius-md, 0.5rem);
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .hp-snapshot__guest-btn:hover {
+    opacity: 0.9;
+  }
+
+  @media (max-width: 640px) {
+    .hp-snapshot {
+      padding: 1.25rem;
+    }
+
+    .hp-snapshot__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hp-snapshot__guest-inner {
+      flex-wrap: wrap;
+    }
+
+    .hp-snapshot__guest-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>

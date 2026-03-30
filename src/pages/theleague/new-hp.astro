@@ -11,6 +11,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
 import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
+import WhatsNext from '../../components/theleague/WhatsNext.astro';
+import HpTeamSnapshot from '../../components/theleague/hp-sections/HpTeamSnapshot.astro';
+import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandingsCompact.astro';
+import HpContractIntel from '../../components/theleague/hp-sections/HpContractIntel.astro';
+import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
 import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, resolveHeroContent, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
@@ -20,11 +25,17 @@ import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
+import { SALARY_YEARS } from '../../utils/salary-calculations';
+import { computeLeagueSummary, parseSalaryAdjustment, type SalaryPlayer, type TeamConfig } from '../../utils/league-summary-utils';
+import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
+import { parseNumber } from '../../utils/formatters';
+import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import type { WhatsNewEntry } from '../../types/whats-new';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import feedData from '../../data/theleague/schefter-feed.json';
 import whatsNewData from '../../data/whats-new.json';
+import leagueConfig from '../../data/theleague.config.json';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
@@ -73,6 +84,101 @@ try {
     }
   }
 } catch { /* fallback gracefully */ }
+
+// ---------------------------------------------------------------------------
+// Homepage sections data: team summaries for snapshot, standings, contract intel
+// ---------------------------------------------------------------------------
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+const extractSeason = (fp: string): string | null => {
+  const m = fp.match(/(\d{4})\.json$/);
+  return m ? m[1] : null;
+};
+const extractFeedSeason = (fp: string): string | null => {
+  const m = fp.match(/mfl-feeds\/(\d{4})\//);
+  return m ? m[1] : null;
+};
+
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', { eager: true });
+const salaryAdjustmentFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/salaryAdjustments.json', { eager: true });
+const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', { eager: true });
+const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', { eager: true });
+
+const rosterEntries = Object.entries(rosterModules)
+  .map(([path, mod]) => ({ season: extractSeason(path), data: getModuleData(mod) }))
+  .filter((item) => item.season && item.data)
+  .sort((a, b) => parseInt(b.season!) - parseInt(a.season!));
+
+const latestRoster = rosterEntries[0]?.data || {};
+const currentSalaryYear = rosterEntries[0]?.season || String(SALARY_YEARS[0]);
+
+const adjEntries = Object.entries(salaryAdjustmentFeeds)
+  .map(([path, mod]) => ({ season: extractFeedSeason(path), data: getModuleData(mod) }))
+  .filter((item) => item.season === currentSalaryYear && item.data);
+const rawAdjustments = adjEntries[0]?.data?.salaryAdjustments?.salaryAdjustment || [];
+
+const draftEntries = Object.entries(draftResultsFeeds)
+  .map(([path, mod]) => ({ season: extractFeedSeason(path), data: getModuleData(mod) }))
+  .filter((item) => item.season === currentSalaryYear && item.data);
+const draftCapitalMap = getDraftCapitalFromDraftResults(draftEntries[0]?.data || null);
+
+const playerFeedEntries = Object.entries(playerFeeds)
+  .map(([path, mod]) => ({ season: extractFeedSeason(path), data: getModuleData(mod) }))
+  .filter((item) => item.season === currentSalaryYear && item.data);
+const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
+const playerMetaById = new Map<string, { name: string; position: string }>();
+for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {
+  if (p?.id) playerMetaById.set(p.id, { name: p.name ?? `Player ${p.id}`, position: p.position ?? '' });
+}
+
+const teamConfigs: TeamConfig[] = (leagueConfig.teams ?? []).map((team: any) => ({
+  franchiseId: team.franchiseId,
+  name: team.name,
+  nameMedium: team.nameMedium,
+  nameShort: team.nameShort,
+  abbrev: team.abbrev,
+  icon: team.icon,
+  division: team.division,
+}));
+
+const salaryPlayers: SalaryPlayer[] = (latestRoster.players ?? []).map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  position: p.position ?? '',
+  salary: parseNumber(p.salary),
+  franchiseId: p.franchiseId ?? '',
+  status: p.status ?? 'ROSTER',
+  contractYear: p.contractYear ?? '0',
+  points: parseNumber(p.points),
+  birthdate: parseNumber(p.birthdate),
+}));
+
+// Overlay Redis-cached roster data for near-real-time freshness
+const cachedRosterPlayers = await getCachedRosters(currentSalaryYear, '13522');
+if (cachedRosterPlayers) {
+  const playerById = new Map(salaryPlayers.map((p) => [p.id, p]));
+  for (const [playerId, cached] of Object.entries(cachedRosterPlayers)) {
+    const existing = playerById.get(playerId);
+    if (existing) {
+      existing.salary = parseNumber(cached.salary);
+      existing.contractYear = cached.contractYear ?? existing.contractYear;
+      existing.status = cached.status ?? existing.status;
+      existing.franchiseId = cached.franchiseId ?? existing.franchiseId;
+    } else {
+      const meta = playerMetaById.get(playerId);
+      if (meta) {
+        salaryPlayers.push({
+          id: playerId, name: meta.name, position: meta.position,
+          salary: parseNumber(cached.salary), franchiseId: cached.franchiseId ?? '',
+          status: cached.status ?? 'ROSTER', contractYear: cached.contractYear ?? '1',
+          points: 0, birthdate: 0,
+        });
+      }
+    }
+  }
+}
+
+const teamSummaries = computeLeagueSummary(salaryPlayers, rawAdjustments, draftCapitalMap, teamConfigs);
 
 // Fetch live scoring data when slot is 'live-scoring'
 let liveScoring: {
@@ -192,6 +298,29 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
           variant={stripVariant}
         />
       )}
+      <HpTeamSnapshot
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        teamSummaries={teamSummaries}
+        userTeamName={userTeamName}
+        userTeamIcon={userTeamIcon}
+      />
+
+      <WhatsNext demoDate={effectiveDate} />
+
+      <HpStandingsCompact
+        userFranchiseId={userFranchiseId}
+        teamSummaries={teamSummaries}
+        referenceDate={effectiveDate}
+      />
+
+      <HpContractIntel
+        players={salaryPlayers}
+        userFranchiseId={userFranchiseId}
+      />
+
+      <HpQuickLinks isAuthenticated={isAuthenticated} />
+
       {testMode && (
         <div class="hp2__debug" id="demo-nav">
           <div class="hp2__debug-phase">

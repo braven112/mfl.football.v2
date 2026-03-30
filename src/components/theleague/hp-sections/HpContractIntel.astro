@@ -1,0 +1,370 @@
+---
+/**
+ * HpContractIntel — Cap & Contract Intelligence card for the homepage.
+ * Two client-side tabs: "Best Bargains" (highest points-per-dollar) and
+ * "Expiring Deals" (highest-value players in their final contract year).
+ */
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { formatCompactNumber, parseNumber } from '../../../utils/formatters';
+import { chooseTeamName } from '../../../utils/team-names';
+import type { SalaryPlayer } from '../../../utils/league-summary-utils';
+import config from '../../../data/theleague.config.json';
+
+interface Props {
+  players?: SalaryPlayer[];
+  userFranchiseId?: string;
+}
+
+const { players = [], userFranchiseId } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+const teams = config.teams ?? [];
+const teamMap = new Map(teams.map((t: any) => [t.franchiseId, t]));
+
+// Filter to rostered players with meaningful salary and points
+const rostered = players.filter(p => p.franchiseId && p.salary > 0);
+
+// Best Bargains: top 5 by points-per-dollar (minimum 50 points to filter noise)
+const bargains = rostered
+  .filter(p => p.points >= 50)
+  .map(p => ({
+    ...p,
+    ppd: p.points / p.salary,
+    teamName: getTeamAbbrev(p.franchiseId),
+    isUser: p.franchiseId === userFranchiseId,
+  }))
+  .sort((a, b) => b.ppd - a.ppd)
+  .slice(0, 5);
+
+// Expiring Deals: players in final contract year, sorted by points (most impactful)
+const expiring = rostered
+  .filter(p => parseNumber(p.contractYear) === 1 && p.points >= 20)
+  .map(p => ({
+    ...p,
+    teamName: getTeamAbbrev(p.franchiseId),
+    isUser: p.franchiseId === userFranchiseId,
+  }))
+  .sort((a, b) => b.points - a.points)
+  .slice(0, 5);
+
+function getTeamAbbrev(franchiseId: string): string {
+  const team = teamMap.get(franchiseId);
+  if (!team) return '??';
+  return chooseTeamName({
+    fullName: team.name,
+    nameMedium: team.nameMedium,
+    nameShort: team.nameShort,
+    abbrev: team.abbrev,
+  }, 'abbrev');
+}
+
+function formatName(name: string): string {
+  // "Last, First" → "F. Last"
+  const parts = name.split(', ');
+  if (parts.length === 2) {
+    return `${parts[1][0]}. ${parts[0]}`;
+  }
+  return name;
+}
+---
+
+<section class="hp-intel" aria-label="Contract intelligence" data-component="hp-intel">
+  <div class="hp-intel__header">
+    <h3 class="hp-intel__section-title">Contract Intel</h3>
+    <a href={r('/theleague/mvp')} class="hp-intel__cta">
+      Full MVPs
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="hp-intel__tabs" role="tablist">
+    <button class="hp-intel__tab hp-intel__tab--active" role="tab" aria-selected="true" data-tab="bargains" type="button">
+      Best Bargains
+    </button>
+    <button class="hp-intel__tab" role="tab" aria-selected="false" data-tab="expiring" type="button">
+      Expiring Deals
+    </button>
+  </div>
+
+  <!-- Bargains panel -->
+  <div class="hp-intel__panel hp-intel__panel--active" data-panel="bargains" role="tabpanel">
+    {bargains.length > 0 ? (
+      <table class="hp-intel__table">
+        <thead>
+          <tr>
+            <th class="hp-intel__th hp-intel__th--player">Player</th>
+            <th class="hp-intel__th hp-intel__th--team">Team</th>
+            <th class="hp-intel__th hp-intel__th--salary">Salary</th>
+            <th class="hp-intel__th hp-intel__th--pts">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bargains.map(p => (
+            <tr class:list={['hp-intel__row', { 'hp-intel__row--user': p.isUser }]}>
+              <td class="hp-intel__td hp-intel__td--player">
+                <span class="hp-intel__player-name">{formatName(p.name)}</span>
+                <span class="hp-intel__player-pos">{p.position}</span>
+              </td>
+              <td class="hp-intel__td hp-intel__td--team">{p.teamName}</td>
+              <td class="hp-intel__td hp-intel__td--salary">${formatCompactNumber(p.salary)}</td>
+              <td class="hp-intel__td hp-intel__td--pts">{p.points.toFixed(1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <p class="hp-intel__empty">No scoring data available yet.</p>
+    )}
+  </div>
+
+  <!-- Expiring panel -->
+  <div class="hp-intel__panel" data-panel="expiring" role="tabpanel" hidden>
+    {expiring.length > 0 ? (
+      <table class="hp-intel__table">
+        <thead>
+          <tr>
+            <th class="hp-intel__th hp-intel__th--player">Player</th>
+            <th class="hp-intel__th hp-intel__th--team">Team</th>
+            <th class="hp-intel__th hp-intel__th--salary">Salary</th>
+            <th class="hp-intel__th hp-intel__th--pts">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {expiring.map(p => (
+            <tr class:list={['hp-intel__row', { 'hp-intel__row--user': p.isUser }]}>
+              <td class="hp-intel__td hp-intel__td--player">
+                <span class="hp-intel__player-name">{formatName(p.name)}</span>
+                <span class="hp-intel__player-pos">{p.position}</span>
+              </td>
+              <td class="hp-intel__td hp-intel__td--team">{p.teamName}</td>
+              <td class="hp-intel__td hp-intel__td--salary">${formatCompactNumber(p.salary)}</td>
+              <td class="hp-intel__td hp-intel__td--pts">{p.points.toFixed(1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <p class="hp-intel__empty">No expiring contracts found.</p>
+    )}
+  </div>
+</section>
+
+<script>
+  function initIntelTabs() {
+    const sections = document.querySelectorAll('[data-component="hp-intel"]');
+    sections.forEach(section => {
+      const tabs = section.querySelectorAll('[data-tab]');
+      const panels = section.querySelectorAll('[data-panel]');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = (tab as HTMLElement).dataset.tab;
+
+          tabs.forEach(t => {
+            t.classList.remove('hp-intel__tab--active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('hp-intel__tab--active');
+          tab.setAttribute('aria-selected', 'true');
+
+          panels.forEach(p => {
+            const panel = p as HTMLElement;
+            if (panel.dataset.panel === target) {
+              panel.classList.add('hp-intel__panel--active');
+              panel.removeAttribute('hidden');
+            } else {
+              panel.classList.remove('hp-intel__panel--active');
+              panel.setAttribute('hidden', '');
+            }
+          });
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initIntelTabs);
+</script>
+
+<style>
+  .hp-intel {
+    --dh-accent: var(--color-primary, #1c497c);
+    --dh-highlight-bg: color-mix(in srgb, var(--dh-accent) 6%, transparent);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.5rem 2rem;
+  }
+
+  .hp-intel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .hp-intel__section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--dh-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .hp-intel__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    text-decoration: none;
+    transition: gap 0.15s ease;
+  }
+
+  .hp-intel__cta:hover {
+    gap: 0.5rem;
+  }
+
+  .hp-intel__tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    padding-bottom: 0;
+  }
+
+  .hp-intel__tab {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+    margin-bottom: -1px;
+  }
+
+  .hp-intel__tab:hover {
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .hp-intel__tab--active {
+    color: var(--dh-accent);
+    border-bottom-color: var(--dh-accent);
+  }
+
+  .hp-intel__panel {
+    display: none;
+  }
+
+  .hp-intel__panel--active {
+    display: block;
+  }
+
+  .hp-intel__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .hp-intel__th {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0 0.5rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    white-space: nowrap;
+  }
+
+  .hp-intel__th--team,
+  .hp-intel__th--salary,
+  .hp-intel__th--pts { text-align: right; }
+
+  .hp-intel__row {
+    transition: background 0.1s ease;
+  }
+
+  .hp-intel__row:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .hp-intel__row--user {
+    background: var(--dh-highlight-bg);
+  }
+
+  .hp-intel__td {
+    padding: 0.4375rem 0.5rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .hp-intel__td--player {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+  }
+
+  .hp-intel__player-name {
+    font-weight: 500;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .hp-intel__player-pos {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .hp-intel__td--team {
+    text-align: right;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .hp-intel__td--salary {
+    text-align: right;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .hp-intel__td--pts {
+    text-align: right;
+    color: var(--color-gray-700, #374151);
+    font-weight: 600;
+  }
+
+  .hp-intel__empty {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 1.5rem 0;
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .hp-intel {
+      padding: 1.25rem;
+    }
+
+    .hp-intel__th--team,
+    .hp-intel__td--team {
+      display: none;
+    }
+  }
+</style>
