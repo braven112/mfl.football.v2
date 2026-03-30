@@ -12,7 +12,11 @@ import AuctionHero from './AuctionHero.astro';
 import DraftHero from './DraftHero.astro';
 import HeroBanner from './HeroBanner.astro';
 import LiveScoringHero from '../shared/LiveScoringHero';
+import TradeDeadlineHero from './TradeDeadlineHero';
+import PlayoffBracketHero from './PlayoffBracketHero';
 import '../../styles/live-scoring-hero.css';
+import '../../styles/trade-deadline-hero.css';
+import '../../styles/playoff-bracket-hero.css';
 
 // Off-season hero components (Phase C)
 import ChampionCrownedHero from './ChampionCrownedHero.astro';
@@ -85,6 +89,14 @@ const isFridayArticle = ptWeekday === 'Fri';
   />
 )}
 
+{/* P0++: Trade Deadline hero — dedicated countdown component */}
+{phase === 'trade-deadline' && state.tradeDeadlineProps && (
+  <TradeDeadlineHero
+    client:load
+    deadlineMidnightPT={state.tradeDeadlineProps.deadlineMidnightPT}
+  />
+)}
+
 {/* Daily rotation slots (regular-season, playoffs, championship) */}
 {slot === 'live-scoring' && liveScoring && (
   <LiveScoringHero
@@ -100,7 +112,18 @@ const isFridayArticle = ptWeekday === 'Fri';
     initialRemaining={liveScoring.initialRemaining}
   />
 )}
-{slot === 'standings' && <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
+{slot === 'standings' && phase === 'playoffs' && state.playoffProps && (
+  <PlayoffBracketHero
+    client:idle
+    leagueYear={state.playoffProps.leagueYear}
+    userFranchiseId={state.playoffProps.userFranchiseId}
+    userIsEliminated={state.playoffProps.userIsEliminated}
+    bracketSummary={state.playoffProps.bracketSummary}
+  />
+)}
+{slot === 'standings' && (phase !== 'playoffs' || !state.playoffProps) && (
+  <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />
+)}
 {slot === 'recap' && <RecapHero state={state} />}
 {slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
@@ -149,7 +172,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 )}
 
 {/* Fallback phases: trade-deadline, offseason-fallback, etc. render via HeroBanner */}
-{!slot && !state.auctionProps && !state.draftProps
+{!slot && !state.auctionProps && !state.draftProps && !state.tradeDeadlineProps
   && !state.championProps && !state.taggedShowcaseProps && !state.cutWatchProps
   && phase !== 'tag-window' && phase !== 'udfa-window'
   && fallback && (

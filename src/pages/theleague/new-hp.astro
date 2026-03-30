@@ -15,7 +15,9 @@ import { getAuthUser } from '../../utils/auth';
 import { resolveHeroState, parseTestDate, resolveHeroContent, isAuctionStripPeriod, isPostDraftPeriod } from '../../utils/hero-resolver';
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
+import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import type { ScheftnerFeed as FeedType } from '../../types/scheftner';
@@ -111,6 +113,62 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
       initialRemaining: liveData?.remaining,
     };
   } catch { /* live scoring is best-effort */ }
+}
+
+// Fetch playoff bracket data when slot is 'standings' during playoffs
+if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
+  try {
+    const seasonYear = getCurrentSeasonYear();
+    const bracketFeed = await import(`../../../data/theleague/mfl-feeds/${seasonYear}/playoff-brackets.json`);
+    const feedData = bracketFeed.default ?? bracketFeed;
+    const champRaw = feedData?.brackets?.['1'];
+
+    if (champRaw) {
+      const champBracket = normalizePlayoffBracket(champRaw, { id: '1', name: 'Championship' });
+
+      if (champBracket) {
+        // Build standings + seed maps for resolving bracket references
+        const standingsFeed = await import(`../../../data/theleague/mfl-feeds/${seasonYear}/standings.json`);
+        const standingsData = standingsFeed.default ?? standingsFeed;
+        const franchiseList = standingsData?.leagueStandings?.franchise
+          ? Array.isArray(standingsData.leagueStandings.franchise)
+            ? standingsData.leagueStandings.franchise
+            : [standingsData.leagueStandings.franchise]
+          : [];
+
+        // Build asset map from config
+        const assetMap = new Map<string, { icon?: string; banner?: string; aliases?: string[]; name?: string }>();
+        for (const t of allTeams) {
+          assetMap.set(t.franchiseId, {
+            icon: t.icon,
+            banner: t.banner,
+            aliases: t.aliases,
+            name: t.name,
+          });
+        }
+
+        const seedMaps = buildSeedMaps(franchiseList, assetMap);
+
+        // Build all-teams map for name resolution
+        const allTeamsMap = new Map<string, { name: string; icon?: string }>();
+        for (const t of allTeams) {
+          allTeamsMap.set(t.franchiseId, { name: t.name, icon: t.icon });
+        }
+
+        const bracketSummary = buildBracketSummary(champBracket, seedMaps, allTeamsMap);
+        const userEliminated = userFranchiseId
+          ? isEliminated(userFranchiseId, champBracket)
+          : undefined;
+
+        heroState.playoffProps = {
+          leagueYear: seasonYear,
+          userFranchiseId,
+          userIsEliminated: userEliminated,
+          bracketSummary,
+        };
+      }
+    }
+  } catch { /* bracket data is best-effort */ }
 }
 ---
 

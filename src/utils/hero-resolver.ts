@@ -737,7 +737,11 @@ export function resolveHeroState(
 
   // --- P0++: Trade Deadline Day (24h override) ---
   if (isTradeDeadlineDay(now)) {
+    const { year } = getPTComponents(now);
     return buildState('trade-deadline', 'P0++', 'isTradeDeadlineDay', now, testMode, {
+      tradeDeadlineProps: {
+        deadlineMidnightPT: `${year}-11-14T00:00:00-08:00`,
+      },
       fallbackHero: {
         source: 'event',
         title: 'Trade Deadline',
@@ -961,4 +965,14 @@ export function parseTestDate(testDateParam: string | null): Date | undefined {
   if (!isNaN(dateOnly.getTime())) return dateOnly;
 
   return undefined;
+}
+
+/**
+ * Get the appropriate standings/playoffs URL based on the current season phase.
+ * During playoffs and championship, links point to /theleague/playoffs instead.
+ */
+export function getStandingsUrl(phase: SeasonPhase): string {
+  return phase === 'playoffs' || phase === 'championship'
+    ? '/theleague/playoffs'
+    : '/theleague/standings';
 }

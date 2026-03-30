@@ -40,6 +40,15 @@ export type GameWindow = 'tnf' | 'sunday' | 'snf' | 'mnf' | null;
 /** Hero priority level */
 export type HeroPriority = 'P0++' | 'P0' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5';
 
+/** A single game in the compact bracket summary for the playoff hero */
+export interface PlayoffBracketSummaryGame {
+  gameId: string;
+  roundWeek: number;
+  home: { franchiseId?: string; seed?: number; displayName: string; icon?: string; points?: number };
+  away: { franchiseId?: string; seed?: number; displayName: string; icon?: string; points?: number };
+  isComplete: boolean;
+}
+
 /** The fully resolved hero state passed from page frontmatter to SeasonDailyHero */
 export interface HeroState {
   /** Current season phase */
@@ -102,6 +111,18 @@ export interface HeroState {
     }>;
     deadlineDate: string;
     daysUntilDeadline: number;
+  };
+  /** Trade deadline props (only when phase is 'trade-deadline') */
+  tradeDeadlineProps?: {
+    /** ISO string for midnight PT cutoff — used by client-side countdown */
+    deadlineMidnightPT: string;
+  };
+  /** Playoff bracket props (only when phase is 'playoffs' and slot is 'standings') */
+  playoffProps?: {
+    leagueYear: number;
+    userFranchiseId?: string;
+    userIsEliminated?: boolean;
+    bracketSummary: PlayoffBracketSummaryGame[];
   };
   /** Metadata for debugging and display */
   metadata: {

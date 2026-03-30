@@ -275,7 +275,8 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
   );
 
   const isChampionship = phase === 'championship';
-  const titlePrefix = isChampionship ? 'Championship' : getGameWindowLabel(gameWindow);
+  const isPlayoffs = phase === 'playoffs';
+  const titlePrefix = isChampionship ? 'Championship' : isPlayoffs ? 'Playoff' : getGameWindowLabel(gameWindow);
 
   // Find ALL user matchups (supports doubleheader weeks)
   const userMatchups = userFranchiseId
@@ -296,9 +297,11 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
     : [interestingMatchups.shift()].filter(Boolean) as MatchupPairing[];
   const compact = userMatchups.length > 0 ? interestingMatchups : interestingMatchups;
 
+  const rootClass = `lsh${isPlayoffs ? ' lsh--playoffs' : ''}`;
+
   if (matchups.length === 0) {
     return (
-      <div className="lsh" aria-label={`Live scoring for Week ${week}`}>
+      <div className={rootClass} aria-label={`Live scoring for Week ${week}`}>
         <div className="lsh__header">
           <h3 className="lsh__title">Live Scoring</h3>
           <StatusBadge isLive={isLive} remaining={remaining} gameWindow={gameWindow} />
@@ -311,7 +314,7 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
   }
 
   return (
-    <div className="lsh" aria-label={`Live scoring for Week ${week}`}>
+    <div className={rootClass} aria-label={`Live scoring for Week ${week}`}>
       <div className="lsh__header">
         <h3 className="lsh__title">{titlePrefix} Scoring</h3>
         <StatusBadge isLive={isLive} remaining={remaining} gameWindow={gameWindow} />
