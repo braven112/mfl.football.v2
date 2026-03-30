@@ -151,11 +151,11 @@
         },
         {
           "id": "submit-lineup",
-          "label": "Submit Lineup",
+          "label": "Set Lineup",
           "icon": "lineup",
-          "urlTemplate": "https://{host}/{year}/lineup?L={leagueId}",
-          "external": true,
-          "description": "Set your starting lineup on MFL"
+          "path": "/theleague/lineup",
+          "external": false,
+          "description": "Set your starting lineup"
         },
         {
           "id": "add-drop",
