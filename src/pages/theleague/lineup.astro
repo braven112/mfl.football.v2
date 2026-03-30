@@ -875,8 +875,19 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           size: 'compact',
         });
 
+        const isHome = game ? p.nflTeam === game.home : false;
+        let matchupHtml = '';
+        if (p.isBye) {
+          matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
+        } else if (oppTeam) {
+          matchupHtml = `<div class="cdm-matchup">
+            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="cdm-matchup__logo" width="12" height="12" />
+            <span class="cdm-matchup__text"><span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span> ${esc(oppTeam)}</span>
+          </div>`;
+        }
+
         return `<tr class="cdm-row" role="option" tabindex="${i === 0 ? '0' : '-1'}" data-player-id="${esc(p.id)}" aria-selected="false">
-          <td class="cdm-td cdm-td--player">${cell}</td>
+          <td class="cdm-td cdm-td--player">${cell}${matchupHtml}</td>
           <td class="cdm-td cdm-td--num ${fpaClass}">${esc(fpaRank)}</td>
           <td class="cdm-td cdm-td--num cdm-td--proj">${p.projection != null ? p.projection.toFixed(1) : '-'}</td>
           <td class="cdm-td cdm-td--num">${p.last3Avg != null ? p.last3Avg.toFixed(1) : '-'}</td>
@@ -1837,6 +1848,40 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .fpa--good { color: var(--lineup-fpa-good); font-weight: 600; }
   .fpa--bad { color: var(--lineup-fpa-bad); font-weight: 600; }
+
+  .cdm-matchup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+  }
+
+  .cdm-matchup__logo {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+
+  .cdm-matchup__text {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cdm-matchup__prefix {
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  .cdm-matchup--bye {
+    display: inline-block;
+    margin-top: 0.2rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
 
   /* ===================================================================
      Toast
