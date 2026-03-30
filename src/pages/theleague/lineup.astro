@@ -469,7 +469,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         <span class="count-display"><strong id="bench-count">{roster.length - slots.filter(s => s.playerId).length}</strong> players</span>
       </div>
       <ul class="lineup-bench-list" id="lineup-bench-list">
-        {roster.filter(p => !usedPlayerIds.has(p.id)).sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1)).map(player => (
+        {roster.filter(p => !usedPlayerIds.has(p.id)).sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1)).map(player => {
+          const game = player.gameIndex != null ? schedule[player.gameIndex] : null;
+          const oppTeam = game ? (player.nflTeam === game.home ? game.away : game.home) : null;
+          const isHome = game ? player.nflTeam === game.home : false;
+          return (
           <li class={`lineup-bench-row ${player.gameLocked ? 'lineup-bench-row--locked' : ''}`}
               data-player-id={player.id}>
             <div class="lineup-bench-row__player">
@@ -482,11 +486,20 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
               />
             </div>
             <span class="lineup-bench-row__pos">{player.position}</span>
+            {player.isBye ? (
+              <span class="lineup-bench-row__bye">BYE</span>
+            ) : oppTeam ? (
+              <div class="lineup-bench-row__opp">
+                <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt={oppTeam} class="lineup-bench-row__opp-logo" width="14" height="14" />
+                <span class="lineup-bench-row__opp-code"><span class="lineup-bench-row__opp-prefix">{isHome ? 'vs' : '@'}</span> {oppTeam}</span>
+              </div>
+            ) : null}
             {player.projection != null && (
               <span class="lineup-bench-row__proj">{player.projection.toFixed(1)}</span>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
 
@@ -1505,6 +1518,38 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     font-variant-numeric: tabular-nums;
     min-width: 32px;
     text-align: right;
+  }
+
+  .lineup-bench-row__bye {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+    letter-spacing: 0.04em;
+  }
+
+  .lineup-bench-row__opp {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .lineup-bench-row__opp-logo {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .lineup-bench-row__opp-code {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lineup-bench-row__opp-prefix {
+    font-size: 0.625rem;
+    color: var(--color-gray-400, #9ca3af);
   }
 
   .lineup-bench-row--locked { opacity: 0.6; }
