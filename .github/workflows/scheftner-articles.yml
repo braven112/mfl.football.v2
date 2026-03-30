@@ -1,0 +1,113 @@
+name: Scheftner Articles
+
+on:
+  schedule:
+    # Tuesday 6am PT (13:00 UTC) — weekly-recap
+    - cron: "0 13 * * 2"
+    # Wednesday 10pm PT (05:00 UTC Thursday) — waiver-pickups
+    - cron: "0 5 * * 4"
+    # Friday 8am PT (15:00 UTC) — weekend-preview
+    - cron: "0 15 * * 5"
+    # Saturday 9am PT (16:00 UTC) — matchup-preview
+    - cron: "0 16 * * 6"
+    # Daily 8am PT (15:00 UTC) — cut-watch (self-guards to Jul 15–Aug 16)
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+    inputs:
+      type:
+        description: "Article type to generate"
+        required: true
+        type: choice
+        options:
+          - weekly-recap
+          - waiver-pickups
+          - weekend-preview
+          - matchup-preview
+          - cut-watch
+          - championship-recap
+          - draft-grades
+          - team-grades
+      week:
+        description: "Override week number (optional)"
+        required: false
+        type: string
+
+concurrency:
+  group: scheftner-articles
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Determine article type
+        id: resolve
+        env:
+          INPUT_TYPE: ${{ github.event.inputs.type }}
+        run: |
+          if [ -n "$INPUT_TYPE" ]; then
+            echo "type=$INPUT_TYPE" >> "$GITHUB_OUTPUT"
+          else
+            # Map cron schedule (UTC day-of-week + hour) to article type
+            DOW=$(date -u +%u)  # 1=Mon ... 7=Sun
+            HOUR=$(date -u +%H)
+            TYPE=""
+            case "${DOW}-${HOUR}" in
+              2-13) TYPE="weekly-recap" ;;
+              4-05) TYPE="waiver-pickups" ;;
+              5-15) TYPE="weekend-preview" ;;
+              6-16) TYPE="matchup-preview" ;;
+              *)
+                # Daily 15:00 UTC = cut-watch (the script self-guards to Jul 15–Aug 16)
+                if [ "$HOUR" = "15" ]; then
+                  TYPE="cut-watch"
+                fi
+                ;;
+            esac
+            echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate article
+        if: steps.resolve.outputs.type != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
+          WEEK_OVERRIDE: ${{ github.event.inputs.week }}
+        run: |
+          WEEK_ARG=""
+          if [ -n "$WEEK_OVERRIDE" ]; then
+            WEEK_ARG="--week $WEEK_OVERRIDE"
+          fi
+          echo "Generating: $ARTICLE_TYPE"
+          node scripts/scheftner-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+
+      - name: Commit and push
+        if: steps.resolve.outputs.type != ''
+        env:
+          ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No new articles generated."
+            exit 0
+          fi
+
+          git config user.name "Scheftner Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/theleague/scheftner-feed.json
+          git commit -m "chore: scheftner article — $ARTICLE_TYPE"
+          git pull --rebase origin main
+          git push
