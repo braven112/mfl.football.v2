@@ -36,7 +36,7 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
       <h2 class="whats-next__heading">What's Next</h2>
       <a href={resolveLeaguePath("/theleague/calendar", hideLeaguePrefix)} class="whats-next__calendar-link">View full calendar &rarr;</a>
     </div>
-    <div class="whats-next__grid">
+    <div class:list={['whats-next__grid', { 'whats-next__grid--2col': maxCards === 2 }]}>
       {timeline.current && <WhatsNextCard event={timeline.current} position="current" />}
       {maxCards >= 2 && timeline.next && <WhatsNextCard event={timeline.next} position="next" />}
       {maxCards >= 3 && timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" />}
@@ -128,6 +128,10 @@ const hasEvents = timeline.current || timeline.next || timeline.upcoming;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
+  }
+
+  .whats-next__grid--2col {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   @media (max-width: 768px) {
