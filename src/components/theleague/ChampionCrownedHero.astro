@@ -70,6 +70,9 @@ const quip = quips[Math.floor(Math.random() * quips.length)];
   )}
 
   <a href={r('/theleague/playoffs')} class="champion-hero__cta">
+    <svg class="champion-hero__cta-icon" aria-hidden="true">
+      <use href={`${spriteUrl}#icon-trophy`}></use>
+    </svg>
     Championship Recap
     <span class="champion-hero__cta-arrow" aria-hidden="true">&rarr;</span>
   </a>
@@ -208,6 +211,13 @@ const quip = quips[Math.floor(Math.random() * quips.length)];
   .champion-hero__cta:focus-visible {
     outline: 2px solid var(--color-warning, #d97706);
     outline-offset: 2px;
+  }
+
+  .champion-hero__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    fill: currentColor;
   }
 
   .champion-hero__cta-arrow {

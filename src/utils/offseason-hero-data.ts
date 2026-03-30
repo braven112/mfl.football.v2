@@ -112,17 +112,93 @@ interface CutCandidateRaw {
 }
 
 /**
+ * Get projected scores as a Map<playerId, score>.
+ */
+function getProjectionMap(leagueYear: number): Map<string, number> {
+  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/projectedScores.json`);
+  const map = new Map<string, number>();
+  if (!data?.projectedScores?.playerScore) return map;
+
+  const scores = Array.isArray(data.projectedScores.playerScore)
+    ? data.projectedScores.playerScore
+    : [data.projectedScores.playerScore];
+
+  for (const ps of scores) {
+    const score = parseFloat(ps.score || '0');
+    if (ps.id) map.set(ps.id, score);
+  }
+  return map;
+}
+
+/**
+ * Get the most recent pickup per franchise from transactions.
+ * Returns Map<franchiseId, playerId[]> sorted newest-first.
+ */
+function getRecentPickups(leagueYear: number): Map<string, string[]> {
+  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/transactions.json`);
+  const map = new Map<string, { playerId: string; timestamp: number }[]>();
+  if (!data?.transactions?.transaction) return new Map();
+
+  const txns = Array.isArray(data.transactions.transaction)
+    ? data.transactions.transaction
+    : [data.transactions.transaction];
+
+  for (const txn of txns) {
+    if (txn.type !== 'FREE_AGENT' && txn.type !== 'AUCTION_WON') continue;
+    const franchiseId = txn.franchise;
+    const timestamp = parseInt(txn.timestamp || '0', 10);
+    if (!franchiseId) continue;
+
+    let playerIds: string[] = [];
+    const txnStr = txn.transaction || '';
+
+    if (txn.type === 'AUCTION_WON') {
+      // Format: "playerId|salary|"
+      const pid = txnStr.split('|')[0];
+      if (pid) playerIds = [pid];
+    } else {
+      // FREE_AGENT format: "|addedId1,addedId2,|droppedId1,droppedId2,"
+      const parts = txnStr.split('|');
+      const added = (parts[1] || '').split(',').filter(Boolean);
+      playerIds = added;
+    }
+
+    if (!map.has(franchiseId)) map.set(franchiseId, []);
+    for (const pid of playerIds) {
+      map.get(franchiseId)!.push({ playerId: pid, timestamp });
+    }
+  }
+
+  // Sort each franchise's pickups newest-first and return just IDs
+  const result = new Map<string, string[]>();
+  for (const [fid, pickups] of map) {
+    pickups.sort((a, b) => b.timestamp - a.timestamp);
+    result.set(fid, pickups.map((p) => p.playerId));
+  }
+  return result;
+}
+
+/**
  * Identify teams over the 22-player active roster limit and their likely cuts.
- * For each over-limit team, rank active (ROSTER status) players by salary
- * ascending — the cheapest beyond 22 are the cut candidates.
+ *
+ * Uses a two-source alternating algorithm:
+ * 1. Most recent pickup (from transactions — newest acquisition first)
+ * 2. Lowest projected points at the owner's most-stacked position
+ *
+ * Alternates between these two sources until the team is at the limit,
+ * skipping duplicates.
  */
 export function getCutCandidates(leagueYear: number): CutCandidateRaw[] {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
-  if (!data?.rosters?.franchise) return [];
+  const rosterData = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/rosters.json`);
+  if (!rosterData?.rosters?.franchise) return [];
 
-  const franchises = Array.isArray(data.rosters.franchise)
-    ? data.rosters.franchise
-    : [data.rosters.franchise];
+  const franchises = Array.isArray(rosterData.rosters.franchise)
+    ? rosterData.rosters.franchise
+    : [rosterData.rosters.franchise];
+
+  const projections = getProjectionMap(leagueYear);
+  const recentPickups = getRecentPickups(leagueYear);
+  const playerMap = getPlayerMap(leagueYear);
 
   const results: CutCandidateRaw[] = [];
 
@@ -132,22 +208,99 @@ export function getCutCandidates(leagueYear: number): CutCandidateRaw[] {
 
     if (activePlayers.length <= TARGET_ACTIVE_COUNT) continue;
 
-    // Sort by salary ascending — cheapest are most expendable
-    const sorted = [...activePlayers].sort(
-      (a: any, b: any) => parseFloat(a.salary || '0') - parseFloat(b.salary || '0'),
-    );
-
-    // Players beyond the 22-player limit are cut candidates
     const excess = activePlayers.length - TARGET_ACTIVE_COUNT;
-    const candidates = sorted.slice(0, excess).map((p: any) => ({
-      playerId: p.id,
-      salary: parseFloat(p.salary || '0'),
-    }));
+    const activeIds = new Set(activePlayers.map((p: any) => p.id));
+    const salaryMap = new Map<string, number>(activePlayers.map((p: any) => [p.id, parseFloat(p.salary || '0')]));
+
+    // Source 1: Recent pickups (filtered to players still on active roster)
+    const pickupQueue = (recentPickups.get(franchise.id) || [])
+      .filter((pid) => activeIds.has(pid));
+
+    // Source 2: Lowest projected points at the most-stacked position
+    // Build position counts for active players
+    const posCounts = new Map<string, string[]>();
+    for (const p of activePlayers) {
+      const info = playerMap.get(p.id);
+      const pos = info?.position || 'UNKNOWN';
+      if (!posCounts.has(pos)) posCounts.set(pos, []);
+      posCounts.get(pos)!.push(p.id);
+    }
+
+    // Build a queue: from most-stacked position, pick lowest-projected player,
+    // then re-evaluate which position is most stacked
+    const getNextWeakestAtStackedPos = (excluded: Set<string>): string | null => {
+      // Recount positions excluding already-picked candidates
+      const remaining = new Map<string, string[]>();
+      for (const [pos, pids] of posCounts) {
+        const active = pids.filter((id) => !excluded.has(id));
+        if (active.length > 1) remaining.set(pos, active);
+      }
+      if (remaining.size === 0) return null;
+
+      // Find position with most players
+      let maxPos = '';
+      let maxCount = 0;
+      for (const [pos, pids] of remaining) {
+        if (pids.length > maxCount) {
+          maxCount = pids.length;
+          maxPos = pos;
+        }
+      }
+      if (!maxPos) return null;
+
+      // Pick the lowest-projected player at that position
+      const candidates = remaining.get(maxPos)!;
+      candidates.sort((a, b) => (projections.get(a) || 0) - (projections.get(b) || 0));
+      return candidates[0] || null;
+    };
+
+    // Alternate between the two sources
+    const selected: Array<{ playerId: string; salary: number }> = [];
+    const used = new Set<string>();
+    let pickupIdx = 0;
+    let usePickup = true; // Start with most recent pickup
+
+    while (selected.length < excess) {
+      let candidate: string | null = null;
+
+      if (usePickup) {
+        // Try next recent pickup not already selected
+        while (pickupIdx < pickupQueue.length && used.has(pickupQueue[pickupIdx])) {
+          pickupIdx++;
+        }
+        if (pickupIdx < pickupQueue.length) {
+          candidate = pickupQueue[pickupIdx];
+          pickupIdx++;
+        }
+      }
+
+      if (!usePickup || candidate === null) {
+        // Fall back to lowest-projected at most-stacked position
+        candidate = getNextWeakestAtStackedPos(used);
+      }
+
+      if (candidate === null) {
+        // Final fallback: cheapest remaining player
+        const remaining = activePlayers
+          .filter((p: any) => !used.has(p.id))
+          .sort((a: any, b: any) => parseFloat(a.salary || '0') - parseFloat(b.salary || '0'));
+        if (remaining.length > 0) candidate = remaining[0].id;
+        else break;
+      }
+
+      used.add(candidate);
+      selected.push({
+        playerId: candidate,
+        salary: salaryMap.get(candidate) || 0,
+      });
+
+      usePickup = !usePickup; // Alternate
+    }
 
     results.push({
       franchiseId: franchise.id,
       activeCount: activePlayers.length,
-      cutCandidates: candidates,
+      cutCandidates: selected,
     });
   }
 

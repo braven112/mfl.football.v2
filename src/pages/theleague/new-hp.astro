@@ -193,8 +193,15 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         />
       )}
       {testMode && (
-        <div class="hp2__debug">
-          <code>Phase: {heroState.phase} | Slot: {heroState.slot ?? 'none'} | Week: {heroState.metadata.week ?? 'n/a'} | Window: {heroState.metadata.gameWindow ?? 'none'} | Live: {heroState.metadata.isLive} | Priority: {heroState.priority} | Resolved by: {heroState.metadata.resolvedBy}</code>
+        <div class="hp2__debug" id="demo-nav">
+          <div class="hp2__debug-phase">
+            <code>Phase: {heroState.phase} | Slot: {heroState.slot ?? 'none'} | Week: {heroState.metadata.week ?? 'n/a'} | Window: {heroState.metadata.gameWindow ?? 'none'} | Live: {heroState.metadata.isLive} | Priority: {heroState.priority} | Resolved by: {heroState.metadata.resolvedBy}</code>
+          </div>
+          <div class="hp2__debug-nav">
+            <button class="hp2__debug-btn" id="demo-prev" type="button">&larr; Prev</button>
+            <span class="hp2__debug-label" id="demo-label"></span>
+            <button class="hp2__debug-btn" id="demo-next" type="button">Next &rarr;</button>
+          </div>
         </div>
       )}
     </section>
@@ -249,6 +256,41 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
     color: var(--color-gray-500, #6b7280);
   }
 
+  .hp2__debug-phase {
+    margin-bottom: 0.375rem;
+  }
+
+  .hp2__debug-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hp2__debug-btn {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    background: #fff;
+    color: var(--color-gray-700, #374151);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .hp2__debug-btn:hover {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border-color: var(--color-primary, #1c497c);
+  }
+
+  .hp2__debug-label {
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    flex: 1;
+    text-align: center;
+  }
+
   .hp2__sidebar {
     min-width: 0;
     position: sticky;
@@ -280,3 +322,89 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
     }
   }
 </style>
+
+<script>
+  function initDemoNav() {
+    const nav = document.getElementById('demo-nav');
+    if (!nav) return;
+
+    // Key dates for cycling through the full year (using 2026 league year)
+    const stops = [
+      { date: '2026-01-08', label: 'Tag Window Opens (Jan 8)' },
+      { date: '2026-01-20', label: 'Tag Window Mid (Jan 20)' },
+      { date: '2026-02-14', label: 'Tag Window Closes (Feb 14)' },
+      { date: '2026-02-15', label: 'Tagged Showcase (Feb 15)' },
+      { date: '2026-03-09', label: 'Auction Preview (Mon before 3rd Thu)' },
+      { date: '2026-03-12T07:00', label: 'Auction Live (3rd Thu 7am PT)' },
+      { date: '2026-03-16', label: 'Auction Mid (Day 4)' },
+      { date: '2026-03-22', label: 'Auction Late (Day 10)' },
+      { date: '2026-04-15', label: 'Auction Strip (post-hero)' },
+      { date: '2026-04-28', label: 'NFL Draft Weekend' },
+      { date: '2026-05-01', label: 'Draft Announced' },
+      { date: '2026-05-15', label: 'Rookie Draft Live' },
+      { date: '2026-05-22', label: 'UDFA Window' },
+      { date: '2026-06-15', label: 'Offseason Fallback (Jun)' },
+      { date: '2026-07-15', label: 'Cut Watch (Jul 15)' },
+      { date: '2026-08-01', label: 'Cut Watch (Aug 1)' },
+      { date: '2026-08-16', label: 'Roster Deadline (Aug 16)' },
+      { date: '2025-09-04T20:20', label: 'NFL Kickoff (Season Opens)' },
+      { date: '2025-09-07T13:00', label: 'Week 1 Sunday' },
+      { date: '2025-09-08T20:15', label: 'Week 1 MNF' },
+      { date: '2025-10-16T20:15', label: 'Mid-Season (Week 6 TNF)' },
+      { date: '2025-11-13', label: 'Trade Deadline (Nov 13)' },
+      { date: '2025-11-27T12:30', label: 'Late Season (Thanksgiving)' },
+      { date: '2025-12-11T20:15', label: 'Week 15 Playoffs Start' },
+      { date: '2025-12-18T20:15', label: 'Week 16 Playoffs' },
+      { date: '2025-12-25T13:00', label: 'Week 17 Championship' },
+      { date: '2025-12-26', label: 'Champion Crowned' },
+      { date: '2025-12-31', label: 'Champion Crowned (Day 5)' },
+    ];
+
+    // Find current stop based on URL
+    const url = new URL(window.location.href);
+    const currentDate = url.searchParams.get('testDate') || '';
+    let currentIdx = stops.findIndex(s => s.date === currentDate);
+    if (currentIdx === -1) {
+      // Find closest match
+      currentIdx = stops.findIndex(s => currentDate.startsWith(s.date.split('T')[0]));
+      if (currentIdx === -1) currentIdx = 0;
+    }
+
+    const label = document.getElementById('demo-label');
+    const prevBtn = document.getElementById('demo-prev') as HTMLButtonElement;
+    const nextBtn = document.getElementById('demo-next') as HTMLButtonElement;
+    if (!label || !prevBtn || !nextBtn) return;
+
+    function update() {
+      const stop = stops[currentIdx];
+      label.textContent = `${currentIdx + 1}/${stops.length} — ${stop.label}`;
+      prevBtn.disabled = currentIdx === 0;
+      nextBtn.disabled = currentIdx === stops.length - 1;
+    }
+
+    function navigate(idx: number) {
+      currentIdx = idx;
+      const stop = stops[currentIdx];
+      url.searchParams.set('testDate', stop.date);
+      window.location.href = url.toString();
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentIdx > 0) navigate(currentIdx - 1);
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentIdx < stops.length - 1) navigate(currentIdx + 1);
+    });
+
+    // Keyboard shortcuts: left/right arrow
+    document.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft' && currentIdx > 0) navigate(currentIdx - 1);
+      if (e.key === 'ArrowRight' && currentIdx < stops.length - 1) navigate(currentIdx + 1);
+    });
+
+    update();
+  }
+  document.addEventListener('astro:page-load', initDemoNav);
+</script>

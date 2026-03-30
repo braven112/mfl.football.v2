@@ -39,7 +39,7 @@ const deadlineFormatted = deadline.toLocaleDateString('en-US', {
         {isDeadlineDay ? (
           <div class="tag-hero__countdown tag-hero__countdown--urgent">
             <svg class="tag-hero__countdown-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-clock`}></use>
+              <use href={`${spriteUrl}#icon-history`}></use>
             </svg>
             <span>Deadline today</span>
           </div>
@@ -53,7 +53,7 @@ const deadlineFormatted = deadline.toLocaleDateString('en-US', {
 
       <a href={r('/theleague/rosters')} class="tag-hero__cta">
         <svg class="tag-hero__cta-icon" aria-hidden="true">
-          <use href={`${spriteUrl}#icon-tag`}></use>
+          <use href={`${spriteUrl}#icon-franchise-tag`}></use>
         </svg>
         <span>Manage Your Roster</span>
         <span class="tag-hero__cta-arrow" aria-hidden="true">&rarr;</span>
@@ -64,8 +64,7 @@ const deadlineFormatted = deadline.toLocaleDateString('en-US', {
       <h3 class="tag-hero__info-title">How It Works</h3>
       <ul class="tag-hero__info-list">
         <li><strong>Franchise Tag:</strong> Pay 120% of current salary or top-3 position average (whichever is higher)</li>
-        <li><strong>Extension:</strong> Lock in a player beyond their current contract at a calculated rate</li>
-        <li><strong>Team Option:</strong> Pick up the next year at 110% escalation</li>
+        <li><strong>Extension:</strong> Lock in a player with 2 years or more on their contract</li>
         <li><strong>Deadline:</strong> {deadlineFormatted} — tags and extensions must be filed before the new league year</li>
       </ul>
     </div>
