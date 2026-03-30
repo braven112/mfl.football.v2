@@ -17,7 +17,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerHeadshot, resolveEspnId } from '../../constants/roster-constants';
+import { getPlayerHeadshot } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
 
 // ---------------------------------------------------------------------------
@@ -129,9 +129,23 @@ const nflByeWeeks: Record<string, number> = {
   NYJ: 13, PHI: 8, PIT: 9, SF: 6, SEA: 10, TB: 13, TEN: 5, WAS: 7,
 };
 
-// ESPN college ID fallback (rookies without NFL headshots)
+// ESPN ID sources — feed file has espn_id for ~1800 players, college IDs covers ~90 rookies
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 const espnCollegeMap = (espnCollegeIds as any)?.players ?? {};
+
+// Build ESPN ID lookup from local player feed (the full MFL export, not the league-scoped API
+// which strips espn_id). This is the same source rosters.astro and trade-builder.astro use.
+const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', { eager: true });
+const espnIdByMflId = new Map<string, string>();
+for (const [path, mod] of Object.entries(playerFeeds)) {
+  const year = path.match(/mfl-feeds\/(\d{4})\//)?.[1];
+  if (year !== String(leagueYear)) continue;
+  const list = (mod as any)?.default?.players?.player ?? (mod as any)?.players?.player ?? [];
+  const arr = Array.isArray(list) ? list : [list];
+  for (const p of arr) {
+    if (p.id && p.espn_id) espnIdByMflId.set(p.id, p.espn_id);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Build LineupPlayer array
@@ -215,7 +229,8 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   const pd = playerMap.get(rp.id);
   const nflTeam = normalizeTeamCode(pd?.team || '');
   const position = (pd?.position || 'N/A').replace(/^Def$/i, 'DEF').replace(/^K$/i, 'PK');
-  const espnId = resolveEspnId(rp.id, pd, espnCollegeMap);
+  const feedEspnId = espnIdByMflId.get(rp.id) ?? null;
+  const espnId = feedEspnId || espnCollegeMap[rp.id]?.espnCollegeId || null;
   const headshot = getPlayerHeadshot(rp.id, espnId);
   const proj = projMap.get(rp.id) ?? null;
   const isBye = nflByeWeeks[nflTeam] === week;
