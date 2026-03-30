@@ -298,29 +298,39 @@ try {
 const slots: { position: string; index: number; playerId: string | null; locked: boolean }[] = [];
 const usedPlayerIds = new Set<string>();
 
-const starterRoster = roster.filter(p => starterIds.has(p.id));
+// If MFL returned starters, use those; otherwise fill optimally by projection
+const hasStarters = starterIds.size > 0;
+const candidatePool = hasStarters
+  ? roster.filter(p => starterIds.has(p.id))
+  : [...roster].sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
 
-// Fill position-specific slots first
+// Pre-allocate slots array to preserve positional order
 for (let i = 0; i < SLOT_POSITIONS.length; i++) {
-  const slotPos = SLOT_POSITIONS[i];
-  let assignedPlayer: LineupPlayer | null = null;
+  slots.push({ position: SLOT_POSITIONS[i], index: i, playerId: null, locked: false });
+}
 
-  if (slotPos !== 'FLEX') {
-    assignedPlayer = starterRoster.find(p => p.position === slotPos && !usedPlayerIds.has(p.id)) || null;
-  } else {
-    assignedPlayer = starterRoster.find(p => ['RB', 'WR', 'TE'].includes(p.position) && !usedPlayerIds.has(p.id)) || null;
+// Pass 1: Fill position-specific slots (non-FLEX)
+for (let i = 0; i < slots.length; i++) {
+  if (slots[i].position === 'FLEX') continue;
+  const assignedPlayer = candidatePool.find(p => p.position === slots[i].position && !usedPlayerIds.has(p.id)) || null;
+  if (assignedPlayer) {
+    usedPlayerIds.add(assignedPlayer.id);
+    slots[i].playerId = assignedPlayer.id;
+    slots[i].locked = assignedPlayer.gameLocked;
   }
+}
 
-  if (assignedPlayer) usedPlayerIds.add(assignedPlayer.id);
-
-  const gameLocked = assignedPlayer ? assignedPlayer.gameLocked : false;
-
-  slots.push({
-    position: slotPos,
-    index: i,
-    playerId: assignedPlayer?.id || null,
-    locked: gameLocked,
-  });
+// Pass 2: Fill FLEX slots with best remaining RB/WR/TE
+for (let i = 0; i < slots.length; i++) {
+  if (slots[i].position !== 'FLEX') continue;
+  const assignedPlayer = candidatePool.find(p =>
+    ['RB', 'WR', 'TE'].includes(p.position) && !usedPlayerIds.has(p.id)
+  ) || null;
+  if (assignedPlayer) {
+    usedPlayerIds.add(assignedPlayer.id);
+    slots[i].playerId = assignedPlayer.id;
+    slots[i].locked = assignedPlayer.gameLocked;
+  }
 }
 
 // Available weeks for selector
