@@ -387,7 +387,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <button class="lineup-clear" id="lineup-clear" aria-label="Hold to clear all starter slots">
         <svg class="lineup-clear__ring" aria-hidden="true" width="28" height="28" viewBox="0 0 28 28">
           <circle cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-200, #e5e7eb)" stroke-width="2"/>
-          <circle class="lineup-clear__progress" cx="14" cy="14" r="12" fill="none" stroke="var(--color-red-500, #ef4444)" stroke-width="2" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" transform="rotate(-90 14 14)"/>
+          <circle class="lineup-clear__progress" cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-500, #6b7280)" stroke-width="2" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" transform="rotate(-90 14 14)"/>
           <path d="M10 10l8 8M18 10l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         Hold to Clear
@@ -1201,13 +1201,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     submitBtn.addEventListener('click', submitLineup);
     optimalBtn.addEventListener('click', setOptimalLineup);
-    // Long-press to clear (600ms hold)
+    // Long-press to clear (1300ms hold)
     const clearProgress = clearBtn.querySelector('.lineup-clear__progress') as SVGCircleElement;
-    const CLEAR_HOLD_MS = 600;
+    const CLEAR_HOLD_MS = 1300;
     let clearTimer: ReturnType<typeof setTimeout> | null = null;
 
     function startClearHold() {
-      clearProgress.style.transition = `stroke-dashoffset ${CLEAR_HOLD_MS}ms linear`;
+      clearProgress.style.transition = `stroke-dashoffset ${CLEAR_HOLD_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
       clearProgress.style.strokeDashoffset = '0';
       clearBtn.classList.add('lineup-clear--holding');
       clearTimer = setTimeout(() => {
@@ -1428,9 +1428,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   }
   .lineup-clear:hover { background: var(--color-gray-100, #f3f4f6); }
   .lineup-clear--holding {
-    color: var(--color-red-600, #dc2626);
-    border-color: var(--color-red-300, #fca5a5);
-    background: var(--color-red-50, #fef2f2);
+    color: var(--color-gray-800, #1f2937);
+    border-color: var(--color-gray-400, #9ca3af);
+    background: var(--color-gray-100, #f3f4f6);
   }
   .lineup-clear__ring { flex-shrink: 0; }
   .lineup-clear__progress { stroke-dashoffset: 75.4; }
