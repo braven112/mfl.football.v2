@@ -200,6 +200,7 @@
 .sfc-post__actions .sfc-replies {
   flex-basis: 100%;
   order: 99;
+  margin-left: calc(-1 * var(--sfc-reply-indent));
 }
 
 /* ── Reply Toggle Button — matches sf-reaction-like / sf-reaction-pill pill style ── */
