@@ -327,12 +327,12 @@ for (let i = 0; i < slots.length; i++) {
 
 // Available weeks for selector
 const availableWeeks: { week: number; label: string; isCurrent: boolean; isPast: boolean }[] = [];
-for (let w = Math.max(1, currentWeek); w <= Math.min(currentWeek + 3, 22); w++) {
+for (let w = 1; w <= 22; w++) {
   availableWeeks.push({
     week: w,
     label: `Week ${w}`,
     isCurrent: w === currentWeek,
-    isPast: false,
+    isPast: w < currentWeek,
   });
 }
 
@@ -383,6 +383,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           <path d="M8 1l2.09 4.26L15 6.27l-3.5 3.42L12.18 15 8 12.77 3.82 15l.68-5.31L1 6.27l4.91-.71L8 1z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
         </svg>
         Set Optimal
+      </button>
+      <button class="lineup-clear" id="lineup-clear" aria-label="Clear all starter slots">
+        <svg class="lineup-clear__icon" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Clear
       </button>
       <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
     </div>
@@ -601,6 +607,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const toastText = document.getElementById('lineup-toast-text')!;
     const weekSelect = document.getElementById('lineup-week') as HTMLSelectElement;
     const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
+    const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
     const statusEl = document.getElementById('lineup-status')!;
 
     let activeSlotIndex: number | null = null;
@@ -1029,6 +1036,30 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     }
 
     // ---------------------------------------------------------------------------
+    // Clear Lineup
+    // ---------------------------------------------------------------------------
+    function clearLineup() {
+      let clearedCount = 0;
+      for (let i = 0; i < currentSlots.length; i++) {
+        if (currentSlots[i].locked || !currentSlots[i].playerId) continue;
+        currentSlots[i].playerId = null;
+        clearedCount++;
+      }
+
+      if (clearedCount === 0) {
+        announce('Lineup is already empty.');
+        statusEl.textContent = 'Already empty!';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        return;
+      }
+
+      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+      updateSubmitBar();
+      announce(`Lineup cleared. ${clearedCount} slots emptied.`);
+      haptic('light');
+    }
+
+    // ---------------------------------------------------------------------------
     // Submit
     // ---------------------------------------------------------------------------
     async function submitLineup() {
@@ -1143,6 +1174,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     submitBtn.addEventListener('click', submitLineup);
     optimalBtn.addEventListener('click', setOptimalLineup);
+    clearBtn.addEventListener('click', clearLineup);
 
     weekSelect.addEventListener('change', () => {
       const newWeek = weekSelect.value;
@@ -1303,16 +1335,34 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--color-primary, #1c497c);
-    background: transparent;
+    color: var(--text-on-colored, #fff);
+    background: var(--color-primary, #1c497c);
     border: 1px solid var(--color-primary, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+    min-height: 44px;
+    transition: background 0.15s ease, filter 0.15s ease;
+  }
+  .lineup-optimal:hover { filter: brightness(1.1); }
+  .lineup-optimal:active { filter: brightness(0.95); transform: scale(0.98); }
+
+  .lineup-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    background: transparent;
+    border: 1px solid var(--color-gray-300, #d1d5db);
     border-radius: var(--radius-md, 0.5rem);
     cursor: pointer;
     min-height: 44px;
     transition: background 0.15s ease;
   }
-  .lineup-optimal:hover { background: rgba(28, 73, 124, 0.06); }
-  .lineup-optimal:active { background: rgba(28, 73, 124, 0.12); }
+  .lineup-clear:hover { background: var(--color-gray-100, #f3f4f6); }
+  .lineup-clear:active { background: var(--color-gray-200, #e5e7eb); }
 
   .lineup-status {
     font-size: 0.8125rem;
