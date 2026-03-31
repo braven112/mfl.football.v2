@@ -384,11 +384,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         </svg>
         Set Optimal
       </button>
-      <button class="lineup-clear" id="lineup-clear" aria-label="Clear all starter slots">
-        <svg class="lineup-clear__icon" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
-          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <button class="lineup-clear" id="lineup-clear" aria-label="Hold to clear all starter slots">
+        <svg class="lineup-clear__ring" aria-hidden="true" width="28" height="28" viewBox="0 0 28 28">
+          <circle cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-200, #e5e7eb)" stroke-width="2"/>
+          <circle class="lineup-clear__progress" cx="14" cy="14" r="12" fill="none" stroke="var(--color-red-500, #ef4444)" stroke-width="2" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" transform="rotate(-90 14 14)"/>
+          <path d="M10 10l8 8M18 10l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-        Clear
+        Hold to Clear
       </button>
       <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
     </div>
@@ -1199,7 +1201,32 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     submitBtn.addEventListener('click', submitLineup);
     optimalBtn.addEventListener('click', setOptimalLineup);
-    clearBtn.addEventListener('click', clearLineup);
+    // Long-press to clear (600ms hold)
+    const clearProgress = clearBtn.querySelector('.lineup-clear__progress') as SVGCircleElement;
+    const CLEAR_HOLD_MS = 600;
+    let clearTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function startClearHold() {
+      clearProgress.style.transition = `stroke-dashoffset ${CLEAR_HOLD_MS}ms linear`;
+      clearProgress.style.strokeDashoffset = '0';
+      clearBtn.classList.add('lineup-clear--holding');
+      clearTimer = setTimeout(() => {
+        clearLineup();
+        cancelClearHold();
+      }, CLEAR_HOLD_MS);
+    }
+
+    function cancelClearHold() {
+      if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+      clearProgress.style.transition = 'stroke-dashoffset 0.15s ease';
+      clearProgress.style.strokeDashoffset = '75.4';
+      clearBtn.classList.remove('lineup-clear--holding');
+    }
+
+    clearBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); startClearHold(); });
+    clearBtn.addEventListener('pointerup', cancelClearHold);
+    clearBtn.addEventListener('pointerleave', cancelClearHold);
+    clearBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
     weekSelect.addEventListener('change', () => {
       const newWeek = weekSelect.value;
@@ -1394,10 +1421,19 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     border-radius: var(--radius-md, 0.5rem);
     cursor: pointer;
     min-height: 44px;
-    transition: background 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   .lineup-clear:hover { background: var(--color-gray-100, #f3f4f6); }
-  .lineup-clear:active { background: var(--color-gray-200, #e5e7eb); }
+  .lineup-clear--holding {
+    color: var(--color-red-600, #dc2626);
+    border-color: var(--color-red-300, #fca5a5);
+    background: var(--color-red-50, #fef2f2);
+  }
+  .lineup-clear__ring { flex-shrink: 0; }
+  .lineup-clear__progress { stroke-dashoffset: 75.4; }
 
   .lineup-status {
     font-size: 0.8125rem;
