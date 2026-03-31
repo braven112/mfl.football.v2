@@ -1,5 +1,20 @@
 [
   {
+    "id": "weekly-rollup-2026-03-30",
+    "date": "2026-03-30",
+    "title": "Weekly Fixes & Polish (Mar 25-25)",
+    "summary": "4 bug fixes and style improvements across other.",
+    "description": [
+      "This week's 4 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Other</strong> — Comment image uploads now work — images were being dropped between the composer and the API, so uploads appeared to succeed but images never showed on the posted comment. Team icons on The Board no longer have a blue circle background — they now match the transparent style used on Ask Roger. Image uploads no longer fail with a 413 error on large photos — images are now auto-compressed client-side before uploading via Vercel Blob's direct upload. Category icons on The Board now use SVG sprite icons (beer, gavel, wrench) instead of plain emoji text."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true
+  },
+  {
     "id": "submit-lineup",
     "date": "2026-03-28",
     "title": "Set Lineup",
