@@ -470,6 +470,23 @@
   font-size: 0.8125rem;
 }
 
+/* ── Mobile Reply Adjustments ── */
+@media (max-width: 640px) {
+  :root {
+    --sfc-reply-avatar-size: 1.125rem;
+    --sfc-reply-body-size: 0.8rem;
+  }
+
+  .sfc-post__body,
+  .sf-post__body {
+    font-size: 0.8rem;
+  }
+
+  .sfc-reply {
+    gap: 0.375rem;
+  }
+}
+
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   .sfc-typing__dot {
