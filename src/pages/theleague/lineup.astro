@@ -588,6 +588,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const originalSlots: SlotState[] = data.slots.map((s: SlotState) => ({ ...s }));
     const rosterMap = new Map(data.roster.map((p: any) => [p.id, p]));
     let lastSwap: { slotIndex: number; oldPlayerId: string; newPlayerId: string } | null = null;
+    let lastClear: { slots: (string | null)[] } | null = null;
     let previousFocus: HTMLElement | null = null;
 
     // DOM refs
@@ -943,6 +944,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       currentSlots[slotIndex].playerId = newPlayerId;
 
       lastSwap = { slotIndex, oldPlayerId: oldPlayerId || '', newPlayerId };
+      lastClear = null;
 
       renderSlotCard(slotIndex);
       updateSubmitBar();
@@ -972,6 +974,23 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       announce(`Undo: restored ${restored?.name || 'empty'} to ${currentSlots[lastSwap.slotIndex].position}.`);
       haptic('medium');
       lastSwap = null;
+    }
+
+    function undoClear() {
+      if (!lastClear) return;
+      let restoredCount = 0;
+      for (let i = 0; i < currentSlots.length; i++) {
+        if (currentSlots[i].locked) continue;
+        if (currentSlots[i].playerId !== lastClear.slots[i]) {
+          currentSlots[i].playerId = lastClear.slots[i];
+          restoredCount++;
+        }
+      }
+      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+      updateSubmitBar();
+      announce(`Undo clear: ${restoredCount} starters restored.`);
+      haptic('medium');
+      lastClear = null;
     }
 
     // ---------------------------------------------------------------------------
@@ -1040,6 +1059,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     // ---------------------------------------------------------------------------
     function clearLineup() {
       let clearedCount = 0;
+      const snapshot = currentSlots.map(s => s.playerId);
+
       for (let i = 0; i < currentSlots.length; i++) {
         if (currentSlots[i].locked || !currentSlots[i].playerId) continue;
         currentSlots[i].playerId = null;
@@ -1053,10 +1074,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         return;
       }
 
+      lastClear = { slots: snapshot };
+      lastSwap = null;
+
       for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
       updateSubmitBar();
       announce(`Lineup cleared. ${clearedCount} slots emptied.`);
       haptic('light');
+      showToast('Shake to undo');
     }
 
     // ---------------------------------------------------------------------------
@@ -1200,25 +1225,35 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       }
 
       window.addEventListener('devicemotion', (e) => {
-        if (!lastSwap) return;
+        if (!lastSwap && !lastClear) return;
         const acc = e.accelerationIncludingGravity;
         if (!acc) return;
         const force = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
         const now = Date.now();
         if (force > shakeThreshold && now - lastShakeTime > 1000) {
           lastShakeTime = now;
-          undoLastSwap();
-          lastSwap = null;
+          if (lastClear) {
+            undoClear();
+          } else {
+            undoLastSwap();
+            lastSwap = null;
+          }
+          toastEl.classList.remove('lineup-toast--visible');
         }
       });
     }
 
     // Desktop undo via toast click
     toastEl.addEventListener('click', () => {
-      if (lastSwap && !isMobileSheet()) {
-        undoLastSwap();
-        lastSwap = null;
-        toastEl.classList.remove('lineup-toast--visible');
+      if (!isMobileSheet()) {
+        if (lastClear) {
+          undoClear();
+          toastEl.classList.remove('lineup-toast--visible');
+        } else if (lastSwap) {
+          undoLastSwap();
+          lastSwap = null;
+          toastEl.classList.remove('lineup-toast--visible');
+        }
       }
     });
 
