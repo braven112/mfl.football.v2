@@ -1,0 +1,291 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import HeroBanner from '../../components/theleague/HeroBanner.astro';
+import AuctionHero from '../../components/theleague/AuctionHero.astro';
+import AuctionStrip from '../../components/theleague/AuctionStrip.astro';
+import DraftHero from '../../components/theleague/DraftHero.astro';
+import WhatsNext from '../../components/theleague/WhatsNext.astro';
+import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
+import { resolveHeroContent, isAuctionLive, isAuctionStripPeriod, isDraftLive, getDraftStartFormatted } from '../../utils/hero-resolver';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import type { WhatsNewEntry } from '../../types/whats-new';
+import whatsNewData from '../../data/whats-new.json';
+import { spriteUrl } from '../../utils/sprite-url';
+
+export const prerender = false;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+// Support ?testDate=YYYY-MM-DD for testing different hero/timeline states
+const testDateParam = Astro.url.searchParams.get('testDate');
+const referenceDate = testDateParam ? new Date(testDateParam + 'T00:00:00') : undefined;
+const isValidTestDate = referenceDate && !isNaN(referenceDate.getTime());
+const effectiveDate = isValidTestDate ? referenceDate : undefined;
+
+const timeline = getWhatsNextTimeline(effectiveDate);
+const hero = resolveHeroContent(whatsNewData as WhatsNewEntry[], timeline, effectiveDate);
+const isAuction = hero.source === 'auction';
+const isDraft = hero.source === 'draft';
+const showAuctionStrip = !isAuction && isAuctionStripPeriod(effectiveDate ?? new Date());
+const needsLeagueYear = isAuction || isDraft || showAuctionStrip;
+const leagueYear = needsLeagueYear ? getCurrentLeagueYear(effectiveDate) : 0;
+const auctionLive = isAuction ? isAuctionLive(effectiveDate ?? new Date()) : false;
+const draftLive = isDraft ? isDraftLive(effectiveDate ?? new Date()) : false;
+const draftStartFormatted = isDraft ? getDraftStartFormatted(leagueYear) : '';
+
+// What's New card row data (for auction hero)
+const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
+const lastVisitDate = lastVisitCookie?.value ?? null;
+
+const pages = {
+  'Team Management': [
+    { title: 'Coach Tab', href: r('/theleague/rosters?view=coach'), description: 'Coach mode with matchups and odds', icon: 'submit' },
+    { title: 'League Planner', href: r('/theleague/rosters?view=nextyear'), description: "Preview next year's roster and salary commitments", icon: 'chalkboard' },
+  ],
+  'League Management': [
+    { title: 'Standings', href: r('/theleague/standings'), description: 'View current season standings and rankings', icon: 'shield' },
+    { title: 'Playoffs', href: r('/theleague/playoffs'), description: 'Playoff brackets and tournament results', icon: 'champ' },
+    { title: 'Draft Predictor', href: r('/theleague/draft-predictor'), description: 'Projected draft order for next season', icon: 'draft-podium' },
+    { title: 'League Calendar', href: r('/theleague/calendar'), description: 'All important league dates and deadlines', icon: 'calendar' },
+  ],
+  'Salary & Contracts': [
+    { title: 'Roster/Salary', href: r('/theleague/rosters'), description: 'Team rosters and salary cap details', icon: 'banknote' },
+    { title: 'Historical Salary Trends', href: r('/theleague/salary-history'), description: 'Track salary changes over time', icon: 'standings-2' },
+    { title: 'Salary Analytics', href: r('/theleague/salary'), description: 'Salary benchmarks and spending analysis', icon: 'bar-chart' },
+  ],
+  'Trading & Analysis': [
+    { title: 'Trade Builder', href: r('/theleague/trade-builder'), description: 'Simulate trades and see salary cap impact', icon: 'transactions-2' },
+    { title: 'MVP Rankings', href: r('/theleague/mvp'), description: 'Salary-adjusted most valuable player rankings', icon: 'standings' },
+    { title: 'League Summary', href: r('/theleague/league-summary'), description: 'Compare all 16 teams across cap, roster, and contract metrics', icon: 'spreadsheet' },
+  ],
+  'Assets & Resources': [
+    { title: 'Asset Library', href: r('/theleague/assets'), description: 'Team logos, banners, and graphics', icon: 'eye' },
+    { title: 'Design System', href: r('/theleague/design-system'), description: 'Editorial design patterns and component reference', icon: 'artboard' },
+    { title: "What's New", href: r('/theleague/whats-new'), description: 'Latest features and improvements', icon: 'star' },
+  ],
+};
+---
+
+<TheLeagueLayout title="The League - Home">
+  <main class="league-home">
+    <section class="featured-news">
+      {isAuction ? (
+        <AuctionHero
+          leagueYear={leagueYear}
+          resolveLeaguePath={r}
+          spriteUrl={spriteUrl}
+          live={auctionLive}
+        />
+      ) : isDraft ? (
+        <DraftHero
+          leagueYear={leagueYear}
+          resolveLeaguePath={r}
+          spriteUrl={spriteUrl}
+          live={draftLive}
+          draftStartFormatted={draftStartFormatted}
+        />
+      ) : (
+        <HeroBanner
+          title={hero.title}
+          summary={hero.summary}
+          link={hero.link ? r(hero.link) : undefined}
+          linkLabel={hero.linkLabel}
+          icon={hero.icon}
+          accentColor={hero.accentColor}
+          variant="editorial"
+          dateDisplay={hero.dateDisplay}
+          statusText={hero.statusText}
+          isActive={hero.isActive}
+          isUrgent={hero.isUrgent}
+          isExternal={hero.isExternal}
+          image={hero.image}
+          imageAlt={hero.imageAlt}
+          kicker={hero.kicker}
+          kickerDate={hero.kickerDate}
+          allNewsLink={r("/theleague/whats-new")}
+          allNewsLabel="All releases"
+        />
+      )}
+    </section>
+
+    {showAuctionStrip && (
+      <AuctionStrip
+        leagueYear={leagueYear}
+        resolveLeaguePath={r}
+        spriteUrl={spriteUrl}
+      />
+    )}
+
+    {(isAuction || isDraft) && (
+      <WhatsNewRow
+        entries={whatsNewData as WhatsNewEntry[]}
+        basePath={hideLeaguePrefix ? '' : '/theleague'}
+        allReleasesLink={r('/theleague/whats-new')}
+        spriteUrl={spriteUrl}
+        lastVisitDate={lastVisitDate}
+      />
+    )}
+
+    <WhatsNext demoDate={effectiveDate} />
+
+    {Object.entries(pages).map(([category, items]) => (
+      <section class="page-category">
+        <h2>{category}</h2>
+        <div class="page-grid">
+          {items.map(page => (
+            <a href={page.href} class="page-card">
+              <div class="page-card__header">
+                <svg class="page-card__icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-${page.icon}`}></use>
+                </svg>
+                <h3>{page.title}</h3>
+              </div>
+              <p>{page.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .league-home {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    padding: 2rem var(--spacing-md, 1rem);
+  }
+
+  .home-header {
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  .home-header h1 {
+    font-size: 3rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: var(--muted-text-color, #6b7280);
+    margin: 0;
+  }
+
+  .featured-news {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .featured-news__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .featured-news__heading {
+    font-size: 1.5rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .featured-news__releases-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .featured-news__releases-link:hover {
+    text-decoration: underline;
+  }
+
+  .page-category {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .page-category h2 {
+    font-size: 1.5rem;
+    color: var(--primary-link-default-text-color, #1c497c);
+    margin: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-xl, 2rem);
+  }
+
+  .page-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--content-bg, #fff);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+  }
+
+  .page-card:hover {
+    border-color: var(--accent-link-hover-text-color, #3c9950);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .page-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .page-card__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: var(--color-primary, #1c497c);
+    transition: color 0.2s ease;
+  }
+
+  .page-card:hover .page-card__icon {
+    color: var(--accent-link-hover-text-color, #3c9950);
+  }
+
+  .page-card h3 {
+    font-size: 1.25rem;
+    margin: 0;
+    color: var(--primary-link-default-text-color, #1c497c);
+  }
+
+  .page-card p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--muted-text-color, #6b7280);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 768px) {
+    .home-header h1 {
+      font-size: 2rem;
+    }
+
+    .page-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
