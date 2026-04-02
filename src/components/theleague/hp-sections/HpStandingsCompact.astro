@@ -8,6 +8,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getContextualRows } from '../../../utils/homepage-dashboard';
+import { getLeagueStandings } from '../../../utils/standings';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
 import config from '../../../data/theleague.config.json';
 
@@ -59,35 +60,34 @@ interface StandingRow {
 let rows: StandingRow[] = [];
 
 if (hasGamesPlayed) {
-  // In-season: sort by record, show W-L + PF + cap
-  rows = franchises
-    .map((f: any) => {
-      const team = teamMap.get(f.id);
-      const record = f.h2hwlt ?? '0-0-0';
-      const [w] = record.split('-').map(Number);
-      const pf = parseFloat(f.pf || '0');
-      const displayName = team
-        ? chooseTeamName({
-            fullName: team.name,
-            nameMedium: team.nameMedium,
-            nameShort: team.nameShort,
-            abbrev: team.abbrev,
-          }, 'default')
-        : f.fname ?? f.id;
+  // In-season: use playoff seeding with full tiebreakers (division winners seeds 1-4)
+  const seeded = getLeagueStandings(franchises, config as any);
+  rows = seeded.map((t, idx) => {
+    const team = teamMap.get(t.id);
+    const record = t.h2hwlt ?? '0-0-0';
+    const [w] = record.split('-').map(Number);
+    const pf = parseFloat(t.pf || '0');
+    const displayName = team
+      ? chooseTeamName({
+          fullName: team.name,
+          nameMedium: team.nameMedium,
+          nameShort: team.nameShort,
+          abbrev: team.abbrev,
+        }, 'default')
+      : t.teamName ?? t.id;
 
-      return {
-        id: f.id,
-        rank: 0,
-        name: displayName,
-        record,
-        wins: w,
-        pf,
-        capSpace: capMap.get(f.id) ?? 0,
-        isUser: f.id === userFranchiseId,
-        color: team?.color ?? 'var(--color-primary, #1c497c)',
-      };
-    })
-    .sort((a: StandingRow, b: StandingRow) => b.wins - a.wins || b.pf - a.pf);
+    return {
+      id: t.id,
+      rank: t.seed ?? idx + 1,
+      name: displayName,
+      record,
+      wins: w,
+      pf,
+      capSpace: capMap.get(t.id) ?? 0,
+      isUser: t.id === userFranchiseId,
+      color: team?.color ?? 'var(--color-primary, #1c497c)',
+    };
+  });
 } else {
   // Offseason: sort by cap space, show cap as the primary metric
   rows = (teamSummaries ?? [])
@@ -117,10 +117,12 @@ if (hasGamesPlayed) {
     .sort((a, b) => b.capSpace - a.capSpace);
 }
 
-rows = rows.map((row, index) => ({
-  ...row,
-  rank: index + 1,
-}));
+if (!hasGamesPlayed) {
+  rows = rows.map((row, index) => ({
+    ...row,
+    rank: index + 1,
+  }));
+}
 
 const contextual = getContextualRows(rows, userFranchiseId, 2, 6);
 const displayRows = contextual.rows;
@@ -164,11 +166,11 @@ const formatCap = (v: number) => {
   <div class="hp-standings__header">
     <div class="hp-standings__section-header">
       <h3 class="hp-standings__section-title">
-        {hasGamesPlayed ? 'Standings' : 'Cap Space Rankings'}
+        {hasGamesPlayed ? 'Playoff Standings' : 'Cap Space Rankings'}
       </h3>
       <p class="hp-standings__sub">{subtitle}</p>
     </div>
-    <a href={r('/theleague/standings')} class="hp-standings__cta">
+    <a href={r('/theleague/standings?view=league')} class="hp-standings__cta">
       Full standings
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <path d="M5 12h14M12 5l7 7-7 7"/>
