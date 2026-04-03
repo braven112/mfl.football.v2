@@ -1,0 +1,791 @@
+---
+/**
+ * 2026 RSP Rookie Rankings
+ * Matt Waldman's Rookie Scouting Portfolio — Pre-Draft Edition
+ * Fully static page — all data processed at build time.
+ */
+
+export const prerender = true;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import rspData from '../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json';
+import sleeperData from '../../../data/fantasy-expert/sleeper-watchlist/2026-class.json';
+
+// Sort all players by DoT score and take top 50
+const top50 = [...rspData.players]
+  .sort((a, b) => b.preDraftScore - a.preDraftScore)
+  .slice(0, 50);
+
+// Metrics
+const totalProspects = rspData.players.length;
+const topDotScore = top50[0].preDraftScore.toFixed(1);
+const sleeperCount = sleeperData.sleepers.length;
+const highPrioritySleepers = sleeperData.sleepers.filter(s => s.priority === 'HIGH').length;
+
+// Waldman overviews
+const { qb, rb, wr, te } = rspData.waldmanOverview;
+---
+
+<TheLeagueLayout title="2026 Rookie Rankings">
+  <div class="rsp-page">
+
+    <!-- ─── Hero ──────────────────────────────────────────────────── -->
+    <div class="rsp-hero">
+      <div class="rsp-hero__eyebrow">Dynasty Scouting</div>
+      <h1 class="rsp-hero__title">2026 Rookie Rankings</h1>
+      <p class="rsp-hero__meta">
+        Matt Waldman's Rookie Scouting Portfolio &middot; Pre-Draft Edition &middot; Published Mar 31, 2026
+      </p>
+    </div>
+
+    <!-- ─── Metrics strip ─────────────────────────────────────────── -->
+    <div class="rsp-metrics">
+      <div class="rsp-metrics__card">
+        <span class="rsp-metrics__value">{totalProspects}</span>
+        <span class="rsp-metrics__label">Prospects Graded</span>
+      </div>
+      <div class="rsp-metrics__card">
+        <span class="rsp-metrics__value">{topDotScore}</span>
+        <span class="rsp-metrics__label">Top DoT Score</span>
+      </div>
+      <div class="rsp-metrics__card">
+        <span class="rsp-metrics__value">{sleeperCount}</span>
+        <span class="rsp-metrics__label">Sleeper Targets</span>
+      </div>
+    </div>
+
+    <!-- ─── Tab bar ───────────────────────────────────────────────── -->
+    <div class="rsp-tabs" role="tablist" aria-label="Rookie rankings sections">
+      <button
+        role="tab"
+        id="tab-rankings"
+        aria-selected="true"
+        aria-controls="panel-rankings"
+        tabindex="0"
+        class="rsp-tab"
+      >Top 50 Rankings</button>
+      <button
+        role="tab"
+        id="tab-sleepers"
+        aria-selected="false"
+        aria-controls="panel-sleepers"
+        tabindex="-1"
+        class="rsp-tab"
+      >Sleeper Watchlist <span class="rsp-tab__badge">{highPrioritySleepers} HIGH</span></button>
+      <button
+        role="tab"
+        id="tab-overview"
+        aria-selected="false"
+        aria-controls="panel-overview"
+        tabindex="-1"
+        class="rsp-tab"
+      >Waldman's Take</button>
+    </div>
+
+    <!-- ─── Panel 1: Top 50 Table ─────────────────────────────────── -->
+    <section role="tabpanel" id="panel-rankings" aria-labelledby="tab-rankings" tabindex="0" class="rsp-panel">
+      <div class="rsp-table-section-header">
+        <h2 class="rsp-section-title">Top 50 by Depth of Talent Score</h2>
+        <p class="rsp-section-sub">Sorted by Waldman's DoT score — a cross-position talent measurement. Pre-draft rankings before NFL landing spots.</p>
+      </div>
+      <div class="rsp-table-scroll">
+        <table class="rsp-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-player">Player</th>
+              <th class="col-pos">Pos</th>
+              <th class="col-dot">DoT</th>
+              <th class="col-grade">Grade</th>
+              <th class="col-comp">Comparison</th>
+              <th class="col-notes">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {top50.map((player, i) => (
+              <tr>
+                <td class="col-rank" data-label="#">{i + 1}</td>
+                <td class="col-player" data-label="Player">
+                  <div class="player-stack">
+                    <span class="player-name">{player.name}</span>
+                    {player.school && <span class="player-school">{player.school}</span>}
+                  </div>
+                </td>
+                <td class="col-pos" data-label="Pos">
+                  <span class={`pos-badge pos-badge--${player.position.toLowerCase()}`}>{player.position}</span>
+                </td>
+                <td class="col-dot" data-label="DoT">{player.preDraftScore.toFixed(1)}</td>
+                <td class="col-grade" data-label="Grade">{player.preDraftGrade}</td>
+                <td class="col-comp" data-label="Comparison">{player.comparison ?? '—'}</td>
+                <td class="col-notes" data-label="Notes">{player.notes}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── Panel 2: Sleeper Watchlist ───────────────────────────── -->
+    <section role="tabpanel" id="panel-sleepers" aria-labelledby="tab-sleepers" tabindex="0" class="rsp-panel" hidden>
+      <div class="rsp-table-section-header">
+        <h2 class="rsp-section-title">Sleeper Watchlist</h2>
+        <p class="rsp-section-sub">{sleeperCount} targets Waldman grades significantly above market — sorted by priority with TheLeague-specific action plans.</p>
+      </div>
+      <div class="sleeper-grid">
+        {sleeperData.sleepers.map(s => (
+          <article class={`sleeper-card sleeper-card--${s.priority.toLowerCase()}`}>
+            <div class="sleeper-card__header">
+              <div class="sleeper-card__name-block">
+                <h3 class="sleeper-card__name">{s.name}</h3>
+                <span class="sleeper-card__school">{s.school}</span>
+              </div>
+              <div class="sleeper-card__badges">
+                <span class={`pos-badge pos-badge--${s.position.toLowerCase()}`}>{s.position}</span>
+                <span class={`priority-badge priority-badge--${s.priority.toLowerCase()}`}>{s.priority}</span>
+              </div>
+            </div>
+
+            <div class="sleeper-metrics">
+              <div class="sleeper-metric">
+                <span class="sleeper-metric__value">{s.preDraftScore.toFixed(1)}</span>
+                <span class="sleeper-metric__label">DoT Score</span>
+              </div>
+              <div class="sleeper-metric">
+                <span class="sleeper-metric__value">{s.positionRank}</span>
+                <span class="sleeper-metric__label">RSP Rank</span>
+              </div>
+              <div class="sleeper-metric">
+                <span class="sleeper-metric__value">{s.preDraftGrade}</span>
+                <span class="sleeper-metric__label">Grade</span>
+              </div>
+            </div>
+
+            {s.comparison && (
+              <div class="sleeper-comp">
+                <span class="sleeper-comp__label">Comp</span>
+                <span class="sleeper-comp__value">{s.comparison}</span>
+              </div>
+            )}
+
+            <div class="sleeper-body">
+              <div class="sleeper-row">
+                <span class="sleeper-row__label">Why a sleeper</span>
+                <p class="sleeper-row__text">{s.sleepReason}</p>
+              </div>
+              <div class="sleeper-row">
+                <span class="sleeper-row__label">Action plan</span>
+                <p class="sleeper-row__text">{s.actionPlan}</p>
+              </div>
+              <div class="sleeper-row sleeper-row--league">
+                <span class="sleeper-row__label">TheLeague fit</span>
+                <p class="sleeper-row__text">{s.leagueAdjustment}</p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- ─── Panel 3: Waldman's Take ──────────────────────────────── -->
+    <section role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" tabindex="0" class="rsp-panel" hidden>
+      <div class="rsp-table-section-header">
+        <h2 class="rsp-section-title">Waldman's Positional Take</h2>
+        <p class="rsp-section-sub">Macro picture by position — where the value is and how to approach each group in the draft.</p>
+      </div>
+      <div class="overview-grid">
+        <div class="overview-card">
+          <div class="overview-card__header">
+            <span class="pos-badge pos-badge--qb">QB</span>
+            <span class="overview-card__pos-label">Quarterback</span>
+          </div>
+          <p class="overview-card__body">{qb}</p>
+        </div>
+        <div class="overview-card">
+          <div class="overview-card__header">
+            <span class="pos-badge pos-badge--rb">RB</span>
+            <span class="overview-card__pos-label">Running Back</span>
+          </div>
+          <p class="overview-card__body">{rb}</p>
+        </div>
+        <div class="overview-card">
+          <div class="overview-card__header">
+            <span class="pos-badge pos-badge--wr">WR</span>
+            <span class="overview-card__pos-label">Wide Receiver</span>
+          </div>
+          <p class="overview-card__body">{wr}</p>
+        </div>
+        <div class="overview-card">
+          <div class="overview-card__header">
+            <span class="pos-badge pos-badge--te">TE</span>
+            <span class="overview-card__pos-label">Tight End</span>
+          </div>
+          <p class="overview-card__body">{te}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Grade Scale Legend (always visible) ──────────────────── -->
+    <div class="grade-legend">
+      <h3 class="grade-legend__title">Grade Scale</h3>
+      <div class="grade-legend__grid">
+        {Object.entries(rspData.gradeScale).map(([grade, desc]) => {
+          const [range, description] = desc.split(' -- ');
+          return (
+            <div class="grade-legend__item">
+              <span class="grade-legend__name">{grade}</span>
+              <span class="grade-legend__range">{range}</span>
+              <span class="grade-legend__desc">{description}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- ─── No-JS fallback ───────────────────────────────────────── -->
+    <noscript>
+      <style>
+        .rsp-tabs { display: none !important; }
+        .rsp-panel[hidden] { display: block !important; }
+      </style>
+    </noscript>
+
+  </div>
+</TheLeagueLayout>
+
+<!-- ─── Tab keyboard nav script ─────────────────────────────────── -->
+<script>
+  const tablist = document.querySelector('[role="tablist"]') as HTMLElement;
+  if (tablist) {
+    const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+
+    function activateTab(tab: HTMLButtonElement) {
+      // Deactivate all
+      tabs.forEach(t => {
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
+        const panelId = t.getAttribute('aria-controls');
+        if (panelId) {
+          const panel = document.getElementById(panelId);
+          if (panel) panel.hidden = true;
+        }
+      });
+      // Activate selected
+      tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('tabindex', '0');
+      tab.focus();
+      const panelId = tab.getAttribute('aria-controls');
+      if (panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel) panel.hidden = false;
+      }
+    }
+
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => activateTab(tab));
+      tab.addEventListener('keydown', (e: KeyboardEvent) => {
+        let nextIndex = i;
+        if (e.key === 'ArrowRight') nextIndex = (i + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') nextIndex = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === 'Home') nextIndex = 0;
+        else if (e.key === 'End') nextIndex = tabs.length - 1;
+        else return;
+        e.preventDefault();
+        activateTab(tabs[nextIndex]);
+      });
+    });
+  }
+</script>
+
+<style>
+  /* ─── Page layout ─────────────────────────────────────────────── */
+  .rsp-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  /* ─── Hero ────────────────────────────────────────────────────── */
+  .rsp-hero {
+    margin-bottom: 1.5rem;
+  }
+  .rsp-hero__eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+    margin-bottom: 0.375rem;
+  }
+  .rsp-hero__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
+  }
+  .rsp-hero__meta {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  /* ─── Metrics strip ───────────────────────────────────────────── */
+  .rsp-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .rsp-metrics__card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+  }
+  .rsp-metrics__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+    line-height: 1;
+  }
+  .rsp-metrics__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* ─── Tab bar ─────────────────────────────────────────────────── */
+  .rsp-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1.25rem;
+    scrollbar-width: none;
+  }
+  .rsp-tabs::-webkit-scrollbar { display: none; }
+
+  .rsp-tab {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.15s;
+  }
+  .rsp-tab:hover {
+    color: var(--color-gray-700, #374151);
+  }
+  .rsp-tab[aria-selected="true"] {
+    color: var(--color-primary, #1c497c);
+    border-bottom-color: var(--color-primary, #1c497c);
+  }
+  .rsp-tab:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: -2px;
+  }
+  .rsp-tab__badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1875rem 0.375rem;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  /* ─── Section headers ─────────────────────────────────────────── */
+  .rsp-table-section-header {
+    margin-bottom: 1rem;
+  }
+  .rsp-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.25rem;
+  }
+  .rsp-section-sub {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0;
+    padding-left: 0.625rem;
+  }
+
+  /* ─── Position badges ─────────────────────────────────────────── */
+  .pos-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.125rem 0.4375rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pos-badge--qb { color: #1d4ed8; background: #eff6ff; }
+  .pos-badge--rb { color: #15803d; background: #f0fdf4; }
+  .pos-badge--wr { color: #b45309; background: #fffbeb; }
+  .pos-badge--te { color: #7e22ce; background: #faf5ff; }
+
+  /* ─── Top 50 Table ────────────────────────────────────────────── */
+  .rsp-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+  }
+  .rsp-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+  .rsp-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .rsp-table tbody tr {
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    transition: background 0.1s;
+  }
+  .rsp-table tbody tr:last-child { border-bottom: none; }
+  .rsp-table tbody tr:hover { background: var(--color-gray-50, #f9fafb); }
+  .rsp-table td {
+    padding: 0.625rem 0.75rem;
+    vertical-align: top;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* Column widths */
+  .col-rank { width: 2.5rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-400, #9ca3af); }
+  .col-player { width: 11rem; }
+  .col-pos { width: 3.5rem; }
+  .col-dot { width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-900, #111827); }
+  .col-grade { width: 9rem; }
+  .col-comp { width: 12rem; color: var(--color-gray-500, #6b7280); font-style: italic; }
+  .col-notes { min-width: 20rem; line-height: 1.5; }
+
+  .player-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .player-name {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    font-size: 0.875rem;
+  }
+  .player-school {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* ─── Sleeper cards ───────────────────────────────────────────── */
+  .sleeper-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+    gap: 1rem;
+  }
+  .sleeper-card {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 2px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--color-white, #fff);
+  }
+  .sleeper-card--high {
+    border-left-color: var(--color-error, #dc2626);
+  }
+  .sleeper-card__header {
+    padding: 0.875rem 1rem 0.75rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    background: var(--color-gray-50, #f9fafb);
+  }
+  .sleeper-card__name-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .sleeper-card__name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+  .sleeper-card__school {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .sleeper-card__badges {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Priority badges */
+  .priority-badge {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+  }
+  .priority-badge--high { background: #fee2e2; color: #dc2626; }
+  .priority-badge--medium { background: #fef3c7; color: #b45309; }
+  .priority-badge--low { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-500, #6b7280); }
+
+  /* Metrics row */
+  .sleeper-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+  .sleeper-metric {
+    padding: 0.625rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+    text-align: center;
+  }
+  .sleeper-metric:not(:last-child) {
+    border-right: 1px solid var(--color-gray-50, #f9fafb);
+  }
+  .sleeper-metric__value {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900, #111827);
+  }
+  .sleeper-metric__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* Comp line */
+  .sleeper-comp {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-size: 0.8125rem;
+  }
+  .sleeper-comp__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+    flex-shrink: 0;
+  }
+  .sleeper-comp__value {
+    color: var(--color-gray-500, #6b7280);
+    font-style: italic;
+  }
+
+  /* Body rows */
+  .sleeper-body {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+  .sleeper-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+  }
+  .sleeper-row__label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+  .sleeper-row__text {
+    font-size: 0.8125rem;
+    color: var(--color-gray-700, #374151);
+    line-height: 1.5;
+    margin: 0;
+  }
+  .sleeper-row--league {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-gray-50, #f9fafb);
+  }
+  .sleeper-row--league .sleeper-row__label {
+    color: var(--color-primary, #1c497c);
+  }
+
+  /* ─── Waldman's Take grid ─────────────────────────────────────── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+    gap: 1rem;
+  }
+  .overview-card {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+  }
+  .overview-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+  }
+  .overview-card__pos-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-700, #374151);
+  }
+  .overview-card__body {
+    font-size: 0.875rem;
+    color: var(--color-gray-700, #374151);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ─── Grade legend ────────────────────────────────────────────── */
+  .grade-legend {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+  }
+  .grade-legend__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.875rem;
+  }
+  .grade-legend__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 0.375rem;
+  }
+  .grade-legend__item {
+    display: flex;
+    gap: 0.625rem;
+    align-items: baseline;
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.25rem;
+  }
+  .grade-legend__item:hover {
+    background: var(--color-gray-50, #f9fafb);
+  }
+  .grade-legend__name {
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    min-width: 9rem;
+    flex-shrink: 0;
+  }
+  .grade-legend__range {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+    min-width: 4rem;
+    flex-shrink: 0;
+  }
+  .grade-legend__desc {
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.75rem;
+  }
+
+  /* ─── Mobile: table → stacked cards ─────────────────────────── */
+  @media (max-width: 640px) {
+    .rsp-metrics {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    .rsp-metrics__value { font-size: 1.125rem; }
+
+    .rsp-table-scroll { border: none; border-radius: 0; }
+    .rsp-table, .rsp-table thead, .rsp-table tbody, .rsp-table th, .rsp-table td, .rsp-table tr {
+      display: block;
+    }
+    .rsp-table thead { display: none; }
+    .rsp-table tbody tr {
+      border: 1px solid var(--content-border, #e2e8f0);
+      border-radius: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        "rank player"
+        "rank pos"
+        "dot grade"
+        "comp comp"
+        "notes notes";
+      gap: 0.375rem 0.625rem;
+      align-items: start;
+    }
+    .rsp-table td { padding: 0; }
+    .rsp-table td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-gray-400, #9ca3af);
+      margin-bottom: 0.125rem;
+    }
+    .col-rank { grid-area: rank; text-align: center; font-size: 1rem; align-self: center; }
+    .col-rank::before { display: none; }
+    .col-player { grid-area: player; }
+    .col-pos { grid-area: pos; }
+    .col-dot { grid-area: dot; text-align: left; }
+    .col-grade { grid-area: grade; }
+    .col-comp { grid-area: comp; }
+    .col-notes { grid-area: notes; }
+  }
+</style>
