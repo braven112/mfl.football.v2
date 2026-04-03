@@ -832,7 +832,6 @@ const KEYWORDS_HIGH = [
   /\btraded\b/i,                              // completed trade
   /\breleased?\b/i, /\bcuts?\b/i,             // roster moves
   /\bsuspend(?:s|ed)\b/i,                     // discipline
-  /\bretir(?:e[ds]?|ement)\b/i,               // retirement
   /\brule change/i, /\bnew rule/i,            // league policy
   /\barrested?\b/i, /\bcharged?\b/i,          // legal
   /\bfined?\b/i, /\bbanned?\b/i,              // discipline
@@ -845,6 +844,13 @@ const KEYWORDS_LOW = [
   /\bACL\b/, /\bPUP\b/,
   /\bfree agent/i,
   /\bexercis(?:e[ds]?|ing) .{0,20}option/i,
+  /\bretir(?:e[ds]?|ement)\b/i,               // retirement — needs second signal (rostered name) to pass
+];
+
+// Hard-block: off-field celebrity/charity content — irrelevant regardless of player name matches
+const NOISE_PATTERNS = [
+  /\bawareness day\b/i,   // charity/awareness TV segments
+  /\bswag bag\b/i,        // celebrity gifting
 ];
 
 /** Build a set of player names from rosters for headline matching */
@@ -908,6 +914,11 @@ function scoreArticle(article, rosteredNames) {
   let score = 0;
   const reasons = [];
   const headline = article.headline ?? article.title ?? '';
+
+  // Hard-block noise regardless of player name matches
+  if (NOISE_PATTERNS.some(re => re.test(headline))) {
+    return { score: 0, reasons: ['noise-blocked'] };
+  }
   const desc = article.description ?? '';
   const text = `${headline} ${desc}`;
   const categories = (article.categories ?? []).map(c => c.description);
