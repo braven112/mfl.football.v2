@@ -744,14 +744,16 @@ const { qb, rb, wr, te } = rspData.waldmanOverview;
     margin: 0 0 0.875rem;
   }
   .grade-legend__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-    gap: 0.375rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    max-width: 56rem;
   }
   .grade-legend__item {
-    display: flex;
-    gap: 0.625rem;
+    display: grid;
+    grid-template-columns: 11rem 6rem 1fr;
     align-items: baseline;
+    gap: 0.75rem;
     font-size: 0.8125rem;
     padding: 0.375rem 0.625rem;
     border-radius: 0.25rem;
@@ -762,15 +764,11 @@ const { qb, rb, wr, te } = rspData.waldmanOverview;
   .grade-legend__name {
     font-weight: 700;
     color: var(--color-gray-900, #111827);
-    min-width: 9rem;
-    flex-shrink: 0;
   }
   .grade-legend__range {
     font-variant-numeric: tabular-nums;
     color: var(--color-primary, #1c497c);
     font-weight: 600;
-    min-width: 4rem;
-    flex-shrink: 0;
   }
   .grade-legend__desc {
     color: var(--color-gray-500, #6b7280);
