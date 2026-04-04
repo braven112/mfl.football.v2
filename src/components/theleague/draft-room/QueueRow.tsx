@@ -35,6 +35,7 @@ export function QueueRow({ item, rank, player, isDrafted, onRemove }: QueueRowPr
   return (
     <div
       ref={setNodeRef}
+      className="dr-queue-row"
       style={{
         ...style,
         display: 'flex',
@@ -53,6 +54,7 @@ export function QueueRow({ item, rank, player, isDrafted, onRemove }: QueueRowPr
         {...attributes}
         {...listeners}
         aria-label="Drag to reorder"
+        className="dr-drag-handle"
         style={{
           flexShrink: 0,
           width: '1.25rem',
@@ -159,6 +161,7 @@ export function QueueRow({ item, rank, player, isDrafted, onRemove }: QueueRowPr
       <button
         onClick={() => onRemove(item.id)}
         aria-label={`Remove ${player?.name ?? 'player'} from queue`}
+        className="dr-remove-btn"
         style={{
           flexShrink: 0,
           width: '1.25rem',

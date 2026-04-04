@@ -82,6 +82,7 @@ export function DraftBoardPanel({
           <button
             key={r}
             onClick={() => onRoundChange(r)}
+            className="dr-round-pill"
             style={{
               padding: '0.25rem 0.75rem',
               borderRadius: 'var(--radius-full, 9999px)',

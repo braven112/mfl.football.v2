@@ -99,6 +99,7 @@ export function PlayerPoolPanel({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           aria-label="Filter players by name"
+          className="dr-search-input"
           style={{
             width: '100%',
             padding: '0.375rem 0.625rem',
@@ -124,6 +125,7 @@ export function PlayerPoolPanel({
                 aria-checked={isActive}
                 aria-label={`Filter by ${pos === 'ALL' ? 'all positions' : pos + ' position'}`}
                 onClick={() => onPositionFilterChange(pos === 'ALL' ? null : pos)}
+                className="dr-pos-filter"
                 style={{
                   padding: '0.1875rem 0.5rem',
                   borderRadius: 'var(--radius-full, 9999px)',
@@ -163,6 +165,7 @@ export function PlayerPoolPanel({
               return (
                 <div
                   key={player.id}
+                  className="dr-player-row"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -184,6 +187,7 @@ export function PlayerPoolPanel({
                     onClick={() => !isQueued && onAddToQueue(player.id)}
                     aria-label={isQueued ? `${player.name} is in your queue` : `Add ${player.name} to queue`}
                     disabled={isQueued}
+                    className="dr-add-queue-btn"
                     style={{
                       flexShrink: 0,
                       width: '1.5rem',

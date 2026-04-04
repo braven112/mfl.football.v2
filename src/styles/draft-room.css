@@ -90,3 +90,147 @@
   outline: 2px solid var(--color-primary, #1c497c);
   outline-offset: 2px;
 }
+
+/* ── Mobile Tap Target Fixes (WCAG 2.5.5 / 44px minimum) ──────────────── */
+
+@media (max-width: 767px) {
+  /*
+   * All interactive elements in the draft room must meet the 44x44px
+   * minimum tap target size on mobile. We use min-height/min-width so
+   * elements can still grow naturally when content is larger.
+   */
+
+  /* ── MobileTabBar tab buttons ── */
+  .draft-room [role="tablist"] > button[role="tab"] {
+    min-height: 44px;
+  }
+
+  /* ── DraftBoardPanel: round selector pills ── */
+  .draft-room .dr-round-pill {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftBoardPanel: mobile list rows ── */
+  .draft-room .dr-mobile-list > div {
+    min-height: 44px;
+  }
+
+  /* ── PlayerPoolPanel: search input ── */
+  .draft-room .dr-search-input {
+    min-height: 44px;
+  }
+
+  /* ── PlayerPoolPanel: position filter chips ── */
+  .draft-room .dr-pos-filter {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── PlayerPoolPanel: player rows ── */
+  .draft-room .dr-player-row {
+    min-height: 44px;
+  }
+
+  /* ── PlayerPoolPanel: add-to-queue (+) button ── */
+  .draft-room .dr-add-queue-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── QueueRow: entire row ── */
+  .draft-room .dr-queue-row {
+    min-height: 44px;
+  }
+
+  /* ── QueueRow: drag handle ── */
+  .draft-room .dr-drag-handle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── QueueRow: remove button ── */
+  .draft-room .dr-remove-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── DraftQueuePanel: Sync to MFL button ── */
+  .draft-room .dr-sync-btn {
+    min-height: 44px;
+  }
+
+  /* ── DraftQueuePanel: auto-submit toggle wrapper ── */
+  .draft-room .dr-auto-submit-label {
+    min-height: 44px;
+  }
+
+  /* ── DraftQueuePanel: Submit Pick CTA ── */
+  .draft-room .dr-submit-pick-btn {
+    min-height: 48px;
+  }
+
+  /* ── DraftChatPanel: GIF button ── */
+  .draft-room .dr-gif-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: Send button ── */
+  .draft-room .dr-send-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: chat textarea ── */
+  .draft-room .dr-chat-input {
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: hover reaction buttons ── */
+  .draft-room .dr-reaction-quick-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftChatPanel: reaction row buttons ── */
+  .draft-room .dr-reaction-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftChatPanel: mention suggestion buttons ── */
+  .draft-room .dr-mention-btn {
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: GIF picker close button ── */
+  .draft-room .dr-gif-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftChatPanel: GIF search input ── */
+  .draft-room .dr-gif-search-input {
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: GIF result buttons ── */
+  .draft-room .dr-gif-result-btn {
+    min-height: 44px;
+  }
+}

@@ -40,6 +40,7 @@ export function MobileTabBar({ activeTab, onTabChange, chatUnread = 0, queueCoun
             aria-selected={isActive}
             aria-controls={`dr-panel-${tab.id}`}
             onClick={() => onTabChange(tab.id)}
+            className="dr-tab-btn"
             style={{
               flex: 1,
               padding: '0.625rem 0',
