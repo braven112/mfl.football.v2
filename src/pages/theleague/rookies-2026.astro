@@ -1434,7 +1434,7 @@ for (const p of allRspPlayers) {
     }
     .rsp-metrics__value { font-size: 1.125rem; }
 
-    .rsp-table-scroll { border: none; border-radius: 0; }
+    .rsp-table-scroll { border: none; border-radius: 0; background: transparent; }
     .rsp-table, .rsp-table thead, .rsp-table tbody, .rsp-table th, .rsp-table td, .rsp-table tr {
       display: block;
     }
@@ -1471,7 +1471,7 @@ for (const p of allRspPlayers) {
     .col-dot { grid-area: dot; text-align: left; }
     .col-grade { grid-area: grade; }
     .col-comp { grid-area: comp; }
-    .col-notes { grid-area: notes; }
+    .col-notes { grid-area: notes; min-width: 0; word-wrap: break-word; overflow-wrap: break-word; }
     .player-avatar { width: 1.75rem; height: 1.75rem; font-size: 0.75rem; }
   }
 </style>
