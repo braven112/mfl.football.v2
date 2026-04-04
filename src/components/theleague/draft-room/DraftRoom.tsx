@@ -1,4 +1,4 @@
-import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { useReducer, useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import type {
   DraftRoomPageData,
@@ -408,6 +408,29 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
   const partyRoomId = `league-${state.leagueId}-draft-${state.leagueYear}`;
   const partyHost = data.partyHost || '';
 
+  // Desktop side panel tab state
+  const [desktopSideTab, setDesktopSideTab] = useState<'players' | 'queue' | 'chat'>('players');
+
+  // Tab button style helper
+  const sideTabStyle = (tab: typeof desktopSideTab): CSSProperties => ({
+    flex: 1,
+    padding: '0.5rem 0.25rem',
+    fontSize: '0.6875rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+    borderBottom: desktopSideTab === tab
+      ? '2px solid var(--color-primary, #1c497c)'
+      : '2px solid transparent',
+    color: desktopSideTab === tab
+      ? 'var(--color-primary, #1c497c)'
+      : 'var(--color-gray-400, #9ca3af)',
+    transition: 'color 0.15s, border-color 0.15s',
+  });
+
   return (
     <div className="draft-room" style={{
       display: 'flex',
@@ -440,22 +463,22 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
         />
       </div>
 
-      {/* Main content area — desktop: 4-col grid */}
+      {/* Main content area — desktop: board row on top, tabbed panel row below */}
       <div className="dr-main" style={{
         flex: 1,
-        display: 'grid',
-        gridTemplateColumns: '2fr 1.2fr 1fr 1fr',
+        display: 'flex',
+        flexDirection: 'column',
         gap: '1px',
         background: 'var(--content-border, #e2e8f0)',
         overflow: 'hidden',
       }}>
-        {/* Board panel */}
+        {/* Board panel — top row, full width, natural height */}
         <div
           id="dr-panel-board"
           role="tabpanel"
           aria-labelledby="dr-tab-board"
           className="dr-panel-board"
-          style={{ background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
+          style={{ flexShrink: 0, background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
         >
           <DraftBoardPanel
             picks={state.picks}
@@ -470,83 +493,130 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
           />
         </div>
 
-        {/* Player pool panel */}
+        {/* Bottom panel — Players / Queue / Chat tabs, full width, fills remaining */}
         <div
-          id="dr-panel-players"
-          role="tabpanel"
-          aria-labelledby="dr-tab-players"
-          className="dr-panel-players"
-          style={{ background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
+          className="dr-side-panel"
+          style={{ flex: 1, minHeight: 0, background: 'var(--content-bg, #ffffff)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         >
-          <PlayerPoolPanel
-            players={state.players}
-            picks={state.picks}
-            queue={state.queue}
-            searchQuery={state.searchQuery}
-            positionFilter={state.positionFilter}
-            onSearchChange={handleSearch}
-            onPositionFilterChange={handlePosFilter}
-            onAddToQueue={handleAddToQueue}
-          />
-        </div>
+          {/* Tab bar (desktop only — hidden on mobile via .dr-side-tab-bar) */}
+          <div
+            role="tablist"
+            aria-label="Side panel tabs"
+            className="dr-side-tab-bar"
+            style={{
+              display: 'flex',
+              borderBottom: '1px solid var(--content-border, #e2e8f0)',
+              background: 'var(--color-gray-50, #f9fafb)',
+              flexShrink: 0,
+            }}
+          >
+            <button
+              role="tab"
+              aria-selected={desktopSideTab === 'players'}
+              aria-controls="dr-panel-players"
+              onClick={() => setDesktopSideTab('players')}
+              style={sideTabStyle('players')}
+            >
+              Players
+            </button>
+            <button
+              role="tab"
+              aria-selected={desktopSideTab === 'queue'}
+              aria-controls="dr-panel-queue"
+              onClick={() => setDesktopSideTab('queue')}
+              style={sideTabStyle('queue')}
+            >
+              Queue{state.queue.length > 0 ? ` (${state.queue.length})` : ''}
+            </button>
+            <button
+              role="tab"
+              aria-selected={desktopSideTab === 'chat'}
+              aria-controls="dr-panel-chat"
+              onClick={() => setDesktopSideTab('chat')}
+              style={sideTabStyle('chat')}
+            >
+              Chat{state.chatUnread > 0 ? ` (${state.chatUnread})` : ''}
+            </button>
+          </div>
 
-        {/* Queue panel */}
-        <div
-          id="dr-panel-queue"
-          role="tabpanel"
-          aria-labelledby="dr-tab-queue"
-          className="dr-panel-queue"
-          style={{ background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
-        >
-          <DraftQueuePanel
-            queue={state.queue}
-            players={playerMap}
-            picks={state.picks}
-            isUserTurn={isUserTurn}
-            autoSubmit={state.autoSubmit}
-            isSyncingQueue={state.isSyncingQueue}
-            isSubmittingPick={state.isSubmittingPick}
-            submitError={state.submitError}
-            onReorder={handleReorderQueue}
-            onRemove={handleRemoveFromQueue}
-            onSyncToMfl={handleSyncToMfl}
-            onSubmitPick={handleSubmitPick}
-            onToggleAutoSubmit={handleToggleAutoSubmit}
-          />
-        </div>
-
-        {/* Chat panel */}
-        <div
-          id="dr-panel-chat"
-          role="tabpanel"
-          aria-labelledby="dr-tab-chat"
-          className="dr-panel-chat"
-          style={{ background: 'var(--content-bg, #ffffff)', overflow: 'hidden' }}
-        >
-          {partyHost ? (
-            <DraftChatPanel
-              partyHost={partyHost}
-              roomId={partyRoomId}
-              franchiseId={userTeamId}
-              franchiseName={userTeam?.nameShort || userTeam?.name || 'Owner'}
-              franchiseIcon={userTeam?.icon || ''}
-              teams={state.teams}
-              messages={state.chatMessages}
-              connected={state.chatConnected}
-              onMessage={handleChatMessage}
-              onReaction={handleChatReaction}
-              onConnected={handleChatConnected}
-              onDisconnected={handleChatDisconnected}
-              onHistory={handleChatHistory}
+          {/* Player pool panel */}
+          <div
+            id="dr-panel-players"
+            role="tabpanel"
+            aria-labelledby="dr-tab-players"
+            className="dr-panel-players"
+            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'players' ? 'flex' : 'none', flexDirection: 'column' }}
+          >
+            <PlayerPoolPanel
+              players={state.players}
+              picks={state.picks}
+              queue={state.queue}
+              searchQuery={state.searchQuery}
+              positionFilter={state.positionFilter}
+              onSearchChange={handleSearch}
+              onPositionFilterChange={handlePosFilter}
+              onAddToQueue={handleAddToQueue}
             />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', textAlign: 'center', color: 'var(--color-gray-400, #9ca3af)', fontSize: '0.8125rem' }}>
-              <div>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💬</div>
-                Chat requires PartyKit.<br />Set PUBLIC_PARTYKIT_HOST.
+          </div>
+
+          {/* Queue panel */}
+          <div
+            id="dr-panel-queue"
+            role="tabpanel"
+            aria-labelledby="dr-tab-queue"
+            className="dr-panel-queue"
+            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'queue' ? 'flex' : 'none', flexDirection: 'column' }}
+          >
+            <DraftQueuePanel
+              queue={state.queue}
+              players={playerMap}
+              picks={state.picks}
+              isUserTurn={isUserTurn}
+              autoSubmit={state.autoSubmit}
+              isSyncingQueue={state.isSyncingQueue}
+              isSubmittingPick={state.isSubmittingPick}
+              submitError={state.submitError}
+              onReorder={handleReorderQueue}
+              onRemove={handleRemoveFromQueue}
+              onSyncToMfl={handleSyncToMfl}
+              onSubmitPick={handleSubmitPick}
+              onToggleAutoSubmit={handleToggleAutoSubmit}
+            />
+          </div>
+
+          {/* Chat panel */}
+          <div
+            id="dr-panel-chat"
+            role="tabpanel"
+            aria-labelledby="dr-tab-chat"
+            className="dr-panel-chat"
+            style={{ flex: 1, overflow: 'hidden', display: desktopSideTab === 'chat' ? 'flex' : 'none', flexDirection: 'column' }}
+          >
+            {partyHost ? (
+              <DraftChatPanel
+                partyHost={partyHost}
+                roomId={partyRoomId}
+                franchiseId={userTeamId}
+                franchiseName={userTeam?.nameShort || userTeam?.name || 'Owner'}
+                franchiseIcon={userTeam?.icon || ''}
+                teams={state.teams}
+                messages={state.chatMessages}
+                connected={state.chatConnected}
+                onMessage={handleChatMessage}
+                onReaction={handleChatReaction}
+                onConnected={handleChatConnected}
+                onDisconnected={handleChatDisconnected}
+                onHistory={handleChatHistory}
+              />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', textAlign: 'center', color: 'var(--color-gray-400, #9ca3af)', fontSize: '0.8125rem' }}>
+                <div>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💬</div>
+                  Chat requires PartyKit.<br />Set PUBLIC_PARTYKIT_HOST.
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -577,34 +647,32 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
           .dr-mobile-tabs {
             display: block;
           }
-          .dr-main {
-            grid-template-columns: 1fr !important;
-          }
+          /* On mobile, board fills when board tab active, otherwise side panel fills */
           .dr-panel-board {
             display: ${state.activeMobileTab === 'board' ? 'block' : 'none'};
+            flex: none !important;
           }
+          .dr-side-panel {
+            display: ${state.activeMobileTab !== 'board' ? 'flex' : 'none'} !important;
+            height: auto !important;
+            flex: 1 !important;
+          }
+          /* Hide the desktop tab bar inside the side panel — mobile uses MobileTabBar */
+          .dr-side-tab-bar {
+            display: none !important;
+          }
+          /* Show the correct panel inside the side panel */
           .dr-panel-players {
-            display: ${state.activeMobileTab === 'players' ? 'block' : 'none'};
+            display: ${state.activeMobileTab === 'players' ? 'flex' : 'none'} !important;
           }
           .dr-panel-queue {
-            display: ${state.activeMobileTab === 'queue' ? 'block' : 'none'};
+            display: ${state.activeMobileTab === 'queue' ? 'flex' : 'none'} !important;
           }
           .dr-panel-chat {
-            display: ${state.activeMobileTab === 'chat' ? 'block' : 'none'};
+            display: ${state.activeMobileTab === 'chat' ? 'flex' : 'none'} !important;
           }
         }
-        /* Tablet: 2-col (board + players), hide queue + chat */
-        @media (min-width: 768px) and (max-width: 1199px) {
-          .dr-main {
-            grid-template-columns: 3fr 2fr !important;
-          }
-          .dr-panel-queue {
-            display: none !important;
-          }
-          .dr-panel-chat {
-            display: none !important;
-          }
-        }
+        /* Tablet: same 2-row layout, no overrides needed */
       `}</style>
     </div>
   );

@@ -5,8 +5,8 @@
 
 .draft-room {
   /* ── Layout ── */
-  --dr-timer-height: 80px;
-  --dr-timer-height-mobile: 64px;
+  --dr-timer-height: 56px;
+  --dr-timer-height-mobile: 52px;
   --dr-tab-bar-height: 44px;
   --dr-panel-padding: var(--spacing-md, 1rem);
   --dr-panel-gap: var(--spacing-md, 1rem);
@@ -16,8 +16,8 @@
   --dr-timer-text: #ffffff;
   --dr-timer-accent: var(--color-warning, #f59e0b);
   --dr-timer-danger: var(--color-error, #dc2626);
-  --dr-timer-font-size: 2.5rem;
-  --dr-timer-font-size-mobile: 1.75rem;
+  --dr-timer-font-size: 1.75rem;
+  --dr-timer-font-size-mobile: 1.375rem;
 
   /* ── Board Grid ── */
   --dr-cell-width: 140px;

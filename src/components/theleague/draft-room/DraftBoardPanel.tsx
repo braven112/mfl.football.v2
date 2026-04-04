@@ -56,7 +56,7 @@ export function DraftBoardPanel({
   const roundNumbers = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Round selector pills */}
       <div style={{
         display: 'flex',
@@ -105,7 +105,7 @@ export function DraftBoardPanel({
       </div>
 
       {/* Grid */}
-      <div style={{ flex: 1, overflow: 'auto' }} role="region" aria-label="Draft board">
+      <div style={{ overflow: 'auto' }} role="region" aria-label="Draft board">
         <table
           role="grid"
           aria-label={`Round ${activeRound} draft picks`}
@@ -196,6 +196,7 @@ export function DraftBoardPanel({
                       pick={pick}
                       player={player}
                       team={team}
+                      teams={teams}
                       isCurrentPick={pick.overallPickNumber === currentPickNumber}
                       isUserTeam={pick.franchiseId === userTeamId}
                     />
