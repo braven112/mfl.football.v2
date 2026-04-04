@@ -122,18 +122,9 @@ function formatTimer(timer: TimerState, draftKind: DraftKind): string {
   return `${mins}:${String(timer.seconds).padStart(2, '0')}`;
 }
 
-function getTimerColor(timer: TimerState, draftKind: DraftKind): string {
+function getTimerColor(timer: TimerState, _draftKind: DraftKind): string {
+  // Timer text is always white on the blue banner; only "TIME EXPIRED" uses danger color
   if (timer.isExpired) return 'var(--dr-timer-danger, #dc2626)';
-
-  if (draftKind === 'email') {
-    if (timer.hours < 1) return 'var(--dr-timer-danger, #dc2626)';
-    if (timer.hours < 4) return 'var(--dr-timer-accent, #f59e0b)';
-    return 'var(--dr-timer-text, #ffffff)';
-  }
-
-  const totalSeconds = timer.hours * 3600 + timer.minutes * 60 + timer.seconds;
-  if (totalSeconds < 30) return 'var(--dr-timer-danger, #dc2626)';
-  if (totalSeconds < 120) return 'var(--dr-timer-accent, #f59e0b)';
   return 'var(--dr-timer-text, #ffffff)';
 }
 
@@ -154,16 +145,16 @@ export function DraftTimerBanner({
   const bannerStyle: React.CSSProperties = {
     background: 'var(--dr-timer-bg, #1c497c)',
     color: 'var(--dr-timer-text, #ffffff)',
-    padding: '0.75rem 1rem',
+    padding: '0.375rem 1rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '1rem',
-    minHeight: 'var(--dr-timer-height, 80px)',
+    minHeight: 'var(--dr-timer-height, 56px)',
   };
 
   const timerStyle: React.CSSProperties = {
-    fontSize: 'var(--dr-timer-font-size, 2.5rem)',
+    fontSize: 'var(--dr-timer-font-size, 1.75rem)',
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
     color: getTimerColor(timer, draftKind),
@@ -197,18 +188,15 @@ export function DraftTimerBanner({
           <img
             src={currentTeam.icon}
             alt={`${currentTeam.nameShort} logo`}
-            style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }}
+            style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }}
           />
         )}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', opacity: 0.7 }}>
-            On the Clock
+          <div style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', opacity: 0.65 }}>
+            On the Clock · {pickLabel}
           </div>
-          <div style={{ fontSize: '1.125rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: '0.9375rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {chooseTeamName({ fullName: currentTeam.name, nameMedium: currentTeam.nameMedium, nameShort: currentTeam.nameShort, abbrev: currentTeam.abbrev })}
-          </div>
-          <div style={{ fontSize: '0.75rem', opacity: 0.7, fontVariantNumeric: 'tabular-nums' }}>
-            {pickLabel}
           </div>
         </div>
       </div>

@@ -6,13 +6,25 @@ interface BoardCellProps {
   pick: DraftRoomPick;
   player?: DraftRoomPlayer;
   team?: DraftRoomTeam;
+  teams?: DraftRoomTeam[];
   isCurrentPick: boolean;
   isUserTeam: boolean;
 }
 
-export function BoardCell({ pick, player, team, isCurrentPick, isUserTeam }: BoardCellProps) {
+export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam }: BoardCellProps) {
   const isMade = !!pick.playerId;
   const posColor = player ? POSITION_COLORS[player.position] || POSITION_COLORS.DEF : undefined;
+
+  // Find original team icon by name for traded picks
+  // MFL sometimes prefixes the name with "from " — strip it before matching
+  const cleanOriginalName = pick.originalTeamName?.replace(/^from\s+/i, '').trim();
+  const originalTeam = pick.isTraded && cleanOriginalName && teams
+    ? teams.find((t) =>
+        t.name === cleanOriginalName ||
+        t.nameShort === cleanOriginalName ||
+        t.abbrev === cleanOriginalName
+      )
+    : undefined;
 
   const cellStyle: React.CSSProperties = {
     position: 'relative',
@@ -39,9 +51,13 @@ export function BoardCell({ pick, player, team, isCurrentPick, isUserTeam }: Boa
         <span style={{ color: 'var(--color-gray-400, #9ca3af)', fontStyle: 'italic', fontSize: '0.6875rem' }}>
           {isCurrentPick ? 'On the clock' : '—'}
         </span>
-        {pick.isTraded && pick.originalTeamName && (
-          <span style={{ fontSize: '0.5625rem', color: 'var(--color-gray-400, #9ca3af)', marginTop: '0.125rem' }}>
-            via {pick.originalTeamName}
+        {pick.isTraded && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.125rem' }} title={pick.originalTeamName ? `via ${pick.originalTeamName}` : 'Traded pick'}>
+            <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)' }}>via</span>
+            {originalTeam?.icon
+              ? <img src={originalTeam.icon} alt={originalTeam.nameShort || cleanOriginalName || ''} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
+              : <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{cleanOriginalName}</span>
+            }
           </span>
         )}
       </div>
@@ -56,9 +72,13 @@ export function BoardCell({ pick, player, team, isCurrentPick, isUserTeam }: Boa
       <span style={{ fontSize: '0.625rem', color: posColor || 'var(--color-gray-500, #6b7280)', fontWeight: 600, marginTop: '0.0625rem' }}>
         {player?.position || ''}{player?.nflTeam ? ` · ${player.nflTeam}` : ''}
       </span>
-      {pick.isTraded && pick.originalTeamName && (
-        <span style={{ fontSize: '0.5625rem', color: 'var(--color-gray-400, #9ca3af)', marginTop: '0.0625rem' }}>
-          via {pick.originalTeamName}
+      {pick.isTraded && (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.0625rem' }} title={cleanOriginalName ? `via ${cleanOriginalName}` : 'Traded pick'}>
+          <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)' }}>via</span>
+          {originalTeam?.icon
+            ? <img src={originalTeam.icon} alt={originalTeam.nameShort || cleanOriginalName || ''} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{cleanOriginalName}</span>
+          }
         </span>
       )}
     </div>
