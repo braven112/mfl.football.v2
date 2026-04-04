@@ -12,6 +12,7 @@ import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import rspData from '../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json';
 import sleeperData from '../../../data/fantasy-expert/sleeper-watchlist/2026-class.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+import fbgData from '../../../data/fantasy-expert/sources/fbg/2026-rookies.json';
 
 // Build name → espnCollegeId lookup from the MFL-matched data
 const espnCollegeByName = new Map<string, string>();
@@ -40,6 +41,21 @@ const highPrioritySleepers = sleeperData.sleepers.filter(s => s.priority === 'HI
 
 // Waldman overviews
 const { qb, rb, wr, te } = rspData.waldmanOverview;
+
+// FBG: build flat row list with tier separators pre-computed
+type FbgTierRow = { type: 'tier'; tier: string };
+type FbgPlayerRow = { type: 'player'; rank: number; name: string; position: string; positionRank: string; age: number | null; tier: string };
+type FbgRow = FbgTierRow | FbgPlayerRow;
+
+const fbgRows: FbgRow[] = [];
+let lastTier = '';
+for (const p of fbgData.players) {
+  if (p.tier !== lastTier) {
+    lastTier = p.tier;
+    fbgRows.push({ type: 'tier', tier: p.tier });
+  }
+  fbgRows.push({ type: 'player', rank: p.rank, name: p.name, position: p.position, positionRank: p.positionRank, age: p.age, tier: p.tier });
+}
 ---
 
 <TheLeagueLayout title="2026 Rookie Rankings">
@@ -96,6 +112,14 @@ const { qb, rb, wr, te } = rspData.waldmanOverview;
         tabindex="-1"
         class="rsp-tab"
       >Waldman's Take</button>
+      <button
+        role="tab"
+        id="tab-fbg"
+        aria-selected="false"
+        aria-controls="panel-fbg"
+        tabindex="-1"
+        class="rsp-tab"
+      >FBG Rankings</button>
     </div>
 
     <!-- ─── Panel 1: Top 50 Table ─────────────────────────────────── -->
@@ -231,6 +255,44 @@ const { qb, rb, wr, te } = rspData.waldmanOverview;
           </div>
           <p class="overview-card__body">{te}</p>
         </div>
+      </div>
+    </section>
+
+    <!-- ─── Panel 4: FBG Rankings ──────────────────────────────────── -->
+    <section role="tabpanel" id="panel-fbg" aria-labelledby="tab-fbg" tabindex="0" class="rsp-panel" hidden>
+      <div class="rsp-table-section-header">
+        <h2 class="rsp-section-title">FBG 2026 Rookie Rankings</h2>
+        <p class="rsp-section-sub">MyFantasyFootballGuys dynasty rookie rankings — {fbgData.players.length} prospects across {[...new Set(fbgData.players.map(p => p.tier))].length} tiers.</p>
+      </div>
+      <div class="rsp-table-scroll">
+        <table class="rsp-table fbg-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-player">Player</th>
+              <th class="col-posrank">Pos Rank</th>
+              <th class="col-age">Age</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fbgRows.map(row => row.type === 'tier' ? (
+              <tr class="tier-row">
+                <td colspan={4} class="tier-label">{row.tier}</td>
+              </tr>
+            ) : (
+              <tr>
+                <td class="col-rank" data-label="#">{row.rank}</td>
+                <td class="col-player" data-label="Player">
+                  <PlayerCell name={row.name} position={row.position} size="compact" headshot={getCollegeHeadshot(row.name)} />
+                </td>
+                <td class="col-posrank" data-label="Pos Rank">
+                  <span class={`pos-badge pos-badge--${row.position.toLowerCase()}`}>{row.positionRank}</span>
+                </td>
+                <td class="col-age" data-label="Age">{row.age ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -499,13 +561,29 @@ const { qb, rb, wr, te } = rspData.waldmanOverview;
     color: var(--color-gray-700, #374151);
   }
 
-  /* Column widths */
+  /* Column widths — RSP table */
   .col-rank { width: 2.5rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-400, #9ca3af); }
   .col-player { width: 14rem; }
   .col-dot { width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-900, #111827); }
   .col-grade { width: 9rem; }
   .col-comp { width: 11rem; color: var(--color-gray-500, #6b7280); font-style: italic; }
   .col-notes { min-width: 28rem; line-height: 1.55; }
+
+  /* Column widths — FBG table */
+  .fbg-table .col-posrank { width: 6rem; }
+  .fbg-table .col-age { width: 4rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--color-gray-500, #6b7280); }
+
+  /* Tier separator rows */
+  .tier-row { background: var(--color-gray-50, #f9fafb) !important; }
+  .tier-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    padding: 0.375rem 0.75rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
 
   /* School label shown below PlayerCell in the table */
   .col-player .player-school {
