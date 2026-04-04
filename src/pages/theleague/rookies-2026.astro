@@ -11,6 +11,21 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import rspData from '../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json';
 import sleeperData from '../../../data/fantasy-expert/sleeper-watchlist/2026-class.json';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+
+// Build name → espnCollegeId lookup from the MFL-matched data
+const espnCollegeByName = new Map<string, string>();
+for (const entry of Object.values(espnCollegeIds.players)) {
+  const e = entry as { name: string; espnCollegeId?: string };
+  if (e.name && e.espnCollegeId) {
+    espnCollegeByName.set(e.name.toLowerCase(), e.espnCollegeId);
+  }
+}
+
+function getCollegeHeadshot(name: string): string | undefined {
+  const id = espnCollegeByName.get(name.toLowerCase());
+  return id ? `https://a.espncdn.com/i/headshots/college-football/players/full/${id}.png` : undefined;
+}
 
 // Sort all players by DoT score and take top 50
 const top50 = [...rspData.players]
@@ -106,7 +121,7 @@ const { qb, rb, wr, te } = rspData.waldmanOverview;
               <tr>
                 <td class="col-rank" data-label="#">{i + 1}</td>
                 <td class="col-player" data-label="Player">
-                  <PlayerCell name={player.name} position={player.position} size="compact" />
+                  <PlayerCell name={player.name} position={player.position} size="compact" headshot={getCollegeHeadshot(player.name)} />
                   {player.school && <span class="player-school">{player.school}</span>}
                 </td>
                 <td class="col-dot" data-label="DoT">{player.preDraftScore.toFixed(1)}</td>
