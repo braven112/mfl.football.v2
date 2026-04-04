@@ -139,6 +139,7 @@ export function DraftQueuePanel({
             onClick={handleSyncToMfl}
             disabled={isSyncingQueue || queue.length === 0}
             title="Sync queue to your MFL draft board"
+            className="dr-sync-btn"
             style={{
               padding: '0.25rem 0.625rem',
               border: '1px solid var(--content-border, #e2e8f0)',
@@ -164,7 +165,7 @@ export function DraftQueuePanel({
         </div>
 
         {/* Auto-submit toggle */}
-        <label style={{
+        <label className="dr-auto-submit-label" onClick={onToggleAutoSubmit} style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.375rem',
@@ -174,7 +175,10 @@ export function DraftQueuePanel({
           <div
             role="switch"
             aria-checked={autoSubmit}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleAutoSubmit(); } }}
             onClick={onToggleAutoSubmit}
+            className="dr-auto-submit-switch"
             style={{
               position: 'relative',
               width: '2rem',
@@ -268,6 +272,7 @@ export function DraftQueuePanel({
           <button
             onClick={() => topItem && onSubmitPick(topItem.playerId)}
             disabled={isSubmittingPick || !topItem}
+            className="dr-submit-pick-btn"
             style={{
               width: '100%',
               padding: '0.625rem',

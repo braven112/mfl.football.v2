@@ -171,6 +171,7 @@ function GifPicker({ onSelect, onClose }: GifPickerProps) {
           placeholder="Search GIFs…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          className="dr-gif-search-input"
           style={{
             flex: 1,
             padding: '0.375rem 0.5rem',
@@ -183,6 +184,7 @@ function GifPicker({ onSelect, onClose }: GifPickerProps) {
         <button
           onClick={onClose}
           aria-label="Close GIF picker"
+          className="dr-gif-close-btn"
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', color: 'var(--color-gray-400, #9ca3af)', fontSize: '1rem', lineHeight: 1 }}
         >
           ✕
@@ -209,6 +211,7 @@ function GifPicker({ onSelect, onClose }: GifPickerProps) {
                 key={gif.id}
                 onClick={() => onSelect(gif)}
                 title={gif.title}
+                className="dr-gif-result-btn"
                 style={{
                   padding: 0,
                   border: 'none',
@@ -267,6 +270,7 @@ function MentionSuggestions({ suggestions, onSelect }: MentionSuggestionsProps) 
           key={team.franchiseId}
           role="option"
           onClick={() => onSelect(team.nameShort || team.name)}
+          className="dr-mention-btn"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -428,6 +432,7 @@ function MessageBubble({ msg, isOwn, teams, onReact, franchiseId }: MessageBubbl
                   key={emoji}
                   onClick={() => onReact(msg.id, emoji)}
                   title={`React ${emoji}`}
+                  className="dr-reaction-quick-btn"
                   style={{
                     background: 'var(--dr-chat-reaction-bg, #f3f4f6)',
                     border: 'none',
@@ -474,6 +479,7 @@ function ReactionRow({ reactions, messageId, onReact, franchiseId }: ReactionRow
             key={emoji}
             onClick={() => onReact(messageId, emoji)}
             title={`${senders.length} reaction${senders.length !== 1 ? 's' : ''}`}
+            className="dr-reaction-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -819,6 +825,7 @@ export function DraftChatPanel({
             onClick={() => setShowGifPicker((v) => !v)}
             title="Add GIF"
             aria-label="Open GIF picker"
+            className="dr-gif-btn"
             style={{
               flexShrink: 0,
               padding: '0.375rem 0.5rem',
@@ -847,6 +854,7 @@ export function DraftChatPanel({
             rows={1}
             disabled={!isConnected}
             aria-label="Chat message"
+            className="dr-chat-input"
             style={{
               flex: 1,
               padding: '0.375rem 0.5rem',
@@ -868,6 +876,7 @@ export function DraftChatPanel({
             onClick={() => sendMessage()}
             disabled={!text.trim() || !isConnected}
             aria-label="Send message"
+            className="dr-send-btn"
             style={{
               flexShrink: 0,
               padding: '0.375rem 0.625rem',

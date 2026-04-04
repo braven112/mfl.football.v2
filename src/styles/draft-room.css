@@ -171,6 +171,10 @@
     min-height: 44px;
   }
 
+  /* ── DraftQueuePanel: auto-submit toggle switch ──
+   * The visual track stays small; the wrapping label (.dr-auto-submit-label)
+   * provides the 44px tap target. No min-size override needed on the track. */
+
   /* ── DraftQueuePanel: Submit Pick CTA ── */
   .draft-room .dr-submit-pick-btn {
     min-height: 48px;
