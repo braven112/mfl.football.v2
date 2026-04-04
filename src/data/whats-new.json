@@ -1,5 +1,22 @@
 [
   {
+    "id": "draft-room",
+    "date": "2026-04-04",
+    "title": "Draft Room",
+    "summary": "A live draft room with a real-time board, pick queue, timer, and chat — all synced to MFL so you never miss a pick.",
+    "description": [
+      "The MFL draft interface is a grid of checkboxes that looks like it was designed for a 2004 monitor. It works, technically. You can make picks. But there's no timer visualization, no queue to pre-rank your targets, no way to see who's on the clock with anything resembling urgency, and definitely no chat. If your league was drafting together, you were using Discord in one tab and MFL in another and hoping you didn't accidentally close the wrong one.",
+      "The Draft Room changes all of that. The four-panel layout puts everything you need on one screen: the live draft board on the left showing every pick across all rounds with franchise icons and player positions color-coded by slot, a player pool panel with search and position filters, a pick queue for pre-ranking your targets so you're never scrambling when the clock hits zero, and a chat panel powered by real-time WebSockets so the trash talk flows as fast as the picks. On mobile, four tabs give you the same panels without compromise — board, players, queue, and chat, all swiping between them with a persistent timer banner at the top so you always know how much time is left.",
+      "When it's your turn, the timer pulses and the Submit Pick button lights up. Click a player in the queue or from the pool, confirm, and the pick syncs directly to MFL via the franchise API. Pick announcements auto-post to chat so everyone sees what just happened. If MFL's draft board has picks that happened outside the app — someone using the MFL interface on a different tab, or the auto-pick system filling in — the board polls for updates and reconciles automatically. Your draft, your tools, finally in the same place."
+    ],
+    "category": "new-page",
+    "link": "/theleague/draft-room",
+    "linkLabel": "Open Draft Room",
+    "icon": "clipboard",
+    "image": "draft-room.webp",
+    "imageAlt": "The Draft Room showing the four-panel layout with the live draft board, player pool with filters, pick queue, and chat panel"
+  },
+  {
     "id": "weekly-rollup-2026-03-30",
     "date": "2026-03-30",
     "title": "Weekly Fixes & Polish (Mar 25-25)",
