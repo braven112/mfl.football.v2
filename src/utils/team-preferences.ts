@@ -51,9 +51,9 @@ const COOKIE_CONFIG = {
  * Normalize franchise ID to 4-digit format
  * Converts "0000" (commissioner) to "0001"
  */
-function normalizeFranchiseId(franchiseId: string): string {
-  if (!franchiseId) return '0001';
-  const trimmed = franchiseId.trim();
+function normalizeFranchiseId(franchiseId: string | number | null | undefined): string {
+  if (franchiseId === null || franchiseId === undefined || franchiseId === '') return '0001';
+  const trimmed = String(franchiseId).trim();
   if (!trimmed) return '0001';
 
   // Pad to 4 digits if it's a number
@@ -66,8 +66,8 @@ function normalizeFranchiseId(franchiseId: string): string {
 /**
  * Validate franchise ID exists in league
  */
-export function validateFranchiseId(franchiseId: string, league: 'theleague' | 'afl' = 'theleague'): boolean {
-  if (!franchiseId) return false;
+export function validateFranchiseId(franchiseId: string | number | null | undefined, league: 'theleague' | 'afl' = 'theleague'): boolean {
+  if (franchiseId === null || franchiseId === undefined || franchiseId === '') return false;
 
   const normalized = normalizeFranchiseId(franchiseId);
 
