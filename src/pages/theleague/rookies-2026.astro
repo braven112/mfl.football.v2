@@ -63,6 +63,95 @@ const ownedIn2025 = compare2025.filter(p => getOwnership(p.name)).length;
 const ownedIn2024 = compare2024.filter(p => getOwnership(p.name)).length;
 const totalRspOwned = ownedIn2025 + ownedIn2024;
 
+// Unified 3-year RSP ranking — tier-based sort (A→E), newest class first within tier
+const TIER_ORDER: Record<string, number> = {
+  'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5,
+  'Franchise': 1, 'Starter': 2,
+  'Rotational Starter': 3, 'Contributor': 3,
+  'Reserve': 4, 'Developmental': 5, 'Street': 5,
+};
+const GRADE_TO_TIER: Record<string, string> = {
+  'Franchise': 'A', 'Starter': 'B',
+  'Rotational Starter': 'C', 'Contributor': 'C',
+  'Reserve': 'D', 'Developmental': 'E', 'Street': 'E',
+};
+const TIER_LABELS: Record<string, string> = {
+  'A': 'Elite',
+  'B': 'Starter Caliber',
+  'C': 'Rotational / Contributor',
+  'D': 'Reserve',
+  'E': 'Developmental',
+};
+
+type CombinedRspPlayer = {
+  classYear: number; rank: number; name: string; position: string;
+  nflTeam?: string; school?: string;
+  tier: string; rawGrade: string; tierOrder: number;
+  value?: string; notes?: string;
+  owned?: PigskinEntry;
+};
+
+const allRspPlayers: CombinedRspPlayer[] = [];
+
+compare2026.forEach((p, i) => {
+  const tier = GRADE_TO_TIER[p.preDraftGrade] ?? 'E';
+  allRspPlayers.push({
+    classYear: 2026, rank: i + 1, name: p.name, position: p.position,
+    school: p.school, tier, rawGrade: p.preDraftGrade,
+    tierOrder: TIER_ORDER[p.preDraftGrade] ?? 5,
+    notes: p.notes, owned: getOwnership(p.name),
+  });
+});
+
+compare2025.forEach(p => {
+  const pos = p.position.includes('/') ? p.position.split('/')[0] : p.position;
+  allRspPlayers.push({
+    classYear: 2025, rank: p.rank, name: p.name, position: pos,
+    nflTeam: p.team, tier: p.tier, rawGrade: p.tier,
+    tierOrder: TIER_ORDER[p.tier] ?? 5,
+    value: p.value, notes: p.notes, owned: getOwnership(p.name),
+  });
+});
+
+compare2024.forEach(p => {
+  allRspPlayers.push({
+    classYear: 2024, rank: p.rank, name: p.name, position: p.position,
+    nflTeam: p.team, tier: p.tier, rawGrade: p.tier,
+    tierOrder: TIER_ORDER[p.tier] ?? 5,
+    value: p.value, notes: p.notes, owned: getOwnership(p.name),
+  });
+});
+
+// Sort: tier asc → class year desc (2026 first) → rank asc
+allRspPlayers.sort((a, b) => {
+  if (a.tierOrder !== b.tierOrder) return a.tierOrder - b.tierOrder;
+  if (a.classYear !== b.classYear) return b.classYear - a.classYear;
+  return a.rank - b.rank;
+});
+
+// Build flat rows with tier separator header rows
+type CombinedTierRow = { type: 'tier'; tier: string; tierOrder: number; label: string; total: number; ownedCount: number };
+type CombinedPlayerRow = { type: 'player'; overallRank: number } & CombinedRspPlayer;
+type CombinedRow = CombinedTierRow | CombinedPlayerRow;
+
+const combinedRows: CombinedRow[] = [];
+let lastTierOrder2 = -1;
+let overallRank = 0;
+for (const p of allRspPlayers) {
+  if (p.tierOrder !== lastTierOrder2) {
+    lastTierOrder2 = p.tierOrder;
+    const tierPlayers = allRspPlayers.filter(x => x.tierOrder === p.tierOrder);
+    combinedRows.push({
+      type: 'tier', tier: p.tier, tierOrder: p.tierOrder,
+      label: TIER_LABELS[p.tier] ?? '',
+      total: tierPlayers.length,
+      ownedCount: tierPlayers.filter(x => x.owned).length,
+    });
+  }
+  overallRank++;
+  combinedRows.push({ type: 'player', overallRank, ...p });
+}
+
 // FBG: build flat row list with tier separators pre-computed
 type FbgTierRow = { type: 'tier'; tier: string };
 type FbgPlayerRow = { type: 'player'; rank: number; name: string; position: string; positionRank: string; age: number | null; tier: string };
@@ -325,160 +414,70 @@ for (const p of fbgData.players) {
       </div>
     </section>
 
-    <!-- ─── Panel 5: 3-Year RSP Comparison ─────────────────────────── -->
+    <!-- ─── Panel 5: 3-Year RSP Unified Ranking ─────────────────────── -->
     <section role="tabpanel" id="panel-compare" aria-labelledby="tab-compare" tabindex="0" class="rsp-panel" hidden>
-
-      <!-- 2026 Pre-Draft -->
-      <div class="rsp-compare-block">
-        <div class="rsp-compare-block__header">
-          <div class="rsp-compare-block__title-row">
-            <span class="class-badge class-badge--2026">2026</span>
-            <h2 class="rsp-section-title">Pre-Draft Class</h2>
-          </div>
-          <p class="rsp-section-sub">{compare2026.length} prospects graded — sorted by DoT score. Target window: upcoming draft &amp; FAAB.</p>
-        </div>
-        <div class="rsp-table-scroll">
-          <table class="rsp-table compare-table compare-table--2026">
-            <thead>
-              <tr>
-                <th class="col-rank">#</th>
-                <th class="col-player">Player</th>
-                <th class="col-school">School</th>
-                <th class="col-grade">Grade</th>
-                <th class="col-comp">Comparison</th>
-              </tr>
-            </thead>
-            <tbody>
-              {compare2026.map((player, i) => (
-                <tr>
-                  <td class="col-rank" data-label="#">{i + 1}</td>
-                  <td class="col-player" data-label="Player">
-                    <PlayerCell name={player.name} position={player.position} size="compact" headshot={getCollegeHeadshot(player.name)} />
-                  </td>
-                  <td class="col-school" data-label="School">{player.school ?? '—'}</td>
-                  <td class="col-grade" data-label="Grade">{player.preDraftGrade}</td>
-                  <td class="col-comp" data-label="Comparison">{player.comparison ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div class="rsp-table-section-header">
+        <h2 class="rsp-section-title">3-Year RSP — Unified Ranking</h2>
+        <p class="rsp-section-sub">{allRspPlayers.length} players across 3 classes — sorted by Waldman tier (A→E), newest class first within tier. 2024 shelf life expires after this season.</p>
       </div>
-
-      <!-- 2025 Post-Draft -->
-      <div class="rsp-compare-block">
-        <div class="rsp-compare-block__header">
-          <div class="rsp-compare-block__title-row">
-            <span class="class-badge class-badge--2025">2025</span>
-            <h2 class="rsp-section-title">Post-Draft Class</h2>
-          </div>
-          <p class="rsp-section-sub">{compare2025.length} players — {ownedIn2025} on your roster. Shelf life expires after 2027 season.</p>
-        </div>
-        <div class="rsp-table-scroll">
-          <table class="rsp-table compare-table">
-            <thead>
-              <tr>
-                <th class="col-rank">#</th>
-                <th class="col-player">Player</th>
-                <th class="col-team">NFL</th>
-                <th class="col-tier">Tier</th>
-                <th class="col-value">Value</th>
-                <th class="col-owned">Status</th>
+      <div class="rsp-table-scroll">
+        <table class="rsp-table compare-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-player">Player</th>
+              <th class="col-class">Class</th>
+              <th class="col-team">NFL / School</th>
+              <th class="col-tier">Tier</th>
+              <th class="col-value">Value</th>
+              <th class="col-owned">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {combinedRows.map(row => row.type === 'tier' ? (
+              <tr class="tier-row">
+                <td colspan={7} class="tier-label">
+                  <span class={`tier-badge tier-badge--${row.tier.toLowerCase()}`}>{row.tier}</span>
+                  {row.label}
+                  <span class="tier-count">· {row.total} players{row.ownedCount > 0 ? ` · ${row.ownedCount} owned` : ''}</span>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {compare2025.map((player) => {
-                const owned = getOwnership(player.name);
-                return (
-                  <tr class:list={[owned && 'rsp-compare-row--owned']}>
-                    <td class="col-rank" data-label="#">{player.rank}</td>
-                    <td class="col-player" data-label="Player">
-                      <PlayerCell
-                        name={player.name}
-                        position={player.position.includes('/') ? player.position.split('/')[0] : player.position}
-                        size="compact"
-                        nflTeam={player.team}
-                        mflId={owned?.mflId}
-                      />
-                    </td>
-                    <td class="col-team" data-label="NFL">{player.team}</td>
-                    <td class="col-tier" data-label="Tier">
-                      <span class={`tier-badge tier-badge--${player.tier.toLowerCase()}`}>{player.tier}</span>
-                    </td>
-                    <td class="col-value" data-label="Value">{player.value}</td>
-                    <td class="col-owned" data-label="Status">
-                      {owned ? (
-                        <span class="owned-badge">
-                          <span class="owned-badge__label">Pigskins</span>
-                          <span class="owned-badge__salary">${(owned.salary / 1_000_000).toFixed(2)}M · Yr {owned.contractYear}</span>
-                        </span>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 2024 Post-Draft -->
-      <div class="rsp-compare-block">
-        <div class="rsp-compare-block__header">
-          <div class="rsp-compare-block__title-row">
-            <span class="class-badge class-badge--2024">2024</span>
-            <h2 class="rsp-section-title">Post-Draft Class</h2>
-          </div>
-          <p class="rsp-section-sub">{compare2024.length} players — {ownedIn2024} on your roster. Shelf life expires after 2026 season.</p>
-        </div>
-        <div class="rsp-table-scroll">
-          <table class="rsp-table compare-table">
-            <thead>
-              <tr>
-                <th class="col-rank">#</th>
-                <th class="col-player">Player</th>
-                <th class="col-team">NFL</th>
-                <th class="col-tier">Tier</th>
-                <th class="col-value">Value</th>
-                <th class="col-owned">Status</th>
+            ) : (
+              <tr class:list={[row.owned && 'rsp-compare-row--owned']}>
+                <td class="col-rank" data-label="#">{row.overallRank}</td>
+                <td class="col-player" data-label="Player">
+                  <PlayerCell
+                    name={row.name}
+                    position={row.position}
+                    size="compact"
+                    nflTeam={row.nflTeam}
+                    mflId={row.owned?.mflId}
+                    headshot={row.classYear === 2026 ? getCollegeHeadshot(row.name) : undefined}
+                  />
+                </td>
+                <td class="col-class" data-label="Class">
+                  <span class={`class-badge class-badge--${row.classYear}`}>{row.classYear}</span>
+                </td>
+                <td class="col-team" data-label="NFL / School">
+                  {row.nflTeam ?? row.school ?? '—'}
+                </td>
+                <td class="col-tier" data-label="Tier">
+                  <span class={`tier-badge tier-badge--${row.tier.toLowerCase()}`} title={row.rawGrade !== row.tier ? row.rawGrade : undefined}>{row.tier}</span>
+                </td>
+                <td class="col-value" data-label="Value">{row.value ?? '—'}</td>
+                <td class="col-owned" data-label="Status">
+                  {row.owned ? (
+                    <span class="owned-badge">
+                      <span class="owned-badge__label">Pigskins</span>
+                      <span class="owned-badge__salary">${(row.owned.salary / 1_000_000).toFixed(2)}M · Yr {row.owned.contractYear}</span>
+                    </span>
+                  ) : null}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {compare2024.map((player) => {
-                const owned = getOwnership(player.name);
-                return (
-                  <tr class:list={[owned && 'rsp-compare-row--owned']}>
-                    <td class="col-rank" data-label="#">{player.rank}</td>
-                    <td class="col-player" data-label="Player">
-                      <PlayerCell
-                        name={player.name}
-                        position={player.position}
-                        size="compact"
-                        nflTeam={player.team}
-                        mflId={owned?.mflId}
-                      />
-                    </td>
-                    <td class="col-team" data-label="NFL">{player.team}</td>
-                    <td class="col-tier" data-label="Tier">
-                      <span class={`tier-badge tier-badge--${player.tier.toLowerCase()}`}>{player.tier}</span>
-                    </td>
-                    <td class="col-value" data-label="Value">{player.value}</td>
-                    <td class="col-owned" data-label="Status">
-                      {owned ? (
-                        <span class="owned-badge">
-                          <span class="owned-badge__label">Pigskins</span>
-                          <span class="owned-badge__salary">${(owned.salary / 1_000_000).toFixed(2)}M · Yr {owned.contractYear}</span>
-                        </span>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
-
     </section>
 
     <!-- ─── Grade Scale Legend (always visible) ──────────────────── -->
@@ -1008,18 +1007,11 @@ for (const p of fbgData.players) {
     font-size: 0.75rem;
   }
 
-  /* ─── RSP Compare blocks ─────────────────────────────────────── */
-  .rsp-compare-block {
-    margin-bottom: 2rem;
-  }
-  .rsp-compare-block__header {
-    margin-bottom: 1rem;
-  }
-  .rsp-compare-block__title-row {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    margin-bottom: 0.25rem;
+  /* ─── Tier separator count note ──────────────────────────────── */
+  .tier-count {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin-left: 0.375rem;
   }
 
   /* Class year badges */
@@ -1084,13 +1076,11 @@ for (const p of fbgData.players) {
   }
 
   /* Compare table column widths */
-  .compare-table .col-school { width: 10rem; color: var(--color-gray-500, #6b7280); }
-  .compare-table .col-team { width: 4rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--color-gray-500, #6b7280); }
+  .compare-table .col-class { width: 4rem; text-align: center; }
+  .compare-table .col-team { width: 8rem; font-size: 0.75rem; color: var(--color-gray-500, #6b7280); }
   .compare-table .col-tier { width: 4rem; text-align: center; }
   .compare-table .col-value { width: 7rem; color: var(--color-gray-500, #6b7280); font-size: 0.75rem; }
   .compare-table .col-owned { width: 9rem; }
-  .compare-table--2026 .col-grade { width: 6rem; }
-  .compare-table--2026 .col-comp { width: 12rem; color: var(--color-gray-500, #6b7280); font-style: italic; }
 
   /* ─── Mobile: table → stacked cards ─────────────────────────── */
   @media (max-width: 640px) {
