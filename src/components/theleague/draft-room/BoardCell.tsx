@@ -18,11 +18,12 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
   // Find original team icon by name for traded picks
   // MFL sometimes prefixes the name with "from " — strip it before matching
   const cleanOriginalName = pick.originalTeamName?.replace(/^from\s+/i, '').trim();
-  const originalTeam = pick.isTraded && cleanOriginalName && teams
+  const lowerOriginalName = cleanOriginalName?.toLowerCase();
+  const originalTeam = pick.isTraded && lowerOriginalName && teams
     ? teams.find((t) =>
-        t.name === cleanOriginalName ||
-        t.nameShort === cleanOriginalName ||
-        t.abbrev === cleanOriginalName
+        t.name?.toLowerCase() === lowerOriginalName ||
+        t.nameShort?.toLowerCase() === lowerOriginalName ||
+        t.abbrev?.toLowerCase() === lowerOriginalName
       )
     : undefined;
 

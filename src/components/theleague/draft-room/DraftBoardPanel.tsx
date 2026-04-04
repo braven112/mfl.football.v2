@@ -39,19 +39,18 @@ export function DraftBoardPanel({
     [picks, activeRound]
   );
 
-  // Get unique franchise columns from picks (ordered by pick number)
-  const columns = useMemo(() => {
-    const seen = new Set<string>();
-    const cols: DraftRoomTeam[] = [];
+  // All teams as columns (preserves full pick count even with trades)
+  const columns = teams;
+
+  // Build a map from franchiseId → picks in this round (can be 0, 1, or 2+)
+  const teamPicksMap = useMemo(() => {
+    const map = new Map<string, DraftRoomPick[]>();
     for (const pick of roundPicks) {
-      if (!seen.has(pick.franchiseId)) {
-        seen.add(pick.franchiseId);
-        const team = teamMap.get(pick.franchiseId);
-        if (team) cols.push(team);
-      }
+      const existing = map.get(pick.franchiseId) ?? [];
+      map.set(pick.franchiseId, [...existing, pick]);
     }
-    return cols;
-  }, [roundPicks, teamMap]);
+    return map;
+  }, [roundPicks]);
 
   const roundNumbers = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
@@ -110,10 +109,10 @@ export function DraftBoardPanel({
           role="grid"
           aria-label={`Round ${activeRound} draft picks`}
           style={{
-            width: '100%',
+            width: 'max-content',
+            minWidth: '100%',
             borderCollapse: 'separate',
             borderSpacing: 0,
-            tableLayout: 'fixed',
           }}
         >
           <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
@@ -172,7 +171,7 @@ export function DraftBoardPanel({
             </tr>
           </thead>
           <tbody>
-            {/* Single row for this round — each column is that team's pick */}
+            {/* Single row for this round — each column is that team's pick(s) */}
             <tr>
               <td style={{
                 padding: '0.25rem',
@@ -187,19 +186,41 @@ export function DraftBoardPanel({
                 {activeRound}
               </td>
               {columns.map((team) => {
-                const pick = roundPicks.find((p) => p.franchiseId === team.franchiseId);
-                if (!pick) return <td key={team.franchiseId} />;
-                const player = pick.playerId ? players.get(pick.playerId) : undefined;
+                const teamPicks = teamPicksMap.get(team.franchiseId) ?? [];
+                if (teamPicks.length === 0) {
+                  // Team traded away their pick — show empty traded indicator
+                  return (
+                    <td key={team.franchiseId} role="gridcell" style={{ padding: 0 }}>
+                      <div style={{
+                        padding: '0.375rem 0.5rem',
+                        minHeight: 'var(--dr-cell-height, 56px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderBottom: '1px solid var(--dr-cell-border, #e2e8f0)',
+                        borderLeft: '3px solid transparent',
+                      }}>
+                        <span style={{ fontSize: '0.5625rem', color: 'var(--color-gray-300, #d1d5db)', fontStyle: 'italic' }}>traded</span>
+                      </div>
+                    </td>
+                  );
+                }
                 return (
                   <td key={team.franchiseId} role="gridcell" style={{ padding: 0 }}>
-                    <BoardCell
-                      pick={pick}
-                      player={player}
-                      team={team}
-                      teams={teams}
-                      isCurrentPick={pick.overallPickNumber === currentPickNumber}
-                      isUserTeam={pick.franchiseId === userTeamId}
-                    />
+                    {teamPicks.map((pick) => {
+                      const player = pick.playerId ? players.get(pick.playerId) : undefined;
+                      return (
+                        <BoardCell
+                          key={pick.overallPickNumber}
+                          pick={pick}
+                          player={player}
+                          team={team}
+                          teams={teams}
+                          isCurrentPick={pick.overallPickNumber === currentPickNumber}
+                          isUserTeam={pick.franchiseId === userTeamId}
+                        />
+                      );
+                    })}
                   </td>
                 );
               })}
