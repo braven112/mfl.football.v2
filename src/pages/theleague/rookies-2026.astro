@@ -15,6 +15,7 @@ import rsp2024 from '../../../data/fantasy-expert/sources/rsp/2024-post-draft.js
 import sleeperData from '../../../data/fantasy-expert/sleeper-watchlist/2026-class.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import fbgData from '../../../data/fantasy-expert/sources/fbg/2026-rookies.json';
+import fbgDynastyData from '../../../data/fantasy-expert/sources/fbg/2026-dynasty.json';
 import pigskinRoster from '../../../data/theleague/pigskins-roster-2026.json';
 import leagueOwnership from '../../../data/theleague/rsp-league-ownership.json';
 import rspPlayerIds from '../../../data/theleague/rsp-player-ids.json';
@@ -49,10 +50,46 @@ function getCollegeHeadshot(name: string): string | undefined {
   return id ? `https://a.espncdn.com/i/headshots/college-football/players/full/${id}.png` : undefined;
 }
 
-// Sort all players by DoT score and take top 50
+// Build FBG rank lookup (2026 rookies only — name normalized for fuzzy match)
+function normalizeFbgName(name: string): string {
+  return name.toLowerCase().replace(/\s+(jr\.?|sr\.?|ii|iii|iv)$/i, '').trim();
+}
+const fbgRankByName = new Map<string, number>();
+const fbgTierByName = new Map<string, string>();
+for (const p of fbgData.players) {
+  fbgRankByName.set(p.name.toLowerCase(), p.rank);
+  fbgRankByName.set(normalizeFbgName(p.name), p.rank);
+  fbgTierByName.set(p.name.toLowerCase(), p.tier);
+  fbgTierByName.set(normalizeFbgName(p.name), p.tier);
+}
+function getFbgRank(name: string): number | undefined {
+  return fbgRankByName.get(name.toLowerCase()) ?? fbgRankByName.get(normalizeFbgName(name));
+}
+function getFbgTier(name: string): string | undefined {
+  return fbgTierByName.get(name.toLowerCase()) ?? fbgTierByName.get(normalizeFbgName(name));
+}
+
+// Build FBG dynasty rank lookup (all players — covers 2024/2025/2026 classes)
+const fbgDynastyRankByName = new Map<string, number>();
+const fbgDynastyTierByName = new Map<string, string>();
+for (const p of fbgDynastyData.players) {
+  fbgDynastyRankByName.set(p.name.toLowerCase(), p.rank);
+  fbgDynastyRankByName.set(normalizeFbgName(p.name), p.rank);
+  fbgDynastyTierByName.set(p.name.toLowerCase(), p.tier);
+  fbgDynastyTierByName.set(normalizeFbgName(p.name), p.tier);
+}
+function getFbgDynastyRank(name: string): number | undefined {
+  return fbgDynastyRankByName.get(name.toLowerCase()) ?? fbgDynastyRankByName.get(normalizeFbgName(name));
+}
+function getFbgDynastyTier(name: string): string | undefined {
+  return fbgDynastyTierByName.get(name.toLowerCase()) ?? fbgDynastyTierByName.get(normalizeFbgName(name));
+}
+
+// Sort all players by DoT score and take top 50 (with FBG rank merged in)
 const top50 = [...rspData.players]
   .sort((a, b) => b.preDraftScore - a.preDraftScore)
-  .slice(0, 50);
+  .slice(0, 50)
+  .map(p => ({ ...p, fbgRank: getFbgRank(p.name), fbgTier: getFbgTier(p.name) }));
 
 // Metrics
 const totalProspects = rspData.players.length;
@@ -86,9 +123,9 @@ function getLeagueOwner(name: string): LeagueOwner | undefined {
   return undefined;
 }
 
-type AffinityEntry = { name: string; slug: string; iconPath: string; abCount: number; totalRsp: number; totalPlayers: number; rspPct: number; affinity: string };
-const affinityData = leagueOwnership.affinity as Record<string, AffinityEntry>;
-const affinitySorted = Object.entries(affinityData).sort((a, b) => b[1].rspCount - a[1].rspCount);
+type AffinityEntry = { name: string; slug: string; iconPath: string; abCount: number; totalRsp: number; totalPlayers: number; abPct: number; affinity: string };
+const affinityData = leagueOwnership.affinity as unknown as Record<string, AffinityEntry>;
+const affinitySorted = Object.entries(affinityData).sort((a, b) => b[1].abCount - a[1].abCount);
 
 const compare2026 = [...rspData.players].sort((a, b) => b.preDraftScore - a.preDraftScore);
 const compare2025 = [...rsp2025.players].sort((a, b) => a.rank - b.rank);
@@ -126,6 +163,8 @@ type CombinedRspPlayer = {
   owner?: LeagueOwner;
   isPigskins?: boolean;
   headshot?: string; mflId?: string; espnId?: string;
+  fbgRank?: number;
+  dynastyRank?: number; dynastyTier?: string;
 };
 
 const allRspPlayers: CombinedRspPlayer[] = [];
@@ -135,11 +174,14 @@ compare2026.forEach((p, i) => {
   const espnCollegeId = espnCollegeByName.get(p.name.toLowerCase());
   allRspPlayers.push({
     classYear: 2026, rank: i + 1, name: p.name, position: p.position,
-    school: p.school, tier, rawGrade: p.preDraftGrade,
+    school: p.school ?? undefined, tier, rawGrade: p.preDraftGrade,
     tierOrder: TIER_ORDER[p.preDraftGrade] ?? 5,
     notes: p.notes,
     headshot: espnCollegeId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnCollegeId}.png` : undefined,
     espnId: espnCollegeId,
+    fbgRank: getFbgRank(p.name),
+    dynastyRank: getFbgDynastyRank(p.name),
+    dynastyTier: getFbgDynastyTier(p.name),
   });
 });
 
@@ -157,6 +199,8 @@ compare2025.forEach(p => {
     headshot: getRspHeadshot(p.name) ?? (pigskinEntry ? `https://www49.myfantasyleague.com/player_photos_big_2014/${pigskinEntry.mflId}_thumb.jpg` : undefined),
     mflId: ids?.mflId ?? pigskinEntry?.mflId,
     espnId: ids?.espnId,
+    dynastyRank: getFbgDynastyRank(p.name),
+    dynastyTier: getFbgDynastyTier(p.name),
   });
 });
 
@@ -173,6 +217,8 @@ compare2024.forEach(p => {
     headshot: getRspHeadshot(p.name) ?? (pigskinEntry ? `https://www49.myfantasyleague.com/player_photos_big_2014/${pigskinEntry.mflId}_thumb.jpg` : undefined),
     mflId: ids?.mflId ?? pigskinEntry?.mflId,
     espnId: ids?.espnId,
+    dynastyRank: getFbgDynastyRank(p.name),
+    dynastyTier: getFbgDynastyTier(p.name),
   });
 });
 
@@ -206,20 +252,6 @@ for (const p of allRspPlayers) {
   combinedRows.push({ type: 'player', overallRank, ...p });
 }
 
-// FBG: build flat row list with tier separators pre-computed
-type FbgTierRow = { type: 'tier'; tier: string };
-type FbgPlayerRow = { type: 'player'; rank: number; name: string; position: string; positionRank: string; age: number | null; tier: string };
-type FbgRow = FbgTierRow | FbgPlayerRow;
-
-const fbgRows: FbgRow[] = [];
-let lastTier = '';
-for (const p of fbgData.players) {
-  if (p.tier !== lastTier) {
-    lastTier = p.tier;
-    fbgRows.push({ type: 'tier', tier: p.tier });
-  }
-  fbgRows.push({ type: 'player', rank: p.rank, name: p.name, position: p.position, positionRank: p.positionRank, age: p.age, tier: p.tier });
-}
 ---
 
 <TheLeagueLayout title="2026 Rookie Rankings">
@@ -278,14 +310,6 @@ for (const p of fbgData.players) {
       >Waldman's Take</button>
       <button
         role="tab"
-        id="tab-fbg"
-        aria-selected="false"
-        aria-controls="panel-fbg"
-        tabindex="-1"
-        class="rsp-tab"
-      >FBG Rankings</button>
-      <button
-        role="tab"
         id="tab-compare"
         aria-selected="false"
         aria-controls="panel-compare"
@@ -297,31 +321,43 @@ for (const p of fbgData.players) {
     <!-- ─── Panel 1: Top 50 Table ─────────────────────────────────── -->
     <section role="tabpanel" id="panel-rankings" aria-labelledby="tab-rankings" tabindex="0" class="rsp-panel">
       <div class="rsp-table-section-header">
-        <h2 class="rsp-section-title">Top 50 by Depth of Talent Score</h2>
-        <p class="rsp-section-sub">Sorted by Waldman's DoT score — a cross-position talent measurement. Pre-draft rankings before NFL landing spots.</p>
+        <h2 class="rsp-section-title">Top 50 — Integrated Rankings</h2>
+        <p class="rsp-section-sub">Waldman's DoT score with FBG dynasty rookie ranks merged. Click a column header to re-sort.</p>
+      </div>
+      <div class="top50-sort-bar">
+        <span class="sort-label">Sort by:</span>
+        <button class="sort-btn sort-btn--active" data-table="top50" data-sort="dot">DoT Score ↓</button>
+        <button class="sort-btn" data-table="top50" data-sort="fbg">FBG Rank ↑</button>
       </div>
       <div class="rsp-table-scroll">
-        <table class="rsp-table">
+        <table class="rsp-table" id="top50-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
               <th class="col-player">Player</th>
-              <th class="col-dot">DoT</th>
+              <th class="col-dot sortable" data-sort-key="dot">DoT</th>
               <th class="col-grade">Grade</th>
+              <th class="col-fbg sortable" data-sort-key="fbg">FBG</th>
               <th class="col-comp">Comparison</th>
               <th class="col-notes">Notes</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="top50-tbody">
             {top50.map((player, i) => (
-              <tr>
-                <td class="col-rank" data-label="#">{i + 1}</td>
+              <tr data-dot={player.preDraftScore} data-fbg={player.fbgRank ?? 9999} data-dot-rank={i + 1}>
+                <td class="col-rank rank-cell" data-label="#">{i + 1}</td>
                 <td class="col-player" data-label="Player">
                   <PlayerCell name={player.name} position={player.position} size="compact" headshot={getCollegeHeadshot(player.name)} />
                   {player.school && <span class="player-school">{player.school}</span>}
                 </td>
                 <td class="col-dot" data-label="DoT">{player.preDraftScore.toFixed(1)}</td>
                 <td class="col-grade" data-label="Grade">{player.preDraftGrade}</td>
+                <td class="col-fbg" data-label="FBG">
+                  {player.fbgRank
+                    ? <span class="fbg-rank">{player.fbgRank} <span class="fbg-tier-chip">{player.fbgTier?.replace('Tier ', 'T')}</span></span>
+                    : <span class="fbg-rank--none">—</span>
+                  }
+                </td>
                 <td class="col-comp" data-label="Comparison">{player.comparison ?? '—'}</td>
                 <td class="col-notes" data-label="Notes">{player.notes}</td>
               </tr>
@@ -430,52 +466,19 @@ for (const p of fbgData.players) {
       </div>
     </section>
 
-    <!-- ─── Panel 4: FBG Rankings ──────────────────────────────────── -->
-    <section role="tabpanel" id="panel-fbg" aria-labelledby="tab-fbg" tabindex="0" class="rsp-panel" hidden>
-      <div class="rsp-table-section-header">
-        <h2 class="rsp-section-title">FBG 2026 Rookie Rankings</h2>
-        <p class="rsp-section-sub">MyFantasyFootballGuys dynasty rookie rankings — {fbgData.players.length} prospects across {[...new Set(fbgData.players.map(p => p.tier))].length} tiers.</p>
-      </div>
-      <div class="rsp-table-scroll">
-        <table class="rsp-table fbg-table">
-          <thead>
-            <tr>
-              <th class="col-rank">#</th>
-              <th class="col-player">Player</th>
-              <th class="col-posrank">Pos Rank</th>
-              <th class="col-age">Age</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fbgRows.map(row => row.type === 'tier' ? (
-              <tr class="tier-row">
-                <td colspan={4} class="tier-label">{row.tier}</td>
-              </tr>
-            ) : (
-              <tr>
-                <td class="col-rank" data-label="#">{row.rank}</td>
-                <td class="col-player" data-label="Player">
-                  <PlayerCell name={row.name} position={row.position} size="compact" headshot={getCollegeHeadshot(row.name)} />
-                </td>
-                <td class="col-posrank" data-label="Pos Rank">
-                  <span class={`pos-badge pos-badge--${row.position.toLowerCase()}`}>{row.positionRank}</span>
-                </td>
-                <td class="col-age" data-label="Age">{row.age ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ─── Panel 5: 3-Year RSP Unified Ranking ─────────────────────── -->
+    <!-- ─── Panel 4: 3-Year RSP Unified Ranking ─────────────────────── -->
     <section role="tabpanel" id="panel-compare" aria-labelledby="tab-compare" tabindex="0" class="rsp-panel" hidden>
       <div class="rsp-table-section-header">
         <h2 class="rsp-section-title">3-Year RSP — Unified Ranking</h2>
-        <p class="rsp-section-sub">{allRspPlayers.length} players across 3 classes — sorted by Waldman tier (A→E), newest class first within tier. 2024 shelf life expires after this season.</p>
+        <p class="rsp-section-sub">{allRspPlayers.length} players across 3 classes — sorted by Waldman tier (A→E), newest class first. FBG dynasty rank shown for 2026 class. 2024 shelf life expires after this season.</p>
+      </div>
+      <div class="top50-sort-bar">
+        <span class="sort-label">Within tier, sort by:</span>
+        <button class="sort-btn sort-btn--active" id="rsp-sort-rsp" data-table="rsp" data-sort="rsp">RSP Rank</button>
+        <button class="sort-btn" id="rsp-sort-fbg" data-table="rsp" data-sort="fbg">FBG Dynasty Rank</button>
       </div>
       <div class="rsp-table-scroll">
-        <table class="rsp-table compare-table">
+        <table class="rsp-table compare-table" id="rsp-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
@@ -483,22 +486,29 @@ for (const p of fbgData.players) {
               <th class="col-class">Class</th>
               <th class="col-team">NFL / School</th>
               <th class="col-tier">Tier</th>
+              <th class="col-fbg">FBG Dyn</th>
               <th class="col-value">Value</th>
               <th class="col-owned">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="rsp-tbody">
             {combinedRows.map(row => row.type === 'tier' ? (
-              <tr class="tier-row">
-                <td colspan={7} class="tier-label">
+              <tr class="tier-row" data-tier-order={row.tierOrder}>
+                <td colspan={8} class="tier-label">
                   <span class={`tier-badge tier-badge--${row.tier.toLowerCase()}`}>{row.tier}</span>
                   {row.label}
                   <span class="tier-count">· {row.total} players{row.ownedCount > 0 ? ` · ${row.ownedCount} owned` : ''}</span>
                 </td>
               </tr>
             ) : (
-              <tr class:list={[row.owner && 'rsp-compare-row--taken', row.isPigskins && 'rsp-compare-row--owned']}>
-                <td class="col-rank" data-label="#">{row.overallRank}</td>
+              <tr
+                class:list={[row.owner && 'rsp-compare-row--taken', row.isPigskins && 'rsp-compare-row--owned']}
+                data-tier-order={row.tierOrder}
+                data-rsp-rank={row.rank}
+                data-fbg={row.dynastyRank ?? 9999}
+                data-class={row.classYear}
+              >
+                <td class="col-rank rank-cell" data-label="#">{row.overallRank}</td>
                 <td class="col-player" data-label="Player">
                   <PlayerCell
                     name={row.name}
@@ -518,6 +528,12 @@ for (const p of fbgData.players) {
                 </td>
                 <td class="col-tier" data-label="Tier">
                   <span class={`tier-badge tier-badge--${row.tier.toLowerCase()}`} title={row.rawGrade !== row.tier ? row.rawGrade : undefined}>{row.tier}</span>
+                </td>
+                <td class="col-fbg" data-label="FBG Dyn">
+                  {row.dynastyRank
+                    ? <span class="fbg-rank" title={row.dynastyTier}>{row.dynastyRank}</span>
+                    : <span class="fbg-rank--none">—</span>
+                  }
                 </td>
                 <td class="col-value" data-label="Value">{row.value ?? '—'}</td>
                 <td class="col-owned" data-label="Owner">
@@ -550,7 +566,7 @@ for (const p of fbgData.players) {
             <img src={info.iconPath} alt={info.name} class="affinity-card__icon" loading="lazy" decoding="async" />
             <div class="affinity-card__body">
               <span class="affinity-card__name">{info.name}</span>
-              <span class="affinity-card__stat">{(info as any).abCount ?? info.rspCount} A/B · {info.rspPct}%</span>
+              <span class="affinity-card__stat">{info.abCount} A/B · {info.abPct}%</span>
             </div>
             <span class:list={['affinity-chip', `affinity-chip--${info.affinity}`]}>
               {info.affinity === 'high' ? 'Buyer' : info.affinity === 'medium' ? 'Mixed' : 'Skips'}
@@ -588,14 +604,14 @@ for (const p of fbgData.players) {
   </div>
 </TheLeagueLayout>
 
-<!-- ─── Tab keyboard nav script ─────────────────────────────────── -->
+<!-- ─── Tab keyboard nav + sort scripts ──────────────────────────── -->
 <script>
+  // ── Tab navigation ────────────────────────────────────────────────
   const tablist = document.querySelector('[role="tablist"]') as HTMLElement;
   if (tablist) {
     const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
 
     function activateTab(tab: HTMLButtonElement) {
-      // Deactivate all
       tabs.forEach(t => {
         t.setAttribute('aria-selected', 'false');
         t.setAttribute('tabindex', '-1');
@@ -605,7 +621,6 @@ for (const p of fbgData.players) {
           if (panel) panel.hidden = true;
         }
       });
-      // Activate selected
       tab.setAttribute('aria-selected', 'true');
       tab.setAttribute('tabindex', '0');
       tab.focus();
@@ -630,6 +645,96 @@ for (const p of fbgData.players) {
       });
     });
   }
+
+  // ── Top 50 sort ───────────────────────────────────────────────────
+  const top50Tbody = document.getElementById('top50-tbody');
+  const top50SortBtns = document.querySelectorAll<HTMLButtonElement>('[data-table="top50"]');
+
+  function sortTop50(key: 'dot' | 'fbg') {
+    if (!top50Tbody) return;
+    const rows = Array.from(top50Tbody.querySelectorAll<HTMLTableRowElement>('tr'));
+    rows.sort((a, b) => {
+      const aVal = parseFloat(a.dataset[key] ?? '9999');
+      const bVal = parseFloat(b.dataset[key] ?? '9999');
+      return key === 'dot' ? bVal - aVal : aVal - bVal;
+    });
+    // Re-number rank cells and reinsert rows
+    rows.forEach((row, i) => {
+      const cell = row.querySelector('.rank-cell');
+      if (cell) cell.textContent = String(i + 1);
+      top50Tbody.appendChild(row);
+    });
+    // Update active button
+    top50SortBtns.forEach(btn => {
+      btn.classList.toggle('sort-btn--active', btn.dataset.sort === key);
+    });
+  }
+
+  top50SortBtns.forEach(btn => {
+    btn.addEventListener('click', () => sortTop50(btn.dataset.sort as 'dot' | 'fbg'));
+  });
+
+  // ── RSP within-tier sort ──────────────────────────────────────────
+  const rspTbody = document.getElementById('rsp-tbody');
+  const rspSortBtns = document.querySelectorAll<HTMLButtonElement>('[data-table="rsp"]');
+
+  function sortRsp(key: 'rsp' | 'fbg') {
+    if (!rspTbody) return;
+    const allRows = Array.from(rspTbody.querySelectorAll<HTMLTableRowElement>('tr'));
+
+    // Group rows into [tierHeaderRow, ...playerRows] segments
+    type Segment = { header: HTMLTableRowElement; players: HTMLTableRowElement[] };
+    const segments: Segment[] = [];
+    let current: Segment | null = null;
+    for (const row of allRows) {
+      if (row.classList.contains('tier-row')) {
+        current = { header: row, players: [] };
+        segments.push(current);
+      } else if (current) {
+        current.players.push(row);
+      }
+    }
+
+    // Sort players within each segment, then rebuild tbody
+    let overallRank = 0;
+    for (const seg of segments) {
+      if (key === 'fbg') {
+        seg.players.sort((a, b) => {
+          const af = parseFloat(a.dataset.fbg ?? '9999');
+          const bf = parseFloat(b.dataset.fbg ?? '9999');
+          // Unranked (9999) go last; within ranked, sort by year desc then fbg asc
+          if (af === 9999 && bf === 9999) return 0;
+          if (af === 9999) return 1;
+          if (bf === 9999) return -1;
+          return af - bf;
+        });
+      } else {
+        // RSP: sort by class year desc, then rsp rank asc
+        seg.players.sort((a, b) => {
+          const ay = parseInt(a.dataset.class ?? '0');
+          const by_ = parseInt(b.dataset.class ?? '0');
+          if (ay !== by_) return by_ - ay;
+          return parseInt(a.dataset.rspRank ?? '0') - parseInt(b.dataset.rspRank ?? '0');
+        });
+      }
+      rspTbody.appendChild(seg.header);
+      for (const row of seg.players) {
+        overallRank++;
+        const cell = row.querySelector('.rank-cell');
+        if (cell) cell.textContent = String(overallRank);
+        rspTbody.appendChild(row);
+      }
+    }
+
+    // Update active button
+    rspSortBtns.forEach(btn => {
+      btn.classList.toggle('sort-btn--active', btn.dataset.sort === key);
+    });
+  }
+
+  rspSortBtns.forEach(btn => {
+    btn.addEventListener('click', () => sortRsp(btn.dataset.sort as 'rsp' | 'fbg'));
+  });
 </script>
 
 <style>
@@ -830,12 +935,63 @@ for (const p of fbgData.players) {
   .col-player { width: 14rem; }
   .col-dot { width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-900, #111827); }
   .col-grade { width: 9rem; }
+  .col-fbg { width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
   .col-comp { width: 11rem; color: var(--color-gray-500, #6b7280); font-style: italic; }
   .col-notes { min-width: 28rem; line-height: 1.55; }
 
-  /* Column widths — FBG table */
-  .fbg-table .col-posrank { width: 6rem; }
-  .fbg-table .col-age { width: 4rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--color-gray-500, #6b7280); }
+  /* Sort bar */
+  .top50-sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .sort-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+  .sort-btn {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.25rem;
+    background: var(--color-white, #fff);
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .sort-btn:hover { border-color: var(--color-primary, #1c497c); color: var(--color-primary, #1c497c); }
+  .sort-btn--active {
+    background: var(--color-primary, #1c497c);
+    color: var(--color-white, #fff);
+    border-color: var(--color-primary, #1c497c);
+  }
+
+  /* FBG rank display */
+  .fbg-rank {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-800, #1f2937);
+  }
+  .fbg-tier-chip {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.0625rem 0.25rem;
+    border-radius: 0.25rem;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .fbg-rank--none { color: var(--color-gray-300, #d1d5db); }
 
   /* Tier separator rows */
   .tier-row { background: var(--color-gray-50, #f9fafb) !important; }
