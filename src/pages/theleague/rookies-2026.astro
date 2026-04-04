@@ -10,9 +10,12 @@ export const prerender = true;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import rspData from '../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json';
+import rsp2025 from '../../../data/fantasy-expert/sources/rsp/2025-post-draft.json';
+import rsp2024 from '../../../data/fantasy-expert/sources/rsp/2024-post-draft.json';
 import sleeperData from '../../../data/fantasy-expert/sleeper-watchlist/2026-class.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import fbgData from '../../../data/fantasy-expert/sources/fbg/2026-rookies.json';
+import pigskinRoster from '../../../data/theleague/pigskins-roster-2026.json';
 
 // Build name → espnCollegeId lookup from the MFL-matched data
 const espnCollegeByName = new Map<string, string>();
@@ -41,6 +44,24 @@ const highPrioritySleepers = sleeperData.sleepers.filter(s => s.priority === 'HI
 
 // Waldman overviews
 const { qb, rb, wr, te } = rspData.waldmanOverview;
+
+// RSP Class Comparison — ownership lookup and per-class data
+type PigskinEntry = { mflId: string; name: string; position: string; nflTeam: string; salary: number; contractYear: number };
+const pigskinsByName = new Map<string, PigskinEntry>();
+for (const [key, data] of Object.entries(pigskinRoster.players)) {
+  pigskinsByName.set(key.toLowerCase(), data as PigskinEntry);
+}
+function getOwnership(name: string): PigskinEntry | undefined {
+  return pigskinsByName.get(name.toLowerCase());
+}
+
+const compare2026 = [...rspData.players].sort((a, b) => b.preDraftScore - a.preDraftScore);
+const compare2025 = [...rsp2025.players].sort((a, b) => a.rank - b.rank);
+const compare2024 = [...rsp2024.players].sort((a, b) => a.rank - b.rank);
+
+const ownedIn2025 = compare2025.filter(p => getOwnership(p.name)).length;
+const ownedIn2024 = compare2024.filter(p => getOwnership(p.name)).length;
+const totalRspOwned = ownedIn2025 + ownedIn2024;
 
 // FBG: build flat row list with tier separators pre-computed
 type FbgTierRow = { type: 'tier'; tier: string };
@@ -120,6 +141,14 @@ for (const p of fbgData.players) {
         tabindex="-1"
         class="rsp-tab"
       >FBG Rankings</button>
+      <button
+        role="tab"
+        id="tab-compare"
+        aria-selected="false"
+        aria-controls="panel-compare"
+        tabindex="-1"
+        class="rsp-tab"
+      >3-Year RSP <span class="rsp-tab__badge">{totalRspOwned} Owned</span></button>
     </div>
 
     <!-- ─── Panel 1: Top 50 Table ─────────────────────────────────── -->
@@ -294,6 +323,162 @@ for (const p of fbgData.players) {
           </tbody>
         </table>
       </div>
+    </section>
+
+    <!-- ─── Panel 5: 3-Year RSP Comparison ─────────────────────────── -->
+    <section role="tabpanel" id="panel-compare" aria-labelledby="tab-compare" tabindex="0" class="rsp-panel" hidden>
+
+      <!-- 2026 Pre-Draft -->
+      <div class="rsp-compare-block">
+        <div class="rsp-compare-block__header">
+          <div class="rsp-compare-block__title-row">
+            <span class="class-badge class-badge--2026">2026</span>
+            <h2 class="rsp-section-title">Pre-Draft Class</h2>
+          </div>
+          <p class="rsp-section-sub">{compare2026.length} prospects graded — sorted by DoT score. Target window: upcoming draft &amp; FAAB.</p>
+        </div>
+        <div class="rsp-table-scroll">
+          <table class="rsp-table compare-table compare-table--2026">
+            <thead>
+              <tr>
+                <th class="col-rank">#</th>
+                <th class="col-player">Player</th>
+                <th class="col-school">School</th>
+                <th class="col-grade">Grade</th>
+                <th class="col-comp">Comparison</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compare2026.map((player, i) => (
+                <tr>
+                  <td class="col-rank" data-label="#">{i + 1}</td>
+                  <td class="col-player" data-label="Player">
+                    <PlayerCell name={player.name} position={player.position} size="compact" headshot={getCollegeHeadshot(player.name)} />
+                  </td>
+                  <td class="col-school" data-label="School">{player.school ?? '—'}</td>
+                  <td class="col-grade" data-label="Grade">{player.preDraftGrade}</td>
+                  <td class="col-comp" data-label="Comparison">{player.comparison ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2025 Post-Draft -->
+      <div class="rsp-compare-block">
+        <div class="rsp-compare-block__header">
+          <div class="rsp-compare-block__title-row">
+            <span class="class-badge class-badge--2025">2025</span>
+            <h2 class="rsp-section-title">Post-Draft Class</h2>
+          </div>
+          <p class="rsp-section-sub">{compare2025.length} players — {ownedIn2025} on your roster. Shelf life expires after 2027 season.</p>
+        </div>
+        <div class="rsp-table-scroll">
+          <table class="rsp-table compare-table">
+            <thead>
+              <tr>
+                <th class="col-rank">#</th>
+                <th class="col-player">Player</th>
+                <th class="col-team">NFL</th>
+                <th class="col-tier">Tier</th>
+                <th class="col-value">Value</th>
+                <th class="col-owned">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compare2025.map((player) => {
+                const owned = getOwnership(player.name);
+                return (
+                  <tr class:list={[owned && 'rsp-compare-row--owned']}>
+                    <td class="col-rank" data-label="#">{player.rank}</td>
+                    <td class="col-player" data-label="Player">
+                      <PlayerCell
+                        name={player.name}
+                        position={player.position.includes('/') ? player.position.split('/')[0] : player.position}
+                        size="compact"
+                        nflTeam={player.team}
+                        mflId={owned?.mflId}
+                      />
+                    </td>
+                    <td class="col-team" data-label="NFL">{player.team}</td>
+                    <td class="col-tier" data-label="Tier">
+                      <span class={`tier-badge tier-badge--${player.tier.toLowerCase()}`}>{player.tier}</span>
+                    </td>
+                    <td class="col-value" data-label="Value">{player.value}</td>
+                    <td class="col-owned" data-label="Status">
+                      {owned ? (
+                        <span class="owned-badge">
+                          <span class="owned-badge__label">Pigskins</span>
+                          <span class="owned-badge__salary">${(owned.salary / 1_000_000).toFixed(2)}M · Yr {owned.contractYear}</span>
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2024 Post-Draft -->
+      <div class="rsp-compare-block">
+        <div class="rsp-compare-block__header">
+          <div class="rsp-compare-block__title-row">
+            <span class="class-badge class-badge--2024">2024</span>
+            <h2 class="rsp-section-title">Post-Draft Class</h2>
+          </div>
+          <p class="rsp-section-sub">{compare2024.length} players — {ownedIn2024} on your roster. Shelf life expires after 2026 season.</p>
+        </div>
+        <div class="rsp-table-scroll">
+          <table class="rsp-table compare-table">
+            <thead>
+              <tr>
+                <th class="col-rank">#</th>
+                <th class="col-player">Player</th>
+                <th class="col-team">NFL</th>
+                <th class="col-tier">Tier</th>
+                <th class="col-value">Value</th>
+                <th class="col-owned">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compare2024.map((player) => {
+                const owned = getOwnership(player.name);
+                return (
+                  <tr class:list={[owned && 'rsp-compare-row--owned']}>
+                    <td class="col-rank" data-label="#">{player.rank}</td>
+                    <td class="col-player" data-label="Player">
+                      <PlayerCell
+                        name={player.name}
+                        position={player.position}
+                        size="compact"
+                        nflTeam={player.team}
+                        mflId={owned?.mflId}
+                      />
+                    </td>
+                    <td class="col-team" data-label="NFL">{player.team}</td>
+                    <td class="col-tier" data-label="Tier">
+                      <span class={`tier-badge tier-badge--${player.tier.toLowerCase()}`}>{player.tier}</span>
+                    </td>
+                    <td class="col-value" data-label="Value">{player.value}</td>
+                    <td class="col-owned" data-label="Status">
+                      {owned ? (
+                        <span class="owned-badge">
+                          <span class="owned-badge__label">Pigskins</span>
+                          <span class="owned-badge__salary">${(owned.salary / 1_000_000).toFixed(2)}M · Yr {owned.contractYear}</span>
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </section>
 
     <!-- ─── Grade Scale Legend (always visible) ──────────────────── -->
@@ -822,6 +1007,90 @@ for (const p of fbgData.players) {
     color: var(--color-gray-500, #6b7280);
     font-size: 0.75rem;
   }
+
+  /* ─── RSP Compare blocks ─────────────────────────────────────── */
+  .rsp-compare-block {
+    margin-bottom: 2rem;
+  }
+  .rsp-compare-block__header {
+    margin-bottom: 1rem;
+  }
+  .rsp-compare-block__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Class year badges */
+  .class-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .class-badge--2026 { background: #dbeafe; color: #1d4ed8; }
+  .class-badge--2025 { background: #dcfce7; color: #15803d; }
+  .class-badge--2024 { background: #fef3c7; color: #b45309; }
+
+  /* RSP tier badges (A/B/C) */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.25rem;
+  }
+  .tier-badge--a { background: #dcfce7; color: #15803d; }
+  .tier-badge--b { background: #dbeafe; color: #1d4ed8; }
+  .tier-badge--c { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-600, #4b5563); }
+  .tier-badge--d { background: #fef3c7; color: #b45309; }
+  .tier-badge--e { background: #fee2e2; color: #dc2626; }
+
+  /* Owned row highlight */
+  .rsp-compare-row--owned {
+    background: #f0fdf4 !important;
+    border-left: 2px solid #16a34a;
+  }
+  .rsp-compare-row--owned:hover {
+    background: #dcfce7 !important;
+  }
+
+  /* Owned badge */
+  .owned-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .owned-badge__label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #16a34a;
+  }
+  .owned-badge__salary {
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* Compare table column widths */
+  .compare-table .col-school { width: 10rem; color: var(--color-gray-500, #6b7280); }
+  .compare-table .col-team { width: 4rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--color-gray-500, #6b7280); }
+  .compare-table .col-tier { width: 4rem; text-align: center; }
+  .compare-table .col-value { width: 7rem; color: var(--color-gray-500, #6b7280); font-size: 0.75rem; }
+  .compare-table .col-owned { width: 9rem; }
+  .compare-table--2026 .col-grade { width: 6rem; }
+  .compare-table--2026 .col-comp { width: 12rem; color: var(--color-gray-500, #6b7280); font-style: italic; }
 
   /* ─── Mobile: table → stacked cards ─────────────────────────── */
   @media (max-width: 640px) {
