@@ -33,24 +33,11 @@ export function DraftBoardPanel({
     [teams]
   );
 
-  // Get picks for the active round
+  // One column per pick slot in the active round, ordered by pick number
   const roundPicks = useMemo(
-    () => picks.filter((p) => p.round === activeRound),
+    () => picks.filter((p) => p.round === activeRound).sort((a, b) => a.pickInRound - b.pickInRound),
     [picks, activeRound]
   );
-
-  // All teams as columns (preserves full pick count even with trades)
-  const columns = teams;
-
-  // Build a map from franchiseId → picks in this round (can be 0, 1, or 2+)
-  const teamPicksMap = useMemo(() => {
-    const map = new Map<string, DraftRoomPick[]>();
-    for (const pick of roundPicks) {
-      const existing = map.get(pick.franchiseId) ?? [];
-      map.set(pick.franchiseId, [...existing, pick]);
-    }
-    return map;
-  }, [roundPicks]);
 
   const roundNumbers = Array.from({ length: totalRounds }, (_, i) => i + 1);
 
@@ -117,110 +104,64 @@ export function DraftBoardPanel({
         >
           <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
             <tr>
-              <th style={{
-                width: 40,
-                padding: '0.375rem 0.25rem',
-                background: 'var(--dr-header-bg, #f9fafb)',
-                fontSize: '0.625rem',
-                fontWeight: 600,
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em',
-                color: 'var(--dr-header-text, #6b7280)',
-                textAlign: 'center',
-                borderBottom: '1px solid var(--content-border, #e2e8f0)',
-              }}>
-                #
-              </th>
-              {columns.map((team) => (
-                <th
-                  key={team.franchiseId}
-                  scope="col"
-                  style={{
-                    padding: '0.375rem 0.25rem',
-                    background: 'var(--dr-header-bg, #f9fafb)',
-                    borderBottom: '1px solid var(--content-border, #e2e8f0)',
-                    textAlign: 'center',
-                    minWidth: 'var(--dr-cell-width, 140px)',
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.125rem' }}>
-                    {team.icon && (
-                      <img
-                        src={team.icon}
-                        alt=""
-                        style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
-                        loading="lazy"
-                      />
-                    )}
-                    <span style={{
-                      fontSize: '0.5625rem',
-                      fontWeight: 700,
-                      textTransform: 'uppercase' as const,
-                      letterSpacing: '0.04em',
-                      color: 'var(--dr-header-text, #6b7280)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '100%',
-                    }}>
-                      {chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }, 'abbrev')}
-                    </span>
-                  </div>
-                </th>
-              ))}
+              {roundPicks.map((pick) => {
+                const team = teamMap.get(pick.franchiseId);
+                return (
+                  <th
+                    key={pick.overallPickNumber}
+                    scope="col"
+                    style={{
+                      padding: '0.375rem 0.25rem',
+                      background: 'var(--dr-header-bg, #f9fafb)',
+                      borderBottom: '1px solid var(--content-border, #e2e8f0)',
+                      textAlign: 'center',
+                      minWidth: 'var(--dr-cell-width, 120px)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.125rem' }}>
+                      {team?.icon && (
+                        <img
+                          src={team.icon}
+                          alt=""
+                          style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
+                          loading="lazy"
+                        />
+                      )}
+                      <span style={{
+                        fontSize: '0.5625rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase' as const,
+                        letterSpacing: '0.04em',
+                        color: 'var(--dr-header-text, #6b7280)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                      }}>
+                        {team ? chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }, 'abbrev') : '—'}
+                      </span>
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {/* Single row for this round — each column is that team's pick(s) */}
+            {/* One column per pick slot — each cell is exactly one pick */}
             <tr>
-              <td style={{
-                padding: '0.25rem',
-                fontSize: '0.625rem',
-                fontWeight: 600,
-                color: 'var(--color-gray-400, #9ca3af)',
-                textAlign: 'center',
-                fontVariantNumeric: 'tabular-nums',
-                verticalAlign: 'top',
-                borderBottom: '1px solid var(--dr-cell-border, #e2e8f0)',
-              }}>
-                {activeRound}
-              </td>
-              {columns.map((team) => {
-                const teamPicks = teamPicksMap.get(team.franchiseId) ?? [];
-                if (teamPicks.length === 0) {
-                  // Team traded away their pick — show empty traded indicator
-                  return (
-                    <td key={team.franchiseId} role="gridcell" style={{ padding: 0, verticalAlign: 'top' }}>
-                      <div style={{
-                        padding: '0.375rem 0.5rem',
-                        minHeight: 'var(--dr-cell-height, 56px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderBottom: '1px solid var(--dr-cell-border, #e2e8f0)',
-                        borderLeft: '3px solid transparent',
-                      }}>
-                        <span style={{ fontSize: '0.5625rem', color: 'var(--color-gray-300, #d1d5db)', fontStyle: 'italic' }}>traded</span>
-                      </div>
-                    </td>
-                  );
-                }
+              {roundPicks.map((pick) => {
+                const team = teamMap.get(pick.franchiseId);
+                const player = pick.playerId ? players.get(pick.playerId) : undefined;
                 return (
-                  <td key={team.franchiseId} role="gridcell" style={{ padding: 0, verticalAlign: 'top' }}>
-                    {teamPicks.map((pick) => {
-                      const player = pick.playerId ? players.get(pick.playerId) : undefined;
-                      return (
-                        <BoardCell
-                          key={pick.overallPickNumber}
-                          pick={pick}
-                          player={player}
-                          team={team}
-                          teams={teams}
-                          isCurrentPick={pick.overallPickNumber === currentPickNumber}
-                          isUserTeam={pick.franchiseId === userTeamId}
-                        />
-                      );
-                    })}
+                  <td key={pick.overallPickNumber} role="gridcell" style={{ padding: 0, verticalAlign: 'top' }}>
+                    <BoardCell
+                      pick={pick}
+                      player={player}
+                      team={team}
+                      teams={teams}
+                      isCurrentPick={pick.overallPickNumber === currentPickNumber}
+                      isUserTeam={pick.franchiseId === userTeamId}
+                    />
                   </td>
                 );
               })}
