@@ -1,0 +1,240 @@
+/**
+ * Draft Room Design Tokens
+ * Scoped under --dr-* to avoid collisions with global tokens.
+ */
+
+.draft-room {
+  /* ── Layout ── */
+  --dr-timer-height: 80px;
+  --dr-timer-height-mobile: 64px;
+  --dr-tab-bar-height: 44px;
+  --dr-panel-padding: var(--spacing-md, 1rem);
+  --dr-panel-gap: var(--spacing-md, 1rem);
+
+  /* ── Timer ── */
+  --dr-timer-bg: var(--color-primary, #1c497c);
+  --dr-timer-text: #ffffff;
+  --dr-timer-accent: var(--color-warning, #f59e0b);
+  --dr-timer-danger: var(--color-error, #dc2626);
+  --dr-timer-font-size: 2.5rem;
+  --dr-timer-font-size-mobile: 1.75rem;
+
+  /* ── Board Grid ── */
+  --dr-cell-width: 140px;
+  --dr-cell-height: 56px;
+  --dr-cell-gap: 1px;
+  --dr-cell-bg: var(--content-bg, #ffffff);
+  --dr-cell-bg-active: var(--color-gray-50, #f9fafb);
+  --dr-cell-bg-user: rgba(28, 73, 124, 0.06);
+  --dr-cell-border: var(--content-border, #e2e8f0);
+  --dr-header-bg: var(--color-gray-50, #f9fafb);
+  --dr-header-text: var(--color-gray-500, #6b7280);
+
+  /* ── Position Colors ── */
+  --dr-pos-qb: #dc2626;
+  --dr-pos-rb: #16a34a;
+  --dr-pos-wr: #2563eb;
+  --dr-pos-te: #7c3aed;
+  --dr-pos-pk: #d97706;
+  --dr-pos-def: #6b7280;
+
+  /* ── On-the-Clock ── */
+  --dr-otc-bg: var(--color-warning-light, #fef3c7);
+  --dr-otc-border: var(--color-warning, #f59e0b);
+
+  /* ── Player Pool ── */
+  --dr-pool-row-height: 48px;
+
+  /* ── Mobile Tabs ── */
+  --dr-tab-active-border: var(--color-primary, #1c497c);
+  --dr-tab-inactive-text: var(--color-gray-400, #9ca3af);
+  --dr-tab-active-text: var(--color-primary, #1c497c);
+
+  /* ── Chat Panel ── */
+  --dr-chat-bg: var(--content-bg, #ffffff);
+  --dr-chat-border: var(--content-border, #e2e8f0);
+  --dr-chat-input-bg: var(--color-gray-50, #f9fafb);
+  --dr-chat-input-border: var(--content-border, #e2e8f0);
+  --dr-chat-bubble-user-bg: var(--color-primary, #1c497c);
+  --dr-chat-bubble-user-text: #ffffff;
+  --dr-chat-bubble-other-bg: var(--color-gray-100, #f3f4f6);
+  --dr-chat-bubble-other-text: var(--color-gray-900, #111827);
+  --dr-chat-pick-bg: rgba(28, 73, 124, 0.05);
+  --dr-chat-pick-border: var(--color-primary, #1c497c);
+  --dr-chat-system-text: var(--color-gray-400, #9ca3af);
+  --dr-chat-reaction-bg: var(--color-gray-100, #f3f4f6);
+  --dr-chat-reaction-active-bg: rgba(28, 73, 124, 0.1);
+  --dr-chat-reaction-active-border: var(--color-primary, #1c497c);
+  --dr-chat-unread-bg: var(--color-error, #dc2626);
+  --dr-chat-gif-radius: var(--radius-md, 0.5rem);
+  --dr-chat-mention-color: var(--color-primary, #1c497c);
+}
+
+/* ── Timer pulse animation ── */
+@keyframes dr-otc-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--dr-otc-border); }
+  50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-cell--otc { animation: none !important; }
+}
+
+/* ── Focus styling ── */
+.draft-room input[type="search"]:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+}
+
+.draft-room button:focus-visible {
+  outline: 2px solid var(--color-primary, #1c497c);
+  outline-offset: 2px;
+}
+
+/* ── Mobile Tap Target Fixes (WCAG 2.5.5 / 44px minimum) ──────────────── */
+
+@media (max-width: 767px) {
+  /*
+   * All interactive elements in the draft room must meet the 44x44px
+   * minimum tap target size on mobile. We use min-height/min-width so
+   * elements can still grow naturally when content is larger.
+   */
+
+  /* ── MobileTabBar tab buttons ── */
+  .draft-room [role="tablist"] > button[role="tab"] {
+    min-height: 44px;
+  }
+
+  /* ── DraftBoardPanel: round selector pills ── */
+  .draft-room .dr-round-pill {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftBoardPanel: mobile list rows ── */
+  .draft-room .dr-mobile-list > div {
+    min-height: 44px;
+  }
+
+  /* ── PlayerPoolPanel: search input ── */
+  .draft-room .dr-search-input {
+    min-height: 44px;
+  }
+
+  /* ── PlayerPoolPanel: position filter chips ── */
+  .draft-room .dr-pos-filter {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── PlayerPoolPanel: player rows ── */
+  .draft-room .dr-player-row {
+    min-height: 44px;
+  }
+
+  /* ── PlayerPoolPanel: add-to-queue (+) button ── */
+  .draft-room .dr-add-queue-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── QueueRow: entire row ── */
+  .draft-room .dr-queue-row {
+    min-height: 44px;
+  }
+
+  /* ── QueueRow: drag handle ── */
+  .draft-room .dr-drag-handle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── QueueRow: remove button ── */
+  .draft-room .dr-remove-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── DraftQueuePanel: Sync to MFL button ── */
+  .draft-room .dr-sync-btn {
+    min-height: 44px;
+  }
+
+  /* ── DraftQueuePanel: auto-submit toggle wrapper ── */
+  .draft-room .dr-auto-submit-label {
+    min-height: 44px;
+  }
+
+  /* ── DraftQueuePanel: auto-submit toggle switch ──
+   * The visual track stays small; the wrapping label (.dr-auto-submit-label)
+   * provides the 44px tap target. No min-size override needed on the track. */
+
+  /* ── DraftQueuePanel: Submit Pick CTA ── */
+  .draft-room .dr-submit-pick-btn {
+    min-height: 48px;
+  }
+
+  /* ── DraftChatPanel: GIF button ── */
+  .draft-room .dr-gif-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: Send button ── */
+  .draft-room .dr-send-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: chat textarea ── */
+  .draft-room .dr-chat-input {
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: hover reaction buttons ── */
+  .draft-room .dr-reaction-quick-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftChatPanel: reaction row buttons ── */
+  .draft-room .dr-reaction-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftChatPanel: mention suggestion buttons ── */
+  .draft-room .dr-mention-btn {
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: GIF picker close button ── */
+  .draft-room .dr-gif-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DraftChatPanel: GIF search input ── */
+  .draft-room .dr-gif-search-input {
+    min-height: 44px;
+  }
+
+  /* ── DraftChatPanel: GIF result buttons ── */
+  .draft-room .dr-gif-result-btn {
+    min-height: 44px;
+  }
+}

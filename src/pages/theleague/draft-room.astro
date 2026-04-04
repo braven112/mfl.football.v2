@@ -1,0 +1,187 @@
+---
+/**
+ * Draft Room — Live Draft Board
+ * Real-time draft board with timer, player pool, and position color-coding.
+ * Polls MFL draftResults via /api/draft/status for live updates.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import DraftRoom from '../../components/theleague/draft-room/DraftRoom';
+import leagueConfigData from '../../data/theleague.config.json';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
+import { getAuthUser } from '../../utils/auth';
+import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { parseTradeFromComment } from '../../utils/draft-utils';
+import type { DraftRoomPageData, DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../types/draft-room';
+import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+
+export const prerender = false;
+
+const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
+
+// ── Auth & team preference ──
+const user = getAuthUser(Astro.request);
+const cookiePref = getTheLeaguePreference(Astro.cookies, 'myteam');
+const defaultTeam = resolveTeamSelection({
+  myTeamParam: Astro.url.searchParams.get('myteam'),
+  authUserFranchise: user?.franchiseId,
+  cookiePreference: cookiePref,
+});
+
+// ── Load MFL feeds ──
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Draft results
+const draftResultsFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  { eager: true }
+);
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === leagueYearStr
+);
+const draftResultsData = draftResultsKey
+  ? getModuleData(draftResultsFeeds[draftResultsKey])
+  : null;
+
+// Players
+const playersFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true }
+);
+const playersKey = Object.keys(playersFeeds).find(
+  (path) => extractFeedSeason(path) === leagueYearStr
+);
+const playersData = playersKey ? getModuleData(playersFeeds[playersKey]) : null;
+
+// League config for draft settings
+const leagueFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/league.json',
+  { eager: true }
+);
+const leagueKey = Object.keys(leagueFeeds).find(
+  (path) => extractFeedSeason(path) === leagueYearStr
+);
+const leagueData = leagueKey ? getModuleData(leagueFeeds[leagueKey]) : null;
+
+// ── Build team configs ──
+const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => ({
+  franchiseId: team.franchiseId,
+  name: team.name,
+  nameMedium: team.nameMedium || team.name,
+  nameShort: team.nameShort || team.name,
+  abbrev: team.abbrev || '',
+  icon: team.icon || '',
+}));
+
+// ── Build player lookup ──
+const rawPlayers = playersData?.players?.player;
+const playerArray: any[] = rawPlayers
+  ? Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers]
+  : [];
+
+// Normalize MFL position codes
+const normPos = (pos: string): string => {
+  if (!pos) return '';
+  const upper = pos.toUpperCase();
+  if (upper.startsWith('TM') || upper === 'DEF' || upper === 'D/ST') return 'DEF';
+  if (upper === 'PK' || upper === 'K') return 'PK';
+  return upper;
+};
+
+// Build MFL name → display name (MFL uses "Last, First")
+const formatName = (mflName: string): string => {
+  if (!mflName) return '';
+  const parts = mflName.split(', ');
+  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : mflName;
+};
+
+const espnCollegeMap = (espnCollegeIds as any)?.players || {};
+
+const players: DraftRoomPlayer[] = playerArray.map((p: any) => {
+  const espnId = p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || '';
+  return {
+    id: p.id,
+    name: formatName(p.name || ''),
+    position: normPos(p.position || ''),
+    nflTeam: (p.team || '').toUpperCase(),
+    headshot: getPlayerHeadshot(p.id, espnId),
+  };
+}).filter((p: DraftRoomPlayer) => {
+  // Filter to draftable positions
+  const pos = p.position;
+  return pos === 'QB' || pos === 'RB' || pos === 'WR' || pos === 'TE' || pos === 'PK' || pos === 'DEF';
+});
+
+// ── Build picks from draft results ──
+const rawPicks = draftResultsData?.draftResults?.draftUnit?.draftPick;
+const pickArray: any[] = rawPicks
+  ? Array.isArray(rawPicks) ? rawPicks : [rawPicks]
+  : [];
+
+// Calculate picks per round from the data
+const rounds = new Set(pickArray.map((p: any) => parseInt(p.round || '1')));
+const totalRounds = rounds.size || 3;
+const picksPerRound = totalRounds > 0 ? Math.ceil(pickArray.length / totalRounds) : 17;
+
+// Sort by (round, pickInRound) then assign sequential overallPickNumber
+// Rounds have variable pick counts (R1=17, R2=18, R3=16) so a fixed stride doesn't work
+const sortedPicks = [...pickArray].sort((a: any, b: any) => {
+  const rDiff = parseInt(a.round || '1') - parseInt(b.round || '1');
+  return rDiff !== 0 ? rDiff : parseInt(a.pick || '1') - parseInt(b.pick || '1');
+});
+
+const picks: DraftRoomPick[] = sortedPicks.map((p: any, idx: number) => {
+  const round = parseInt(p.round || '1');
+  const pickInRound = parseInt(p.pick || '1');
+  const tradedFrom = parseTradeFromComment(p.comments || '');
+  return {
+    round,
+    pickInRound,
+    overallPickNumber: idx + 1,
+    franchiseId: p.franchise || '',
+    playerId: p.player || '',
+    timestamp: p.timestamp || '',
+    comments: p.comments || '',
+    isTraded: !!tradedFrom,
+    originalTeamName: tradedFrom,
+  };
+});
+
+// ── Draft settings from league config ──
+const leagueConfig = leagueData?.league || {};
+const draftKind = leagueConfig.draft_kind === 'live' ? 'live' : 'email';
+const draftLimitHours = leagueConfig.draftLimitHours || '12:00';
+const draftTimerSusp = leagueConfig.draftTimerSusp || '03 07';
+
+// ── Serialize page data ──
+const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
+
+const pageData: DraftRoomPageData = {
+  leagueYear,
+  draftKind,
+  draftLimitHours,
+  draftTimerSusp,
+  totalRounds,
+  picksPerRound,
+  teams,
+  picks,
+  players,
+  partyHost,
+};
+---
+
+<TheLeagueLayout title="Draft Room | The League">
+  <DraftRoom
+    client:load
+    pageData={JSON.stringify(pageData)}
+    userTeamId={defaultTeam}
+  />
+</TheLeagueLayout>
