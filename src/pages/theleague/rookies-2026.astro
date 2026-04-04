@@ -86,7 +86,7 @@ function getLeagueOwner(name: string): LeagueOwner | undefined {
   return undefined;
 }
 
-type AffinityEntry = { name: string; slug: string; iconPath: string; rspCount: number; totalPlayers: number; rspPct: number; affinity: string };
+type AffinityEntry = { name: string; slug: string; iconPath: string; abCount: number; totalRsp: number; totalPlayers: number; rspPct: number; affinity: string };
 const affinityData = leagueOwnership.affinity as Record<string, AffinityEntry>;
 const affinitySorted = Object.entries(affinityData).sort((a, b) => b[1].rspCount - a[1].rspCount);
 
@@ -542,7 +542,7 @@ for (const p of fbgData.players) {
     <div class="affinity-panel">
       <div class="affinity-panel__header">
         <h3 class="affinity-panel__title">RSP Buyer Likelihood</h3>
-        <p class="affinity-panel__sub">Which owners target Waldman-graded players — based on current 2024 &amp; 2025 class holdings</p>
+        <p class="affinity-panel__sub">Ranked by Waldman <strong>Tier A &amp; B</strong> holdings from the 2024 &amp; 2025 classes — high-grade guys only</p>
       </div>
       <div class="affinity-panel__grid">
         {affinitySorted.map(([fid, info]) => (
@@ -550,7 +550,7 @@ for (const p of fbgData.players) {
             <img src={info.iconPath} alt={info.name} class="affinity-card__icon" loading="lazy" decoding="async" />
             <div class="affinity-card__body">
               <span class="affinity-card__name">{info.name}</span>
-              <span class="affinity-card__stat">{info.rspCount} RSP · {info.rspPct}%</span>
+              <span class="affinity-card__stat">{(info as any).abCount ?? info.rspCount} A/B · {info.rspPct}%</span>
             </div>
             <span class:list={['affinity-chip', `affinity-chip--${info.affinity}`]}>
               {info.affinity === 'high' ? 'Buyer' : info.affinity === 'medium' ? 'Mixed' : 'Skips'}

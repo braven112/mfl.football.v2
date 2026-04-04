@@ -1,14 +1,15 @@
 {
   "meta": {
-    "description": "League-wide ownership of RSP 2024/2025 players + franchise RSP affinity scores",
-    "totalOwnershipEntries": 359
+    "description": "League-wide RSP ownership + franchise A/B-tier RSP affinity scores",
+    "totalOwnershipEntries": 359,
+    "affinityBasis": "Count of Waldman A/B tier players (2024+2025 classes) on each roster"
   },
   "ownership": {
     "Keon Coleman": {
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 1633500.0,
       "contractYear": 3
     },
@@ -16,7 +17,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 565675.0,
       "contractYear": 2
     },
@@ -24,7 +25,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 574750.0,
       "contractYear": 3
     },
@@ -32,7 +33,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 605000.0,
       "contractYear": 1
     },
@@ -40,7 +41,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 660000.0,
       "contractYear": 4
     },
@@ -48,7 +49,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 577500.0,
       "contractYear": 4
     },
@@ -56,7 +57,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 852500.0,
       "contractYear": 4
     },
@@ -64,7 +65,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 467500.0,
       "contractYear": 1
     },
@@ -72,7 +73,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 467500.0,
       "contractYear": 2
     },
@@ -80,7 +81,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 467500.0,
       "contractYear": 1
     },
@@ -88,7 +89,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -96,7 +97,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 574750.0,
       "contractYear": 3
     },
@@ -104,7 +105,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 544500.0,
       "contractYear": 1
     },
@@ -112,7 +113,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 467500.0,
       "contractYear": 1
     },
@@ -120,7 +121,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 550000.0,
       "contractYear": 4
     },
@@ -128,7 +129,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -136,7 +137,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 700000.0,
       "contractYear": 3
     },
@@ -144,7 +145,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 625000.0,
       "contractYear": 3
     },
@@ -152,7 +153,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 3250000.0,
       "contractYear": 2
     },
@@ -160,7 +161,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 1200000.0,
       "contractYear": 3
     },
@@ -168,7 +169,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 3125000.0,
       "contractYear": 2
     },
@@ -176,7 +177,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 2000000.0,
       "contractYear": 3
     },
@@ -184,7 +185,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 2500000.0,
       "contractYear": 2
     },
@@ -192,7 +193,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 3250000.0,
       "contractYear": 3
     },
@@ -200,7 +201,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 3400000.0,
       "contractYear": 3
     },
@@ -208,7 +209,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 2125000.0,
       "contractYear": 3
     },
@@ -216,7 +217,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 5000000.0,
       "contractYear": 3
     },
@@ -224,7 +225,7 @@
       "franchiseId": "0001",
       "franchiseName": "Pacific Pigskins",
       "franchiseSlug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
+      "iconPath": "/assets/theleague/icons/pigskins.png",
       "salary": 5575000.0,
       "contractYear": 2
     },
@@ -768,7 +769,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 7150000.0,
       "contractYear": 2
     },
@@ -776,7 +777,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 6346224.5,
       "contractYear": 3
     },
@@ -784,7 +785,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 768652.5,
       "contractYear": 1
     },
@@ -792,7 +793,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 1149500.0,
       "contractYear": 1
     },
@@ -800,7 +801,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 1875500.0,
       "contractYear": 3
     },
@@ -808,7 +809,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 574750.0,
       "contractYear": 3
     },
@@ -816,7 +817,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 4400000.0,
       "contractYear": 1
     },
@@ -824,7 +825,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 467500.0,
       "contractYear": 2
     },
@@ -832,7 +833,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 1182500.0,
       "contractYear": 4
     },
@@ -840,7 +841,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -848,7 +849,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -856,7 +857,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 4400000.0,
       "contractYear": 1
     },
@@ -864,7 +865,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -872,7 +873,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -880,7 +881,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -888,7 +889,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 715000.0,
       "contractYear": 4
     },
@@ -896,7 +897,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 775000.0,
       "contractYear": 3
     },
@@ -904,7 +905,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 5000000.0,
       "contractYear": 1
     },
@@ -912,7 +913,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 425000.0,
       "contractYear": 3
     },
@@ -920,7 +921,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 1000000.0,
       "contractYear": 3
     },
@@ -928,7 +929,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 425000.0,
       "contractYear": 3
     },
@@ -936,7 +937,7 @@
       "franchiseId": "0005",
       "franchiseName": "The Mariachi Ninjas",
       "franchiseSlug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
+      "iconPath": "/assets/theleague/icons/ninjas.png",
       "salary": 1900000.0,
       "contractYear": 1
     },
@@ -944,7 +945,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 658845.0,
       "contractYear": 1
     },
@@ -952,7 +953,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 632225.0,
       "contractYear": 2
     },
@@ -960,7 +961,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 565675.0,
       "contractYear": 2
     },
@@ -968,7 +969,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 878460.0,
       "contractYear": 1
     },
@@ -976,7 +977,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 544500.0,
       "contractYear": 3
     },
@@ -984,7 +985,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 467500.0,
       "contractYear": 3
     },
@@ -992,7 +993,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 605000.0,
       "contractYear": 2
     },
@@ -1000,7 +1001,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 2117500.0,
       "contractYear": 1
     },
@@ -1008,7 +1009,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 931700.0,
       "contractYear": 2
     },
@@ -1016,7 +1017,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 6490000.0,
       "contractYear": 1
     },
@@ -1024,7 +1025,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -1032,7 +1033,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 1464100.0,
       "contractYear": 1
     },
@@ -1040,7 +1041,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 1800000.0,
       "contractYear": 1
     },
@@ -1048,7 +1049,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 4500000.0,
       "contractYear": 4
     },
@@ -1056,7 +1057,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 425000.0,
       "contractYear": 1
     },
@@ -1064,7 +1065,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 4000000.0,
       "contractYear": 2
     },
@@ -1072,7 +1073,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 3100000.0,
       "contractYear": 2
     },
@@ -1080,7 +1081,7 @@
       "franchiseId": "0006",
       "franchiseName": "Music City Mafia",
       "franchiseSlug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
+      "iconPath": "/assets/theleague/icons/music_city.png",
       "salary": 6525000.0,
       "contractYear": 4
     },
@@ -1488,7 +1489,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 7700000.0,
       "contractYear": 2
     },
@@ -1496,7 +1497,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 1031525.0,
       "contractYear": 2
     },
@@ -1504,7 +1505,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 605000.0,
       "contractYear": 1
     },
@@ -1512,7 +1513,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 4235000.0,
       "contractYear": 3
     },
@@ -1520,7 +1521,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 514250.0,
       "contractYear": 3
     },
@@ -1528,7 +1529,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -1536,7 +1537,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 726000.0,
       "contractYear": 3
     },
@@ -1544,7 +1545,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -1552,7 +1553,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -1560,7 +1561,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 990000.0,
       "contractYear": 4
     },
@@ -1568,7 +1569,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 514250.0,
       "contractYear": 3
     },
@@ -1576,7 +1577,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -1584,7 +1585,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -1592,7 +1593,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 831875.0,
       "contractYear": 2
     },
@@ -1600,7 +1601,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 1512500.0,
       "contractYear": 3
     },
@@ -1608,7 +1609,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 550000.0,
       "contractYear": 4
     },
@@ -1616,7 +1617,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -1624,7 +1625,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 577500.0,
       "contractYear": 4
     },
@@ -1632,7 +1633,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 1500000.0,
       "contractYear": 2
     },
@@ -1640,7 +1641,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 9800000.0,
       "contractYear": 2
     },
@@ -1648,7 +1649,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 2050000.0,
       "contractYear": 4
     },
@@ -1656,7 +1657,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 4200000.0,
       "contractYear": 4
     },
@@ -1664,7 +1665,7 @@
       "franchiseId": "0009",
       "franchiseName": "Wascawy Wabbits",
       "franchiseSlug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
+      "iconPath": "/assets/theleague/icons/wabbits.png",
       "salary": 425000.0,
       "contractYear": 1
     },
@@ -1832,7 +1833,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 768652.5,
       "contractYear": 1
     },
@@ -1840,7 +1841,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 565675.0,
       "contractYear": 2
     },
@@ -1848,7 +1849,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 2129600.0,
       "contractYear": 2
     },
@@ -1856,7 +1857,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 514250.0,
       "contractYear": 3
     },
@@ -1864,7 +1865,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 605000.0,
       "contractYear": 1
     },
@@ -1872,7 +1873,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 544500.0,
       "contractYear": 3
     },
@@ -1880,7 +1881,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -1888,7 +1889,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -1896,7 +1897,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -1904,7 +1905,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 622242.5,
       "contractYear": 1
     },
@@ -1912,7 +1913,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 1210000.0,
       "contractYear": 1
     },
@@ -1920,7 +1921,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 3410000.0,
       "contractYear": 4
     },
@@ -1928,7 +1929,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -1936,7 +1937,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 3466870.0,
       "contractYear": 4
     },
@@ -1944,7 +1945,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 10000000.0,
       "contractYear": 1
     },
@@ -1952,7 +1953,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 5250000.0,
       "contractYear": 2
     },
@@ -1960,7 +1961,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 575000.0,
       "contractYear": 3
     },
@@ -1968,7 +1969,7 @@
       "franchiseId": "0011",
       "franchiseName": "Midwestside Connection",
       "franchiseSlug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
+      "iconPath": "/assets/theleague/icons/midwestside.png",
       "salary": 750000.0,
       "contractYear": 1
     },
@@ -2144,7 +2145,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 622242.5,
       "contractYear": 1
     },
@@ -2152,7 +2153,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 3806660.0,
       "contractYear": 1
     },
@@ -2160,7 +2161,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 658845.0,
       "contractYear": 1
     },
@@ -2168,7 +2169,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 1131350.0,
       "contractYear": 2
     },
@@ -2176,7 +2177,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 598950.0,
       "contractYear": 2
     },
@@ -2184,7 +2185,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 565675.0,
       "contractYear": 2
     },
@@ -2192,7 +2193,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 825000.0,
       "contractYear": 2
     },
@@ -2200,7 +2201,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 1100000.0,
       "contractYear": 4
     },
@@ -2208,7 +2209,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 550000.0,
       "contractYear": 4
     },
@@ -2216,7 +2217,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 577500.0,
       "contractYear": 4
     },
@@ -2224,7 +2225,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 990000.0,
       "contractYear": 4
     },
@@ -2232,7 +2233,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 514250.0,
       "contractYear": 3
     },
@@ -2240,7 +2241,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -2248,7 +2249,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 575000.0,
       "contractYear": 5
     },
@@ -2256,7 +2257,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 10000000.0,
       "contractYear": 5
     },
@@ -2264,7 +2265,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 4750000.0,
       "contractYear": 1
     },
@@ -2272,7 +2273,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 1075000.0,
       "contractYear": 5
     },
@@ -2280,7 +2281,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 5000000.0,
       "contractYear": 1
     },
@@ -2288,7 +2289,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 4750000.0,
       "contractYear": 5
     },
@@ -2296,7 +2297,7 @@
       "franchiseId": "0013",
       "franchiseName": "Gridiron Geeks",
       "franchiseSlug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
+      "iconPath": "/assets/theleague/icons/geeks.png",
       "salary": 450000.0,
       "contractYear": 5
     },
@@ -2520,7 +2521,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 3061300.0,
       "contractYear": 2
     },
@@ -2528,7 +2529,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 765325.0,
       "contractYear": 2
     },
@@ -2536,7 +2537,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 514250.0,
       "contractYear": 3
     },
@@ -2544,7 +2545,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 632225.0,
       "contractYear": 2
     },
@@ -2552,7 +2553,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 3146000.0,
       "contractYear": 3
     },
@@ -2560,7 +2561,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 1331000.0,
       "contractYear": 3
     },
@@ -2568,7 +2569,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 605000.0,
       "contractYear": 3
     },
@@ -2576,7 +2577,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -2584,7 +2585,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 5142500.0,
       "contractYear": 2
     },
@@ -2592,7 +2593,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 990000.0,
       "contractYear": 3
     },
@@ -2600,7 +2601,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -2608,7 +2609,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -2616,7 +2617,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 605000.0,
       "contractYear": 4
     },
@@ -2624,7 +2625,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 10800000.0,
       "contractYear": 1
     },
@@ -2632,7 +2633,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -2640,7 +2641,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 665500.0,
       "contractYear": 2
     },
@@ -2648,7 +2649,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 467500.0,
       "contractYear": 4
     },
@@ -2656,7 +2657,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 495000.0,
       "contractYear": 4
     },
@@ -2664,7 +2665,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 4000000.0,
       "contractYear": 2
     },
@@ -2672,7 +2673,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 525000.0,
       "contractYear": 2
     },
@@ -2680,7 +2681,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 800000.0,
       "contractYear": 3
     },
@@ -2688,7 +2689,7 @@
       "franchiseId": "0015",
       "franchiseName": "Dark Magicians of Chaos",
       "franchiseSlug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
       "salary": 3525000.0,
       "contractYear": 4
     },
@@ -2696,7 +2697,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 768652.5,
       "contractYear": 1
     },
@@ -2704,7 +2705,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 2695275.0,
       "contractYear": 2
     },
@@ -2712,7 +2713,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 3859900.0,
       "contractYear": 2
     },
@@ -2720,7 +2721,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 565675.0,
       "contractYear": 2
     },
@@ -2728,7 +2729,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 632225.0,
       "contractYear": 2
     },
@@ -2736,7 +2737,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 937750.0,
       "contractYear": 1
     },
@@ -2744,7 +2745,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 544500.0,
       "contractYear": 3
     },
@@ -2752,7 +2753,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 951665.0,
       "contractYear": 1
     },
@@ -2760,7 +2761,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 544500.0,
       "contractYear": 3
     },
@@ -2768,7 +2769,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 2420000.0,
       "contractYear": 3
     },
@@ -2776,7 +2777,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 8800000.0,
       "contractYear": 2
     },
@@ -2784,7 +2785,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 880000.0,
       "contractYear": 4
     },
@@ -2792,7 +2793,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 1210000.0,
       "contractYear": 4
     },
@@ -2800,7 +2801,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 660000.0,
       "contractYear": 4
     },
@@ -2808,7 +2809,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -2816,7 +2817,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -2824,7 +2825,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 522500.0,
       "contractYear": 4
     },
@@ -2832,7 +2833,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 1197900.0,
       "contractYear": 2
     },
@@ -2840,7 +2841,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 2708585.0,
       "contractYear": 1
     },
@@ -2848,7 +2849,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 9000000.0,
       "contractYear": 3
     },
@@ -2856,7 +2857,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 1050000.0,
       "contractYear": 3
     },
@@ -2864,7 +2865,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 650000.0,
       "contractYear": 3
     },
@@ -2872,7 +2873,7 @@
       "franchiseId": "0016",
       "franchiseName": "Running down the Dream",
       "franchiseSlug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
+      "iconPath": "/assets/theleague/icons/the_dream.png",
       "salary": 425000.0,
       "contractYear": 5
     }
@@ -2881,145 +2882,161 @@
     "0001": {
       "name": "Pacific Pigskins",
       "slug": "pacific_pigskins",
-      "iconPath": "/assets/theleague/icons/pacific_pigskins.png",
-      "rspCount": 6,
+      "iconPath": "/assets/theleague/icons/pigskins.png",
+      "abCount": 6,
+      "totalRsp": 6,
       "totalPlayers": 28,
-      "rspPct": 21.4,
-      "affinity": "medium"
+      "abPct": 21.4,
+      "affinity": "high"
     },
     "0002": {
       "name": "Da Dangsters",
       "slug": "da_dangsters",
       "iconPath": "/assets/theleague/icons/da_dangsters.png",
-      "rspCount": 5,
+      "abCount": 1,
+      "totalRsp": 5,
       "totalPlayers": 23,
-      "rspPct": 21.7,
-      "affinity": "medium"
+      "abPct": 4.3,
+      "affinity": "low"
     },
     "0003": {
       "name": "Maverick",
       "slug": "maverick",
       "iconPath": "/assets/theleague/icons/maverick.png",
-      "rspCount": 9,
+      "abCount": 8,
+      "totalRsp": 9,
       "totalPlayers": 21,
-      "rspPct": 42.9,
+      "abPct": 38.1,
       "affinity": "high"
     },
     "0004": {
       "name": "Heavy Chevy",
       "slug": "heavy_chevy",
       "iconPath": "/assets/theleague/icons/heavy_chevy.png",
-      "rspCount": 6,
+      "abCount": 3,
+      "totalRsp": 6,
       "totalPlayers": 23,
-      "rspPct": 26.1,
+      "abPct": 13.0,
       "affinity": "medium"
     },
     "0005": {
       "name": "The Mariachi Ninjas",
       "slug": "the_mariachi_ninjas",
-      "iconPath": "/assets/theleague/icons/the_mariachi_ninjas.png",
-      "rspCount": 6,
+      "iconPath": "/assets/theleague/icons/ninjas.png",
+      "abCount": 3,
+      "totalRsp": 6,
       "totalPlayers": 22,
-      "rspPct": 27.3,
+      "abPct": 13.6,
       "affinity": "medium"
     },
     "0006": {
       "name": "Music City Mafia",
       "slug": "music_city_mafia",
-      "iconPath": "/assets/theleague/icons/music_city_mafia.png",
-      "rspCount": 1,
+      "iconPath": "/assets/theleague/icons/music_city.png",
+      "abCount": 0,
+      "totalRsp": 1,
       "totalPlayers": 18,
-      "rspPct": 5.6,
+      "abPct": 0.0,
       "affinity": "low"
     },
     "0007": {
       "name": "Fire Ready Aim",
       "slug": "fire_ready_aim",
       "iconPath": "/assets/theleague/icons/fire_ready_aim.png",
-      "rspCount": 7,
+      "abCount": 2,
+      "totalRsp": 7,
       "totalPlayers": 26,
-      "rspPct": 26.9,
-      "affinity": "high"
+      "abPct": 7.7,
+      "affinity": "medium"
     },
     "0008": {
       "name": "Bring The Pain",
       "slug": "bring_the_pain",
       "iconPath": "/assets/theleague/icons/bring_the_pain.png",
-      "rspCount": 7,
+      "abCount": 4,
+      "totalRsp": 7,
       "totalPlayers": 24,
-      "rspPct": 29.2,
-      "affinity": "high"
+      "abPct": 16.7,
+      "affinity": "medium"
     },
     "0009": {
       "name": "Wascawy Wabbits",
       "slug": "wascawy_wabbits",
-      "iconPath": "/assets/theleague/icons/wascawy_wabbits.png",
-      "rspCount": 8,
+      "iconPath": "/assets/theleague/icons/wabbits.png",
+      "abCount": 8,
+      "totalRsp": 8,
       "totalPlayers": 23,
-      "rspPct": 34.8,
+      "abPct": 34.8,
       "affinity": "high"
     },
     "0010": {
       "name": "Computer Jocks",
       "slug": "computer_jocks",
       "iconPath": "/assets/theleague/icons/computer_jocks.png",
-      "rspCount": 8,
+      "abCount": 4,
+      "totalRsp": 8,
       "totalPlayers": 20,
-      "rspPct": 40.0,
-      "affinity": "high"
+      "abPct": 20.0,
+      "affinity": "medium"
     },
     "0011": {
       "name": "Midwestside Connection",
       "slug": "midwestside_connection",
-      "iconPath": "/assets/theleague/icons/midwestside_connection.png",
-      "rspCount": 4,
+      "iconPath": "/assets/theleague/icons/midwestside.png",
+      "abCount": 2,
+      "totalRsp": 4,
       "totalPlayers": 18,
-      "rspPct": 22.2,
+      "abPct": 11.1,
       "affinity": "medium"
     },
     "0012": {
       "name": "Vitside Mafia",
       "slug": "vitside_mafia",
       "iconPath": "/assets/theleague/icons/vitside_mafia.png",
-      "rspCount": 5,
+      "abCount": 3,
+      "totalRsp": 5,
       "totalPlayers": 21,
-      "rspPct": 23.8,
+      "abPct": 14.3,
       "affinity": "medium"
     },
     "0013": {
       "name": "Gridiron Geeks",
       "slug": "gridiron_geeks",
-      "iconPath": "/assets/theleague/icons/gridiron_geeks.png",
-      "rspCount": 3,
+      "iconPath": "/assets/theleague/icons/geeks.png",
+      "abCount": 2,
+      "totalRsp": 3,
       "totalPlayers": 20,
-      "rspPct": 15.0,
-      "affinity": "low"
+      "abPct": 10.0,
+      "affinity": "medium"
     },
     "0014": {
       "name": "Cowboy Up",
       "slug": "cowboy_up",
       "iconPath": "/assets/theleague/icons/cowboy_up.png",
-      "rspCount": 4,
+      "abCount": 4,
+      "totalRsp": 4,
       "totalPlayers": 27,
-      "rspPct": 14.8,
+      "abPct": 14.8,
       "affinity": "medium"
     },
     "0015": {
       "name": "Dark Magicians of Chaos",
       "slug": "dark_magicians_of_chaos",
-      "iconPath": "/assets/theleague/icons/dark_magicians_of_chaos.png",
-      "rspCount": 5,
+      "iconPath": "/assets/theleague/icons/dark_magicians.png",
+      "abCount": 4,
+      "totalRsp": 5,
       "totalPlayers": 22,
-      "rspPct": 22.7,
+      "abPct": 18.2,
       "affinity": "medium"
     },
     "0016": {
       "name": "Running down the Dream",
       "slug": "running_down_the_dream",
-      "iconPath": "/assets/theleague/icons/running_down_the_dream.png",
-      "rspCount": 6,
+      "iconPath": "/assets/theleague/icons/the_dream.png",
+      "abCount": 4,
+      "totalRsp": 6,
       "totalPlayers": 23,
-      "rspPct": 26.1,
+      "abPct": 17.4,
       "affinity": "medium"
     }
   }
