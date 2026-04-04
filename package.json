@@ -46,10 +46,16 @@
     "check:bundle:src": "node scripts/check-bundle-size.mjs --src",
     "predeploy": "pnpm run check:bundle:src",
     "type-check": "pnpm --filter './packages/*' type-check",
-    "clean": "pnpm --parallel --filter './packages/*' clean"
+    "clean": "pnpm --parallel --filter './packages/*' clean",
+    "party:dev": "partykit dev",
+    "party:deploy": "partykit deploy"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["workerd"]
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "partykit": "^0.0.115",
     "@astrojs/check": "^0.9.8",
     "@astrojs/vercel": "^10.0.2",
     "@playwright/test": "^1.57.0",
