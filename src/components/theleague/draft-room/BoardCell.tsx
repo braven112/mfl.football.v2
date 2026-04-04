@@ -27,9 +27,11 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
       )
     : undefined;
 
+  const pickLabel = `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`;
+
   const cellStyle: React.CSSProperties = {
     position: 'relative',
-    padding: '0.375rem 0.5rem',
+    padding: '0.25rem 0.5rem 0.375rem',
     borderBottom: '1px solid var(--dr-cell-border, #e2e8f0)',
     borderLeft: isMade && posColor ? `3px solid ${posColor}` : '3px solid transparent',
     background: isCurrentPick
@@ -40,48 +42,50 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
     minHeight: 'var(--dr-cell-height, 56px)',
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     fontSize: '0.75rem',
     transition: 'background 0.2s ease',
     animation: isCurrentPick ? 'dr-otc-pulse 2s ease-in-out infinite' : undefined,
   };
 
+  const pickLabelEl = (
+    <span style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--color-gray-400, #9ca3af)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em', marginBottom: '0.1875rem' }}>
+      {pickLabel}
+    </span>
+  );
+
+  const tradeTag = pick.isTraded ? (
+    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.125rem' }} title={pick.originalTeamName ? `via ${pick.originalTeamName}` : 'Traded pick'}>
+      <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)' }}>via</span>
+      {originalTeam?.icon
+        ? <img src={originalTeam.icon} alt={originalTeam.nameShort || cleanOriginalName || ''} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
+        : <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{cleanOriginalName}</span>
+      }
+    </span>
+  ) : null;
+
   if (!isMade) {
     return (
-      <div style={cellStyle} aria-label={`Pick ${pick.round}.${String(pick.pickInRound).padStart(2, '0')} — ${team?.nameShort || 'TBD'}${isCurrentPick ? ' — On the clock' : ''}`}>
+      <div style={cellStyle} aria-label={`Pick ${pickLabel} — ${team?.nameShort || 'TBD'}${isCurrentPick ? ' — On the clock' : ''}`}>
+        {pickLabelEl}
         <span style={{ color: 'var(--color-gray-400, #9ca3af)', fontStyle: 'italic', fontSize: '0.6875rem' }}>
           {isCurrentPick ? 'On the clock' : '—'}
         </span>
-        {pick.isTraded && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.125rem' }} title={pick.originalTeamName ? `via ${pick.originalTeamName}` : 'Traded pick'}>
-            <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)' }}>via</span>
-            {originalTeam?.icon
-              ? <img src={originalTeam.icon} alt={originalTeam.nameShort || cleanOriginalName || ''} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{cleanOriginalName}</span>
-            }
-          </span>
-        )}
+        {tradeTag}
       </div>
     );
   }
 
   return (
-    <div style={cellStyle} aria-label={`Pick ${pick.round}.${String(pick.pickInRound).padStart(2, '0')} — ${player?.name || 'Unknown'}, ${player?.position || ''}`}>
+    <div style={cellStyle} aria-label={`Pick ${pickLabel} — ${player?.name || 'Unknown'}, ${player?.position || ''}`}>
+      {pickLabelEl}
       <span style={{ fontWeight: 600, color: 'var(--color-gray-900, #111827)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {player?.name || `Player ${pick.playerId}`}
       </span>
       <span style={{ fontSize: '0.625rem', color: posColor || 'var(--color-gray-500, #6b7280)', fontWeight: 600, marginTop: '0.0625rem' }}>
         {player?.position || ''}{player?.nflTeam ? ` · ${player.nflTeam}` : ''}
       </span>
-      {pick.isTraded && (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.0625rem' }} title={cleanOriginalName ? `via ${cleanOriginalName}` : 'Traded pick'}>
-          <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)' }}>via</span>
-          {originalTeam?.icon
-            ? <img src={originalTeam.icon} alt={originalTeam.nameShort || cleanOriginalName || ''} style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
-            : <span style={{ fontSize: '0.5rem', color: 'var(--color-gray-400, #9ca3af)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{cleanOriginalName}</span>
-          }
-        </span>
-      )}
+      {tradeTag}
     </div>
   );
 }

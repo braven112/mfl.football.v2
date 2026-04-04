@@ -190,7 +190,7 @@ export function DraftBoardPanel({
                 if (teamPicks.length === 0) {
                   // Team traded away their pick — show empty traded indicator
                   return (
-                    <td key={team.franchiseId} role="gridcell" style={{ padding: 0 }}>
+                    <td key={team.franchiseId} role="gridcell" style={{ padding: 0, verticalAlign: 'top' }}>
                       <div style={{
                         padding: '0.375rem 0.5rem',
                         minHeight: 'var(--dr-cell-height, 56px)',
@@ -206,7 +206,7 @@ export function DraftBoardPanel({
                   );
                 }
                 return (
-                  <td key={team.franchiseId} role="gridcell" style={{ padding: 0 }}>
+                  <td key={team.franchiseId} role="gridcell" style={{ padding: 0, verticalAlign: 'top' }}>
                     {teamPicks.map((pick) => {
                       const player = pick.playerId ? players.get(pick.playerId) : undefined;
                       return (
