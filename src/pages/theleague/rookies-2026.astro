@@ -16,6 +16,23 @@ import sleeperData from '../../../data/fantasy-expert/sleeper-watchlist/2026-cla
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import fbgData from '../../../data/fantasy-expert/sources/fbg/2026-rookies.json';
 import pigskinRoster from '../../../data/theleague/pigskins-roster-2026.json';
+import rspPlayerIds from '../../../data/theleague/rsp-player-ids.json';
+
+// Build name → { mflId, espnId } lookup for RSP 2024/2025 NFL players
+const rspIdsByName = new Map<string, { mflId: string; espnId?: string }>();
+for (const [name, ids] of Object.entries(rspPlayerIds.players)) {
+  const entry = ids as { mflId: string; espnId?: string };
+  rspIdsByName.set(name.toLowerCase(), entry);
+}
+function getRspIds(name: string): { mflId: string; espnId?: string } | undefined {
+  return rspIdsByName.get(name.toLowerCase());
+}
+function getRspHeadshot(name: string): string | undefined {
+  const ids = getRspIds(name);
+  if (!ids) return undefined;
+  if (ids.espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${ids.espnId}.png`;
+  return `https://www49.myfantasyleague.com/player_photos_big_2014/${ids.mflId}_thumb.jpg`;
+}
 
 // Build name → espnCollegeId lookup from the MFL-matched data
 const espnCollegeByName = new Map<string, string>();
@@ -89,36 +106,50 @@ type CombinedRspPlayer = {
   tier: string; rawGrade: string; tierOrder: number;
   value?: string; notes?: string;
   owned?: PigskinEntry;
+  headshot?: string; mflId?: string; espnId?: string;
 };
 
 const allRspPlayers: CombinedRspPlayer[] = [];
 
 compare2026.forEach((p, i) => {
   const tier = GRADE_TO_TIER[p.preDraftGrade] ?? 'E';
+  const espnCollegeId = espnCollegeByName.get(p.name.toLowerCase());
   allRspPlayers.push({
     classYear: 2026, rank: i + 1, name: p.name, position: p.position,
     school: p.school, tier, rawGrade: p.preDraftGrade,
     tierOrder: TIER_ORDER[p.preDraftGrade] ?? 5,
     notes: p.notes, owned: getOwnership(p.name),
+    headshot: espnCollegeId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnCollegeId}.png` : undefined,
+    espnId: espnCollegeId,
   });
 });
 
 compare2025.forEach(p => {
   const pos = p.position.includes('/') ? p.position.split('/')[0] : p.position;
+  const ids = getRspIds(p.name);
+  const ownedEntry = getOwnership(p.name);
   allRspPlayers.push({
     classYear: 2025, rank: p.rank, name: p.name, position: pos,
     nflTeam: p.team, tier: p.tier, rawGrade: p.tier,
     tierOrder: TIER_ORDER[p.tier] ?? 5,
-    value: p.value, notes: p.notes, owned: getOwnership(p.name),
+    value: p.value, notes: p.notes, owned: ownedEntry,
+    headshot: getRspHeadshot(p.name) ?? (ownedEntry ? `https://www49.myfantasyleague.com/player_photos_big_2014/${ownedEntry.mflId}_thumb.jpg` : undefined),
+    mflId: ids?.mflId ?? ownedEntry?.mflId,
+    espnId: ids?.espnId,
   });
 });
 
 compare2024.forEach(p => {
+  const ids = getRspIds(p.name);
+  const ownedEntry = getOwnership(p.name);
   allRspPlayers.push({
     classYear: 2024, rank: p.rank, name: p.name, position: p.position,
     nflTeam: p.team, tier: p.tier, rawGrade: p.tier,
     tierOrder: TIER_ORDER[p.tier] ?? 5,
-    value: p.value, notes: p.notes, owned: getOwnership(p.name),
+    value: p.value, notes: p.notes, owned: ownedEntry,
+    headshot: getRspHeadshot(p.name) ?? (ownedEntry ? `https://www49.myfantasyleague.com/player_photos_big_2014/${ownedEntry.mflId}_thumb.jpg` : undefined),
+    mflId: ids?.mflId ?? ownedEntry?.mflId,
+    espnId: ids?.espnId,
   });
 });
 
@@ -451,8 +482,9 @@ for (const p of fbgData.players) {
                     position={row.position}
                     size="compact"
                     nflTeam={row.nflTeam}
-                    mflId={row.owned?.mflId}
-                    headshot={row.classYear === 2026 ? getCollegeHeadshot(row.name) : undefined}
+                    headshot={row.headshot}
+                    mflId={row.mflId}
+                    espnId={row.espnId}
                   />
                 </td>
                 <td class="col-class" data-label="Class">
