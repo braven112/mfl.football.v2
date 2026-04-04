@@ -1440,6 +1440,7 @@ for (const p of allRspPlayers) {
     }
     .rsp-table thead { display: none; }
     .rsp-table tbody tr {
+      background: #fff;
       border: 1px solid var(--content-border, #e2e8f0);
       border-radius: 0.5rem;
       margin-bottom: 0.75rem;
@@ -1471,7 +1472,7 @@ for (const p of allRspPlayers) {
     .col-dot { grid-area: dot; text-align: left; }
     .col-grade { grid-area: grade; }
     .col-comp { grid-area: comp; }
-    .col-notes { grid-area: notes; min-width: 0; word-wrap: break-word; overflow-wrap: break-word; }
+    .col-notes { grid-area: notes; min-width: 0; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; overflow: hidden; }
     .player-avatar { width: 1.75rem; height: 1.75rem; font-size: 0.75rem; }
   }
 </style>
