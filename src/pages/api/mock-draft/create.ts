@@ -205,8 +205,8 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // PartyKit multi-party HTTP: POST to /parties/mock-draft/{roomId}
-    const partyUrl = `${partyHost}/parties/mock-draft/${sessionId}`;
+    // PartyKit multi-party HTTP: POST to /parties/mockdraft/{roomId}
+    const partyUrl = `${partyHost}/parties/mockdraft/${sessionId}`;
 
     // Use PartyKit's storage API — POST the session as the room's initial state
     const partyRes = await fetch(partyUrl, {
@@ -226,7 +226,7 @@ export const POST: APIRoute = async ({ request }) => {
     // ── Track active session ──
     // Store in a lightweight KV so the list endpoint can find active sessions
     // We'll use a second PartyKit room keyed by leagueId as a session registry
-    const registryUrl = `${partyHost}/parties/mock-draft/${leagueId}-registry`;
+    const registryUrl = `${partyHost}/parties/mockdraft/${leagueId}-registry`;
     try {
       await fetch(registryUrl, {
         method: 'POST',

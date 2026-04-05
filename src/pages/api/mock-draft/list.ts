@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const registryUrl = `${partyHost}/parties/mock-draft/${leagueId}-registry`;
+    const registryUrl = `${partyHost}/parties/mockdraft/${leagueId}-registry`;
     const res = await fetch(registryUrl, { method: 'GET' });
 
     if (!res.ok) {
