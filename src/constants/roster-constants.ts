@@ -82,7 +82,7 @@ export function resolveEspnId(
  */
 export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
   if (espnId) {
-    return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+    return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=96&h=70&cb=1`;
   }
   return getPlayerImageUrl(mflId);
 }
