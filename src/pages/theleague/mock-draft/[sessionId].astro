@@ -1,0 +1,138 @@
+---
+/**
+ * Mock Draft Room — /theleague/mock-draft/[sessionId]
+ *
+ * Reuses the same DraftRoom.tsx component in `mode: 'mock'`.
+ * Loads player + team data locally (same as real draft room),
+ * but picks/timer/state come from PartyKit instead of MFL polling.
+ */
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftRoom from '../../../components/theleague/draft-room/DraftRoom';
+import leagueConfigData from '../../../data/theleague.config.json';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
+import { getAuthUser } from '../../../utils/auth';
+import { getPlayerHeadshot } from '../../../constants/roster-constants';
+import espnCollegeIds from '../../../../data/theleague/espn-college-ids.json';
+import type { DraftRoomPageData, DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../../types/draft-room';
+
+export const prerender = false;
+
+const { sessionId } = Astro.params;
+if (!sessionId) {
+  return Astro.redirect('/theleague/mock-draft');
+}
+
+const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
+
+// ── Auth & team preference ──
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect('/theleague/login');
+}
+
+const cookiePref = getTheLeaguePreference(Astro.cookies, 'myteam');
+const defaultTeam = resolveTeamSelection({
+  myTeamParam: Astro.url.searchParams.get('myteam'),
+  authUserFranchise: user?.franchiseId,
+  cookiePreference: cookiePref,
+});
+
+// ── Load MFL feeds (same as draft-room.astro) ──
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Players
+const playersFeeds = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true },
+);
+const playersKey = Object.keys(playersFeeds).find(
+  (path) => extractFeedSeason(path) === leagueYearStr,
+);
+const playersData = playersKey ? getModuleData(playersFeeds[playersKey]) : null;
+
+// ── Build team configs ──
+const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => ({
+  franchiseId: team.franchiseId,
+  name: team.name,
+  nameMedium: team.nameMedium || team.name,
+  nameShort: team.nameShort || team.name,
+  abbrev: team.abbrev || '',
+  icon: team.icon || '',
+}));
+
+// ── Build player lookup ──
+const rawPlayers = playersData?.players?.player;
+const playerArray: any[] = rawPlayers
+  ? Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers]
+  : [];
+
+const normPos = (pos: string): string => {
+  if (!pos) return '';
+  const upper = pos.toUpperCase();
+  if (upper.startsWith('TM') || upper === 'DEF' || upper === 'D/ST') return 'DEF';
+  if (upper === 'PK' || upper === 'K') return 'PK';
+  return upper;
+};
+
+const formatName = (mflName: string): string => {
+  if (!mflName) return '';
+  const parts = mflName.split(', ');
+  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : mflName;
+};
+
+const espnCollegeMap = (espnCollegeIds as any)?.players || {};
+
+const players: DraftRoomPlayer[] = playerArray.map((p: any) => {
+  const espnId = p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || '';
+  return {
+    id: p.id,
+    name: formatName(p.name || ''),
+    position: normPos(p.position || ''),
+    nflTeam: (p.team || '').toUpperCase(),
+    headshot: getPlayerHeadshot(p.id, espnId),
+    isRookie: p.status === 'R' || p.draft_year === leagueYearStr,
+  };
+}).filter((p: DraftRoomPlayer) => {
+  const pos = p.position;
+  return pos === 'QB' || pos === 'RB' || pos === 'WR' || pos === 'TE' || pos === 'PK' || pos === 'DEF';
+});
+
+// ── Serialize page data ──
+// Picks start empty — they'll be populated by PartyKit session sync
+const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
+const leagueId = user.leagueId || '13522';
+
+const pageData: DraftRoomPageData = {
+  leagueYear,
+  draftKind: 'live',
+  draftLimitHours: '',
+  draftTimerSusp: '',
+  totalRounds: 3,
+  picksPerRound: teams.length,
+  teams,
+  picks: [],
+  players,
+  partyHost,
+  leagueId,
+};
+---
+
+<TheLeagueLayout title="Mock Draft Room | The League">
+  <DraftRoom
+    client:load
+    pageData={JSON.stringify(pageData)}
+    userTeamId={defaultTeam}
+    mode="mock"
+    mockSessionId={sessionId}
+    draftContext="rookie"
+  />
+</TheLeagueLayout>

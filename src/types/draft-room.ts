@@ -53,6 +53,7 @@ export interface DraftRoomPlayer {
   position: string;
   nflTeam: string;
   headshot: string;
+  isRookie?: boolean;
 }
 
 /** Data serialized from Astro frontmatter to React island */
@@ -125,6 +126,12 @@ export interface DraftGif {
 
 // ── React State ──────────────────────────────────────────────────────────────
 
+/** Draft context — determines default filter behavior in the player pool */
+export type DraftContext = 'rookie' | 'general';
+
+/** Operating mode for DraftRoom — 'live' polls MFL, 'mock' uses PartyKit session */
+export type DraftRoomMode = 'live' | 'mock';
+
 /** React useReducer state */
 export interface DraftRoomState {
   picks: DraftRoomPick[];
@@ -140,6 +147,7 @@ export interface DraftRoomState {
   activeMobileTab: 'board' | 'players' | 'queue' | 'chat';
   searchQuery: string;
   positionFilter: string | null;
+  rookiesOnly: boolean;
 
   // Polling
   lastPollTimestamp: number;
@@ -165,6 +173,10 @@ export interface DraftRoomState {
   picksPerRound: number;
   leagueYear: number;
   leagueId: string;
+
+  // Mock draft state
+  mockSession: MockDraftSession | null;
+  mockClockSeconds: number;
 }
 
 /** React useReducer actions */
@@ -175,6 +187,7 @@ export type DraftRoomAction =
   | { type: 'SET_MOBILE_TAB'; tab: 'board' | 'players' | 'queue' | 'chat' }
   | { type: 'SET_SEARCH_QUERY'; query: string }
   | { type: 'SET_POSITION_FILTER'; position: string | null }
+  | { type: 'SET_ROOKIES_ONLY'; value: boolean }
   // Queue actions
   | { type: 'LOAD_QUEUE'; items: DraftQueueItem[] }
   | { type: 'ADD_TO_QUEUE'; playerId: string }
@@ -192,4 +205,70 @@ export type DraftRoomAction =
   | { type: 'CHAT_REACTION'; messageId: string; emoji: string; reactions: Record<string, string[]> }
   | { type: 'CHAT_CONNECTED' }
   | { type: 'CHAT_DISCONNECTED' }
-  | { type: 'CHAT_CLEAR_UNREAD' };
+  | { type: 'CHAT_CLEAR_UNREAD' }
+  // Mock draft actions
+  | { type: 'MOCK_SESSION_SYNC'; session: MockDraftSession }
+  | { type: 'MOCK_PICK_MADE'; pick: MockPick; session: MockDraftSession }
+  | { type: 'MOCK_CLOCK_TICK'; secondsRemaining: number };
+
+// ── Mock Draft Types ────────────────────────────────────────────────────────
+
+export type MockDraftStatus = 'lobby' | 'active' | 'paused' | 'completed';
+
+export type MockTimerPreset = 60 | 120 | 300;
+
+/** Full mock draft session state — stored in PartyKit Durable Object KV */
+export interface MockDraftSession {
+  id: string;
+  leagueId: string;
+  leagueYear: number;
+  /** franchiseId of the owner who created the session */
+  createdBy: string;
+  createdAt: string;
+  status: MockDraftStatus;
+  /** franchiseIds in snake-order, all rounds flattened */
+  draftOrder: string[];
+  picksPerRound: number;
+  totalRounds: number;
+  /** 0-based index into draftOrder for the current pick */
+  currentPickIndex: number;
+  /** seconds per pick */
+  timerSeconds: number;
+  picks: MockPick[];
+  participants: MockParticipant[];
+  /** true = use real MFL futureDraftPicks order, false = randomized */
+  useRealOrder: boolean;
+}
+
+/** A single pick in a mock draft */
+export interface MockPick {
+  overallPickNumber: number;
+  round: number;
+  pickInRound: number;
+  franchiseId: string;
+  playerId?: string;
+  pickedAt?: string;
+  isAutoPick?: boolean;
+}
+
+/** A participant connected to a mock draft session */
+export interface MockParticipant {
+  franchiseId: string;
+  connectedAt: string;
+  isAutoPickEnabled: boolean;
+  isConnected: boolean;
+}
+
+/** Lightweight summary used in lobby session cards */
+export interface MockDraftSessionSummary {
+  id: string;
+  createdBy: string;
+  createdAt: string;
+  status: MockDraftStatus;
+  participantCount: number;
+  totalTeams: number;
+  currentRound: number;
+  currentPickInRound: number;
+  timerSeconds: number;
+  totalRounds: number;
+}

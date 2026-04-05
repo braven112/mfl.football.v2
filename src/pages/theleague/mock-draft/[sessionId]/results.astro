@@ -1,0 +1,522 @@
+---
+/**
+ * Mock Draft Results — /theleague/mock-draft/[sessionId]/results
+ *
+ * Static results view after a mock draft completes.
+ * Fetches the session from PartyKit storage via HTTP, renders
+ * the draft board and per-team pick summaries.
+ */
+
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser } from '../../../../utils/auth';
+import { getCurrentLeagueYear } from '../../../../utils/league-year';
+import { getPlayerHeadshot } from '../../../../constants/roster-constants';
+import leagueConfigData from '../../../../data/theleague.config.json';
+import espnCollegeIds from '../../../../../data/theleague/espn-college-ids.json';
+
+export const prerender = false;
+
+const { sessionId } = Astro.params;
+if (!sessionId) {
+  return Astro.redirect('/theleague/mock-draft');
+}
+
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect('/theleague/login');
+}
+
+const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
+const leagueYear = getCurrentLeagueYear();
+const leagueYearStr = String(leagueYear);
+
+// ── Fetch session from PartyKit ──
+let session: any = null;
+if (partyHost) {
+  try {
+    const res = await fetch(`${partyHost}/parties/mock-draft/${sessionId}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      session = data.session;
+    }
+  } catch (e) {
+    console.error('[mock-draft/results] Failed to fetch session:', e);
+  }
+}
+
+if (!session) {
+  return Astro.redirect('/theleague/mock-draft');
+}
+
+// ── Build team lookup ──
+const teamMap = new Map<string, { name: string; nameMedium: string; nameShort: string; icon: string }>();
+for (const team of leagueConfigData.teams ?? []) {
+  teamMap.set(team.franchiseId, {
+    name: team.name,
+    nameMedium: (team as any).nameMedium || team.name,
+    nameShort: (team as any).nameShort || team.name,
+    icon: (team as any).icon || '',
+  });
+}
+
+// ── Build player lookup ──
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const playersFeeds = import.meta.glob(
+  '../../../../../data/theleague/mfl-feeds/*/players.json',
+  { eager: true },
+);
+const playersKey = Object.keys(playersFeeds).find(
+  (path) => path.includes(`/${leagueYearStr}/`),
+);
+const playersData = playersKey ? getModuleData(playersFeeds[playersKey]) : null;
+const rawPlayers = playersData?.players?.player;
+const playerArray: any[] = rawPlayers
+  ? Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers]
+  : [];
+
+const normPos = (pos: string): string => {
+  if (!pos) return '';
+  const upper = pos.toUpperCase();
+  if (upper.startsWith('TM') || upper === 'DEF' || upper === 'D/ST') return 'DEF';
+  if (upper === 'PK' || upper === 'K') return 'PK';
+  return upper;
+};
+
+const formatName = (mflName: string): string => {
+  if (!mflName) return '';
+  const parts = mflName.split(', ');
+  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : mflName;
+};
+
+const espnCollegeMap = (espnCollegeIds as any)?.players || {};
+
+const playerMap = new Map<string, { name: string; position: string; nflTeam: string; headshot: string }>();
+for (const p of playerArray) {
+  const espnId = p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || '';
+  playerMap.set(p.id, {
+    name: formatName(p.name || ''),
+    position: normPos(p.position || ''),
+    nflTeam: (p.team || '').toUpperCase(),
+    headshot: getPlayerHeadshot(p.id, espnId),
+  });
+}
+
+// ── Process picks ──
+const picks = (session.picks || []).filter((p: any) => p.playerId);
+const totalRounds = session.totalRounds || 3;
+const picksPerRound = session.picksPerRound || 16;
+
+// Group picks by team
+const picksByTeam = new Map<string, any[]>();
+for (const pick of picks) {
+  const list = picksByTeam.get(pick.franchiseId) || [];
+  list.push(pick);
+  picksByTeam.set(pick.franchiseId, list);
+}
+
+// Position color map
+const posColors: Record<string, string> = {
+  QB: '#dc2626',
+  RB: '#16a34a',
+  WR: '#2563eb',
+  TE: '#7c3aed',
+  PK: '#d97706',
+  DEF: '#6b7280',
+};
+
+// Draft order (round 1 unique franchises)
+const round1Order = session.draftOrder
+  ? session.draftOrder.slice(0, picksPerRound)
+  : [...picksByTeam.keys()];
+
+const creatorTeam = teamMap.get(session.createdBy);
+const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
+  month: 'short', day: 'numeric', year: 'numeric',
+});
+---
+
+<TheLeagueLayout title="Mock Draft Results | The League">
+  <div class="results">
+    <!-- Header -->
+    <header class="results__header">
+      <div class="results__header-top">
+        <a href="/theleague/mock-draft" class="results__back">&larr; Back to Lobby</a>
+      </div>
+      <h1 class="results__title">Mock Draft Results</h1>
+      <p class="results__meta">
+        {creatorTeam?.nameShort || 'Unknown'}'s mock · {createdDate} · {totalRounds} rounds · {session.timerSeconds}s timer
+      </p>
+    </header>
+
+    <!-- Draft Board (round-by-round grid) -->
+    <section class="results__board-section">
+      <div class="section-header">
+        <h2 class="section-header__title">Draft Board</h2>
+      </div>
+
+      {Array.from({ length: totalRounds }, (_, ri) => {
+        const round = ri + 1;
+        const roundPicks = picks
+          .filter((p: any) => p.round === round)
+          .sort((a: any, b: any) => a.pickInRound - b.pickInRound);
+
+        return (
+          <div class="results__round">
+            <h3 class="results__round-label">Round {round}</h3>
+            <div class="results__round-grid">
+              {roundPicks.map((pick: any) => {
+                const player = playerMap.get(pick.playerId);
+                const team = teamMap.get(pick.franchiseId);
+                const posColor = player ? posColors[player.position] || '#6b7280' : '#6b7280';
+                return (
+                  <div class="results__pick-card" style={`border-left: 3px solid ${posColor}`}>
+                    <div class="results__pick-number">
+                      {round}.{String(pick.pickInRound).padStart(2, '0')}
+                    </div>
+                    <div class="results__pick-team">
+                      {team?.nameShort || pick.franchiseId}
+                    </div>
+                    {player ? (
+                      <div class="results__pick-player">
+                        <span class="results__pick-name">{player.name}</span>
+                        <span class="results__pick-pos" style={`color: ${posColor}`}>
+                          {player.position} · {player.nflTeam}
+                        </span>
+                      </div>
+                    ) : (
+                      <div class="results__pick-player">
+                        <span class="results__pick-name results__pick-name--unknown">Unknown Player</span>
+                      </div>
+                    )}
+                    {pick.isAutoPick && (
+                      <span class="results__auto-badge">Auto</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+
+    <!-- Per-team picks -->
+    <section class="results__teams-section">
+      <div class="section-header">
+        <h2 class="section-header__title">Picks by Team</h2>
+      </div>
+
+      <div class="results__teams-grid">
+        {round1Order.map((franchiseId: string) => {
+          const team = teamMap.get(franchiseId);
+          const teamPicks = (picksByTeam.get(franchiseId) || [])
+            .sort((a: any, b: any) => a.overallPickNumber - b.overallPickNumber);
+
+          return (
+            <div class="results__team-card">
+              <div class="results__team-header">
+                {team?.icon && (
+                  <img src={team.icon} alt="" class="results__team-icon" width="24" height="24" />
+                )}
+                <span class="results__team-name">{team?.nameMedium || franchiseId}</span>
+              </div>
+              <div class="results__team-picks">
+                {teamPicks.map((pick: any) => {
+                  const player = playerMap.get(pick.playerId);
+                  const posColor = player ? posColors[player.position] || '#6b7280' : '#6b7280';
+                  return (
+                    <div class="results__team-pick-row">
+                      <span class="results__team-pick-num">
+                        {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
+                      </span>
+                      {player ? (
+                        <>
+                          <span class="results__team-pick-name">{player.name}</span>
+                          <span class="results__team-pick-pos" style={`color: ${posColor}`}>
+                            {player.position}
+                          </span>
+                        </>
+                      ) : (
+                        <span class="results__team-pick-name results__team-pick-name--unknown">—</span>
+                      )}
+                      {pick.isAutoPick && (
+                        <span class="results__auto-badge results__auto-badge--sm">A</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {teamPicks.length === 0 && (
+                  <div class="results__team-pick-row">
+                    <span class="results__team-pick-name results__team-pick-name--unknown">No picks</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="results__cta">
+      <a href="/theleague/mock-draft" class="results__cta-btn">Run Another Mock Draft</a>
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .results {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  /* ── Header ── */
+  .results__header {
+    margin-bottom: 2rem;
+  }
+
+  .results__header-top {
+    margin-bottom: 0.75rem;
+  }
+
+  .results__back {
+    font-size: 0.8125rem;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+  }
+
+  .results__back:hover {
+    text-decoration: underline;
+  }
+
+  .results__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
+  }
+
+  .results__meta {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0;
+  }
+
+  /* ── Section headers ── */
+  .section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 1rem;
+  }
+
+  .section-header__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  /* ── Draft Board ── */
+  .results__board-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .results__round {
+    margin-bottom: 1.25rem;
+  }
+
+  .results__round-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0 0 0.5rem;
+  }
+
+  .results__round-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .results__pick-card {
+    position: relative;
+    padding: 0.5rem 0.625rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: 0.375rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .results__pick-number {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .results__pick-team {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .results__pick-player {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .results__pick-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .results__pick-name--unknown {
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  .results__pick-pos {
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  .results__auto-badge {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.5rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 999px;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .results__auto-badge--sm {
+    font-size: 0.5rem;
+    padding: 0 0.25rem;
+    position: static;
+    margin-left: auto;
+  }
+
+  /* ── Per-team picks ── */
+  .results__teams-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .results__teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .results__team-card {
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .results__team-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .results__team-icon {
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .results__team-name {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .results__team-picks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .results__team-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .results__team-pick-num {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+    min-width: 2rem;
+  }
+
+  .results__team-pick-name {
+    font-weight: 500;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .results__team-pick-name--unknown {
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  .results__team-pick-pos {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    margin-left: auto;
+  }
+
+  /* ── CTA ── */
+  .results__cta {
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  .results__cta-btn {
+    display: inline-block;
+    padding: 0.625rem 1.5rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: opacity 0.15s ease;
+  }
+
+  .results__cta-btn:hover {
+    opacity: 0.9;
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 639px) {
+    .results__round-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .results__teams-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

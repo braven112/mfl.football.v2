@@ -1,0 +1,503 @@
+---
+/**
+ * Mock Draft Lobby
+ * Create or join a mock draft session. Lists active and recent sessions.
+ * Auth-gated: only authenticated owners can create/join.
+ */
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+import leagueConfigData from '../../../data/theleague.config.json';
+
+export const prerender = false;
+
+const user = getAuthUser(Astro.request);
+const leagueYear = getCurrentLeagueYear();
+const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
+
+// Build team lookup for display
+const teamMap = new Map<string, { name: string; icon: string }>();
+for (const team of leagueConfigData.teams ?? []) {
+  teamMap.set(team.franchiseId, {
+    name: (team as any).nameMedium || team.name,
+    icon: (team as any).icon || '',
+  });
+}
+const teamMapJson = JSON.stringify(Object.fromEntries(teamMap));
+---
+
+<TheLeagueLayout title="Mock Draft | The League">
+  <div class="mock-lobby">
+    <!-- Header -->
+    <header class="mock-lobby__header">
+      <h1 class="mock-lobby__title">Mock Draft</h1>
+      <p class="mock-lobby__subtitle">
+        Practice your {leagueYear} rookie draft strategy before the real thing.
+      </p>
+    </header>
+
+    {!user ? (
+      <div class="mock-lobby__auth-wall">
+        <p>Sign in to create or join a mock draft.</p>
+        <a href="/theleague/login" class="mock-lobby__signin-btn">Sign In</a>
+      </div>
+    ) : (
+      <>
+        <!-- Create section -->
+        <section class="mock-lobby__create">
+          <div class="section-header">
+            <h2 class="section-header__title">Start a Mock Draft</h2>
+            <p class="section-header__sub">Configure and launch a new session</p>
+          </div>
+
+          <div class="mock-lobby__create-form" id="create-form">
+            <div class="mock-lobby__form-row">
+              <label class="mock-lobby__label">Timer per pick</label>
+              <div class="mock-lobby__timer-chips" id="timer-chips">
+                <button class="mock-lobby__chip" data-value="60">1 min</button>
+                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="120">2 min</button>
+                <button class="mock-lobby__chip" data-value="300">5 min</button>
+              </div>
+            </div>
+
+            <div class="mock-lobby__form-row">
+              <label class="mock-lobby__label">Rounds</label>
+              <div class="mock-lobby__timer-chips" id="round-chips">
+                <button class="mock-lobby__chip" data-value="1">1</button>
+                <button class="mock-lobby__chip" data-value="2">2</button>
+                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="3">3</button>
+              </div>
+            </div>
+
+            <div class="mock-lobby__form-row">
+              <label class="mock-lobby__label">Draft order</label>
+              <div class="mock-lobby__timer-chips" id="order-chips">
+                <button class="mock-lobby__chip mock-lobby__chip--active" data-value="real">Real order</button>
+                <button class="mock-lobby__chip" data-value="random">Randomized</button>
+              </div>
+            </div>
+
+            <button class="mock-lobby__start-btn" id="start-btn">
+              Start Mock Draft
+            </button>
+            <p class="mock-lobby__error" id="create-error" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <!-- Active sessions -->
+        <section class="mock-lobby__sessions">
+          <div class="section-header">
+            <h2 class="section-header__title">Active Sessions</h2>
+            <p class="section-header__sub">Join an in-progress mock draft</p>
+          </div>
+
+          <div id="sessions-list" class="mock-lobby__sessions-list">
+            <p class="mock-lobby__loading">Loading sessions…</p>
+          </div>
+        </section>
+      </>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<script define:vars={{ userFranchiseId: user?.franchiseId, teamMapJson, partyHost }}>
+  const teamMap = JSON.parse(teamMapJson);
+
+  function getTeamName(franchiseId) {
+    return teamMap[franchiseId]?.name || `Team ${franchiseId}`;
+  }
+
+  // ── Chip selection ──
+  function initChipGroup(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.mock-lobby__chip');
+      if (!btn) return;
+      container.querySelectorAll('.mock-lobby__chip').forEach((c) =>
+        c.classList.remove('mock-lobby__chip--active'),
+      );
+      btn.classList.add('mock-lobby__chip--active');
+    });
+  }
+
+  function getChipValue(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return null;
+    const active = container.querySelector('.mock-lobby__chip--active');
+    return active?.dataset.value ?? null;
+  }
+
+  initChipGroup('timer-chips');
+  initChipGroup('round-chips');
+  initChipGroup('order-chips');
+
+  // ── Create session ──
+  const startBtn = document.getElementById('start-btn');
+  const createError = document.getElementById('create-error');
+
+  if (startBtn) {
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      startBtn.textContent = 'Creating…';
+      if (createError) createError.textContent = '';
+
+      const timerSeconds = parseInt(getChipValue('timer-chips') || '120');
+      const totalRounds = parseInt(getChipValue('round-chips') || '3');
+      const useRealOrder = getChipValue('order-chips') === 'real';
+
+      try {
+        const res = await fetch('/api/mock-draft/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timerSeconds, totalRounds, useRealOrder }),
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.sessionId) {
+          window.location.href = `/theleague/mock-draft/${data.sessionId}`;
+          return;
+        }
+
+        if (createError) createError.textContent = data.message || 'Failed to create session.';
+      } catch (err) {
+        if (createError) createError.textContent = 'Network error. Please try again.';
+      }
+
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start Mock Draft';
+    });
+  }
+
+  // ── Load sessions ──
+  function createSessionCard(s) {
+    const statusLabels = {
+      lobby: 'Waiting',
+      active: 'In Progress',
+      paused: 'Paused',
+      completed: 'Completed',
+    };
+
+    const card = document.createElement('a');
+    card.href = `/theleague/mock-draft/${encodeURIComponent(s.id)}`;
+    card.className = 'mock-lobby__session-card';
+
+    // Top row: status + timer
+    const topRow = document.createElement('div');
+    topRow.className = 'mock-lobby__session-top';
+
+    const statusBadge = document.createElement('span');
+    statusBadge.className = `mock-lobby__status mock-lobby__status--${s.status}`;
+    statusBadge.textContent = statusLabels[s.status] || s.status;
+
+    const timerLabel = document.createElement('span');
+    timerLabel.className = 'mock-lobby__session-timer';
+    timerLabel.textContent = `${s.timerSeconds}s / pick`;
+
+    topRow.append(statusBadge, timerLabel);
+
+    // Meta row: creator + participants
+    const metaRow = document.createElement('div');
+    metaRow.className = 'mock-lobby__session-meta';
+
+    const creator = document.createElement('span');
+    creator.textContent = `Created by ${getTeamName(s.createdBy)}`;
+
+    const joined = document.createElement('span');
+    joined.textContent = `${s.participantCount}/${s.totalTeams} joined`;
+
+    metaRow.append(creator, joined);
+
+    // Progress row
+    const progress = document.createElement('div');
+    progress.className = 'mock-lobby__session-progress';
+    progress.textContent = `Round ${s.currentRound} · Pick ${s.currentPickInRound} · ${s.totalRounds} rounds`;
+
+    card.append(topRow, metaRow, progress);
+    return card;
+  }
+
+  async function loadSessions() {
+    const container = document.getElementById('sessions-list');
+    if (!container) return;
+
+    try {
+      const res = await fetch('/api/mock-draft/list');
+      const data = await res.json();
+      const sessions = data.sessions || [];
+
+      container.replaceChildren();
+
+      if (sessions.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'mock-lobby__empty';
+        empty.textContent = 'No active sessions. Start one above!';
+        container.appendChild(empty);
+        return;
+      }
+
+      for (const s of sessions) {
+        container.appendChild(createSessionCard(s));
+      }
+    } catch {
+      container.replaceChildren();
+      const err = document.createElement('p');
+      err.className = 'mock-lobby__empty';
+      err.textContent = 'Could not load sessions.';
+      container.appendChild(err);
+    }
+  }
+
+  loadSessions();
+</script>
+
+<style>
+  .mock-lobby {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .mock-lobby__header {
+    margin-bottom: 2rem;
+  }
+
+  .mock-lobby__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
+  }
+
+  .mock-lobby__subtitle {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  /* ── Section headers (editorial pattern) ── */
+  .section-header {
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin-bottom: 1rem;
+  }
+
+  .section-header__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  .section-header__sub {
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0.25rem 0 0;
+  }
+
+  /* ── Auth wall ── */
+  .mock-lobby__auth-wall {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: 0.5rem;
+  }
+
+  .mock-lobby__auth-wall p {
+    color: var(--color-gray-500, #6b7280);
+    margin: 0 0 1rem;
+  }
+
+  .mock-lobby__signin-btn {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  /* ── Create form ── */
+  .mock-lobby__create {
+    margin-bottom: 2.5rem;
+  }
+
+  .mock-lobby__create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .mock-lobby__form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .mock-lobby__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .mock-lobby__timer-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mock-lobby__chip {
+    padding: 0.375rem 0.875rem;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 999px;
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mock-lobby__chip:hover {
+    border-color: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .mock-lobby__chip--active {
+    background: var(--color-primary, #1c497c);
+    border-color: var(--color-primary, #1c497c);
+    color: #fff;
+  }
+
+  .mock-lobby__chip--active:hover {
+    color: #fff;
+  }
+
+  .mock-lobby__start-btn {
+    margin-top: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .mock-lobby__start-btn:hover {
+    opacity: 0.9;
+  }
+
+  .mock-lobby__start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .mock-lobby__error {
+    font-size: 0.8125rem;
+    color: var(--color-red-500, #ef4444);
+    margin: 0;
+    min-height: 1.25rem;
+  }
+
+  /* ── Sessions list ── */
+  .mock-lobby__sessions {
+    margin-bottom: 2rem;
+  }
+
+  .mock-lobby__sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mock-lobby__loading,
+  .mock-lobby__empty {
+    font-size: 0.875rem;
+    color: var(--color-gray-400, #9ca3af);
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  .mock-lobby__session-card {
+    display: block;
+    padding: 0.875rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease;
+  }
+
+  .mock-lobby__session-card:hover {
+    border-color: var(--color-primary, #1c497c);
+  }
+
+  .mock-lobby__session-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.375rem;
+  }
+
+  .mock-lobby__status {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  .mock-lobby__status--lobby {
+    background: var(--color-blue-50, #eff6ff);
+    color: var(--color-blue-600, #2563eb);
+  }
+
+  .mock-lobby__status--active {
+    background: var(--color-green-50, #f0fdf4);
+    color: var(--color-green-600, #16a34a);
+  }
+
+  .mock-lobby__status--paused {
+    background: var(--color-yellow-50, #fefce8);
+    color: var(--color-yellow-600, #ca8a04);
+  }
+
+  .mock-lobby__status--completed {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .mock-lobby__session-timer {
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mock-lobby__session-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    margin-bottom: 0.25rem;
+  }
+
+  .mock-lobby__session-progress {
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

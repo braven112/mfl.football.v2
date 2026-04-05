@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import type { DraftRoomPlayer, DraftRoomPick, DraftQueueItem } from '../../../types/draft-room';
+import type { DraftRoomPlayer, DraftRoomPick, DraftQueueItem, DraftContext } from '../../../types/draft-room';
 import { PlayerCell } from '../PlayerCell.tsx';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
@@ -13,6 +13,9 @@ interface PlayerPoolPanelProps {
   onSearchChange: (query: string) => void;
   onPositionFilterChange: (pos: string | null) => void;
   onAddToQueue: (playerId: string) => void;
+  rookiesOnly: boolean;
+  onRookiesOnlyChange: (value: boolean) => void;
+  draftContext: DraftContext;
 }
 
 export function PlayerPoolPanel({
@@ -24,6 +27,9 @@ export function PlayerPoolPanel({
   onSearchChange,
   onPositionFilterChange,
   onAddToQueue,
+  rookiesOnly,
+  onRookiesOnlyChange,
+  draftContext,
 }: PlayerPoolPanelProps) {
   // Build set of drafted player IDs
   const draftedIds = useMemo(
@@ -38,9 +44,17 @@ export function PlayerPoolPanel({
   );
 
   // Filter available players
-  const { filteredPlayers, availableCount, totalMatches } = useMemo(() => {
+  const { filteredPlayers, availableCount, totalMatches, rookieCount } = useMemo(() => {
     let list = players.filter((p) => !draftedIds.has(p.id));
     const available = list.length;
+
+    // Count rookies in the full available pool for the badge
+    const rookieCount = list.filter((p) => p.isRookie).length;
+
+    // Rookie filter — applied before position/search (broadest exclusion first)
+    if (rookiesOnly) {
+      list = list.filter((p) => p.isRookie === true);
+    }
 
     if (positionFilter) {
       list = list.filter((p) => p.position === positionFilter);
@@ -55,8 +69,8 @@ export function PlayerPoolPanel({
     }
 
     const total = list.length;
-    return { filteredPlayers: list.slice(0, 100), availableCount: available, totalMatches: total };
-  }, [players, draftedIds, positionFilter, searchQuery]);
+    return { filteredPlayers: list.slice(0, 100), availableCount: available, totalMatches: total, rookieCount };
+  }, [players, draftedIds, rookiesOnly, positionFilter, searchQuery]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -109,6 +123,66 @@ export function PlayerPoolPanel({
             background: 'var(--color-gray-50, #f9fafb)',
           }}
         />
+
+        {/* Rookies toggle — only shown in rookie draft context */}
+        {draftContext === 'rookie' && (
+          <button
+            type="button"
+            role="switch"
+            aria-pressed={rookiesOnly}
+            aria-label={
+              rookiesOnly
+                ? `Showing rookies only (${rookieCount} available). Press to show all players.`
+                : `Showing all players. Press to show rookies only (${rookieCount} available).`
+            }
+            onClick={() => onRookiesOnlyChange(!rookiesOnly)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              marginTop: '0.375rem',
+              marginBottom: '0.125rem',
+              padding: '0.25rem 0.625rem',
+              borderRadius: 'var(--radius-full, 9999px)',
+              border: rookiesOnly
+                ? '1.5px solid var(--color-primary, #1c497c)'
+                : '1.5px dashed var(--color-gray-300, #d1d5db)',
+              background: rookiesOnly ? 'var(--color-primary, #1c497c)' : 'transparent',
+              color: rookiesOnly ? '#ffffff' : 'var(--color-gray-500, #6b7280)',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.04em',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {rookiesOnly && (
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style={{ flexShrink: 0 }}>
+                <path d="M1.5 5.5L4 8L8.5 2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            Rookies
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '1.125rem',
+              height: '1.125rem',
+              padding: '0 0.25rem',
+              borderRadius: 'var(--radius-full, 9999px)',
+              fontSize: '0.5625rem',
+              fontWeight: 700,
+              lineHeight: 1,
+              background: rookiesOnly ? 'rgba(255,255,255,0.2)' : 'var(--color-gray-100, #f3f4f6)',
+              color: rookiesOnly ? '#ffffff' : 'var(--color-gray-600, #4b5563)',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {rookieCount}
+            </span>
+          </button>
+        )}
 
         {/* Position filters */}
         <div

@@ -9,6 +9,8 @@ import type {
   DraftQueueItem,
   DraftStatusResponse,
   ChatMessage,
+  DraftContext,
+  DraftRoomMode,
 } from '../../../types/draft-room';
 import { DraftTimerBanner } from './DraftTimerBanner';
 import { DraftBoardPanel } from './DraftBoardPanel';
@@ -17,11 +19,15 @@ import { DraftQueuePanel } from './DraftQueuePanel';
 import { MobileTabBar } from './MobileTabBar';
 import { DraftChatPanel, broadcastPickToChat } from './DraftChatPanel';
 import { getQueue, saveQueue } from '../../../utils/draft-queue-storage';
+import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
 import '../../../styles/draft-room.css';
 
 interface DraftRoomProps {
   pageData: string;
   userTeamId: string;
+  mode?: DraftRoomMode;
+  mockSessionId?: string;
+  draftContext?: DraftContext;
 }
 
 function findCurrentPickNumber(picks: DraftRoomPick[]): number {
@@ -76,6 +82,14 @@ function draftRoomReducer(state: DraftRoomState, action: DraftRoomAction): Draft
       return { ...state, searchQuery: action.query };
     case 'SET_POSITION_FILTER':
       return { ...state, positionFilter: action.position };
+    case 'SET_ROOKIES_ONLY':
+      return { ...state, rookiesOnly: action.value };
+    case 'MOCK_SESSION_SYNC':
+      return { ...state, mockSession: action.session };
+    case 'MOCK_PICK_MADE':
+      return { ...state, mockSession: action.session };
+    case 'MOCK_CLOCK_TICK':
+      return { ...state, mockClockSeconds: action.secondsRemaining };
 
     // Queue actions
     case 'LOAD_QUEUE':
@@ -144,7 +158,7 @@ function draftRoomReducer(state: DraftRoomState, action: DraftRoomAction): Draft
   }
 }
 
-function initState(data: DraftRoomPageData): DraftRoomState {
+function initState(data: DraftRoomPageData, draftContext: DraftContext = 'rookie'): DraftRoomState {
   const currentPickNumber = findCurrentPickNumber(data.picks);
   const draftComplete = currentPickNumber === -1 && data.picks.length > 0;
   const currentPick = data.picks.find((p) => p.overallPickNumber === currentPickNumber);
@@ -159,6 +173,7 @@ function initState(data: DraftRoomPageData): DraftRoomState {
     activeMobileTab: 'board',
     searchQuery: '',
     positionFilter: null,
+    rookiesOnly: draftContext === 'rookie',
     lastPollTimestamp: Date.now(),
     pollError: null,
     // Queue
@@ -179,12 +194,154 @@ function initState(data: DraftRoomPageData): DraftRoomState {
     picksPerRound: data.picksPerRound,
     leagueYear: data.leagueYear,
     leagueId: data.leagueId,
+    // Mock draft
+    mockSession: null,
+    mockClockSeconds: 0,
   };
 }
 
-export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
+// ── Mock Timer Banner ────────────────────────────────────────────────────────
+
+interface MockTimerBannerProps {
+  mockSession: import('../../../types/draft-room').MockDraftSession | null;
+  mockClockSeconds: number;
+  currentTeam: DraftRoomTeam | null;
+  isUserTurn: boolean;
+  isCreator: boolean;
+  draftComplete: boolean;
+  onStart: () => void;
+  onPause: () => void;
+  onResume: () => void;
+  onSkip: () => void;
+}
+
+function MockTimerBanner({
+  mockSession,
+  mockClockSeconds,
+  currentTeam,
+  isUserTurn,
+  isCreator,
+  draftComplete,
+  onStart,
+  onPause,
+  onResume,
+  onSkip,
+}: MockTimerBannerProps) {
+  const status = mockSession?.status || 'lobby';
+  const mins = Math.floor(mockClockSeconds / 60);
+  const secs = mockClockSeconds % 60;
+  const clockStr = `${mins}:${String(secs).padStart(2, '0')}`;
+  const isUrgent = status === 'active' && mockClockSeconds <= 10;
+
+  const bannerBg = draftComplete
+    ? 'var(--color-gray-100, #f3f4f6)'
+    : isUserTurn
+      ? 'var(--color-green-50, #f0fdf4)'
+      : 'var(--color-gray-50, #f9fafb)';
+
+  const bannerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0.5rem 0.75rem',
+    background: bannerBg,
+    borderBottom: '1px solid var(--content-border, #e2e8f0)',
+    fontSize: '0.8125rem',
+    fontWeight: 500,
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+    flexShrink: 0,
+  };
+
+  const clockStyle: CSSProperties = {
+    fontVariantNumeric: 'tabular-nums',
+    fontWeight: 700,
+    fontSize: '1rem',
+    color: isUrgent ? 'var(--color-red-600, #dc2626)' : 'var(--color-gray-700, #374151)',
+  };
+
+  const btnStyle: CSSProperties = {
+    padding: '0.25rem 0.625rem',
+    fontSize: '0.6875rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    border: '1px solid var(--color-gray-200, #e5e7eb)',
+    borderRadius: '0.25rem',
+    background: 'var(--color-gray-50, #f9fafb)',
+    cursor: 'pointer',
+  };
+
+  if (draftComplete) {
+    return (
+      <div style={bannerStyle}>
+        <span style={{ color: 'var(--color-gray-500, #6b7280)' }}>Mock draft complete</span>
+      </div>
+    );
+  }
+
+  if (status === 'lobby') {
+    return (
+      <div style={bannerStyle}>
+        <span style={{ color: 'var(--color-gray-600, #4b5563)' }}>
+          Waiting in lobby — {mockSession?.participants.length || 0} joined
+        </span>
+        {isCreator && (
+          <button style={{ ...btnStyle, background: 'var(--color-primary, #1c497c)', color: '#fff', borderColor: 'var(--color-primary, #1c497c)' }} onClick={onStart}>
+            Start Draft
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={bannerStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {isUserTurn ? (
+          <span style={{ color: 'var(--color-green-700, #15803d)', fontWeight: 700 }}>You're on the clock!</span>
+        ) : (
+          <span style={{ color: 'var(--color-gray-600, #4b5563)' }}>
+            On the clock: {currentTeam?.nameShort || currentTeam?.name || '—'}
+          </span>
+        )}
+        {status === 'active' && <span style={clockStyle}>{clockStr}</span>}
+        {status === 'paused' && (
+          <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-yellow-600, #ca8a04)' }}>
+            Paused
+          </span>
+        )}
+      </div>
+      {isCreator && (
+        <div style={{ display: 'flex', gap: '0.375rem' }}>
+          {status === 'active' && <button style={btnStyle} onClick={onPause}>Pause</button>}
+          {status === 'paused' && <button style={btnStyle} onClick={onResume}>Resume</button>}
+          {status === 'active' && <button style={btnStyle} onClick={onSkip}>Skip</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DraftRoom Component ──────────────────────────────────────────────────────
+
+export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSessionId, draftContext = 'rookie' }: DraftRoomProps) {
   const data: DraftRoomPageData = useMemo(() => JSON.parse(pageData), [pageData]);
-  const [state, dispatch] = useReducer(draftRoomReducer, data, initState);
+  const [state, dispatch] = useReducer(
+    draftRoomReducer,
+    undefined,
+    () => initState(data, draftContext)
+  );
+
+  // ── Mock draft WebSocket ──
+  const isMock = mode === 'mock';
+  const { send: mockSend } = useMockDraftSocket({
+    partyHost: data.partyHost,
+    sessionId: mockSessionId || '',
+    franchiseId: userTeamId,
+    dispatch,
+    enabled: isMock,
+  });
 
   // Player lookup map
   const playerMap = useMemo(
@@ -250,17 +407,31 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
     }
   }, [state.leagueId, state.leagueYear]);
 
+  // Auto-redirect to results when mock draft completes
+  useEffect(() => {
+    if (isMock && mockSessionId && state.mockSession?.status === 'completed') {
+      const timer = setTimeout(() => {
+        window.location.href = `/theleague/mock-draft/${mockSessionId}/results`;
+      }, 2000); // Brief delay so users see the final pick
+      return () => clearTimeout(timer);
+    }
+  }, [isMock, mockSessionId, state.mockSession?.status]);
+
   // Polling — adaptive interval via self-rescheduling setTimeout (reads ref fresh each tick)
+  // Disabled in mock mode — state comes from PartyKit WebSocket instead
   const hasRecentPickRef = useRef(false);
   useEffect(() => {
+    if (isMock) return;
     hasRecentPickRef.current = state.picks.some((p) => {
       if (!p.timestamp) return false;
       const ts = parseInt(p.timestamp) * 1000;
       return Date.now() - ts < 30 * 60 * 1000;
     });
-  }, [state.picks]);
+  }, [state.picks, isMock]);
 
   useEffect(() => {
+    if (isMock) return; // Mock mode uses WebSocket, not polling
+
     let active = true;
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -285,7 +456,7 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
       active = false;
       clearTimeout(timeoutId);
     };
-  }, [state.leagueYear]);
+  }, [state.leagueYear, isMock]);
 
   // Auto-submit: when user is on clock + autoSubmit on + queue non-empty
   useEffect(() => {
@@ -294,6 +465,13 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
     const draftedIds = new Set(state.picks.filter((p) => p.playerId).map((p) => p.playerId));
     const topItem = state.queue.find((i) => !draftedIds.has(i.playerId));
     if (!topItem) return;
+
+    if (isMock) {
+      // Mock mode: send pick via WebSocket
+      mockSend({ type: 'pick', franchiseId: userTeamId, playerId: topItem.playerId });
+      dispatch({ type: 'REMOVE_FROM_QUEUE', id: topItem.id });
+      return;
+    }
 
     dispatch({ type: 'SUBMIT_PICK_START' });
     fetch('/api/draft/submit-pick', {
@@ -313,11 +491,11 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
       .catch((e) => {
         dispatch({ type: 'SET_SUBMIT_ERROR', error: (e as Error).message });
       });
-  }, [state.autoSubmit, isUserTurn, state.queue, state.isSubmittingPick, state.draftComplete, state.picks]);
+  }, [state.autoSubmit, isUserTurn, state.queue, state.isSubmittingPick, state.draftComplete, state.picks, isMock, mockSend, userTeamId]);
 
-  // Sync queue to MFL
+  // Sync queue to MFL (no-op in mock mode — queue is local only)
   const handleSyncToMfl = useCallback(async () => {
-    if (state.isSyncingQueue || state.queue.length === 0) return;
+    if (isMock || state.isSyncingQueue || state.queue.length === 0) return;
     dispatch({ type: 'SYNC_QUEUE_START' });
     try {
       await fetch('/api/draft/queue', {
@@ -330,11 +508,18 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
     } finally {
       dispatch({ type: 'SYNC_QUEUE_DONE' });
     }
-  }, [state.queue, state.isSyncingQueue]);
+  }, [state.queue, state.isSyncingQueue, isMock]);
 
   // Manual pick submission
   const handleSubmitPick = useCallback((playerId: string) => {
     if (state.isSubmittingPick) return;
+
+    if (isMock) {
+      // Mock mode: send pick via WebSocket — server validates and broadcasts
+      mockSend({ type: 'pick', franchiseId: userTeamId, playerId });
+      return;
+    }
+
     dispatch({ type: 'SUBMIT_PICK_START' });
     fetch('/api/draft/submit-pick', {
       method: 'POST',
@@ -352,7 +537,7 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
       .catch((e) => {
         dispatch({ type: 'SET_SUBMIT_ERROR', error: (e as Error).message });
       });
-  }, [state.isSubmittingPick]);
+  }, [state.isSubmittingPick, isMock, mockSend, userTeamId]);
 
   // Callbacks
   const handleRoundChange = useCallback(
@@ -373,6 +558,10 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
   );
   const handleAddToQueue = useCallback(
     (playerId: string) => dispatch({ type: 'ADD_TO_QUEUE', playerId }),
+    []
+  );
+  const handleRookiesOnly = useCallback(
+    (value: boolean) => dispatch({ type: 'SET_ROOKIES_ONLY', value }),
     []
   );
   const handleRemoveFromQueue = useCallback(
@@ -443,15 +632,30 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
         {announcement}
       </div>
 
-      {/* Timer Banner */}
-      <DraftTimerBanner
-        currentPick={previousPick ? { ...currentPick!, timestamp: previousPick.timestamp } : currentPick}
-        currentTeam={currentTeam}
-        draftKind={state.draftKind}
-        draftLimitHours={state.draftLimitHours}
-        draftTimerSusp={state.draftTimerSusp}
-        draftComplete={state.draftComplete}
-      />
+      {/* Timer Banner — mock mode shows its own clock + controls */}
+      {isMock ? (
+        <MockTimerBanner
+          mockSession={state.mockSession}
+          mockClockSeconds={state.mockClockSeconds}
+          currentTeam={currentTeam}
+          isUserTurn={isUserTurn}
+          isCreator={state.mockSession?.createdBy === userTeamId}
+          draftComplete={state.draftComplete}
+          onStart={() => mockSend({ type: 'start', franchiseId: userTeamId })}
+          onPause={() => mockSend({ type: 'pause', franchiseId: userTeamId })}
+          onResume={() => mockSend({ type: 'resume', franchiseId: userTeamId })}
+          onSkip={() => mockSend({ type: 'skip', franchiseId: userTeamId })}
+        />
+      ) : (
+        <DraftTimerBanner
+          currentPick={previousPick ? { ...currentPick!, timestamp: previousPick.timestamp } : currentPick}
+          currentTeam={currentTeam}
+          draftKind={state.draftKind}
+          draftLimitHours={state.draftLimitHours}
+          draftTimerSusp={state.draftTimerSusp}
+          draftComplete={state.draftComplete}
+        />
+      )}
 
       {/* Mobile Tab Bar */}
       <div className="dr-mobile-tabs">
@@ -556,6 +760,9 @@ export default function DraftRoom({ pageData, userTeamId }: DraftRoomProps) {
               onSearchChange={handleSearch}
               onPositionFilterChange={handlePosFilter}
               onAddToQueue={handleAddToQueue}
+              rookiesOnly={state.rookiesOnly}
+              onRookiesOnlyChange={handleRookiesOnly}
+              draftContext={draftContext}
             />
           </div>
 
