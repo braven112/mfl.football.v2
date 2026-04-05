@@ -60,8 +60,7 @@ export function useMockDraftSocket({
 
     const socket = new PartySocket({
       host: partyHost,
-      room: sessionId,
-      party: 'mockdraft',
+      room: `mock-${sessionId}`,
     });
 
     socket.addEventListener('open', () => {

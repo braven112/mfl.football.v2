@@ -34,7 +34,7 @@ const leagueYearStr = String(leagueYear);
 let session: any = null;
 if (partyHost) {
   try {
-    const res = await fetch(`${partyHost}/parties/mock-draft/${sessionId}`, {
+    const res = await fetch(`${partyHost}/party/mock-${sessionId}`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
     });
