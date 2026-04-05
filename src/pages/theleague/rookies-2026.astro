@@ -322,40 +322,35 @@ for (const p of allRspPlayers) {
         <h2 class="rsp-section-title">Top 50 — Integrated Rankings</h2>
         <p class="rsp-section-sub">Waldman's DoT score with FBG dynasty rookie ranks merged. Click a column header to re-sort.</p>
       </div>
-      <div class="top50-sort-bar">
-        <span class="sort-label">Sort by:</span>
-        <button class="sort-btn sort-btn--active" data-table="top50" data-sort="dot">DoT Score ↓</button>
-        <button class="sort-btn" data-table="top50" data-sort="fbg">FBG Rank ↑</button>
-      </div>
       <div class="rsp-table-scroll">
         <table class="rsp-table" id="top50-table">
           <thead>
             <tr>
               <th class="col-rank">#</th>
               <th class="col-player">Player</th>
-              <th class="col-dot sortable" data-sort-key="dot">DoT</th>
-              <th class="col-grade">Grade</th>
-              <th class="col-fbg sortable" data-sort-key="fbg">FBG</th>
+              <th class="col-fbg sortable" data-sort-key="fbg">FBG<span class="sort-arrow"></span></th>
+              <th class="col-dot sortable" data-sort-key="dot">DoT<span class="sort-arrow"> ↓</span></th>
+              <th class="col-grade sortable" data-sort-key="grade">Grade<span class="sort-arrow"></span></th>
               <th class="col-comp">Comparison</th>
               <th class="col-notes">Notes</th>
             </tr>
           </thead>
           <tbody id="top50-tbody">
             {top50.map((player, i) => (
-              <tr data-dot={player.preDraftScore} data-fbg={player.fbgRank ?? 9999} data-dot-rank={i + 1}>
+              <tr data-dot={player.preDraftScore} data-fbg={player.fbgRank ?? 9999} data-dot-rank={i + 1} data-grade-order={TIER_ORDER[player.preDraftGrade] ?? 5}>
                 <td class="col-rank rank-cell" data-label="#">{i + 1}</td>
                 <td class="col-player" data-label="Player">
                   <PlayerCell name={player.name} position={player.position} size="compact" headshot={getCollegeHeadshot(player.name)} />
                   {player.school && <span class="player-school">{player.school}</span>}
                 </td>
-                <td class="col-dot" data-label="DoT">{player.preDraftScore.toFixed(1)}</td>
-                <td class="col-grade" data-label="Grade">{player.preDraftGrade}</td>
                 <td class="col-fbg" data-label="FBG">
                   {player.fbgRank
                     ? <span class="fbg-rank">{player.fbgRank} <span class="fbg-tier-chip">{player.fbgTier?.replace('Tier ', 'T')}</span></span>
                     : <span class="fbg-rank--none">—</span>
                   }
                 </td>
+                <td class="col-dot" data-label="DoT">{player.preDraftScore.toFixed(1)}</td>
+                <td class="col-grade" data-label="Grade">{player.preDraftGrade}</td>
                 <td class="col-comp" data-label="Comparison">{player.comparison ?? '—'}</td>
                 <td class="col-notes" data-label="Notes">{player.notes}</td>
               </tr>
@@ -644,33 +639,70 @@ for (const p of allRspPlayers) {
     });
   }
 
-  // ── Top 50 sort ───────────────────────────────────────────────────
+  // ── Top 50: header-click sort ─────────────────────────────────────
   const top50Tbody = document.getElementById('top50-tbody');
-  const top50SortBtns = document.querySelectorAll<HTMLButtonElement>('[data-table="top50"]');
+  const top50Table = document.getElementById('top50-table') as HTMLTableElement | null;
 
-  function sortTop50(key: 'dot' | 'fbg') {
+  let top50SortKey = 'dot';
+  let top50SortDir: 'asc' | 'desc' = 'desc';
+
+  function sortTop50ByKey(key: string, dir: 'asc' | 'desc') {
     if (!top50Tbody) return;
     const rows = Array.from(top50Tbody.querySelectorAll<HTMLTableRowElement>('tr'));
     rows.sort((a, b) => {
-      const aVal = parseFloat(a.dataset[key] ?? '9999');
-      const bVal = parseFloat(b.dataset[key] ?? '9999');
-      return key === 'dot' ? bVal - aVal : aVal - bVal;
+      if (key === 'fbg') {
+        const af = parseFloat(a.dataset.fbg ?? '9999');
+        const bf = parseFloat(b.dataset.fbg ?? '9999');
+        if (af === 9999 && bf === 9999) return 0;
+        if (af === 9999) return 1;
+        if (bf === 9999) return -1;
+        return dir === 'asc' ? af - bf : bf - af;
+      }
+      if (key === 'dot') {
+        const ad = parseFloat(a.dataset.dot ?? '0');
+        const bd = parseFloat(b.dataset.dot ?? '0');
+        return dir === 'asc' ? ad - bd : bd - ad;
+      }
+      if (key === 'grade') {
+        const ag = parseFloat(a.dataset.gradeOrder ?? '5');
+        const bg = parseFloat(b.dataset.gradeOrder ?? '5');
+        return dir === 'asc' ? ag - bg : bg - ag;
+      }
+      return 0;
     });
-    // Re-number rank cells and reinsert rows
     rows.forEach((row, i) => {
       const cell = row.querySelector('.rank-cell');
       if (cell) cell.textContent = String(i + 1);
       top50Tbody.appendChild(row);
     });
-    // Update active button
-    top50SortBtns.forEach(btn => {
-      btn.classList.toggle('sort-btn--active', btn.dataset.sort === key);
+  }
+
+  function updateTop50Indicators() {
+    top50Table?.querySelectorAll<HTMLTableCellElement>('th[data-sort-key]').forEach(th => {
+      const arrow = th.querySelector<HTMLElement>('.sort-arrow');
+      if (!arrow) return;
+      arrow.textContent = th.dataset.sortKey === top50SortKey
+        ? (top50SortDir === 'asc' ? ' ↑' : ' ↓')
+        : '';
     });
   }
 
-  top50SortBtns.forEach(btn => {
-    btn.addEventListener('click', () => sortTop50(btn.dataset.sort as 'dot' | 'fbg'));
+  top50Table?.querySelectorAll<HTMLTableCellElement>('th[data-sort-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortKey!;
+      if (key === top50SortKey) {
+        top50SortDir = top50SortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        top50SortKey = key;
+        // DoT: higher = better → default desc; FBG & Grade: lower = better → default asc
+        top50SortDir = key === 'dot' ? 'desc' : 'asc';
+      }
+      sortTop50ByKey(top50SortKey, top50SortDir);
+      updateTop50Indicators();
+    });
   });
+
+  updateTop50Indicators();
 
   // ── RSP within-tier sort ──────────────────────────────────────────
   const rspTbody = document.getElementById('rsp-tbody');
@@ -928,16 +960,30 @@ for (const p of allRspPlayers) {
     color: var(--color-gray-700, #374151);
   }
 
-  /* Column widths — RSP table */
-  .col-rank { width: 2.5rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-400, #9ca3af); }
-  .col-player { width: 14rem; }
-  .col-dot { width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-900, #111827); }
-  .col-grade { width: 9rem; }
-  .col-fbg { width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
-  .col-comp { width: 11rem; color: var(--color-gray-500, #6b7280); font-style: italic; }
-  .col-notes { min-width: 28rem; line-height: 1.55; }
+  /* Column widths — RSP table (percentages sum to 100%) */
+  .col-rank  { width: 3%;  text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-400, #9ca3af); }
+  .col-player{ width: 18%; }
+  .col-fbg   { width: 5%;  text-align: center; font-variant-numeric: tabular-nums; }
+  .col-dot   { width: 5%;  text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-gray-900, #111827); }
+  .col-grade { width: 10%; }
+  .col-comp  { width: 14%; color: var(--color-gray-500, #6b7280); font-style: italic; overflow: hidden; text-overflow: ellipsis; }
+  .col-notes { width: 45%; line-height: 1.55; }
 
-  /* Sort bar */
+  /* Sortable headers */
+  .rsp-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+  .rsp-table th.sortable:hover {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+  }
+  .sort-arrow {
+    color: var(--color-primary, #1c497c);
+    font-weight: 700;
+  }
+
+  /* Sort bar — kept for the RSP panel below */
   .top50-sort-bar {
     display: flex;
     align-items: center;
@@ -1449,7 +1495,8 @@ for (const p of allRspPlayers) {
       grid-template-columns: auto 1fr;
       grid-template-areas:
         "rank player"
-        "dot grade"
+        "fbg dot"
+        "grade ."
         "comp comp"
         "notes notes";
       gap: 0.375rem 0.625rem;
@@ -1469,6 +1516,7 @@ for (const p of allRspPlayers) {
     .col-rank { grid-area: rank; text-align: center; font-size: 1rem; align-self: center; }
     .col-rank::before { display: none; }
     .col-player { grid-area: player; }
+    .col-fbg { grid-area: fbg; text-align: left; }
     .col-dot { grid-area: dot; text-align: left; }
     .col-grade { grid-area: grade; }
     .col-comp { grid-area: comp; }
