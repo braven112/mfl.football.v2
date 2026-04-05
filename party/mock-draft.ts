@@ -102,6 +102,11 @@ interface SkipMessage {
   franchiseId: string;
 }
 
+interface ResetMessage {
+  type: 'reset';
+  franchiseId: string;
+}
+
 type ClientMessage =
   | JoinMessage
   | PickMessage
@@ -109,7 +114,8 @@ type ClientMessage =
   | StartMessage
   | PauseMessage
   | ResumeMessage
-  | SkipMessage;
+  | SkipMessage
+  | ResetMessage;
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -158,7 +164,8 @@ export default class MockDraftServer implements Party.Server {
         return this.handleResume(msg);
       case 'skip':
         return this.handleSkip(msg);
-    }
+      case 'reset':
+        return this.handleReset(msg);
   }
 
   async onClose(conn: Party.Connection) {
@@ -211,6 +218,15 @@ export default class MockDraftServer implements Party.Server {
     }
 
     await this.saveSession(session);
+
+    // Auto-start when the creator joins and draft is still in lobby
+    if (session.status === 'lobby' && msg.franchiseId === session.createdBy) {
+      session.status = 'active';
+      await this.saveSession(session);
+      this.broadcastSession(session);
+      this.startTimer(session);
+      return;
+    }
 
     // Send full state to the joiner
     conn.send(JSON.stringify({ type: 'session', session }));
@@ -328,6 +344,39 @@ export default class MockDraftServer implements Party.Server {
 
     // Auto-pick for the current team (skip = force auto-pick)
     await this.autoPick(session);
+  }
+
+  private async handleReset(msg: ResetMessage) {
+    const session = await this.getSession();
+    if (!session) return;
+
+    // Only the creator can reset
+    if (msg.franchiseId !== session.createdBy) {
+      this.sendError(msg.franchiseId, 'Only the session creator can reset');
+      return;
+    }
+
+    this.stopTimer();
+
+    // Clear all picks back to empty slots
+    session.currentPickIndex = 0;
+    session.status = 'active';
+    session.picks = [];
+    const totalPicks = session.totalRounds * session.picksPerRound;
+    for (let i = 0; i < totalPicks; i++) {
+      const round = Math.ceil((i + 1) / session.picksPerRound);
+      const pickInRound = (i + 1) - (round - 1) * session.picksPerRound;
+      session.picks.push({
+        overallPickNumber: i + 1,
+        round,
+        pickInRound,
+        franchiseId: session.draftOrder[i],
+      });
+    }
+
+    await this.saveSession(session);
+    this.broadcastSession(session);
+    this.startTimer(session);
   }
 
   // ── Pick logic ────────────────────────────────────────────────────────────

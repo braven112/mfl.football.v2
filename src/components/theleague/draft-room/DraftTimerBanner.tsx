@@ -9,6 +9,10 @@ interface DraftTimerBannerProps {
   draftLimitHours: string;
   draftTimerSusp: string;
   draftComplete: boolean;
+  /** Mock mode: server-driven countdown seconds (overrides internal timer) */
+  mockClockSeconds?: number;
+  /** Optional actions rendered on the right side (e.g. Reset button) */
+  actions?: React.ReactNode;
 }
 
 function parseTimerHours(limitStr: string): number {
@@ -135,8 +139,22 @@ export function DraftTimerBanner({
   draftLimitHours,
   draftTimerSusp,
   draftComplete,
+  mockClockSeconds,
+  actions,
 }: DraftTimerBannerProps) {
-  const timer = useTimer(currentPick, draftKind, draftLimitHours, draftTimerSusp, draftComplete);
+  const isMockTimer = mockClockSeconds !== undefined;
+  const internalTimer = useTimer(currentPick, draftKind, draftLimitHours, draftTimerSusp, draftComplete);
+
+  // In mock mode, build timer state from server-driven seconds
+  const timer: TimerState = isMockTimer
+    ? {
+        hours: Math.floor(mockClockSeconds / 3600),
+        minutes: Math.floor((mockClockSeconds % 3600) / 60),
+        seconds: mockClockSeconds % 60,
+        isExpired: mockClockSeconds <= 0 && !draftComplete,
+        isSuspended: false,
+      }
+    : internalTimer;
 
   const pickLabel = currentPick
     ? `Round ${currentPick.round}, Pick ${currentPick.pickInRound}`
@@ -169,6 +187,7 @@ export function DraftTimerBanner({
             DRAFT COMPLETE
           </span>
         </div>
+        {actions}
       </div>
     );
   }
@@ -201,19 +220,22 @@ export function DraftTimerBanner({
         </div>
       </div>
 
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        {timer.isSuspended ? (
-          <div>
-            <div style={{ ...timerStyle, fontSize: '1.25rem', opacity: 0.7 }}>CLOCK PAUSED</div>
-            <div style={{ fontSize: '0.6875rem', opacity: 0.5, marginTop: '0.25rem' }}>
-              Resumes at {getSuspendedEndHour(draftTimerSusp)}:00 AM
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+        <div style={{ textAlign: 'right' }}>
+          {timer.isSuspended ? (
+            <div>
+              <div style={{ ...timerStyle, fontSize: '1.25rem', opacity: 0.7 }}>CLOCK PAUSED</div>
+              <div style={{ fontSize: '0.6875rem', opacity: 0.5, marginTop: '0.25rem' }}>
+                Resumes at {getSuspendedEndHour(draftTimerSusp)}:00 AM
+              </div>
             </div>
-          </div>
-        ) : (
-          <div role="timer" aria-label="Time remaining for current pick" style={timerStyle}>
-            {formatTimer(timer, draftKind)}
-          </div>
-        )}
+          ) : (
+            <div role="timer" aria-label="Time remaining for current pick" style={timerStyle}>
+              {formatTimer(timer, draftKind)}
+            </div>
+          )}
+        </div>
+        {actions}
       </div>
     </div>
   );
