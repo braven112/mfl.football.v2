@@ -13,7 +13,7 @@ import leagueConfigData from '../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
 import { getAuthUser } from '../../../utils/auth';
-import { getPlayerHeadshot } from '../../../constants/roster-constants';
+import { getPlayerHeadshot, getCollegeHeadshot } from '../../../constants/roster-constants';
 import espnCollegeIds from '../../../../data/theleague/espn-college-ids.json';
 import type { DraftRoomPageData, DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../../types/draft-room';
 
@@ -92,13 +92,28 @@ const formatName = (mflName: string): string => {
 const espnCollegeMap = (espnCollegeIds as any)?.players || {};
 
 const players: DraftRoomPlayer[] = playerArray.map((p: any) => {
-  const espnId = p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || '';
+  const nflEspnId = p.espn_id || '';
+  const collegeEspnId = espnCollegeMap[p.id]?.espnCollegeId || '';
+  const espnId = nflEspnId || collegeEspnId;
+
+  // Use college headshot URL when only a college ID is available —
+  // the ESPN combiner returns a broken placeholder (not a 404) for
+  // missing NFL headshots, so onerror fallback never fires.
+  let headshot: string;
+  if (nflEspnId) {
+    headshot = getPlayerHeadshot(p.id, nflEspnId);
+  } else if (collegeEspnId) {
+    headshot = getCollegeHeadshot(collegeEspnId);
+  } else {
+    headshot = getPlayerHeadshot(p.id);
+  }
+
   return {
     id: p.id,
     name: formatName(p.name || ''),
     position: normPos(p.position || ''),
     nflTeam: (p.team || '').toUpperCase(),
-    headshot: getPlayerHeadshot(p.id, espnId),
+    headshot,
     isRookie: p.status === 'R' || p.draft_year === leagueYearStr,
     mflId: p.id,
     espnId: espnId || undefined,
