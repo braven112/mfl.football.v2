@@ -636,6 +636,8 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
               rookiesOnly={state.rookiesOnly}
               onRookiesOnlyChange={handleRookiesOnly}
               draftContext={draftContext}
+              isUserTurn={isUserTurn}
+              onSubmitPick={handleSubmitPick}
             />
           </div>
 

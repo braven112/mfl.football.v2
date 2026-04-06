@@ -16,6 +16,10 @@ interface PlayerPoolPanelProps {
   rookiesOnly: boolean;
   onRookiesOnlyChange: (value: boolean) => void;
   draftContext: DraftContext;
+  /** Whether it's currently the user's turn to pick */
+  isUserTurn?: boolean;
+  /** Submit a pick for the given player ID */
+  onSubmitPick?: (playerId: string) => void;
 }
 
 export function PlayerPoolPanel({
@@ -30,6 +34,8 @@ export function PlayerPoolPanel({
   rookiesOnly,
   onRookiesOnlyChange,
   draftContext,
+  isUserTurn = false,
+  onSubmitPick,
 }: PlayerPoolPanelProps) {
   // Build set of drafted player IDs
   const draftedIds = useMemo(
@@ -257,6 +263,35 @@ export function PlayerPoolPanel({
                       size="compact"
                     />
                   </div>
+                  {/* Draft button — shown when it's the user's turn */}
+                  {isUserTurn && onSubmitPick && (
+                    <button
+                      onClick={() => onSubmitPick(player.id)}
+                      aria-label={`Draft ${player.name}`}
+                      className="dr-draft-btn"
+                      style={{
+                        flexShrink: 0,
+                        padding: '0.25rem 0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm, 0.25rem)',
+                        background: 'var(--color-primary, #1c497c)',
+                        color: '#ffffff',
+                        cursor: 'pointer',
+                        fontSize: '0.625rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase' as const,
+                        letterSpacing: '0.04em',
+                        lineHeight: 1,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                    >
+                      Draft
+                    </button>
+                  )}
+                  {/* Add to queue button */}
                   <button
                     onClick={() => !isQueued && onAddToQueue(player.id)}
                     aria-label={isQueued ? `${player.name} is in your queue` : `Add ${player.name} to queue`}
