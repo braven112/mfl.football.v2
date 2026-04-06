@@ -353,8 +353,10 @@ export default class DraftRoomServer implements Party.Server {
       return;
     }
 
+    // In mock drafts, allow the session creator to pick for any team on the clock
     const currentFranchise = session.draftOrder[session.currentPickIndex];
-    if (currentFranchise !== msg.franchiseId) {
+    const isCreator = msg.franchiseId === session.createdBy;
+    if (currentFranchise !== msg.franchiseId && !isCreator) {
       sender.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
       return;
     }

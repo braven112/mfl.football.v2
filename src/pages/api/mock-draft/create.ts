@@ -137,30 +137,51 @@ export const POST: APIRoute = async ({ request }) => {
     const picksPerRound = franchiseOrder.length;
     const draftOrder = buildSnakeOrder(franchiseOrder, totalRounds);
 
-    // ── Build ranked player list for auto-pick (by dynasty ADP) ──
+    // ── Build ranked rookie player list for auto-pick (MFL Rookie ADP) ──
     let rankedPlayerIds: string[] = [];
+
+    // Try MFL's live rookie ADP first
     try {
-      const adpFeeds = import.meta.glob(
-        '../../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
-        { eager: true },
-      );
-      const adpKey = Object.keys(adpFeeds).find(
-        (path) => path.includes(`/${leagueYearStr}/`),
-      );
-      if (adpKey) {
-        const adpMod = adpFeeds[adpKey] as any;
-        const adpData = adpMod && typeof adpMod === 'object' && 'default' in adpMod ? adpMod.default : adpMod;
+      const mflHost = `https://www55.myfantasyleague.com/${leagueYearStr}`;
+      const adpUrl = `${mflHost}/export?TYPE=adp&L=${leagueId}&FCOUNT=12&IS_PPR=3&IS_KEEPER=3&IS_MOCK=0&CUTOFF=3&ROOKIES=1&JSON=1`;
+      const adpRes = await fetch(adpUrl, { signal: AbortSignal.timeout(5000) });
+      if (adpRes.ok) {
+        const adpData = await adpRes.json();
         const adpPlayers = adpData?.adp?.player;
         const adpArray: any[] = adpPlayers ? (Array.isArray(adpPlayers) ? adpPlayers : [adpPlayers]) : [];
-
-        // Sort by ADP (lowest = best) and extract IDs
         rankedPlayerIds = adpArray
           .sort((a: any, b: any) => parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'))
           .map((p: any) => p.id as string)
           .filter(Boolean);
       }
     } catch {
-      console.warn('[mock-draft/create] Could not load ADP data for auto-pick ranking');
+      console.warn('[mock-draft/create] MFL rookie ADP fetch failed, using local fallback');
+    }
+
+    // Fallback: rookies from local players feed sorted by ID (MFL assigns IDs roughly in draft order)
+    if (rankedPlayerIds.length === 0) {
+      try {
+        const playersFeeds = import.meta.glob(
+          '../../../../data/theleague/mfl-feeds/*/players.json',
+          { eager: true },
+        );
+        const playersKey = Object.keys(playersFeeds).find(
+          (path) => path.includes(`/${leagueYearStr}/`),
+        );
+        if (playersKey) {
+          const mod = playersFeeds[playersKey] as any;
+          const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+          const allPlayers = data?.players?.player;
+          const playerArray: any[] = allPlayers ? (Array.isArray(allPlayers) ? allPlayers : [allPlayers]) : [];
+          rankedPlayerIds = playerArray
+            .filter((p: any) => p.status === 'R' || p.draft_year === leagueYearStr)
+            .sort((a: any, b: any) => parseInt(a.id || '99999') - parseInt(b.id || '99999'))
+            .map((p: any) => p.id as string)
+            .filter(Boolean);
+        }
+      } catch {
+        console.warn('[mock-draft/create] Could not load players feed for rookie fallback');
+      }
     }
 
     // ── Build pre-populated pick slots ──

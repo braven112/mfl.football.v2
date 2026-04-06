@@ -242,8 +242,10 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   );
   const currentTeam = currentPick ? teamMap.get(currentPick.franchiseId) || null : null;
 
-  // Is it the user's turn?
-  const isUserTurn = !!(currentPick && userTeamId && currentPick.franchiseId === userTeamId);
+  // Is it the user's turn? In mock mode, the creator can always pick for any team.
+  const isUserTurn = isMock
+    ? !!(currentPick && !state.draftComplete)
+    : !!(currentPick && userTeamId && currentPick.franchiseId === userTeamId);
 
   // Previous pick for timer calculation
   const previousPick = useMemo(() => {
@@ -383,6 +385,7 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
 
     if (isMock) {
       // Mock mode: send pick via WebSocket — server validates and broadcasts
+      // Send userTeamId (creator) so the server allows picking for any team on the clock
       mockSend({ type: 'pick', franchiseId: userTeamId, playerId });
       return;
     }
