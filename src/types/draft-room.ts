@@ -54,6 +54,8 @@ export interface DraftRoomPlayer {
   nflTeam: string;
   headshot: string;
   isRookie?: boolean;
+  mflId?: string;
+  espnId?: string;
 }
 
 /** Data serialized from Astro frontmatter to React island */

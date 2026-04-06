@@ -260,6 +260,8 @@ export function PlayerPoolPanel({
                       headshot={player.headshot}
                       position={player.position}
                       nflTeam={player.nflTeam}
+                      mflId={player.mflId}
+                      espnId={player.espnId}
                       size="compact"
                     />
                   </div>

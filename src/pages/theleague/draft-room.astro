@@ -114,6 +114,8 @@ const players: DraftRoomPlayer[] = playerArray.map((p: any) => {
     nflTeam: (p.team || '').toUpperCase(),
     headshot: getPlayerHeadshot(p.id, espnId),
     isRookie: p.status === 'R' || p.draft_year === leagueYearStr,
+    mflId: p.id,
+    espnId: espnId || undefined,
   };
 }).filter((p: DraftRoomPlayer) => {
   // Filter to draftable positions

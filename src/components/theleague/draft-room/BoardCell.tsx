@@ -1,6 +1,8 @@
 import React from 'react';
 import type { DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../../types/draft-room';
 import { POSITION_COLORS } from '../../../types/draft-room';
+import { DEFAULT_HEADSHOT_URL, getCollegeHeadshot, getPlayerImageUrl } from '../../../constants/roster-constants';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
 
 interface BoardCellProps {
   pick: DraftRoomPick;
@@ -76,12 +78,59 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
     );
   }
 
+  const isDef = player?.position?.toUpperCase() === 'DEF';
+  const normalizedTeam = player?.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
+  const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
+  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : (player?.headshot ?? DEFAULT_HEADSHOT_URL);
+
+  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    img.onerror = null;
+    if (player?.espnId) {
+      const college = getCollegeHeadshot(player.espnId);
+      if (player.mflId) {
+        const mfl = getPlayerImageUrl(player.mflId);
+        img.onerror = () => {
+          img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+          img.src = mfl;
+        };
+        img.src = college;
+      } else {
+        img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+        img.src = college;
+      }
+    } else if (player?.mflId) {
+      img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+      img.src = getPlayerImageUrl(player.mflId);
+    } else {
+      img.src = DEFAULT_HEADSHOT_URL;
+    }
+  };
+
   return (
     <div style={cellStyle} aria-label={`Pick ${pickLabel} — ${player?.name || 'Unknown'}, ${player?.position || ''}`}>
       {pickLabelEl}
-      <span style={{ fontWeight: 600, color: 'var(--color-gray-900, #111827)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {player?.name || `Player ${pick.playerId}`}
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', minWidth: 0 }}>
+        <img
+          src={avatarSrc}
+          alt={isDef ? `${player?.nflTeam ?? 'DEF'} logo` : `${player?.name || ''} headshot`}
+          loading="lazy"
+          decoding="async"
+          onError={handleImgError}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: isDef ? 0 : '50%',
+            objectFit: isDef ? 'contain' : 'cover',
+            objectPosition: 'top',
+            flexShrink: 0,
+            background: 'var(--color-gray-100, #f3f4f6)',
+          }}
+        />
+        <span style={{ fontWeight: 600, color: 'var(--color-gray-900, #111827)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {player?.name || `Player ${pick.playerId}`}
+        </span>
+      </div>
       <span style={{ fontSize: '0.625rem', color: posColor || 'var(--color-gray-500, #6b7280)', fontWeight: 600, marginTop: '0.0625rem' }}>
         {player?.position || ''}{player?.nflTeam ? ` · ${player.nflTeam}` : ''}
       </span>
