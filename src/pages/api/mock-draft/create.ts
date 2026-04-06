@@ -197,13 +197,15 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     // ── Write session to PartyKit storage via HTTP ──
-    const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
-    if (!partyHost) {
+    const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
+    if (!rawPartyHost) {
       return new Response(
         JSON.stringify({ success: false, message: 'PartyKit host not configured.' }),
         { status: 500, headers: JSON_HEADERS },
       );
     }
+    // Ensure protocol prefix for server-side fetch (env var may be bare hostname)
+    const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
 
     // POST to main party with mock- prefixed room ID
     const partyUrl = `${partyHost}/party/mock-${sessionId}`;

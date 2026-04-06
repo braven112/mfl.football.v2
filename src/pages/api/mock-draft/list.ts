@@ -22,13 +22,15 @@ export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const leagueId = url.searchParams.get('leagueId') || user.leagueId || '13522';
 
-  const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
-  if (!partyHost) {
+  const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
+  if (!rawPartyHost) {
     return new Response(
       JSON.stringify({ success: false, sessions: [], message: 'PartyKit not configured.' }),
       { status: 200, headers: JSON_HEADERS },
     );
   }
+  // Ensure protocol prefix for server-side fetch (env var may be bare hostname)
+  const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
 
   try {
     const registryUrl = `${partyHost}/party/${leagueId}-registry`;
