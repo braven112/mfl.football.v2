@@ -16,9 +16,11 @@ interface Props {
   teamSummaries?: TeamSummary[];
   userTeamName?: string;
   userTeamIcon?: string;
+  /** Active + taxi roster count (excludes IR players) */
+  activeRosterCount?: number;
 }
 
-const { isAuthenticated, userFranchiseId, teamSummaries, userTeamName, userTeamIcon } = Astro.props;
+const { isAuthenticated, userFranchiseId, teamSummaries, userTeamName, userTeamIcon, activeRosterCount } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
@@ -54,7 +56,7 @@ const metrics: MetricDef[] = [
   },
   {
     label: 'Roster',
-    value: `${playersUnderContract}`,
+    value: `${activeRosterCount ?? playersUnderContract}`,
     sub: `of ${ROSTER_LIMIT} slots`,
     href: r('/theleague/rosters'),
     icon: 'users',

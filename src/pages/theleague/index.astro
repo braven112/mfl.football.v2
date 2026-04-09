@@ -232,6 +232,9 @@ if (cachedRosterPlayers) {
 }
 
 const teamSummaries = computeLeagueSummary(salaryPlayers, rawAdjustments, draftCapitalMap, teamConfigs);
+const activeRosterCount = userFranchiseId
+  ? salaryPlayers.filter(p => p.franchiseId === userFranchiseId && p.status !== 'INJURED_RESERVE' && parseNumber(p.contractYear) > 0).length
+  : 0;
 const userRosterPlayers: RosterPlayer[] = userFranchiseId
   ? salaryPlayers
     .filter((player) => player.franchiseId === userFranchiseId)
@@ -377,6 +380,7 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
         teamSummaries={teamSummaries}
         userTeamName={userTeamName}
         userTeamIcon={userTeamIcon}
+        activeRosterCount={activeRosterCount}
       />
 
       <HpUnsignedFaCard
