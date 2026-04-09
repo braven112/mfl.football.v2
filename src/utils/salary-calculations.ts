@@ -9,7 +9,7 @@ import { getCurrentLeagueYear } from './league-year';
  * Fantasy football salary cap constants
  */
 export const SALARY_CAP = 45_000_000;
-export const ROSTER_LIMIT = 28;
+export const ROSTER_LIMIT = 25;
 export const TARGET_ACTIVE_COUNT = 22;
 export const RESERVE_FOR_ROOKIES = 5_000_000;
 
