@@ -7,7 +7,7 @@
 import { spriteUrl } from '../../../utils/sprite-url';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
-import { SALARY_CAP, ROSTER_LIMIT } from '../../../utils/salary-calculations';
+import { SALARY_CAP, TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
 
 interface Props {
@@ -57,7 +57,7 @@ const metrics: MetricDef[] = [
   {
     label: 'Roster',
     value: `${activeRosterCount ?? playersUnderContract}`,
-    sub: `of ${ROSTER_LIMIT} slots`,
+    sub: `of ${TARGET_ACTIVE_COUNT} slots`,
     href: r('/theleague/rosters'),
     icon: 'users',
   },

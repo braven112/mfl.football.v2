@@ -233,7 +233,7 @@ if (cachedRosterPlayers) {
 
 const teamSummaries = computeLeagueSummary(salaryPlayers, rawAdjustments, draftCapitalMap, teamConfigs);
 const activeRosterCount = userFranchiseId
-  ? salaryPlayers.filter(p => p.franchiseId === userFranchiseId && p.status !== 'INJURED_RESERVE' && parseNumber(p.contractYear) > 0).length
+  ? salaryPlayers.filter(p => p.franchiseId === userFranchiseId && p.status !== 'INJURED_RESERVE' && p.status !== 'TAXI_SQUAD' && parseNumber(p.contractYear) > 0).length
   : 0;
 const userRosterPlayers: RosterPlayer[] = userFranchiseId
   ? salaryPlayers
