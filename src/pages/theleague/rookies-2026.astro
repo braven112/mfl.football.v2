@@ -1492,14 +1492,13 @@ for (const p of allRspPlayers) {
       margin-bottom: 0.75rem;
       padding: 0.75rem;
       display: grid;
-      grid-template-columns: auto 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       grid-template-areas:
-        "rank player"
-        "fbg dot"
-        "grade ."
-        "comp comp"
-        "notes notes";
-      gap: 0.375rem 0.625rem;
+        "rank player player"
+        "fbg dot grade"
+        "comp comp comp"
+        "notes notes notes";
+      gap: 0.25rem 0.75rem;
       align-items: start;
     }
     .rsp-table td { padding: 0; }
@@ -1513,14 +1512,33 @@ for (const p of allRspPlayers) {
       color: var(--color-gray-400, #9ca3af);
       margin-bottom: 0.125rem;
     }
-    .col-rank { grid-area: rank; text-align: center; font-size: 1rem; align-self: center; }
-    .col-rank::before { display: none; }
+    .col-rank { grid-area: rank; text-align: left; font-size: 1.25rem; font-weight: 700; align-self: center; color: var(--color-gray-300, #d1d5db); }
+    .col-rank::before { content: "#"; display: inline; font-size: 0.75rem; font-weight: 600; color: var(--color-gray-300, #d1d5db); margin-right: 0.125rem; text-transform: none; letter-spacing: 0; margin-bottom: 0; }
     .col-player { grid-area: player; }
+    .col-player::before { display: none; }
     .col-fbg { grid-area: fbg; text-align: left; }
     .col-dot { grid-area: dot; text-align: left; }
-    .col-grade { grid-area: grade; }
-    .col-comp { grid-area: comp; }
+    .col-grade { grid-area: grade; text-align: left; }
+    .col-comp { grid-area: comp; overflow: visible; text-overflow: unset; white-space: normal; }
     .col-notes { grid-area: notes; min-width: 0; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; overflow: hidden; }
+    .col-player .player-school { padding-left: 0; }
     .player-avatar { width: 1.75rem; height: 1.75rem; font-size: 0.75rem; }
+    /* Compare table (3-Year RSP) mobile card layout */
+    .compare-table tbody tr {
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-areas:
+        "rank player player"
+        "class tier fbg"
+        "team team value"
+        "owned owned owned";
+    }
+    .col-class { grid-area: class; text-align: left; }
+    .col-team { grid-area: team; text-align: left; }
+    .col-tier { grid-area: tier; text-align: left; }
+    .col-value { grid-area: value; text-align: left; }
+    .col-owned { grid-area: owned; }
+
+    .tier-row { display: block !important; }
+    .tier-row td { display: block; }
   }
 </style>
