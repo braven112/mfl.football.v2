@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type {
   PendingTrade,
+  DraftTrade,
   TradeBuilderTeam,
   TradeBuilderAuthUser,
+  TradeSide,
 } from '../../../types/trade-builder';
 import PendingTradeCard from './PendingTradeCard';
 
@@ -12,9 +14,52 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onLoadIntoBuilder: (trade: PendingTrade, mode: 'counter' | 'view') => void;
+  drafts: DraftTrade[];
+  onLoadDraft: (draft: DraftTrade) => void;
+  onDeleteDraft: (draftId: string) => void;
+  onRenameDraft: (draftId: string, name: string) => void;
 }
 
 type LoadingState = 'loading' | 'loaded' | 'error';
+
+function formatRelativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+function DraftSideSummary({
+  side,
+  teams,
+}: {
+  side: TradeSide;
+  teams: TradeBuilderTeam[];
+}) {
+  const team = teams.find(t => t.franchiseId === side.franchiseId);
+  if (!team) return <span className="ptp-draft-no-team">No team</span>;
+
+  const playerCount = side.playerIds.length;
+  const pickCount = side.draftPicks.length;
+  const parts: string[] = [];
+  if (playerCount > 0) parts.push(`${playerCount} player${playerCount > 1 ? 's' : ''}`);
+  if (pickCount > 0) parts.push(`${pickCount} pick${pickCount > 1 ? 's' : ''}`);
+
+  return (
+    <span className="ptp-draft-side">
+      {team.icon && <img src={team.icon} alt="" className="ptp-draft-icon" />}
+      <span className="ptp-draft-team">{team.abbrev}</span>
+      {parts.length > 0 && (
+        <span className="ptp-draft-assets">({parts.join(', ')})</span>
+      )}
+    </span>
+  );
+}
 
 export default function PendingTradesPanel({
   authUser,
@@ -22,6 +67,10 @@ export default function PendingTradesPanel({
   isOpen,
   onClose,
   onLoadIntoBuilder,
+  drafts,
+  onLoadDraft,
+  onDeleteDraft,
+  onRenameDraft,
 }: Props) {
   const [trades, setTrades] = useState<PendingTrade[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>('loading');
@@ -29,6 +78,9 @@ export default function PendingTradesPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const [editDraftName, setEditDraftName] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchTrades = useCallback(async () => {
     setLoadingState('loading');
@@ -129,6 +181,28 @@ export default function PendingTradesPanel({
   const handleViewDetails = (trade: PendingTrade) => {
     onClose();
     onLoadIntoBuilder(trade, 'view');
+  };
+
+  const handleStartDraftRename = (draft: DraftTrade) => {
+    setEditingDraftId(draft.id);
+    setEditDraftName(draft.name);
+  };
+
+  const handleCommitDraftRename = () => {
+    if (editingDraftId && editDraftName.trim()) {
+      onRenameDraft(editingDraftId, editDraftName.trim());
+    }
+    setEditingDraftId(null);
+    setEditDraftName('');
+  };
+
+  const handleDeleteDraft = (id: string) => {
+    if (confirmDeleteId === id) {
+      onDeleteDraft(id);
+      setConfirmDeleteId(null);
+    } else {
+      setConfirmDeleteId(id);
+    }
   };
 
   if (!isOpen) return null;
@@ -237,6 +311,78 @@ export default function PendingTradesPanel({
               </div>
             </>
           )}
+
+          {/* Draft Trades — always shown, sourced from localStorage */}
+          <div className="ptp-section ptp-drafts-section">
+            <div className="ptp-section-header">
+              <h3 className="ptp-section-title">Drafts</h3>
+              <p className="ptp-section-sub">Saved trade templates</p>
+            </div>
+            {drafts.length > 0 ? (
+              <div className="ptp-card-list">
+                {[...drafts].sort((a, b) => b.updatedAt - a.updatedAt).map(draft => {
+                  const isEditing = editingDraftId === draft.id;
+                  const isConfirmingDelete = confirmDeleteId === draft.id;
+                  return (
+                    <div key={draft.id} className="ptp-draft-card">
+                      <div className="ptp-draft-header">
+                        {isEditing ? (
+                          <input
+                            className="ptp-draft-rename"
+                            value={editDraftName}
+                            onChange={e => setEditDraftName(e.target.value)}
+                            onBlur={handleCommitDraftRename}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleCommitDraftRename();
+                              if (e.key === 'Escape') { setEditingDraftId(null); setEditDraftName(''); }
+                            }}
+                            autoFocus
+                            maxLength={60}
+                          />
+                        ) : (
+                          <button
+                            className="ptp-draft-name"
+                            onClick={() => handleStartDraftRename(draft)}
+                            title="Click to rename"
+                          >
+                            {draft.name}
+                          </button>
+                        )}
+                        <span className="ptp-draft-time">{formatRelativeTime(draft.updatedAt)}</span>
+                      </div>
+                      <div className="ptp-draft-trade">
+                        <DraftSideSummary side={draft.teamA} teams={teams} />
+                        <span className="ptp-draft-arrow">&#8644;</span>
+                        <DraftSideSummary side={draft.teamB} teams={teams} />
+                      </div>
+                      <div className="ptp-draft-actions">
+                        <button
+                          className="ptp-draft-btn ptp-draft-btn--load"
+                          onClick={() => {
+                            onLoadDraft(draft);
+                            onClose();
+                          }}
+                        >
+                          Load
+                        </button>
+                        <button
+                          className={`ptp-draft-btn ptp-draft-btn--delete ${isConfirmingDelete ? 'ptp-draft-btn--confirm-del' : ''}`}
+                          onClick={() => handleDeleteDraft(draft.id)}
+                          onBlur={() => setConfirmDeleteId(null)}
+                        >
+                          {isConfirmingDelete ? 'Confirm' : 'Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ptp-empty">
+                No saved drafts. Build a trade and click "Save Draft" to reuse it later.
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -385,6 +531,137 @@ export default function PendingTradesPanel({
           clip: rect(0, 0, 0, 0);
           white-space: nowrap;
           border-width: 0;
+        }
+        /* Draft trades section */
+        .ptp-drafts-section {
+          border-top: 1px solid var(--content-border, #e2e8f0);
+          padding-top: 1.5rem;
+        }
+        .ptp-draft-card {
+          border: 1px solid var(--content-border, #e2e8f0);
+          border-radius: var(--radius-md, 0.5rem);
+          padding: 0.875rem;
+          background: var(--content-bg, #fff);
+        }
+        .ptp-draft-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .ptp-draft-name {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: var(--color-gray-900, #111827);
+          cursor: pointer;
+          text-align: left;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 70%;
+        }
+        .ptp-draft-name:hover { color: var(--color-primary, #1c497c); }
+        .ptp-draft-name:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
+        }
+        .ptp-draft-rename {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: var(--color-gray-900, #111827);
+          border: 1px solid var(--color-primary, #1c497c);
+          border-radius: var(--radius-sm, 0.25rem);
+          padding: 0.125rem 0.375rem;
+          flex: 1;
+          max-width: 70%;
+          background: var(--color-white, #fff);
+        }
+        .ptp-draft-rename:focus {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 1px;
+        }
+        .ptp-draft-time {
+          font-size: 0.75rem;
+          color: var(--color-gray-400, #9ca3af);
+          white-space: nowrap;
+        }
+        .ptp-draft-trade {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.8125rem;
+          color: var(--color-gray-700, #374151);
+          margin-bottom: 0.625rem;
+          flex-wrap: wrap;
+        }
+        .ptp-draft-side {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+        .ptp-draft-icon {
+          width: 18px;
+          height: 18px;
+          border-radius: 2px;
+        }
+        .ptp-draft-team { font-weight: 600; }
+        .ptp-draft-assets {
+          color: var(--color-gray-500, #6b7280);
+          font-size: 0.75rem;
+        }
+        .ptp-draft-no-team {
+          color: var(--color-gray-400, #9ca3af);
+          font-style: italic;
+        }
+        .ptp-draft-arrow {
+          color: var(--color-gray-400, #9ca3af);
+          font-size: 1rem;
+        }
+        .ptp-draft-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+        .ptp-draft-btn {
+          padding: 0.375rem 0.75rem;
+          border-radius: var(--radius-sm, 0.25rem);
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid var(--content-border, #e2e8f0);
+          transition: all 0.15s ease;
+        }
+        .ptp-draft-btn:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
+        }
+        .ptp-draft-btn--load {
+          background: var(--btn-primary-bg, #1c497c);
+          color: #fff;
+          border-color: var(--btn-primary-bg, #1c497c);
+        }
+        .ptp-draft-btn--load:hover {
+          background: var(--btn-primary-bg-hover, #164066);
+        }
+        .ptp-draft-btn--delete {
+          background: var(--content-bg, #fff);
+          color: var(--color-gray-600, #4b5563);
+        }
+        .ptp-draft-btn--delete:hover {
+          border-color: var(--color-error, #dc2626);
+          color: var(--color-error, #dc2626);
+        }
+        .ptp-draft-btn--confirm-del {
+          background: var(--color-error, #dc2626);
+          color: #fff;
+          border-color: var(--color-error, #dc2626);
+        }
+        .ptp-draft-btn--confirm-del:hover {
+          background: #b91c1c;
+          border-color: #b91c1c;
         }
         @media (max-width: 640px) {
           .ptp-panel { width: 100%; }
