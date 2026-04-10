@@ -271,7 +271,8 @@ const teams = franchises.map((franchise: any) => {
     const contractInfo = rp.contractInfo ?? '';
     const status = rp.status ?? 'ROSTER';
     const norm = normalizeStatus(status);
-    const position = pData?.position ?? 'N/A';
+    const rawPos = pData?.position ?? 'N/A';
+    const position = rawPos === 'Def' ? 'DEF' : rawPos;
     const nflTeam = normalizeTeamCode(pData?.team ?? '');
 
     return {
