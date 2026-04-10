@@ -1,49 +1,47 @@
 {
-  "version": "1.0",
-  "encoding": "utf-8",
   "salaryAdjustments": {
     "salaryAdjustment": [
       {
+        "id": "0",
         "timestamp": "1771139599",
         "description": "2026 Dead Money",
-        "id": "0",
-        "franchise_id": "0001",
-        "amount": "636125"
+        "amount": "636125",
+        "franchise_id": "0001"
       },
       {
-        "description": "2026 Dead Money",
-        "timestamp": "1771139599",
-        "id": "1",
         "franchise_id": "0002",
-        "amount": "1059625"
+        "amount": "1059625",
+        "timestamp": "1771139599",
+        "description": "2026 Dead Money",
+        "id": "1"
       },
       {
         "franchise_id": "0012",
         "amount": "552736",
-        "description": "2026 Dead Money",
         "timestamp": "1771139599",
+        "description": "2026 Dead Money",
         "id": "10"
       },
       {
         "franchise_id": "0013",
         "amount": "4633500",
-        "description": "2026 Dead Money",
         "timestamp": "1771139599",
+        "description": "2026 Dead Money",
         "id": "11"
       },
       {
-        "timestamp": "1771139599",
-        "description": "2026 Dead Money",
         "id": "12",
-        "franchise_id": "0014",
-        "amount": "796250"
+        "description": "2026 Dead Money",
+        "timestamp": "1771139599",
+        "amount": "796250",
+        "franchise_id": "0014"
       },
       {
-        "id": "13",
+        "franchise_id": "0015",
+        "amount": "693875",
         "description": "2026 Dead Money",
         "timestamp": "1771139599",
-        "amount": "693875",
-        "franchise_id": "0015"
+        "id": "13"
       },
       {
         "timestamp": "1771139599",
@@ -53,39 +51,39 @@
         "amount": "136125"
       },
       {
-        "amount": "233750",
         "franchise_id": "0013",
-        "id": "15",
+        "amount": "233750",
         "timestamp": "1774116905",
-        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)"
+        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)",
+        "id": "15"
       },
       {
-        "franchise_id": "0013",
-        "amount": "233750",
         "timestamp": "1774116905",
         "description": "Dropped Palmer, Joshua BUF WR (Salary: $467,500, Years: 4)",
-        "id": "16"
+        "id": "16",
+        "franchise_id": "0013",
+        "amount": "233750"
       },
       {
-        "description": "2026 Dead Money",
-        "timestamp": "1771139599",
-        "id": "2",
         "franchise_id": "0003",
-        "amount": "840125"
+        "amount": "840125",
+        "timestamp": "1771139599",
+        "description": "2026 Dead Money",
+        "id": "2"
       },
       {
+        "timestamp": "1771139599",
+        "description": "2026 Dead Money",
+        "id": "3",
         "franchise_id": "0005",
-        "amount": "1783750",
-        "description": "2026 Dead Money",
-        "timestamp": "1771139599",
-        "id": "3"
+        "amount": "1783750"
       },
       {
-        "id": "4",
+        "franchise_id": "0006",
+        "amount": "450771",
         "description": "2026 Dead Money",
         "timestamp": "1771139599",
-        "amount": "450771",
-        "franchise_id": "0006"
+        "id": "4"
       },
       {
         "description": "2026 Dead Money",
@@ -102,18 +100,18 @@
         "franchise_id": "0008"
       },
       {
+        "amount": "798941",
+        "franchise_id": "0009",
         "id": "7",
         "timestamp": "1771139599",
-        "description": "2026 Dead Money",
-        "amount": "798941",
-        "franchise_id": "0009"
+        "description": "2026 Dead Money"
       },
       {
-        "amount": "1440601",
         "franchise_id": "0010",
-        "id": "8",
+        "amount": "1440601",
+        "description": "2026 Dead Money",
         "timestamp": "1771139599",
-        "description": "2026 Dead Money"
+        "id": "8"
       },
       {
         "amount": "741813",
@@ -123,5 +121,7 @@
         "timestamp": "1771139599"
       }
     ]
-  }
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
 }
