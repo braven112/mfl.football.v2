@@ -5,6 +5,7 @@ import type {
   TradeAction,
   TradeSide,
   DraftPickKey,
+  DraftTrade,
   TradeBuilderAuthUser,
   TradeSubmissionState,
   PendingTrade,
@@ -125,6 +126,12 @@ function tradeReducer(state: TradeState, action: TradeAction): TradeState {
       return {
         teamA: { ...EMPTY_SIDE, franchiseId: state.teamA.franchiseId },
         teamB: { ...EMPTY_SIDE, franchiseId: state.teamB.franchiseId },
+        rookieModalTarget: null,
+      };
+    case 'LOAD_DRAFT':
+      return {
+        teamA: action.teamA,
+        teamB: action.teamB,
         rookieModalTarget: null,
       };
     case 'START_TRADE_FOR_PLAYER': {
@@ -335,20 +342,6 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     return null;
   }, [authUser, state.teamA.franchiseId, state.teamB.franchiseId]);
 
-  // Copy share link
-  const handleCopyLink = useCallback(() => {
-    const params = serializeTradeToParams({
-      teamAId: state.teamA.franchiseId,
-      teamBId: state.teamB.franchiseId,
-      teamAPlayerIds: state.teamA.playerIds,
-      teamBPlayerIds: state.teamB.playerIds,
-      teamADraftPicks: state.teamA.draftPicks,
-      teamBDraftPicks: state.teamB.draftPicks,
-    });
-    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-    navigator.clipboard.writeText(url);
-  }, [state]);
-
   // Update URL when trade changes
   useEffect(() => {
     if (!hasTrade) return;
@@ -453,6 +446,82 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     }
   }, [authUser, defaultTeamId, state.teamA, state.teamB, teamA, teamB]);
 
+  // ---------------------------------------------------------------------------
+  // Draft Trades (server-persisted via /api/trades/drafts)
+  // ---------------------------------------------------------------------------
+  const [drafts, setDrafts] = useState<DraftTrade[]>([]);
+
+  // Fetch drafts from server when panel opens or auth changes
+  const fetchDrafts = useCallback(async () => {
+    if (!authUser) { setDrafts([]); return; }
+    try {
+      const res = await fetch('/api/trades/drafts', { credentials: 'include' });
+      const json = await res.json();
+      if (json.drafts) setDrafts(json.drafts);
+    } catch { /* silent — drafts are non-critical */ }
+  }, [authUser]);
+
+  useEffect(() => { fetchDrafts(); }, [fetchDrafts]);
+
+  const handleSaveDraft = useCallback(async () => {
+    if (!authUser) {
+      setShowLoginModal(true);
+      return;
+    }
+    const teamAData = data.teams.find(t => t.franchiseId === state.teamA.franchiseId);
+    const teamBData = data.teams.find(t => t.franchiseId === state.teamB.franchiseId);
+    const nameA = teamAData?.abbrev ?? 'Team A';
+    const nameB = teamBData?.abbrev ?? 'Team B';
+    const now = Date.now();
+    const draft: DraftTrade = {
+      id: `draft-${now}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `${nameA} / ${nameB}`,
+      createdAt: now,
+      updatedAt: now,
+      teamA: { ...state.teamA },
+      teamB: { ...state.teamB },
+    };
+    try {
+      const res = await fetch('/api/trades/drafts', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      });
+      const json = await res.json();
+      if (json.drafts) setDrafts(json.drafts);
+    } catch { /* silent */ }
+  }, [authUser, state.teamA, state.teamB, data.teams]);
+
+  const handleLoadDraft = useCallback((draft: DraftTrade) => {
+    setSubmissionStatus({ status: 'idle', errorMessage: null });
+    dispatch({ type: 'LOAD_DRAFT', teamA: draft.teamA, teamB: draft.teamB });
+  }, []);
+
+  const handleDeleteDraft = useCallback(async (draftId: string) => {
+    try {
+      const res = await fetch(`/api/trades/drafts?id=${encodeURIComponent(draftId)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const json = await res.json();
+      if (json.drafts) setDrafts(json.drafts);
+    } catch { /* silent */ }
+  }, []);
+
+  const handleRenameDraft = useCallback(async (draftId: string, name: string) => {
+    try {
+      const res = await fetch('/api/trades/drafts', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: draftId, name }),
+      });
+      const json = await res.json();
+      if (json.drafts) setDrafts(json.drafts);
+    } catch { /* silent */ }
+  }, []);
+
   // Load a pending trade into the builder
   const handleLoadTradeIntoBuilder = useCallback((trade: PendingTrade, _mode: 'counter' | 'view') => {
     // Reset any prior submission state
@@ -493,17 +562,18 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           >
             Reset
           </button>
-          <button
-            className="btn btn--secondary"
-            onClick={handleCopyLink}
-            disabled={!hasTrade}
-          >
-            Copy Link
-          </button>
+          {hasTrade && (
+            <button
+              className="btn btn--secondary"
+              onClick={handleSaveDraft}
+            >
+              Save Draft
+            </button>
+          )}
           {authUser && (
             <button
               className="btn btn--secondary"
-              onClick={() => setShowPendingPanel(true)}
+              onClick={() => { fetchDrafts(); setShowPendingPanel(true); }}
             >
               My Trades
             </button>
@@ -664,6 +734,22 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           isOpen={showPendingPanel}
           onClose={() => setShowPendingPanel(false)}
           onLoadIntoBuilder={handleLoadTradeIntoBuilder}
+          drafts={drafts}
+          onLoadDraft={handleLoadDraft}
+          onDeleteDraft={handleDeleteDraft}
+          onRenameDraft={handleRenameDraft}
+          onCopyDraftLink={(draft) => {
+            const params = serializeTradeToParams({
+              teamAId: draft.teamA.franchiseId,
+              teamBId: draft.teamB.franchiseId,
+              teamAPlayerIds: draft.teamA.playerIds,
+              teamBPlayerIds: draft.teamB.playerIds,
+              teamADraftPicks: draft.teamA.draftPicks,
+              teamBDraftPicks: draft.teamB.draftPicks,
+            });
+            const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            navigator.clipboard.writeText(url);
+          }}
         />
       )}
 

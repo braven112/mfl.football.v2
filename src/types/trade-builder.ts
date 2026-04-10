@@ -133,7 +133,8 @@ export type TradeAction =
   | { type: 'HIDE_ROOKIE_MODAL' }
   | { type: 'RESET' }
   | { type: 'SWAP_TEAMS' }
-  | { type: 'START_TRADE_FOR_PLAYER'; franchiseId: string; playerId: string };
+  | { type: 'START_TRADE_FOR_PLAYER'; franchiseId: string; playerId: string }
+  | { type: 'LOAD_DRAFT'; teamA: TradeSide; teamB: TradeSide };
 
 /** Computed cap impact for one team in a trade */
 export interface TeamTradeImpact {
@@ -199,3 +200,17 @@ export type TradeActionExtended =
   | { type: 'SUBMIT_TRADE_SUCCESS' }
   | { type: 'SUBMIT_TRADE_ERROR'; message: string }
   | { type: 'SUBMIT_TRADE_RESET' };
+
+// ---------------------------------------------------------------------------
+// Draft Trades (localStorage persistence)
+// ---------------------------------------------------------------------------
+
+/** A saved draft trade */
+export interface DraftTrade {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  teamA: TradeSide;
+  teamB: TradeSide;
+}
