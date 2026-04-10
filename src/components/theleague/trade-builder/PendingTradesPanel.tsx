@@ -18,6 +18,7 @@ interface Props {
   onLoadDraft: (draft: DraftTrade) => void;
   onDeleteDraft: (draftId: string) => void;
   onRenameDraft: (draftId: string, name: string) => void;
+  onCopyDraftLink: (draft: DraftTrade) => void;
 }
 
 type LoadingState = 'loading' | 'loaded' | 'error';
@@ -71,6 +72,7 @@ export default function PendingTradesPanel({
   onLoadDraft,
   onDeleteDraft,
   onRenameDraft,
+  onCopyDraftLink,
 }: Props) {
   const [trades, setTrades] = useState<PendingTrade[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>('loading');
@@ -81,6 +83,7 @@ export default function PendingTradesPanel({
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [editDraftName, setEditDraftName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [copiedDraftId, setCopiedDraftId] = useState<string | null>(null);
 
   const fetchTrades = useCallback(async () => {
     setLoadingState('loading');
@@ -366,12 +369,41 @@ export default function PendingTradesPanel({
                           Load
                         </button>
                         <button
-                          className={`ptp-draft-btn ptp-draft-btn--delete ${isConfirmingDelete ? 'ptp-draft-btn--confirm-del' : ''}`}
-                          onClick={() => handleDeleteDraft(draft.id)}
-                          onBlur={() => setConfirmDeleteId(null)}
+                          className="ptp-draft-btn ptp-draft-btn--copy"
+                          onClick={() => {
+                            onCopyDraftLink(draft);
+                            setCopiedDraftId(draft.id);
+                            setTimeout(() => setCopiedDraftId(null), 2000);
+                          }}
                         >
-                          {isConfirmingDelete ? 'Confirm' : 'Delete'}
+                          {copiedDraftId === draft.id ? 'Copied!' : 'Copy Link'}
                         </button>
+                      </div>
+                      <div className="ptp-draft-meta-row">
+                        {isConfirmingDelete ? (
+                          <>
+                            <span className="ptp-draft-delete-prompt">Delete this draft?</span>
+                            <button
+                              className="ptp-draft-link ptp-draft-link--danger"
+                              onClick={() => { onDeleteDraft(draft.id); setConfirmDeleteId(null); }}
+                            >
+                              Yes, delete
+                            </button>
+                            <button
+                              className="ptp-draft-link"
+                              onClick={() => setConfirmDeleteId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="ptp-draft-link"
+                            onClick={() => setConfirmDeleteId(draft.id)}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -646,22 +678,43 @@ export default function PendingTradesPanel({
         .ptp-draft-btn--load:hover {
           background: var(--btn-primary-bg-hover, #164066);
         }
-        .ptp-draft-btn--delete {
+        .ptp-draft-btn--copy {
           background: var(--content-bg, #fff);
-          color: var(--color-gray-600, #4b5563);
+          color: var(--color-gray-700, #374151);
         }
-        .ptp-draft-btn--delete:hover {
-          border-color: var(--color-error, #dc2626);
+        .ptp-draft-btn--copy:hover {
+          border-color: var(--color-primary, #1c497c);
+          color: var(--color-primary, #1c497c);
+        }
+        .ptp-draft-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+          padding-top: 0.5rem;
+          border-top: 1px solid var(--color-gray-100, #f3f4f6);
+        }
+        .ptp-draft-delete-prompt {
+          font-size: 0.75rem;
           color: var(--color-error, #dc2626);
+          font-weight: 500;
         }
-        .ptp-draft-btn--confirm-del {
-          background: var(--color-error, #dc2626);
-          color: #fff;
-          border-color: var(--color-error, #dc2626);
+        .ptp-draft-link {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 0.6875rem;
+          color: var(--color-gray-400, #9ca3af);
+          cursor: pointer;
+          text-decoration: underline;
+          text-underline-offset: 2px;
         }
-        .ptp-draft-btn--confirm-del:hover {
-          background: #b91c1c;
-          border-color: #b91c1c;
+        .ptp-draft-link:hover { color: var(--color-gray-600, #4b5563); }
+        .ptp-draft-link--danger { color: var(--color-error, #dc2626); font-weight: 600; }
+        .ptp-draft-link--danger:hover { color: #b91c1c; }
+        .ptp-draft-link:focus-visible {
+          outline: 2px solid var(--color-primary, #1c497c);
+          outline-offset: 2px;
         }
         @media (max-width: 640px) {
           .ptp-panel { width: 100%; }

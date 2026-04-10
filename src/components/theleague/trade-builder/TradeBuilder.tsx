@@ -342,20 +342,6 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     return null;
   }, [authUser, state.teamA.franchiseId, state.teamB.franchiseId]);
 
-  // Copy share link
-  const handleCopyLink = useCallback(() => {
-    const params = serializeTradeToParams({
-      teamAId: state.teamA.franchiseId,
-      teamBId: state.teamB.franchiseId,
-      teamAPlayerIds: state.teamA.playerIds,
-      teamBPlayerIds: state.teamB.playerIds,
-      teamADraftPicks: state.teamA.draftPicks,
-      teamBDraftPicks: state.teamB.draftPicks,
-    });
-    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-    navigator.clipboard.writeText(url);
-  }, [state]);
-
   // Update URL when trade changes
   useEffect(() => {
     if (!hasTrade) return;
@@ -576,13 +562,6 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           >
             Reset
           </button>
-          <button
-            className="btn btn--secondary"
-            onClick={handleCopyLink}
-            disabled={!hasTrade}
-          >
-            Copy Link
-          </button>
           {hasTrade && (
             <button
               className="btn btn--secondary"
@@ -759,6 +738,18 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           onLoadDraft={handleLoadDraft}
           onDeleteDraft={handleDeleteDraft}
           onRenameDraft={handleRenameDraft}
+          onCopyDraftLink={(draft) => {
+            const params = serializeTradeToParams({
+              teamAId: draft.teamA.franchiseId,
+              teamBId: draft.teamB.franchiseId,
+              teamAPlayerIds: draft.teamA.playerIds,
+              teamBPlayerIds: draft.teamB.playerIds,
+              teamADraftPicks: draft.teamA.draftPicks,
+              teamBDraftPicks: draft.teamB.draftPicks,
+            });
+            const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            navigator.clipboard.writeText(url);
+          }}
         />
       )}
 
