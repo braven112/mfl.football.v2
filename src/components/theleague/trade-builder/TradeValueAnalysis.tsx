@@ -361,12 +361,9 @@ export default function TradeValueAnalysis({
           color: var(--color-error, #dc2626);
         }
         .tva__rank {
-          font-size: 0.625rem;
-          font-weight: 700;
-          color: var(--color-primary, #1c497c);
-          background: var(--color-primary-light, #dbeafe);
-          padding: 0.0625rem 0.25rem;
-          border-radius: 0.1875rem;
+          font-size: 0.6875rem;
+          font-weight: 600;
+          color: var(--color-gray-400, #9ca3af);
           flex-shrink: 0;
           font-variant-numeric: tabular-nums;
           white-space: nowrap;

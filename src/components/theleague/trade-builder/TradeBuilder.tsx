@@ -617,7 +617,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           salaryYears={data.salaryYears}
           salaryCap={data.salaryCap}
           dispatch={dispatch}
-          rankingLookup={state.teamA.franchiseId === '0001' ? rankingLookup : null}
+          rankingLookup={rankingLookup}
         />
 
         <div className="trade-builder__divider">
@@ -641,7 +641,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           salaryYears={data.salaryYears}
           salaryCap={data.salaryCap}
           dispatch={dispatch}
-          rankingLookup={state.teamB.franchiseId === '0001' ? rankingLookup : null}
+          rankingLookup={rankingLookup}
         />
       </div>
 
