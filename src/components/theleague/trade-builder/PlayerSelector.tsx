@@ -270,15 +270,15 @@ function PlayerRow({
         position={player.position}
         nflTeam={player.nflTeam}
         nflLogo={player.nflLogo}
+        afterName={compositeRank != null ? (
+          <span className="player-row__rank" title="My Rank (Composite)">#{compositeRank}</span>
+        ) : undefined}
         metaSlot={<>
           {player.isRookie && <span className="player-row__badge player-row__badge--rookie">R</span>}
           {player.isFranchiseTagged && <span className="player-row__badge player-row__badge--tag">F</span>}
           {player.tradeBait && <span className="player-row__trade-bait" title="On Trade Block">🏷️</span>}
         </>}
       />
-      {compositeRank != null && (
-        <span className="player-row__rank" title="My Rank (Composite)">#{compositeRank}</span>
-      )}
       <div className="player-row__contract">
         <span className="player-row__salary">{formatCurrency(player.salary)}</span>
         <span className="player-row__years">{player.contractYears}yr</span>
@@ -354,14 +354,12 @@ function PlayerRow({
           cursor: default;
         }
         .player-row__rank {
-          font-size: 0.6875rem;
+          font-size: 0.75rem;
           font-weight: 600;
           color: var(--color-gray-400, #9ca3af);
-          flex-shrink: 0;
           font-variant-numeric: tabular-nums;
           white-space: nowrap;
-          min-width: 1.75rem;
-          text-align: right;
+          margin-left: 0.25rem;
         }
         .player-row__add {
           background: var(--btn-secondary-bg, #2e8743);
