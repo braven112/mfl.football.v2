@@ -9,6 +9,8 @@
 import React, { useMemo } from 'react';
 import type { TradeBuilderPlayer, PlayerSurplusData, DraftPickKey, DraftPickValueData } from '../../../types/trade-builder';
 import { formatCompactNumber } from '../../../utils/formatters';
+import type { RankingLookup } from '../../../utils/rankings-lookup';
+import { getPlayerRank, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
 
 interface Props {
   teamAName: string;
@@ -21,6 +23,7 @@ interface Props {
   teamBDraftPicks: DraftPickKey[];
   surplusMap: Record<string, PlayerSurplusData>;
   pickValueMap?: Record<string, DraftPickValueData>;
+  rankingLookup?: RankingLookup | null;
 }
 
 function formatSurplus(value: number): string {
@@ -43,6 +46,7 @@ export default function TradeValueAnalysis({
   teamBDraftPicks,
   surplusMap,
   pickValueMap,
+  rankingLookup,
 }: Props) {
   const analysis = useMemo(() => {
     const sumPlayerSurplus = (players: TradeBuilderPlayer[]) =>
@@ -53,6 +57,15 @@ export default function TradeValueAnalysis({
         const val = pickValueMap?.[pickKey(p)];
         return sum + (val?.surplusValue ?? 0);
       }, 0);
+
+    const avgRank = (players: TradeBuilderPlayer[]) => {
+      if (!rankingLookup) return null;
+      const ranks = players
+        .map((p) => getPlayerRank(rankingLookup, p.id, COMPOSITE_IMPORT_ID))
+        .filter((r): r is number => r !== null);
+      if (ranks.length === 0) return null;
+      return Math.round(ranks.reduce((a, b) => a + b, 0) / ranks.length);
+    };
 
     const teamAPlayerSurplus = sumPlayerSurplus(teamAPlayers);
     const teamBPlayerSurplus = sumPlayerSurplus(teamBPlayers);
@@ -67,17 +80,21 @@ export default function TradeValueAnalysis({
       teamBGivesSurplus,
       netSurplusA: teamBGivesSurplus - teamAGivesSurplus,
       netSurplusB: teamAGivesSurplus - teamBGivesSurplus,
+      avgRankA: avgRank(teamAPlayers),
+      avgRankB: avgRank(teamBPlayers),
     };
-  }, [teamAPlayers, teamBPlayers, teamADraftPicks, teamBDraftPicks, surplusMap, pickValueMap]);
+  }, [teamAPlayers, teamBPlayers, teamADraftPicks, teamBDraftPicks, surplusMap, pickValueMap, rankingLookup]);
 
   if (Object.keys(surplusMap).length === 0) return null;
 
   const renderPlayerSurplus = (player: TradeBuilderPlayer) => {
     const data = surplusMap[player.id];
+    const rank = rankingLookup ? getPlayerRank(rankingLookup, player.id, COMPOSITE_IMPORT_ID) : null;
     if (!data) {
       return (
         <div key={player.id} className="tva__player">
           <span className="tva__player-name">{player.name}</span>
+          {rank != null && <span className="tva__rank">#{rank}</span>}
           <span className="tva__player-value tva__player-value--na">n/a</span>
         </div>
       );
@@ -86,6 +103,7 @@ export default function TradeValueAnalysis({
     return (
       <div key={player.id} className="tva__player">
         <span className="tva__player-name">{player.name}</span>
+        {rank != null && <span className="tva__rank">#{rank}</span>}
         <span
           className={`tva__player-value ${
             isPositive ? 'tva__player-value--positive' : 'tva__player-value--negative'
@@ -206,6 +224,25 @@ export default function TradeValueAnalysis({
         </div>
       )}
 
+      {/* Rank summary */}
+      {(analysis.avgRankA != null || analysis.avgRankB != null) && (
+        <div className="tva__rank-summary">
+          {analysis.avgRankA != null && (
+            <span className="tva__rank-summary-item">
+              Avg rank sent: <strong>#{analysis.avgRankA}</strong>
+            </span>
+          )}
+          {analysis.avgRankA != null && analysis.avgRankB != null && (
+            <span className="tva__rank-summary-sep">|</span>
+          )}
+          {analysis.avgRankB != null && (
+            <span className="tva__rank-summary-item">
+              Avg rank received: <strong>#{analysis.avgRankB}</strong>
+            </span>
+          )}
+        </div>
+      )}
+
       <style>{`
         .tva {
           margin-top: 1.5rem;
@@ -322,6 +359,33 @@ export default function TradeValueAnalysis({
         .tva__net--negative {
           background: var(--color-error-light, #fee2e2);
           color: var(--color-error, #dc2626);
+        }
+        .tva__rank {
+          font-size: 0.625rem;
+          font-weight: 700;
+          color: var(--color-primary, #1c497c);
+          background: var(--color-primary-light, #dbeafe);
+          padding: 0.0625rem 0.25rem;
+          border-radius: 0.1875rem;
+          flex-shrink: 0;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+        .tva__rank-summary {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+          font-size: 0.75rem;
+          color: var(--color-gray-600, #4b5563);
+          font-variant-numeric: tabular-nums;
+        }
+        .tva__rank-summary-item strong {
+          color: var(--color-primary, #1c497c);
+        }
+        .tva__rank-summary-sep {
+          color: var(--color-gray-300, #d1d5db);
         }
         @media (max-width: 640px) {
           .tva__columns {

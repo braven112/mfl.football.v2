@@ -9,6 +9,7 @@ interface Props {
   rookieExtension?: RookieExtensionSim;
   onRemove: () => void;
   onSimulateExtension: () => void;
+  compositeRank?: number | null;
 }
 
 export default function PlayerCard({
@@ -16,6 +17,7 @@ export default function PlayerCard({
   rookieExtension,
   onRemove,
   onSimulateExtension,
+  compositeRank,
 }: Props) {
   const statusLabel =
     player.normalizedStatus === 'PRACTICE'
@@ -66,6 +68,12 @@ export default function PlayerCard({
               : player.contractYears}
           </span>
         </div>
+        {compositeRank != null && (
+          <div className="player-card__detail">
+            <span className="player-card__detail-label">My Rank</span>
+            <span className="player-card__detail-value player-card__detail-value--rank">#{compositeRank}</span>
+          </div>
+        )}
         {player.normalizedStatus === 'PRACTICE' && (
           <div className="player-card__detail">
             <span className="player-card__detail-label">Cap Hit</span>
@@ -187,6 +195,9 @@ export default function PlayerCard({
           font-size: 0.75rem;
           color: var(--color-gray-500, #6b7280);
           font-weight: 500;
+        }
+        .player-card__detail-value--rank {
+          color: var(--color-primary, #1c497c);
         }
         .player-card__rookie-warning {
           display: flex;

@@ -331,6 +331,25 @@ Sign as many **long-term contracts** as possible by targeting **young, inexpensi
 - Know which teams can't afford to match — you might steal a star for the price of draft picks
 - Protect YOUR tagged players by maintaining enough cap space to match any offer
 
+### Rankings Integration
+
+The user maintains custom composite dynasty rankings stored in Vercel KV (Upstash Redis). When analyzing trades, factor in rank differential to quantify dynasty value gaps.
+
+**How to fetch rankings:**
+```bash
+curl -s "$KV_REST_API_URL/get/cr:0001" -H "Authorization: Bearer $KV_REST_API_TOKEN"
+```
+
+**Response format:** The `rankings` field is an ordered array of MFL player IDs — index 0 = rank 1, index 1 = rank 2, etc.
+
+**Cross-reference players:** Map player IDs to names using `src/data/theleague/mfl-feeds/{year}/players.json`.
+
+**How to use in trade analysis:**
+- Report rank for each player in the trade (e.g., "You're sending your #8 ranked player for their #35")
+- Flag large rank differentials as dynasty value gaps
+- Consider rank alongside surplus value — a positive surplus player ranked low may be less desirable than the numbers suggest
+- Rank reflects the user's personal dynasty valuations, not market consensus — treat it as the owner's own conviction tier list
+
 ---
 
 ## RSP SCOUTING KNOWLEDGE BASE
