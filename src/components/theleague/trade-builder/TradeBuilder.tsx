@@ -15,7 +15,7 @@ import {
   serializeTradeToParams,
   deserializeTradeFromParams,
 } from '../../../utils/trade-calculations';
-import { buildMflAssetString, parseFpCode } from '../../../utils/trade-asset-parsing';
+import { buildMflAssetString, parseFpCode, parseDpCode } from '../../../utils/trade-asset-parsing';
 import TeamPanel from './TeamPanel';
 import TradeBaitMarketplace from './TradeBaitMarketplace';
 import MultiYearCapTable from './MultiYearCapTable';
@@ -428,8 +428,8 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     const otherTeamSide = currentUserSide === 'A' ? state.teamB : state.teamA;
     const otherTeam = currentUserSide === 'A' ? teamB : teamA;
 
-    const willGiveUp = buildMflAssetString(userTeamSide.playerIds, userTeamSide.draftPicks);
-    const willReceive = buildMflAssetString(otherTeamSide.playerIds, otherTeamSide.draftPicks);
+    const willGiveUp = buildMflAssetString(userTeamSide.playerIds, userTeamSide.draftPicks, data.currentYearDpMap);
+    const willReceive = buildMflAssetString(otherTeamSide.playerIds, otherTeamSide.draftPicks, data.currentYearDpMap);
 
     try {
       const res = await fetch('/api/trades/submit', {
@@ -552,9 +552,14 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
       const parts = assetStr.split(',').filter(Boolean);
       for (const part of parts) {
         const trimmed = part.trim();
-        const pick = parseFpCode(trimmed);
-        if (pick) {
-          dispatch({ type: 'ADD_DRAFT_PICK', side, pick });
+        const fpPick = parseFpCode(trimmed);
+        if (fpPick) {
+          dispatch({ type: 'ADD_DRAFT_PICK', side, pick: fpPick });
+        } else if (trimmed.startsWith('DP_')) {
+          const dpPick = parseDpCode(trimmed, data.dpReverseMap);
+          if (dpPick) {
+            dispatch({ type: 'ADD_DRAFT_PICK', side, pick: dpPick });
+          }
         } else if (/^\d+$/.test(trimmed)) {
           dispatch({ type: 'ADD_PLAYER', side, playerId: trimmed });
         }

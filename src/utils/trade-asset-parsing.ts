@@ -45,9 +45,11 @@ export function formatPickCode(code: string, allTeams: TradeBuilderTeam[]): stri
     return `${year} Rd ${round}${via}`;
   }
   if (code.startsWith('DP_')) {
+    // DP_ format: DP_{round-1}_{pick-1} (both zero-indexed)
     const parts = code.split('_');
     const round = parseInt(parts[1], 10) + 1;
-    return `Current Rd ${round}`;
+    const pickInRound = parts[2] != null ? parseInt(parts[2], 10) + 1 : null;
+    return pickInRound ? `Current Rd ${round}, Pick ${pickInRound}` : `Current Rd ${round}`;
   }
   return code;
 }
@@ -65,16 +67,44 @@ export function parseFpCode(code: string): DraftPickKey | null {
 }
 
 /**
+ * Parse DP_ code into a DraftPickKey using a reverse lookup map.
+ * DP_ codes identify current-year draft picks by slot (DP_{round-1}_{pick-1}).
+ * The reverse map is built from draftResults data at page load time.
+ */
+export function parseDpCode(
+  code: string,
+  reverseMap?: Record<string, { year: string; round: string; originalPickFor: string }>
+): DraftPickKey | null {
+  if (!code.startsWith('DP_')) return null;
+  if (!reverseMap) return null;
+  const entry = reverseMap[code];
+  if (!entry) return null;
+  return { year: entry.year, round: entry.round, originalPickFor: entry.originalPickFor };
+}
+
+/**
  * Build the MFL asset string from player IDs and draft picks.
- * Players are numeric IDs, future picks are FP_{franchise}_{year}_{round}.
+ * Players are numeric IDs, future picks are FP_{franchise}_{year}_{round},
+ * current-year picks are DP_{round-1}_{pick-1} (zero-indexed).
+ *
+ * @param dpMap - Optional map from "{year}-{round}-{originalPickFor}" to DP_ code.
+ *   When a pick is found in this map, the DP_ code is used instead of FP_ format.
+ *   This is required for current-year picks that MFL no longer tracks as "future".
  */
 export function buildMflAssetString(
   playerIds: string[],
-  draftPicks: DraftPickKey[]
+  draftPicks: DraftPickKey[],
+  dpMap?: Record<string, string>
 ): string {
   const parts: string[] = [...playerIds];
   for (const pick of draftPicks) {
-    parts.push(`FP_${pick.originalPickFor}_${pick.year}_${pick.round}`);
+    const dpKey = `${pick.year}-${pick.round}-${pick.originalPickFor}`;
+    const dpCode = dpMap?.[dpKey];
+    if (dpCode) {
+      parts.push(dpCode);
+    } else {
+      parts.push(`FP_${pick.originalPickFor}_${pick.year}_${pick.round}`);
+    }
   }
   return parts.join(',');
 }
