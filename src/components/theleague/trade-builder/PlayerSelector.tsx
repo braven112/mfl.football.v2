@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import type { TradeBuilderTeam, TradeBuilderPlayer } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
 import { PlayerCell } from '../PlayerCell';
+import type { RankingLookup } from '../../../utils/rankings-lookup';
+import { getPlayerRank, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -9,13 +11,17 @@ interface Props {
   team: TradeBuilderTeam;
   selectedPlayerIds: string[];
   onAdd: (playerId: string) => void;
+  rankingLookup?: RankingLookup | null;
 }
 
-export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props) {
+export default function PlayerSelector({ team, selectedPlayerIds, onAdd, rankingLookup }: Props) {
   const [search, setSearch] = useState('');
   const [posFilter, setPosFilter] = useState('ALL');
   const [tradeBaitOnly, setTradeBaitOnly] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [sortByRank, setSortByRank] = useState(false);
+
+  const hasCompositeRanks = !!rankingLookup?.byImport.has(COMPOSITE_IMPORT_ID);
 
   const tradeBaitCount = useMemo(
     () => team.players.filter((p) => p.tradeBait && !selectedPlayerIds.includes(p.id)).length,
@@ -45,22 +51,30 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
       );
     }
 
-    // Sort: trade bait first, then by position order, then salary desc
-    const posOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
-    players.sort((a, b) => {
-      // Trade bait players float to the top when not filtering
-      if (!tradeBaitOnly) {
-        if (a.tradeBait && !b.tradeBait) return -1;
-        if (!a.tradeBait && b.tradeBait) return 1;
-      }
-      const posA = posOrder.indexOf(a.position);
-      const posB = posOrder.indexOf(b.position);
-      if (posA !== posB) return posA - posB;
-      return b.salary - a.salary;
-    });
+    // Sort: by rank if toggled, otherwise default (trade bait -> position -> salary)
+    if (sortByRank && hasCompositeRanks && rankingLookup) {
+      const compositeMap = rankingLookup.byImport.get(COMPOSITE_IMPORT_ID);
+      players.sort((a, b) => {
+        const rankA = compositeMap?.get(a.id) ?? Infinity;
+        const rankB = compositeMap?.get(b.id) ?? Infinity;
+        return rankA - rankB;
+      });
+    } else {
+      const posOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
+      players.sort((a, b) => {
+        if (!tradeBaitOnly) {
+          if (a.tradeBait && !b.tradeBait) return -1;
+          if (!a.tradeBait && b.tradeBait) return 1;
+        }
+        const posA = posOrder.indexOf(a.position);
+        const posB = posOrder.indexOf(b.position);
+        if (posA !== posB) return posA - posB;
+        return b.salary - a.salary;
+      });
+    }
 
     return players;
-  }, [team.players, selectedPlayerIds, search, posFilter, tradeBaitOnly]);
+  }, [team.players, selectedPlayerIds, search, posFilter, tradeBaitOnly, sortByRank, hasCompositeRanks, rankingLookup]);
 
   const displayPlayers = expanded ? filteredPlayers : filteredPlayers.slice(0, 8);
 
@@ -92,7 +106,16 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
               onClick={() => setTradeBaitOnly(!tradeBaitOnly)}
               title="Show only players on the trade block"
             >
-              🏷️ Trade Bait ({tradeBaitCount})
+              Trade Bait ({tradeBaitCount})
+            </button>
+          )}
+          {hasCompositeRanks && (
+            <button
+              className={`player-selector__pos-btn player-selector__pos-btn--rank ${sortByRank ? 'player-selector__pos-btn--active' : ''}`}
+              onClick={() => setSortByRank(!sortByRank)}
+              title="Sort by My Rank"
+            >
+              # Rank
             </button>
           )}
         </div>
@@ -100,7 +123,12 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
 
       <div className="player-selector__list">
         {displayPlayers.map((player) => (
-          <PlayerRow key={player.id} player={player} onAdd={onAdd} />
+          <PlayerRow
+            key={player.id}
+            player={player}
+            onAdd={onAdd}
+            compositeRank={hasCompositeRanks && rankingLookup ? getPlayerRank(rankingLookup, player.id, COMPOSITE_IMPORT_ID) : null}
+          />
         ))}
         {filteredPlayers.length === 0 && (
           <div className="player-selector__empty">No players found</div>
@@ -180,6 +208,11 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
           border-color: var(--color-warning, #f59e0b);
           color: #fff;
         }
+        .player-selector__pos-btn--rank {
+          margin-left: 0.25rem;
+          border-color: var(--color-primary, #1c497c);
+          color: var(--color-primary, #1c497c);
+        }
         .player-selector__list {
           display: flex;
           flex-direction: column;
@@ -221,9 +254,11 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd }: Props
 function PlayerRow({
   player,
   onAdd,
+  compositeRank,
 }: {
   player: TradeBuilderPlayer;
   onAdd: (id: string) => void;
+  compositeRank: number | null;
 }) {
   return (
     <div className={`player-row${player.tradeBait ? ' player-row--trade-bait' : ''}`}>
@@ -238,9 +273,12 @@ function PlayerRow({
         metaSlot={<>
           {player.isRookie && <span className="player-row__badge player-row__badge--rookie">R</span>}
           {player.isFranchiseTagged && <span className="player-row__badge player-row__badge--tag">F</span>}
-          {player.tradeBait && <span className="player-row__trade-bait" title="On Trade Block">🏷️</span>}
+          {player.tradeBait && <span className="player-row__trade-bait" title="On Trade Block">T</span>}
         </>}
       />
+      {compositeRank != null && (
+        <span className="player-row__rank" title="My Rank (Composite)">#{compositeRank}</span>
+      )}
       <div className="player-row__contract">
         <span className="player-row__salary">{formatCurrency(player.salary)}</span>
         <span className="player-row__years">{player.contractYears}yr</span>
@@ -310,6 +348,17 @@ function PlayerRow({
         .player-row__badge--tag {
           background: var(--color-franchise-tag-light, #ede9fe);
           color: var(--color-franchise-tag, #7c3aed);
+        }
+        .player-row__rank {
+          font-size: 0.625rem;
+          font-weight: 700;
+          color: var(--color-primary, #1c497c);
+          background: var(--color-primary-light, #dbeafe);
+          padding: 0.0625rem 0.25rem;
+          border-radius: 0.1875rem;
+          flex-shrink: 0;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
         }
         .player-row__trade-bait {
           font-size: 0.75rem;

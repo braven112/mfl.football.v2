@@ -25,6 +25,11 @@ import RookieExtensionModal from './RookieExtensionModal';
 import TradeConfirmationModal from './TradeConfirmationModal';
 import PendingTradesPanel from './PendingTradesPanel';
 import LoginModal from './LoginModal';
+import {
+  buildRankingLookup,
+  onRankingsChanged,
+  type RankingLookup,
+} from '../../../utils/rankings-lookup';
 
 const EMPTY_SIDE: TradeSide = {
   franchiseId: null,
@@ -214,6 +219,17 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
       })
       .catch(() => {}); // Silent — user just isn't logged in
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rankings lookup (admin-only)
+  const isAdmin = authUser?.franchiseId === '0001';
+  const [rankingLookup, setRankingLookup] = useState<RankingLookup | null>(null);
+  useEffect(() => {
+    if (!isAdmin) return;
+    setRankingLookup(buildRankingLookup());
+    return onRankingsChanged(() => {
+      setRankingLookup(buildRankingLookup());
+    });
+  }, [isAdmin]);
 
   // Refs for focus return
   const submitBtnRef = useRef<HTMLButtonElement>(null);
@@ -601,6 +617,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           salaryYears={data.salaryYears}
           salaryCap={data.salaryCap}
           dispatch={dispatch}
+          rankingLookup={state.teamA.franchiseId === '0001' ? rankingLookup : null}
         />
 
         <div className="trade-builder__divider">
@@ -624,6 +641,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
           salaryYears={data.salaryYears}
           salaryCap={data.salaryCap}
           dispatch={dispatch}
+          rankingLookup={state.teamB.franchiseId === '0001' ? rankingLookup : null}
         />
       </div>
 
@@ -641,6 +659,7 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
               teamBDraftPicks={state.teamB.draftPicks}
               surplusMap={data.surplusMap}
               pickValueMap={data.pickValueMap}
+              rankingLookup={rankingLookup}
             />
           )}
           <MultiYearCapTable

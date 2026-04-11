@@ -9,6 +9,8 @@ import PlayerSelector from './PlayerSelector';
 import PlayerCard from './PlayerCard';
 import CapImpactCard from './CapImpactCard';
 import DraftPickSelector from './DraftPickSelector';
+import type { RankingLookup } from '../../../utils/rankings-lookup';
+import { getPlayerRank, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
 
 interface Props {
   side: 'A' | 'B';
@@ -20,6 +22,7 @@ interface Props {
   salaryYears: number[];
   salaryCap: number;
   dispatch: React.Dispatch<TradeAction>;
+  rankingLookup?: RankingLookup | null;
 }
 
 export default function TeamPanel({
@@ -32,6 +35,7 @@ export default function TeamPanel({
   salaryYears,
   salaryCap,
   dispatch,
+  rankingLookup,
 }: Props) {
   const selectedPlayers =
     selectedTeam?.players.filter((p) =>
@@ -92,6 +96,7 @@ export default function TeamPanel({
             onAdd={(playerId) =>
               dispatch({ type: 'ADD_PLAYER', side, playerId })
             }
+            rankingLookup={rankingLookup}
           />
 
           {selectedPlayers.length > 0 && (
@@ -112,6 +117,7 @@ export default function TeamPanel({
                       side,
                     })
                   }
+                  compositeRank={rankingLookup ? getPlayerRank(rankingLookup, player.id, COMPOSITE_IMPORT_ID) : null}
                 />
               ))}
             </div>
