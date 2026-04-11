@@ -273,7 +273,7 @@ function PlayerRow({
         metaSlot={<>
           {player.isRookie && <span className="player-row__badge player-row__badge--rookie">R</span>}
           {player.isFranchiseTagged && <span className="player-row__badge player-row__badge--tag">F</span>}
-          {player.tradeBait && <span className="player-row__trade-bait" title="On Trade Block">T</span>}
+          {player.tradeBait && <span className="player-row__badge player-row__badge--bait" title="On Trade Block">TB</span>}
         </>}
       />
       {compositeRank != null && (
@@ -349,6 +349,10 @@ function PlayerRow({
           background: var(--color-franchise-tag-light, #ede9fe);
           color: var(--color-franchise-tag, #7c3aed);
         }
+        .player-row__badge--bait {
+          background: var(--color-warning-light, #fef3c7);
+          color: var(--color-warning-dark, #d97706);
+        }
         .player-row__rank {
           font-size: 0.625rem;
           font-weight: 700;
@@ -359,10 +363,6 @@ function PlayerRow({
           flex-shrink: 0;
           font-variant-numeric: tabular-nums;
           white-space: nowrap;
-        }
-        .player-row__trade-bait {
-          font-size: 0.75rem;
-          cursor: default;
         }
         .player-row__add {
           background: var(--btn-secondary-bg, #2e8743);
