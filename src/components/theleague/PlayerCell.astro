@@ -29,7 +29,7 @@
  */
 
 import '../../styles/player-cell.css';
-import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror } from '../../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
 
@@ -81,8 +81,12 @@ const isDef = position?.toUpperCase() === 'DEF';
 const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
+// ESPN is the primary headshot source when espnId is available
+const resolvedHeadshot = resolvedEspnId
+  ? getPlayerHeadshot(resolvedMflId, resolvedEspnId)
+  : (headshot ?? DEFAULT_HEADSHOT_URL);
 // Avatar: DEF uses team logo, others use headshot
-const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : (headshot ?? DEFAULT_HEADSHOT_URL);
+const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
 
 // NFL logo in meta row: DEF hides it, others show it
 const nflLogoUrl = isDef ? '' : (explicitNflLogo || teamLogoUrl || '/assets/nfl-logos/NFL.svg');

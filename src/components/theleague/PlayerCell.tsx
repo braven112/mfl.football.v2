@@ -4,6 +4,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import {
   DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
+  getPlayerHeadshot,
   getPlayerImageUrl,
 } from '../../constants/roster-constants';
 
@@ -43,7 +44,11 @@ export function PlayerCell({
   const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
   const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
-  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : (headshot ?? DEFAULT_HEADSHOT_URL);
+  // ESPN is the primary headshot source when espnId is available
+  const resolvedHeadshot = espnId
+    ? getPlayerHeadshot(mflId, espnId)
+    : (headshot ?? DEFAULT_HEADSHOT_URL);
+  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
   const nflLogoUrl = isDef ? '' : (explicitNflLogo ?? teamLogoUrl);
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {

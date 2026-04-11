@@ -19,7 +19,7 @@
  */
 
 import type { PlayerModalData } from './player-modal-trigger';
-import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror } from '../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getPlayerHeadshot } from '../constants/roster-constants';
 
 /** Map MFL team codes to standard codes (must match nfl-logo.ts) */
 const TEAM_CODE_MAP: Record<string, string> = {
@@ -85,7 +85,11 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const normalized = nflTeam ? normalizeTeam(nflTeam) : '';
   const teamLogo = normalized ? `/assets/nfl-logos/${normalized}.svg` : '';
 
-  const avatarSrc = isDef && teamLogo ? teamLogo : (headshot || DEFAULT_HEADSHOT_URL);
+  // ESPN is the primary headshot source when espnId is available
+  const resolvedHeadshot = resolvedEspnId
+    ? getPlayerHeadshot(resolvedMflId, resolvedEspnId)
+    : (headshot || DEFAULT_HEADSHOT_URL);
+  const avatarSrc = isDef && teamLogo ? teamLogo : resolvedHeadshot;
   const nflLogoUrl = isDef ? '' : (teamLogo || '/assets/nfl-logos/NFL.svg');
 
   const sizeClass = size === 'compact' ? ' player-cell--compact' : '';
