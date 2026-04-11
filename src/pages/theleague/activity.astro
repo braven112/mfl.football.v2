@@ -817,6 +817,9 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		border-collapse: separate;
 		border-spacing: 0;
 		font-size: 0.875rem;
+		background: #fff;
+		border-radius: var(--radius-md, 0.5rem);
+		overflow: hidden;
 	}
 
 	.activity-table__th {
@@ -900,9 +903,8 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 	.activity-team__icon {
 		width: 2rem;
 		height: 2rem;
-		border-radius: 50%;
-		object-fit: cover;
-		background: var(--color-gray-100, #f3f4f6);
+		object-fit: contain;
+		background: transparent;
 		flex-shrink: 0;
 	}
 
