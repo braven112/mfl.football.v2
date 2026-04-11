@@ -6017,8 +6017,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             ];
             allPlayers.forEach(player => {
               if (player.name && player.id) {
-                // Store by "Last, First" format
-                lookup[player.name.toLowerCase()] = player.id;
+                // Store by "Last, First" format — include espnId and headshot for dead money display
+                lookup[player.name.toLowerCase()] = {
+                  id: player.id,
+                  espnId: player.espnId || null,
+                  headshot: player.headshot || null,
+                };
               }
             });
           });
@@ -6029,7 +6033,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     const playerLookup = createPlayerLookup();
 
-    const findPlayerId = (playerName) => {
+    const findPlayerData = (playerName) => {
       if (!playerName) return null;
       return playerLookup[playerName.toLowerCase()] || null;
     };
@@ -6561,12 +6565,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             })
             .join('');
           const name = adj.name || adj.description || 'Adjustment';
-          const playerId = findPlayerId(name);
+          const playerData = findPlayerData(name);
 
           // Use player headshot if available, otherwise use franchise team logo, finally fallback to default
           let headshot = DEFAULT_HEADSHOT_URL;
-          if (playerId) {
-            headshot = getPlayerImageUrl(playerId);
+          if (playerData?.headshot) {
+            headshot = playerData.headshot;
+          } else if (playerData?.id) {
+            headshot = getPlayerImageUrl(playerData.id);
           } else if (config.teams[franchiseId]?.icon) {
             headshot = config.teams[franchiseId].icon;
           }
@@ -6576,7 +6582,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             headshot,
             position: adj.position || undefined,
             nflTeam: adj.nflTeam || undefined,
-            mflId: playerId || undefined,
+            mflId: playerData?.id || undefined,
+            espnId: playerData?.espnId || undefined,
           });
           return `<tr class="${rowClasses.join(' ').trim()}">
             <td data-column="player" class="deadmoney-player-cell">
