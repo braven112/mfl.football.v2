@@ -6561,8 +6561,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             })
             .join('');
           const name = adj.name || adj.description || 'Adjustment';
-          const teamLabel = adj.nflTeam || 'FA';
-          const nflLogo = adj.nflTeam ? getNflLogoUrl(adj.nflTeam) : '';
           const playerId = findPlayerId(name);
 
           // Use player headshot if available, otherwise use franchise team logo, finally fallback to default
@@ -6573,24 +6571,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             headshot = config.teams[franchiseId].icon;
           }
           const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
+          const playerCellHtml = buildPlayerCellHTML({
+            name,
+            headshot,
+            position: adj.position || undefined,
+            nflTeam: adj.nflTeam || undefined,
+            mflId: playerId || undefined,
+          });
           return `<tr class="${rowClasses.join(' ').trim()}">
             <td data-column="player" class="deadmoney-player-cell">
-              <div class="player-cell">
-                <div class="player-cell__avatar player-cell__avatar--dm">
-                  <img src="${headshot}" alt="${name} headshot" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';" />
-                </div>
-                <div>
-                  <strong>${name}</strong>
-                  <div class="player-meta">
-                    ${
-                      adj.position && adj.position.toUpperCase() !== 'DEF' && nflLogo
-                        ? `<img src="${nflLogo}" alt="${teamLabel} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
-                        : ''
-                    }
-                    ${adj.position ? `<span class="player-meta__pos">${adj.position}</span>` : ''}
-                  </div>
-                </div>
-              </div>
+              ${playerCellHtml}
             </td>
             ${cells}
           </tr>`;

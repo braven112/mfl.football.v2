@@ -8,11 +8,8 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { PlayerCell } from '../PlayerCell';
 import type { RankedPlayer } from '../../../types/custom-rankings';
-
-const DEFAULT_HEADSHOT =
-  'https://www49.myfantasyleague.com/player_photos_2010/no_photo_available.jpg';
 
 interface PlayerRowProps {
   player: RankedPlayer;
@@ -35,11 +32,6 @@ export default function PlayerRow({ player, rank, isEditing = false }: PlayerRow
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-
-  const isDef = player.position === 'DEF';
-  const normalized = normalizeTeamCode(player.nflTeam);
-  const teamLogo = normalized ? `/assets/nfl-logos/${normalized}.svg` : '';
-  const avatarSrc = isDef && teamLogo ? teamLogo : (player.headshot || DEFAULT_HEADSHOT);
 
   // Rank delta: positive = moved up (green), negative = moved down (red)
   let delta: number | null = null;
@@ -70,36 +62,15 @@ export default function PlayerRow({ player, rank, isEditing = false }: PlayerRow
       {/* Rank number */}
       <div className="cr-row__rank">{rank}</div>
 
-      {/* Player lockup (reuses player-cell CSS) */}
-      <div className="player-cell player-cell--compact">
-        <div className={`player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}`}>
-          <img
-            src={avatarSrc}
-            alt={isDef ? `${player.nflTeam} logo` : `${player.name} headshot`}
-            loading="lazy"
-            decoding="async"
-            onError={(e) => {
-              (e.target as HTMLImageElement).onerror = null;
-              (e.target as HTMLImageElement).src = DEFAULT_HEADSHOT;
-            }}
-          />
-        </div>
-        <div className="player-cell__info">
-          <strong className="player-cell__name">{player.name}</strong>
-          <div className="player-meta">
-            {!isDef && teamLogo && (
-              <img
-                src={teamLogo}
-                alt={`${normalized} logo`}
-                className="player-meta__logo"
-                loading="lazy"
-                decoding="async"
-              />
-            )}
-            <span className="player-meta__pos">{player.position}</span>
-          </div>
-        </div>
-      </div>
+      {/* Player lockup */}
+      <PlayerCell
+        name={player.name}
+        headshot={player.headshot}
+        position={player.position}
+        nflTeam={player.nflTeam}
+        mflId={player.id}
+        size="compact"
+      />
 
       {/* VORP chip (when enabled) */}
       {player.vorpPoints != null && (
