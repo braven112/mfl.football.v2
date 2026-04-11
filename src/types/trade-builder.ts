@@ -88,6 +88,10 @@ export interface TradeBuilderPageData {
   positionAverages: PositionSalaryAverages;
   surplusMap?: Record<string, PlayerSurplusData>;
   pickValueMap?: Record<string, DraftPickValueData>;
+  /** Map from "{year}-{round}-{originalPickFor}" to DP_ code for current-year draft picks */
+  currentYearDpMap?: Record<string, string>;
+  /** Reverse map from DP_ code to DraftPickKey for loading pending trades with DP_ codes */
+  dpReverseMap?: Record<string, { year: string; round: string; originalPickFor: string }>;
 }
 
 /** Key to uniquely identify a draft pick */

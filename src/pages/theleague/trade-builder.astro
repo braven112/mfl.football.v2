@@ -184,6 +184,12 @@ const rawDraftResultPicks: any[] = (() => {
 })();
 
 const currentYearPicksByFranchise = new Map<string, any[]>();
+// Build DP_ code lookup maps for current-year draft picks.
+// MFL uses DP_{round-1}_{pick-1} format for current-year picks (zero-indexed),
+// while future picks use FP_{franchiseId}_{year}_{round}.
+const currentYearDpMap: Record<string, string> = {};
+const dpReverseMap: Record<string, { year: string; round: string; originalPickFor: string }> = {};
+
 for (const pick of rawDraftResultPicks) {
   if (pick.player) continue; // Skip already-drafted picks
 
@@ -212,6 +218,14 @@ for (const pick of rawDraftResultPicks) {
         abbrev: origTeamConfig.abbrev,
       }, 'short')
     : `Team ${originalPickFor}`;
+
+  // Build DP_ code: DP_{0-based-round}_{0-based-pick-in-round}
+  const dpRound = parseInt(pick.round, 10) - 1;
+  const dpPick = parseInt(pick.pick, 10) - 1;
+  const dpCode = `DP_${dpRound}_${String(dpPick).padStart(2, '0')}`;
+  const dpKey = `${leagueYearStr}-${round}-${originalPickFor}`;
+  currentYearDpMap[dpKey] = dpCode;
+  dpReverseMap[dpCode] = { year: leagueYearStr, round, originalPickFor };
 
   const draftPick = {
     year: leagueYearStr,
@@ -456,6 +470,8 @@ const pageData = {
   positionAverages,
   ...(Object.keys(surplusMap).length > 0 ? { surplusMap } : {}),
   ...(Object.keys(pickValueMap).length > 0 ? { pickValueMap } : {}),
+  ...(Object.keys(currentYearDpMap).length > 0 ? { currentYearDpMap } : {}),
+  ...(Object.keys(dpReverseMap).length > 0 ? { dpReverseMap } : {}),
 };
 ---
 
