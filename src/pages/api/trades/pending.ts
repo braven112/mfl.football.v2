@@ -13,8 +13,7 @@ import { mflFetch } from '../../../utils/mfl-fetch';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import type { PendingTrade } from '../../../types/trade-builder';
 import leagueConfig from '../../../data/theleague.config.json';
-import fs from 'node:fs';
-import path from 'node:path';
+import { getPlayerMap } from '../../../utils/player-map';
 
 /** Resolved asset for the trade alert modal (avoids needing full player data on client) */
 interface ResolvedAsset {
@@ -26,28 +25,17 @@ interface ResolvedAsset {
   espnId?: string;
 }
 
-/** Build a player lookup map from the static players.json feed */
+/** Build a player lookup map using the unified player identity map */
 function loadPlayerMap(year: number): Map<string, { name: string; position: string; team: string; espnId: string }> {
+  const identityMap = getPlayerMap(year);
   const map = new Map<string, { name: string; position: string; team: string; espnId: string }>();
-  try {
-    const feedPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${year}/players.json`);
-    if (!fs.existsSync(feedPath)) return map;
-    const raw = JSON.parse(fs.readFileSync(feedPath, 'utf-8'));
-    const players = raw?.players?.player;
-    if (!players) return map;
-    const list = Array.isArray(players) ? players : [players];
-    for (const p of list) {
-      if (p.id) {
-        map.set(p.id, {
-          name: p.name ? p.name.replace(/,\s*/, ', ') : `Player ${p.id}`,
-          position: p.position || '',
-          team: p.team || '',
-          espnId: p.espn_id || '',
-        });
-      }
-    }
-  } catch {
-    // Non-fatal — assets will show as "Unknown Player"
+  for (const [id, identity] of identityMap) {
+    map.set(id, {
+      name: identity.name,
+      position: identity.position,
+      team: identity.nflTeam,
+      espnId: identity.espnId || '',
+    });
   }
   return map;
 }

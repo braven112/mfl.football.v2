@@ -8,6 +8,7 @@
  */
 import type { HeroState } from '../../../types/hero-state';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import GameDayPreviewHeroStub from '../hero-stubs/GameDayPreviewHeroStub.astro';
 import broadcastData from '../../../../data/theleague/broadcast-mappings.json';
@@ -49,11 +50,19 @@ const weekGames = (weekIdx >= 0 && weekIdx < rawSchedule.length)
   ? (rawSchedule[weekIdx]?.matchup ?? [])
   : [];
 
-// Build player → NFL team lookup
+// Build player → NFL team lookup (using unified identity map as primary, feed as fallback)
+const heroPlayerIdentityMap = getPlayerMap(year);
 const allPlayers = playersData?.players?.player ?? playersData?.default?.players?.player ?? [];
 const playerTeamMap = new Map<string, string>();
+// Pre-populate from identity map (normalized team codes)
+for (const [id, identity] of heroPlayerIdentityMap) {
+  playerTeamMap.set(id, identity.nflTeam);
+}
+// Fill in any missing from raw feed (non-fantasy positions may be needed)
 for (const p of allPlayers) {
-  playerTeamMap.set(p.id, p.team ?? '');
+  if (!playerTeamMap.has(p.id)) {
+    playerTeamMap.set(p.id, p.team ?? '');
+  }
 }
 
 // Build projection lookup

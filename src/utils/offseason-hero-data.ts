@@ -327,22 +327,27 @@ export function isDraftComplete(leagueYear: number): boolean {
 }
 
 // ── Player Lookup ──
+import { getPlayerMap as getUnifiedPlayerMap } from './player-map';
 
 function getPlayerMap(leagueYear: number): Map<string, { name: string; position: string; team: string }> {
-  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/players.json`);
-  if (!data?.players?.player) return new Map();
-
-  const players = Array.isArray(data.players.player)
-    ? data.players.player
-    : [data.players.player];
-
+  const identityMap = getUnifiedPlayerMap(leagueYear);
   const map = new Map<string, { name: string; position: string; team: string }>();
-  for (const p of players) {
-    map.set(p.id, {
-      name: p.name || 'Unknown',
-      position: p.position || '',
-      team: p.team || '',
+  for (const [id, identity] of identityMap) {
+    map.set(id, {
+      name: identity.name,
+      position: identity.position,
+      team: identity.nflTeam,
     });
+  }
+  // Also load non-fantasy-position players from raw feed (coaches, etc. may appear in transactions)
+  const data = readJsonFile(`data/theleague/mfl-feeds/${leagueYear}/players.json`);
+  if (data?.players?.player) {
+    const players = Array.isArray(data.players.player) ? data.players.player : [data.players.player];
+    for (const p of players) {
+      if (!map.has(p.id)) {
+        map.set(p.id, { name: p.name || 'Unknown', position: p.position || '', team: p.team || '' });
+      }
+    }
   }
   return map;
 }

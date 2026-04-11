@@ -13,6 +13,7 @@ import {
 import { getDraftCapitalFromDraftResults } from '../../utils/future-draft-picks-utils';
 import { chooseTeamName } from '../../utils/team-names';
 import { parseNumber } from '../../utils/formatters';
+import { getPlayerMap } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 
 export const prerender = false;
@@ -99,13 +100,14 @@ const playerFeedEntries = Object.entries(playerFeeds)
   .filter((item) => item.season === currentYear && item.data);
 
 const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
+const lsPlayerIdentityMap = getPlayerMap(parseInt(currentYear) || 2026);
 const playerMetaById = new Map<string, { name: string; position: string }>();
 for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {
   if (p?.id) {
-    // MFL names are "Last, First" — normalize to "Last, First" (matches salary file)
+    const identity = lsPlayerIdentityMap.get(p.id);
     playerMetaById.set(p.id, {
-      name: p.name ?? `Player ${p.id}`,
-      position: p.position ?? '',
+      name: identity?.name ?? p.name ?? `Player ${p.id}`,
+      position: identity?.position ?? p.position ?? '',
     });
   }
 }

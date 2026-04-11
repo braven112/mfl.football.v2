@@ -9,6 +9,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CustomRankingsPage from '../../components/theleague/custom-rankings/CustomRankingsPage';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import '../../styles/player-cell.css';
 import '../../styles/custom-rankings.css';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
@@ -53,16 +54,20 @@ for (const [filepath, mod] of Object.entries(playersFeeds)) {
 }
 
 // Build player array with headshot info for client-side enrichment
+const crPlayerIdentityMap = getPlayerMap(leagueYear);
 const rawPlayers = playersData?.players?.player ?? [];
 const mflPlayers = rawPlayers
   .filter((p: any) => p.name && p.position)
-  .map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    position: p.position === 'Def' ? 'DEF' : p.position,
-    team: p.team || '',
-    espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
-  }));
+  .map((p: any) => {
+    const identity = crPlayerIdentityMap.get(p.id);
+    return {
+      id: p.id,
+      name: identity?.name ?? p.name,
+      position: identity?.position ?? (p.position === 'Def' ? 'DEF' : p.position),
+      team: identity?.nflTeam ?? p.team ?? '',
+      espnId: identity?.espnId ?? (p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null),
+    };
+  });
 
 // ---------------------------------------------------------------------------
 // Load projected scores + rosters for VORP calculation

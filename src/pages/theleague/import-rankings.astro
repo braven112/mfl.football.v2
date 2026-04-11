@@ -9,6 +9,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import RankingsImportPage from '../../components/theleague/rankings-import/RankingsImportPage';
 import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import bookmarkletManifest from '../../data/bookmarklet-manifest.json';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 
@@ -44,16 +45,20 @@ for (const [filepath, mod] of Object.entries(playersFeeds)) {
   }
 }
 
-// Build simplified player array for client-side matching
+// Build simplified player array for client-side matching using unified identity map
+const irPlayerIdentityMap = getPlayerMap(leagueYear);
 const rawPlayers = playersData?.players?.player ?? [];
 const mflPlayers = rawPlayers
   .filter((p: any) => p.name && p.position)
-  .map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    position: p.position,
-    team: p.team || '',
-  }));
+  .map((p: any) => {
+    const identity = irPlayerIdentityMap.get(p.id);
+    return {
+      id: p.id,
+      name: identity?.name ?? p.name,
+      position: identity?.position ?? p.position,
+      team: identity?.nflTeam ?? p.team ?? '',
+    };
+  });
 
 // ---------------------------------------------------------------------------
 // Site configurations for bookmarklet cards

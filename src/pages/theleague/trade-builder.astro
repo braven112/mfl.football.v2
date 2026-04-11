@@ -27,6 +27,8 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import { chooseTeamName } from '../../utils/team-names';
 import { calculatePlayerCapHitByYear } from '../../utils/trade-calculations';
 import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { getPlayerMap } from '../../utils/player-map';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
@@ -143,17 +145,8 @@ const teamConfigMap = new Map(
   (leagueConfigData.teams ?? []).map((t: any) => [t.franchiseId, t])
 );
 
-// Normalize NFL team codes
-const normalizeTeamCode = (team: string) => {
-  const map: Record<string, string> = {
-    NEP: 'NE', CLV: 'CLE', JAC: 'JAX', KCC: 'KC', LVR: 'LV', OAK: 'LV',
-    SD: 'LAC', ARZ: 'ARI', SFO: 'SF', STL: 'LAR', LA: 'LAR', GBP: 'GB',
-    NOR: 'NO', NOS: 'NO', TBB: 'TB', WSH: 'WAS',
-  };
-  if (!team) return '';
-  const upper = team.toUpperCase();
-  return map[upper] ?? upper;
-};
+// Player identity map for canonical team codes, names, headshots
+const tradePlayerIdentityMap = getPlayerMap(leagueYear);
 
 // Salary adjustments
 const rawAdjustments = salaryAdjData?.salaryAdjustments?.salaryAdjustment ?? [];
@@ -266,18 +259,19 @@ const teams = franchises.map((franchise: any) => {
   const tradeBaitSet = teamHasCurrentBait ? currentTradeBaitIds : prevTradeBaitIds;
   const players = rawRosterPlayers.map((rp: any) => {
     const pData = playerMap.get(rp.id);
+    const identity = tradePlayerIdentityMap.get(rp.id);
     const salary = parseNumber(rp.salary);
     const contractYears = parseInt(rp.contractYear ?? '0', 10) || 0;
     const contractInfo = rp.contractInfo ?? '';
     const status = rp.status ?? 'ROSTER';
     const norm = normalizeStatus(status);
-    const rawPos = pData?.position ?? 'N/A';
-    const position = rawPos === 'Def' ? 'DEF' : rawPos;
-    const nflTeam = normalizeTeamCode(pData?.team ?? '');
+    const position = identity?.position ?? pData?.position ?? 'N/A';
+    const nflTeam = identity?.nflTeam ?? normalizeTeamCode(pData?.team ?? '');
+
 
     return {
       id: rp.id,
-      name: pData?.name ?? `Player ${rp.id}`,
+      name: identity?.name ?? pData?.name ?? `Player ${rp.id}`,
       position,
       salary,
       contractYears,
@@ -285,7 +279,7 @@ const teams = franchises.map((franchise: any) => {
       status,
       normalizedStatus: norm,
       nflTeam,
-      headshot: getPlayerHeadshot(rp.id, pData?.espn_id || (espnCollegeIds as any).players?.[rp.id]?.espnCollegeId),
+      headshot: identity?.headshot ?? getPlayerHeadshot(rp.id, pData?.espn_id || (espnCollegeIds as any).players?.[rp.id]?.espnCollegeId),
       nflLogo: getNflLogoUrl(nflTeam),
       isRookie: contractInfo.startsWith('R'),
       isFranchiseTagged: contractInfo === 'F',

@@ -1,12 +1,10 @@
 ---
-import fs from 'node:fs';
-import path from 'node:path';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../../components/theleague/PlayerCell.astro';
 import { getPendingDeclarations, getDeclarations } from '../../../utils/contract-storage';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { getPlayerMap } from '../../../utils/player-map';
 import leagueConfig from '../../../data/theleague.config.json';
 
 // Commissioner actions (Apply button) only show when commish-mode toggle is ON
@@ -44,29 +42,23 @@ const declarationTypeLabels: Record<string, string> = {
 
 const appliedCount = allDeclarations.filter(d => d.status === 'applied').length;
 
-// Load player data for headshots/positions in applied contracts
+// Load player identity data for headshots/positions
 const leagueYear = getCurrentLeagueYear();
-const playersPath = path.resolve(process.cwd(), `data/theleague/mfl-feeds/${leagueYear}/players.json`);
-let playerLookup: Record<string, { position: string; team: string; espnId?: string }> = {};
-try {
-  if (fs.existsSync(playersPath)) {
-    const playersData = JSON.parse(fs.readFileSync(playersPath, 'utf8'));
-    const players = playersData?.players?.player ?? [];
-    for (const p of players) {
-      playerLookup[p.id] = {
-        position: p.position === 'Def' ? 'DEF' : p.position,
-        team: normalizeTeamCode(p.team || ''),
-        espnId: p.espn_id,
-      };
-    }
-  }
-} catch (e) {
-  console.warn('Failed to load players.json for contract manage page:', e);
+const managePlayerMap = getPlayerMap(leagueYear);
+const playerLookup: Record<string, { position: string; team: string; espnId?: string }> = {};
+for (const [id, identity] of managePlayerMap) {
+  playerLookup[id] = {
+    position: identity.position,
+    team: identity.nflTeam,
+    espnId: identity.espnId ?? undefined,
+  };
 }
 
 const getHeadshot = (playerId: string, espnId?: string) => {
-  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
-  return `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+  const identity = managePlayerMap.get(playerId);
+  return identity?.headshot ?? (espnId
+    ? `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
+    : `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`);
 };
 ---
 

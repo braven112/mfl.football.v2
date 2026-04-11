@@ -60,6 +60,7 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
@@ -971,6 +972,7 @@ const buildDisplayRows = (teamData) => {
 
 const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => {
   const feedPlayers = playersFeedBySeason[season] ?? {};
+  const playerIdentityMap = getPlayerMap(Number(season));
   const liveRosterData = liveRosterDataByPlayerId[season] ?? {};
 
   // Projections Map — use the season's projected scores data
@@ -992,12 +994,13 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
     ? Object.entries(liveRosterData).map(([id, liveData]) => {
         const salaryPlayer = salaryDataById.get(id) ?? {};
         const feed = feedPlayers[id] ?? {};
+        const identity = playerIdentityMap.get(id);
         return {
           ...salaryPlayer,
           id,
-          name: salaryPlayer.name ?? feed.name ?? `Player ${id}`,
-          position: (salaryPlayer.position ?? feed.position ?? 'N/A').replace(/^Def$/i, 'DEF'),
-          team: salaryPlayer.team ?? feed.team ?? '',
+          name: identity?.name ?? salaryPlayer.name ?? feed.name ?? `Player ${id}`,
+          position: identity?.position ?? (salaryPlayer.position ?? feed.position ?? 'N/A').replace(/^Def$/i, 'DEF'),
+          team: identity?.nflTeam ?? salaryPlayer.team ?? feed.team ?? '',
           salary: liveData.salary ?? salaryPlayer.salary ?? '0',
           contractYear: liveData.contractYear ?? salaryPlayer.contractYear ?? '1',
           status: liveData.status ?? salaryPlayer.status ?? 'ROSTER',
@@ -1106,8 +1109,9 @@ const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => 
       : '-';
 
     const feedPlayer = feedPlayers[player.id] ?? null;
-    const resolvedEspnId = feedPlayer?.espn_id || (espnCollegeIds as any).players?.[player.id]?.espnCollegeId || null;
-    const headshot = getPlayerHeadshot(player.id, resolvedEspnId);
+    const identity = playerIdentityMap.get(player.id);
+    const resolvedEspnId = identity?.espnId ?? feedPlayer?.espn_id ?? (espnCollegeIds as any).players?.[player.id]?.espnCollegeId ?? null;
+    const headshot = identity?.headshot ?? getPlayerHeadshot(player.id, resolvedEspnId);
     const collegeName = player.sleeper?.college ?? player.college ?? null;
     const collegeAssets = getCollegeAssets(collegeName);
     const parseDraft = (val) => {
@@ -1594,11 +1598,13 @@ teamsList.forEach((team) => {
 });
 
 // Enrich FA players with headshot URLs for PlayerCell rendering
+const faPlayerIdentityMap = getPlayerMap(Number(faNeedsLeagueYear));
 for (const needs of Object.values(freeAgentNeedsByTeam)) {
   for (const need of needs) {
     for (const fa of need.topFreeAgents) {
+      const faIdentity = faPlayerIdentityMap.get(fa.id);
       const feedPlayer = faPlayerFeed[fa.id];
-      fa.headshot = getPlayerHeadshot(fa.id, feedPlayer?.espn_id || (espnCollegeIds as any).players?.[fa.id]?.espnCollegeId);
+      fa.headshot = faIdentity?.headshot ?? getPlayerHeadshot(fa.id, feedPlayer?.espn_id || (espnCollegeIds as any).players?.[fa.id]?.espnCollegeId);
       if (feedPlayer?.birthdate) fa.birthdate = Number(feedPlayer.birthdate);
     }
   }

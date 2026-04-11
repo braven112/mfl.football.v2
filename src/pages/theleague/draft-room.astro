@@ -12,6 +12,7 @@ import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
 import { getPlayerHeadshot, getCollegeHeadshot } from '../../constants/roster-constants';
+import { getPlayerMap } from '../../utils/player-map';
 import { parseTradeFromComment } from '../../utils/draft-utils';
 import type { DraftRoomPageData, DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../types/draft-room';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
@@ -104,33 +105,37 @@ const formatName = (mflName: string): string => {
 };
 
 const espnCollegeMap = (espnCollegeIds as any)?.players || {};
+const draftPlayerIdentityMap = getPlayerMap(leagueYear);
 
 const players: DraftRoomPlayer[] = playerArray.map((p: any) => {
-  const nflEspnId = p.espn_id || '';
-  const collegeEspnId = espnCollegeMap[p.id]?.espnCollegeId || '';
-  const espnId = nflEspnId || collegeEspnId;
+  const identity = draftPlayerIdentityMap.get(p.id);
 
-  // Use college headshot URL when only a college ID is available —
-  // the ESPN combiner returns a broken placeholder (not a 404) for
-  // missing NFL headshots, so onerror fallback never fires.
+  // Use identity map for headshot (handles college fallback internally)
+  // But for rookies without NFL espn_id, prefer college headshot directly
   let headshot: string;
-  if (nflEspnId) {
-    headshot = getPlayerHeadshot(p.id, nflEspnId);
-  } else if (collegeEspnId) {
-    headshot = getCollegeHeadshot(collegeEspnId);
+  if (identity) {
+    headshot = identity.headshot;
   } else {
-    headshot = getPlayerHeadshot(p.id);
+    const nflEspnId = p.espn_id || '';
+    const collegeEspnId = espnCollegeMap[p.id]?.espnCollegeId || '';
+    if (nflEspnId) {
+      headshot = getPlayerHeadshot(p.id, nflEspnId);
+    } else if (collegeEspnId) {
+      headshot = getCollegeHeadshot(collegeEspnId);
+    } else {
+      headshot = getPlayerHeadshot(p.id);
+    }
   }
 
   return {
     id: p.id,
-    name: formatName(p.name || ''),
-    position: normPos(p.position || ''),
-    nflTeam: (p.team || '').toUpperCase(),
+    name: identity?.name ?? formatName(p.name || ''),
+    position: identity?.position ?? normPos(p.position || ''),
+    nflTeam: identity?.nflTeam ?? (p.team || '').toUpperCase(),
     headshot,
     isRookie: p.status === 'R' || p.draft_year === leagueYearStr,
     mflId: p.id,
-    espnId: espnId || undefined,
+    espnId: identity?.espnId ?? (p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || undefined),
   };
 }).filter((p: DraftRoomPlayer) => {
   // Filter to draftable positions

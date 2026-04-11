@@ -11,6 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
@@ -422,6 +423,7 @@ interface PlayerRow {
 
 const allPlayers = playersData?.players?.player;
 const playerList: PlayerRow[] = [];
+const playerIdentityMap = getPlayerMap(currentYear);
 
 if (Array.isArray(allPlayers)) {
   const now = Date.now() / 1000;
@@ -444,11 +446,12 @@ if (Array.isArray(allPlayers)) {
       }
     }
 
-    const pos = p.position === 'Def' ? 'DEF' : p.position;
-    const nameParts = p.name.split(', ');
-    const displayName = nameParts.length === 2
-      ? `${nameParts[1]} ${nameParts[0]}`
-      : p.name;
+    const identity = playerIdentityMap.get(p.id);
+    const pos = identity?.position ?? (p.position === 'Def' ? 'DEF' : p.position);
+    const displayName = identity?.name ?? (() => {
+      const nameParts = p.name.split(', ');
+      return nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : p.name;
+    })();
 
     // Experience (years in NFL)
     const draftYr = p.draft_year ? parseInt(p.draft_year, 10) : null;
@@ -479,9 +482,9 @@ if (Array.isArray(allPlayers)) {
       id: p.id,
       name: displayName,
       position: pos,
-      team: normalizeMflTeam(p.team || ''),
+      team: identity?.nflTeam ?? normalizeMflTeam(p.team || ''),
       age: pos === 'DEF' ? 25 : age,
-      espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null,
+      espnId: identity?.espnId ?? (p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null),
       projected,
       rostered: isRostered,
       exp: pos === 'DEF' ? 5 : exp,
