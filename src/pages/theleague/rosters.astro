@@ -819,15 +819,38 @@ Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
   const data = getModuleData(mod);
   if (!season || !data?.salaryAdjustments?.salaryAdjustment) return;
+
+  // Build name→identity lookup for enriching dead money entries with headshots
+  // Index by both "First Last" and "Last, First" since dead money uses MFL's "Last, First" format
+  const identityMap = getPlayerMap(Number(season));
+  const nameToIdentity = new Map<string, { id: string; espnId: string | null; headshot: string }>();
+  for (const [id, identity] of identityMap) {
+    const entry = { id, espnId: identity.espnId, headshot: identity.headshot };
+    nameToIdentity.set(identity.name.toLowerCase(), entry); // "first last"
+    const parts = identity.name.split(' ');
+    if (parts.length >= 2) {
+      const lastFirst = `${parts.slice(-1)[0]}, ${parts.slice(0, -1).join(' ')}`;
+      nameToIdentity.set(lastFirst.toLowerCase(), entry); // "last, first"
+    }
+  }
+
   feedSalaryAdjustmentsBySeason[season] = data.salaryAdjustments.salaryAdjustment
-    .map((adj) => ({
-      franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
-      amount: parseNumber(adj.amount),
-      description: adj.description ?? '',
-      yearOffset: 0, // default to current season; can enhance if offset parsing desired
-      timestamp: adj.timestamp ?? null,
-      ...parseAdjustmentMeta(adj.description ?? ''),
-    }))
+    .map((adj) => {
+      const meta = parseAdjustmentMeta(adj.description ?? '');
+      const playerIdentity = meta.name ? nameToIdentity.get(meta.name.toLowerCase()) : null;
+      return {
+        franchiseId: adj.franchise_id ?? adj.franchiseId ?? '',
+        amount: parseNumber(adj.amount),
+        description: adj.description ?? '',
+        yearOffset: 0,
+        timestamp: adj.timestamp ?? null,
+        ...meta,
+        // Enrich with player identity for headshot display
+        playerId: playerIdentity?.id ?? null,
+        espnId: playerIdentity?.espnId ?? null,
+        headshot: playerIdentity?.headshot ?? null,
+      };
+    })
     .filter((adj) => Number.isFinite(adj.amount));
 });
 
@@ -6565,15 +6588,19 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             })
             .join('');
           const name = adj.name || adj.description || 'Adjustment';
-          const playerData = findPlayerData(name);
 
-          // Use player headshot if available, otherwise use franchise team logo, finally fallback to default
+          // Use build-time enriched identity data (covers dropped players too)
+          // Fall back to runtime roster lookup, then franchise icon
+          const enrichedId = adj.playerId;
+          const enrichedEspnId = adj.espnId;
+          const enrichedHeadshot = adj.headshot;
+
           let headshot = DEFAULT_HEADSHOT_URL;
-          if (playerData?.headshot) {
-            headshot = playerData.headshot;
-          } else if (playerData?.id) {
-            headshot = getPlayerImageUrl(playerData.id);
-          } else if (config.teams[franchiseId]?.icon) {
+          if (enrichedHeadshot) {
+            headshot = enrichedHeadshot;
+          } else if (enrichedId) {
+            headshot = getPlayerImageUrl(enrichedId);
+          } else if (!enrichedId && config.teams[franchiseId]?.icon) {
             headshot = config.teams[franchiseId].icon;
           }
           const rowClasses = ['deadmoney-row', adj.rowClass === 'eventablerow' ? 'deadmoney-row--alt' : ''];
@@ -6582,8 +6609,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             headshot,
             position: adj.position || undefined,
             nflTeam: adj.nflTeam || undefined,
-            mflId: playerData?.id || undefined,
-            espnId: playerData?.espnId || undefined,
+            mflId: enrichedId || undefined,
+            espnId: enrichedEspnId || undefined,
           });
           return `<tr class="${rowClasses.join(' ').trim()}">
             <td data-column="player" class="deadmoney-player-cell">
