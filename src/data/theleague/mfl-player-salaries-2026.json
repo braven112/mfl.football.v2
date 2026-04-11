@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-04-11T07:35:36.853Z"
+    "fetchedAt": "2026-04-11T07:59:17.861Z"
   },
   "players": [
     {
@@ -7407,6 +7407,10 @@
         {
           "id": "14105",
           "name": "Brown, Marquise"
+        },
+        {
+          "id": "16195",
+          "name": "Wicks, Dontayvion"
         }
       ]
     },
@@ -12814,20 +12818,55 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "GB",
+      "team": "PHI",
       "draftYear": 2023,
       "draftTeam": "GBP",
       "birthdate": 992667600,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16195_thumb.jpg",
       "externalIds": {
         "mfl": "16195",
-        "sleeper": null,
+        "sleeper": "9486",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "9486",
+        "fullName": "Dontayvion Wicks",
+        "team": "PHI",
+        "age": 24,
+        "height": "73",
+        "weight": "206",
+        "number": 13,
+        "college": "Virginia",
+        "birthDate": "2001-06-16",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14104",
+          "name": "Brown, A.J."
+        },
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        },
+        {
+          "id": "14105",
+          "name": "Brown, Marquise"
+        }
+      ]
     },
     {
       "id": "16287",
