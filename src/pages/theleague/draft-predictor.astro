@@ -17,6 +17,7 @@ import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentSeasonYear, getNextDraftYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
@@ -223,7 +224,8 @@ const resolvePlayersDataForYear = (year: number | string) => {
 
 const historyPlayersData = resolvePlayersDataForYear(historyYear);
 
-const buildPlayerLookup = (playersData: any) => {
+const buildPlayerLookup = (playersData: any, year: number) => {
+  const identityMap = getPlayerMap(year);
   const lookup = new Map<
     string,
     { name: string; position?: string; nflTeam?: string; espnId?: string }
@@ -232,11 +234,12 @@ const buildPlayerLookup = (playersData: any) => {
   const list = Array.isArray(players) ? players : players ? [players] : [];
   list.forEach((p: any) => {
     if (!p?.id) return;
+    const identity = identityMap.get(p.id);
     lookup.set(p.id, {
-      name: p.name || '',
-      position: p.position || '',
-      nflTeam: p.team || p.draft_team || '',
-      espnId: p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || '',
+      name: identity?.name ?? p.name ?? '',
+      position: identity?.position ?? p.position ?? '',
+      nflTeam: identity?.nflTeam ?? p.team ?? p.draft_team ?? '',
+      espnId: identity?.espnId ?? p.espn_id ?? (espnCollegeIds as any).players?.[p.id]?.espnCollegeId ?? '',
     });
   });
   return lookup;
@@ -272,7 +275,7 @@ const normalizeNflTeamCode = (code = '') => {
   return map[upper] || upper;
 };
 
-const historyPlayerLookup = buildPlayerLookup(historyPlayersData);
+const historyPlayerLookup = buildPlayerLookup(historyPlayersData, parseInt(historyYear) || getNextDraftYear());
 
 // Team personalization: URL params + cookie integration
 const myTeamParam = Astro.url.searchParams.get('myteam');

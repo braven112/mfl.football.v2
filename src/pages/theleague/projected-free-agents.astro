@@ -14,6 +14,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
@@ -177,16 +178,21 @@ interface ProjectedFARow {
   draftYear: number | null;
 }
 
+const pfaPlayerIdentityMap = getPlayerMap(currentYear);
+
 function buildPlayerRow(
   playerId: string,
   info: any,
   salary: number,
   franchiseId: string,
 ): ProjectedFARow | null {
-  const pos = info.position === 'Def' ? 'DEF' : info.position;
-  const nameParts = info.name.split(', ');
-  const displayName = nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : info.name;
-  const team = normalizeMflTeam(info.team || '');
+  const identity = pfaPlayerIdentityMap.get(playerId);
+  const pos = identity?.position ?? (info.position === 'Def' ? 'DEF' : info.position);
+  const displayName = identity?.name ?? (() => {
+    const nameParts = info.name.split(', ');
+    return nameParts.length === 2 ? `${nameParts[1]} ${nameParts[0]}` : info.name;
+  })();
+  const team = identity?.nflTeam ?? normalizeMflTeam(info.team || '');
 
   let age: number | null = null;
   if (info.birthdate && pos !== 'DEF') {
@@ -204,9 +210,9 @@ function buildPlayerRow(
 
   const fInfo = franchiseMap.get(franchiseId);
 
-  const headshot = info.espn_id
+  const headshot = identity?.headshot ?? (info.espn_id
     ? `https://a.espncdn.com/i/headshots/nfl/players/full/${info.espn_id}.png`
-    : `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`;
+    : `https://www49.myfantasyleague.com/player_photos_big_2014/${playerId}_thumb.jpg`);
 
   return {
     id: playerId,
@@ -214,7 +220,7 @@ function buildPlayerRow(
     position: pos,
     nflTeam: team,
     headshot,
-    espnId: info.espn_id || null,
+    espnId: identity?.espnId ?? info.espn_id ?? null,
     franchiseId,
     franchiseName: fInfo?.nameShort || franchiseId,
     franchiseIcon: fInfo?.icon || '',

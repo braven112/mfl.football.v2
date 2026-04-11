@@ -21,6 +21,7 @@ import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isPostDraftPerio
 import { enrichHeroState, isDraftComplete } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getPlayerMap } from '../../utils/player-map';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
 import { resolveLeaguePath } from '../../utils/nav-utils';
@@ -139,26 +140,28 @@ const rawTransactions: MFLRawTransaction[] = transactionEntries[0]?.data?.transa
     : [transactionEntries[0].data.transactions.transaction]
   : [];
 
+const hpPlayerIdentityMap = getPlayerMap(parseInt(currentSalaryYear) || getCurrentLeagueYear());
 const playerMetaById = new Map<string, { name: string; position: string }>();
 const eligibilityPlayersById = new Map<string, MFLPlayerInfo>();
 const playerDisplayById = new Map<string, DashboardPlayerContext>();
 for (const p of Array.isArray(rawPlayerFeed) ? rawPlayerFeed : [rawPlayerFeed]) {
   if (!p?.id) continue;
-  playerMetaById.set(p.id, { name: p.name ?? `Player ${p.id}`, position: p.position ?? '' });
+  const identity = hpPlayerIdentityMap.get(p.id);
+  playerMetaById.set(p.id, { name: identity?.name ?? p.name ?? `Player ${p.id}`, position: identity?.position ?? p.position ?? '' });
   eligibilityPlayersById.set(p.id, {
     id: p.id,
-    name: p.name ?? `Player ${p.id}`,
-    position: p.position ?? '',
-    team: p.team ?? '',
+    name: identity?.name ?? p.name ?? `Player ${p.id}`,
+    position: identity?.position ?? p.position ?? '',
+    team: identity?.nflTeam ?? p.team ?? '',
     status: p.status,
     draft_year: p.draft_year,
   });
   if (!playerDisplayById.has(p.id)) {
     playerDisplayById.set(p.id, {
       id: p.id,
-      name: p.name ?? `Player ${p.id}`,
-      position: p.position ?? '',
-      nflTeam: p.team ?? '',
+      name: identity?.name ?? p.name ?? `Player ${p.id}`,
+      position: identity?.position ?? p.position ?? '',
+      nflTeam: identity?.nflTeam ?? p.team ?? '',
     });
   }
 }

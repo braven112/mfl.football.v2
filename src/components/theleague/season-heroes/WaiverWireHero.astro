@@ -8,6 +8,7 @@
  */
 import type { HeroState } from '../../../types/hero-state';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getPlayerMap as getUnifiedPlayerMap } from '../../../utils/player-map';
 import PlayerCell from '../PlayerCell.astro';
 import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
 
@@ -34,7 +35,8 @@ try {
 const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
 const hasData = Array.isArray(rawScores) && rawScores.length > 0;
 
-// Build lookups
+// Build lookups — use unified player identity map for canonical team/name/position
+const waiverPlayerIdentityMap = getUnifiedPlayerMap(year);
 const playerMap = new Map<string, any>();
 const allPlayers = playersData?.players?.player ?? playersData?.default?.players?.player ?? [];
 for (const p of allPlayers) {
@@ -72,17 +74,19 @@ if (hasData) {
   for (const s of scored) {
     const player = playerMap.get(s.id);
     if (!player) continue;
-    // Parse "Last, First" name format
-    const [last, first] = (player.name ?? '').split(', ');
-    const displayName = first ? `${first} ${last}` : player.name;
-    const position = player.position?.replace(/^TM/, 'DEF') ?? '';
+    const identity = waiverPlayerIdentityMap.get(s.id);
+    const displayName = identity?.name ?? (() => {
+      const [last, first] = (player.name ?? '').split(', ');
+      return first ? `${first} ${last}` : player.name;
+    })();
+    const position = identity?.position ?? player.position?.replace(/^TM/, 'DEF') ?? '';
 
     freeAgents.push({
       id: s.id,
       name: displayName,
       position,
-      nflTeam: player.team ?? '',
-      headshot: `https://sleepercdn.com/content/nfl/players/thumb/${player.stats_global_id}.jpg`,
+      nflTeam: identity?.nflTeam ?? player.team ?? '',
+      headshot: identity?.headshot ?? `https://sleepercdn.com/content/nfl/players/thumb/${player.stats_global_id}.jpg`,
       projection: s.score,
       projDisplay: s.score.toFixed(1),
     });
