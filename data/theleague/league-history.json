@@ -1,0 +1,802 @@
+{
+  "meta": {
+    "leagueId": 13522,
+    "leagueName": "TheLeague",
+    "founded": 2007,
+    "lastUpdated": "2026-04-14",
+    "dataVersion": "1.0",
+    "generatedBy": "scripts/build-league-history.mjs",
+    "notes": "Auto-generated from raw MFL standings data. champion fields marked with _estimated:true are heuristic (best regular season record). Modern years (where vp field is present) use victory points which include playoff wins. lore[], notableEvents[], notableTrades[], awards[] require manual curation. Run: node scripts/build-league-history.mjs to regenerate.",
+    "schemaDoc": "data/theleague/league-history/README.md"
+  },
+  "seasons": [
+    {
+      "year": 2026,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0001",
+        "teamName": "Pacific Pigskins",
+        "record": "0-0-0",
+        "_estimated": true,
+        "_estimatedBy": "highest vp (victory points, includes playoff wins)"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "record": "0-0-0",
+          "pf": 0
+        },
+        "worstRecord": {
+          "franchiseId": "0016",
+          "teamName": "Running down the Dream",
+          "record": "0-0-0",
+          "pf": 0
+        },
+        "mostPointsScored": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "pf": 0
+        },
+        "leastPointsScored": {
+          "franchiseId": "0016",
+          "teamName": "Running down the Dream",
+          "pf": 0
+        },
+        "highestSingleWeek": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "score": 0
+        },
+        "lowestSingleWeek": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "score": 0
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2025,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0002",
+        "teamName": "Da Dangsters",
+        "record": "13-5-0",
+        "_estimated": true,
+        "_estimatedBy": "highest vp (victory points, includes playoff wins)"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0002",
+          "teamName": "Da Dangsters",
+          "record": "13-5-0",
+          "pf": 1992.84
+        },
+        "worstRecord": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "record": "2-16-0",
+          "pf": 1453.35
+        },
+        "mostPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 1998.36
+        },
+        "leastPointsScored": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "pf": 1453.35
+        },
+        "highestSingleWeek": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "score": 195.26
+        },
+        "lowestSingleWeek": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "score": 31.3
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2024,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0009",
+        "teamName": "Wascawy Wabbits",
+        "record": "14-4-0",
+        "_estimated": true,
+        "_estimatedBy": "highest vp (victory points, includes playoff wins)"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "record": "14-4-0",
+          "pf": 2140.71
+        },
+        "worstRecord": {
+          "franchiseId": "0014",
+          "teamName": "Cowboy Up",
+          "record": "2-16-0",
+          "pf": 1287.96
+        },
+        "mostPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 2140.71
+        },
+        "leastPointsScored": {
+          "franchiseId": "0014",
+          "teamName": "Cowboy Up",
+          "pf": 1287.96
+        },
+        "highestSingleWeek": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "score": 182.98
+        },
+        "lowestSingleWeek": {
+          "franchiseId": "0004",
+          "teamName": "Heavy Chevy",
+          "score": 32.96
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2023,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0007",
+        "teamName": "Fire Ready Aim",
+        "record": "15-3-0",
+        "_estimated": true,
+        "_estimatedBy": "highest vp (victory points, includes playoff wins)"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "record": "15-3-0",
+          "pf": 2028.28
+        },
+        "worstRecord": {
+          "franchiseId": "0006",
+          "teamName": "The Music City Mafia",
+          "record": "4-14-0",
+          "pf": 1438.61
+        },
+        "mostPointsScored": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "pf": 2028.28
+        },
+        "leastPointsScored": {
+          "franchiseId": "0006",
+          "teamName": "The Music City Mafia",
+          "pf": 1438.61
+        },
+        "highestSingleWeek": {
+          "franchiseId": "0012",
+          "teamName": "Vitside Mafia",
+          "score": 181.45
+        },
+        "lowestSingleWeek": {
+          "franchiseId": "0004",
+          "teamName": "Heavy Chevy",
+          "score": 48.75
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2022,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0001",
+        "teamName": "Pacific Pigskins",
+        "record": "13-5-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "record": "13-5-0",
+          "pf": 2081.41
+        },
+        "worstRecord": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "record": "8-10-0",
+          "pf": 1415.66
+        },
+        "mostPointsScored": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "pf": 2081.41
+        },
+        "leastPointsScored": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "pf": 1415.66
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2021,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0009",
+        "teamName": "Wascawy Wabbits",
+        "record": "15-3-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "record": "15-3-0",
+          "pf": 2114.36
+        },
+        "worstRecord": {
+          "franchiseId": "0002",
+          "teamName": "Da Dangsters",
+          "record": "5-13-0",
+          "pf": 1508.96
+        },
+        "mostPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 2114.36
+        },
+        "leastPointsScored": {
+          "franchiseId": "0004",
+          "teamName": "Heavy Chevy",
+          "pf": 1416.64
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2020,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0009",
+        "teamName": "Wascawy Wabbits",
+        "record": "14-4-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "record": "14-4-0",
+          "pf": 2183.75
+        },
+        "worstRecord": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "record": "5-13-0",
+          "pf": 1464.1
+        },
+        "mostPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 2183.75
+        },
+        "leastPointsScored": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "pf": 1464.1
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2019,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0011",
+        "teamName": "Midwestside Connection",
+        "record": "15-1-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0011",
+          "teamName": "Midwestside Connection",
+          "record": "15-1-0",
+          "pf": 2108.29
+        },
+        "worstRecord": {
+          "franchiseId": "0003",
+          "teamName": "Maverick",
+          "record": "1-15-0",
+          "pf": 1371.26
+        },
+        "mostPointsScored": {
+          "franchiseId": "0011",
+          "teamName": "Midwestside Connection",
+          "pf": 2108.29
+        },
+        "leastPointsScored": {
+          "franchiseId": "0003",
+          "teamName": "Maverick",
+          "pf": 1371.26
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2018,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0009",
+        "teamName": "Wascawy Wabbits",
+        "record": "16-0-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "record": "16-0-0",
+          "pf": 2453.05
+        },
+        "worstRecord": {
+          "franchiseId": "0003",
+          "teamName": "Maverick",
+          "record": "4-12-0",
+          "pf": 1301.62
+        },
+        "mostPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 2453.05
+        },
+        "leastPointsScored": {
+          "franchiseId": "0003",
+          "teamName": "Maverick",
+          "pf": 1301.62
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2017,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0006",
+        "teamName": "LBer-DeCleaters",
+        "record": "13-5-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0006",
+          "teamName": "LBer-DeCleaters",
+          "record": "13-5-0",
+          "pf": 1902.12
+        },
+        "worstRecord": {
+          "franchiseId": "0001",
+          "teamName": "Pacific Pigskins",
+          "record": "4-14-0",
+          "pf": 1412.33
+        },
+        "mostPointsScored": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "pf": 1979.66
+        },
+        "leastPointsScored": {
+          "franchiseId": "0015",
+          "teamName": "Dark Magicians of Chaos",
+          "pf": 1068.58
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2016,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0008",
+        "teamName": "Bring The Pain",
+        "record": "14-2-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "record": "14-2-0",
+          "pf": 1947.5
+        },
+        "worstRecord": {
+          "franchiseId": "0013",
+          "teamName": "Gridiron Geeks",
+          "record": "3-13-0",
+          "pf": 1398.16
+        },
+        "mostPointsScored": {
+          "franchiseId": "0006",
+          "teamName": "LBer-DeCleaters",
+          "pf": 2218.54
+        },
+        "leastPointsScored": {
+          "franchiseId": "0013",
+          "teamName": "Gridiron Geeks",
+          "pf": 1398.16
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2015,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0006",
+        "teamName": "LBer-DeCleaters",
+        "record": "9-4-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0006",
+          "teamName": "LBer-DeCleaters",
+          "record": "9-4-0",
+          "pf": 1127.25
+        },
+        "worstRecord": {
+          "franchiseId": "0005",
+          "teamName": "The Executioners",
+          "record": "3-10-0",
+          "pf": 1092
+        },
+        "mostPointsScored": {
+          "franchiseId": "0012",
+          "teamName": "Vitside Mafia",
+          "pf": 1328.5
+        },
+        "leastPointsScored": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "pf": 1003.5
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2014,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0006",
+        "teamName": "LBer-DeCleaters",
+        "record": "13-3-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0006",
+          "teamName": "LBer-DeCleaters",
+          "record": "13-3-0",
+          "pf": 2036.65
+        },
+        "worstRecord": {
+          "franchiseId": "0013",
+          "teamName": "Gridiron Geeks",
+          "record": "4-12-0",
+          "pf": 1545.47
+        },
+        "mostPointsScored": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "pf": 2083.14
+        },
+        "leastPointsScored": {
+          "franchiseId": "0007",
+          "teamName": "Fire Ready Aim",
+          "pf": 1447.77
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2013,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0012",
+        "teamName": "Vitside Mafia",
+        "record": "13-5-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0012",
+          "teamName": "Vitside Mafia",
+          "record": "13-5-0",
+          "pf": 1885.18
+        },
+        "worstRecord": {
+          "franchiseId": "0004",
+          "teamName": "Las Vegas Elite",
+          "record": "4-14-0",
+          "pf": 1342.3
+        },
+        "mostPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 1981.95
+        },
+        "leastPointsScored": {
+          "franchiseId": "0004",
+          "teamName": "Las Vegas Elite",
+          "pf": 1342.3
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2012,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0006",
+        "teamName": "LBer-DeCleaters",
+        "record": "13-5-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0006",
+          "teamName": "LBer-DeCleaters",
+          "record": "13-5-0",
+          "pf": 1920.79
+        },
+        "worstRecord": {
+          "franchiseId": "0004",
+          "teamName": "Las Vegas Elite",
+          "record": "3-15-0",
+          "pf": 1541.93
+        },
+        "mostPointsScored": {
+          "franchiseId": "0014",
+          "teamName": "Devil Dogs",
+          "pf": 1962.93
+        },
+        "leastPointsScored": {
+          "franchiseId": "0003",
+          "teamName": "Poker in the Rear",
+          "pf": 1492.08
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2010,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0011",
+        "teamName": "Midwestside Connection",
+        "record": "9-5-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0011",
+          "teamName": "Midwestside Connection",
+          "record": "9-5-0",
+          "pf": 2035
+        },
+        "worstRecord": {
+          "franchiseId": "0005",
+          "teamName": "The Mariachi Ninjas",
+          "record": "3-11-0",
+          "pf": 1481
+        },
+        "mostPointsScored": {
+          "franchiseId": "0002",
+          "teamName": "Da Dangsters",
+          "pf": 2115
+        },
+        "leastPointsScored": {
+          "franchiseId": "0005",
+          "teamName": "The Mariachi Ninjas",
+          "pf": 1481
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    },
+    {
+      "year": 2008,
+      "summary": "",
+      "champion": {
+        "franchiseId": "0008",
+        "teamName": "Bring The Pain",
+        "record": "15-3-0",
+        "_estimated": true,
+        "_estimatedBy": "highest regular season wins + PF — verify against actual playoff results"
+      },
+      "playoffs": {
+        "participants": [],
+        "_note": "Needs manual curation"
+      },
+      "toiletBowl": null,
+      "regularSeason": {
+        "bestRecord": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "record": "15-3-0",
+          "pf": 1957.99
+        },
+        "worstRecord": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "record": "4-14-0",
+          "pf": 1301.74
+        },
+        "mostPointsScored": {
+          "franchiseId": "0008",
+          "teamName": "Bring The Pain",
+          "pf": 1957.99
+        },
+        "leastPointsScored": {
+          "franchiseId": "0009",
+          "teamName": "Wascawy Wabbits",
+          "pf": 1301.74
+        }
+      },
+      "awards": [],
+      "notableTrades": [],
+      "notableEvents": [],
+      "lore": []
+    }
+  ]
+}
