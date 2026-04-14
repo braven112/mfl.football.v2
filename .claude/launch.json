@@ -4,7 +4,7 @@
     {
       "name": "dev",
       "runtimeExecutable": "/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin/node",
-      "runtimeArgs": ["/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin/pnpm", "dev", "--port", "4322"],
+      "runtimeArgs": ["--env-file=.env", "/Users/brandon.shields@alaskaair.com/.nvm/versions/node/v22.21.1/bin/pnpm", "dev", "--port", "4322"],
       "port": 4322,
       "autoPort": false,
       "env": {

@@ -10,16 +10,20 @@
  *   ?source=nfl       — NFL news + wire (ESPN authors + wire posts)
  *   ?source=draft     — NFL Draft coverage
  *   ?source=insider   — Injuries + odds (Doc Rivers + Vegas Vic)
+ *   ?source=groupme   — GroupMe group chat (auth-gated)
  *   (default)         — All sources, mixed timeline
  */
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
+import GroupMeChatPanel from '../../components/shared/GroupMeChatPanel.tsx';
 import { getAuthUser } from '../../utils/auth';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../../types/schefter';
+import type { SchefterPost } from '../../types/schefter';
 import feedData from '../../data/theleague/schefter-feed.json';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
+import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
@@ -44,7 +48,7 @@ if (userFranchiseId) {
   } catch { /* fallback gracefully */ }
 }
 
-// Source filter via ?source=theleague|nfl|draft|insider
+// Source filter via ?source=theleague|nfl|draft|insider|groupme
 // Legacy aliases: claude/events → theleague, wire → nfl, injuries/odds → insider
 const sourceParam = Astro.url.searchParams.get('source');
 const legacyAliases: Record<string, string> = {
@@ -53,7 +57,7 @@ const legacyAliases: Record<string, string> = {
   injuries: 'insider', odds: 'insider',
 };
 const resolvedSource = legacyAliases[sourceParam ?? ''] ?? sourceParam;
-const validSources = ['theleague', 'nfl', 'draft', 'insider'] as const;
+const validSources = ['theleague', 'nfl', 'draft', 'insider', 'groupme'] as const;
 type SourceFilter = typeof validSources[number];
 const activeSource: SourceFilter | null = validSources.includes(resolvedSource as SourceFilter)
   ? (resolvedSource as SourceFilter)
@@ -67,9 +71,30 @@ const espnAuthorIds = new Set(
   Object.values(SCHEFTER_AUTHORS).filter(a => a.external && !nflExcludeIds.has(a.id)).map(a => a.id)
 );
 
+// Fetch GroupMe messages from Redis (auth-gated)
+let groupMePosts: SchefterPost[] = [];
+if (isAuthenticated) {
+  try {
+    const gmMessages = await getRecentMessages(100);
+    const teamConfig = await loadTeamConfig();
+    groupMePosts = toSchefterPosts(gmMessages, teamConfig);
+  } catch (err) {
+    console.warn('[news] Failed to load GroupMe messages:', err);
+  }
+}
+
 // Filter posts by source
 const filteredPosts = (() => {
-  if (!activeSource) return feed.posts;
+  if (activeSource === 'groupme') return groupMePosts;
+  if (!activeSource) {
+    // "All" tab: merge Schefter + GroupMe (if authenticated), sorted by timestamp
+    if (isAuthenticated && groupMePosts.length > 0) {
+      const merged = [...feed.posts, ...groupMePosts];
+      merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return merged;
+    }
+    return feed.posts;
+  }
   if (activeSource === 'theleague') return feed.posts.filter(p => {
     const authorId = p.authorId ?? 'claude';
     return authorId === 'claude' || authorId === 'roger';
@@ -91,15 +116,18 @@ const sourceAuthorMap: Record<string, string> = {
   insider: 'nfl-insider',
 };
 // Default to Claude Schefter for the "All" tab, otherwise use the source's persona
-const profileAuthorId = activeSource ? sourceAuthorMap[activeSource] : 'claude';
+const profileAuthorId = activeSource && activeSource !== 'groupme' ? sourceAuthorMap[activeSource] : 'claude';
 const profileAuthor = profileAuthorId ? getAuthor(profileAuthorId) : null;
 const profileAvatar = profileAuthor ? getAuthorAvatar(profileAuthor) : null;
+
+const isGroupMeTab = activeSource === 'groupme';
 
 // Build filter tab URLs
 const basePath = '/theleague/news';
 const tabs = [
   { label: 'All', href: basePath, active: !activeSource },
   { label: 'The League', href: `${basePath}?source=theleague`, active: activeSource === 'theleague' },
+  ...(isAuthenticated ? [{ label: 'Group Chat', href: `${basePath}?source=groupme`, active: activeSource === 'groupme' }] : []),
   { label: 'NFL', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' },
   { label: 'NFL Draft', href: `${basePath}?source=draft`, active: activeSource === 'draft' },
   { label: 'NFL Insider', href: `${basePath}?source=insider`, active: activeSource === 'insider' },
@@ -110,16 +138,25 @@ const tabs = [
   <main class="sf-news-page">
     <div class="sf-news-card">
       {/* Profile header — every tab has a persona */}
-      <div class="sf-page-header">
-        <div class="sf-page-header__persona">
-          <img class="sf-page-header__avatar" src={profileAvatar} alt="" aria-hidden="true" width="48" height="48" />
-          <div>
-            <h1 class="sf-page-header__name">{profileAuthor!.name}</h1>
-            <div class="sf-page-header__handle">{profileAuthor!.handle}</div>
-          </div>
+      {isGroupMeTab ? (
+        <div class="sf-page-header sf-page-header--feed">
+          <h1 class="sf-page-header__name">Group Chat</h1>
+          <p class="sf-page-header__bio">
+            The latest from TheLeague's GroupMe — trash talk, trade talk, and everything in between.
+          </p>
         </div>
-        <p class="sf-page-header__bio">{profileAuthor!.bio}</p>
-      </div>
+      ) : (
+        <div class="sf-page-header">
+          <div class="sf-page-header__persona">
+            <img class="sf-page-header__avatar" src={profileAvatar} alt="" aria-hidden="true" width="48" height="48" />
+            <div>
+              <h1 class="sf-page-header__name">{profileAuthor!.name}</h1>
+              <div class="sf-page-header__handle">{profileAuthor!.handle}</div>
+            </div>
+          </div>
+          <p class="sf-page-header__bio">{profileAuthor!.bio}</p>
+        </div>
+      )}
 
       {/* Source filter tabs */}
       <nav class="sf-source-tabs" aria-label="Filter news by source">
@@ -133,6 +170,16 @@ const tabs = [
           </a>
         ))}
       </nav>
+
+      {/* GroupMe compose bar — shown above the feed on the GroupMe tab */}
+      {isGroupMeTab && isAuthenticated && userFranchiseId && (
+        <GroupMeChatPanel
+          client:visible
+          franchiseId={userFranchiseId}
+          teamName={userTeamName ?? 'My Team'}
+          teamIcon={userTeamIcon ?? ''}
+        />
+      )}
 
       <div data-feed-container>
         <SchefterFeed

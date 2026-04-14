@@ -8,6 +8,7 @@
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { formatRelativeTime } from '../../utils/schefter-feed';
+import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
 
@@ -30,23 +31,31 @@ const {
 } = Astro.props;
 
 const relTime = formatRelativeTime(post.timestamp, now);
-const author = getAuthor(post.authorId);
-const avatarSrc = getAuthorAvatar(author);
+const isGroupMe = post.type === 'groupme';
+const gmMeta = isGroupMe ? (post as SchefterPost & { _groupMe: GroupMePostMeta })._groupMe : null;
+const author = isGroupMe ? null : getAuthor(post.authorId);
+const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : getAuthorAvatar(author!);
+const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
+const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isExternal = post.type === 'external';
-const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}`;
+const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}${isGroupMe ? ' sfc-post--groupme' : ''}`;
 ---
 
-<article class={tierClass} data-post-id={post.id} aria-label={`${author.name}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
-  <img class="sfc-avatar" src={avatarSrc} alt="" aria-hidden="true" width="32" height="32" loading="lazy" />
+<article class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
+  <img class={`sfc-avatar${isGroupMe ? ' sfc-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="32" height="32" loading="lazy" />
 
   <div class="sfc-post__content">
     <div class="sfc-post__header">
-      <span class="sfc-post__name">{author.name}</span>
-      <span class="sfc-post__handle">{author.handle}</span>
+      <span class="sfc-post__name">{displayName}</span>
+      <span class={`sfc-post__handle${isGroupMe ? ' sfc-post__handle--groupme' : ''}`}>{displayHandle}</span>
       <time class="sfc-post__time" datetime={post.timestamp}>{relTime}</time>
     </div>
 
-    <div class="sfc-post__body" set:html={post.body} />
+    {isGroupMe ? (
+      <div class="sfc-post__body sfc-post__body--groupme">{post.body}</div>
+    ) : (
+      <div class="sfc-post__body" set:html={post.body} />
+    )}
 
     {post.link && (
       <a
@@ -59,22 +68,31 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
       </a>
     )}
 
-    <div class="sfc-post__actions">
-      <SchefterReplyThread
-        client:idle
-        postId={post.id}
-        postHeadline={post.headline}
-        postAuthorId={post.authorId}
-        isAuthenticated={isAuthenticated}
-        userFranchiseId={userFranchiseId}
-        userTeamName={userTeamName}
-        userTeamIcon={userTeamIcon}
-      />
-      <SchefterReactionBar
-        client:visible
-        postId={post.id}
-        isAuthenticated={isAuthenticated}
-      />
-    </div>
+    {isGroupMe ? (
+      gmMeta && gmMeta.likeCount > 0 && (
+        <div class="sfc-post__groupme-likes">
+          <span class="sfc-post__groupme-likes-icon" aria-hidden="true">&#x2764;</span>
+          <span>{gmMeta.likeCount}</span>
+        </div>
+      )
+    ) : (
+      <div class="sfc-post__actions">
+        <SchefterReplyThread
+          client:idle
+          postId={post.id}
+          postHeadline={post.headline}
+          postAuthorId={post.authorId}
+          isAuthenticated={isAuthenticated}
+          userFranchiseId={userFranchiseId}
+          userTeamName={userTeamName}
+          userTeamIcon={userTeamIcon}
+        />
+        <SchefterReactionBar
+          client:visible
+          postId={post.id}
+          isAuthenticated={isAuthenticated}
+        />
+      </div>
+    )}
   </div>
 </article>
