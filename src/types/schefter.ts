@@ -175,7 +175,8 @@ export type SchefterPostType =
   | 'board'
   | 'ask-roger'
   | 'injury'
-  | 'odds';
+  | 'odds'
+  | 'groupme';
 
 /** MFL transaction sub-types we care about */
 export type TransactionSubType =

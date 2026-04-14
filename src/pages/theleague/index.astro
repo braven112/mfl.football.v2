@@ -39,6 +39,7 @@ import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types
 import feedData from '../../data/theleague/schefter-feed.json';
 import whatsNewData from '../../data/whats-new.json';
 import leagueConfig from '../../data/theleague.config.json';
+import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
@@ -47,7 +48,23 @@ const isAuthenticated = !!authUser;
 const userFranchiseId = authUser?.franchiseId;
 
 const feed = feedData as FeedType;
-const compactPosts = feed.posts.slice(0, 30);
+
+// Merge GroupMe messages into the compact sidebar feed (auth-gated)
+let compactPosts = feed.posts.slice(0, 30);
+if (isAuthenticated) {
+  try {
+    const gmMessages = await getRecentMessages(30);
+    if (gmMessages.length > 0) {
+      const teamConfig = await loadTeamConfig();
+      const gmPosts = toSchefterPosts(gmMessages, teamConfig);
+      const merged = [...feed.posts.slice(0, 50), ...gmPosts];
+      merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      compactPosts = merged.slice(0, 30);
+    }
+  } catch (err) {
+    console.warn('[homepage] Failed to load GroupMe messages:', err);
+  }
+}
 
 // Support ?testDate=YYYY-MM-DD or ?testDate=YYYY-MM-DDTHH:MM for testing hero states
 const testDateParam = Astro.url.searchParams.get('testDate');

@@ -16,6 +16,7 @@
 import type { SchefterPost } from '../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { formatRelativeTime } from '../../utils/schefter-feed';
+import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
 
@@ -30,75 +31,92 @@ interface Props {
 
 const { post, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, now } = Astro.props;
 const relTime = formatRelativeTime(post.timestamp, now);
-const author = getAuthor(post.authorId);
-const avatarSrc = getAuthorAvatar(author);
+const isGroupMe = post.type === 'groupme';
+const gmMeta = isGroupMe ? (post as SchefterPost & { _groupMe: GroupMePostMeta })._groupMe : null;
+const author = isGroupMe ? null : getAuthor(post.authorId);
+const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : getAuthorAvatar(author!);
+const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
+const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
-const tierClass = `sf-post ${isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}`;
+const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}`;
 ---
 
-<article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} aria-label={`${author.name}: ${post.headline}`}>
-  <img class="sf-avatar" src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
+<article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+  <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">
     <div class="sf-post__header">
-      <span class="sf-post__name">{author.name}</span>
-      <span class="sf-post__handle">{author.handle}</span>
+      <span class="sf-post__name">{displayName}</span>
+      <span class={`sf-post__handle${isGroupMe ? ' sf-post__handle--groupme' : ''}`}>{displayHandle}</span>
       <time class="sf-post__time" datetime={post.timestamp}>{relTime}</time>
     </div>
 
-    {/* Article card: featured image + headline + excerpt */}
-    {isArticle && post.image && (
-      <a href={post.link} class="sf-post__image-link">
-        <img
-          class="sf-post__image"
-          src={`/assets/schefter/${post.image}`}
-          alt={post.imageAlt ?? ''}
-          loading="lazy"
-        />
-      </a>
+    {isGroupMe ? (
+      <>
+        <div class="sf-post__body sf-post__body--groupme">{post.body}</div>
+        {gmMeta && gmMeta.likeCount > 0 && (
+          <div class="sf-post__groupme-likes">
+            <span class="sf-post__groupme-likes-icon" aria-hidden="true">&#x2764;</span>
+            <span>{gmMeta.likeCount}</span>
+          </div>
+        )}
+      </>
+    ) : (
+      <>
+        {isArticle && post.image && (
+          <a href={post.link} class="sf-post__image-link">
+            <img
+              class="sf-post__image"
+              src={`/assets/schefter/${post.image}`}
+              alt={post.imageAlt ?? ''}
+              loading="lazy"
+            />
+          </a>
+        )}
+
+        {isArticle && (
+          <div class="sf-post__headline">{post.headline}</div>
+        )}
+
+        <div class="sf-post__body" set:html={post.body} />
+
+        {post.analysis && (
+          <div class="sf-post__analysis">
+            <div class="sf-post__analysis-label">Schefter's Take</div>
+            <Fragment set:html={post.analysis} />
+          </div>
+        )}
+
+        {post.link && (
+          <a
+            href={post.link}
+            class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}`}
+            {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          >
+            {post.linkLabel ?? (isExternal ? 'Read on ESPN →' : 'View details')}
+            {isExternal && <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">(opens in new tab)</span>}
+          </a>
+        )}
+
+        <div class="sfc-post__actions">
+          <SchefterReplyThread
+            client:idle
+            postId={post.id}
+            postHeadline={post.headline}
+            postAuthorId={post.authorId}
+            isAuthenticated={isAuthenticated}
+            userFranchiseId={userFranchiseId}
+            userTeamName={userTeamName}
+            userTeamIcon={userTeamIcon}
+          />
+          <SchefterReactionBar
+            client:visible
+            postId={post.id}
+            isAuthenticated={isAuthenticated}
+          />
+        </div>
+      </>
     )}
-
-    {isArticle && (
-      <div class="sf-post__headline">{post.headline}</div>
-    )}
-
-    <div class="sf-post__body" set:html={post.body} />
-
-    {post.analysis && (
-      <div class="sf-post__analysis">
-        <div class="sf-post__analysis-label">Schefter's Take</div>
-        <Fragment set:html={post.analysis} />
-      </div>
-    )}
-
-    {post.link && (
-      <a
-        href={post.link}
-        class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}`}
-        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      >
-        {post.linkLabel ?? (isExternal ? 'Read on ESPN →' : 'View details')}
-        {isExternal && <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">(opens in new tab)</span>}
-      </a>
-    )}
-
-    <div class="sfc-post__actions">
-      <SchefterReplyThread
-        client:idle
-        postId={post.id}
-        postHeadline={post.headline}
-        postAuthorId={post.authorId}
-        isAuthenticated={isAuthenticated}
-        userFranchiseId={userFranchiseId}
-        userTeamName={userTeamName}
-        userTeamIcon={userTeamIcon}
-      />
-      <SchefterReactionBar
-        client:visible
-        postId={post.id}
-        isAuthenticated={isAuthenticated}
-      />
-    </div>
   </div>
 </article>
