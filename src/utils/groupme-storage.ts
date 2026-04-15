@@ -60,6 +60,31 @@ async function getRedis(): Promise<RedisClient | null> {
   }
 }
 
+/** Debug: check Redis connection status and env vars */
+export async function debugRedisStatus(): Promise<Record<string, unknown>> {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
+  const redis = await getRedis();
+  const status: Record<string, unknown> = {
+    hasUrl: !!url,
+    urlSource: url ? (process.env.UPSTASH_REDIS_REST_URL ? 'UPSTASH' : process.env.KV_REST_API_URL ? 'KV' : 'STORAGE') : 'none',
+    hasToken: !!token,
+    redisConnected: !!redis,
+    cachedState: _redis === undefined ? 'uninitialized' : _redis === null ? 'null' : 'connected',
+  };
+  if (redis) {
+    try {
+      const msgCount = await redis.zcard(KEYS.messages);
+      status.messageCount = msgCount;
+      status.ping = 'ok';
+    } catch (err) {
+      status.ping = 'failed';
+      status.pingError = String(err);
+    }
+  }
+  return status;
+}
+
 /** Store messages in the sorted set, scored by createdAt timestamp */
 export async function storeMessages(messages: GroupMeMessage[]): Promise<number> {
   const redis = await getRedis();
