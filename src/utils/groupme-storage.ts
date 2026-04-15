@@ -234,6 +234,7 @@ export function toSchefterPosts(messages: GroupMeMessage[], teamConfig: TeamConf
           avatar: team?.icon ?? msg.avatarUrl ?? '',
           likeCount: msg.likeCount,
           senderName: msg.name,
+          attachments: msg.attachments ?? [],
         },
       } as SchefterPost & { _groupMe: GroupMePostMeta };
     });
@@ -244,6 +245,7 @@ export interface GroupMePostMeta {
   avatar: string;
   likeCount: number;
   senderName: string;
+  attachments: Array<{ type: string; url?: string }>;
 }
 
 interface TeamConfig {

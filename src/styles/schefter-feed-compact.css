@@ -504,6 +504,55 @@
   word-break: break-word;
 }
 
+/* GroupMe image thumbnail in compact view */
+.sfc-post__gm-thumb {
+  position: relative;
+  margin-top: 0.375rem;
+  border-radius: var(--radius-md, 0.5rem);
+  overflow: hidden;
+  max-width: 8rem;
+  line-height: 0;
+}
+
+.sfc-post__gm-thumb-img {
+  width: 100%;
+  height: 5rem;
+  object-fit: cover;
+  border-radius: var(--radius-md, 0.5rem);
+  transition: opacity 0.15s ease;
+}
+
+.sfc-post__gm-thumb-img:hover {
+  opacity: 0.9;
+}
+
+.sfc-post__gm-thumb-more {
+  position: absolute;
+  bottom: 0.25rem;
+  right: 0.25rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  line-height: 1;
+}
+
+/* X/Twitter link in compact view */
+.sfc-post__x-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--color-gray-500, #6b7280);
+  text-decoration: none;
+}
+
+.sfc-post__x-link:hover {
+  color: var(--color-gray-700, #374151);
+}
 
 /* ── GroupMe Compose Bar ── */
 

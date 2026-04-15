@@ -42,6 +42,16 @@ const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
 const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}`;
+
+// GroupMe rich content: images from attachments, X/Twitter URLs from body
+const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
+const xPostRegex = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
+const gmBodyText = isGroupMe ? (post.body ?? '') : '';
+const xPostMatches = isGroupMe ? [...gmBodyText.matchAll(xPostRegex)] : [];
+// Strip X/Twitter URLs from displayed body text so they render as embeds instead
+const gmDisplayBody = isGroupMe && xPostMatches.length > 0
+  ? gmBodyText.replace(xPostRegex, '').trim()
+  : gmBodyText;
 ---
 
 <article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
@@ -56,7 +66,39 @@ const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-po
 
     {isGroupMe ? (
       <>
-        <div class="sf-post__body sf-post__body--groupme">{post.body}</div>
+        {gmDisplayBody && (
+          <div class="sf-post__body sf-post__body--groupme">{gmDisplayBody}</div>
+        )}
+
+        {/* GroupMe image attachments */}
+        {gmImages.length > 0 && (
+          <div class={`sf-post__gm-images${gmImages.length > 1 ? ' sf-post__gm-images--grid' : ''}`}>
+            {gmImages.map(att => (
+              <a href={att.url} target="_blank" rel="noopener noreferrer" class="sf-post__gm-image-link">
+                <img src={att.url} alt="Shared image" class="sf-post__gm-image" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* X/Twitter embeds */}
+        {xPostMatches.map(match => {
+          const tweetUrl = match[0].replace(/https?:\/\/twitter\.com/, 'https://x.com');
+          const username = match[1];
+          const tweetId = match[2];
+          return (
+            <div class="sf-post__x-embed" data-tweet-url={tweetUrl} data-tweet-id={tweetId}>
+              <a href={tweetUrl} target="_blank" rel="noopener noreferrer" class="sf-post__x-embed-link">
+                <div class="sf-post__x-embed-header">
+                  <svg class="sf-post__x-logo" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  <span class="sf-post__x-username">@{username}</span>
+                </div>
+                <span class="sf-post__x-cta">View on X</span>
+              </a>
+            </div>
+          );
+        })}
+
         <div class="sfc-post__actions">
           <SchefterReplyThread
             client:idle

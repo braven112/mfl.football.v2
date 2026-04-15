@@ -42,6 +42,15 @@ const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
 const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isExternal = post.type === 'external';
 const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}${isGroupMe ? ' sfc-post--groupme' : ''}`;
+
+// GroupMe rich content
+const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
+const xPostRegex = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
+const gmBodyText = isGroupMe ? (post.body ?? '') : '';
+const xPostMatches = isGroupMe ? [...gmBodyText.matchAll(xPostRegex)] : [];
+const gmDisplayBody = isGroupMe && xPostMatches.length > 0
+  ? gmBodyText.replace(xPostRegex, '').trim()
+  : gmBodyText;
 ---
 
 <article class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
@@ -55,7 +64,32 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
     </div>
 
     {isGroupMe ? (
-      <div class="sfc-post__body sfc-post__body--groupme">{post.body}</div>
+      <>
+        {gmDisplayBody && (
+          <div class="sfc-post__body sfc-post__body--groupme">{gmDisplayBody}</div>
+        )}
+        {gmImages.length > 0 && (
+          <div class="sfc-post__gm-thumb">
+            <a href={gmImages[0].url} target="_blank" rel="noopener noreferrer">
+              <img src={gmImages[0].url} alt="Shared image" class="sfc-post__gm-thumb-img" loading="lazy" />
+            </a>
+            {gmImages.length > 1 && (
+              <span class="sfc-post__gm-thumb-more">+{gmImages.length - 1}</span>
+            )}
+          </div>
+        )}
+        {xPostMatches.length > 0 && (
+          <a
+            href={xPostMatches[0][0].replace(/https?:\/\/twitter\.com/, 'https://x.com')}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="sfc-post__x-link"
+          >
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            View on X
+          </a>
+        )}
+      </>
     ) : (
       <div class="sfc-post__body" set:html={post.body} />
     )}
