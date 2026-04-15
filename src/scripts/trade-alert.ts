@@ -580,15 +580,15 @@ function tamOpenFromBell() {
   tamOpen();
 }
 
-// ---- Event handlers (attached once) ----
+// ---- Event handlers ----
+// Element-level handlers must be re-attached after every View Transition because
+// Astro's ClientRouter swaps DOM nodes, destroying old event listeners.
+// The document-level keydown handler survives swaps and is only attached once.
 
-let tamHandlersAttached = false;
+let tamDocKeydownBound = false;
 
 function tamAttachHandlers() {
-  if (tamHandlersAttached) return;
-  tamHandlersAttached = true;
-
-  // Close
+  // Element handlers — re-bind to fresh DOM after each View Transition
   tamEl('tam-overlay')?.addEventListener('click', tamClose);
   tamEl('tam-close')?.addEventListener('click', tamClose);
 
@@ -617,32 +617,35 @@ function tamAttachHandlers() {
   });
   tamEl('tam-confirm-no')?.addEventListener('click', () => tamResetFooter());
 
-  // ESC + focus trap
-  document.addEventListener('keydown', (e) => {
-    const modal = tamEl('trade-alert-modal');
-    if (!modal?.classList.contains('active')) return;
+  // ESC + focus trap — document-level, survives View Transitions, attach once
+  if (!tamDocKeydownBound) {
+    tamDocKeydownBound = true;
+    document.addEventListener('keydown', (e) => {
+      const modal = tamEl('trade-alert-modal');
+      if (!modal?.classList.contains('active')) return;
 
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      tamClose();
-      return;
-    }
-
-    // Focus trap
-    if (e.key === 'Tab') {
-      const focusable = modal.querySelectorAll<HTMLElement>(
-        'button:not([disabled]):not([style*="display: none"]), a[href]:not([style*="display: none"]), [tabindex="0"]'
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault(); last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault(); first.focus();
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        tamClose();
+        return;
       }
-    }
-  });
+
+      // Focus trap
+      if (e.key === 'Tab') {
+        const focusable = modal.querySelectorAll<HTMLElement>(
+          'button:not([disabled]):not([style*="display: none"]), a[href]:not([style*="display: none"]), [tabindex="0"]'
+        );
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    });
+  }
 }
 
 // ---- Mock data for preview (?mockTrades=1 for single, ?mockTrades=3 for multi) ----
