@@ -1,9 +1,9 @@
 /**
  * GroupMe Sync — Poll GroupMe API and store messages in Redis
  *
- * POST /api/groupme/sync
+ * GET /api/groupme/sync  (auth: Bearer CRON_SECRET)
  *
- * Called by a scheduled task or manually by an admin.
+ * Called every 15 minutes by Vercel Cron.
  * Uses GROUPME_SERVICE_TOKEN to read the group chat.
  * Stores normalized messages in a Redis sorted set.
  */
@@ -27,7 +27,13 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-export const POST: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  // Allow Vercel Cron (Bearer CRON_SECRET) to trigger sync
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return json({ error: 'Unauthorized' }, 401);
+  }
+
   try {
     if (!process.env.GROUPME_SERVICE_TOKEN || !process.env.GROUPME_GROUP_ID) {
       return json({ error: 'GroupMe not configured' }, 503);

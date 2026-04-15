@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/groupme/sync",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/theleague/:path*",
