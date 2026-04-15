@@ -6,6 +6,8 @@
  * Section header with editorial left-border accent.
  */
 import type { SchefterPost } from '../../types/schefter';
+import type { SchefterReactionResponse } from '../../types/schefter';
+import { getBatchReactions } from '../../utils/schefter-reactions';
 import SchefterPostCardCompact from './SchefterPostCardCompact.astro';
 
 interface Props {
@@ -27,6 +29,10 @@ const {
 } = Astro.props;
 
 const now = new Date();
+
+// Batch-fetch all reactions server-side (1 Redis pipeline call instead of N client fetches)
+const postIds = posts.map(p => p.id);
+const allReactions = await getBatchReactions(postIds, userFranchiseId);
 ---
 
 <section class="sfc-feed" aria-label="Latest league news">
@@ -48,6 +54,7 @@ const now = new Date();
             userTeamName={userTeamName}
             userTeamIcon={userTeamIcon}
             now={now}
+            reactions={allReactions[post.id]}
           />
         </div>
       ))}

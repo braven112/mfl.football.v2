@@ -51,19 +51,8 @@ export default function SchefterReactionBar({
     return merged;
   }, [baseReactions]);
 
-  // Fetch initial reaction state when component becomes visible
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/schefter-reactions?postId=${encodeURIComponent(postId)}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (cancelled || !data) return;
-        if (data.reactions) setReactions(mergeWithBase(data.reactions));
-        if (data.userReaction !== undefined) setUserReaction(data.userReaction);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [postId, mergeWithBase]);
+  // Reactions are now server-resolved and passed via initialReactions/initialUserReaction props.
+  // No client-side fetch needed on mount — this saves ~25 Redis calls per page load.
 
   // Close picker on Escape and click-outside
   useEffect(() => {
