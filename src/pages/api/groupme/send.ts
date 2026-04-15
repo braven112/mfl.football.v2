@@ -1,11 +1,11 @@
 /**
- * GroupMe Send — Post a message to GroupMe via the bot, attributed to the owner's team
+ * GroupMe Send — Post a message to GroupMe via the bot
  *
  * POST /api/groupme/send
- * Body: { text: string, replyTo?: string }
+ * Body: { text: string, raw?: boolean, replyTo?: string }
  *
- * Uses the bot API to post, prepending the team name for attribution.
- * If replyTo is provided, quotes the original message.
+ * If raw=true, posts text as-is (already Schefter-rewritten).
+ * Otherwise prepends team name for attribution.
  * Auth required. Rate limited: 20 messages/hour per franchise.
  */
 
@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  let body: { text: string; replyTo?: string };
+  let body: { text: string; raw?: boolean; replyTo?: string };
   try {
     body = await request.json();
   } catch {
@@ -34,9 +34,6 @@ export const POST: APIRoute = async ({ request }) => {
 
   const text = body.text?.trim() ?? '';
   if (!text) return json({ error: 'Message cannot be empty' }, 400);
-  if (text.length > 900) {
-    return json({ error: 'Message must be under 900 characters (team name is prepended)' }, 400);
-  }
 
   // Rate limit
   const { allowed, count } = await checkSendRateLimit(user.franchiseId);
@@ -44,23 +41,29 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Slow down — you\'re limited to 20 messages per hour.', count }, 429);
   }
 
-  // Resolve team name for attribution
-  const teamConfig = await loadTeamConfig();
-  const team = teamConfig.find(t => t.franchiseId === user.franchiseId);
-  const teamName = team?.name ?? 'Unknown Team';
+  let finalText: string;
 
-  // Format message with team attribution
-  let attributed: string;
-  if (body.replyTo) {
-    // Quote the original message in the reply
-    const quotedLines = body.replyTo.split('\n').map(l => `> ${l}`).join('\n');
-    attributed = `${teamName}:\n${quotedLines}\n\n${text}`;
+  if (body.raw) {
+    // Already Schefter-rewritten — post as-is
+    finalText = text;
   } else {
-    attributed = `${teamName}:\n${text}`;
+    // Prepend team name for attribution
+    const teamConfig = await loadTeamConfig();
+    const team = teamConfig.find(t => t.franchiseId === user.franchiseId);
+    const teamName = team?.name ?? 'Unknown Team';
+
+    if (body.replyTo) {
+      const quotedLines = body.replyTo.split('\n').map(l => `> ${l}`).join('\n');
+      finalText = `${teamName}:\n${quotedLines}\n\n${text}`;
+    } else {
+      finalText = `${teamName}:\n${text}`;
+    }
   }
 
   // Trim to GroupMe's 1000 char limit
-  const finalText = attributed.length > 1000 ? attributed.slice(0, 997) + '...' : attributed;
+  if (finalText.length > 1000) {
+    finalText = finalText.slice(0, 997) + '...';
+  }
 
   const success = await postAsBot(finalText);
   if (!success) return json({ error: 'Failed to send message to GroupMe' }, 502);
