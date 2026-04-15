@@ -16,6 +16,8 @@ interface Props {
   initialReactions?: Record<string, number>;
   initialUserReaction?: string | null;
   isAuthenticated?: boolean;
+  /** Base reactions that persist even after fetch (e.g. GroupMe likes) */
+  baseReactions?: Record<string, number>;
 }
 
 export default function SchefterReactionBar({
@@ -23,13 +25,31 @@ export default function SchefterReactionBar({
   initialReactions = {},
   initialUserReaction = null,
   isAuthenticated = false,
+  baseReactions = {},
 }: Props) {
-  const [reactions, setReactions] = useState<Record<string, number>>(initialReactions);
+  const [reactions, setReactions] = useState<Record<string, number>>(() => {
+    // Merge base reactions (e.g. GroupMe likes) into initial state
+    const merged = { ...initialReactions };
+    for (const [emoji, count] of Object.entries(baseReactions)) {
+      merged[emoji] = (merged[emoji] ?? 0) + count;
+    }
+    return merged;
+  });
   const [userReaction, setUserReaction] = useState<string | null>(initialUserReaction);
   const [loading, setLoading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Merge base reactions (e.g. GroupMe likes) into fetched site reactions
+  const mergeWithBase = useCallback((fetched: Record<string, number>) => {
+    if (!baseReactions || Object.keys(baseReactions).length === 0) return fetched;
+    const merged = { ...fetched };
+    for (const [emoji, count] of Object.entries(baseReactions)) {
+      merged[emoji] = (merged[emoji] ?? 0) + count;
+    }
+    return merged;
+  }, [baseReactions]);
 
   // Fetch initial reaction state when component becomes visible
   useEffect(() => {
@@ -38,12 +58,12 @@ export default function SchefterReactionBar({
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (cancelled || !data) return;
-        if (data.reactions) setReactions(data.reactions);
+        if (data.reactions) setReactions(mergeWithBase(data.reactions));
         if (data.userReaction !== undefined) setUserReaction(data.userReaction);
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [postId]);
+  }, [postId, mergeWithBase]);
 
   // Close picker on Escape and click-outside
   useEffect(() => {
@@ -111,7 +131,7 @@ export default function SchefterReactionBar({
         setUserReaction(prevUserReaction);
       } else {
         const data = await res.json();
-        setReactions(data.reactions ?? {});
+        setReactions(mergeWithBase(data.reactions ?? {}));
         setUserReaction(data.userReaction ?? null);
       }
     } catch {
@@ -120,7 +140,7 @@ export default function SchefterReactionBar({
     } finally {
       setLoading(false);
     }
-  }, [postId, reactions, userReaction, isAuthenticated, loading]);
+  }, [postId, reactions, userReaction, isAuthenticated, loading, mergeWithBase]);
 
   const likeCount = reactions[LIKE_EMOJI] ?? 0;
   const isLiked = userReaction === LIKE_EMOJI;

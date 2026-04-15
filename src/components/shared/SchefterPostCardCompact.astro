@@ -83,6 +83,7 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
         client:visible
         postId={post.id}
         isAuthenticated={isAuthenticated}
+        {...(isGroupMe && gmMeta && gmMeta.likeCount > 0 ? { baseReactions: { '❤️': gmMeta.likeCount } } : {})}
       />
     </div>
   </div>

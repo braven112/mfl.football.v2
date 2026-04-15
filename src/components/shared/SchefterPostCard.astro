@@ -70,6 +70,7 @@ const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-po
             client:visible
             postId={post.id}
             isAuthenticated={isAuthenticated}
+            {...(gmMeta && gmMeta.likeCount > 0 ? { baseReactions: { '❤️': gmMeta.likeCount } } : {})}
           />
         </div>
       </>
