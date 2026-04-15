@@ -71,6 +71,12 @@ export const POST: APIRoute = async () => {
     });
   } catch (err) {
     console.error('[groupme/sync] Error:', err);
-    return json({ error: 'Sync failed', detail: String(err) }, 500);
+    return json({
+      error: 'Sync failed',
+      detail: String(err),
+      redisSource: process.env.UPSTASH_REDIS_REST_URL ? 'UPSTASH' : process.env.KV_REST_API_URL ? 'KV' : 'none',
+      upstashUrlPrefix: process.env.UPSTASH_REDIS_REST_URL?.substring(0, 40) ?? 'NOT SET',
+      kvUrlPrefix: process.env.KV_REST_API_URL?.substring(0, 40) ?? 'NOT SET',
+    }, 500);
   }
 };
