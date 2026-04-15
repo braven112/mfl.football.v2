@@ -515,14 +515,14 @@ if (heroState.phase === 'playoffs' && heroState.slot === 'standings') {
     border-radius: var(--radius-lg, 0.75rem);
   }
 
-  @media (max-width: 1024px) {
+  @container (max-width: 1024px) {
     .hp2 {
       grid-template-columns: 1fr 320px;
       gap: 1rem;
     }
   }
 
-  @media (max-width: 880px) {
+  @container (max-width: 880px) {
     .hp2 {
       grid-template-columns: 1fr;
       gap: 1rem;
