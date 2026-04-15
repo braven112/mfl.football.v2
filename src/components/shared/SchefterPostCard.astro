@@ -19,6 +19,7 @@ import { formatRelativeTime } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
+import GroupMeReply from './GroupMeReply.tsx';
 
 interface Props {
   post: SchefterPost;
@@ -55,12 +56,22 @@ const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-po
     {isGroupMe ? (
       <>
         <div class="sf-post__body sf-post__body--groupme">{post.body}</div>
-        {gmMeta && gmMeta.likeCount > 0 && (
-          <div class="sf-post__groupme-likes">
-            <span class="sf-post__groupme-likes-icon" aria-hidden="true">&#x2764;</span>
-            <span>{gmMeta.likeCount}</span>
-          </div>
-        )}
+        <div class="sf-post__groupme-actions">
+          {gmMeta && gmMeta.likeCount > 0 && (
+            <div class="sf-post__groupme-likes">
+              <span class="sf-post__groupme-likes-icon" aria-hidden="true">&#x2764;</span>
+              <span>{gmMeta.likeCount}</span>
+            </div>
+          )}
+          {isAuthenticated && userTeamName && (
+            <GroupMeReply
+              client:visible
+              originalText={post.body ?? ''}
+              originalAuthor={gmMeta?.name ?? 'Unknown'}
+              teamName={userTeamName}
+            />
+          )}
+        </div>
       </>
     ) : (
       <>
