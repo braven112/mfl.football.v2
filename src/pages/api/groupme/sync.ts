@@ -53,20 +53,35 @@ export const POST: APIRoute = async () => {
       return normalizeGroupMeMessage(raw, franchiseId);
     });
 
-    const stored = await storeMessages(normalized);
+    let stored = 0;
+    let storeError: string | undefined;
+    try {
+      stored = await storeMessages(normalized);
+    } catch (err) {
+      storeError = String(err);
+      console.error('[groupme/sync] storeMessages error:', err);
+    }
 
     // Update watermark to the newest message ID
     const newest = sorted[sorted.length - 1];
-    if (newest) {
-      await setLastMessageId(newest.id);
+    let watermarkError: string | undefined;
+    try {
+      if (newest) {
+        await setLastMessageId(newest.id);
+      }
+      await setLastSyncTs();
+    } catch (err) {
+      watermarkError = String(err);
+      console.error('[groupme/sync] watermark/ts error:', err);
     }
-
-    await setLastSyncTs();
 
     return json({
       synced: stored,
+      fetched: normalized.length,
       newest: newest?.id,
       oldestProcessed: sorted[0]?.id,
+      ...(storeError && { storeError }),
+      ...(watermarkError && { watermarkError }),
     });
   } catch (err) {
     console.error('[groupme/sync] Error:', err);
