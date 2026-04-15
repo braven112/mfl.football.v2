@@ -63,27 +63,26 @@ async function getRedis(): Promise<RedisClient | null> {
 /** Store messages in the sorted set, scored by createdAt timestamp */
 export async function storeMessages(messages: GroupMeMessage[]): Promise<number> {
   const redis = await getRedis();
-  if (!redis || messages.length === 0) return 0;
-
-  try {
-    let stored = 0;
-    for (const msg of messages) {
-      // Score is createdAt in milliseconds for precise ordering
-      await redis.zadd(KEYS.messages, { score: msg.createdAt * 1000, member: JSON.stringify(msg) });
-      stored++;
-    }
-
-    // Trim to keep only the most recent MAX_MESSAGES
-    const count = await redis.zcard(KEYS.messages);
-    if (count > MAX_MESSAGES) {
-      await redis.zremrangebyrank(KEYS.messages, 0, count - MAX_MESSAGES - 1);
-    }
-
-    return stored;
-  } catch (err) {
-    console.error('[groupme-storage] Failed to store messages:', err);
-    return 0;
+  if (messages.length === 0) return 0;
+  if (!redis) {
+    console.error('[groupme-storage] Redis not available for storeMessages');
+    return -1; // Distinguish "no redis" from "no messages"
   }
+
+  let stored = 0;
+  for (const msg of messages) {
+    // Score is createdAt in milliseconds for precise ordering
+    await redis.zadd(KEYS.messages, { score: msg.createdAt * 1000, member: JSON.stringify(msg) });
+    stored++;
+  }
+
+  // Trim to keep only the most recent MAX_MESSAGES
+  const count = await redis.zcard(KEYS.messages);
+  if (count > MAX_MESSAGES) {
+    await redis.zremrangebyrank(KEYS.messages, 0, count - MAX_MESSAGES - 1);
+  }
+
+  return stored;
 }
 
 /** Get recent messages, newest first */
