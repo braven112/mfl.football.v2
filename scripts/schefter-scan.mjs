@@ -392,6 +392,155 @@ async function generateBreakingCommentary(post, raw) {
   }
 }
 
+// ── GroupMe Sync ──
+// Fetches messages from GroupMe API and stores them in Upstash Redis.
+// Uses raw HTTP to the Upstash REST API (no SDK needed in GHA).
+
+const GROUPME_FRANCHISE_MAP = {
+  '84883733': '0001',  // Pacific Pigskins (Brandon)
+  '16291586': '0002',  // Da Dangsters (DDang)
+  '40592442': '0003',  // Maverick
+  '84975567': '0004',  // Dead Cap Walking (JoBu)
+  '7252038':  '0005',  // The Mariachi Ninjas (Junior)
+  '84966064': '0006',  // Music City Mafia (James)
+  '121438191': '0007', // Fire Ready Aim (Jim Kubek)
+  '84969747': '0008',  // Bring The Pain (Todd)
+  '54045522': '0009',  // Wascawy Wabbits (Nick)
+  '22601344': '0010',  // Computer Jocks (Jomar)
+  '10114594': '0011',  // Midwestside Connection (Nate)
+  '84947761': '0012',  // Vitside Mafia
+  '37386080': '0013',  // Gridiron Geeks (Bob)
+  '84947778': '0014',  // Cowboy Up (Ross)
+  '49905080': '0014',  // Cowboy Up (Shawn) — co-owner
+  '89377289': '0015',  // Dark Magicians of Chaos (Dan)
+  '84961628': '0016',  // Running down the Dream (Kevin)
+};
+
+/** Send a command to Upstash Redis REST API */
+async function redisCommand(redisUrl, redisToken, args) {
+  const res = await fetch(redisUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${redisToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Redis ${args[0]} failed (${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  return data.result;
+}
+
+/** Normalize a raw GroupMe API message for Redis storage */
+function normalizeGroupMeMessage(raw) {
+  return {
+    id: raw.id,
+    groupId: raw.group_id,
+    userId: raw.user_id,
+    name: raw.name,
+    text: raw.text ?? '',
+    avatarUrl: raw.avatar_url,
+    createdAt: raw.created_at,
+    senderType: raw.sender_type,
+    franchiseId: GROUPME_FRANCHISE_MAP[raw.user_id],
+    likeCount: raw.favorited_by?.length ?? 0,
+    attachments: (raw.attachments ?? [])
+      .filter(a => a.type === 'image')
+      .map(a => ({ type: a.type, url: a.url })),
+  };
+}
+
+async function syncGroupMe() {
+  console.log('\n📱 GroupMe Sync');
+
+  const groupMeToken = process.env.GROUPME_SERVICE_TOKEN;
+  const groupId = process.env.GROUPME_GROUP_ID;
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+  if (!groupMeToken || !groupId) {
+    console.log('  Skipped — GROUPME_SERVICE_TOKEN or GROUPME_GROUP_ID not set');
+    return;
+  }
+  if (!redisUrl || !redisToken) {
+    console.log('  Skipped — Upstash Redis not configured');
+    return;
+  }
+
+  const redis = (args) => redisCommand(redisUrl, redisToken, args);
+
+  try {
+    // Get the watermark — last synced message ID
+    const lastId = await redis(['GET', 'groupme:last_message_id']);
+
+    // Fetch messages from GroupMe API
+    const url = new URL(`https://api.groupme.com/v3/groups/${groupId}/messages`);
+    url.searchParams.set('token', groupMeToken);
+    url.searchParams.set('limit', '100');
+    if (lastId) url.searchParams.set('since_id', lastId);
+
+    const res = await fetch(url.toString());
+
+    if (res.status === 304) {
+      console.log('  No new messages');
+      await redis(['SET', 'groupme:last_sync_ts', String(Date.now())]);
+      return;
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`GroupMe API returned ${res.status}: ${text}`);
+    }
+
+    const data = await res.json();
+    const rawMessages = data.response?.messages ?? [];
+
+    if (rawMessages.length === 0) {
+      console.log('  No new messages');
+      await redis(['SET', 'groupme:last_sync_ts', String(Date.now())]);
+      return;
+    }
+
+    // Sort oldest-first for processing
+    const sorted = [...rawMessages].sort((a, b) => a.created_at - b.created_at);
+
+    // Seed franchise mappings into Redis
+    for (const [gmUserId, franchiseId] of Object.entries(GROUPME_FRANCHISE_MAP)) {
+      await redis(['SET', `groupme:user:${gmUserId}`, franchiseId]);
+      await redis(['SET', `groupme:franchise:${franchiseId}`, gmUserId]);
+      await redis(['SET', `groupme:connected:${franchiseId}`, '1']);
+    }
+
+    // Normalize and store each message in the sorted set
+    let stored = 0;
+    for (const raw of sorted) {
+      const msg = normalizeGroupMeMessage(raw);
+      const score = msg.createdAt * 1000; // ms for precise ordering
+      await redis(['ZADD', 'groupme:messages', score, JSON.stringify(msg)]);
+      stored++;
+    }
+
+    // Trim to keep only the most recent 500 messages
+    const count = await redis(['ZCARD', 'groupme:messages']);
+    if (count > 500) {
+      await redis(['ZREMRANGEBYRANK', 'groupme:messages', 0, count - 501]);
+    }
+
+    // Update watermark to newest message ID
+    const newest = sorted[sorted.length - 1];
+    if (newest) {
+      await redis(['SET', 'groupme:last_message_id', newest.id]);
+    }
+
+    await redis(['SET', 'groupme:last_sync_ts', String(Date.now())]);
+    console.log(`  Synced ${stored} messages (newest: ${newest?.id})`);
+  } catch (err) {
+    console.error(`  GroupMe sync error: ${err.message}`);
+  }
+}
+
 // ── GroupMe Bot ──
 
 async function postToGroupMe(text) {
@@ -1488,6 +1637,13 @@ for (const league of LEAGUES) {
   } catch (err) {
     console.error(`  Error scanning ${league.slug}:`, err.message);
   }
+}
+
+// Sync GroupMe messages to Redis (TheLeague only, runs once)
+try {
+  await syncGroupMe();
+} catch (err) {
+  console.error(`  GroupMe sync error: ${err.message}`);
 }
 
 console.log(`\n✅ Done. Generated ${totalPosts} new posts.`);
