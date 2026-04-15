@@ -67,6 +67,7 @@ export const POST: APIRoute = async () => {
       synced: stored,
       newest: newest?.id,
       oldestProcessed: sorted[0]?.id,
+      redisSource: process.env.UPSTASH_REDIS_REST_URL ? 'UPSTASH' : process.env.KV_REST_API_URL ? 'KV' : 'none',
     });
   } catch (err) {
     console.error('[groupme/sync] Error:', err);
