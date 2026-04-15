@@ -27,9 +27,11 @@ interface Props {
   userTeamName?: string;
   userTeamIcon?: string;
   now?: Date;
+  /** Server-resolved reactions (avoids per-post client fetch) */
+  reactions?: { reactions: Record<string, number>; userReaction: string | null };
 }
 
-const { post, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, now } = Astro.props;
+const { post, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, now, reactions } = Astro.props;
 const relTime = formatRelativeTime(post.timestamp, now);
 const isGroupMe = post.type === 'groupme';
 const gmMeta = isGroupMe ? (post as SchefterPost & { _groupMe: GroupMePostMeta })._groupMe : null;
@@ -70,6 +72,8 @@ const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-po
             client:visible
             postId={post.id}
             isAuthenticated={isAuthenticated}
+            initialReactions={reactions?.reactions}
+            initialUserReaction={reactions?.userReaction}
             {...(gmMeta && gmMeta.likeCount > 0 ? { baseReactions: { '❤️': gmMeta.likeCount } } : {})}
           />
         </div>
@@ -126,6 +130,8 @@ const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-po
             client:visible
             postId={post.id}
             isAuthenticated={isAuthenticated}
+            initialReactions={reactions?.reactions}
+            initialUserReaction={reactions?.userReaction}
           />
         </div>
       </>

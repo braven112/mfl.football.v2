@@ -18,7 +18,6 @@ import {
   setLastSyncTs,
   getFranchiseIdFromMap,
   seedFranchiseMappings,
-  debugRedisStatus,
 } from '../../../utils/groupme-storage';
 
 function json(data: unknown, status = 200): Response {
@@ -54,38 +53,20 @@ export const POST: APIRoute = async () => {
       return normalizeGroupMeMessage(raw, franchiseId);
     });
 
-    let stored = 0;
-    let storeError: string | undefined;
-    try {
-      stored = await storeMessages(normalized);
-    } catch (err) {
-      storeError = String(err);
-      console.error('[groupme/sync] storeMessages error:', err);
-    }
+    const stored = await storeMessages(normalized);
 
     // Update watermark to the newest message ID
     const newest = sorted[sorted.length - 1];
-    let watermarkError: string | undefined;
-    try {
-      if (newest) {
-        await setLastMessageId(newest.id);
-      }
-      await setLastSyncTs();
-    } catch (err) {
-      watermarkError = String(err);
-      console.error('[groupme/sync] watermark/ts error:', err);
+    if (newest) {
+      await setLastMessageId(newest.id);
     }
 
-    const redisStatus = await debugRedisStatus();
+    await setLastSyncTs();
 
     return json({
       synced: stored,
-      fetched: normalized.length,
       newest: newest?.id,
       oldestProcessed: sorted[0]?.id,
-      redis: redisStatus,
-      ...(storeError && { storeError }),
-      ...(watermarkError && { watermarkError }),
     });
   } catch (err) {
     console.error('[groupme/sync] Error:', err);

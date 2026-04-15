@@ -10,6 +10,8 @@
  * the "Load more" button in batches of PAGE_SIZE.
  */
 import type { SchefterPost } from '../../types/schefter';
+import type { SchefterReactionResponse } from '../../types/schefter';
+import { getBatchReactions } from '../../utils/schefter-reactions';
 import SchefterPostCard from './SchefterPostCard.astro';
 
 interface Props {
@@ -24,6 +26,10 @@ interface Props {
 
 const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, initialLimit = 25 } = Astro.props;
 const now = new Date();
+
+// Batch-fetch all reactions server-side (1 Redis pipeline call instead of N client fetches)
+const postIds = posts.map(p => p.id);
+const allReactions = await getBatchReactions(postIds, userFranchiseId);
 ---
 
 <div class="sf-feed sf-feed--page" data-initial-limit={initialLimit}>
@@ -42,6 +48,7 @@ const now = new Date();
           userTeamName={userTeamName}
           userTeamIcon={userTeamIcon}
           now={now}
+          reactions={allReactions[post.id]}
         />
       </div>
     ))

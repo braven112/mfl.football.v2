@@ -13,11 +13,17 @@ import type { SchefterReactionMap, SchefterReactionResponse } from '../types/sch
 
 const KEY_PREFIX = 'schefter:reactions:';
 
+type PipelineClient = {
+  hgetall: (key: string) => void;
+  exec: <T>() => Promise<T>;
+};
+
 type RedisClient = {
   hget: <T>(key: string, field: string) => Promise<T | null>;
   hgetall: <T>(key: string) => Promise<Record<string, T> | null>;
   hset: (key: string, fieldValues: Record<string, unknown>) => Promise<number>;
   hdel: (key: string, ...fields: string[]) => Promise<number>;
+  pipeline: () => PipelineClient;
 };
 
 let _redis: RedisClient | null | undefined;
@@ -101,6 +107,65 @@ export async function getReactionMap(postId: string): Promise<SchefterReactionMa
     console.error('[schefter-reactions] Read error:', err);
     return {};
   }
+}
+
+/**
+ * Batch-fetch reactions for multiple posts in one Redis round-trip.
+ * Returns a map of postId → { reactions, userReaction }.
+ */
+export async function getBatchReactions(
+  postIds: string[],
+  userFranchiseId?: string,
+): Promise<Record<string, SchefterReactionResponse>> {
+  const result: Record<string, SchefterReactionResponse> = {};
+  if (postIds.length === 0) return result;
+
+  const redis = await getRedis();
+  if (!redis) {
+    for (const id of postIds) result[id] = { reactions: {}, userReaction: null };
+    return result;
+  }
+
+  try {
+    // Use pipeline to batch all hgetall calls into one round-trip
+    const pipeline = (redis as unknown as { pipeline: () => PipelineClient }).pipeline();
+    for (const postId of postIds) {
+      pipeline.hgetall(KEY_PREFIX + postId);
+    }
+    const results = await pipeline.exec<(Record<string, string[]> | null)[]>();
+
+    for (let i = 0; i < postIds.length; i++) {
+      const postId = postIds[i];
+      const all = results[i];
+
+      if (!all || Object.keys(all).length === 0) {
+        result[postId] = { reactions: {}, userReaction: null };
+        continue;
+      }
+
+      const reactions: Record<string, number> = {};
+      let userReaction: string | null = null;
+
+      for (const [emoji, franchiseIds] of Object.entries(all)) {
+        const ids = Array.isArray(franchiseIds) ? franchiseIds : [];
+        if (ids.length > 0) {
+          reactions[emoji] = ids.length;
+          if (userFranchiseId && ids.includes(userFranchiseId)) {
+            userReaction = emoji;
+          }
+        }
+      }
+
+      result[postId] = { reactions, userReaction };
+    }
+  } catch (err) {
+    console.error('[schefter-reactions] Batch read error:', err);
+    for (const id of postIds) {
+      if (!result[id]) result[id] = { reactions: {}, userReaction: null };
+    }
+  }
+
+  return result;
 }
 
 /**
