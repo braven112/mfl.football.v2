@@ -392,6 +392,23 @@ async function generateBreakingCommentary(post, raw) {
   }
 }
 
+// ── GroupMe Bot ──
+
+async function postToGroupMe(text) {
+  const botId = process.env.GROUPME_ROGER_BOT_ID;
+  if (!botId) return;
+  try {
+    await fetch('https://api.groupme.com/v3/bots/post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bot_id: botId, text }),
+    });
+    console.log('  [GroupMe] Posted');
+  } catch (err) {
+    console.log(`  [GroupMe] Failed: ${err.message}`);
+  }
+}
+
 // ── MFL API ──
 
 async function fetchTransactions(leagueId, year) {
@@ -799,6 +816,12 @@ async function scanEventReminders(league) {
   feed.posts = [...newPosts.reverse(), ...feed.posts];
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} reminder posts. Feed total: ${feed.posts.length}`);
+
+  // Send Ask Roger reminders to GroupMe
+  for (const post of newPosts) {
+    const text = `${post.headline}\n\n${post.body}\n\nhttps://www.theleague.us/calendar`;
+    await postToGroupMe(text);
+  }
   return newPosts.length;
 }
 
