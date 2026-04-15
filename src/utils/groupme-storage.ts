@@ -42,7 +42,11 @@ let _redis: RedisClient | null | undefined;
 async function getRedis(): Promise<RedisClient | null> {
   if (_redis !== undefined) return _redis;
 
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL;
+  // Log which Redis source is being used (debug — remove after confirming new Upstash works)
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const kvUrl = process.env.KV_REST_API_URL;
+  console.log(`[groupme-storage] Redis: UPSTASH=${!!upstashUrl} (${upstashUrl?.substring(0, 30) ?? 'none'}), KV=${!!kvUrl} (${kvUrl?.substring(0, 30) ?? 'none'})`);
+  const url = upstashUrl || kvUrl || process.env.STORAGE_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN;
   if (!url || !token) {
     _redis = null;
