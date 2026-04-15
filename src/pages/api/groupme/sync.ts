@@ -18,6 +18,7 @@ import {
   setLastSyncTs,
   getFranchiseIdFromMap,
   seedFranchiseMappings,
+  debugRedisStatus,
 } from '../../../utils/groupme-storage';
 
 function json(data: unknown, status = 200): Response {
@@ -75,11 +76,14 @@ export const POST: APIRoute = async () => {
       console.error('[groupme/sync] watermark/ts error:', err);
     }
 
+    const redisStatus = await debugRedisStatus();
+
     return json({
       synced: stored,
       fetched: normalized.length,
       newest: newest?.id,
       oldestProcessed: sorted[0]?.id,
+      redis: redisStatus,
       ...(storeError && { storeError }),
       ...(watermarkError && { watermarkError }),
     });
