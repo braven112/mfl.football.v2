@@ -34,6 +34,7 @@ jobs:
         env:
           MFL_HOST: ${{ vars.MFL_HOST }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
         run: node scripts/schefter-scan.mjs
 
       - name: Commit and push feed updates
