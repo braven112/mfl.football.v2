@@ -17,6 +17,7 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
+import GroupMeChatPanel from '../../components/shared/GroupMeChatPanel.tsx';
 import { getAuthUser } from '../../utils/auth';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../../types/schefter';
 import type { SchefterPost } from '../../types/schefter';
@@ -169,6 +170,15 @@ const tabs = [
           </a>
         ))}
       </nav>
+
+      {/* GroupMe compose bar — shown on the Group Chat tab for authenticated users */}
+      {activeSource === 'groupme' && isAuthenticated && userFranchiseId && (
+        <GroupMeChatPanel
+          client:visible
+          teamName={userTeamName ?? 'My Team'}
+          teamIcon={userTeamIcon ?? ''}
+        />
+      )}
 
       <div data-feed-container>
         <SchefterFeed

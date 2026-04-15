@@ -640,17 +640,12 @@
 
 /* ── GroupMe Messages ── */
 
-.sf-post--groupme {
-  border-left: 3px solid var(--color-groupme, #00aff0);
-}
-
 .sf-avatar--groupme {
   border-radius: 50%;
-  border: 2px solid var(--color-groupme, #00aff0);
 }
 
 .sf-post__handle--groupme {
-  color: var(--color-groupme, #00aff0);
+  color: var(--color-gray-400, #9ca3af);
   font-size: 0.6875rem;
 }
 
@@ -659,13 +654,19 @@
   word-break: break-word;
 }
 
+.sf-post__groupme-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.375rem;
+}
+
 .sf-post__groupme-likes {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
   color: var(--color-gray-400, #9ca3af);
-  margin-top: 0.375rem;
 }
 
 .sf-post__groupme-likes-icon {
