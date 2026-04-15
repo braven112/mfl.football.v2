@@ -539,8 +539,8 @@
   line-height: 1;
 }
 
-/* X/Twitter link in compact view */
-.sfc-post__x-link {
+/* Embed link in compact view */
+.sfc-post__embed-link {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -550,8 +550,20 @@
   text-decoration: none;
 }
 
-.sfc-post__x-link:hover {
+.sfc-post__embed-link:hover {
   color: var(--color-gray-700, #374151);
+}
+
+.sfc-post__embed-domain {
+  font-weight: 500;
+}
+
+.sfc-post__embed-sep {
+  color: var(--color-gray-300, #d1d5db);
+}
+
+.sfc-post__embed-cta {
+  color: var(--sf-link-color, var(--color-primary, #1c497c));
 }
 
 /* ── GroupMe Compose Bar ── */

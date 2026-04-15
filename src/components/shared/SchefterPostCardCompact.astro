@@ -45,12 +45,35 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
 
 // GroupMe rich content
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
-const xPostRegex = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
 const gmBodyText = isGroupMe ? (post.body ?? '') : '';
+
+const xPostRegex = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
+const instaRegex = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv)\/[\w-]+\S*/gi;
+const genericUrlRegex = /https?:\/\/\S+/gi;
+
 const xPostMatches = isGroupMe ? [...gmBodyText.matchAll(xPostRegex)] : [];
-const gmDisplayBody = isGroupMe && xPostMatches.length > 0
-  ? gmBodyText.replace(xPostRegex, '').trim()
-  : gmBodyText;
+const instaMatches = isGroupMe ? [...gmBodyText.matchAll(instaRegex)] : [];
+const specialUrls = new Set([...xPostMatches.map(m => m[0]), ...instaMatches.map(m => m[0])]);
+const allUrls = isGroupMe ? [...gmBodyText.matchAll(genericUrlRegex)] : [];
+const genericUrls = allUrls.map(m => m[0]).filter(url => !specialUrls.has(url)).map(url => url.replace(/[).,;:!?]+$/, ''));
+
+const allUrlsToStrip = [...specialUrls, ...genericUrls];
+let gmDisplayBody = gmBodyText;
+for (const url of allUrlsToStrip) { gmDisplayBody = gmDisplayBody.replace(url, ''); }
+gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
+
+// Pick the first embed to show in compact view
+const firstEmbedUrl = xPostMatches[0]?.[0]?.replace(/https?:\/\/twitter\.com/, 'https://x.com')
+  ?? instaMatches[0]?.[0]
+  ?? genericUrls[0]
+  ?? null;
+let firstEmbedLabel = '';
+let firstEmbedDomain = '';
+if (firstEmbedUrl) {
+  if (xPostMatches.length > 0) { firstEmbedLabel = 'View on X'; firstEmbedDomain = 'x.com'; }
+  else if (instaMatches.length > 0) { firstEmbedLabel = 'View on Instagram'; firstEmbedDomain = 'instagram.com'; }
+  else { try { firstEmbedDomain = new URL(firstEmbedUrl).hostname.replace(/^www\./, ''); } catch { firstEmbedDomain = ''; } firstEmbedLabel = 'Open link'; }
+}
 ---
 
 <article class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
@@ -78,15 +101,11 @@ const gmDisplayBody = isGroupMe && xPostMatches.length > 0
             )}
           </div>
         )}
-        {xPostMatches.length > 0 && (
-          <a
-            href={xPostMatches[0][0].replace(/https?:\/\/twitter\.com/, 'https://x.com')}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="sfc-post__x-link"
-          >
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            View on X
+        {firstEmbedUrl && (
+          <a href={firstEmbedUrl} target="_blank" rel="noopener noreferrer" class="sfc-post__embed-link">
+            <span class="sfc-post__embed-domain">{firstEmbedDomain}</span>
+            <span class="sfc-post__embed-sep">·</span>
+            <span class="sfc-post__embed-cta">{firstEmbedLabel}</span>
           </a>
         )}
       </>

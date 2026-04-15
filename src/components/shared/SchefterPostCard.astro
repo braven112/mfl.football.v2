@@ -43,15 +43,39 @@ const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
 const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}`;
 
-// GroupMe rich content: images from attachments, X/Twitter URLs from body
+// GroupMe rich content: images from attachments, embedded URLs from body
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
-const xPostRegex = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
 const gmBodyText = isGroupMe ? (post.body ?? '') : '';
+
+// Detect special URLs
+const xPostRegex = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
+const instaRegex = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv)\/[\w-]+\S*/gi;
+const genericUrlRegex = /https?:\/\/\S+/gi;
+
 const xPostMatches = isGroupMe ? [...gmBodyText.matchAll(xPostRegex)] : [];
-// Strip X/Twitter URLs from displayed body text so they render as embeds instead
-const gmDisplayBody = isGroupMe && xPostMatches.length > 0
-  ? gmBodyText.replace(xPostRegex, '').trim()
-  : gmBodyText;
+const instaMatches = isGroupMe ? [...gmBodyText.matchAll(instaRegex)] : [];
+
+// Collect all special URLs to strip from body
+const specialUrls = new Set([
+  ...xPostMatches.map(m => m[0]),
+  ...instaMatches.map(m => m[0]),
+]);
+
+// Find generic URLs (not X/Twitter or Instagram) to render as link cards
+const allUrls = isGroupMe ? [...gmBodyText.matchAll(genericUrlRegex)] : [];
+const genericUrls = allUrls
+  .map(m => m[0])
+  .filter(url => !specialUrls.has(url))
+  // Clean trailing punctuation that's likely not part of the URL
+  .map(url => url.replace(/[).,;:!?]+$/, ''));
+
+// Strip all detected URLs from displayed body text
+const allUrlsToStrip = [...specialUrls, ...genericUrls];
+let gmDisplayBody = gmBodyText;
+for (const url of allUrlsToStrip) {
+  gmDisplayBody = gmDisplayBody.replace(url, '');
+}
+gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 ---
 
 <article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
@@ -85,15 +109,54 @@ const gmDisplayBody = isGroupMe && xPostMatches.length > 0
         {xPostMatches.map(match => {
           const tweetUrl = match[0].replace(/https?:\/\/twitter\.com/, 'https://x.com');
           const username = match[1];
-          const tweetId = match[2];
           return (
-            <div class="sf-post__x-embed" data-tweet-url={tweetUrl} data-tweet-id={tweetId}>
-              <a href={tweetUrl} target="_blank" rel="noopener noreferrer" class="sf-post__x-embed-link">
-                <div class="sf-post__x-embed-header">
-                  <svg class="sf-post__x-logo" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                  <span class="sf-post__x-username">@{username}</span>
+            <div class="sf-post__embed-card sf-post__embed-card--x">
+              <a href={tweetUrl} target="_blank" rel="noopener noreferrer" class="sf-post__embed-link">
+                <div class="sf-post__embed-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 </div>
-                <span class="sf-post__x-cta">View on X</span>
+                <div class="sf-post__embed-info">
+                  <span class="sf-post__embed-domain">@{username}</span>
+                  <span class="sf-post__embed-cta">View on X</span>
+                </div>
+              </a>
+            </div>
+          );
+        })}
+
+        {/* Instagram embeds */}
+        {instaMatches.map(match => {
+          const instaUrl = match[0];
+          const isReel = instaUrl.includes('/reel/');
+          return (
+            <div class="sf-post__embed-card sf-post__embed-card--instagram">
+              <a href={instaUrl} target="_blank" rel="noopener noreferrer" class="sf-post__embed-link">
+                <div class="sf-post__embed-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </div>
+                <div class="sf-post__embed-info">
+                  <span class="sf-post__embed-domain">Instagram</span>
+                  <span class="sf-post__embed-cta">{isReel ? 'View Reel' : 'View Post'}</span>
+                </div>
+              </a>
+            </div>
+          );
+        })}
+
+        {/* Generic link cards */}
+        {genericUrls.map(url => {
+          let domain: string;
+          try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch { domain = url; }
+          return (
+            <div class="sf-post__embed-card">
+              <a href={url} target="_blank" rel="noopener noreferrer" class="sf-post__embed-link">
+                <div class="sf-post__embed-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                </div>
+                <div class="sf-post__embed-info">
+                  <span class="sf-post__embed-domain">{domain}</span>
+                  <span class="sf-post__embed-cta">Open link</span>
+                </div>
               </a>
             </div>
           );
