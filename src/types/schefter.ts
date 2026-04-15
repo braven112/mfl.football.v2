@@ -140,6 +140,14 @@ export const SCHEFTER_AUTHORS: Record<string, SchefterAuthor> = {
     avatar: 'vegas-vic-avatar.webp',
     bio: 'Weekly lines, spreads, and over/unders for every NFL matchup. Not financial advice. Okay, maybe a little.',
   },
+  'nfl-insider': {
+    id: 'nfl-insider',
+    name: 'NFL Insider',
+    handle: '@NFLInsider',
+    avatar: 'nfl-insider-avatar.webp',
+    bio: 'Injury reports, betting lines, and the intel that moves lineups. If it affects your start/sit decision, it\'s here.',
+    external: true,
+  },
 };
 
 /** Resolve an authorId to its author config, defaulting to Claude */

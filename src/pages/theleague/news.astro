@@ -6,9 +6,11 @@
  * with real NFL news from ESPN's Adam Schefter.
  *
  * Filters:
- *   ?source=claude   — League news only (shows Claude Schefter profile)
- *   ?source=nfl      — NFL news only (shows Adam Schefter profile)
- *   (default)        — All sources, mixed timeline
+ *   ?source=theleague — League news + events (Claude Schefter + Ask Roger)
+ *   ?source=nfl       — NFL news + wire (ESPN authors + wire posts)
+ *   ?source=draft     — NFL Draft coverage
+ *   ?source=insider   — Injuries + odds (Doc Rivers + Vegas Vic)
+ *   (default)         — All sources, mixed timeline
  */
 export const prerender = false;
 
@@ -42,80 +44,82 @@ if (userFranchiseId) {
   } catch { /* fallback gracefully */ }
 }
 
-// Source filter via ?source=claude|nfl|events|wire|draft|injuries|odds
+// Source filter via ?source=theleague|nfl|draft|insider
+// Legacy aliases: claude/events → theleague, wire → nfl, injuries/odds → insider
 const sourceParam = Astro.url.searchParams.get('source');
-const validSources = ['claude', 'nfl', 'events', 'wire', 'draft', 'injuries', 'odds'] as const;
+const legacyAliases: Record<string, string> = {
+  claude: 'theleague', events: 'theleague',
+  wire: 'nfl',
+  injuries: 'insider', odds: 'insider',
+};
+const resolvedSource = legacyAliases[sourceParam ?? ''] ?? sourceParam;
+const validSources = ['theleague', 'nfl', 'draft', 'insider'] as const;
 type SourceFilter = typeof validSources[number];
-const activeSource: SourceFilter | null = validSources.includes(sourceParam as SourceFilter)
-  ? (sourceParam as SourceFilter)
+const activeSource: SourceFilter | null = validSources.includes(resolvedSource as SourceFilter)
+  ? (resolvedSource as SourceFilter)
   : null;
 
-// ESPN external authors (excluding wire/draft personas which have their own tabs)
-const wireAuthorIds = new Set(['nfl-wire', 'nfl-draft']);
+// ESPN external authors (excluding draft + insider personas which have their own tabs)
+const draftAuthorIds = new Set(['nfl-draft']);
+const insiderAuthorIds = new Set(['doc-rivers', 'vegas-vic']);
+const nflExcludeIds = new Set([...draftAuthorIds, ...insiderAuthorIds]);
 const espnAuthorIds = new Set(
-  Object.values(SCHEFTER_AUTHORS).filter(a => a.external && !wireAuthorIds.has(a.id)).map(a => a.id)
+  Object.values(SCHEFTER_AUTHORS).filter(a => a.external && !nflExcludeIds.has(a.id)).map(a => a.id)
 );
 
 // Filter posts by source
 const filteredPosts = (() => {
   if (!activeSource) return feed.posts;
-  if (activeSource === 'claude') return feed.posts.filter(p => (p.authorId ?? 'claude') === 'claude');
-  if (activeSource === 'nfl') return feed.posts.filter(p => espnAuthorIds.has(p.authorId ?? '') && !p.id.startsWith('wire_'));
-  if (activeSource === 'events') return feed.posts.filter(p => (p.authorId ?? '') === 'roger');
-  if (activeSource === 'wire') return feed.posts.filter(p => p.id.startsWith('wire_') && p.authorId !== 'nfl-draft');
-  if (activeSource === 'draft') return feed.posts.filter(p => p.authorId === 'nfl-draft' || (p.id.startsWith('wire_') && p.authorId === 'nfl-draft'));
-  if (activeSource === 'injuries') return feed.posts.filter(p => p.authorId === 'doc-rivers');
-  if (activeSource === 'odds') return feed.posts.filter(p => p.authorId === 'vegas-vic');
+  if (activeSource === 'theleague') return feed.posts.filter(p => {
+    const authorId = p.authorId ?? 'claude';
+    return authorId === 'claude' || authorId === 'roger';
+  });
+  if (activeSource === 'nfl') return feed.posts.filter(p => {
+    const authorId = p.authorId ?? '';
+    return (espnAuthorIds.has(authorId) || p.id.startsWith('wire_')) && !draftAuthorIds.has(authorId);
+  });
+  if (activeSource === 'draft') return feed.posts.filter(p => p.authorId === 'nfl-draft');
+  if (activeSource === 'insider') return feed.posts.filter(p => insiderAuthorIds.has(p.authorId ?? ''));
   return feed.posts;
 })();
 
-// Show profile header when filtered to a single-author source
-const singleAuthorSources: Record<string, string> = {
-  claude: 'claude', events: 'roger', wire: 'nfl-wire', draft: 'nfl-draft',
-  injuries: 'doc-rivers', odds: 'vegas-vic',
+// Show profile header for each tab's persona
+const sourceAuthorMap: Record<string, string> = {
+  theleague: 'roger',
+  nfl: 'nfl-wire',
+  draft: 'nfl-draft',
+  insider: 'nfl-insider',
 };
-const profileAuthor = activeSource && singleAuthorSources[activeSource]
-  ? getAuthor(singleAuthorSources[activeSource])
-  : null;
+// Default to Claude Schefter for the "All" tab, otherwise use the source's persona
+const profileAuthorId = activeSource ? sourceAuthorMap[activeSource] : 'claude';
+const profileAuthor = profileAuthorId ? getAuthor(profileAuthorId) : null;
 const profileAvatar = profileAuthor ? getAuthorAvatar(profileAuthor) : null;
 
 // Build filter tab URLs
 const basePath = '/theleague/news';
 const tabs = [
   { label: 'All', href: basePath, active: !activeSource },
-  { label: 'League News', href: `${basePath}?source=claude`, active: activeSource === 'claude' },
-  { label: 'NFL Wire', href: `${basePath}?source=wire`, active: activeSource === 'wire' },
+  { label: 'The League', href: `${basePath}?source=theleague`, active: activeSource === 'theleague' },
+  { label: 'NFL', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' },
   { label: 'NFL Draft', href: `${basePath}?source=draft`, active: activeSource === 'draft' },
-  { label: 'NFL News', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' },
-  { label: 'Injuries', href: `${basePath}?source=injuries`, active: activeSource === 'injuries' },
-  { label: 'Odds', href: `${basePath}?source=odds`, active: activeSource === 'odds' },
-  { label: 'Events', href: `${basePath}?source=events`, active: activeSource === 'events' },
+  { label: 'NFL Insider', href: `${basePath}?source=insider`, active: activeSource === 'insider' },
 ];
 ---
 
 <TheLeagueLayout title="League News">
   <main class="sf-news-page">
     <div class="sf-news-card">
-      {/* Profile header — shown when filtered to a single source */}
-      {profileAuthor ? (
-        <div class="sf-page-header">
-          <div class="sf-page-header__persona">
-            <img class="sf-page-header__avatar" src={profileAvatar} alt="" aria-hidden="true" width="48" height="48" />
-            <div>
-              <h1 class="sf-page-header__name">{profileAuthor.name}</h1>
-              <div class="sf-page-header__handle">{profileAuthor.handle}</div>
-            </div>
+      {/* Profile header — every tab has a persona */}
+      <div class="sf-page-header">
+        <div class="sf-page-header__persona">
+          <img class="sf-page-header__avatar" src={profileAvatar} alt="" aria-hidden="true" width="48" height="48" />
+          <div>
+            <h1 class="sf-page-header__name">{profileAuthor!.name}</h1>
+            <div class="sf-page-header__handle">{profileAuthor!.handle}</div>
           </div>
-          <p class="sf-page-header__bio">{profileAuthor.bio}</p>
         </div>
-      ) : (
-        <div class="sf-page-header sf-page-header--feed">
-          <h1 class="sf-page-header__name">League News</h1>
-          <p class="sf-page-header__bio">
-            League transactions, breaking NFL news, and hot takes — all in one feed.
-          </p>
-        </div>
-      )}
+        <p class="sf-page-header__bio">{profileAuthor!.bio}</p>
+      </div>
 
       {/* Source filter tabs */}
       <nav class="sf-source-tabs" aria-label="Filter news by source">
