@@ -11,7 +11,6 @@ import { formatRelativeTime } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
-import GroupMeReply from './GroupMeReply.tsx';
 
 interface Props {
   post: SchefterPost;
@@ -69,41 +68,22 @@ const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : 
       </a>
     )}
 
-    {isGroupMe ? (
-      <div class="sfc-post__groupme-actions">
-        {gmMeta && gmMeta.likeCount > 0 && (
-          <div class="sfc-post__groupme-likes">
-            <span class="sfc-post__groupme-likes-icon" aria-hidden="true">&#x2764;</span>
-            <span>{gmMeta.likeCount}</span>
-          </div>
-        )}
-        {isAuthenticated && userTeamName && (
-          <GroupMeReply
-            client:visible
-            originalText={post.body ?? ''}
-            originalAuthor={gmMeta?.name ?? 'Unknown'}
-            teamName={userTeamName}
-          />
-        )}
-      </div>
-    ) : (
-      <div class="sfc-post__actions">
-        <SchefterReplyThread
-          client:idle
-          postId={post.id}
-          postHeadline={post.headline}
-          postAuthorId={post.authorId}
-          isAuthenticated={isAuthenticated}
-          userFranchiseId={userFranchiseId}
-          userTeamName={userTeamName}
-          userTeamIcon={userTeamIcon}
-        />
-        <SchefterReactionBar
-          client:visible
-          postId={post.id}
-          isAuthenticated={isAuthenticated}
-        />
-      </div>
-    )}
+    <div class="sfc-post__actions">
+      <SchefterReplyThread
+        client:idle
+        postId={post.id}
+        postHeadline={isGroupMe ? (gmMeta?.name ?? 'GroupMe') : post.headline}
+        postAuthorId={post.authorId}
+        isAuthenticated={isAuthenticated}
+        userFranchiseId={userFranchiseId}
+        userTeamName={userTeamName}
+        userTeamIcon={userTeamIcon}
+      />
+      <SchefterReactionBar
+        client:visible
+        postId={post.id}
+        isAuthenticated={isAuthenticated}
+      />
+    </div>
   </div>
 </article>
