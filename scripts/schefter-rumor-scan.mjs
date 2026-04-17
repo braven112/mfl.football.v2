@@ -36,6 +36,13 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { ingestGroupMeMentions, getLatestRogerQuote } from './schefter-groupme-listen.mjs';
 import { redactTradeOffer, offerPostProbability } from './lib/redact-trade-offer.mjs';
+import {
+  loadLore,
+  loadPostHistory,
+  buildRecentPostsPromptBlock,
+  appendPostHistory,
+  buildHistoryEntry,
+} from './lib/schefter-lore.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -419,7 +426,7 @@ Example D — named tier (escalatedPlayer.tier=named, name="Some Player", positi
 `;
 }
 
-async function generateAiBody(anonymized, { rogerQuote } = {}) {
+async function generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     warn('  [rumor-scan] ANTHROPIC_API_KEY not set — using template');
@@ -448,12 +455,23 @@ Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division riv
     system += '\n\n' + buildTradeOfferPlaybook({ includeBotWink });
   }
 
+  // Append lore (personality + league-lore + running-bits + salt-not-sugar
+  // directive) if it loaded successfully. When unavailable, we keep the
+  // legacy inline prompt above — scanner still runs.
+  if (lore && lore.ok && lore.assembledSuffix) {
+    system += lore.assembledSuffix;
+  }
+
   let rogerDirective = '';
   if (rogerQuote && typeof rogerQuote.text === 'string' && rogerQuote.text.trim()) {
     rogerDirective = `\n\nASK ROGER RIFF (mandatory this post — rare 7% cameo):\nAsk Roger said in the group chat today: "${rogerQuote.text.replace(/"/g, '\\"')}"\nRiff on this with light ribbing, ONE sentence max, work it into the post naturally. Do not quote Roger verbatim — paraphrase or react. Keep total length within the 2–4 sentence cap.`;
   }
 
-  const userMessage = `Synthesize these tips into ONE rumor-mill post. Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
+  const recentBlock = recentPostsBlock
+    ? `\n\n${recentPostsBlock}`
+    : '';
+
+  const userMessage = `Synthesize these tips into ONE rumor-mill post. Output plain text only — no JSON, no formatting, no headlines.${rogerDirective}${recentBlock}\n\nTIPS:\n${JSON.stringify(anonymized, null, 2)}`;
 
   if (DRY_RUN) {
     log('\n  [dry-run] Full LLM prompt that would be sent:');
@@ -799,6 +817,40 @@ async function scanTradeOffers({ redis, dryRun }) {
   return { tips, debug: debugLog };
 }
 
+// ── History subject heuristic ──
+
+/**
+ * Derive a short subject tag for post-history entries. Uses anonymized scope
+ * info so we never leak a franchise the LLM wasn't allowed to name.
+ */
+function deriveHistorySubject(batch, anonymized) {
+  const sources = new Set(batch.map((t) => t.source).filter(Boolean));
+  if (sources.has('trade_offer')) {
+    const hasNamed = anonymized.some((t) => t.escalatedPlayer?.tier === 'named');
+    return hasNamed ? 'trade-offer (named)' : 'trade-offer';
+  }
+  if (sources.has('groupme')) {
+    const authors = anonymized
+      .filter((t) => t.source === 'groupme' && t.author)
+      .map((t) => t.author);
+    if (authors.length > 0) return `groupme (${authors.slice(0, 2).join(', ')})`;
+    return 'groupme';
+  }
+  const divs = new Set(
+    anonymized
+      .map((t) => t.scope?.kind === 'division' ? t.scope.division : null)
+      .filter(Boolean),
+  );
+  if (divs.size === 1) return `division (${[...divs][0]})`;
+  const franchises = new Set(
+    anonymized
+      .map((t) => t.scope?.kind === 'franchise-multi-source' ? t.scope.franchise : null)
+      .filter(Boolean),
+  );
+  if (franchises.size === 1) return `franchise (${[...franchises][0]})`;
+  return 'web';
+}
+
 // ── Gate checks ──
 
 async function checkGates(redis, now) {
@@ -862,6 +914,13 @@ async function main() {
     warn('  Redis unavailable — exiting gracefully');
     return 0;
   }
+
+  // Load personality + lore + bits once per run. If any file fails we fall
+  // back to the legacy inline prompt inside generateAiBody.
+  const lore = await loadLore({ log, warn });
+  const history = await loadPostHistory({ log, warn });
+  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
+  log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
   // ── Phase 6: Trade-Offer Rumor source ──
   // Runs BEFORE the queue read so fresh redacted tips land in this cycle.
@@ -1027,8 +1086,9 @@ async function main() {
     log(`  [roger-riff] Dice roll failed — no riff this cycle`);
   }
 
-  // Generate post (AI receives Roger directive only if quote is available)
-  const aiBody = await generateAiBody(anonymized, { rogerQuote });
+  // Generate post (AI receives Roger directive only if quote is available,
+  // plus assembled lore suffix + recent-post memory when available)
+  const aiBody = await generateAiBody(anonymized, { rogerQuote, lore, recentPostsBlock });
   const body = aiBody || templateBody(anonymized);
   log(`  Post body (${aiBody ? 'AI' : 'template'})${hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
 
@@ -1071,6 +1131,21 @@ async function main() {
 
   // GroupMe
   await postToGroupMe(post.body);
+
+  // Append to rolling post history (best-effort — never crashes the run).
+  // Subject is a short tag derived from dominant tip source/scope.
+  const subject = deriveHistorySubject(batch, anonymized);
+  const tipSources = Array.from(new Set(batch.map((t) => t.source).filter(Boolean)));
+  await appendPostHistory(
+    buildHistoryEntry({
+      id: post.id,
+      timestamp: post.timestamp,
+      body: post.body,
+      subject,
+      tipSources,
+    }),
+    { log, warn },
+  );
 
   // Redis updates: increment counter (with TTL to midnight PT), last post ts,
   // drop marinate anchor, drain consumed tips, record processed for audit

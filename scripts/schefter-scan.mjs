@@ -16,9 +16,21 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadLore,
+  loadPostHistory,
+  buildRecentPostsPromptBlock,
+  appendPostHistory,
+  buildHistoryEntry,
+} from './lib/schefter-lore.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
+
+// Dry-run flag: when set, scripts assemble prompts and log what WOULD happen
+// but do NOT call the LLM, do NOT write to feed files, do NOT post to GroupMe,
+// and do NOT append to post-history.json.
+const DRY_RUN = process.argv.includes('--dry-run');
 
 // ── League configs ──
 
@@ -648,7 +660,7 @@ function generatePendingTradeTemplate(trade, players, teams) {
  * Call Claude (if key present) to tighten the rumor into Schefter voice.
  * Mirrors generateBreakingCommentary() pattern but with rumor-mill directives.
  */
-async function generatePendingTradeAiBody(templateBody, trade, players, teams) {
+async function generatePendingTradeAiBody(templateBody, trade, players, teams, { lore, recentPostsBlock } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
@@ -658,6 +670,30 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams) {
   const team2 = pickTeamDisplayName(t2) ?? `Team ${trade.franchise2}`;
   const { playerNames: gave1Players, pickNames: gave1Picks } = parseTradeAssets(trade.franchise1_gave_up, players, teams);
   const { playerNames: gave2Players, pickNames: gave2Picks } = parseTradeAssets(trade.franchise2_gave_up, players, teams);
+
+  let system = `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You've just heard a trade has landed on the commissioner's desk awaiting approval. Voice: breaking-news tease, "I'm told...", "League sources tell me...", "hearing...". 2-3 sentences. End with "Developing." or a similar tease. Reference both franchises by name and loosely name the key assets. Do NOT include a @Brandon tag — that will be appended separately. Never break character.`;
+
+  // Append personality + lore + bits when available. Falls back silently.
+  if (lore && lore.ok && lore.assembledSuffix) {
+    system += lore.assembledSuffix;
+  }
+
+  const recentBlock = recentPostsBlock ? `\n\n${recentPostsBlock}` : '';
+  const userContent =
+    `Trade pending commish approval:\n\n` +
+    `${team1} sends: ${[...gave1Players, ...gave1Picks].join(', ') || 'assets'}\n` +
+    `${team2} sends: ${[...gave2Players, ...gave2Picks].join(', ') || 'assets'}${recentBlock}\n\n` +
+    `Write a 2-3 sentence Schefter-voiced rumor-mill post teasing this pending deal. Plain text only, no JSON, no formatting.`;
+
+  if (DRY_RUN) {
+    console.log('  [dry-run] Would call LLM with pending-trade prompt:');
+    console.log('  ─── SYSTEM (first 400 chars) ───');
+    console.log('  ' + system.slice(0, 400).replace(/\n/g, '\n  '));
+    console.log(`  … (${system.length} chars total)`);
+    console.log('  ─── USER ───');
+    console.log(userContent.split('\n').map((l) => '  ' + l).join('\n'));
+    return null;
+  }
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -670,13 +706,8 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 220,
-        system: `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You've just heard a trade has landed on the commissioner's desk awaiting approval. Voice: breaking-news tease, "I'm told...", "League sources tell me...", "hearing...". 2-3 sentences. End with "Developing." or a similar tease. Reference both franchises by name and loosely name the key assets. Do NOT include a @Brandon tag — that will be appended separately. Never break character.`,
-        messages: [
-          {
-            role: 'user',
-            content: `Trade pending commish approval:\n\n${team1} sends: ${[...gave1Players, ...gave1Picks].join(', ') || 'assets'}\n${team2} sends: ${[...gave2Players, ...gave2Picks].join(', ') || 'assets'}\n\nWrite a 2-3 sentence Schefter-voiced rumor-mill post teasing this pending deal. Plain text only, no JSON, no formatting.`,
-          },
-        ],
+        system,
+        messages: [{ role: 'user', content: userContent }],
       }),
     });
     if (!res.ok) {
@@ -739,12 +770,23 @@ async function scanPendingTrades(league) {
   const newPosts = [];
   const leagueSlug = 'theleague';
 
+  // Load personality + lore + bits + rolling post-memory ONCE per scan cycle.
+  // If anything is missing the lore loader falls back and logs a warning;
+  // recentPostsBlock is an empty string when history is empty.
+  const lore = await loadLore({ log: console.log, warn: console.warn });
+  const history = await loadPostHistory({ log: console.log, warn: console.warn });
+  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
+  console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
+
   for (const trade of newPending) {
     const offerId = String(trade.id || trade.trade_id || '');
     if (!offerId) continue;
 
     const templateBody = generatePendingTradeTemplate(trade, players, teams);
-    const aiBody = await generatePendingTradeAiBody(templateBody, trade, players, teams);
+    const aiBody = await generatePendingTradeAiBody(templateBody, trade, players, teams, {
+      lore,
+      recentPostsBlock,
+    });
     const body = aiBody || templateBody;
 
     const t1 = teams.get(trade.franchise);
@@ -781,9 +823,25 @@ async function scanPendingTrades(league) {
     const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
     if (!schefterBotId) {
       console.warn('  [GroupMe] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe post (Roger bot is reserved for deadlines)');
+    } else if (DRY_RUN) {
+      console.log(`  [dry-run] Would post to GroupMe:\n${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`);
     } else {
       const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
       await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
+    }
+
+    // Append to rolling post history (skipped in dry-run). Best-effort.
+    if (!DRY_RUN) {
+      await appendPostHistory(
+        buildHistoryEntry({
+          id: post.id,
+          timestamp: post.timestamp,
+          body: post.body,
+          subject: `trade-pending (${team1} ↔ ${team2})`,
+          tipSources: ['trade_pending'],
+        }),
+        { log: console.log, warn: console.warn },
+      );
     }
   }
 
@@ -796,7 +854,11 @@ async function scanPendingTrades(league) {
     feed.posts = [...newPosts.reverse(), ...feed.posts];
   }
 
-  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  if (DRY_RUN) {
+    console.log(`  [dry-run] Would write ${newPosts.length} pending-trade post(s) to feed`);
+  } else {
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  }
 
   const dropped = prevWatermark.filter(id => !newWatermarkSet.has(id));
   if (dropped.length) console.log(`  [rumor-mill] Dropped ${dropped.length} resolved trade(s) from watermark`);
