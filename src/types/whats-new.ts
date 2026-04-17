@@ -51,6 +51,8 @@ export interface WhatsNewEntry {
   image?: string;
   /** Alt text for the screenshot image (required when image is provided) */
   imageAlt?: string;
+  /** Audience restriction — defaults to "all" if omitted. "admin" hides the entry from non-admin users in both the listing and the detail route. */
+  visibility?: 'all' | 'admin';
 }
 
 /** Hero content source type */

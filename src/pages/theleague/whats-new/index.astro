@@ -17,13 +17,20 @@ import {
   groupByMonth,
   getCategoryCounts,
 } from '../../../utils/whats-new-helpers';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 
 export const prerender = false;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const basePath = hideLeaguePrefix ? '' : '/theleague';
 
-const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
+const user = getAuthUser(Astro.request);
+const isAdmin = !!user && isCommissionerOrAdmin(user);
+
+const visible = (entries as WhatsNewEntry[]).filter(
+  (e) => e.visibility !== 'admin' || isAdmin,
+);
+const sorted = sortEntriesNewestFirst(visible);
 
 // Read the last-visit cookie for "NEW" badge computation
 const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');

@@ -18,6 +18,7 @@ import {
   getAdjacentEntries,
 } from '../../../utils/whats-new-helpers';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import SchefterWidget from '../../../components/shared/SchefterWidget.astro';
 import type { SchefterFeed as FeedType } from '../../../types/schefter';
 import schefterFeedData from '../../../data/theleague/schefter-feed.json';
@@ -27,7 +28,13 @@ export const prerender = false;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
-const sorted = sortEntriesNewestFirst(entries as WhatsNewEntry[]);
+const user = getAuthUser(Astro.request);
+const isAdmin = !!user && isCommissionerOrAdmin(user);
+
+const visible = (entries as WhatsNewEntry[]).filter(
+  (e) => e.visibility !== 'admin' || isAdmin,
+);
+const sorted = sortEntriesNewestFirst(visible);
 const id = Astro.params.id;
 const entry = sorted.find((e) => e.id === id);
 if (!entry) return Astro.redirect(r('/theleague/whats-new'));
