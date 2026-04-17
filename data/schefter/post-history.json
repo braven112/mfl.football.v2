@@ -1,0 +1,18 @@
+{
+  "_description": "Rolling history of Claude Schefter's recent posts. Used to prevent repetition and enable callbacks. Scanner appends to this file after each post; oldest entries get pruned to keep the file capped at 30.",
+  "_schema": {
+    "maxEntries": 30,
+    "entry": {
+      "id": "post id from schefter-feed.json",
+      "timestamp": "ISO8601",
+      "body": "full text of the post",
+      "subject": "short tag — which owner/team/topic was the focus",
+      "openerUsed": "the opener phrase used (for rotation avoidance)",
+      "closerUsed": "the closer phrase used",
+      "hadBotWink": "boolean",
+      "hadLoreCallback": "boolean",
+      "tipSources": ["web|groupme|trade_offer|trade_pending"]
+    }
+  },
+  "posts": []
+}
