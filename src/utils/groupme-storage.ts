@@ -246,6 +246,17 @@ export interface GroupMePostMeta {
   likeCount: number;
   senderName: string;
   attachments: Array<{ type: string; url?: string }>;
+  /** Open Graph previews for generic URLs in the body, keyed by URL */
+  ogPreviews?: Record<string, OgPreviewLite>;
+}
+
+/** Subset of OG preview fields used by post cards (kept small for JSON payload) */
+export interface OgPreviewLite {
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+  domain: string;
 }
 
 interface TeamConfig {
@@ -369,6 +380,76 @@ export async function seedFranchiseMappings(): Promise<number> {
 /** Look up franchiseId from the hardcoded map (no Redis needed) */
 export function getFranchiseIdFromMap(groupMeUserId: string): string | undefined {
   return GROUPME_FRANCHISE_MAP[groupMeUserId];
+}
+
+/**
+ * URL detection regexes — shared with post cards to keep URL handling consistent.
+ * Export here so the enrichment step uses the same extraction logic as rendering.
+ */
+export const X_POST_REGEX = /https?:\/\/(?:x|twitter)\.com\/(\w+)\/status\/(\d+)\S*/gi;
+export const INSTAGRAM_REGEX = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv)\/[\w-]+\S*/gi;
+export const GENERIC_URL_REGEX = /https?:\/\/\S+/gi;
+
+/** Extract generic (non-X, non-Instagram) URLs from a GroupMe post body */
+export function extractGenericUrls(body: string): string[] {
+  const xUrls = new Set([...body.matchAll(X_POST_REGEX)].map(m => m[0]));
+  const instaUrls = new Set([...body.matchAll(INSTAGRAM_REGEX)].map(m => m[0]));
+  return [...body.matchAll(GENERIC_URL_REGEX)]
+    .map(m => m[0].replace(/[).,;:!?]+$/, ''))
+    .filter(url => !xUrls.has(url) && !instaUrls.has(url));
+}
+
+/**
+ * Enrich GroupMe posts with Open Graph previews for their generic URLs.
+ * Modifies posts in place (adds `_groupMe.ogPreviews`). Tolerates failures.
+ * Designed to be called server-side in the page render path.
+ */
+export async function enrichPostsWithOgPreviews(
+  posts: SchefterPost[],
+): Promise<void> {
+  // Only enrich GroupMe posts (type === 'groupme')
+  const gmPosts = posts.filter(p => p.type === 'groupme');
+  if (gmPosts.length === 0) return;
+
+  // Collect all unique generic URLs across the batch
+  const allUrls = new Set<string>();
+  const postUrlMap = new Map<string, string[]>();
+  for (const post of gmPosts) {
+    const urls = extractGenericUrls(post.body ?? '');
+    if (urls.length > 0) {
+      postUrlMap.set(post.id, urls);
+      urls.forEach(u => allUrls.add(u));
+    }
+  }
+  if (allUrls.size === 0) return;
+
+  // Fetch all OG previews in parallel (cached in Redis)
+  const { getOgPreviewsBatch } = await import('./og-preview');
+  const previews = await getOgPreviewsBatch([...allUrls]);
+
+  // Attach previews to each post
+  for (const post of gmPosts) {
+    const urls = postUrlMap.get(post.id);
+    if (!urls) continue;
+    const meta = (post as SchefterPost & { _groupMe?: GroupMePostMeta })._groupMe;
+    if (!meta) continue;
+    const ogMap: Record<string, OgPreviewLite> = {};
+    for (const url of urls) {
+      const preview = previews.get(url);
+      if (preview) {
+        ogMap[url] = {
+          title: preview.title,
+          description: preview.description,
+          image: preview.image,
+          siteName: preview.siteName,
+          domain: preview.domain,
+        };
+      }
+    }
+    if (Object.keys(ogMap).length > 0) {
+      meta.ogPreviews = ogMap;
+    }
+  }
 }
 
 /** Helper to load team config for mapping */

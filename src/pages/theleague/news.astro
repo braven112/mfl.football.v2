@@ -23,7 +23,7 @@ import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../../types/scheft
 import type { SchefterPost } from '../../types/schefter';
 import feedData from '../../data/theleague/schefter-feed.json';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
-import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
+import { getRecentMessages, toSchefterPosts, loadTeamConfig, enrichPostsWithOgPreviews } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
@@ -107,6 +107,14 @@ const filteredPosts = (() => {
   if (activeSource === 'insider') return feed.posts.filter(p => insiderAuthorIds.has(p.authorId ?? ''));
   return feed.posts;
 })();
+
+// Enrich GroupMe posts with Open Graph previews (server-side, Redis-cached).
+// Failures are silent — posts without previews fall back to simple link cards.
+try {
+  await enrichPostsWithOgPreviews(filteredPosts);
+} catch (err) {
+  console.warn('[news] OG enrichment failed:', err);
+}
 
 // Show profile header for each tab's persona
 const sourceAuthorMap: Record<string, string> = {
