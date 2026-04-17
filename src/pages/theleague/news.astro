@@ -188,7 +188,13 @@ const tabs = [
         />
       )}
 
-      <div data-feed-container>
+      <div
+        data-feed-container
+        data-groupme-poll={isGroupMeTab && isAuthenticated ? 'true' : undefined}
+        data-groupme-since={isGroupMeTab && isAuthenticated && groupMePosts.length > 0
+          ? String(new Date(groupMePosts[0].timestamp).getTime())
+          : undefined}
+      >
         <SchefterFeed
           posts={filteredPosts}
           isAuthenticated={isAuthenticated}
@@ -201,3 +207,164 @@ const tabs = [
     </div>
   </main>
 </TheLeagueLayout>
+
+<script>
+  // Live polling for the GroupMe tab — surfaces new messages without reload.
+  // Polls /api/groupme/messages?since={ms}&format=posts every POLL_MS.
+  // Renders new posts as plain markup (no reaction/reply islands until next reload).
+  const POLL_MS = 20_000;
+
+  function relTime(iso: string, now = new Date()): string {
+    const then = new Date(iso).getTime();
+    const diff = Math.max(0, now.getTime() - then);
+    const m = Math.floor(diff / 60_000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 7) return `${d}d ago`;
+    return new Date(iso).toLocaleDateString();
+  }
+
+  type GroupMePost = {
+    id: string;
+    timestamp: string;
+    body: string;
+    authorId?: string;
+    _groupMe?: { name: string; avatar: string; likeCount: number; senderName: string };
+  };
+
+  function buildPostElement(post: GroupMePost): HTMLElement {
+    const meta = post._groupMe ?? { name: 'GroupMe', avatar: '', likeCount: 0, senderName: '' };
+    const body = post.body ?? '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sf-feed__item';
+    wrapper.setAttribute('data-feed-index', '0');
+
+    const article = document.createElement('article');
+    article.className = 'sf-post sf-post--groupme';
+    article.dataset.postId = post.id;
+    article.dataset.tier = 'standard';
+    article.dataset.postType = 'groupme';
+    article.dataset.author = post.authorId ?? 'groupme';
+    article.setAttribute('aria-label', `${meta.name}: ${body.slice(0, 80)}`);
+
+    if (meta.avatar) {
+      const img = document.createElement('img');
+      img.className = 'sf-avatar sf-avatar--groupme';
+      img.src = meta.avatar;
+      img.alt = '';
+      img.setAttribute('aria-hidden', 'true');
+      img.width = 40;
+      img.height = 40;
+      img.loading = 'lazy';
+      article.appendChild(img);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'sf-avatar sf-avatar--groupme';
+      placeholder.setAttribute('aria-hidden', 'true');
+      article.appendChild(placeholder);
+    }
+
+    const content = document.createElement('div');
+    content.className = 'sf-post__content';
+
+    const header = document.createElement('div');
+    header.className = 'sf-post__header';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'sf-post__name';
+    nameSpan.textContent = meta.name;
+    header.appendChild(nameSpan);
+
+    const handleSpan = document.createElement('span');
+    handleSpan.className = 'sf-post__handle sf-post__handle--groupme';
+    handleSpan.textContent = 'via GroupMe';
+    header.appendChild(handleSpan);
+
+    const time = document.createElement('time');
+    time.className = 'sf-post__time';
+    time.dateTime = post.timestamp;
+    time.textContent = relTime(post.timestamp);
+    header.appendChild(time);
+
+    content.appendChild(header);
+
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'sf-post__body sf-post__body--groupme';
+    bodyDiv.textContent = body;
+    content.appendChild(bodyDiv);
+
+    const actions = document.createElement('div');
+    actions.className = 'sfc-post__actions';
+    content.appendChild(actions);
+
+    article.appendChild(content);
+    wrapper.appendChild(article);
+    return wrapper;
+  }
+
+  function initGroupMePolling() {
+    const container = document.querySelector('[data-groupme-poll="true"]') as HTMLElement | null;
+    if (!container) return;
+
+    const feed = container.querySelector('.sf-feed--page') as HTMLElement | null;
+    if (!feed) return;
+
+    let since = Number(container.dataset.groupmeSince ?? '0') || 0;
+    let stopped = false;
+
+    async function tick() {
+      if (stopped) return;
+      try {
+        const url = since > 0
+          ? `/api/groupme/messages?since=${since}&format=posts&limit=50`
+          : `/api/groupme/messages?format=posts&limit=50`;
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json() as { posts?: GroupMePost[] };
+        const posts = (data.posts ?? []).filter(p => p && p.id);
+        if (posts.length === 0) return;
+
+        const empty = feed.querySelector('.sf-empty');
+        if (empty) empty.remove();
+
+        const ordered = [...posts].sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        );
+
+        const loadMoreEl = feed.querySelector('.sf-load-more');
+
+        for (const post of ordered) {
+          if (feed.querySelector(`[data-post-id="${CSS.escape(post.id)}"]`)) continue;
+          const node = buildPostElement(post);
+          feed.insertBefore(node, feed.firstChild);
+
+          const ts = new Date(post.timestamp).getTime();
+          if (ts > since) since = ts;
+        }
+
+        if (loadMoreEl) feed.appendChild(loadMoreEl);
+        container.dataset.groupmeSince = String(since);
+      } catch {
+        /* swallow — try again next tick */
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') tick();
+    });
+
+    const interval = window.setInterval(tick, POLL_MS);
+    window.addEventListener('beforeunload', () => {
+      stopped = true;
+      window.clearInterval(interval);
+    });
+
+    void tick();
+  }
+
+  document.addEventListener('astro:page-load', initGroupMePolling);
+</script>

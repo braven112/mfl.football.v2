@@ -1,0 +1,28 @@
+name: GroupMe Sync
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: groupme-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync endpoint
+        env:
+          SYNC_URL: https://theleague.us/api/groupme/sync
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" -X POST "$SYNC_URL")
+          body=$(echo "$response" | sed '$d')
+          status=$(echo "$response" | tail -n1)
+          echo "Status: $status"
+          echo "Body: $body"
+          if [ "$status" -ge 400 ]; then
+            echo "::error::GroupMe sync failed with status $status"
+            exit 1
+          fi

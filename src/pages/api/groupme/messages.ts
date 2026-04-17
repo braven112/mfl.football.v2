@@ -1,16 +1,23 @@
 /**
  * GroupMe Messages — Serve cached messages from Redis
  *
- * GET /api/groupme/messages              — Recent messages (newest first)
- * GET /api/groupme/messages?since={ms}   — Messages after a timestamp (for polling)
- * GET /api/groupme/messages?limit={n}    — Limit results (default 50)
+ * GET /api/groupme/messages                — Recent messages (newest first)
+ * GET /api/groupme/messages?since={ms}     — Messages after a timestamp (for polling)
+ * GET /api/groupme/messages?limit={n}      — Limit results (default 50)
+ * GET /api/groupme/messages?format=posts   — Also include SchefterPost-shaped objects
  *
  * Auth required — GroupMe content is only visible to authenticated owners.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
-import { getRecentMessages, getMessagesSince, getLastSyncTs } from '../../../utils/groupme-storage';
+import {
+  getRecentMessages,
+  getMessagesSince,
+  getLastSyncTs,
+  toSchefterPosts,
+  loadTeamConfig,
+} from '../../../utils/groupme-storage';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -25,6 +32,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const sinceParam = url.searchParams.get('since');
   const limitParam = url.searchParams.get('limit');
+  const formatParam = url.searchParams.get('format');
   const limit = Math.min(Math.max(Number(limitParam) || 50, 1), 200);
 
   try {
@@ -33,9 +41,13 @@ export const GET: APIRoute = async ({ request, url }) => {
       : await getRecentMessages(limit);
 
     const lastSync = await getLastSyncTs();
+    const posts = formatParam === 'posts'
+      ? toSchefterPosts(messages, await loadTeamConfig())
+      : undefined;
 
     return json({
       messages,
+      ...(posts ? { posts } : {}),
       count: messages.length,
       lastSync,
     });
