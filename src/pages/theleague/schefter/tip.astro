@@ -1,0 +1,429 @@
+---
+/**
+ * Tip Schefter — /theleague/schefter/tip
+ *
+ * Anonymous tip form for the Schefter Rumor Mill. Authenticated only.
+ * Tips are hashed server-side (see utils/schefter-tipster-hash.ts) and
+ * queued in Redis. Scanner drains the queue, anonymizes, and posts a
+ * rumor-mill Schefter report at most 3x/day.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser } from '../../../utils/auth';
+import theLeagueConfig from '../../../data/theleague.config.json';
+import { chooseTeamName } from '../../../utils/team-names';
+
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId) {
+  return Astro.redirect('/theleague/login?redirect=/theleague/schefter/tip');
+}
+
+type TeamConfig = {
+  franchiseId: string;
+  name: string;
+  nameMedium?: string;
+  nameShort?: string;
+  abbrev?: string;
+  division?: string;
+};
+
+const teams = ((theLeagueConfig as { teams?: TeamConfig[] }).teams ?? [])
+  .slice()
+  .sort((a, b) => {
+    const da = a.division ?? '';
+    const db = b.division ?? '';
+    if (da !== db) return da.localeCompare(db);
+    return a.name.localeCompare(b.name);
+  });
+
+const franchiseOptions = teams.map((t) => ({
+  franchiseId: t.franchiseId,
+  label: chooseTeamName(
+    {
+      fullName: t.name,
+      nameMedium: t.nameMedium,
+      nameShort: t.nameShort,
+      abbrev: t.abbrev,
+    },
+    'default',
+  ),
+  division: t.division,
+}));
+---
+
+<TheLeagueLayout title="Tip Schefter">
+  <main class="tip-page">
+    <header class="tip-hero">
+      <p class="tip-hero__eyebrow">Schefter Rumor Mill</p>
+      <h1 class="tip-hero__title">Tip Schefter</h1>
+      <p class="tip-hero__lede">
+        Got a hunch, a grievance, or a leak? Schefter is listening. He'll fold your tip into his
+        next report without ever naming names.
+      </p>
+    </header>
+
+    <section class="tip-card" aria-labelledby="how-it-works-title">
+      <div class="section-header">
+        <h2 class="section-header__title" id="how-it-works-title">How this works</h2>
+        <p class="section-header__sub">Anonymity is the whole point.</p>
+      </div>
+      <ul class="tip-detail-list">
+        <li class="tip-detail-row">
+          <span class="tip-detail-row__label">Anonymous</span>
+          <span class="tip-detail-row__value">
+            Your tip is stored with a one-way hash of your user id. Not even the commish can see who
+            sent what.
+          </span>
+        </li>
+        <li class="tip-detail-row">
+          <span class="tip-detail-row__label">Rate</span>
+          <span class="tip-detail-row__value">
+            Schefter fires at most <strong>3 rumor-mill posts per day</strong>, and he sits on every
+            tip for at least an hour before saying anything.
+          </span>
+        </li>
+        <li class="tip-detail-row">
+          <span class="tip-detail-row__label">Fuzz</span>
+          <span class="tip-detail-row__value">
+            If you name a team, Schefter may generalize to the division unless multiple owners are
+            whispering about the same franchise.
+          </span>
+        </li>
+        <li class="tip-detail-row">
+          <span class="tip-detail-row__label">Limits</span>
+          <span class="tip-detail-row__value">3 tips per owner per 24 hours. Make them count.</span>
+        </li>
+      </ul>
+    </section>
+
+    <form class="tip-card tip-form" id="tip-form" novalidate>
+      <div class="section-header">
+        <h2 class="section-header__title">Your tip</h2>
+        <p class="section-header__sub">500 characters. Salt, not sugar.</p>
+      </div>
+
+      <div class="tip-field">
+        <label class="tip-field__label" for="tip-text">Tip</label>
+        <textarea
+          class="tip-field__textarea"
+          id="tip-text"
+          name="text"
+          maxlength="500"
+          rows="6"
+          placeholder="e.g. Hearing someone in the Northwest is shopping their 1st for a vet WR..."
+          required
+        ></textarea>
+        <div class="tip-field__meta">
+          <span class="tip-field__counter" id="tip-counter" aria-live="polite">0 / 500</span>
+        </div>
+      </div>
+
+      <div class="tip-field-row">
+        <div class="tip-field">
+          <label class="tip-field__label" for="tip-topic">Topic</label>
+          <select class="tip-field__select" id="tip-topic" name="topic" required>
+            <option value="trade">Trade interest</option>
+            <option value="roster">Roster gripe</option>
+            <option value="prediction">Bold prediction</option>
+            <option value="commish">Commish beef</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="tip-field">
+          <label class="tip-field__label" for="tip-franchise">About which team?</label>
+          <select class="tip-field__select" id="tip-franchise" name="franchiseHint">
+            <option value="league-wide">League-wide</option>
+            {franchiseOptions.map((t) => (
+              <option value={t.franchiseId}>{t.label}{t.division ? ` — ${t.division}` : ''}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div class="tip-actions">
+        <button type="submit" class="tip-submit" id="tip-submit">Send tip</button>
+        <p class="tip-status" id="tip-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .tip-page {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .tip-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .tip-hero__eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+    margin: 0;
+  }
+  .tip-hero__title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+    color: var(--color-gray-900, #111827);
+  }
+  .tip-hero__lede {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    margin: 0;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .tip-card {
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+  }
+  .section-header__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    color: var(--color-gray-800, #1f2937);
+  }
+  .section-header__sub {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  .tip-detail-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .tip-detail-row {
+    display: flex;
+    gap: 1rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .tip-detail-row:last-child {
+    border-bottom: none;
+  }
+  .tip-detail-row__label {
+    flex: 0 0 5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+    padding-top: 0.0625rem;
+  }
+  .tip-detail-row__value {
+    flex: 1;
+    color: var(--color-gray-700, #374151);
+  }
+  .tip-detail-row__value strong {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tip-form {
+    gap: 1.25rem;
+  }
+
+  .tip-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .tip-field__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .tip-field__textarea,
+  .tip-field__select {
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--color-gray-900, #111827);
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .tip-field__textarea {
+    resize: vertical;
+    min-height: 6rem;
+    line-height: 1.5;
+  }
+  .tip-field__textarea:focus-visible,
+  .tip-field__select:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+    border-color: var(--color-primary, #1c497c);
+  }
+  .tip-field__meta {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .tip-field__counter {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tip-field-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  @media (min-width: 480px) {
+    .tip-field-row {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .tip-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .tip-submit {
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-white, #ffffff);
+    background: var(--color-primary, #1c497c);
+    border: 1px solid var(--color-primary, #1c497c);
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    cursor: pointer;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .tip-submit:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  .tip-submit:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+  .tip-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .tip-status {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    min-height: 1.25rem;
+  }
+  .tip-status[data-state='success'] {
+    color: #047857;
+  }
+  .tip-status[data-state='error'] {
+    color: var(--color-error-dark, #b91c1c);
+  }
+</style>
+
+<script>
+  const form = document.getElementById('tip-form') as HTMLFormElement | null;
+  const textarea = document.getElementById('tip-text') as HTMLTextAreaElement | null;
+  const counter = document.getElementById('tip-counter');
+  const status = document.getElementById('tip-status');
+  const submitBtn = document.getElementById('tip-submit') as HTMLButtonElement | null;
+
+  function setStatus(message: string, state: 'success' | 'error' | '') {
+    if (!status) return;
+    status.textContent = message;
+    if (state) status.setAttribute('data-state', state);
+    else status.removeAttribute('data-state');
+  }
+
+  function updateCounter() {
+    if (!textarea || !counter) return;
+    counter.textContent = `${textarea.value.length} / 500`;
+  }
+
+  textarea?.addEventListener('input', updateCounter);
+  updateCounter();
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form || !submitBtn || !textarea) return;
+
+    const fd = new FormData(form);
+    const text = String(fd.get('text') ?? '').trim();
+    const topic = String(fd.get('topic') ?? '');
+    const franchiseHint = String(fd.get('franchiseHint') ?? '');
+
+    if (!text) {
+      setStatus('Tip cannot be empty.', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    setStatus('Sending…', '');
+
+    try {
+      const res = await fetch('/api/schefter/tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, topic, franchiseHint }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data?.ok) {
+        setStatus("Schefter's got it. He'll use it when the time is right.", 'success');
+        form.reset();
+        updateCounter();
+      } else {
+        const msg = (data && typeof data.error === 'string' && data.error) ||
+          (res.status === 429 ? "You've hit the 3-tips-per-24h cap. Try again tomorrow." :
+           res.status === 401 ? 'Please sign in to tip Schefter.' :
+           res.status === 503 ? 'Tip system is temporarily unavailable. Try again shortly.' :
+           'Something went wrong. Try again.');
+        setStatus(msg, 'error');
+      }
+    } catch (err) {
+      console.error('[tip] submit error', err);
+      setStatus('Network error. Try again.', 'error');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
