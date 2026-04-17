@@ -62,18 +62,19 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
 }
 
 /** Convert a ResolvedLeagueEvent to HeroContent */
-function eventToHero(event: ResolvedLeagueEvent): HeroContent {
+function eventToHero(event: ResolvedLeagueEvent, referenceDate?: Date): HeroContent {
   const category = event.definition.category;
   const link = event.actionLinks[0] ?? event.resultLinks[0];
   const dateDisplay = event.definition.endDate
     ? formatEventDateRange(event.startDate, event.endDate)
     : formatEventDate(event.startDate);
   const statusText = getStatusText(event.isActive, event.isPast, event.daysUntilStart);
+  const summary = buildEventSummary(event, referenceDate);
 
   return {
     source: 'event',
     title: event.definition.name,
-    summary: event.definition.description,
+    summary,
     link: link?.url,
     linkLabel: link?.label ?? 'Learn more',
     icon: event.definition.icon,
@@ -89,6 +90,36 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
     kicker: event.isActive ? 'Happening Now' : event.isUrgent ? 'Coming Up' : 'League Event',
     kickerDate: dateDisplay,
   };
+}
+
+/**
+ * Build the hero summary for an event, with special handling for the NFL Draft
+ * so the copy reflects the actual calendar (three-day weekend) and surfaces how
+ * many days remain until our own rookie draft.
+ */
+function buildEventSummary(event: ResolvedLeagueEvent, referenceDate?: Date): string {
+  if (event.definition.id === 'nfl-draft' && referenceDate) {
+    const nflStart = event.startDate;
+    const nflEnd = new Date(nflStart);
+    nflEnd.setDate(nflEnd.getDate() + 2); // NFL Draft runs Thu–Sat
+    const nflRange = formatEventDateRange(nflStart, nflEnd);
+
+    const rookieDraftDate = getRookieDraftDate(nflStart.getFullYear());
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const refMidnight = new Date(referenceDate);
+    refMidnight.setHours(0, 0, 0, 0);
+    const rookieMidnight = new Date(rookieDraftDate);
+    rookieMidnight.setHours(0, 0, 0, 0);
+    const daysUntilRookie = Math.max(0, Math.round((rookieMidnight.getTime() - refMidnight.getTime()) / msPerDay));
+    const rookieFormatted = rookieDraftDate.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    });
+    const dayWord = daysUntilRookie === 1 ? 'day' : 'days';
+
+    return `The NFL Draft runs ${nflRange} — prospects meet their teams before they meet dynasty. Our own 3-round rookie draft follows on ${rookieFormatted}, ${daysUntilRookie} ${dayWord} from today.`;
+  }
+
+  return event.definition.description;
 }
 
 /** Total days the full Auction Hero is displayed */
@@ -319,19 +350,19 @@ export function resolveHeroContent(
   // --- Priority 2: Urgent league event ---
   const urgentEvent = findUrgentEvent(timeline);
   if (urgentEvent) {
-    return eventToHero(urgentEvent);
+    return eventToHero(urgentEvent, now);
   }
 
   // --- Priority 3: Active league event ---
   const activeEvent = findActiveEvent(timeline);
   if (activeEvent) {
-    return eventToHero(activeEvent);
+    return eventToHero(activeEvent, now);
   }
 
   // --- Priority 4: Upcoming league event (within 7 days) ---
   const upcomingEvent = findUpcomingEvent(timeline);
   if (upcomingEvent) {
-    return eventToHero(upcomingEvent);
+    return eventToHero(upcomingEvent, now);
   }
 
   // --- Priority 5: Default fallback (newest article, any age) ---
