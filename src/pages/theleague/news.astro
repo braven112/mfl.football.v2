@@ -32,6 +32,12 @@ const isAuthenticated = !!authUser;
 const userFranchiseId = authUser?.franchiseId;
 const feed = feedData as FeedType;
 
+// Claude Schefter's featured articles — surfaced in the right rail
+const schefterArticles = feed.posts
+  .filter((p: any) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))
+  .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  .slice(0, 5);
+
 // Resolve team info for reply composer avatar
 let userTeamName: string | undefined;
 let userTeamIcon: string | undefined;
@@ -143,7 +149,7 @@ const tabs = [
 ---
 
 <TheLeagueLayout title="League News">
-  <main class="sf-news-page">
+  <main class="sf-news-page sf-news-page--with-rail">
     <div class="sf-news-card">
       {/* Profile header — every tab has a persona */}
       {isGroupMeTab ? (
@@ -205,8 +211,199 @@ const tabs = [
         />
       </div>
     </div>
+
+    <aside class="sf-news-rail" aria-label="Tip the beat reporter">
+      <a href="/theleague/schefter/tip" class="sf-rail-promo">
+        <img
+          src="/assets/claude-schefter-avatar.webp"
+          alt=""
+          class="sf-rail-promo__avatar"
+          width="40"
+          height="40"
+          loading="lazy"
+        />
+        <div class="sf-rail-promo__body">
+          <div class="sf-rail-promo__title">Got a tip?</div>
+          <p class="sf-rail-promo__text">Drop anonymous intel to Claude Schefter. Rumors, roster gripes, bold predictions — he'll fold it in without naming names.</p>
+        </div>
+        <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </a>
+
+      {schefterArticles.length > 0 && (
+        <section class="sf-rail-section" aria-label="Featured articles from Claude Schefter">
+          <h2 class="sf-rail-section__title">From the Schefter Report</h2>
+          <ul class="sf-rail-articles">
+            {schefterArticles.map((article: any) => (
+              <li class="sf-rail-articles__item">
+                <a href={article.link ?? `/theleague/news/${article.id}`} class="sf-rail-article-card">
+                  {article.image && (
+                    <img
+                      src={`/assets/schefter/${article.image}`}
+                      alt={article.imageAlt ?? ''}
+                      class="sf-rail-article-card__image"
+                      width="240"
+                      height="135"
+                      loading="lazy"
+                    />
+                  )}
+                  <div class="sf-rail-article-card__body">
+                    <div class="sf-rail-article-card__meta">
+                      {new Date(article.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                    <div class="sf-rail-article-card__headline">{article.headline}</div>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </aside>
   </main>
 </TheLeagueLayout>
+
+<style>
+  .sf-news-page--with-rail {
+    max-width: 60rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .sf-news-rail {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sf-rail-promo {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-lg, 0.5rem);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .sf-rail-promo:hover {
+    border-color: var(--color-gray-200, #e5e7eb);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  .sf-rail-promo__avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+  }
+  .sf-rail-promo__body {
+    flex: 1;
+    min-width: 0;
+  }
+  .sf-rail-promo__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.3;
+  }
+  .sf-rail-promo__text {
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    line-height: 1.4;
+    margin: 0.125rem 0 0;
+  }
+  .sf-rail-promo__arrow {
+    color: var(--color-gray-300, #d1d5db);
+    min-width: 16px;
+    transition: color 0.15s;
+  }
+  .sf-rail-promo:hover .sf-rail-promo__arrow {
+    color: var(--color-primary, #1c497c);
+  }
+
+  .sf-rail-section__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.5rem;
+  }
+  .sf-rail-articles {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .sf-rail-article-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg, 0.5rem);
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  .sf-rail-article-card:hover {
+    border-color: var(--color-gray-200, #e5e7eb);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+  .sf-rail-article-card__image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+  .sf-rail-article-card__body {
+    padding: 0.625rem 0.75rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .sf-rail-article-card__meta {
+    font-size: 0.625rem;
+    color: var(--color-gray-500, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .sf-rail-article-card__headline {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (max-width: 860px) {
+    .sf-news-page--with-rail {
+      grid-template-columns: 1fr;
+      max-width: 40rem;
+    }
+    .sf-news-rail {
+      position: static;
+    }
+  }
+</style>
 
 <script>
   // Live polling for the GroupMe tab — surfaces new messages without reload.

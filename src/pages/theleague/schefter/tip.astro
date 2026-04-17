@@ -13,6 +13,11 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser } from '../../../utils/auth';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import { chooseTeamName } from '../../../utils/team-names';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import '../../../styles/schefter-feed.css';
+
+const schefterAuthor = getAuthor('claude-schefter');
+const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/assets/claude-schefter-avatar.webp';
 
 const user = getAuthUser(Astro.request);
 if (!user?.franchiseId) {
@@ -54,13 +59,36 @@ const franchiseOptions = teams.map((t) => ({
 
 <TheLeagueLayout title="Tip Schefter">
   <main class="tip-page">
-    <header class="tip-hero">
+    <header class="tip-hero tip-hero--persona">
       <p class="tip-hero__eyebrow">Schefter Rumor Mill</p>
-      <h1 class="tip-hero__title">Tip Schefter</h1>
+      <div class="sf-page-header tip-hero__persona-card">
+        <div class="sf-page-header__persona">
+          <img
+            class="sf-page-header__avatar"
+            src={schefterAvatar}
+            alt=""
+            aria-hidden="true"
+            width="48"
+            height="48"
+            loading="eager"
+          />
+          <div>
+            <h1 class="sf-page-header__name">{schefterAuthor?.name ?? 'Claude Schefter'}</h1>
+            <div class="sf-page-header__handle">{schefterAuthor?.handle ?? '@ClaudeSchefter'}</div>
+          </div>
+        </div>
+        <p class="sf-page-header__bio">{schefterAuthor?.bio}</p>
+      </div>
       <p class="tip-hero__lede">
         Got a hunch, a grievance, or a leak? Schefter is listening. He'll fold your tip into his
         next report without ever naming names.
       </p>
+      <a href="/theleague/news" class="tip-hero__feed-link">
+        Read the feed
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </a>
     </header>
 
     <section class="tip-card" aria-labelledby="how-it-works-title">
@@ -100,7 +128,7 @@ const franchiseOptions = teams.map((t) => ({
     <form class="tip-card tip-form" id="tip-form" novalidate>
       <div class="section-header">
         <h2 class="section-header__title">Your tip</h2>
-        <p class="section-header__sub">500 characters. Salt, not sugar.</p>
+        <p class="section-header__sub">500 characters. Make it count.</p>
       </div>
 
       <div class="tip-field">
@@ -164,6 +192,30 @@ const franchiseOptions = teams.map((t) => ({
   .tip-hero {
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
+  }
+  .tip-hero--persona {
+    gap: 0.75rem;
+  }
+  /* Neutralize the sf-page-header card chrome when embedded in the hero */
+  .tip-hero__persona-card {
+    padding: 0;
+    background: transparent;
+    border-bottom: none;
+  }
+  .tip-hero__feed-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    align-self: flex-start;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    padding: 0.25rem 0;
+    transition: gap 0.15s;
+  }
+  .tip-hero__feed-link:hover {
     gap: 0.5rem;
   }
   .tip-hero__eyebrow {
