@@ -1,35 +1,33 @@
 {
-  "encoding": "utf-8",
-  "version": "1.0",
   "salaryAdjustments": {
     "salaryAdjustment": [
       {
+        "franchise_id": "0001",
+        "id": "0",
         "timestamp": "1771139599",
         "amount": "636125",
-        "id": "0",
-        "franchise_id": "0001",
         "description": "2026 Dead Money"
       },
       {
-        "franchise_id": "0002",
-        "timestamp": "1771139599",
         "amount": "1059625",
+        "timestamp": "1771139599",
         "id": "1",
+        "franchise_id": "0002",
+        "description": "2026 Dead Money"
+      },
+      {
+        "id": "10",
+        "timestamp": "1771139599",
+        "amount": "552736",
+        "franchise_id": "0012",
         "description": "2026 Dead Money"
       },
       {
         "description": "2026 Dead Money",
-        "franchise_id": "0012",
-        "timestamp": "1771139599",
-        "id": "10",
-        "amount": "552736"
-      },
-      {
-        "franchise_id": "0013",
-        "amount": "4633500",
         "timestamp": "1771139599",
         "id": "11",
-        "description": "2026 Dead Money"
+        "amount": "4633500",
+        "franchise_id": "0013"
       },
       {
         "description": "2026 Dead Money",
@@ -40,88 +38,90 @@
       },
       {
         "description": "2026 Dead Money",
-        "amount": "693875",
-        "timestamp": "1771139599",
         "id": "13",
+        "timestamp": "1771139599",
+        "amount": "693875",
         "franchise_id": "0015"
       },
       {
-        "description": "2026 Dead Money",
-        "franchise_id": "0016",
-        "amount": "136125",
         "timestamp": "1771139599",
-        "id": "14"
+        "amount": "136125",
+        "id": "14",
+        "franchise_id": "0016",
+        "description": "2026 Dead Money"
       },
       {
-        "franchise_id": "0013",
+        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)",
+        "timestamp": "1774116905",
+        "amount": "233750",
         "id": "15",
-        "timestamp": "1774116905",
-        "amount": "233750",
-        "description": "Dropped Mafah, Phil DAL RB (Salary: $467,500, Years: 4)"
+        "franchise_id": "0013"
       },
       {
+        "franchise_id": "0013",
+        "id": "16",
         "timestamp": "1774116905",
         "amount": "233750",
-        "id": "16",
-        "franchise_id": "0013",
         "description": "Dropped Palmer, Joshua BUF WR (Salary: $467,500, Years: 4)"
       },
       {
+        "description": "2026 Dead Money",
         "timestamp": "1771139599",
         "id": "2",
         "amount": "840125",
-        "franchise_id": "0003",
-        "description": "2026 Dead Money"
+        "franchise_id": "0003"
       },
       {
-        "description": "2026 Dead Money",
+        "franchise_id": "0005",
         "timestamp": "1771139599",
         "id": "3",
         "amount": "1783750",
-        "franchise_id": "0005"
-      },
-      {
-        "franchise_id": "0006",
-        "amount": "450771",
-        "timestamp": "1771139599",
-        "id": "4",
         "description": "2026 Dead Money"
       },
       {
         "description": "2026 Dead Money",
-        "franchise_id": "0007",
-        "amount": "1061500",
         "timestamp": "1771139599",
-        "id": "5"
+        "id": "4",
+        "amount": "450771",
+        "franchise_id": "0006"
       },
       {
         "description": "2026 Dead Money",
-        "franchise_id": "0008",
-        "amount": "3022396",
+        "amount": "1061500",
         "timestamp": "1771139599",
-        "id": "6"
+        "id": "5",
+        "franchise_id": "0007"
       },
       {
-        "franchise_id": "0009",
+        "timestamp": "1771139599",
+        "amount": "3022396",
+        "id": "6",
+        "franchise_id": "0008",
+        "description": "2026 Dead Money"
+      },
+      {
         "id": "7",
         "timestamp": "1771139599",
         "amount": "798941",
+        "franchise_id": "0009",
         "description": "2026 Dead Money"
       },
       {
         "description": "2026 Dead Money",
+        "franchise_id": "0010",
         "id": "8",
         "timestamp": "1771139599",
-        "amount": "1440601",
-        "franchise_id": "0010"
+        "amount": "1440601"
       },
       {
-        "description": "2026 Dead Money",
-        "timestamp": "1771139599",
+        "franchise_id": "0011",
         "amount": "741813",
+        "timestamp": "1771139599",
         "id": "9",
-        "franchise_id": "0011"
+        "description": "2026 Dead Money"
       }
     ]
-  }
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
 }
