@@ -1,0 +1,71 @@
+name: Schefter Rumor Mill Scan
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run without mutating Redis/feed/GroupMe"
+        required: false
+        default: "false"
+
+concurrency:
+  group: schefter-rumor-scan
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
+
+      - name: Run Schefter rumor-mill scanner
+        env:
+          SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          SCHEFTER_TIPSTER_SALT: ${{ secrets.SCHEFTER_TIPSTER_SALT }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN_INPUT" = "true" ]; then
+            node scripts/schefter-rumor-scan.mjs --dry-run
+          else
+            node scripts/schefter-rumor-scan.mjs
+          fi
+
+      - name: Commit and push feed updates
+        env:
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No new rumor-mill posts."
+            exit 0
+          fi
+
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/theleague/schefter-feed.json
+          git commit -m "chore: schefter rumor-mill — new anonymous-tip post"
+          git pull --rebase origin main
+          git push

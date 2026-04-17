@@ -394,8 +394,8 @@ async function generateBreakingCommentary(post, raw) {
 
 // ── GroupMe Bot ──
 
-async function postToGroupMe(text) {
-  const botId = process.env.GROUPME_ROGER_BOT_ID;
+async function postToGroupMe(text, { botIdOverride } = {}) {
+  const botId = botIdOverride || process.env.GROUPME_ROGER_BOT_ID;
   if (!botId) return;
   try {
     await fetch('https://api.groupme.com/v3/bots/post', {
@@ -545,6 +545,262 @@ async function scanLeague(league) {
 
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} new posts. Feed total: ${feed.posts.length}`);
+  return newPosts.length;
+}
+
+// ── Schefter Rumor Mill: Trade-Pending Posts (Phase 1) ──
+// When a trade enters pending commish approval, post a breaking-news rumor
+// to the feed + GroupMe. Doubles as a nag reminder for the commish.
+// Gated by SCHEFTER_RUMOR_MILL_ENABLED. Bypasses rumor-mill rate limits.
+// Watermark: feed.pendingTradeWatermark = [offerId, ...] of already-posted trades.
+
+const TRADE_PENDING_SUB_TYPE = 'trade_pending_rumor';
+
+/** Pick the best short-ish team display name from the league config entry */
+function pickTeamDisplayName(team) {
+  if (!team) return null;
+  return team.nameShort || team.nameMedium || team.name || null;
+}
+
+/** Load teams WITH short names for rumor posts (the default loadTeams drops those) */
+async function loadTeamsWithShortNames(configPath) {
+  try {
+    const raw = JSON.parse(await fs.readFile(configPath, 'utf8'));
+    const teams = raw.teams ?? [];
+    const map = new Map();
+    for (const t of teams) {
+      map.set(t.franchiseId, {
+        name: t.name,
+        nameMedium: t.nameMedium,
+        nameShort: t.nameShort,
+        abbrev: t.abbrev,
+      });
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Fetch trades pending commish approval. Requires MFL_USER_ID env (commish cookie)
+ * because FRANCHISE_ID=0000 is commissioner-scoped.
+ *
+ * NOTE: This is the ONE non-contract write context that uses the commish cookie
+ * for a READ — justified because only the commish can see the "pending approval"
+ * queue for the whole league. For all other user-specific write endpoints, use
+ * the owner's cookie via getAuthUser() per repo auth rules.
+ */
+async function fetchPendingCommishTrades(leagueId, year) {
+  const mflCookie = process.env.MFL_USER_ID;
+  if (!mflCookie) {
+    console.log('  [rumor-mill] MFL_USER_ID not set — cannot fetch pending commish trades');
+    return { trades: null, error: 'MFL_USER_ID env missing' };
+  }
+  const url = `https://${MFL_HOST}/${year}/export?TYPE=pendingTrades&L=${leagueId}&FRANCHISE_ID=0000&JSON=1`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Cookie: `MFL_USER_ID=${mflCookie}`,
+        'User-Agent': 'schefter-scan/1.0',
+      },
+      redirect: 'follow',
+    });
+    if (!res.ok) return { trades: null, error: `HTTP ${res.status}` };
+    const text = await res.text();
+    if (text.trim().startsWith('<')) return { trades: null, error: 'Got HTML — auth likely failed' };
+    let data;
+    try { data = JSON.parse(text); } catch { return { trades: null, error: 'Invalid JSON' }; }
+    if (data?.error) return { trades: null, error: `MFL error: ${JSON.stringify(data.error)}` };
+    const pending = data?.pendingTrades;
+    if (!pending || pending === '') return { trades: [] };
+    const raw = pending?.pendingTrade ?? pending?.trade;
+    if (!raw) return { trades: [] };
+    return { trades: Array.isArray(raw) ? raw : [raw] };
+  } catch (err) {
+    return { trades: null, error: err.message };
+  }
+}
+
+/** Build the natural-language asset phrase for a side of the trade */
+function describeSide(assetStr, players, teams) {
+  const { playerNames, pickNames } = parseTradeAssets(assetStr, players, teams);
+  const all = [...playerNames, ...pickNames];
+  if (all.length === 0) return 'assets';
+  if (all.length === 1) return all[0];
+  if (all.length === 2) return `${all[0]} and ${all[1]}`;
+  return `${all.slice(0, 2).join(', ')} and ${all.length - 2} more`;
+}
+
+/** Schefter-voiced template fallback when Claude rewrite is unavailable */
+function generatePendingTradeTemplate(trade, players, teams) {
+  const t1 = teams.get(trade.franchise);
+  const t2 = teams.get(trade.franchise2);
+  const team1 = pickTeamDisplayName(t1) ?? `Team ${trade.franchise}`;
+  const team2 = pickTeamDisplayName(t2) ?? `Team ${trade.franchise2}`;
+  const side1 = describeSide(trade.franchise1_gave_up, players, teams);
+  const side2 = describeSide(trade.franchise2_gave_up, players, teams);
+
+  return `Hearing a deal is on the commish's desk between the ${team1} and the ${team2} — ${side1} going one way, ${side2} coming back. The league awaits. Developing.`;
+}
+
+/**
+ * Call Claude (if key present) to tighten the rumor into Schefter voice.
+ * Mirrors generateBreakingCommentary() pattern but with rumor-mill directives.
+ */
+async function generatePendingTradeAiBody(templateBody, trade, players, teams) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const t1 = teams.get(trade.franchise);
+  const t2 = teams.get(trade.franchise2);
+  const team1 = pickTeamDisplayName(t1) ?? `Team ${trade.franchise}`;
+  const team2 = pickTeamDisplayName(t2) ?? `Team ${trade.franchise2}`;
+  const { playerNames: gave1Players, pickNames: gave1Picks } = parseTradeAssets(trade.franchise1_gave_up, players, teams);
+  const { playerNames: gave2Players, pickNames: gave2Picks } = parseTradeAssets(trade.franchise2_gave_up, players, teams);
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 220,
+        system: `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You've just heard a trade has landed on the commissioner's desk awaiting approval. Voice: breaking-news tease, "I'm told...", "League sources tell me...", "hearing...". 2-3 sentences. End with "Developing." or a similar tease. Reference both franchises by name and loosely name the key assets. Do NOT include a @Brandon tag — that will be appended separately. Never break character.`,
+        messages: [
+          {
+            role: 'user',
+            content: `Trade pending commish approval:\n\n${team1} sends: ${[...gave1Players, ...gave1Picks].join(', ') || 'assets'}\n${team2} sends: ${[...gave2Players, ...gave2Picks].join(', ') || 'assets'}\n\nWrite a 2-3 sentence Schefter-voiced rumor-mill post teasing this pending deal. Plain text only, no JSON, no formatting.`,
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      console.log(`  [rumor-mill AI] ${res.status} — using template`);
+      return null;
+    }
+    const data = await res.json();
+    const text = (data.content?.[0]?.text ?? '').trim();
+    return text || null;
+  } catch (err) {
+    console.log(`  [rumor-mill AI] error: ${err.message} — using template`);
+    return null;
+  }
+}
+
+async function scanPendingTrades(league) {
+  if (!process.env.SCHEFTER_RUMOR_MILL_ENABLED ||
+      process.env.SCHEFTER_RUMOR_MILL_ENABLED === '0' ||
+      process.env.SCHEFTER_RUMOR_MILL_ENABLED.toLowerCase() === 'false') {
+    return 0;
+  }
+
+  // Phase 1 is theleague-only (AFL has its own commish and cadence)
+  if (league.slug !== 'theleague') return 0;
+
+  console.log(`\n=== Scanning Pending Trades (Rumor Mill) for ${league.slug} ===`);
+
+  const feed = await loadFeed(league.feedPath);
+  const prevWatermark = Array.isArray(feed.pendingTradeWatermark) ? feed.pendingTradeWatermark : [];
+
+  const now = new Date();
+  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+
+  const [result, players, teams] = await Promise.all([
+    fetchPendingCommishTrades(league.leagueId, year),
+    loadPlayers(league.playersPath(year)),
+    loadTeamsWithShortNames(league.configPath),
+  ]);
+
+  if (result.error) {
+    console.log(`  [rumor-mill] Could not fetch pending trades: ${result.error}`);
+    // Still write watermark cleanup below — but we only know what's currently pending if the call succeeded
+    return 0;
+  }
+
+  const pending = result.trades ?? [];
+  const currentOfferIds = pending
+    .map(t => String(t.id || t.trade_id || ''))
+    .filter(Boolean);
+  console.log(`  Pending commish-review trades: ${pending.length}`);
+
+  // New trades = currently pending but not yet posted about
+  const newPending = pending.filter(t => {
+    const id = String(t.id || t.trade_id || '');
+    return id && !prevWatermark.includes(id);
+  });
+
+  console.log(`  Already posted: ${prevWatermark.length}, new: ${newPending.length}`);
+
+  const newPosts = [];
+  const leagueSlug = 'theleague';
+
+  for (const trade of newPending) {
+    const offerId = String(trade.id || trade.trade_id || '');
+    if (!offerId) continue;
+
+    const templateBody = generatePendingTradeTemplate(trade, players, teams);
+    const aiBody = await generatePendingTradeAiBody(templateBody, trade, players, teams);
+    const body = aiBody || templateBody;
+
+    const t1 = teams.get(trade.franchise);
+    const t2 = teams.get(trade.franchise2);
+    const team1 = pickTeamDisplayName(t1) ?? `Team ${trade.franchise}`;
+    const team2 = pickTeamDisplayName(t2) ?? `Team ${trade.franchise2}`;
+
+    const tradeTs = parseInt(trade.timestamp || `${Math.floor(Date.now() / 1000)}`, 10);
+    const post = {
+      id: `sf_pending_${offerId}`,
+      timestamp: new Date().toISOString(),
+      type: 'transaction',
+      transactionSubType: TRADE_PENDING_SUB_TYPE,
+      tier: 'breaking',
+      headline: `Trade on the commish's desk: ${team1} and ${team2}`,
+      body,
+      authorId: 'adam-schefter',
+      franchiseIds: [trade.franchise, trade.franchise2].filter(Boolean),
+      sourceTimestamp: String(tradeTs),
+      offerId,
+      league: leagueSlug,
+    };
+
+    // Dedup guard in case watermark got out of sync with feed
+    if (feed.posts.some(p => p.id === post.id)) {
+      console.log(`  [rumor-mill] Skip ${offerId} — already in feed`);
+      continue;
+    }
+
+    newPosts.push(post);
+    console.log(`  [breaking] ${post.headline}`);
+
+    // GroupMe: Schefter is the voice of the league — require his bot, never fall back to Roger
+    const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
+    if (!schefterBotId) {
+      console.warn('  [GroupMe] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe post (Roger bot is reserved for deadlines)');
+    } else {
+      const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
+      await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
+    }
+  }
+
+  // Rebuild watermark: only keep offerIds still pending. Add any new ones we posted.
+  const newWatermarkSet = new Set(currentOfferIds);
+  // (Trades that disappeared from pending drop off automatically.)
+  feed.pendingTradeWatermark = Array.from(newWatermarkSet);
+
+  if (newPosts.length > 0) {
+    feed.posts = [...newPosts.reverse(), ...feed.posts];
+  }
+
+  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+
+  const dropped = prevWatermark.filter(id => !newWatermarkSet.has(id));
+  if (dropped.length) console.log(`  [rumor-mill] Dropped ${dropped.length} resolved trade(s) from watermark`);
+  console.log(`  Wrote ${newPosts.length} pending-trade rumor post(s). Watermark size: ${feed.pendingTradeWatermark.length}`);
   return newPosts.length;
 }
 
@@ -1475,6 +1731,8 @@ for (const league of LEAGUES) {
   try {
     // Scan MFL transactions
     totalPosts += await scanLeague(league);
+    // Scan pending trades (Schefter Rumor Mill — Phase 1)
+    totalPosts += await scanPendingTrades(league);
     // Scan ESPN contributors
     totalPosts += await scanEspn(league);
     // Scan event reminders (Ask Roger)
