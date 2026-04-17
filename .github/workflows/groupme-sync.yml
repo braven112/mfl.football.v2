@@ -15,9 +15,10 @@ jobs:
     steps:
       - name: Trigger sync endpoint
         env:
-          SYNC_URL: https://theleague.us/api/groupme/sync
+          SYNC_URL: https://www.theleague.us/api/groupme/sync
+          SYNC_ORIGIN: https://www.theleague.us
         run: |
-          response=$(curl -sS -w "\n%{http_code}" -X POST "$SYNC_URL")
+          response=$(curl -sS -w "\n%{http_code}" -X POST -H "Origin: $SYNC_ORIGIN" "$SYNC_URL")
           body=$(echo "$response" | sed '$d')
           status=$(echo "$response" | tail -n1)
           echo "Status: $status"
