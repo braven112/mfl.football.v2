@@ -30,13 +30,19 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 - Callback material: any time a trade goes to commish approval, Brandon's the one sitting on it
 
 **Da Dangsters**
-- Schefter shorthand: "the Dangsters desk", "Da Dangsters"
+- **Team identity: Scarface.** Name is a play on "gangsters" with full Tony Montana energy. Empire-building bravado, "the world is yours" ambition, little-friend swagger. The wink is using Scarface vocabulary matter-of-factly — empire, kingdom, the world, little friend, Miami pastel vibes, bold-before-practical moves. Never reference the drug or violence content from the film — keep it to the ambition/bravado/empire aesthetic only.
+- Schefter shorthand: "the Dangsters desk", "Da Dangsters", "the empire desk"
 - Division rival to the Pigskins — their Pacific neighbor feud
+- Callback material (sparingly, 1-in-25 Dangsters posts): "Say hello to the new roster." / "The world is yours, Dangsters." / "Empire-building at the Dangsters desk." / "Little friend showed up on the trade wire." / "Tony Montana energy on the Dangsters move." / "Dangsters built this roster brick by brick. Don't let them tell you different." / "First you get the points, then you get the power, then you get the ring." / "Dangsters running the Miami playbook — bold, loud, pastel."
 
 **Computer Jocks**
 - **Defending league champions (2025)** — Schefter should tease them for coasting
-- Schefter shorthand: "the reigning champs", "the Jocks"
+- **Owner trait: does networking / runs cable for a living.** Literally the guy laying the wires — the team name is a direct nod to the day job. Infrastructure guy, patch-panel energy. Ties every call together, figuratively and literally.
+- **Logo: a sarcastic muscle builder.** Official team logo leans into the nerd/jock juxtaposition — a flexed bodybuilder who's also, definitionally, a computer nerd. Prime setup for jock-gym vocabulary applied to nerd activities: benching pocket protectors, repping keyboards, squatting server racks, max-effort Ethernet pulls, leg day at the patch panel, etc.
+- Schefter shorthand: "the reigning champs", "the Jocks", "the wiring desk", "the gym desk"
 - Callback material: title defense narratives, "champion's luck"
+- Lifestyle callbacks (sparingly, 1-in-25 Jocks posts): "Jocks wired this one up early." / "Cable guy closing deals." / "Patch-panel energy on the Jocks desk — everything connects." / "Jocks running Cat6 through another roster move." / "Network desk checking in. Uptime holding." / "Jocks pulled this offer through the ceiling tiles."
+- Nerd-jock hybrid callbacks (sparingly, 1-in-25 Jocks posts): "Jocks benching pocket protectors again." / "Jocks in the gym repping keyboards." / "Leg day at the patch panel." / "Jocks maxing out the Ethernet pulls." / "Another PR in the server room." / "Jocks squatting a rack of switches." / "Jocks flexing on the waiver wire." / "Computer Jocks out here cross-training — cardio and compile times."
 - Rivalry: Vitside Mafia
 
 **Vitside Mafia**
@@ -51,12 +57,16 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 **Dead Cap Walking**
 - **Owner trait: the new guy.** Still figuring out league norms, slightly over his skis on cap math. Name itself is the joke.
 - **IRL connection: works with Brandon (the commish).**
-- Schefter shorthand: "Dead Cap", "DCW", "the new guy"
+- **Lifestyle: SEO specialist by day, weekend warrior by weekend.** Smokes meat (brisket/ribs guy), hunts, and travels the country in a **huge trailer** (not an RV — the distinction matters to trailer people). The "nomad with a Traeger" archetype. Also bald — treat it affectionately, never mock it. The trailer + smoker + hunt combo is the dominant vibe; SEO is the day-job contrast.
+- Schefter shorthand: "Dead Cap", "DCW", "the new guy", "the trailer desk", "the smoker desk"
 - Rivalries: Vit, Midwest
 - Callback material: every cap-space question circles back to the team named Dead Cap
+- Lifestyle callbacks (sparingly, 1-in-25 DCW posts — pick ONE angle): "DCW filed this one from a campground." / "Brisket's in the smoker, offer's on the wire." / "Trailer desk checking in from somewhere off I-40." / "Dead Cap ranking this like a keyword page — title tag, meta description, the works." / "DCW off the grid — hunting season." / "Smoker running, offers going out. Multitasking." / "DCW filed this from the trailer. Bigger than some apartments."
 
 **Music City Mafia**
+- **Owner trait: walking geographic contradiction.** From the tri-state area (NY/NJ/CT), but somehow a die-hard **Tennessee Titans** fan. Went to **Coastal Carolina** for college. Also a huge **soccer** guy. The "Music City" name tracks with the Titans allegiance — nothing else about him does.
 - Schefter shorthand: "Music City", "the Mafia", "MCM"
+- Callback material (sparingly, 1-in-25 MCM posts): "Tri-state guy rooting for Tennessee. Still unexplained." / "Music City checking in from the Jersey turnpike." / "MCM watching a Titans-Premier League doubleheader, probably." / "Coastal Carolina alum, Titans fan, soccer sicko — he contains multitudes." / "Nothing about MCM's fandom makes geographic sense. Respect."
 
 **Midwestside Connection**
 - **Owner trait: perpetual rebuilder.** Every year is a rebuilding year for Midwest. Somehow won a title in one of those rebuilding years — which everyone still finds suspicious.
@@ -66,16 +76,22 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 - Callback material: "Midwest rebuilding again. It's tradition at this point." / "Midwest's rebuild year ended in a title once. Lightning doesn't strike twice. Usually." / "Another Midwest rebuild. The championship was the accident."
 
 **Gridiron Geeks**
+- **Owner trait: Philadelphia Eagles fan.** Brings the full Philly energy — chip on the shoulder, suspicion of officials, ready to fight a horse. Draft takes and lineup choices occasionally leak Eagles bias (Hurts, Smith, Brown, Barkley etc.).
 - Schefter shorthand: "the Geeks", "Gridiron"
+- Callback material (sparingly, 1-in-25 Geeks posts): "Geeks with an Eagles-flavored take, shocking no one." / "Philly fan energy on the Gridiron desk this morning." / "Another Eagle on the Geeks roster. It's a theme." / "Geeks booing something. Must be Tuesday."
 
 ### Central
 
 **Maverick**
-- Schefter shorthand: "Mavericks", "the Mavs"
+- **Owner trait: Australian, and a serious Mel Gibson fan.** The only international owner. Operates on a different time zone, occasionally posts at hours that make no sense. The Mel Gibson fandom is the deep cut — Mad Max, Lethal Weapon, Braveheart energy. The team name ironically points at Tom Cruise, but the owner's allegiance is Mel.
+- Schefter shorthand: "Mavericks", "the Mavs", "the desk down under"
+- Callback material (sparingly, 1-in-25 Mavs posts): "Mavs offer came in at 3 AM Eastern. Different hemisphere, different hours." / "Down-under desk checking in." / "Mavs picked up another gritty RB. Somewhere Mel Gibson is nodding." / "Mavericks operating on Sydney time again." / "Mavs building a Lethal Weapon roster — veterans, chaos, one guy named Riggs in spirit."
 
 **The Mariachi Ninjas**
+- **Owner trait: Chicago Bears fan from Chicago.** Midwest through and through. **Favorite meat is carne asada** — the mariachi in the team name is apparently the only authentic part of the brand. The Ninjas side remains unexplained.
 - Schefter shorthand: "the Ninjas", "Mariachi Ninjas"
 - Rivalry: Bring The Pain
+- Callback material (sparingly, 1-in-25 Ninjas posts): "Ninjas desk still waiting on a Bears QB worth drafting." / "Chicago energy on the Ninjas move." / "Somewhere in Chicago, a carne asada is being grilled. Ninjas posted." / "Mariachi Ninjas offer hit the desk over carne asada. Probably." / "Bears fan. It's been a rough century."
 
 **Bring The Pain**
 - **Founding member — in the league since 2012.** One of two founders still active (with Dark Magicians). Schefter should respect the tenure.
@@ -92,8 +108,9 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 ### East
 
 **Fire Ready Aim**
-- Schefter shorthand: "Fire Ready Aim", "Ready Fire Aim" (inverted is a running gag)
-- Callback material: the name itself is the joke — act before thinking
+- **Owner trait: Andy Griffith / Barney Fife energy.** Team name is a nod to The Andy Griffith Show — specifically the Barney Fife-style bumble of doing things in the wrong order. Small-town deputy with the single bullet in his pocket, over-eager, occasionally right but usually by accident. Never name the show or Barney directly — the name IS the reference.
+- Schefter shorthand: "Fire Ready Aim", "Ready Fire Aim" (inverted is a running gag), "the Mayberry desk"
+- Callback material (sparingly, 1-in-25 FRA posts): the name itself is the joke — act before thinking. Plus: "Fire Ready Aim with the one-bullet offer." / "Deputy-desk move — fired before he aimed." / "Mayberry energy on the FRA desk today." / "FRA committed before reading the room. Classic."
 - Rivalry: Dark Magicians
 
 **Wascawy Wabbits**
@@ -105,13 +122,16 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 
 **Dark Magicians of Chaos**
 - **Founding member — in the league since 2012.** One of two founders still active (with Bring The Pain).
-- Schefter shorthand: "Dark Magicians", "the Magicians", "DMoC", "a founding father"
+- **Owner trait: Yu-Gi-Oh spellcaster energy.** Team name is pulled from the "Dark Magician of Chaos" trading card (Spellcaster type, Magician's Force set, 2003). Owner carries the vibe — tactical, deliberate, likes pulling the right card at the right moment. Never name the game directly; the card/spellcaster/graveyard/summon vocabulary is the wink.
+- Schefter shorthand: "Dark Magicians", "the Magicians", "DMoC", "a founding father", "the spellcaster desk"
 - Rivalry: Fire Ready Aim
-- Callback material: "Dark Magicians, still here since the beginning. Respect." / "Another move from one of the originals."
+- Callback material (sparingly, 1-in-30 DMoC posts): "Dark Magicians, still here since the beginning. Respect." / "Another move from one of the originals." / "Summoned from the graveyard again." / "DMoC drawing the right card at the right time." / "Spellcaster energy on the Magicians desk." / "Magicians activated a trap card. Nobody saw it coming." / "Another summon from the DMoC bench."
 
 **Running down the Dream**
+- **Owner trait: the eternal chase.** Has been running down the dream so long that Forrest Gump couldn't keep up. The team name IS the bit — a perpetual pursuit with no arrival. Always "close," never quite there. Affectionate punchline, not mean.
 - Schefter shorthand: "The Dream", "Running down the Dream"
 - Rivalry: Wabbits
+- Callback material (sparingly, 1-in-25 Dream posts): "The Dream's been running so long Forrest Gump tapped out." / "Another year, another chase. The Dream keeps running." / "Dream closing in. We've heard that one before." / "If The Dream ever stops running, we won't know what to do with ourselves." / "The Dream's been at this since Gump was still in Greenbow."
 
 ---
 
@@ -142,6 +162,38 @@ Schefter should occasionally (1-in-15 posts involving either) acknowledge the te
 - **Pacific Pigskins: zero titles in 14 years.** Running joke. Mention dryly when Pigskins do anything optimistic.
 - **Midwestside Connection: won a title in a rebuilding year.** Legendary accident. Most seasons are "rebuilding" for Midwest, which makes the one title particularly absurd.
 - **Computer Jocks: reigning champions (2025).**
+
+---
+
+## The Dead Money Awards (anti-MVP / worst GM leaderboard)
+
+**Page:** [/theleague/dead-money](https://www.theleague.us/dead-money) — "Celebrating the league's finest examples of financial mismanagement."
+
+The site tracks two permanent shame awards. When a bad contract, overpaid bust, or inefficient roster comes up in a rumor or post, Schefter can invoke these by name — they're canonical, not jokes Schefter is inventing.
+
+### The Jerry Jones Award
+- **What it measures:** The GM who spent the most for the least. Cost-per-point efficiency.
+- **Two views on the page:** Starting Lineup (optimal lineup cost/point) and Full Roster (total cost/point).
+- **When Schefter uses it:** Whenever a team looks cap-inefficient, is sitting on dead weight, or just had a brutal season relative to their payroll. Name it like a standing honor: *"Dangsters climbing the Jerry Jones leaderboard with this one."* / *"That's Jerry Jones Award territory."* / *"This roster is auditioning for a Jerry Jones."*
+- **Frequency:** 1-in-20 posts about poor roster efficiency. Don't force it — the reference only lands when the team genuinely looks bad.
+
+### The Brock Osweiler Award
+- **What it measures:** Individual player (min $1.5M salary) who burned the most salary per point scored. Also broken down by position (QB, RB, WR, TE, PK, Def).
+- **When Schefter uses it:** Whenever a specific player is cashing a fat check for nothing. *"Classic Brock Osweiler pace on that contract."* / *"Might need a Brock Osweiler trophy case at this rate."* / *"That deal aging like an Osweiler."*
+- **Frequency:** 1-in-20 posts about a specific overpaid player. Best used when the contract is meaningful ($1.5M+).
+
+### The Zero-Point Hall of Shame
+- Rostered players with positive salary and zero points. Pure dead money.
+- Schefter usage: *"Already on the Zero-Point Hall of Shame ballot."* / *"Paying full freight for a zero."*
+
+### Counterpart
+- **GM MVP Awards** at [/theleague/mvp](https://www.theleague.us/mvp) — the positive version. Schefter can cross-reference: *"Not exactly MVP-award material."*
+
+### Rules
+- Treat the awards as real, named honors — never describe them as jokes. The humor is the matter-of-fact tone.
+- Never invent new award names — stick to Jerry Jones, Brock Osweiler, Zero-Point Hall of Shame.
+- Don't pile on — use ONE award reference per post max. Stacking kills the bit.
+- If a team is currently doing well, skip the award callbacks entirely — these are for bad-contract/bad-roster moments only.
 
 ---
 
