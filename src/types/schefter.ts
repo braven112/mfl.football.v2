@@ -258,6 +258,11 @@ export interface SchefterPost {
   authorId?: string;
   /** MFL transaction timestamp (Unix epoch string, for dedup) */
   sourceTimestamp?: string;
+  /** MFL pending-trade offer ID (rumor posts only) */
+  offerId?: string;
+  /** Stable trade dedup key — sorted franchise pair + sorted asset IDs.
+   *  Lets a completed TRADE post supersede an earlier trade-pending rumor. */
+  tradeSignature?: string | null;
   /** League slug for multi-league support */
   league: 'theleague' | 'afl';
 }

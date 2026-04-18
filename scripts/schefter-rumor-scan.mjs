@@ -1102,7 +1102,7 @@ async function main() {
     tier: RUMOR_TIER,
     headline: 'Schefter hearing…',
     body,
-    authorId: 'adam-schefter',
+    authorId: 'claude',
     franchiseIds: [],
     tipIds,
     hadRogerRiff,

@@ -118,6 +118,30 @@ function parseTradeAssets(str, players, teams) {
   return { playerNames, pickNames };
 }
 
+/**
+ * Build a stable signature for a trade so a completed TRADE transaction can
+ * supersede any prior trade-pending rumor post about the same deal.
+ * Uses sorted franchise pair + sorted asset IDs (player IDs + raw FP_ pick IDs)
+ * so pending and completed sides hash identically regardless of who's "side 1".
+ */
+function buildTradeSignature(franchise1, franchise2, gaveStr1, gaveStr2) {
+  const f1 = String(franchise1 || '');
+  const f2 = String(franchise2 || '');
+  if (!f1 || !f2) return null;
+  const franchisePair = [f1, f2].sort().join(':');
+
+  const assets = [];
+  for (const str of [gaveStr1, gaveStr2]) {
+    if (!str) continue;
+    for (const part of str.split(',').map(s => s.trim()).filter(Boolean)) {
+      assets.push(part);
+    }
+  }
+  if (assets.length === 0) return null;
+  assets.sort();
+  return `${franchisePair}|${assets.join(',')}`;
+}
+
 function parseAuctionTransaction(txnStr, players) {
   const clean = txnStr.replace(/^\|/, '').replace(/\|$/, '');
   const parts = clean.split('|').filter(Boolean);
@@ -180,6 +204,7 @@ function generateTradePost(raw, players, teams, leagueSlug) {
     body,
     franchiseIds,
     sourceTimestamp: raw.timestamp,
+    tradeSignature: buildTradeSignature(raw.franchise, raw.franchise2, raw.franchise1_gave_up, raw.franchise2_gave_up),
     league: leagueSlug,
   };
 }
@@ -539,6 +564,20 @@ async function scanLeague(league) {
       continue;
     }
 
+    // One post per topic: a completed TRADE supersedes any prior trade-pending
+    // rumor about the same deal. Match by sorted franchise pair + sorted assets.
+    if (post.transactionSubType === 'TRADE' && post.tradeSignature) {
+      const before = feed.posts.length;
+      feed.posts = feed.posts.filter(p => {
+        if (p.transactionSubType !== TRADE_PENDING_SUB_TYPE) return true;
+        return p.tradeSignature !== post.tradeSignature;
+      });
+      const removed = before - feed.posts.length;
+      if (removed > 0) {
+        console.log(`  [dedup] Removed ${removed} pending-trade rumor post(s) superseded by completed TRADE`);
+      }
+    }
+
     // Generate AI commentary for breaking-tier posts
     if (post.tier === 'breaking') {
       await generateBreakingCommentary(post, txn);
@@ -803,16 +842,26 @@ async function scanPendingTrades(league) {
       tier: 'breaking',
       headline: `Trade on the commish's desk: ${team1} and ${team2}`,
       body,
-      authorId: 'adam-schefter',
+      authorId: 'claude',
       franchiseIds: [trade.franchise, trade.franchise2].filter(Boolean),
       sourceTimestamp: String(tradeTs),
       offerId,
+      tradeSignature: buildTradeSignature(trade.franchise, trade.franchise2, trade.franchise1_gave_up, trade.franchise2_gave_up),
       league: leagueSlug,
     };
 
     // Dedup guard in case watermark got out of sync with feed
     if (feed.posts.some(p => p.id === post.id)) {
       console.log(`  [rumor-mill] Skip ${offerId} — already in feed`);
+      continue;
+    }
+
+    // One post per topic: don't post a pending rumor if the completed TRADE
+    // already landed on the feed (e.g., approved between scan cycles).
+    if (post.tradeSignature && feed.posts.some(p =>
+      p.transactionSubType === 'TRADE' && p.tradeSignature === post.tradeSignature
+    )) {
+      console.log(`  [rumor-mill] Skip ${offerId} — completed TRADE already in feed`);
       continue;
     }
 
