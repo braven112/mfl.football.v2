@@ -129,7 +129,7 @@ No new API or Redis keys — feed JSON is already imported on this page.
 **Content (copy):**
 - **Example 1 — Single-source franchise mention**
   - Tip: "The Magicians are shopping their 1.03 for a WR."
-  - What Schefter prints: "Sources in the East whisper that a franchise is dangling a top rookie pick for WR help. Developing."
+  - What Schefter prints: "Sources tell me a team in the East is dangling a top rookie pick for WR help. Developing."
 - **Example 2 — Multi-source franchise mention**
   - Tip (plus one other owner on the same team): "The Magicians are shopping their 1.03."
   - What Schefter prints: "League sources tell me multiple owners are talking about the Dark Magicians. Worth watching."
