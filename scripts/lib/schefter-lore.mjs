@@ -134,6 +134,14 @@ const LORE_CALLBACK_PHRASES = [
   'Ready, Fire, Aim',
   'founding father',
   'Squeaky wheel gets the tampering fine',
+  'style book',
+  'Learning your style',
+  'learning your patterns',
+  'dossier compiles',
+  'scouting report on',
+  'Every denial is a data point',
+  'file just got thicker',
+  'algorithm\'s taking notes',
 ];
 
 // ── File loading (cached) ──
