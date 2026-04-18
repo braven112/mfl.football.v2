@@ -32,6 +32,24 @@ const RUMOR_POSTS_TODAY_KEY = 'schefter:rumor:posts_today';
 const MARINATE_WINDOW_MS = 60 * 60 * 1000;
 const DAILY_CAP = 3;
 
+// In-process cache. The client polls /api/schefter/cooker-status every 60s
+// per open tab; under any concurrency at all we rack up Redis commands fast
+// (3 per request: LLEN + 2× GET). Cooker state changes slowly enough that a
+// 15-second staleness window is imperceptible to users, and it bounds the
+// per-minute Redis cost at 4 reads × 3 commands = 12 commands regardless of
+// how many concurrent viewers we have.
+const CACHE_TTL_MS = 15_000;
+type CookerSnapshot = {
+  queueDepth: number;
+  marinateStartedAt: number | null;
+  nextEarliestPostAt: number | null;
+  postsToday: number;
+  dailyCap: number;
+  dailyCapHit: boolean;
+  marinateWindowMs: number;
+};
+let _cache: { data: CookerSnapshot; expiresAt: number } | null = null;
+
 type RedisClient = {
   llen: (key: string) => Promise<number>;
   get: <T>(key: string) => Promise<T | null>;
@@ -74,10 +92,22 @@ function coerce(raw: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Expose cache reset for tests — not wired to anything in production. */
+export function _resetCookerCacheForTests(): void {
+  _cache = null;
+}
+
 export const GET: APIRoute = async () => {
+  // Serve from in-process cache when fresh — same-instance concurrent
+  // callers share a single Redis read per CACHE_TTL_MS window.
+  const now = Date.now();
+  if (_cache && _cache.expiresAt > now) {
+    return json(_cache.data);
+  }
+
   const redis = await getRedis();
   if (!redis) {
-    return json({
+    const empty: CookerSnapshot = {
       queueDepth: 0,
       marinateStartedAt: null,
       nextEarliestPostAt: null,
@@ -85,7 +115,11 @@ export const GET: APIRoute = async () => {
       dailyCap: DAILY_CAP,
       dailyCapHit: false,
       marinateWindowMs: MARINATE_WINDOW_MS,
-    });
+    };
+    // Cache the zero state too — prevents a hot-path of Redis-missing
+    // requests from re-running the import every poll.
+    _cache = { data: empty, expiresAt: now + CACHE_TTL_MS };
+    return json(empty);
   }
 
   let queueDepth = 0;
@@ -110,7 +144,7 @@ export const GET: APIRoute = async () => {
   const nextEarliestPostAt =
     marinateStartedAt !== null ? marinateStartedAt + MARINATE_WINDOW_MS : null;
 
-  return json({
+  const snapshot: CookerSnapshot = {
     queueDepth,
     marinateStartedAt,
     nextEarliestPostAt,
@@ -118,5 +152,7 @@ export const GET: APIRoute = async () => {
     dailyCap: DAILY_CAP,
     dailyCapHit,
     marinateWindowMs: MARINATE_WINDOW_MS,
-  });
+  };
+  _cache = { data: snapshot, expiresAt: now + CACHE_TTL_MS };
+  return json(snapshot);
 };

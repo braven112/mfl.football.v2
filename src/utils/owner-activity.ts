@@ -14,6 +14,7 @@ type RedisClient = {
 	hset: (key: string, data: Record<string, unknown>) => Promise<unknown>;
 	hincrby: (key: string, field: string, increment: number) => Promise<number>;
 	expire: (key: string, seconds: number) => Promise<unknown>;
+	eval: <T = unknown>(script: string, keys: string[], args: (string | number)[]) => Promise<T>;
 };
 
 let _redis: RedisClient | null | undefined;
@@ -61,6 +62,30 @@ function ownerPageKey(leagueId: string, franchiseId: string): string {
 	return `pages:${leagueId}:${franchiseId}`;
 }
 
+/**
+ * Lua script bundling the four writes recordVisit needs into a single
+ * EVAL call. Upstash bills EVAL as one command regardless of how many
+ * `redis.call(...)` lines the script contains, so this takes a ~5-command
+ * operation (HSET + 3× HINCRBY + EXPIRE-on-every-call) down to 1 command
+ * per visit. The EXPIRE guard uses TTL < 0 so it only fires the first
+ * time we touch the pageview key each day.
+ *
+ * KEYS[1] activity hash        ARGV[1] franchiseId
+ * KEYS[2] daily pageview hash  ARGV[2] now-ms timestamp string
+ * KEYS[3] global pages hash    ARGV[3] pageview TTL seconds
+ * KEYS[4] owner pages hash     ARGV[4] normalized page path
+ */
+const RECORD_VISIT_LUA = `
+redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+redis.call('HINCRBY', KEYS[2], ARGV[1], 1)
+if redis.call('TTL', KEYS[2]) < 0 then
+  redis.call('EXPIRE', KEYS[2], ARGV[3])
+end
+redis.call('HINCRBY', KEYS[3], ARGV[4], 1)
+redis.call('HINCRBY', KEYS[4], ARGV[4], 1)
+return 1
+`;
+
 /** Record a visit for a franchise (updates last-seen, daily page view count, and page popularity) */
 export async function recordVisit(leagueId: string, franchiseId: string, page = '/'): Promise<void> {
 	const redis = await getRedis();
@@ -69,12 +94,24 @@ export async function recordVisit(leagueId: string, franchiseId: string, page = 
 	const pvKey = pageviewKey(leagueId, today);
 	// Normalize page path: strip query params, trailing slashes
 	const normalizedPage = page.split('?')[0].replace(/\/+$/, '') || '/';
-	await Promise.all([
-		redis.hset(redisKey(leagueId), { [franchiseId]: Date.now().toString() }),
-		redis.hincrby(pvKey, franchiseId, 1).then(() => redis.expire(pvKey, PAGEVIEW_TTL_SECONDS)),
-		redis.hincrby(globalPageKey(leagueId), normalizedPage, 1),
-		redis.hincrby(ownerPageKey(leagueId, franchiseId), normalizedPage, 1),
-	]);
+
+	try {
+		await redis.eval(
+			RECORD_VISIT_LUA,
+			[redisKey(leagueId), pvKey, globalPageKey(leagueId), ownerPageKey(leagueId, franchiseId)],
+			[franchiseId, Date.now().toString(), PAGEVIEW_TTL_SECONDS, normalizedPage],
+		);
+	} catch (err) {
+		// Older Redis/Upstash instances without EVAL fall back to the 5-command
+		// path so tracking keeps working even if the script layer is unavailable.
+		console.warn('[owner-activity] EVAL failed, falling back to pipelined writes:', err);
+		await Promise.all([
+			redis.hset(redisKey(leagueId), { [franchiseId]: Date.now().toString() }),
+			redis.hincrby(pvKey, franchiseId, 1).then(() => redis.expire(pvKey, PAGEVIEW_TTL_SECONDS)),
+			redis.hincrby(globalPageKey(leagueId), normalizedPage, 1),
+			redis.hincrby(ownerPageKey(leagueId, franchiseId), normalizedPage, 1),
+		]);
+	}
 }
 
 /** Get all franchise activity timestamps for a league */
