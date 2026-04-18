@@ -14,7 +14,15 @@ import { getAuthUser } from '../../../utils/auth';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import { chooseTeamName } from '../../../utils/team-names';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import feedData from '../../../data/theleague/schefter-feed.json';
+import type { SchefterFeed as FeedType } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
+
+const feed = feedData as FeedType;
+const schefterArticles = feed.posts
+  .filter((p: any) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))
+  .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  .slice(0, 3);
 
 const schefterAuthor = getAuthor('claude-schefter');
 const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/assets/claude-schefter-avatar.webp';
@@ -59,73 +67,34 @@ const franchiseOptions = teams.map((t) => ({
 
 <TheLeagueLayout title="Tip Schefter">
   <main class="tip-page">
-    <header class="tip-hero tip-hero--persona">
-      <p class="tip-hero__eyebrow">Schefter Rumor Mill</p>
-      <div class="sf-page-header tip-hero__persona-card">
-        <div class="sf-page-header__persona">
-          <img
-            class="sf-page-header__avatar"
-            src={schefterAvatar}
-            alt=""
-            aria-hidden="true"
-            width="48"
-            height="48"
-            loading="eager"
-          />
-          <div>
-            <h1 class="sf-page-header__name">{schefterAuthor?.name ?? 'Claude Schefter'}</h1>
-            <div class="sf-page-header__handle">{schefterAuthor?.handle ?? '@ClaudeSchefter'}</div>
+    <div class="tip-main">
+      <header class="tip-hero tip-hero--persona">
+        <p class="tip-hero__eyebrow">Schefter Rumor Mill</p>
+        <div class="sf-page-header tip-hero__persona-card">
+          <div class="sf-page-header__persona">
+            <img
+              class="sf-page-header__avatar"
+              src={schefterAvatar}
+              alt=""
+              aria-hidden="true"
+              width="48"
+              height="48"
+              loading="eager"
+            />
+            <div>
+              <h1 class="sf-page-header__name">{schefterAuthor?.name ?? 'Claude Schefter'}</h1>
+              <div class="sf-page-header__handle">{schefterAuthor?.handle ?? '@ClaudeSchefter'}</div>
+            </div>
           </div>
+          <p class="sf-page-header__bio">{schefterAuthor?.bio}</p>
         </div>
-        <p class="sf-page-header__bio">{schefterAuthor?.bio}</p>
-      </div>
-      <p class="tip-hero__lede">
-        Got a hunch, a grievance, or a leak? Schefter is listening. He'll fold your tip into his
-        next report without ever naming names.
-      </p>
-      <a href="/theleague/news" class="tip-hero__feed-link">
-        Read the feed
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </a>
-    </header>
+        <p class="tip-hero__lede">
+          Got a hunch, a grievance, or a leak? Schefter is listening. He'll fold your tip into his
+          next report without ever naming names.
+        </p>
+      </header>
 
-    <section class="tip-card" aria-labelledby="how-it-works-title">
-      <div class="section-header">
-        <h2 class="section-header__title" id="how-it-works-title">How this works</h2>
-        <p class="section-header__sub">Anonymity is the whole point.</p>
-      </div>
-      <ul class="tip-detail-list">
-        <li class="tip-detail-row">
-          <span class="tip-detail-row__label">Anonymous</span>
-          <span class="tip-detail-row__value">
-            Your tip is stored with a one-way hash of your user id. Not even the commish can see who
-            sent what.
-          </span>
-        </li>
-        <li class="tip-detail-row">
-          <span class="tip-detail-row__label">Rate</span>
-          <span class="tip-detail-row__value">
-            Schefter fires at most <strong>3 rumor-mill posts per day</strong>, and he sits on every
-            tip for at least an hour before saying anything.
-          </span>
-        </li>
-        <li class="tip-detail-row">
-          <span class="tip-detail-row__label">Fuzz</span>
-          <span class="tip-detail-row__value">
-            If you name a team, Schefter may generalize to the division unless multiple owners are
-            whispering about the same franchise.
-          </span>
-        </li>
-        <li class="tip-detail-row">
-          <span class="tip-detail-row__label">Limits</span>
-          <span class="tip-detail-row__value">3 tips per owner per 24 hours. Make them count.</span>
-        </li>
-      </ul>
-    </section>
-
-    <form class="tip-card tip-form" id="tip-form" novalidate>
+      <form class="tip-card tip-form" id="tip-form" novalidate>
       <div class="section-header">
         <h2 class="section-header__title">Your tip</h2>
         <p class="section-header__sub">500 characters. Make it count.</p>
@@ -175,18 +144,118 @@ const franchiseOptions = teams.map((t) => ({
         <p class="tip-status" id="tip-status" role="status" aria-live="polite"></p>
       </div>
     </form>
+    </div>
+
+    <aside class="tip-rail" aria-label="How tips work and recent reports">
+      <section class="tip-rail-card" aria-labelledby="how-it-works-title">
+        <div class="section-header">
+          <h2 class="section-header__title" id="how-it-works-title">How this works</h2>
+          <p class="section-header__sub">Anonymity is the whole point.</p>
+        </div>
+        <ul class="tip-rail-rules">
+          <li class="tip-rail-rule">
+            <span class="tip-rail-rule__label">Anonymous</span>
+            <p class="tip-rail-rule__text">
+              Tips are stored with a one-way hash of your user id. Not even the commish can see who
+              sent what.
+            </p>
+          </li>
+          <li class="tip-rail-rule">
+            <span class="tip-rail-rule__label">Rate</span>
+            <p class="tip-rail-rule__text">
+              At most <strong>3 rumor-mill posts per day</strong>. Schefter sits on every tip for an
+              hour before saying anything.
+            </p>
+          </li>
+          <li class="tip-rail-rule">
+            <span class="tip-rail-rule__label">Fuzz</span>
+            <p class="tip-rail-rule__text">
+              Name a team and Schefter may generalize to the division unless multiple owners are
+              whispering about the same franchise.
+            </p>
+          </li>
+          <li class="tip-rail-rule">
+            <span class="tip-rail-rule__label">Limits</span>
+            <p class="tip-rail-rule__text"><strong>3 tips per owner per 24 hours.</strong> Make them count.</p>
+          </li>
+        </ul>
+      </section>
+
+      {schefterArticles.length > 0 && (
+        <section class="tip-rail-section" aria-label="Featured articles from Claude Schefter">
+          <h2 class="tip-rail-section__title">From the Schefter Report</h2>
+          <ul class="tip-rail-articles">
+            {schefterArticles.map((article: any) => (
+              <li class="tip-rail-articles__item">
+                <a href={article.link ?? `/theleague/news/${article.id}`} class="tip-rail-article-card">
+                  {article.image && (
+                    <img
+                      src={`/assets/schefter/${article.image}`}
+                      alt={article.imageAlt ?? ''}
+                      class="tip-rail-article-card__image"
+                      width="240"
+                      height="135"
+                      loading="lazy"
+                    />
+                  )}
+                  <div class="tip-rail-article-card__body">
+                    <div class="tip-rail-article-card__meta">
+                      {new Date(article.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                    <div class="tip-rail-article-card__headline">{article.headline}</div>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a href="/theleague/news" class="tip-rail-feed-link">
+            Read the full feed
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </a>
+        </section>
+      )}
+    </aside>
   </main>
 </TheLeagueLayout>
 
 <style>
   .tip-page {
-    max-width: 44rem;
+    max-width: 60rem;
     margin: 0 auto;
     padding: 1.5rem 1rem 4rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 1.5rem;
+    align-items: start;
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  .tip-main {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    color: var(--color-gray-800, #1f2937);
+    min-width: 0;
+  }
+
+  .tip-rail {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  @media (max-width: 860px) {
+    .tip-page {
+      grid-template-columns: 1fr;
+      max-width: 44rem;
+    }
+    .tip-rail {
+      position: static;
+    }
   }
 
   .tip-hero {
@@ -202,21 +271,6 @@ const franchiseOptions = teams.map((t) => ({
     padding: 0;
     background: transparent;
     border-bottom: none;
-  }
-  .tip-hero__feed-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    align-self: flex-start;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-    padding: 0.25rem 0;
-    transition: gap 0.15s;
-  }
-  .tip-hero__feed-link:hover {
-    gap: 0.5rem;
   }
   .tip-hero__eyebrow {
     font-size: 0.75rem;
@@ -409,6 +463,140 @@ const franchiseOptions = teams.map((t) => ({
   }
   .tip-status[data-state='error'] {
     color: var(--color-error-dark, #b91c1c);
+  }
+
+  /* Right rail: How this works card */
+  .tip-rail-card {
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  .tip-rail-rules {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .tip-rail-rule {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+  }
+  .tip-rail-rule:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .tip-rail-rule__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+  }
+  .tip-rail-rule__text {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-gray-700, #374151);
+    margin: 0;
+  }
+  .tip-rail-rule__text strong {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* Right rail: From the Schefter Report */
+  .tip-rail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .tip-rail-section__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-900, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0 0 0.25rem;
+  }
+  .tip-rail-articles {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .tip-rail-article-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg, 0.5rem);
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  .tip-rail-article-card:hover {
+    border-color: var(--color-gray-200, #e5e7eb);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+  .tip-rail-article-card__image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+  .tip-rail-article-card__body {
+    padding: 0.625rem 0.75rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .tip-rail-article-card__meta {
+    font-size: 0.625rem;
+    color: var(--color-gray-500, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .tip-rail-article-card__headline {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .tip-rail-feed-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    align-self: flex-start;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: gap 0.15s;
+  }
+  .tip-rail-feed-link:hover {
+    gap: 0.5rem;
   }
 </style>
 

@@ -120,11 +120,11 @@ const liveScoringUrl = `https://${league.host}/${year}/home/${league.leagueId}?M
         <!-- Desktop Navigation Icons -->
         <nav class="desktop-nav" aria-label="Main navigation">
           {!isAFL && (
-            <a href="/theleague/suggestions" class="nav-icon-link" title="The Board">
+            <a href="/theleague/schefter/tip" class="nav-icon-link" title="Tip Schefter">
               <svg class="nav-icon" aria-hidden="true">
-                <use href={`${spriteUrl}#icon-commenting`}></use>
+                <use href={`${spriteUrl}#icon-news`}></use>
               </svg>
-              <span class="nav-label">The Board</span>
+              <span class="nav-label">Tip Schefter</span>
             </a>
           )}
           <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
