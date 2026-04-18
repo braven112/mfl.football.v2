@@ -1,0 +1,184 @@
+---
+/**
+ * Rumor Thread Permalink — /theleague/schefter/thread/[threadId]
+ *
+ * Renders a single rumor thread in chronological order. Thread data is
+ * resolved from the feed JSON (fast path); the Redis registry powers
+ * cross-scan lookups when posts don't have `threadId` stamped yet.
+ *
+ * Server-rendered so we can gate the permalink at edge-middleware without
+ * prerender caching stale thread state.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import feedData from '../../../../data/theleague/schefter-feed.json';
+import type { SchefterFeed, SchefterPost } from '../../../../types/schefter';
+import { formatRelativeTime } from '../../../../utils/schefter-feed';
+import '../../../../styles/schefter-feed.css';
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/theleague/news');
+
+const feed = feedData as SchefterFeed;
+
+const threadPosts: SchefterPost[] = feed.posts
+  .filter((p) => p.threadId === id && p.transactionSubType === 'rumor_mill')
+  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+// If the feed doesn't know about this thread yet, fall through — we still
+// render the page with a "waiting" state so a freshly committed thread isn't
+// a 404 before the feed file propagates.
+---
+
+<TheLeagueLayout title="Rumor thread — The Schefter Report">
+  <main class="sf-thread">
+    <a href="/theleague/news?source=theleague" class="sf-thread__back">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 3L5 8l5 5" />
+      </svg>
+      The Schefter Report
+    </a>
+
+    <header class="sf-thread__header">
+      <span class="sf-thread__eyebrow">Rumor thread</span>
+      <h1 class="sf-thread__title">The whole chain</h1>
+      <p class="sf-thread__meta">
+        {threadPosts.length} post{threadPosts.length === 1 ? '' : 's'} in this thread.
+      </p>
+    </header>
+
+    {threadPosts.length === 0 ? (
+      <div class="sf-thread__empty">
+        <p>This thread hasn't populated yet. Either the rumor was removed or the whisper-back is still marinating.</p>
+      </div>
+    ) : (
+      <ol class="sf-thread__list">
+        {threadPosts.map((post, i) => (
+          <li class="sf-thread__item" data-post-id={post.id}>
+            <div class="sf-thread__item-meta">
+              <span class="sf-thread__seq">#{i + 1}</span>
+              <time class="sf-thread__time" datetime={post.timestamp}>
+                {new Date(post.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </time>
+            </div>
+            <p class="sf-thread__body">{post.body}</p>
+          </li>
+        ))}
+      </ol>
+    )}
+
+    <div class="sf-thread__footer">
+      <a href="/theleague/schefter/tip" class="sf-thread__tip-link">
+        Got something to add? Tip Schefter →
+      </a>
+    </div>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .sf-thread {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 1rem 1rem 3rem;
+  }
+  .sf-thread__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-gray-600, #4b5563);
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+  .sf-thread__back:hover {
+    color: var(--color-primary, #1c497c);
+  }
+  .sf-thread__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    margin-bottom: 1rem;
+  }
+  .sf-thread__eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary, #1c497c);
+  }
+  .sf-thread__title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+  .sf-thread__meta {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+  }
+  .sf-thread__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .sf-thread__item {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: 0.75rem;
+    background: var(--color-white, #fff);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .sf-thread__item-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .sf-thread__seq {
+    font-weight: 700;
+    color: var(--color-primary, #1c497c);
+  }
+  .sf-thread__time {
+    font-weight: 500;
+  }
+  .sf-thread__body {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--color-gray-800, #1f2937);
+  }
+  .sf-thread__empty {
+    padding: 1.5rem;
+    border: 1px dashed var(--color-gray-200, #e5e7eb);
+    border-radius: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.875rem;
+    text-align: center;
+  }
+  .sf-thread__footer {
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+  .sf-thread__tip-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+  }
+  .sf-thread__tip-link:hover {
+    text-decoration: underline;
+  }
+</style>

@@ -19,6 +19,7 @@ import { formatRelativeTime } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
+import SchefterWhisperBack from './SchefterWhisperBack.tsx';
 import SocialEmbed from './SocialEmbed.tsx';
 
 interface Props {
@@ -245,7 +246,19 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
             initialUserReaction={reactions?.userReaction}
             anonymous={isRumor}
           />
+          {isRumor && (
+            <SchefterWhisperBack
+              client:idle
+              postId={post.id}
+              isAuthenticated={isAuthenticated}
+            />
+          )}
         </div>
+        {isRumor && post.threadId && (
+          <a class="sfc-post__thread-link" href={`/theleague/schefter/thread/${post.threadId}`}>
+            View the full thread →
+          </a>
+        )}
       </>
     )}
   </div>

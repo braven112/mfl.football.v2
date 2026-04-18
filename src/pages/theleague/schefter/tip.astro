@@ -186,6 +186,26 @@ const franchiseOptions = teams.map((t) => ({
         </section>
       )}
 
+      <section class="tip-rail-card tip-rail-record" aria-labelledby="record-title" data-tipster-record>
+        <div class="section-header">
+          <h2 class="section-header__title" id="record-title">Your record</h2>
+          <p class="section-header__sub">Every tip is anonymous — this is between you and the hash.</p>
+        </div>
+        <div class="tip-rail-record__body" data-tipster-record-body>
+          <p class="tip-rail-record__loading" data-tipster-record-loading>Checking the Rolodex…</p>
+        </div>
+      </section>
+
+      <section class="tip-rail-card tip-rail-leaderboard" aria-labelledby="leaderboard-title" data-tipster-leaderboard>
+        <div class="section-header">
+          <h2 class="section-header__title" id="leaderboard-title">Top tipsters this season</h2>
+          <p class="section-header__sub" data-tipster-leaderboard-sub>By rumors seeded.</p>
+        </div>
+        <ol class="tip-rail-leaderboard__list" data-tipster-leaderboard-list>
+          <li class="tip-rail-leaderboard__loading" data-tipster-leaderboard-loading>Loading the board…</li>
+        </ol>
+      </section>
+
       <details class="tip-rail-card tip-rail-examples">
         <summary class="tip-rail-examples__summary">
           <span class="tip-rail-examples__label">Good tip vs. what Schefter prints</span>
@@ -667,6 +687,98 @@ const franchiseOptions = teams.map((t) => ({
     letter-spacing: 0.04em;
   }
 
+  /* Right rail: Your record + leaderboard */
+  .tip-rail-record__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+  .tip-rail-record__loading,
+  .tip-rail-leaderboard__loading {
+    margin: 0;
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .tip-rail-record__codename {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
+    color: var(--color-primary, #1c497c);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    align-self: flex-start;
+  }
+  .tip-rail-record__counts {
+    display: flex;
+    gap: 1rem;
+    color: var(--color-gray-700, #374151);
+  }
+  .tip-rail-record__counts strong {
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
+  }
+  .tip-rail-record__empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .tip-rail-leaderboard__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    counter-reset: tipster-rank;
+  }
+  .tip-rail-leaderboard__row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--color-gray-800, #1f2937);
+    font-variant-numeric: tabular-nums;
+    counter-increment: tipster-rank;
+  }
+  .tip-rail-leaderboard__row::before {
+    content: counter(tipster-rank);
+    flex: 0 0 1.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-gray-500, #6b7280);
+    text-align: right;
+  }
+  .tip-rail-leaderboard__row--me {
+    color: var(--color-primary, #1c497c);
+    font-weight: 700;
+  }
+  .tip-rail-leaderboard__codename {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tip-rail-leaderboard__count {
+    flex-shrink: 0;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .tip-rail-leaderboard__row--me .tip-rail-leaderboard__count {
+    color: var(--color-primary, #1c497c);
+  }
+  .tip-rail-leaderboard__empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
   /* Right rail: Good tip vs. bad tip examples */
   .tip-rail-examples {
     padding: 0;
@@ -926,6 +1038,75 @@ const franchiseOptions = teams.map((t) => ({
     }
   }
   refreshRemaining();
+
+  // Phase 6 — tipster scorecard + leaderboard.
+  const recordBody = document.querySelector('[data-tipster-record-body]') as HTMLElement | null;
+  const leaderboardList = document.querySelector('[data-tipster-leaderboard-list]') as HTMLElement | null;
+  const leaderboardSub = document.querySelector('[data-tipster-leaderboard-sub]') as HTMLElement | null;
+
+  function escapeHtml(s: string): string {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      c === '&' ? '&amp;' :
+      c === '<' ? '&lt;' :
+      c === '>' ? '&gt;' :
+      c === '"' ? '&quot;' : '&#39;'
+    );
+  }
+
+  function renderRecord(data: { me: { codename: string | null; rumorsTotal: number; rumorsSeason: number } | null }) {
+    if (!recordBody) return;
+    const me = data.me;
+    if (!me || (!me.codename && (me.rumorsTotal ?? 0) === 0)) {
+      recordBody.innerHTML = '<p class="tip-rail-record__empty">No rumors seeded yet. Tip something Schefter can run with and you\'ll earn a codename.</p>';
+      return;
+    }
+    const codename = me.codename ? escapeHtml(me.codename) : 'Unnamed Source';
+    recordBody.innerHTML = `
+      <span class="tip-rail-record__codename">Your codename · ${codename}</span>
+      <div class="tip-rail-record__counts">
+        <span>Season · <strong>${Number(me.rumorsSeason || 0)}</strong></span>
+        <span>Lifetime · <strong>${Number(me.rumorsTotal || 0)}</strong></span>
+      </div>
+    `;
+  }
+
+  function renderLeaderboard(data: { leaderboard: Array<{ codename: string; rumorsSeason: number; isMe: boolean }>; seasonYear: number }) {
+    if (!leaderboardList) return;
+    if (leaderboardSub) {
+      leaderboardSub.textContent = `By rumors seeded · ${data.seasonYear}`;
+    }
+    const rows = Array.isArray(data.leaderboard) ? data.leaderboard : [];
+    if (rows.length === 0) {
+      leaderboardList.innerHTML = '<li class="tip-rail-leaderboard__empty">No one\'s on the board yet. Be the first.</li>';
+      return;
+    }
+    leaderboardList.innerHTML = rows.slice(0, 10).map((row) => {
+      const meClass = row.isMe ? ' tip-rail-leaderboard__row--me' : '';
+      return `<li class="tip-rail-leaderboard__row${meClass}">
+        <span class="tip-rail-leaderboard__codename">${escapeHtml(row.codename)}</span>
+        <span class="tip-rail-leaderboard__count">${Number(row.rumorsSeason || 0)}</span>
+      </li>`;
+    }).join('');
+  }
+
+  async function refreshTipsterStats() {
+    if (!recordBody && !leaderboardList) return;
+    try {
+      const res = await fetch('/api/schefter/tipster-stats', { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        if (recordBody) recordBody.innerHTML = '<p class="tip-rail-record__empty">Stats are napping. Try again soon.</p>';
+        if (leaderboardList) leaderboardList.innerHTML = '<li class="tip-rail-leaderboard__empty">Stats are napping.</li>';
+        return;
+      }
+      const data = await res.json();
+      renderRecord(data);
+      renderLeaderboard(data);
+    } catch {
+      if (recordBody) recordBody.innerHTML = '<p class="tip-rail-record__empty">Network error. Try again.</p>';
+      if (leaderboardList) leaderboardList.innerHTML = '<li class="tip-rail-leaderboard__empty">Network error.</li>';
+    }
+  }
+  refreshTipsterStats();
 
   function setStatus(message: string, state: 'success' | 'error' | '') {
     if (!status) return;

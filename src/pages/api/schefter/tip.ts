@@ -27,9 +27,12 @@ import {
   TIP_TEXT_MAX,
   LEAGUE_WIDE_HINT,
   COMMISH_HINT,
+  WHISPER_BACK_MAX_AGE_MS,
   type Tip,
   type TipTopic,
 } from '../../../types/schefter-tips';
+import feedData from '../../../data/theleague/schefter-feed.json';
+import type { SchefterFeed } from '../../../types/schefter';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -111,10 +114,11 @@ export const POST: APIRoute = async ({ request }) => {
     return errorResponse('bad_json', 'Invalid JSON body.', 400);
   }
 
-  const { text, topic, franchiseHint } = (body ?? {}) as {
+  const { text, topic, franchiseHint, repliesToPostId } = (body ?? {}) as {
     text?: unknown;
     topic?: unknown;
     franchiseHint?: unknown;
+    repliesToPostId?: unknown;
   };
 
   if (typeof text !== 'string') {
@@ -159,6 +163,29 @@ export const POST: APIRoute = async ({ request }) => {
     } else {
       return errorResponse('bad_hint', 'Unknown franchise.', 400);
     }
+  }
+
+  // Phase 7 — validate whisper-back parent (if supplied). Must be an existing
+  // rumor_mill post ≤14 days old. Anything else is rejected early so we don't
+  // enqueue orphan tips the scanner would have to drop later.
+  let validatedRepliesToPostId: string | undefined;
+  if (repliesToPostId !== undefined && repliesToPostId !== null && repliesToPostId !== '') {
+    if (typeof repliesToPostId !== 'string') {
+      return errorResponse('bad_reply', 'repliesToPostId must be a string.', 400);
+    }
+    const feed = feedData as SchefterFeed;
+    const parent = feed.posts.find((p) => p.id === repliesToPostId);
+    if (!parent) {
+      return errorResponse('reply_not_found', 'That rumor is not in the feed.', 404);
+    }
+    if (parent.transactionSubType !== 'rumor_mill') {
+      return errorResponse('reply_not_rumor', 'You can only whisper back on rumor posts.', 400);
+    }
+    const ageMs = Date.now() - new Date(parent.timestamp).getTime();
+    if (!Number.isFinite(ageMs) || ageMs > WHISPER_BACK_MAX_AGE_MS) {
+      return errorResponse('reply_too_old', 'That rumor is too old to whisper back on.', 400);
+    }
+    validatedRepliesToPostId = repliesToPostId;
   }
 
   // Hash identity (throws if salt unset)
@@ -218,6 +245,7 @@ export const POST: APIRoute = async ({ request }) => {
     text: trimmedText,
     submittedAt: Date.now(),
     source: 'web',
+    ...(validatedRepliesToPostId ? { repliesToPostId: validatedRepliesToPostId } : {}),
   };
 
   try {

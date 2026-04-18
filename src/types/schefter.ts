@@ -254,6 +254,12 @@ export interface SchefterPost {
   link?: string;
   /** Link CTA label */
   linkLabel?: string;
+  /**
+   * Phase 7 — Whisper back: continuity thread id. When present, this post is
+   * part of a rumor thread and can be looked up via GET /api/schefter/thread.
+   * First post in a thread has `threadId === id` (or a dedicated UUID).
+   */
+  threadId?: string;
   /** Author ID — defaults to 'claude' for backward compatibility */
   authorId?: string;
   /** MFL transaction timestamp (Unix epoch string, for dedup) */

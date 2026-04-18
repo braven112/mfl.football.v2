@@ -43,6 +43,7 @@ import {
   appendPostHistory,
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
+import { incrementTipsterCounters } from './lib/schefter-tipster-counters.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -235,8 +236,14 @@ async function postToGroupMe(text) {
  * "don't surface a single-source franchise mention" rule — when only one
  * tip names a specific franchise, we fuzz to the franchise's division (or
  * league-wide if no division is resolvable).
+ *
+ * @param {Array} tips - raw tips from queue
+ * @param {Map} teams - franchise → team config
+ * @param {Array} [feedPosts] - current feed posts, used to resolve parent
+ *   rumor snippets for thread-followup scopes. When omitted, followups still
+ *   get the thread-followup scope but with no parent headline context.
  */
-function anonymizeTips(tips, teams) {
+function anonymizeTips(tips, teams, feedPosts = []) {
   // Single-franchise fuzz applies ONLY to web tips. A GroupMe mention of
   // franchise X isn't an anonymity leak — the speaker publicly named it
   // in the group chat. Count only web tips when deciding fuzz.
@@ -254,6 +261,12 @@ function anonymizeTips(tips, teams) {
     if (count >= 2) multiSourceFranchises.add(fid);
   }
 
+  const feedById = new Map(
+    Array.isArray(feedPosts)
+      ? feedPosts.map((p) => [p.id, p])
+      : [],
+  );
+
   return tips.map((tip) => {
     const safe = {
       id: tip.id,
@@ -264,6 +277,22 @@ function anonymizeTips(tips, teams) {
       author: tip.attributable && tip.author ? tip.author : undefined,
       submittedAt: tip.submittedAt,
     };
+
+    // Phase 7 — whisper-back continuity. Surface the parent rumor's first
+    // clause (<= 90 chars) so the LLM can open with "Following up on…".
+    // Never surface the parent's tipIds or internal metadata.
+    if (tip.repliesToPostId) {
+      const parent = feedById.get(tip.repliesToPostId);
+      const parentBody = parent?.body ? String(parent.body) : '';
+      const firstSentence = parentBody.match(/^[^.!?]+[.!?]/)?.[0] ?? parentBody;
+      const snippet = firstSentence.length > 90
+        ? firstSentence.slice(0, 87).trimEnd() + '…'
+        : firstSentence;
+      safe.threadFollowup = {
+        parentPostId: tip.repliesToPostId,
+        parentHeadlineSnippet: snippet || undefined,
+      };
+    }
 
     // GroupMe: no fuzz — everything is public context. Attach franchise hint
     // only if the author's franchise is identifiable (left to the LLM to use
@@ -459,6 +488,7 @@ HARD RULES (self-enforce, never violate):
 8. Length: 2–4 sentences total (even in mixed batches). Breaking-news tease voice. End with "Developing." or similar when appropriate.
 9. Do NOT include hashtags, emoji, or @-mentions. Plain prose only.
 10. Do NOT reveal how many tips fed this post. No meta commentary about the rumor mill itself.
+11. Thread continuity: if ANY tip in this batch has a `threadFollowup` field (Phase 7 whisper-back), open with continuity language — "Following up on yesterday's…", "More on the…", "Circling back to…", "As a reminder…". Use the parentHeadlineSnippet as a cue, but do not quote it. Still respect every fuzz/anonymity rule above. If no tip has threadFollowup, do not use continuity phrasing.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
@@ -1057,9 +1087,11 @@ async function main() {
   const batch = freshTips.slice(0, MAX_TIPS_PER_BATCH);
   log(`  Processing batch of ${batch.length}`);
 
-  // Anonymize
+  // Anonymize — load the feed early so whisper-back tips can pull parent
+  // headline snippets into their scope.
   const teams = await loadTeams();
-  const anonymized = anonymizeTips(batch, teams);
+  const feedForAnonymize = await loadFeed();
+  const anonymized = anonymizeTips(batch, teams, feedForAnonymize.posts ?? []);
   log(`  Anonymized ${anonymized.length} tips`);
 
   // ── Phase 4: Ask Roger 7% riff ──
@@ -1105,6 +1137,44 @@ async function main() {
 
   // Build post
   const tipIds = batch.map((t) => t.id);
+
+  // Phase 7 — whisper-back thread resolution. If any tip in the batch is a
+  // follow-up to an existing rumor, the new post joins that thread. We pick
+  // the most-referenced parent in the batch, then resolve its threadId via
+  // the Redis registry (or mint a new one and stamp the parent).
+  const parentCounts = new Map();
+  for (const tip of batch) {
+    if (tip && typeof tip.repliesToPostId === 'string' && tip.repliesToPostId.length > 0) {
+      parentCounts.set(tip.repliesToPostId, (parentCounts.get(tip.repliesToPostId) ?? 0) + 1);
+    }
+  }
+  let dominantParentId = null;
+  if (parentCounts.size > 0) {
+    let best = -1;
+    for (const [id, count] of parentCounts) {
+      if (count > best) {
+        best = count;
+        dominantParentId = id;
+      }
+    }
+  }
+  let threadId = null;
+  if (dominantParentId) {
+    try {
+      const registered = await redis.get(`schefter:thread_of:${dominantParentId}`);
+      if (typeof registered === 'string' && registered.length > 0) {
+        threadId = registered;
+      } else {
+        // Mint a new threadId rooted at the parent rumor so permalinks are
+        // readable. Stamp the parent via thread_of so future whisper-backs
+        // to the same rumor join the same thread.
+        threadId = dominantParentId;
+      }
+    } catch {
+      threadId = dominantParentId;
+    }
+  }
+
   const post = {
     id: generatePostId(),
     timestamp: now.toISOString(),
@@ -1118,6 +1188,7 @@ async function main() {
     tipIds,
     hadRogerRiff,
     league: LEAGUE_SLUG,
+    ...(threadId ? { threadId } : {}),
   };
 
   if (DRY_RUN) {
@@ -1193,7 +1264,70 @@ async function main() {
     warn(`  Redis post-write update failed: ${err.message}`);
   }
 
+  // Phase 7 — thread registry. If this post joined an existing thread (or
+  // started one from a whisper-back), record it in Redis so future follow-ups
+  // can look up the thread and the permalink page can render the chain.
+  if (threadId) {
+    try {
+      const threadZsetKey = `schefter:thread:${threadId}`;
+      const threadOfParentKey = `schefter:thread_of:${dominantParentId}`;
+      const threadOfNewKey = `schefter:thread_of:${post.id}`;
+      const threadTtlSec = 14 * 24 * 60 * 60;
+
+      await redis.zadd(threadZsetKey, { score: new Date(post.timestamp).getTime(), member: post.id });
+      // If the thread is new (rooted at the parent), also index the parent in
+      // the zset so the permalink view always opens with it.
+      if (dominantParentId && dominantParentId === threadId) {
+        const parentPost = (feedForAnonymize.posts ?? []).find((p) => p.id === dominantParentId);
+        if (parentPost) {
+          await redis.zadd(threadZsetKey, {
+            score: new Date(parentPost.timestamp).getTime(),
+            member: dominantParentId,
+          });
+        }
+      }
+
+      await redis.set(threadOfParentKey, threadId, { ex: threadTtlSec });
+      await redis.set(threadOfNewKey, threadId, { ex: threadTtlSec });
+      await redis.expire(threadZsetKey, threadTtlSec);
+
+      log(`  [thread] Registered ${post.id} in thread ${threadId}`);
+    } catch (err) {
+      warn(`  [thread] Registry update failed: ${err.message}`);
+    }
+  }
+
+  // Phase 6 — tipster scorecard: increment counters for each distinct web
+  // tipster that contributed to this rumor. Runs after the queue drain so a
+  // scorecard failure cannot block the post from shipping.
+  try {
+    const seasonYear = getSeasonYearForTipster(now);
+    await incrementTipsterCounters({
+      redis,
+      batch,
+      seasonYear,
+      dryRun: DRY_RUN,
+      log,
+      warn,
+    });
+  } catch (err) {
+    warn(`  [tipster-counters] hook failed: ${err.message}`);
+  }
+
   return 1;
+}
+
+/**
+ * Returns the 4-digit league year for tipster counters. Mirrors the
+ * getCurrentLeagueYear() semantics from src/utils/league-year.ts — league
+ * year advances after Feb 14 @ 8:45 PT. Kept inline here so the scanner
+ * stays in pure-Node .mjs without importing the .ts module.
+ */
+function getSeasonYearForTipster(now = new Date()) {
+  const calendarYear = now.getUTCFullYear();
+  // Feb 14 @ 8:45 PST = Feb 15 04:45 UTC
+  const febCutoff = Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0);
+  return now.getTime() >= febCutoff ? calendarYear : calendarYear - 1;
 }
 
 main()
