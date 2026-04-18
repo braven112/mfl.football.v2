@@ -87,7 +87,16 @@ export interface Tip {
   author?: string;
   /** GroupMe message id (for dedup & audit) — only set for source === 'groupme' */
   mentionMessageId?: string;
+  /**
+   * Phase 7 — Whisper back. Rumor post id this tip is a follow-up to, if any.
+   * The scanner groups whisper-backs under a `thread-followup` scope so Schefter
+   * opens with continuity language ("Following up on yesterday's chatter…").
+   */
+  repliesToPostId?: string;
 }
+
+/** Max age of a rumor post that whisper-backs can still attach to (ms). */
+export const WHISPER_BACK_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 export interface RumorPost {
   id: string;

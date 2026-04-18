@@ -254,6 +254,12 @@ export interface SchefterPost {
   link?: string;
   /** Link CTA label */
   linkLabel?: string;
+  /**
+   * Phase 7 — Whisper back: continuity thread id. When present, this post is
+   * part of a rumor thread and can be looked up via GET /api/schefter/thread.
+   * First post in a thread has `threadId === id` (or a dedicated UUID).
+   */
+  threadId?: string;
   /** Author ID — defaults to 'claude' for backward compatibility */
   authorId?: string;
   /** MFL transaction timestamp (Unix epoch string, for dedup) */
@@ -288,6 +294,19 @@ export interface SchefterFeed {
 /** Fixed reaction emoji set — ❤️ is the primary "like" action */
 export const SCHEFTER_REACTIONS = ['❤️', '🔥', '💰', '💩', '🏆', '📉', '💯', '🤔', '😂', '📈', '💉'] as const;
 export type SchefterReaction = (typeof SCHEFTER_REACTIONS)[number];
+
+/**
+ * Rumor-mill reaction subset — four semantic verdicts for rumor_mill posts.
+ * These render via the anonymous reaction path: counts only, reactor identity
+ * is stored under the one-way tipster hash so "Pigskins reacted 🔥" cannot
+ * be surfaced to other owners (engagement plan Phase 5).
+ */
+export const SCHEFTER_RUMOR_REACTIONS = ['🔥', '💯', '🤔', '📉'] as const;
+export type SchefterRumorReaction = (typeof SCHEFTER_RUMOR_REACTIONS)[number];
+
+export function isValidRumorReaction(emoji: string): boolean {
+  return (SCHEFTER_RUMOR_REACTIONS as readonly string[]).includes(emoji);
+}
 
 /** Emoji → array of franchiseIds who reacted */
 export interface SchefterReactionMap {

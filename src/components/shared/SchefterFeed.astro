@@ -11,7 +11,8 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import type { SchefterReactionResponse } from '../../types/schefter';
-import { getBatchReactions } from '../../utils/schefter-reactions';
+import { getBatchReactions, getBatchAnonymousReactions } from '../../utils/schefter-reactions';
+import { hashTipsterId } from '../../utils/schefter-tipster-hash';
 import SchefterPostCard from './SchefterPostCard.astro';
 
 interface Props {
@@ -20,16 +21,41 @@ interface Props {
   userFranchiseId?: string;
   userTeamName?: string;
   userTeamIcon?: string;
+  /**
+   * Authenticated user id — only used to derive the tipster hash for anonymous
+   * rumor reactions. Never surfaced to the client.
+   */
+  userId?: string;
   /** Max posts to show initially (for pagination) */
   initialLimit?: number;
 }
 
-const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, initialLimit = 25 } = Astro.props;
+const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, userId, initialLimit = 25 } = Astro.props;
 const now = new Date();
 
-// Batch-fetch all reactions server-side (1 Redis pipeline call instead of N client fetches)
-const postIds = posts.map(p => p.id);
-const allReactions = await getBatchReactions(postIds, userFranchiseId);
+// Partition rumor_mill posts from the rest — they use the anonymous reaction
+// namespace (keyed on hashedOwnerId) so reactor identity never leaks.
+function isRumorPost(p: SchefterPost): boolean {
+  return p.type === 'transaction' && p.transactionSubType === 'rumor_mill';
+}
+
+const rumorPostIds = posts.filter(isRumorPost).map((p) => p.id);
+const regularPostIds = posts.filter((p) => !isRumorPost(p)).map((p) => p.id);
+
+let userHashedOwnerId: string | undefined;
+if (userId) {
+  try {
+    userHashedOwnerId = hashTipsterId(userId);
+  } catch {
+    userHashedOwnerId = undefined;
+  }
+}
+
+const [regularReactions, anonymousReactions] = await Promise.all([
+  getBatchReactions(regularPostIds, userFranchiseId),
+  getBatchAnonymousReactions(rumorPostIds, userHashedOwnerId),
+]);
+const allReactions: Record<string, SchefterReactionResponse> = { ...regularReactions, ...anonymousReactions };
 ---
 
 <div class="sf-feed sf-feed--page" data-initial-limit={initialLimit}>
@@ -64,6 +90,50 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
 </div>
 
 <script>
+  // Phase 10 — rumor impression beacon. Fires once per rumor per session when
+  // the card enters the viewport. Uses sessionStorage to dedupe so a user
+  // scrolling past the same card twice doesn't double-count; the server also
+  // enforces shape + 30d TTL so abuse is bounded.
+  function initRumorImpressions() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const seenKey = 'schefter:rumor-impression-seen-v1';
+    let seen: Record<string, true> = {};
+    try {
+      seen = JSON.parse(sessionStorage.getItem(seenKey) ?? '{}');
+    } catch { /* ignore malformed session storage */ }
+
+    const send = (postId: string) => {
+      if (seen[postId]) return;
+      seen[postId] = true;
+      try { sessionStorage.setItem(seenKey, JSON.stringify(seen)); } catch { /* ignore quota */ }
+      const body = JSON.stringify({ postId });
+      try {
+        if (typeof navigator.sendBeacon === 'function') {
+          navigator.sendBeacon('/api/schefter/rumor-impression', new Blob([body], { type: 'application/json' }));
+          return;
+        }
+      } catch { /* fall through to fetch */ }
+      fetch('/api/schefter/rumor-impression', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    const rumorCards = document.querySelectorAll('[data-rumor-impression="true"][data-post-id]');
+    if (rumorCards.length === 0) return;
+    const obs = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const id = (entry.target as HTMLElement).dataset.postId;
+        if (id) send(id);
+        obs.unobserve(entry.target);
+      }
+    }, { threshold: 0.5 });
+    rumorCards.forEach((card) => obs.observe(card));
+  }
+
   function initLoadMore() {
     const feed = document.querySelector('.sf-feed--page');
     if (!feed) return;
@@ -95,6 +165,7 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
   }
 
   document.addEventListener('astro:page-load', initLoadMore);
+  document.addEventListener('astro:page-load', initRumorImpressions);
 </script>
 
 <style>

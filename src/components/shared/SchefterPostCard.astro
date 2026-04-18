@@ -19,6 +19,7 @@ import { formatRelativeTime } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
+import SchefterWhisperBack from './SchefterWhisperBack.tsx';
 import SocialEmbed from './SocialEmbed.tsx';
 
 interface Props {
@@ -42,7 +43,8 @@ const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
 const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
-const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}`;
+const isRumor = post.type === 'transaction' && post.transactionSubType === 'rumor_mill';
+const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumor ? ' sf-post--rumor' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
@@ -79,7 +81,7 @@ for (const url of allUrlsToStrip) {
 gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 ---
 
-<article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+<article class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumor ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
   <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">
@@ -242,8 +244,21 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
             isAuthenticated={isAuthenticated}
             initialReactions={reactions?.reactions}
             initialUserReaction={reactions?.userReaction}
+            anonymous={isRumor}
           />
+          {isRumor && (
+            <SchefterWhisperBack
+              client:idle
+              postId={post.id}
+              isAuthenticated={isAuthenticated}
+            />
+          )}
         </div>
+        {isRumor && post.threadId && (
+          <a class="sfc-post__thread-link" href={`/theleague/schefter/thread/${post.threadId}`}>
+            View the full thread →
+          </a>
+        )}
       </>
     )}
   </div>

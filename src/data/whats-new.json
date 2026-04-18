@@ -1,5 +1,22 @@
 [
   {
+    "id": "tip-schefter-gets-louder",
+    "date": "2026-04-18",
+    "title": "Tip Schefter Gets Louder",
+    "summary": "The anonymous tip page is now a living surface — tipster scorecards, whisper-back threads, rumor reactions, hot topics, a live cooker timeline, and Tip of the Week badges. Still anonymous. Louder.",
+    "description": [
+      "The original Tip Schefter page was a fire-and-forget form. You'd drop a hunch into the void, Schefter would marinate it, and at some point a rumor would show up in the feed that may or may not have been yours. No feedback, no social proof, no reason to come back. It worked, but it sat there. The Rumor Mill was getting tips — one or two a week, from the same three owners — and the rest of the league had no idea the button even existed. Time to turn the lights on without compromising anonymity.",
+      "The tip page now has a personality. Submit and you'll see your daily cap chip tick down — 2 of 3 left today — and a Last Rumor Dropped card in the sidebar shows the newest thing Schefter printed with a link into the feed. The textarea placeholder rotates by topic: trade interest, roster gripe, bold prediction, beef (covering both league-wide grievances and the commish), and other. A collapsible Good Tip vs. What Schefter Prints card shows exactly how the fuzzing works with three worked examples so nobody's guessing whether their tip is going to leak their franchise. Rumor cards in the feed now have a four-verdict reaction row — 🔥 smoke, 💯 confirmed, 🤔 fake news, 📉 cooked — that stores reactions under the one-way tipster hash instead of a franchise id, so nobody can tell who reacted what. The admin rate-limit exemption is gone too: every user is capped at 3 tips per 24 hours, full stop, because any counter surface would've otherwise leaked who the commissioners are.",
+      "The real hook is the scorecard. Every tipster that actually produces a rumor gets a stable codename — Burner Phone, Back-Channel, Smoke Signal, Off the Record, The Whisper — that's unique per owner (no #N suffixes) and stable across sessions. Your Record shows your codename, your season count, your lifetime count, and any Tip of the Week badges you've earned. Top Tipsters This Season is a codename-only leaderboard: you'll see Hearsay at 7 rumors, Cold Case at 4, and you (hopefully) at the top. Nobody knows who Hearsay is except Hearsay. Whisper Back opens a mini tip form on any rumor card so you can add context to an existing thread — the scanner groups whisper-backs, Schefter opens the next post with 'Following up on yesterday's chatter…', and the thread has its own permalink page that renders the whole chain chronologically. Add a live cooker timeline ('Schefter is marinating 2 tips. Next rumor drops in 47m.'), a Hot Topics this Week chip row showing which topics are buzzing league-wide, and a weekly Tip of the Week ritual where the most-read rumor earns badges for the tipsters that seeded it, and the page stops being a drop-off. It becomes a hangout. Anonymously, of course."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/schefter/tip",
+    "linkLabel": "Tip Schefter",
+    "icon": "commenting",
+    "image": "tip-schefter-engagement.webp",
+    "imageAlt": "The Tip Schefter page with the new tipster scorecard, top-tipsters leaderboard, live cooker timeline, hot topics chips, and a rumor card in the feed showing the four-verdict anonymous reaction bar"
+  },
+  {
     "id": "weekly-rollup-2026-03-30",
     "date": "2026-03-30",
     "title": "Weekly Fixes & Polish (Mar 25-25)",

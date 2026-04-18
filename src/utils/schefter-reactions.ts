@@ -8,10 +8,16 @@
  * Follows the contract-storage.ts Redis pattern.
  */
 
-import { SCHEFTER_REACTIONS } from '../types/schefter';
+import { SCHEFTER_REACTIONS, SCHEFTER_RUMOR_REACTIONS } from '../types/schefter';
 import type { SchefterReactionMap, SchefterReactionResponse } from '../types/schefter';
 
 const KEY_PREFIX = 'schefter:reactions:';
+/**
+ * Anonymous reactions key-space. Members are hashedOwnerId (same hash used for
+ * tip identity) — never franchiseId. Used by rumor_mill posts to avoid
+ * revealing "Pigskins reacted 🔥" signals that could correlate with tip patterns.
+ */
+const ANON_KEY_PREFIX = 'schefter:reactions:anon:';
 
 type PipelineClient = {
   hgetall: (key: string) => void;
@@ -52,6 +58,11 @@ async function getRedis(): Promise<RedisClient | null> {
 /** Validate that an emoji is in the allowed set */
 export function isValidReaction(emoji: string): boolean {
   return (SCHEFTER_REACTIONS as readonly string[]).includes(emoji);
+}
+
+/** Validate that an emoji is in the rumor-reaction subset (🔥 💯 🤔 📉) */
+export function isValidRumorReactionEmoji(emoji: string): boolean {
+  return (SCHEFTER_RUMOR_REACTIONS as readonly string[]).includes(emoji);
 }
 
 /** Get all reactions for a post, with optional user highlight */
@@ -232,6 +243,168 @@ export async function toggleReaction(
     return emoji;
   } catch (err) {
     console.error('[schefter-reactions] Toggle error:', err);
+    return null;
+  }
+}
+
+// ── Anonymous reaction path (rumor-mill posts) ──
+//
+// Identical semantics to toggleReaction, but keyed on `hashedOwnerId` instead
+// of `franchiseId`, and stored in a separate Redis namespace so the identified
+// reaction data for non-rumor posts cannot accidentally leak into rumor surfaces.
+// The response NEVER returns the hashedOwnerId list — only counts + whether
+// the caller themselves reacted.
+
+/**
+ * Get anonymous reaction counts for a single rumor post.
+ * Only the caller's own reaction is returned — never anyone else's identity.
+ */
+export async function getAnonymousReactions(
+  postId: string,
+  userHashedOwnerId?: string,
+): Promise<SchefterReactionResponse> {
+  const redis = await getRedis();
+  if (!redis) return { reactions: {}, userReaction: null };
+
+  try {
+    const all = await redis.hgetall<string[]>(ANON_KEY_PREFIX + postId);
+    if (!all || Object.keys(all).length === 0) {
+      return { reactions: {}, userReaction: null };
+    }
+
+    const reactions: Record<string, number> = {};
+    let userReaction: string | null = null;
+
+    for (const [emoji, members] of Object.entries(all)) {
+      const ids = Array.isArray(members) ? members : [];
+      if (ids.length > 0) {
+        reactions[emoji] = ids.length;
+        if (userHashedOwnerId && ids.includes(userHashedOwnerId)) {
+          userReaction = emoji;
+        }
+      }
+    }
+
+    return { reactions, userReaction };
+  } catch (err) {
+    console.error('[schefter-reactions] Anonymous read error:', err);
+    return { reactions: {}, userReaction: null };
+  }
+}
+
+/**
+ * Batch-fetch anonymous reactions for multiple posts in one Redis round-trip.
+ * Used by the news feed when rendering rumor_mill cards.
+ */
+export async function getBatchAnonymousReactions(
+  postIds: string[],
+  userHashedOwnerId?: string,
+): Promise<Record<string, SchefterReactionResponse>> {
+  const result: Record<string, SchefterReactionResponse> = {};
+  if (postIds.length === 0) return result;
+
+  const redis = await getRedis();
+  if (!redis) {
+    for (const id of postIds) result[id] = { reactions: {}, userReaction: null };
+    return result;
+  }
+
+  try {
+    const pipeline = (redis as unknown as { pipeline: () => PipelineClient }).pipeline();
+    for (const postId of postIds) {
+      pipeline.hgetall(ANON_KEY_PREFIX + postId);
+    }
+    const results = await pipeline.exec<(Record<string, string[]> | null)[]>();
+
+    for (let i = 0; i < postIds.length; i++) {
+      const postId = postIds[i];
+      const all = results[i];
+
+      if (!all || Object.keys(all).length === 0) {
+        result[postId] = { reactions: {}, userReaction: null };
+        continue;
+      }
+
+      const reactions: Record<string, number> = {};
+      let userReaction: string | null = null;
+
+      for (const [emoji, members] of Object.entries(all)) {
+        const ids = Array.isArray(members) ? members : [];
+        if (ids.length > 0) {
+          reactions[emoji] = ids.length;
+          if (userHashedOwnerId && ids.includes(userHashedOwnerId)) {
+            userReaction = emoji;
+          }
+        }
+      }
+
+      result[postId] = { reactions, userReaction };
+    }
+  } catch (err) {
+    console.error('[schefter-reactions] Anonymous batch read error:', err);
+    for (const id of postIds) {
+      if (!result[id]) result[id] = { reactions: {}, userReaction: null };
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Toggle an anonymous reaction for a user on a rumor post.
+ * Rejects emoji outside the rumor-reaction subset.
+ */
+export async function toggleAnonymousReaction(
+  postId: string,
+  hashedOwnerId: string,
+  emoji: string,
+): Promise<string | null> {
+  if (!isValidRumorReactionEmoji(emoji)) return null;
+
+  const redis = await getRedis();
+  if (!redis) return null;
+
+  const key = ANON_KEY_PREFIX + postId;
+
+  try {
+    const all = await redis.hgetall<string[]>(key);
+    const reactionMap: Record<string, string[]> = {};
+
+    if (all) {
+      for (const [e, members] of Object.entries(all)) {
+        reactionMap[e] = Array.isArray(members) ? [...members] : [];
+      }
+    }
+
+    let currentEmoji: string | null = null;
+    for (const [e, ids] of Object.entries(reactionMap)) {
+      if (ids.includes(hashedOwnerId)) {
+        currentEmoji = e;
+        break;
+      }
+    }
+
+    if (currentEmoji) {
+      reactionMap[currentEmoji] = reactionMap[currentEmoji].filter((id) => id !== hashedOwnerId);
+      if (reactionMap[currentEmoji].length === 0) {
+        await redis.hdel(key, currentEmoji);
+        delete reactionMap[currentEmoji];
+      } else {
+        await redis.hset(key, { [currentEmoji]: reactionMap[currentEmoji] });
+      }
+    }
+
+    if (currentEmoji === emoji) {
+      return null;
+    }
+
+    const existing = reactionMap[emoji] ?? [];
+    existing.push(hashedOwnerId);
+    await redis.hset(key, { [emoji]: existing });
+
+    return emoji;
+  } catch (err) {
+    console.error('[schefter-reactions] Anonymous toggle error:', err);
     return null;
   }
 }
