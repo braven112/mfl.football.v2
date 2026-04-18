@@ -17,16 +17,18 @@ let tamAuthCache: { franchiseId: string; role: string } | null | undefined = und
 
 /** All received trades (persists across dismiss — used by bell click to reopen) */
 let tamAllTrades: any[] = [];
+/** Sent trades — outgoing offers from the user (viewable, but never trigger the alert badge) */
+let tamSentTrades: any[] = [];
 /** Commissioner trades — league-wide trades not involving the user */
 let tamCommishTrades: any[] = [];
-/** Current trades in the modal (may be filtered by dismiss within a session) */
+/** Current received trades in the modal (may be filtered by dismiss within a session) */
 let tamTrades: any[] = [];
 /** Index of the currently viewed trade in detail view */
 let tamCurrentTradeIdx = -1;
-/** Whether the currently viewed trade is a commissioner trade (affects UI) */
-let tamIsCommishTrade = false;
+/** Type of the currently viewed trade — routes footer actions and asset labeling */
+let tamCurrentTradeType: 'received' | 'sent' | 'commish' = 'received';
 /** Whether a confirm prompt is active */
-let tamConfirmAction: 'accept' | 'reject' | 'veto' | 'approve' | null = null;
+let tamConfirmAction: 'accept' | 'reject' | 'veto' | 'approve' | 'revoke' | null = null;
 /** Previously focused element for focus return */
 let tamPrevFocus: HTMLElement | null = null;
 
@@ -153,14 +155,13 @@ function tamClose() {
 
 // ---- Build list card via safe DOM methods ----
 
-function tamBuildListCard(trade: any, idx: number, isCommish: boolean): HTMLElement {
+function tamBuildListCard(trade: any, idx: number, type: 'received' | 'sent' | 'commish'): HTMLElement {
   const card = document.createElement('div');
   card.className = 'tam-list-card';
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
 
-  if (isCommish) {
-    // Commissioner card: show both teams
+  if (type === 'commish') {
     card.setAttribute('aria-label', `Trade between ${trade.offeredByName} and ${trade.offeredToName}`);
 
     const icon = document.createElement('img');
@@ -185,8 +186,34 @@ function tamBuildListCard(trade: any, idx: number, isCommish: boolean): HTMLElem
     body.appendChild(summaryP);
 
     card.appendChild(body);
+  } else if (type === 'sent') {
+    // Outgoing offer: show the team we offered to
+    card.setAttribute('aria-label', `Trade offer to ${trade.offeredToName || 'Unknown'}`);
+
+    const icon = document.createElement('img');
+    icon.className = 'tam-list-card__icon';
+    icon.src = trade.offeredToIcon || '';
+    icon.alt = '';
+    card.appendChild(icon);
+
+    const body = document.createElement('div');
+    body.className = 'tam-list-card__body';
+
+    const teamP = document.createElement('p');
+    teamP.className = 'tam-list-card__team';
+    teamP.textContent = `To: ${trade.offeredToName || 'Unknown'}`;
+    body.appendChild(teamP);
+
+    const summaryP = document.createElement('p');
+    summaryP.className = 'tam-list-card__summary';
+    const giveAssets = trade.resolvedAssets?.willGiveUp || [];
+    const receiveAssets = trade.resolvedAssets?.willReceive || [];
+    summaryP.textContent = `Offered: ${tamSummarizeAssets(giveAssets)} for ${tamSummarizeAssets(receiveAssets)}`;
+    body.appendChild(summaryP);
+
+    card.appendChild(body);
   } else {
-    // Owner card: show counterparty
+    // Received (incoming): show counterparty
     card.setAttribute('aria-label', `Trade offer from ${trade.offeredByName || 'Unknown'}`);
 
     const icon = document.createElement('img');
@@ -233,11 +260,9 @@ function tamBuildListCard(trade: any, idx: number, isCommish: boolean): HTMLElem
   svg.appendChild(path);
   card.appendChild(svg);
 
-  // Click handler — commissioner trades use negative index to distinguish
-  const clickIdx = isCommish ? -(idx + 1) : idx;
-  card.addEventListener('click', () => tamShowDetailView(clickIdx));
+  card.addEventListener('click', () => tamShowDetailView(idx, type));
   card.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tamShowDetailView(clickIdx); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tamShowDetailView(idx, type); }
   });
   return card;
 }
@@ -253,32 +278,46 @@ function tamShowListView() {
   void listView.offsetWidth;
   listView.classList.add('slide-back');
 
-  const totalCount = tamTrades.length + tamCommishTrades.length;
+  const totalCount = tamTrades.length + tamSentTrades.length + tamCommishTrades.length;
   tamEl('tam-badge')!.textContent = String(totalCount);
   const body = tamEl('tam-list-body')!;
   body.replaceChildren();
 
-  // Section: Your Offers (only show header if commissioner trades also exist)
-  if (tamTrades.length > 0 && tamCommishTrades.length > 0) {
+  // Count how many sections we'll render — only show headers when more than one section exists
+  const sectionCount =
+    (tamTrades.length > 0 ? 1 : 0) +
+    (tamSentTrades.length > 0 ? 1 : 0) +
+    (tamCommishTrades.length > 0 ? 1 : 0);
+  const showHeaders = sectionCount > 1;
+
+  const appendHeader = (text: string) => {
     const header = document.createElement('h4');
     header.className = 'tam-section-title';
-    header.textContent = 'Your Offers';
+    header.textContent = text;
     body.appendChild(header);
+  };
+
+  // Section: Incoming offers (received)
+  if (tamTrades.length > 0) {
+    if (showHeaders) appendHeader('Incoming Offers');
+    tamTrades.forEach((trade, idx) => {
+      body.appendChild(tamBuildListCard(trade, idx, 'received'));
+    });
   }
 
-  tamTrades.forEach((trade, idx) => {
-    body.appendChild(tamBuildListCard(trade, idx, false));
-  });
+  // Section: Sent offers (outgoing)
+  if (tamSentTrades.length > 0) {
+    if (showHeaders) appendHeader('Sent Offers');
+    tamSentTrades.forEach((trade, idx) => {
+      body.appendChild(tamBuildListCard(trade, idx, 'sent'));
+    });
+  }
 
   // Section: Pending Approval (commissioner only)
   if (tamCommishTrades.length > 0) {
-    const header = document.createElement('h4');
-    header.className = 'tam-section-title';
-    header.textContent = 'Pending Approval';
-    body.appendChild(header);
-
+    if (showHeaders) appendHeader('Pending Approval');
     tamCommishTrades.forEach((trade, idx) => {
-      body.appendChild(tamBuildListCard(trade, idx, true));
+      body.appendChild(tamBuildListCard(trade, idx, 'commish'));
     });
   }
 }
@@ -326,18 +365,13 @@ function tamRenderAssetList(container: HTMLElement, assets: any[]) {
   }
 }
 
-function tamShowDetailView(idx: number) {
-  // Negative index = commissioner trade (-(commishIdx + 1))
-  let trade: any;
-  if (idx < 0) {
-    tamIsCommishTrade = true;
-    tamCurrentTradeIdx = idx;
-    trade = tamCommishTrades[-(idx + 1)];
-  } else {
-    tamIsCommishTrade = false;
-    tamCurrentTradeIdx = idx;
-    trade = tamTrades[idx];
-  }
+function tamShowDetailView(idx: number, type: 'received' | 'sent' | 'commish' = 'received') {
+  tamCurrentTradeType = type;
+  tamCurrentTradeIdx = idx;
+  const trade =
+    type === 'commish' ? tamCommishTrades[idx] :
+    type === 'sent' ? tamSentTrades[idx] :
+    tamTrades[idx];
   if (!trade) return;
 
   const listView = tamEl('tam-list-view')!;
@@ -349,18 +383,23 @@ function tamShowDetailView(idx: number) {
   detailView.classList.add('slide-in');
 
   // Show back button when there are multiple items total
-  const totalItems = tamTrades.length + tamCommishTrades.length;
+  const totalItems = tamTrades.length + tamSentTrades.length + tamCommishTrades.length;
   tamEl('tam-back')!.style.display = totalItems > 1 ? '' : 'none';
 
-  // Hero — commissioner sees "Trade between X & Y", owner sees "Trade offer from X"
+  // Hero — commish shows both teams, sent shows recipient, received shows proposer
   const iconEl = tamEl('tam-counterparty-icon') as HTMLImageElement;
   const labelEl = detailView.querySelector('.tam-detail-hero__label')!;
-  if (tamIsCommishTrade) {
+  if (type === 'commish') {
     iconEl.src = trade.offeredByIcon || '';
     iconEl.alt = '';
     labelEl.textContent = 'Trade between';
     tamEl('tam-counterparty-name')!.textContent =
       `${trade.offeredByName || '?'} & ${trade.offeredToName || '?'}`;
+  } else if (type === 'sent') {
+    iconEl.src = trade.offeredToIcon || '';
+    iconEl.alt = trade.offeredToName || '';
+    labelEl.textContent = 'Trade offer to';
+    tamEl('tam-counterparty-name')!.textContent = trade.offeredToName || 'Unknown';
   } else {
     iconEl.src = trade.offeredByIcon || '';
     iconEl.alt = trade.offeredByName || '';
@@ -375,10 +414,10 @@ function tamShowDetailView(idx: number) {
   expiresEl.textContent = expiresText;
   expiresEl.style.display = expiresText ? '' : 'none';
 
-  // Asset column titles — commissioner sees team names, owner sees "You Receive" / "You Give"
+  // Asset column titles — commish shows team names, owner (sent/received) sees "You Receive" / "You Give"
   const receiveTitle = tamEl('tam-assets-receive-title')!;
   const giveTitle = tamEl('tam-assets-give-title')!;
-  if (tamIsCommishTrade) {
+  if (type === 'commish') {
     receiveTitle.textContent = trade.offeredToName || 'Team B';
     receiveTitle.className = 'tam-assets-col__title';
     giveTitle.textContent = trade.offeredByName || 'Team A';
@@ -390,7 +429,8 @@ function tamShowDetailView(idx: number) {
     giveTitle.className = 'tam-assets-col__title tam-assets-col__title--give';
   }
 
-  // Assets — for commissioner, willGiveUp = what offeredBy gives, willReceive = what offeredBy receives
+  // Assets — MFL returns from the queried franchise's perspective, so willReceive/willGiveUp
+  // are user-relative for both sent and received trades.
   tamRenderAssetList(tamEl('tam-assets-receive')!, trade.resolvedAssets?.willReceive || []);
   tamRenderAssetList(tamEl('tam-assets-give')!, trade.resolvedAssets?.willGiveUp || []);
 
@@ -403,21 +443,27 @@ function tamShowDetailView(idx: number) {
     commentsEl.style.display = 'none';
   }
 
-  // Builder link
+  // Builder link — useful for received (review cap impact); hidden for sent (user already built it)
   (tamEl('tam-builder-link') as HTMLAnchorElement).href = tamBuildTradeBuilderUrl(trade);
 
-  // Footer — commissioner gets "Review Cap Impact" + Approve + subtle Veto
-  // Owner gets Accept/Reject
+  // Footer — commissioner: Approve + Veto; sent: Withdraw only; received: Accept + Reject
   const acceptBtn = tamEl('tam-accept') as HTMLElement;
   const rejectBtn = tamEl('tam-reject') as HTMLElement;
   const builderLink = tamEl('tam-builder-link') as HTMLElement;
-  if (tamIsCommishTrade) {
+  if (type === 'commish') {
     acceptBtn.style.display = '';
     acceptBtn.textContent = 'Approve';
     acceptBtn.className = 'tam-btn tam-btn--accept';
     rejectBtn.textContent = 'Veto';
     rejectBtn.className = 'tam-btn tam-btn--dismiss';
     rejectBtn.style.fontSize = '0.75rem';
+    builderLink.style.display = 'none';
+  } else if (type === 'sent') {
+    acceptBtn.style.display = 'none';
+    rejectBtn.textContent = 'Withdraw';
+    rejectBtn.className = 'tam-btn tam-btn--reject';
+    rejectBtn.style.fontSize = '';
+    rejectBtn.style.flex = '1';
     builderLink.style.display = 'none';
   } else {
     acceptBtn.style.display = '';
@@ -426,6 +472,7 @@ function tamShowDetailView(idx: number) {
     rejectBtn.textContent = 'Reject';
     rejectBtn.className = 'tam-btn tam-btn--reject';
     rejectBtn.style.fontSize = '';
+    rejectBtn.style.flex = '';
     builderLink.style.display = '';
   }
 
@@ -444,7 +491,13 @@ function tamResetFooter() {
 
 // ---- Actions ----
 
-function tamShowConfirm(action: 'accept' | 'reject' | 'veto' | 'approve') {
+function tamGetCurrentTrade(): any {
+  if (tamCurrentTradeType === 'commish') return tamCommishTrades[tamCurrentTradeIdx];
+  if (tamCurrentTradeType === 'sent') return tamSentTrades[tamCurrentTradeIdx];
+  return tamTrades[tamCurrentTradeIdx];
+}
+
+function tamShowConfirm(action: 'accept' | 'reject' | 'veto' | 'approve' | 'revoke') {
   tamConfirmAction = action;
   tamEl('tam-actions')!.style.display = 'none';
   tamEl('tam-confirm')!.style.display = 'flex';
@@ -453,19 +506,14 @@ function tamShowConfirm(action: 'accept' | 'reject' | 'veto' | 'approve') {
     reject: 'Reject this trade?',
     veto: 'Are you sure you want to veto this trade? This will cancel the trade for both teams.',
     approve: 'Approve this trade as commissioner?',
+    revoke: 'Withdraw this trade offer?',
   };
   tamEl('tam-confirm-msg')!.textContent = msgs[action] || 'Confirm?';
   tamEl('tam-confirm-yes')!.focus();
 }
 
-async function tamExecuteAction(action: 'accept' | 'reject' | 'veto' | 'approve') {
-  // Resolve the trade from the correct array
-  let trade: any;
-  if (tamIsCommishTrade && tamCurrentTradeIdx < 0) {
-    trade = tamCommishTrades[-(tamCurrentTradeIdx + 1)];
-  } else {
-    trade = tamTrades[tamCurrentTradeIdx];
-  }
+async function tamExecuteAction(action: 'accept' | 'reject' | 'veto' | 'approve' | 'revoke') {
+  const trade = tamGetCurrentTrade();
   if (!trade) return;
 
   tamEl('tam-confirm')!.style.display = 'none';
@@ -474,31 +522,35 @@ async function tamExecuteAction(action: 'accept' | 'reject' | 'veto' | 'approve'
   btns.forEach(b => { if (b) (b as HTMLButtonElement).disabled = true; });
   tamEl('tam-error')!.style.display = 'none';
 
+  // MFL response codes: veto→reject, approve→accept, revoke→revoke
+  const apiResponse =
+    action === 'veto' ? 'reject' :
+    action === 'approve' ? 'accept' :
+    action;
+
   try {
     const res = await fetch('/api/trades/respond', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tradeId: trade.tradeId, response: action === 'veto' ? 'reject' : action === 'approve' ? 'accept' : action }),
+      body: JSON.stringify({ tradeId: trade.tradeId, response: apiResponse }),
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.message || 'Action failed');
 
-    // Show success
     const successEl = tamEl('tam-success')!;
     const msgs: Record<string, string> = {
       accept: 'Trade accepted!',
       reject: 'Trade rejected',
       veto: 'Trade vetoed',
       approve: 'Trade approved!',
+      revoke: 'Trade withdrawn',
     };
     tamEl('tam-success-text')!.textContent = msgs[action] || 'Done';
     successEl.style.display = 'flex';
 
-    // Also dismiss so it doesn't reappear
     tamDismissTrade(trade.tradeId);
 
-    // Auto-close after brief delay
     setTimeout(() => {
       tamRemoveCurrentTrade();
     }, 1200);
@@ -506,9 +558,8 @@ async function tamExecuteAction(action: 'accept' | 'reject' | 'veto' | 'approve'
     tamEl('tam-error')!.textContent = err.message || 'Something went wrong';
     tamEl('tam-error')!.style.display = '';
     btns.forEach(b => { if (b) (b as HTMLButtonElement).disabled = false; });
-    // On failure, show the Trade Builder link so they can review cap impact
     const link = tamEl('tam-builder-link');
-    if (link) link.style.display = '';
+    if (link && tamCurrentTradeType === 'received') link.style.display = '';
   }
 }
 
@@ -521,17 +572,21 @@ function tamDismissTrade(tradeId: string) {
 }
 
 function tamRemoveCurrentTrade() {
-  if (tamIsCommishTrade && tamCurrentTradeIdx < 0) {
-    tamCommishTrades.splice(-(tamCurrentTradeIdx + 1), 1);
+  if (tamCurrentTradeType === 'commish') {
+    tamCommishTrades.splice(tamCurrentTradeIdx, 1);
+  } else if (tamCurrentTradeType === 'sent') {
+    tamSentTrades.splice(tamCurrentTradeIdx, 1);
   } else {
     tamTrades.splice(tamCurrentTradeIdx, 1);
   }
 
-  const totalRemaining = tamTrades.length + tamCommishTrades.length;
+  const totalRemaining = tamTrades.length + tamSentTrades.length + tamCommishTrades.length;
   if (totalRemaining === 0) {
     tamClose();
-  } else if (totalRemaining === 1 && tamTrades.length === 1) {
-    tamShowDetailView(0);
+  } else if (totalRemaining === 1) {
+    if (tamTrades.length === 1) tamShowDetailView(0, 'received');
+    else if (tamSentTrades.length === 1) tamShowDetailView(0, 'sent');
+    else tamShowDetailView(0, 'commish');
   } else {
     tamShowListView();
   }
@@ -554,28 +609,28 @@ function tamUpdateNavBell(totalCount: number) {
   }
 }
 
-/** Open the trade alert modal from the nav bell — shows trades or empty state */
+/** Open the trade alert modal from the nav bell — shows received, sent, and commish trades */
 function tamOpenFromBell() {
-  const hasPersonal = tamAllTrades.length > 0;
-  const hasCommish = tamCommishTrades.length > 0;
+  tamTrades = [...tamAllTrades];
+  const total = tamTrades.length + tamSentTrades.length + tamCommishTrades.length;
 
-  if (hasPersonal || hasCommish) {
-    tamTrades = [...tamAllTrades];
+  if (total === 0) {
+    tamEl('tam-list-view')!.style.display = 'none';
+    tamEl('tam-detail-view')!.style.display = 'none';
+    tamEl('tam-empty-view')!.style.display = 'flex';
+  } else {
     tamEl('tam-empty-view')!.style.display = 'none';
-    if (tamTrades.length === 1 && !hasCommish) {
+    if (total === 1) {
       tamEl('tam-list-view')!.style.display = 'none';
       tamEl('tam-detail-view')!.style.display = 'flex';
-      tamShowDetailView(0);
+      if (tamTrades.length === 1) tamShowDetailView(0, 'received');
+      else if (tamSentTrades.length === 1) tamShowDetailView(0, 'sent');
+      else tamShowDetailView(0, 'commish');
     } else {
       tamEl('tam-detail-view')!.style.display = 'none';
       tamEl('tam-list-view')!.style.display = 'flex';
       tamShowListView();
     }
-  } else {
-    // No trades — show empty state with Trade Builder CTA
-    tamEl('tam-list-view')!.style.display = 'none';
-    tamEl('tam-detail-view')!.style.display = 'none';
-    tamEl('tam-empty-view')!.style.display = 'flex';
   }
   tamOpen();
 }
@@ -598,15 +653,17 @@ function tamAttachHandlers() {
   // Back
   tamEl('tam-back')?.addEventListener('click', () => tamShowListView());
 
-  // Accept / Reject / Dismiss
+  // Accept / Reject / Dismiss — routed by current trade type
   tamEl('tam-accept')?.addEventListener('click', () =>
-    tamShowConfirm(tamIsCommishTrade ? 'approve' : 'accept')
+    tamShowConfirm(tamCurrentTradeType === 'commish' ? 'approve' : 'accept')
   );
-  tamEl('tam-reject')?.addEventListener('click', () =>
-    tamShowConfirm(tamIsCommishTrade ? 'veto' : 'reject')
-  );
+  tamEl('tam-reject')?.addEventListener('click', () => {
+    if (tamCurrentTradeType === 'commish') tamShowConfirm('veto');
+    else if (tamCurrentTradeType === 'sent') tamShowConfirm('revoke');
+    else tamShowConfirm('reject');
+  });
   tamEl('tam-dismiss')?.addEventListener('click', () => {
-    const trade = tamTrades[tamCurrentTradeIdx];
+    const trade = tamGetCurrentTrade();
     if (trade) tamDismissTrade(trade.tradeId);
     tamRemoveCurrentTrade();
   });
@@ -790,6 +847,61 @@ function tamGetMockCommishTrades(): any[] {
   ];
 }
 
+/** Mock outgoing offers — trades the user has sent to others */
+function tamGetMockSentTrades(count: number): any[] {
+  const now = Math.floor(Date.now() / 1000);
+  const mocks = [
+    {
+      tradeId: 'mock-sent-001',
+      offeredBy: '0001',
+      offeredTo: '0002',
+      offeredByName: 'Pacific Pigskins',
+      offeredToName: 'Da Dangsters',
+      offeredByIcon: '/assets/theleague/icons/pigskins.png',
+      offeredToIcon: '/assets/theleague/icons/da_dangsters.png',
+      willGiveUp: '16617',
+      willReceive: '15708',
+      timestamp: now - 1800,
+      expires: now + 86400,
+      comments: 'Let me know what you think.',
+      byCommish: false,
+      resolvedAssets: {
+        willGiveUp: [
+          { type: 'player', label: 'Coleman, Keon', position: 'WR', nflTeam: 'BUF', playerId: '16617', espnId: '4635008' },
+        ],
+        willReceive: [
+          { type: 'player', label: 'Hall, Breece', position: 'RB', nflTeam: 'NYJ', playerId: '15708', espnId: '4427366' },
+        ],
+      },
+    },
+    {
+      tradeId: 'mock-sent-002',
+      offeredBy: '0001',
+      offeredTo: '0010',
+      offeredByName: 'Pacific Pigskins',
+      offeredToName: 'Computer Jocks',
+      offeredByIcon: '/assets/theleague/icons/pigskins.png',
+      offeredToIcon: '/assets/theleague/icons/computer_jocks.png',
+      willGiveUp: '15255,FP_0001_2027_3',
+      willReceive: '16161',
+      timestamp: now - 10800,
+      expires: now + 172800,
+      comments: '',
+      byCommish: false,
+      resolvedAssets: {
+        willGiveUp: [
+          { type: 'player', label: 'Gainwell, Kenneth', position: 'RB', nflTeam: 'TBB', playerId: '15255', espnId: '4371733' },
+          { type: 'pick', label: '2027 Rd 3 (via SKINS)' },
+        ],
+        willReceive: [
+          { type: 'player', label: 'Robinson, Bijan', position: 'RB', nflTeam: 'ATL', playerId: '16161', espnId: '4430807' },
+        ],
+      },
+    },
+  ];
+  return mocks.slice(0, count);
+}
+
 // ---- Polling logic ----
 
 async function tamCheckAuth(): Promise<{ franchiseId: string; role: string } | null> {
@@ -812,32 +924,35 @@ function tamIsCommissioner(): boolean {
   return tamAuthCache?.role === 'commissioner' || tamAuthCache?.role === 'admin';
 }
 
-function tamShowMockTrades(trades: any[], mockCommish: boolean) {
+function tamShowMockTrades(trades: any[], sentTrades: any[], mockCommish: boolean) {
   // Clear dismissed for mock trades so they always show
   const dismissed = tamGetDismissed();
-  const allMocks = [...trades];
   const commish = mockCommish ? tamGetMockCommishTrades() : [];
-  allMocks.push(...commish);
+  const allMocks = [...trades, ...sentTrades, ...commish];
   const mockIds = allMocks.map(t => t.tradeId);
   const cleaned = dismissed.filter(id => !mockIds.includes(id));
   if (cleaned.length !== dismissed.length) tamSetDismissed(cleaned);
 
   // Store trades
   tamAllTrades = trades;
+  tamSentTrades = sentTrades;
   tamCommishTrades = commish;
   tamTrades = [...trades];
+  // Badge = incoming only (received + commish). Sent trades never contribute to the alert.
   tamUpdateNavBell(trades.length + commish.length);
   tamAttachHandlers();
 
-  // Auto-show
-  const totalVisible = tamTrades.length + tamCommishTrades.length;
-  if (totalVisible === 0) return;
+  // Auto-open only when there are incoming trades (received or commish approvals).
+  // Sent-only mocks don't auto-open — you reach them via the bell click.
+  const hasIncoming = tamTrades.length > 0 || tamCommishTrades.length > 0;
+  if (!hasIncoming) return;
 
   tamEl('tam-empty-view')!.style.display = 'none';
+  const totalVisible = tamTrades.length + tamSentTrades.length + tamCommishTrades.length;
   if (totalVisible === 1 && tamTrades.length === 1) {
     tamEl('tam-list-view')!.style.display = 'none';
     tamEl('tam-detail-view')!.style.display = 'flex';
-    tamShowDetailView(0);
+    tamShowDetailView(0, 'received');
   } else {
     tamEl('tam-detail-view')!.style.display = 'none';
     tamEl('tam-list-view')!.style.display = 'flex';
@@ -850,21 +965,32 @@ async function tamPoll() {
   // Always attach handlers so the bell click works (even with no trades)
   tamAttachHandlers();
 
-  // Mock mode: ?mockTrades=N and/or ?mockCommish=1 (dev/preview only)
+  // Mock mode: ?mockTrades=N and/or ?mockSent=N and/or ?mockCommish=1 (dev/preview only)
   // Mocks skip debounce so they always work on reload
   const params = new URLSearchParams(window.location.search);
   const mockParam = params.get('mockTrades');
+  const mockSentParam = params.get('mockSent');
   const mockCommish = params.get('mockCommish') === '1';
-  if (mockParam || mockCommish) {
-    const count = mockParam ? Math.max(1, Math.min(3, parseInt(mockParam, 10) || 1)) : 0;
-    tamShowMockTrades(count > 0 ? tamGetMockTrades(count) : [], mockCommish);
+  if (mockParam || mockSentParam || mockCommish) {
+    const receivedCount = mockParam ? Math.max(1, Math.min(3, parseInt(mockParam, 10) || 1)) : 0;
+    const sentCount = mockSentParam ? Math.max(1, Math.min(2, parseInt(mockSentParam, 10) || 1)) : 0;
+    tamShowMockTrades(
+      receivedCount > 0 ? tamGetMockTrades(receivedCount) : [],
+      sentCount > 0 ? tamGetMockSentTrades(sentCount) : [],
+      mockCommish,
+    );
     return;
   }
 
   // No mock param — clear any stale mock data from previous page
-  if (tamTrades.length > 0 && tamTrades[0]?.tradeId?.startsWith('mock-')) {
+  const hasMocks =
+    (tamTrades[0]?.tradeId?.startsWith('mock-')) ||
+    (tamSentTrades[0]?.tradeId?.startsWith('mock-')) ||
+    (tamCommishTrades[0]?.tradeId?.startsWith('mock-'));
+  if (hasMocks) {
     tamTrades = [];
     tamAllTrades = [];
+    tamSentTrades = [];
     tamCommishTrades = [];
     tamUpdateNavBell(0);
   }
@@ -891,37 +1017,43 @@ async function tamPoll() {
     if (!hasTrades && !hasCommish) {
       tamUpdateNavBell(0);
       tamAllTrades = [];
+      tamSentTrades = [];
       tamCommishTrades = [];
       tamTrades = [];
       return;
     }
 
-    // Cache trades
+    // Split personal trades into incoming (received) and outgoing (sent)
     const received = hasTrades
       ? data.trades.filter((t: any) => t.offeredTo === auth.franchiseId)
       : [];
+    const sent = hasTrades
+      ? data.trades.filter((t: any) => t.offeredBy === auth.franchiseId)
+      : [];
     tamAllTrades = received;
+    tamSentTrades = sent;
     tamCommishTrades = hasCommish ? data.commishTrades : [];
     tamTrades = [...received];
 
-    // Badge = total (personal sent+received + commissioner)
-    const totalCount = (data.trades?.length || 0) + tamCommishTrades.length;
-    tamUpdateNavBell(totalCount);
+    // Badge = incoming only (received + commissioner approvals). Sent trades never trigger the alert.
+    const incomingCount = received.length + tamCommishTrades.length;
+    tamUpdateNavBell(incomingCount);
     tamAttachHandlers();
 
-    // Auto-show modal for undismissed trades (personal + commissioner)
+    // Auto-show modal for undismissed INCOMING trades only (received + commish).
+    // Sent trades are viewable via the bell click but never auto-open the modal.
     const dismissed = tamGetDismissed();
-    const undismissedPersonal = received.filter((t: any) => !dismissed.includes(t.tradeId));
+    const undismissedReceived = received.filter((t: any) => !dismissed.includes(t.tradeId));
     const undismissedCommish = tamCommishTrades.filter((t: any) => !dismissed.includes(t.tradeId));
-    const totalUndismissed = undismissedPersonal.length + undismissedCommish.length;
+    const totalUndismissed = undismissedReceived.length + undismissedCommish.length;
 
     if (totalUndismissed > 0) {
-      tamTrades = undismissedPersonal;
+      tamTrades = undismissedReceived;
       tamEl('tam-empty-view')!.style.display = 'none';
-      if (totalUndismissed === 1 && undismissedPersonal.length === 1) {
+      if (totalUndismissed === 1 && undismissedReceived.length === 1) {
         tamEl('tam-list-view')!.style.display = 'none';
         tamEl('tam-detail-view')!.style.display = 'flex';
-        tamShowDetailView(0);
+        tamShowDetailView(0, 'received');
       } else {
         tamEl('tam-detail-view')!.style.display = 'none';
         tamEl('tam-list-view')!.style.display = 'flex';
