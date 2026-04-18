@@ -30,9 +30,11 @@ const RECENT_MENTIONS_TTL_SEC = 24 * 60 * 60;
 const MAX_RECENT_MENTIONS = 50;
 
 // Regex patterns (case-insensitive)
-// "claude schefter" > "schefter" > "claude" — match all, we only count once.
+// "claude schefter" > "schefter" > "schefty" > "claude" — match all, we only count once.
+// "schefty" is the affectionate group-chat nickname for the bot.
 const PATTERN_CLAUDE_SCHEFTER = /\bclaude\s+schefter\b/i;
 const PATTERN_SCHEFTER = /\bschefter\b/i;
+const PATTERN_SCHEFTY = /\bschefty\b/i;
 const PATTERN_CLAUDE = /\bclaude\b/i;
 
 // Ack phrases that should NOT trigger (false-positive guard)
@@ -83,9 +85,14 @@ export function detectMention(rawText) {
     if (sMatch) {
       matchInfo = { variant: 'schefter', index: sMatch.index ?? 0, length: sMatch[0].length };
     } else {
-      const cMatch = text.match(PATTERN_CLAUDE);
-      if (cMatch) {
-        matchInfo = { variant: 'claude', index: cMatch.index ?? 0, length: cMatch[0].length };
+      const styMatch = text.match(PATTERN_SCHEFTY);
+      if (styMatch) {
+        matchInfo = { variant: 'schefty', index: styMatch.index ?? 0, length: styMatch[0].length };
+      } else {
+        const cMatch = text.match(PATTERN_CLAUDE);
+        if (cMatch) {
+          matchInfo = { variant: 'claude', index: cMatch.index ?? 0, length: cMatch[0].length };
+        }
       }
     }
   }
@@ -229,7 +236,7 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
     const detection = detectMention(text);
 
     if (!detection || !detection.match) {
-      if (detection && detection.reason && /schefter|claude/i.test(text)) {
+      if (detection && detection.reason && /schefter|schefty|claude/i.test(text)) {
         // Only log rejections that almost matched, to keep noise down
         result.rejected.push({
           id: msg.id,
