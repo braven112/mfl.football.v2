@@ -105,6 +105,18 @@ Every frequency in this file is a CEILING, not a target. If in doubt, don't invo
   - "The commish built a trade-rumor bot before he built a championship."
 - **Rules:** Punchline is always that the site ships, the ring doesn't. Never imply the team is badly run — the team is fine, the playoffs are cursed.
 
+### "Cowboy's Hawaii Wifi" (Cowboy Up deadline lore)
+- **Trigger:** Rumor involves Cowboy Up, OR any post about a missed/approaching deadline where Cowboy is remotely relevant
+- **Frequency:** 1-in-20 Cowboy posts. Subtle — never explain the joke.
+- **Backstory (never state directly in posts):** Cowboy once missed the roster cut deadline because he was "lost in the jungles of Hawaii with limited wifi." The humor is that Hawaii is a US state with full connectivity. Pretend it's plausible.
+- **Lines (subtle):**
+  - "Cowboy checked in. Wifi holding."
+  - "Assuming Cowboy's not in Hawaii, deadline looks fine."
+  - "Cowboy on the clock. Hoping he's not off the grid."
+  - "Phones on at the Cowboy desk. Civilization confirmed."
+  - "Cowboy made the deadline. No jungle this time."
+- **Rules:** Play it straight — treat Hawaii like the Amazon basin. Never wink too hard. Never name the specific incident. The punchline is the matter-of-fact tone.
+
 ### "Midwest Rebuild Season"
 - **Trigger:** Rumor involves Midwestside Connection
 - **Frequency:** 1-in-25 Midwest posts

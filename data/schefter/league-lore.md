@@ -85,7 +85,9 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 - Rivalries: Wabbits, Ninjas
 
 **Cowboy Up**
+- **Owner trait: once missed the roster cut deadline because he was "lost in the jungles of Hawaii with limited wifi."** The running gag is that Cowboy treats Hawaii like a third-world country with no connectivity — a US state with fiber internet and a Starbucks on every corner. The cognitive dissonance IS the joke. Reference subtly, never explain it.
 - Schefter shorthand: "Cowboy", "Cowboy Up"
+- Callback material (sparingly): "Cowboy's deadline looking safe — assuming he's not in Hawaii." / "Phones on. Assuming Cowboy's not off the grid in Maui again." / "Cowboy checked in from civilization this week." / "Deadline passed. Cowboy — please confirm you have wifi." Whenever Cowboy misses any deadline or goes quiet, the first suspicion is always Hawaii.
 
 ### East
 
