@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { SCHEFTER_REACTIONS } from '../../types/schefter';
+import { SCHEFTER_REACTIONS, SCHEFTER_RUMOR_REACTIONS } from '../../types/schefter';
 
 /** Human-readable emoji names for screen readers */
 const EMOJI_LABELS: Record<string, string> = {
@@ -18,6 +18,12 @@ interface Props {
   isAuthenticated?: boolean;
   /** Base reactions that persist even after fetch (e.g. GroupMe likes) */
   baseReactions?: Record<string, number>;
+  /**
+   * Anonymous mode for rumor_mill posts. Stores reactions keyed on the
+   * tipster hash instead of franchise id and restricts the emoji set to the
+   * four rumor verdicts (🔥 💯 🤔 📉). Never surfaces other users' identities.
+   */
+  anonymous?: boolean;
 }
 
 export default function SchefterReactionBar({
@@ -26,6 +32,7 @@ export default function SchefterReactionBar({
   initialUserReaction = null,
   isAuthenticated = false,
   baseReactions = {},
+  anonymous = false,
 }: Props) {
   const [reactions, setReactions] = useState<Record<string, number>>(() => {
     // Merge base reactions (e.g. GroupMe likes) into initial state
@@ -112,7 +119,7 @@ export default function SchefterReactionBar({
       const res = await fetch('/api/schefter-reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, reaction: emoji }),
+        body: JSON.stringify({ postId, reaction: emoji, ...(anonymous ? { anonymous: true } : {}) }),
       });
 
       if (!res.ok) {
@@ -129,7 +136,33 @@ export default function SchefterReactionBar({
     } finally {
       setLoading(false);
     }
-  }, [postId, reactions, userReaction, isAuthenticated, loading, mergeWithBase]);
+  }, [postId, reactions, userReaction, isAuthenticated, loading, mergeWithBase, anonymous]);
+
+  // Anonymous rumor-mode rendering: four verdict pills, no heart, no picker.
+  if (anonymous) {
+    return (
+      <div className="sf-reactions sf-reactions--rumor" role="toolbar" aria-label="React to this rumor">
+        {SCHEFTER_RUMOR_REACTIONS.map((emoji) => {
+          const count = reactions[emoji] ?? 0;
+          const isActive = userReaction === emoji;
+          return (
+            <button
+              key={emoji}
+              type="button"
+              className={`sf-reaction-pill sf-reaction-pill--rumor${isActive ? ' sf-reaction-pill--active' : ''}`}
+              onClick={() => handleToggle(emoji)}
+              disabled={!isAuthenticated || loading}
+              aria-label={`${EMOJI_LABELS[emoji] ?? emoji}, ${count} reaction${count === 1 ? '' : 's'}`}
+              aria-pressed={isActive}
+            >
+              <span className="sf-reaction-pill__emoji" aria-hidden="true">{emoji}</span>
+              {count > 0 && <span className="sf-reaction-pill__count">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   const likeCount = reactions[LIKE_EMOJI] ?? 0;
   const isLiked = userReaction === LIKE_EMOJI;

@@ -42,7 +42,8 @@ const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
 const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
-const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}`;
+const isRumor = post.type === 'transaction' && post.transactionSubType === 'rumor_mill';
+const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumor ? ' sf-post--rumor' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
@@ -242,6 +243,7 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
             isAuthenticated={isAuthenticated}
             initialReactions={reactions?.reactions}
             initialUserReaction={reactions?.userReaction}
+            anonymous={isRumor}
           />
         </div>
       </>

@@ -11,7 +11,8 @@
  */
 import type { SchefterPost } from '../../types/schefter';
 import type { SchefterReactionResponse } from '../../types/schefter';
-import { getBatchReactions } from '../../utils/schefter-reactions';
+import { getBatchReactions, getBatchAnonymousReactions } from '../../utils/schefter-reactions';
+import { hashTipsterId } from '../../utils/schefter-tipster-hash';
 import SchefterPostCard from './SchefterPostCard.astro';
 
 interface Props {
@@ -20,16 +21,41 @@ interface Props {
   userFranchiseId?: string;
   userTeamName?: string;
   userTeamIcon?: string;
+  /**
+   * Authenticated user id — only used to derive the tipster hash for anonymous
+   * rumor reactions. Never surfaced to the client.
+   */
+  userId?: string;
   /** Max posts to show initially (for pagination) */
   initialLimit?: number;
 }
 
-const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, initialLimit = 25 } = Astro.props;
+const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, userId, initialLimit = 25 } = Astro.props;
 const now = new Date();
 
-// Batch-fetch all reactions server-side (1 Redis pipeline call instead of N client fetches)
-const postIds = posts.map(p => p.id);
-const allReactions = await getBatchReactions(postIds, userFranchiseId);
+// Partition rumor_mill posts from the rest — they use the anonymous reaction
+// namespace (keyed on hashedOwnerId) so reactor identity never leaks.
+function isRumorPost(p: SchefterPost): boolean {
+  return p.type === 'transaction' && p.transactionSubType === 'rumor_mill';
+}
+
+const rumorPostIds = posts.filter(isRumorPost).map((p) => p.id);
+const regularPostIds = posts.filter((p) => !isRumorPost(p)).map((p) => p.id);
+
+let userHashedOwnerId: string | undefined;
+if (userId) {
+  try {
+    userHashedOwnerId = hashTipsterId(userId);
+  } catch {
+    userHashedOwnerId = undefined;
+  }
+}
+
+const [regularReactions, anonymousReactions] = await Promise.all([
+  getBatchReactions(regularPostIds, userFranchiseId),
+  getBatchAnonymousReactions(rumorPostIds, userHashedOwnerId),
+]);
+const allReactions: Record<string, SchefterReactionResponse> = { ...regularReactions, ...anonymousReactions };
 ---
 
 <div class="sf-feed sf-feed--page" data-initial-limit={initialLimit}>

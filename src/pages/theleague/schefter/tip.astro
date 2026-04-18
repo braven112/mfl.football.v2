@@ -24,6 +24,21 @@ const schefterArticles = feed.posts
   .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   .slice(0, 3);
 
+// Phase 2 — last rumor dropped: newest rumor_mill post, for the sidebar.
+const lastRumor = feed.posts
+  .filter((p: any) => p.type === 'transaction' && p.transactionSubType === 'rumor_mill')
+  .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0] ?? null;
+
+const lastRumorSnippet = (() => {
+  if (!lastRumor) return null;
+  const raw = String(lastRumor.body ?? '').replace(/<[^>]+>/g, '').trim();
+  if (!raw) return null;
+  // Pull first sentence (end-of-sentence punctuation) or first ~100 chars.
+  const match = raw.match(/^[^.!?]+[.!?]/);
+  const sentence = match ? match[0] : raw;
+  return sentence.length > 120 ? sentence.slice(0, 117).trimEnd() + '…' : sentence;
+})();
+
 const schefterAuthor = getAuthor('claude-schefter');
 const schefterAvatar = schefterAuthor ? getAuthorAvatar(schefterAuthor) : '/assets/claude-schefter-avatar.webp';
 
@@ -142,12 +157,89 @@ const franchiseOptions = teams.map((t) => ({
 
       <div class="tip-actions">
         <button type="submit" class="tip-submit" id="tip-submit">Send tip</button>
+        <span class="tip-remaining" id="tip-remaining" data-state="loading" aria-live="polite">
+          <span class="tip-remaining__text" id="tip-remaining-text">Checking tips left…</span>
+        </span>
         <p class="tip-status" id="tip-status" role="status" aria-live="polite"></p>
       </div>
     </form>
     </div>
 
     <aside class="tip-rail" aria-label="How tips work and recent reports">
+      {lastRumor && lastRumorSnippet && (
+        <section class="tip-rail-card tip-rail-last-rumor" aria-labelledby="last-rumor-title">
+          <div class="section-header">
+            <h2 class="section-header__title" id="last-rumor-title">Last rumor dropped</h2>
+            <p class="section-header__sub" data-relative-time={lastRumor.timestamp}>
+              {new Date(lastRumor.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </p>
+          </div>
+          <a href={`/theleague/news?source=theleague#${lastRumor.id}`} class="tip-rail-last-rumor__link">
+            <span class="tip-rail-last-rumor__snippet">"{lastRumorSnippet}"</span>
+            <span class="tip-rail-last-rumor__cta">
+              Read the feed
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </span>
+          </a>
+        </section>
+      )}
+
+      <details class="tip-rail-card tip-rail-examples">
+        <summary class="tip-rail-examples__summary">
+          <span class="tip-rail-examples__label">Good tip vs. what Schefter prints</span>
+          <svg class="tip-rail-examples__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </summary>
+        <div class="tip-rail-examples__body">
+          <p class="tip-rail-examples__intro">
+            Schefter fuzzes every tip. Name a team and he'll generalize to the division — unless multiple
+            owners whisper the same thing.
+          </p>
+          <div class="tip-rail-example">
+            <span class="tip-rail-example__label">Single-source franchise mention</span>
+            <div class="tip-rail-example__pair">
+              <div class="tip-rail-example__row tip-rail-example__row--tip">
+                <span class="tip-rail-example__row-label">You tip</span>
+                <span class="tip-rail-example__row-text">"The Magicians are shopping their 1.03 for a WR."</span>
+              </div>
+              <div class="tip-rail-example__row tip-rail-example__row--print">
+                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-text">"Sources in the East whisper that a franchise is dangling a top rookie pick for WR help. Developing."</span>
+              </div>
+            </div>
+          </div>
+          <div class="tip-rail-example">
+            <span class="tip-rail-example__label">Multi-source franchise mention</span>
+            <div class="tip-rail-example__pair">
+              <div class="tip-rail-example__row tip-rail-example__row--tip">
+                <span class="tip-rail-example__row-label">You + another owner</span>
+                <span class="tip-rail-example__row-text">"The Magicians are shopping their 1.03."</span>
+              </div>
+              <div class="tip-rail-example__row tip-rail-example__row--print">
+                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-text">"League sources tell me multiple owners are talking about the Dark Magicians. Worth watching."</span>
+              </div>
+            </div>
+          </div>
+          <div class="tip-rail-example">
+            <span class="tip-rail-example__label">The Commish</span>
+            <div class="tip-rail-example__pair">
+              <div class="tip-rail-example__row tip-rail-example__row--tip">
+                <span class="tip-rail-example__row-label">You tip</span>
+                <span class="tip-rail-example__row-text">"The Commish is sandbagging the trade review window."</span>
+              </div>
+              <div class="tip-rail-example__row tip-rail-example__row--print">
+                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-text">"Word around the league is the commissioner's office is drawing some static. Developing."</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
       <section class="tip-rail-card" aria-labelledby="how-it-works-title">
         <div class="section-header">
           <h2 class="section-header__title" id="how-it-works-title">How this works</h2>
@@ -426,9 +518,33 @@ const franchiseOptions = teams.map((t) => ({
 
   .tip-actions {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+  }
+  .tip-actions .tip-status {
+    flex-basis: 100%;
+  }
+  .tip-remaining {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    font-variant-numeric: tabular-nums;
+  }
+  .tip-remaining[data-state='empty'] {
+    color: var(--color-error-dark, #b91c1c);
+    background: color-mix(in srgb, var(--color-error-dark, #b91c1c) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-error-dark, #b91c1c) 20%, transparent);
+  }
+  .tip-remaining[data-state='loading'] {
+    opacity: 0.6;
   }
   .tip-submit {
     font: inherit;
@@ -512,6 +628,127 @@ const franchiseOptions = teams.map((t) => ({
   .tip-rail-rule__text strong {
     font-weight: 600;
     color: var(--color-gray-900, #111827);
+  }
+
+  /* Right rail: Last rumor dropped */
+  .tip-rail-last-rumor {
+    gap: 0.75rem;
+  }
+  .tip-rail-last-rumor__link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.625rem 0.75rem;
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 12%, transparent);
+    border-radius: 0.5rem;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .tip-rail-last-rumor__link:hover {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 7%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary, #1c497c) 24%, transparent);
+  }
+  .tip-rail-last-rumor__snippet {
+    font-size: 0.8125rem;
+    font-style: italic;
+    line-height: 1.45;
+    color: var(--color-gray-800, #1f2937);
+  }
+  .tip-rail-last-rumor__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Right rail: Good tip vs. bad tip examples */
+  .tip-rail-examples {
+    padding: 0;
+    overflow: hidden;
+  }
+  .tip-rail-examples__summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-800, #1f2937);
+  }
+  .tip-rail-examples__summary::-webkit-details-marker {
+    display: none;
+  }
+  .tip-rail-examples__chevron {
+    color: var(--color-gray-500, #6b7280);
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .tip-rail-examples[open] .tip-rail-examples__chevron {
+    transform: rotate(180deg);
+  }
+  .tip-rail-examples__body {
+    padding: 0 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    border-top: 1px solid var(--color-gray-50, #f9fafb);
+    padding-top: 0.75rem;
+  }
+  .tip-rail-examples__intro {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .tip-rail-example {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .tip-rail-example__label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #1c497c);
+  }
+  .tip-rail-example__pair {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-left: 2px solid var(--color-gray-100, #f3f4f6);
+    padding-left: 0.625rem;
+  }
+  .tip-rail-example__row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.25rem 0;
+  }
+  .tip-rail-example__row-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .tip-rail-example__row-text {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--color-gray-700, #374151);
+    font-style: italic;
+  }
+  .tip-rail-example__row--print .tip-rail-example__row-label {
+    color: var(--color-primary, #1c497c);
   }
 
   /* Right rail: From the Schefter Report */
@@ -610,6 +847,8 @@ const franchiseOptions = teams.map((t) => ({
   const topicSelect = document.getElementById('tip-topic') as HTMLSelectElement | null;
   const franchiseSelect = document.getElementById('tip-franchise') as HTMLSelectElement | null;
   const commishOption = franchiseSelect?.querySelector<HTMLOptionElement>('option[data-commish]') ?? null;
+  const remainingChip = document.getElementById('tip-remaining') as HTMLElement | null;
+  const remainingText = document.getElementById('tip-remaining-text');
 
   function syncCommishOption() {
     if (!topicSelect || !franchiseSelect || !commishOption) return;
@@ -622,6 +861,71 @@ const franchiseOptions = teams.map((t) => ({
   }
   topicSelect?.addEventListener('change', syncCommishOption);
   syncCommishOption();
+
+  // Phase 3 — rotating placeholders by topic
+  const PLACEHOLDERS: Record<string, string> = {
+    trade: "e.g. Hearing the Northwest is shopping their 1st for a vet WR…",
+    roster: "e.g. Somebody in the East just gave up on their rebuild…",
+    prediction: "e.g. Calling it now — Breece Hall isn't making it through Week 8…",
+    commish: "e.g. The Commish keeps scheduling the auction when I'm on vacation. I see you.",
+    other: "Tell me what's brewing.",
+  };
+  function syncPlaceholder() {
+    if (!topicSelect || !textarea) return;
+    const next = PLACEHOLDERS[topicSelect.value] ?? PLACEHOLDERS.other;
+    textarea.placeholder = next;
+  }
+  topicSelect?.addEventListener('change', syncPlaceholder);
+  syncPlaceholder();
+
+  // Phase 1 — tips-remaining chip: fetch on mount, refresh after submit.
+  function formatReset(resetsAt: number | null): string {
+    if (!resetsAt) return '';
+    const diffMs = resetsAt - Date.now();
+    if (diffMs <= 0) return '';
+    const totalMin = Math.ceil(diffMs / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h >= 1) return `resets in ${h}h ${m}m`;
+    return `resets in ${m}m`;
+  }
+  function renderRemaining(used: number, remaining: number, max: number, resetsAt: number | null) {
+    if (!remainingChip || !remainingText) return;
+    const state = remaining === 0 ? 'empty' : 'ok';
+    remainingChip.setAttribute('data-state', state);
+    if (remaining === 0) {
+      const reset = formatReset(resetsAt);
+      remainingText.textContent = reset
+        ? `Daily cap hit — ${reset}`
+        : `Daily cap hit — try again tomorrow`;
+    } else {
+      remainingText.textContent = `${remaining} of ${max} tips left today`;
+    }
+    if (submitBtn) {
+      submitBtn.disabled = remaining === 0;
+    }
+  }
+  async function refreshRemaining() {
+    if (!remainingChip || !remainingText) return;
+    try {
+      const res = await fetch('/api/schefter/tips-remaining', { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        remainingChip.setAttribute('data-state', 'ok');
+        remainingText.textContent = '';
+        return;
+      }
+      const data = await res.json();
+      const used = Number(data?.used ?? 0);
+      const max = Number(data?.max ?? 3);
+      const remaining = Number.isFinite(data?.remaining) ? Number(data.remaining) : Math.max(0, max - used);
+      const resetsAt = typeof data?.resetsAt === 'number' ? data.resetsAt : null;
+      renderRemaining(used, remaining, max, resetsAt);
+    } catch {
+      remainingChip.setAttribute('data-state', 'ok');
+      remainingText.textContent = '';
+    }
+  }
+  refreshRemaining();
 
   function setStatus(message: string, state: 'success' | 'error' | '') {
     if (!status) return;
@@ -667,6 +971,8 @@ const franchiseOptions = teams.map((t) => ({
         setStatus("Schefter's got it. He'll use it when the time is right.", 'success');
         form.reset();
         updateCounter();
+        syncPlaceholder();
+        refreshRemaining();
       } else {
         const msg = (data && typeof data.error === 'string' && data.error) ||
           (res.status === 429 ? "You've hit the 3-tips-per-24h cap. Try again tomorrow." :
@@ -674,6 +980,7 @@ const franchiseOptions = teams.map((t) => ({
            res.status === 503 ? 'Tip system is temporarily unavailable. Try again shortly.' :
            'Something went wrong. Try again.');
         setStatus(msg, 'error');
+        if (res.status === 429) refreshRemaining();
       }
     } catch (err) {
       console.error('[tip] submit error', err);

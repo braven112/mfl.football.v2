@@ -289,6 +289,19 @@ export interface SchefterFeed {
 export const SCHEFTER_REACTIONS = ['❤️', '🔥', '💰', '💩', '🏆', '📉', '💯', '🤔', '😂', '📈', '💉'] as const;
 export type SchefterReaction = (typeof SCHEFTER_REACTIONS)[number];
 
+/**
+ * Rumor-mill reaction subset — four semantic verdicts for rumor_mill posts.
+ * These render via the anonymous reaction path: counts only, reactor identity
+ * is stored under the one-way tipster hash so "Pigskins reacted 🔥" cannot
+ * be surfaced to other owners (engagement plan Phase 5).
+ */
+export const SCHEFTER_RUMOR_REACTIONS = ['🔥', '💯', '🤔', '📉'] as const;
+export type SchefterRumorReaction = (typeof SCHEFTER_RUMOR_REACTIONS)[number];
+
+export function isValidRumorReaction(emoji: string): boolean {
+  return (SCHEFTER_RUMOR_REACTIONS as readonly string[]).includes(emoji);
+}
+
 /** Emoji → array of franchiseIds who reacted */
 export interface SchefterReactionMap {
   [emoji: string]: string[];
