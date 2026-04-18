@@ -18,7 +18,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import {
@@ -177,27 +177,30 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  // Rate limit: 3 tips per hashedOwnerId per 24h
-  const rateKey = `${RATE_LIMIT_PREFIX}${hashedOwnerId}`;
-  try {
-    const count = await redis.incr(rateKey);
-    if (count === 1) {
-      await redis.expire(rateKey, RATE_LIMIT_TTL_SEC);
-    }
-    if (count > RATE_LIMIT_MAX) {
+  // Rate limit: 3 tips per hashedOwnerId per 24h (admins exempt)
+  const isAdmin = isCommissionerOrAdmin(user);
+  if (!isAdmin) {
+    const rateKey = `${RATE_LIMIT_PREFIX}${hashedOwnerId}`;
+    try {
+      const count = await redis.incr(rateKey);
+      if (count === 1) {
+        await redis.expire(rateKey, RATE_LIMIT_TTL_SEC);
+      }
+      if (count > RATE_LIMIT_MAX) {
+        return errorResponse(
+          'rate_limited',
+          "You've hit the 3-tips-per-24h cap. Try again tomorrow.",
+          429,
+        );
+      }
+    } catch (err) {
+      console.error('[schefter/tip] Rate limit error:', err);
       return errorResponse(
-        'rate_limited',
-        "You've hit the 3-tips-per-24h cap. Try again tomorrow.",
-        429,
+        'redis_unavailable',
+        'Tip system is temporarily unavailable. Try again shortly.',
+        503,
       );
     }
-  } catch (err) {
-    console.error('[schefter/tip] Rate limit error:', err);
-    return errorResponse(
-      'redis_unavailable',
-      'Tip system is temporarily unavailable. Try again shortly.',
-      503,
-    );
   }
 
   const tip: Tip = {
