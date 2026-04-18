@@ -29,6 +29,15 @@ const RECENT_MENTIONS_KEY = 'schefter:groupme:recent_mentions';
 const RECENT_MENTIONS_TTL_SEC = 24 * 60 * 60;
 const MAX_RECENT_MENTIONS = 50;
 
+// Native-reply detection: cache of recent Schefter-bot GroupMe message IDs.
+// When a user hits GroupMe's reply UI on one of these messages, the reply
+// message carries an attachment `{type:'reply', reply_id, base_reply_id}`.
+// We resolve that reply_id against this cache so replies become tips without
+// requiring the name ("schefter", "claude") in the body.
+const BOT_MESSAGE_IDS_KEY = 'schefter:groupme:bot_message_ids';
+const BOT_MESSAGE_IDS_TTL_SEC = 48 * 60 * 60; // 48h — GroupMe replies older than this are rare
+const MAX_TRACKED_BOT_MESSAGES = 50;
+
 // Regex patterns (case-insensitive)
 // "claude schefter" > "schefter" > "schefty" > "claude" — match all, we only count once.
 // "schefty" is the affectionate group-chat nickname for the bot.
@@ -133,6 +142,89 @@ export function detectMention(rawText) {
 }
 
 /**
+ * Validate a native-reply's content (no name required — the reply attachment
+ * itself is the signal that this was directed at Schefter). Guards against
+ * low-effort reactions so "lol" and "🔥" don't enqueue as tips.
+ */
+export function validateReplyContent(rawText) {
+  if (!rawText || typeof rawText !== 'string') {
+    return { valid: false, reason: 'no-text' };
+  }
+  const text = rawText.trim();
+  if (text.length < 5) {
+    return { valid: false, reason: 'too-short' };
+  }
+
+  // Strip emoji + trailing punctuation, then re-check length for things like
+  // "ok!!!" or "👍👍👍" that clear the 5-char bar only via noise.
+  const stripped = text
+    .replace(/[\p{Extended_Pictographic}]/gu, '')
+    .replace(/[!?.,:;\s]+/g, ' ')
+    .trim();
+  if (stripped.length < 5) {
+    return { valid: false, reason: 'too-short-after-strip' };
+  }
+
+  // Whole-message ack pattern: if the entire reply is a single low-effort
+  // token (with optional repetition like "hahaha" / "hehehe"), reject it.
+  // `(ha){2,}` handles "haha", "hahaha", "hahahaha"; `haha+` catches
+  // stretched variants like "hahaaaa".
+  const LOW_EFFORT =
+    /^(lol|lmao|lmfao|yeah|yea|yes|no|ok|okay|kk|thanks|thx|nice|cool|sweet|good|sure|yep|yup|right|correct|agreed|ty|thnx|hmm+|(ha){2,}|haha+|(he){2,}|hehe+|heh|true|word|facts|fr|nah|bet|same)$/i;
+  if (LOW_EFFORT.test(stripped.replace(/\s+/g, ''))) {
+    return { valid: false, reason: 'low-effort-ack' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Return true if the GroupMe message was posted by the Schefter bot.
+ * Match order: explicit sender-id env var, then sender_type==='bot' + name
+ * regex fallback. Roger is NEVER matched here.
+ */
+export function isSchefterBotMessage(msg) {
+  if (!msg || typeof msg !== 'object') return false;
+  const explicitId = process.env.GROUPME_SCHEFTER_BOT_SENDER_ID;
+  if (explicitId) {
+    if (msg.user_id === explicitId || msg.sender_id === explicitId) return true;
+    // Env var set but no match — still allow name fallback so a renamed
+    // sender_id doesn't silently break the feature.
+  }
+  if (msg.sender_type !== 'bot') return false;
+  if (typeof msg.name !== 'string') return false;
+  // "Schefter", "Claude Schefter", "Schefty" are all acceptable display names.
+  // Exclude Roger explicitly so a bot named "Roger" never matches.
+  if (/roger/i.test(msg.name)) return false;
+  return /schefter|schefty/i.test(msg.name);
+}
+
+/**
+ * If the message is a GroupMe native reply targeting a known Schefter-bot
+ * message ID, return the matched reply_id. Otherwise null.
+ *
+ * GroupMe reply attachment shape:
+ *   { type: 'reply', reply_id: '<msgId>', base_reply_id: '<msgId>', user_id: '...' }
+ * In thread-of-thread conversations `reply_id` points at the immediate parent
+ * and `base_reply_id` at the chain root; we accept either match since both
+ * indicate the user meant to address Schefter.
+ */
+export function detectReplyToSchefter(msg, schefterBotMsgIds) {
+  if (!msg || !Array.isArray(msg.attachments) || msg.attachments.length === 0) {
+    return null;
+  }
+  if (!schefterBotMsgIds || schefterBotMsgIds.size === 0) return null;
+  for (const att of msg.attachments) {
+    if (!att || att.type !== 'reply') continue;
+    const primary = typeof att.reply_id === 'string' ? att.reply_id : null;
+    const base = typeof att.base_reply_id === 'string' ? att.base_reply_id : null;
+    if (primary && schefterBotMsgIds.has(primary)) return primary;
+    if (base && schefterBotMsgIds.has(base)) return base;
+  }
+  return null;
+}
+
+/**
  * Fetch GroupMe messages since the watermark. Uses the service token.
  * Returns oldest-first.
  */
@@ -227,13 +319,64 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
   const botSenderIds = getBotSenderIds();
   const newestId = messages[messages.length - 1].id;
 
+  // Load the known Schefter-bot message ID cache so native replies to posts
+  // from earlier scans (not in this batch) are still recognized.
+  const schefterBotMsgIds = new Set();
+  try {
+    const cached = await redis.lrange(BOT_MESSAGE_IDS_KEY, 0, MAX_TRACKED_BOT_MESSAGES - 1);
+    if (Array.isArray(cached)) {
+      for (const id of cached) if (typeof id === 'string') schefterBotMsgIds.add(id);
+    }
+  } catch (err) {
+    warn(`Bot-message-id cache read failed: ${err.message}`);
+  }
+  const newSchefterBotMsgIds = [];
+
   for (const msg of messages) {
-    // Filter bots
+    // Track Schefter-bot message IDs BEFORE the bot filter — replies later in
+    // this same batch need them, and we persist them for future batches.
+    if (isSchefterBotMessage(msg) && typeof msg.id === 'string') {
+      if (!schefterBotMsgIds.has(msg.id)) {
+        schefterBotMsgIds.add(msg.id);
+        newSchefterBotMsgIds.push(msg.id);
+      }
+    }
+
+    // Filter bots out of tip generation
     if (msg.sender_type === 'bot') continue;
     if (botSenderIds.has(msg.user_id) || botSenderIds.has(msg.sender_id)) continue;
 
     const text = msg.text ?? '';
-    const detection = detectMention(text);
+
+    // Native-reply path: if this is a GroupMe reply targeting a known Schefter
+    // post, accept it as a tip without requiring the name in the body.
+    let detection = null;
+    const replyTargetId = detectReplyToSchefter(msg, schefterBotMsgIds);
+    if (replyTargetId) {
+      const contentCheck = validateReplyContent(text);
+      if (contentCheck.valid) {
+        detection = {
+          match: true,
+          variant: 'native-reply',
+          signals: { replyTo: replyTargetId, native: true },
+        };
+      } else {
+        // Surface low-effort reply rejections the same way near-miss name
+        // detections are surfaced — they represent real intent (the user hit
+        // the reply button) so they're worth logging for tuning.
+        result.rejected.push({
+          id: msg.id,
+          author: msg.name,
+          text: text.slice(0, 80),
+          reason: `reply-${contentCheck.reason}`,
+        });
+      }
+    }
+
+    // Fall back to name-regex detection if the reply path didn't match.
+    if (!detection) {
+      detection = detectMention(text);
+    }
 
     if (!detection || !detection.match) {
       if (detection && detection.reason && /schefter|schefty|claude/i.test(text)) {
@@ -258,6 +401,7 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
       source: 'groupme',
       attributable: true,
       author: msg.name,
+      ...(replyTargetId ? { replyToGroupMeId: replyTargetId } : {}),
     };
 
     result.accepted.push({
@@ -303,9 +447,27 @@ export async function ingestGroupMeMentions({ redis, dryRun = false }) {
     log(`  [dry-run] Would advance watermark → ${newestId}`);
   }
 
+  // Persist any newly-seen Schefter-bot message IDs so future batches can
+  // recognize replies to them. LPUSH keeps the newest-first ordering and the
+  // LTRIM caps the list at MAX_TRACKED_BOT_MESSAGES.
+  if (!dryRun && newSchefterBotMsgIds.length > 0) {
+    try {
+      // LPUSH accepts multiple values; feed them newest-first so the list
+      // matches the ordering convention used elsewhere in this file.
+      await redis.lpush(BOT_MESSAGE_IDS_KEY, ...[...newSchefterBotMsgIds].reverse());
+      await redis.ltrim(BOT_MESSAGE_IDS_KEY, 0, MAX_TRACKED_BOT_MESSAGES - 1);
+      await redis.expire(BOT_MESSAGE_IDS_KEY, BOT_MESSAGE_IDS_TTL_SEC);
+    } catch (err) {
+      warn(`Bot-message-id cache write failed: ${err.message}`);
+    }
+  } else if (dryRun && newSchefterBotMsgIds.length > 0) {
+    log(`  [dry-run] Would cache ${newSchefterBotMsgIds.length} Schefter bot message IDs`);
+  }
+
   log(
     `Scanned=${result.scanned} detected=${result.detected} ` +
-    `rejected(near-miss)=${result.rejected.length}`,
+    `rejected(near-miss)=${result.rejected.length} ` +
+    `botMsgsTracked=${newSchefterBotMsgIds.length}`,
   );
 
   return result;
