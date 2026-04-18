@@ -90,6 +90,50 @@ const allReactions: Record<string, SchefterReactionResponse> = { ...regularReact
 </div>
 
 <script>
+  // Phase 10 — rumor impression beacon. Fires once per rumor per session when
+  // the card enters the viewport. Uses sessionStorage to dedupe so a user
+  // scrolling past the same card twice doesn't double-count; the server also
+  // enforces shape + 30d TTL so abuse is bounded.
+  function initRumorImpressions() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const seenKey = 'schefter:rumor-impression-seen-v1';
+    let seen: Record<string, true> = {};
+    try {
+      seen = JSON.parse(sessionStorage.getItem(seenKey) ?? '{}');
+    } catch { /* ignore malformed session storage */ }
+
+    const send = (postId: string) => {
+      if (seen[postId]) return;
+      seen[postId] = true;
+      try { sessionStorage.setItem(seenKey, JSON.stringify(seen)); } catch { /* ignore quota */ }
+      const body = JSON.stringify({ postId });
+      try {
+        if (typeof navigator.sendBeacon === 'function') {
+          navigator.sendBeacon('/api/schefter/rumor-impression', new Blob([body], { type: 'application/json' }));
+          return;
+        }
+      } catch { /* fall through to fetch */ }
+      fetch('/api/schefter/rumor-impression', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    const rumorCards = document.querySelectorAll('[data-rumor-impression="true"][data-post-id]');
+    if (rumorCards.length === 0) return;
+    const obs = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const id = (entry.target as HTMLElement).dataset.postId;
+        if (id) send(id);
+        obs.unobserve(entry.target);
+      }
+    }, { threshold: 0.5 });
+    rumorCards.forEach((card) => obs.observe(card));
+  }
+
   function initLoadMore() {
     const feed = document.querySelector('.sf-feed--page');
     if (!feed) return;
@@ -121,6 +165,7 @@ const allReactions: Record<string, SchefterReactionResponse> = { ...regularReact
   }
 
   document.addEventListener('astro:page-load', initLoadMore);
+  document.addEventListener('astro:page-load', initRumorImpressions);
 </script>
 
 <style>

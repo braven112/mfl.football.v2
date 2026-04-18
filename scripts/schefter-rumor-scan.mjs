@@ -1253,6 +1253,24 @@ async function main() {
       await redis.expire(TIPS_PROCESSED_KEY, PROCESSED_TTL_SEC);
     }
 
+    // Phase 10 — hash_for_tip index. The weekly tip-of-the-week script needs to
+    // resolve each contributing tipId back to a hashedOwnerId to award badges.
+    // We TTL these at 14 days so the weekly job has a generous window even if
+    // it runs a day or two late.
+    for (const tip of batch) {
+      if (tip && tip.source === 'web' && typeof tip.hashedOwnerId === 'string' && tip.hashedOwnerId.length > 0) {
+        try {
+          await redis.set(
+            `schefter:tipster_hash_for_tip:${tip.id}`,
+            tip.hashedOwnerId,
+            { ex: 14 * 24 * 60 * 60 },
+          );
+        } catch (err) {
+          warn(`  [hash-for-tip] set failed for ${tip.id}: ${err.message}`);
+        }
+      }
+    }
+
     // Roger riff date stamp — approximate "end of day PT" with a 48h TTL so
     // the key naturally falls off even if clocks skew.
     if (hadRogerRiff) {

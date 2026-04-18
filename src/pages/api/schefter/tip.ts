@@ -49,6 +49,8 @@ type RedisClient = {
   set: (key: string, value: unknown, opts?: { nx?: boolean; ex?: number }) => Promise<unknown>;
   llen: (key: string) => Promise<number>;
   get: <T>(key: string) => Promise<T | null>;
+  zadd: (key: string, entry: { score: number; member: string }) => Promise<unknown>;
+  zremrangebyscore: (key: string, min: number | string, max: number | string) => Promise<unknown>;
 };
 
 let _redis: RedisClient | null | undefined;
@@ -259,6 +261,18 @@ export const POST: APIRoute = async ({ request }) => {
       // First tip of a new batch — start the 1-hour marinate clock. SET NX so
       // a racing request doesn't clobber the anchor if it's already set.
       await redis.set(FIRST_TIP_TS_KEY, Date.now(), { nx: true });
+    }
+
+    // Phase 9 — topic timeline. One ZSET per topic, member = tip id (anonymous),
+    // score = submit timestamp. Hot-topics endpoint ZCOUNTs over the last 7d.
+    // Also prune entries older than 30 days so the sets stay bounded.
+    try {
+      const timelineKey = `schefter:topic_timeline:${tip.topic}`;
+      await redis.zadd(timelineKey, { score: tip.submittedAt, member: tip.id });
+      await redis.zremrangebyscore(timelineKey, 0, tip.submittedAt - 30 * 24 * 60 * 60 * 1000);
+    } catch (err) {
+      console.warn('[schefter/tip] topic timeline write failed:', err);
+      // Non-fatal — the tip is already queued.
     }
   } catch (err) {
     console.error('[schefter/tip] Queue write error:', err);

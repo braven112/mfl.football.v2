@@ -32,6 +32,7 @@ type RedisClient = {
   set: (key: string, value: unknown, opts?: { nx?: boolean; ex?: number }) => Promise<unknown>;
   sadd: (key: string, ...members: string[]) => Promise<number>;
   srem: (key: string, ...members: string[]) => Promise<number>;
+  smembers: (key: string) => Promise<string[]>;
   zrange: (
     key: string,
     start: number,
@@ -135,18 +136,21 @@ export const GET: APIRoute = async ({ request }) => {
   let rumorsTotal = 0;
   let rumorsSeason = 0;
   let rawLeaderboard: unknown = [];
+  let badges: string[] = [];
 
   try {
-    const [cn, total, season, zrangeRaw] = await Promise.all([
+    const [cn, total, season, zrangeRaw, rawBadges] = await Promise.all([
       getCodename(redis, hashedOwnerId),
       redis.get<string | number>(totalKey),
       redis.get<string | number>(seasonKey),
       redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
+      redis.smembers(`schefter:tipster:badges:${hashedOwnerId}`).catch(() => []),
     ]);
     codename = cn;
     rumorsTotal = coerceCount(total);
     rumorsSeason = coerceCount(season);
     rawLeaderboard = zrangeRaw;
+    badges = Array.isArray(rawBadges) ? rawBadges.map((b) => String(b)).sort().reverse() : [];
   } catch (err) {
     console.error('[tipster-stats] Read error:', err);
     return json({ error: 'redis_unavailable' }, 503);
@@ -176,7 +180,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   return json({
-    me: { codename, rumorsTotal, rumorsSeason },
+    me: { codename, rumorsTotal, rumorsSeason, badges },
     leaderboard,
     seasonYear,
   });
