@@ -154,6 +154,7 @@ const defendingChampions = getDivisionChampions(franchises, yearResolvedConfig);
               defendingChampionYear={selectedYear}
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
+              rosterBaseUrl="/theleague/rosters"
             />
           ))}
         </div>
@@ -161,13 +162,13 @@ const defendingChampions = getDivisionChampions(franchises, yearResolvedConfig);
 
       {view === 'league' && (
         <div class="league-view">
-          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} preferredTeamId={yearPreferredTeamId} />
+          <LeagueStandingsTable teams={leagueStandings} year={selectedYear} preferredTeamId={yearPreferredTeamId} rosterBaseUrl="/theleague/rosters" />
         </div>
       )}
 
       {view === 'all_play' && (
         <div class="all-play-view">
-          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} preferredTeamId={yearPreferredTeamId} />
+          <StandingsTable teams={allPlayStandings} view="all_play" year={selectedYear} preferredTeamId={yearPreferredTeamId} rosterBaseUrl="/theleague/rosters" />
         </div>
       )}
 

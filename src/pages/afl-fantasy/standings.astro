@@ -202,6 +202,7 @@ const promoRegTeams = [
               defendingChampionYear={previousYear}
               year={selectedYear}
               preferredTeamId={preferredTeamId}
+              rosterBaseUrl={`${baseUrl}/rosters`}
             />
           ))}
         </div>
@@ -214,12 +215,14 @@ const promoRegTeams = [
             teams={conferenceAStandings.allTeams}
             year={selectedYear}
             preferredTeamId={preferredTeamId}
+            rosterBaseUrl={`${baseUrl}/rosters`}
           />
           <ConferenceLeagueStandingsTable
             conferenceName={conferenceBStandings.conference.name}
             teams={conferenceBStandings.allTeams}
             year={selectedYear}
             preferredTeamId={preferredTeamId}
+            rosterBaseUrl={`${baseUrl}/rosters`}
           />
 
           {nitTeams.length > 0 && (
@@ -254,7 +257,11 @@ const promoRegTeams = [
                             <span class="rank-badge">{team.nitRank}</span>
                           </td>
                           <td class="col-team">
-                            <div class="team-info">
+                            <a
+                              href={`${baseUrl}/rosters?franchise=${team.id}`}
+                              class="team-info team-info-link"
+                              aria-label={`View ${team.teamName} roster`}
+                            >
                               {team.teamIcon && (
                                 <img
                                   src={team.teamIcon}
@@ -267,7 +274,7 @@ const promoRegTeams = [
                                 <span class="team-name">{team.teamName}</span>
                                 <span class="team-division">Seed {team.seed || '—'} • Div {team.division}</span>
                               </div>
-                            </div>
+                            </a>
                           </td>
                           <td class="col-seed">{team.seed ?? '—'}</td>
                           <td class="col-record">{wins}-{losses}</td>
@@ -290,6 +297,7 @@ const promoRegTeams = [
               tierName={tierGroup.tier}
               teams={tierGroup.teams}
               year={selectedYear}
+              rosterBaseUrl={`${baseUrl}/rosters`}
             />
           ))}
         </div>
@@ -323,7 +331,11 @@ const promoRegTeams = [
                       <span class="rank-badge">{index + 1}</span>
                     </td>
                     <td class="col-team">
-                      <div class="team-info">
+                      <a
+                        href={`${baseUrl}/rosters?franchise=${team.id}`}
+                        class="team-info team-info-link"
+                        aria-label={`View ${team.teamName} roster`}
+                      >
                         {team.teamIcon && (
                           <img
                             src={team.teamIcon}
@@ -333,7 +345,7 @@ const promoRegTeams = [
                           />
                         )}
                         <span class="team-name">{team.teamName}</span>
-                      </div>
+                      </a>
                     </td>
                     <td class="col-record">{team.all_play_wlt?.split('-')[0] || '0'}</td>
                     <td class="col-record">{team.all_play_wlt?.split('-')[1] || '0'}</td>
@@ -693,6 +705,24 @@ const promoRegTeams = [
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  a.team-info-link {
+    color: inherit;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  a.team-info-link:hover,
+  a.team-info-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  a.team-info-link:focus-visible {
+    outline: 2px solid var(--color-focus, #2563eb);
+    outline-offset: 2px;
   }
 
   .promo-reg-table .team-icon {
