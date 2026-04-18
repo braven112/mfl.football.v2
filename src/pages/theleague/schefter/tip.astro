@@ -123,7 +123,7 @@ const franchiseOptions = teams.map((t) => ({
             <option value="trade">Trade interest</option>
             <option value="roster">Roster gripe</option>
             <option value="prediction">Bold prediction</option>
-            <option value="commish">Commish beef</option>
+            <option value="commish">Beef</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -132,6 +132,7 @@ const franchiseOptions = teams.map((t) => ({
           <label class="tip-field__label" for="tip-franchise">About which team?</label>
           <select class="tip-field__select" id="tip-franchise" name="franchiseHint">
             <option value="league-wide">League-wide</option>
+            <option value="commish" data-commish>The Commish</option>
             {franchiseOptions.map((t) => (
               <option value={t.franchiseId}>{t.label}{t.division ? ` — ${t.division}` : ''}</option>
             ))}
@@ -606,6 +607,21 @@ const franchiseOptions = teams.map((t) => ({
   const counter = document.getElementById('tip-counter');
   const status = document.getElementById('tip-status');
   const submitBtn = document.getElementById('tip-submit') as HTMLButtonElement | null;
+  const topicSelect = document.getElementById('tip-topic') as HTMLSelectElement | null;
+  const franchiseSelect = document.getElementById('tip-franchise') as HTMLSelectElement | null;
+  const commishOption = franchiseSelect?.querySelector<HTMLOptionElement>('option[data-commish]') ?? null;
+
+  function syncCommishOption() {
+    if (!topicSelect || !franchiseSelect || !commishOption) return;
+    const isTrade = topicSelect.value === 'trade';
+    commishOption.hidden = isTrade;
+    commishOption.disabled = isTrade;
+    if (isTrade && franchiseSelect.value === 'commish') {
+      franchiseSelect.value = 'league-wide';
+    }
+  }
+  topicSelect?.addEventListener('change', syncCommishOption);
+  syncCommishOption();
 
   function setStatus(message: string, state: 'success' | 'error' | '') {
     if (!status) return;

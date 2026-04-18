@@ -294,6 +294,13 @@ function anonymizeTips(tips, teams) {
       return safe;
     }
 
+    if (hint === 'commish') {
+      // Commish is a role, not an anonymity leak — the office is public.
+      // Schefter can reference "the commissioner" without naming the franchise.
+      safe.scope = { kind: 'commish' };
+      return safe;
+    }
+
     const team = teams.get(hint);
     if (multiSourceFranchises.has(hint)) {
       // Unlock named franchise + "multiple sources" phrasing
@@ -356,6 +363,9 @@ function templateBody(anonymized) {
     }
     if (one.scope?.kind === 'franchise-multi-source') {
       return `League sources tell me multiple owners are talking about the ${one.scope.franchise}. Worth watching.`;
+    }
+    if (one.scope?.kind === 'commish') {
+      return `Word around the league is the commissioner's office is drawing some static. Developing.`;
     }
     return `I'm told there's chatter in the league about something brewing. Stay tuned.`;
   }
@@ -443,11 +453,12 @@ HARD RULES (self-enforce, never violate):
 2. If a web tip's scope is "division", refer only to that division (e.g. "sources in the Northwest") — NEVER name a specific franchise.
 3. If a web tip's scope is "league-wide", stay vague ("an owner tells me", "hearing from multiple corners").
 4. If a web tip's scope is "franchise-multi-source" (sourceCount >= 2), you MAY name the franchise AND use "multiple sources" / "multiple owners" phrasing.
-5. For GroupMe tips (source: "groupme", scope: "groupme-public", attributable: true): direct attribution is ENCOURAGED. The author publicly @'d Schefter in the group chat — name them. Riff BACK conversationally, second-person where it fits ("Wabbit, I hear you, but…", "Nice try, Jomar — my sources say otherwise"). Light ribbing is in-voice.
-6. Mixed batches: attribute GroupMe quotes by name while keeping web tips anonymized in the same post. It's okay for a single post to blend "I'm hearing from sources in the Pacific…" (web) with "Wabbit, meanwhile, fired off in the group chat…" (GroupMe).
-7. Length: 2–4 sentences total (even in mixed batches). Breaking-news tease voice. End with "Developing." or similar when appropriate.
-8. Do NOT include hashtags, emoji, or @-mentions. Plain prose only.
-9. Do NOT reveal how many tips fed this post. No meta commentary about the rumor mill itself.
+5. If a web tip's scope is "commish", you MAY reference the commissioner's office or "the commish" — it's a public role, not a hidden identity — but NEVER name the franchise that holds the office.
+6. For GroupMe tips (source: "groupme", scope: "groupme-public", attributable: true): direct attribution is ENCOURAGED. The author publicly @'d Schefter in the group chat — name them. Riff BACK conversationally, second-person where it fits ("Wabbit, I hear you, but…", "Nice try, Jomar — my sources say otherwise"). Light ribbing is in-voice.
+7. Mixed batches: attribute GroupMe quotes by name while keeping web tips anonymized in the same post. It's okay for a single post to blend "I'm hearing from sources in the Pacific…" (web) with "Wabbit, meanwhile, fired off in the group chat…" (GroupMe).
+8. Length: 2–4 sentences total (even in mixed batches). Breaking-news tease voice. End with "Developing." or similar when appropriate.
+9. Do NOT include hashtags, emoji, or @-mentions. Plain prose only.
+10. Do NOT reveal how many tips fed this post. No meta commentary about the rumor mill itself.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 

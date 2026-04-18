@@ -13,6 +13,7 @@ export const TIP_TOPICS = ['trade', 'roster', 'prediction', 'commish', 'other'] 
 export type TipTopic = (typeof TIP_TOPICS)[number];
 
 export const LEAGUE_WIDE_HINT = 'league-wide';
+export const COMMISH_HINT = 'commish';
 
 export type TipSource = 'web' | 'groupme' | 'trade_offer';
 
