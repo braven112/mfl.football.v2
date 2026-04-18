@@ -5,9 +5,10 @@ export interface Props {
   tierName: string;
   teams: TeamStanding[];
   year?: number;
+  rosterBaseUrl?: string;
 }
 
-const { tierName, teams, year = new Date().getFullYear() } = Astro.props;
+const { tierName, teams, year = new Date().getFullYear(), rosterBaseUrl } = Astro.props;
 
 // Determine logo based on tier
 const tierLogo = tierName === 'Premier League'
@@ -95,17 +96,35 @@ const prizes: Record<string, string[]> = {
                 <span class="rank-number">{rank}</span>
               </td>
               <td class="col-team">
-                <div class="team-info">
-                  {team.teamIcon && (
-                    <img
-                      src={team.teamIcon}
-                      alt={team.teamName}
-                      class="team-icon"
-                      loading="lazy"
-                    />
-                  )}
-                  <span class="team-name">{team.teamName}</span>
-                </div>
+                {rosterBaseUrl ? (
+                  <a
+                    href={`${rosterBaseUrl}?franchise=${team.id}`}
+                    class="team-info team-info-link"
+                    aria-label={`View ${team.teamName} roster`}
+                  >
+                    {team.teamIcon && (
+                      <img
+                        src={team.teamIcon}
+                        alt={team.teamName}
+                        class="team-icon"
+                        loading="lazy"
+                      />
+                    )}
+                    <span class="team-name">{team.teamName}</span>
+                  </a>
+                ) : (
+                  <div class="team-info">
+                    {team.teamIcon && (
+                      <img
+                        src={team.teamIcon}
+                        alt={team.teamName}
+                        class="team-icon"
+                        loading="lazy"
+                      />
+                    )}
+                    <span class="team-name">{team.teamName}</span>
+                  </div>
+                )}
               </td>
               <td class="col-record">
                 {record ? `${record.w}-${record.l}${record.t > 0 ? `-${record.t}` : ''}` : 'N/A'}
@@ -278,6 +297,24 @@ const prizes: Record<string, string[]> = {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  a.team-info-link {
+    color: inherit;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  a.team-info-link:hover,
+  a.team-info-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  a.team-info-link:focus-visible {
+    outline: 2px solid var(--color-focus, #2563eb);
+    outline-offset: 2px;
   }
 
   .team-icon {

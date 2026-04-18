@@ -6,9 +6,10 @@ export interface Props {
   teams: TeamStanding[];
   year?: number;
   preferredTeamId?: string;
+  rosterBaseUrl?: string;
 }
 
-const { conferenceName, teams, year = new Date().getFullYear(), preferredTeamId } = Astro.props;
+const { conferenceName, teams, year = new Date().getFullYear(), preferredTeamId, rosterBaseUrl } = Astro.props;
 
 function parseWLT(wlt: string | undefined) {
   if (!wlt) return { w: 0, l: 0, t: 0 };
@@ -88,12 +89,27 @@ function getRowColor(seed: number | undefined): string {
               <td class="col-team">
                 <div class="team-info">
                   {team.teamBanner && (
-                    <img
-                      src={team.teamBanner}
-                      alt={team.teamName}
-                      class="team-banner"
-                      title={team.teamName}
-                    />
+                    rosterBaseUrl ? (
+                      <a
+                        href={`${rosterBaseUrl}?franchise=${team.id}`}
+                        class="team-banner-link"
+                        aria-label={`View ${team.teamName} roster`}
+                      >
+                        <img
+                          src={team.teamBanner}
+                          alt={team.teamName}
+                          class="team-banner"
+                          title={team.teamName}
+                        />
+                      </a>
+                    ) : (
+                      <img
+                        src={team.teamBanner}
+                        alt={team.teamName}
+                        class="team-banner"
+                        title={team.teamName}
+                      />
+                    )
                   )}
                 </div>
               </td>
@@ -283,6 +299,24 @@ function getRowColor(seed: number | undefined): string {
     max-width: 400px;
     height: auto;
     object-fit: contain;
+  }
+
+  .team-banner-link {
+    display: inline-block;
+    line-height: 0;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .team-banner-link:hover,
+  .team-banner-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  .team-banner-link:focus-visible {
+    outline: 2px solid var(--color-focus, #2563eb);
+    outline-offset: 2px;
   }
 
   .seed-number {
