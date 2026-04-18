@@ -163,56 +163,6 @@ const franchiseOptions = teams.map((t) => ({
         <p class="tip-status" id="tip-status" role="status" aria-live="polite"></p>
       </div>
     </form>
-    </div>
-
-    <aside class="tip-rail" aria-label="How tips work and recent reports">
-      {lastRumor && lastRumorSnippet && (
-        <section class="tip-rail-card tip-rail-last-rumor" aria-labelledby="last-rumor-title">
-          <div class="section-header">
-            <h2 class="section-header__title" id="last-rumor-title">Last rumor dropped</h2>
-            <p class="section-header__sub" data-relative-time={lastRumor.timestamp}>
-              {new Date(lastRumor.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-            </p>
-          </div>
-          <a href={`/theleague/news?source=theleague#${lastRumor.id}`} class="tip-rail-last-rumor__link">
-            <span class="tip-rail-last-rumor__snippet">"{lastRumorSnippet}"</span>
-            <span class="tip-rail-last-rumor__cta">
-              Read the feed
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </span>
-          </a>
-        </section>
-      )}
-
-      <section class="tip-rail-card tip-rail-cooker" aria-labelledby="cooker-title" data-cooker-status>
-        <div class="section-header">
-          <h2 class="section-header__title" id="cooker-title">Schefter's kitchen</h2>
-          <p class="section-header__sub" data-cooker-sub>Checking on the pot…</p>
-        </div>
-        <p class="tip-rail-cooker__body" data-cooker-body>Loading…</p>
-      </section>
-
-      <section class="tip-rail-card tip-rail-hot" aria-labelledby="hot-title" data-hot-topics>
-        <div class="section-header">
-          <h2 class="section-header__title" id="hot-title">Hot topics this week</h2>
-          <p class="section-header__sub">Last 7 days · all tipsters.</p>
-        </div>
-        <div class="tip-rail-hot__chips" data-hot-topics-chips>
-          <span class="tip-rail-hot__loading">Loading…</span>
-        </div>
-      </section>
-
-      <section class="tip-rail-card tip-rail-record" aria-labelledby="record-title" data-tipster-record>
-        <div class="section-header">
-          <h2 class="section-header__title" id="record-title">Your record</h2>
-          <p class="section-header__sub">Every tip is anonymous — this is between you and the hash.</p>
-        </div>
-        <div class="tip-rail-record__body" data-tipster-record-body>
-          <p class="tip-rail-record__loading" data-tipster-record-loading>Checking the Rolodex…</p>
-        </div>
-      </section>
 
       <section class="tip-rail-card tip-rail-leaderboard" aria-labelledby="leaderboard-title" data-tipster-leaderboard>
         <div class="section-header">
@@ -310,6 +260,56 @@ const franchiseOptions = teams.map((t) => ({
             <p class="tip-rail-rule__text"><strong>3 tips per owner per 24 hours.</strong> Make them count.</p>
           </li>
         </ul>
+      </section>
+    </div>
+
+    <aside class="tip-rail" aria-label="How tips work and recent reports">
+      {lastRumor && lastRumorSnippet && (
+        <section class="tip-rail-card tip-rail-last-rumor" aria-labelledby="last-rumor-title">
+          <div class="section-header">
+            <h2 class="section-header__title" id="last-rumor-title">Last rumor dropped</h2>
+            <p class="section-header__sub" data-relative-time={lastRumor.timestamp}>
+              {new Date(lastRumor.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </p>
+          </div>
+          <a href={`/theleague/news?source=theleague#${lastRumor.id}`} class="tip-rail-last-rumor__link">
+            <span class="tip-rail-last-rumor__snippet">"{lastRumorSnippet}"</span>
+            <span class="tip-rail-last-rumor__cta">
+              Read the feed
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </span>
+          </a>
+        </section>
+      )}
+
+      <section class="tip-rail-card tip-rail-cooker" aria-labelledby="cooker-title" data-cooker-status>
+        <div class="section-header">
+          <h2 class="section-header__title" id="cooker-title">Schefter's kitchen</h2>
+          <p class="section-header__sub" data-cooker-sub>Checking on the pot…</p>
+        </div>
+        <p class="tip-rail-cooker__body" data-cooker-body>Loading…</p>
+      </section>
+
+      <section class="tip-rail-card tip-rail-hot" aria-labelledby="hot-title" data-hot-topics>
+        <div class="section-header">
+          <h2 class="section-header__title" id="hot-title">Hot topics this week</h2>
+          <p class="section-header__sub">Last 7 days · all tipsters.</p>
+        </div>
+        <div class="tip-rail-hot__chips" data-hot-topics-chips>
+          <span class="tip-rail-hot__loading">Loading…</span>
+        </div>
+      </section>
+
+      <section class="tip-rail-card tip-rail-record" aria-labelledby="record-title" data-tipster-record>
+        <div class="section-header">
+          <h2 class="section-header__title" id="record-title">Your record</h2>
+          <p class="section-header__sub">Every tip is anonymous — this is between you and the hash.</p>
+        </div>
+        <div class="tip-rail-record__body" data-tipster-record-body>
+          <p class="tip-rail-record__loading" data-tipster-record-loading>Checking the Rolodex…</p>
+        </div>
       </section>
 
       {schefterArticles.length > 0 && (
