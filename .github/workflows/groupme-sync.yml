@@ -13,17 +13,29 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger sync endpoint
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Poll GroupMe and store messages
         env:
-          SYNC_URL: https://www.theleague.us/api/groupme/sync
-          SYNC_ORIGIN: https://www.theleague.us
-        run: |
-          response=$(curl -sS -w "\n%{http_code}" -X POST -H "Origin: $SYNC_ORIGIN" "$SYNC_URL")
-          body=$(echo "$response" | sed '$d')
-          status=$(echo "$response" | tail -n1)
-          echo "Status: $status"
-          echo "Body: $body"
-          if [ "$status" -ge 400 ]; then
-            echo "::error::GroupMe sync failed with status $status"
-            exit 1
-          fi
+          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
+          GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: pnpm exec tsx scripts/groupme-sync.ts
