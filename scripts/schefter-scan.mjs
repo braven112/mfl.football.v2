@@ -817,80 +817,107 @@ async function scanPendingTrades(league) {
   const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
   console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
+  // Feed-first, GroupMe-second per trade. Previously the whole loop built up a
+  // `newPosts[]` array and only flushed to disk AFTER the loop. If any call in
+  // the loop (AI, network, history append, next-iteration) threw between a
+  // GroupMe send and the post-loop feed write, the GroupMe message was already
+  // out but the feed never persisted — resulting in "Schefter posted to the
+  // group chat but the rumor is missing from the site". Swap the order per
+  // iteration: persist the feed first, THEN fire GroupMe. Each iteration is
+  // wrapped in its own try/catch so a single bad trade can't drop the batch.
   for (const trade of newPending) {
     const offerId = String(trade.id || trade.trade_id || '');
     if (!offerId) continue;
 
-    const templateBody = generatePendingTradeTemplate(trade, players, teams);
-    const aiBody = await generatePendingTradeAiBody(templateBody, trade, players, teams, {
-      lore,
-      recentPostsBlock,
-    });
-    const body = aiBody || templateBody;
+    try {
+      const templateBody = generatePendingTradeTemplate(trade, players, teams);
+      const aiBody = await generatePendingTradeAiBody(templateBody, trade, players, teams, {
+        lore,
+        recentPostsBlock,
+      });
+      const body = aiBody || templateBody;
 
-    const t1 = teams.get(trade.franchise);
-    const t2 = teams.get(trade.franchise2);
-    const team1 = pickTeamDisplayName(t1) ?? `Team ${trade.franchise}`;
-    const team2 = pickTeamDisplayName(t2) ?? `Team ${trade.franchise2}`;
+      const t1 = teams.get(trade.franchise);
+      const t2 = teams.get(trade.franchise2);
+      const team1 = pickTeamDisplayName(t1) ?? `Team ${trade.franchise}`;
+      const team2 = pickTeamDisplayName(t2) ?? `Team ${trade.franchise2}`;
 
-    const tradeTs = parseInt(trade.timestamp || `${Math.floor(Date.now() / 1000)}`, 10);
-    const post = {
-      id: `sf_pending_${offerId}`,
-      timestamp: new Date().toISOString(),
-      type: 'transaction',
-      transactionSubType: TRADE_PENDING_SUB_TYPE,
-      tier: 'breaking',
-      headline: `Trade on the commish's desk: ${team1} and ${team2}`,
-      body,
-      authorId: 'claude',
-      franchiseIds: [trade.franchise, trade.franchise2].filter(Boolean),
-      sourceTimestamp: String(tradeTs),
-      offerId,
-      tradeSignature: buildTradeSignature(trade.franchise, trade.franchise2, trade.franchise1_gave_up, trade.franchise2_gave_up),
-      league: leagueSlug,
-    };
+      const tradeTs = parseInt(trade.timestamp || `${Math.floor(Date.now() / 1000)}`, 10);
+      const post = {
+        id: `sf_pending_${offerId}`,
+        timestamp: new Date().toISOString(),
+        type: 'transaction',
+        transactionSubType: TRADE_PENDING_SUB_TYPE,
+        tier: 'breaking',
+        headline: `Trade on the commish's desk: ${team1} and ${team2}`,
+        body,
+        authorId: 'claude',
+        franchiseIds: [trade.franchise, trade.franchise2].filter(Boolean),
+        sourceTimestamp: String(tradeTs),
+        offerId,
+        tradeSignature: buildTradeSignature(trade.franchise, trade.franchise2, trade.franchise1_gave_up, trade.franchise2_gave_up),
+        league: leagueSlug,
+      };
 
-    // Dedup guard in case watermark got out of sync with feed
-    if (feed.posts.some(p => p.id === post.id)) {
-      console.log(`  [rumor-mill] Skip ${offerId} — already in feed`);
-      continue;
-    }
+      // Dedup guard in case watermark got out of sync with feed
+      if (feed.posts.some(p => p.id === post.id)) {
+        console.log(`  [rumor-mill] Skip ${offerId} — already in feed`);
+        continue;
+      }
 
-    // One post per topic: don't post a pending rumor if the completed TRADE
-    // already landed on the feed (e.g., approved between scan cycles).
-    if (post.tradeSignature && feed.posts.some(p =>
-      p.transactionSubType === 'TRADE' && p.tradeSignature === post.tradeSignature
-    )) {
-      console.log(`  [rumor-mill] Skip ${offerId} — completed TRADE already in feed`);
-      continue;
-    }
+      // One post per topic: don't post a pending rumor if the completed TRADE
+      // already landed on the feed (e.g., approved between scan cycles).
+      if (post.tradeSignature && feed.posts.some(p =>
+        p.transactionSubType === 'TRADE' && p.tradeSignature === post.tradeSignature
+      )) {
+        console.log(`  [rumor-mill] Skip ${offerId} — completed TRADE already in feed`);
+        continue;
+      }
 
-    newPosts.push(post);
-    console.log(`  [breaking] ${post.headline}`);
+      newPosts.push(post);
+      console.log(`  [breaking] ${post.headline}`);
 
-    // GroupMe: Schefter is the voice of the league — require his bot, never fall back to Roger
-    const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
-    if (!schefterBotId) {
-      console.warn('  [GroupMe] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe post (Roger bot is reserved for deadlines)');
-    } else if (DRY_RUN) {
-      console.log(`  [dry-run] Would post to GroupMe:\n${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`);
-    } else {
-      const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
-      await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
-    }
+      // Persist the feed BEFORE GroupMe so a GroupMe-without-feed divergence is
+      // impossible. If the write fails, we skip GroupMe too — better to miss
+      // a group-chat notification than to have the feed lie about what posted.
+      if (!DRY_RUN) {
+        const feedWithPost = {
+          ...feed,
+          posts: [post, ...feed.posts],
+        };
+        await fs.writeFile(league.feedPath, JSON.stringify(feedWithPost, null, 2) + '\n');
+        // Mirror the write into our in-memory feed so subsequent iterations
+        // and the post-loop watermark update see it.
+        feed.posts = feedWithPost.posts;
+      }
 
-    // Append to rolling post history (skipped in dry-run). Best-effort.
-    if (!DRY_RUN) {
-      await appendPostHistory(
-        buildHistoryEntry({
-          id: post.id,
-          timestamp: post.timestamp,
-          body: post.body,
-          subject: `trade-pending (${team1} ↔ ${team2})`,
-          tipSources: ['trade_pending'],
-        }),
-        { log: console.log, warn: console.warn },
-      );
+      // GroupMe: Schefter is the voice of the league — require his bot, never fall back to Roger
+      const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
+      if (!schefterBotId) {
+        console.warn('  [GroupMe] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe post (Roger bot is reserved for deadlines)');
+      } else if (DRY_RUN) {
+        console.log(`  [dry-run] Would post to GroupMe:\n${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`);
+      } else {
+        const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
+        await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
+      }
+
+      // Append to rolling post history (skipped in dry-run). Best-effort.
+      if (!DRY_RUN) {
+        await appendPostHistory(
+          buildHistoryEntry({
+            id: post.id,
+            timestamp: post.timestamp,
+            body: post.body,
+            subject: `trade-pending (${team1} ↔ ${team2})`,
+            tipSources: ['trade_pending'],
+          }),
+          { log: console.log, warn: console.warn },
+        );
+      }
+    } catch (err) {
+      // One trade's failure shouldn't block the rest of the batch.
+      console.error(`  [rumor-mill] Skipping trade ${offerId} due to error: ${err.message}`);
     }
   }
 
@@ -899,10 +926,8 @@ async function scanPendingTrades(league) {
   // (Trades that disappeared from pending drop off automatically.)
   feed.pendingTradeWatermark = Array.from(newWatermarkSet);
 
-  if (newPosts.length > 0) {
-    feed.posts = [...newPosts.reverse(), ...feed.posts];
-  }
-
+  // Feed body is already persisted per-iteration above; here we just flush the
+  // updated watermark (and any non-post-array metadata) back to disk.
   if (DRY_RUN) {
     console.log(`  [dry-run] Would write ${newPosts.length} pending-trade post(s) to feed`);
   } else {
