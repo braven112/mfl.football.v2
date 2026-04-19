@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isChampionshipComplete } from '../article-utils/season-guards.mjs';
 
 const CHAMPIONSHIP_WEEK = 17;
@@ -111,8 +111,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Championship Recap
-This is the biggest article of the year. Crown the champion with all the fanfare they deserve. Celebrate greatness — the MVP performances, the dynasty implications. This team just won the whole damn thing. Make it feel like a coronation. But also give the runner-up credit for getting there.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Championship Recap
+This is the biggest article of the year. Crown the champion with all the fanfare they deserve. Celebrate greatness — the MVP performances, the dynasty implications. This team just won the whole damn thing. Make it feel like a coronation. But also give the runner-up credit for getting there.`);
 }
 
 export function getUserPrompt(factSheet) {

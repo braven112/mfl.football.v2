@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, loadJSON, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import path from 'node:path';
@@ -142,8 +142,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
-Break down each fantasy matchup in TheLeague for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
+Break down each fantasy matchup in TheLeague for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.`);
 }
 
 export function getUserPrompt(factSheet) {

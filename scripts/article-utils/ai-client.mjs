@@ -51,7 +51,8 @@ function repairJSON(text) {
  * Call the Anthropic API and return the parsed JSON from the response.
  * Retries once on JSON parse failure with a repair attempt.
  *
- * @param {string} systemPrompt - System prompt (Schefter voice + rules)
+ * @param {string | Array<{type:'text',text:string,cache_control?:object}>} systemPrompt
+ *   System prompt — either a plain string or an array of content blocks (for prompt caching).
  * @param {string} userPrompt - User prompt (fact sheet + output instructions)
  * @param {number} maxTokens - Max tokens for response
  * @returns {object} Parsed JSON from the AI response
@@ -112,6 +113,21 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
       }
     }
   }
+}
+
+/**
+ * Build a cacheable system-prompt array: the stable BASE_SYSTEM_PROMPT is
+ * marked ephemeral so repeated article generations within the cache window
+ * skip re-tokenizing the shared voice/rules preamble.
+ *
+ * @param {string} typeSpecificText - Article-type-specific additions appended after BASE.
+ * @returns {Array<{type:'text',text:string,cache_control?:object}>}
+ */
+export function buildCachedSystem(typeSpecificText) {
+  return [
+    { type: 'text', text: BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: typeSpecificText },
+  ];
 }
 
 /** Base Schefter system prompt shared by all article types. */

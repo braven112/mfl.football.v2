@@ -145,11 +145,20 @@ async function callHaiku(question: string): Promise<string> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const client = new Anthropic({ apiKey });
 
+  // The system prompt embeds the full league constitution, so mark it as an
+  // ephemeral cache block. Subsequent questions within the 5-minute window
+  // hit the cache and skip re-tokenizing ~constitution-size of input.
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 500,
     temperature: 0.3,
-    system: SYSTEM_PROMPT,
+    system: [
+      {
+        type: 'text',
+        text: SYSTEM_PROMPT,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     messages: [{ role: 'user', content: question }],
   });
 

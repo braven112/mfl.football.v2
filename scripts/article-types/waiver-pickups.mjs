@@ -7,7 +7,7 @@
  */
 
 import { loadTeams, formatSalary, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
-import { BASE_SYSTEM_PROMPT } from '../article-utils/ai-client.mjs';
+import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 
 export const config = {
@@ -113,8 +113,8 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 }
 
 export function getSystemPrompt() {
-  return BASE_SYSTEM_PROMPT + `\n\nARTICLE TYPE: Waiver Pickups
-Grade the waiver wire activity for the week. Who made the best claims? Who overpaid? Who missed out on players they needed? Talk about which pickups could be league-winners and which are desperation moves.`;
+  return buildCachedSystem(`\n\nARTICLE TYPE: Waiver Pickups
+Grade the waiver wire activity for the week. Who made the best claims? Who overpaid? Who missed out on players they needed? Talk about which pickups could be league-winners and which are desperation moves.`);
 }
 
 export function getUserPrompt(factSheet) {
