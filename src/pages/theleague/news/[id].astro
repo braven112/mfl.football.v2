@@ -9,6 +9,7 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import SchefterReactionBar from '../../../components/shared/SchefterReactionBar.tsx';
 import { formatRelativeTime } from '../../../utils/schefter-feed';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
@@ -44,13 +45,11 @@ function gradeColor(grade: string): string {
 <TheLeagueLayout title={`${post.headline} — The Schefter Report`}>
   <main class="sf-article">
 
-    <!-- Back link -->
-    <a href={r('/theleague/news')} class="sf-article__back">
-      <svg class="sf-article__back-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M10 3L5 8l5 5" />
-      </svg>
-      The Schefter Report
-    </a>
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'The Schefter Report', href: '/theleague/news' },
+      { label: post.headline },
+    ]} />
 
     <div class="sf-article__card">
       <!-- Hero image -->
@@ -184,27 +183,6 @@ function gradeColor(grade: string): string {
     max-width: 40rem;
     margin: 0 auto;
     padding: 1rem 0;
-  }
-
-  .sf-article__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--sf-text-secondary, #536471);
-    text-decoration: none;
-    margin-bottom: 0.75rem;
-    padding: 0.25rem 0;
-  }
-
-  .sf-article__back:hover {
-    color: var(--sf-accent, #1c497c);
-  }
-
-  .sf-article__back-icon {
-    width: 0.875rem;
-    height: 0.875rem;
   }
 
   .sf-article__card {
