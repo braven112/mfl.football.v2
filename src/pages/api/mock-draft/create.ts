@@ -10,8 +10,15 @@
  */
 
 import type { APIRoute } from 'astro';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { getAuthUser } from '../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
+import {
+  buildMflNameLookup,
+  resolveMflId,
+  formatMflName,
+} from '../../../utils/player-name-matching';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
@@ -137,10 +144,77 @@ export const POST: APIRoute = async ({ request }) => {
     const picksPerRound = franchiseOrder.length;
     const draftOrder = buildSnakeOrder(franchiseOrder, totalRounds);
 
-    // ── Build ranked rookie player list for auto-pick (MFL Rookie ADP) ──
-    let rankedPlayerIds: string[] = [];
+    // ── Load MFL player catalog (needed by every ranking source below) ──
+    // We ship the players feed with the build; third-party sources (Sleeper,
+    // KTC, FBG) give us names, so we match them back to MFL IDs here.
+    const playersFeeds = import.meta.glob(
+      '../../../../data/theleague/mfl-feeds/*/players.json',
+      { eager: true },
+    );
+    const playersKey = Object.keys(playersFeeds).find(
+      (p) => p.includes(`/${leagueYearStr}/`),
+    );
+    const playersMod = playersKey ? (playersFeeds[playersKey] as any) : null;
+    const playersData = playersMod && typeof playersMod === 'object' && 'default' in playersMod
+      ? playersMod.default
+      : playersMod;
+    const allPlayersRaw = playersData?.players?.player;
+    const allPlayers: any[] = allPlayersRaw
+      ? (Array.isArray(allPlayersRaw) ? allPlayersRaw : [allPlayersRaw])
+      : [];
+    const rookiePool = allPlayers.filter(
+      (p: any) => p.status === 'R' || p.draft_year === leagueYearStr,
+    );
+    const rookieIdSet = new Set(rookiePool.map((p: any) => p.id));
 
-    // Try MFL's live rookie ADP first
+    // Normalized "first last" → MFL id for fuzzy matching (rookies only;
+    // the auto-pick list should never include veterans).
+    const rookieNameLookup = buildMflNameLookup(
+      rookiePool.map((p: any) => ({
+        id: p.id,
+        name: p.name, // MFL "Last, First"
+        position: p.position,
+        team: p.team,
+      })),
+      { includePosition: true },
+    );
+
+    /** Convert a list of MFL IDs into the fallback-safe ranked list. */
+    const dedupe = (ids: string[]): string[] => {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const id of ids) {
+        if (!id || seen.has(id)) continue;
+        if (!rookieIdSet.has(id)) continue; // only keep confirmed rookies
+        seen.add(id);
+        out.push(id);
+      }
+      return out;
+    };
+
+    // ── Build ranked rookie player list — cascading fallback ──
+    // Never falls back to RSP (licensed content, owner-only).
+    //
+    //   1. MFL rookie ADP    (live, with CUTOFF=3)
+    //   2. MFL dynasty ADP   (local, filtered to rookies)
+    //   3. Sleeper           (cached: data/adp/sleeper-rookies-<year>.json)
+    //   4. KTC               (cached: data/adp/ktc-rookies-<year>.json)
+    //   5. FBG rookies       (data/fantasy-expert/sources/fbg/<year>-rookies.json)
+    let rankedPlayerIds: string[] = [];
+    let rankingSource = 'none';
+
+    const loadJsonFile = (relPath: string): any => {
+      try {
+        const abs = join(process.cwd(), relPath);
+        if (!existsSync(abs)) return null;
+        return JSON.parse(readFileSync(abs, 'utf-8'));
+      } catch (err) {
+        console.warn(`[mock-draft/create] Could not read ${relPath}:`, (err as Error).message);
+        return null;
+      }
+    };
+
+    // 1. MFL rookie ADP (live)
     try {
       const mflHost = `https://www55.myfantasyleague.com/${leagueYearStr}`;
       const adpUrl = `${mflHost}/export?TYPE=adp&L=${leagueId}&FCOUNT=12&IS_PPR=3&IS_KEEPER=3&IS_MOCK=0&CUTOFF=3&ROOKIES=1&JSON=1`;
@@ -148,41 +222,104 @@ export const POST: APIRoute = async ({ request }) => {
       if (adpRes.ok) {
         const adpData = await adpRes.json();
         const adpPlayers = adpData?.adp?.player;
-        const adpArray: any[] = adpPlayers ? (Array.isArray(adpPlayers) ? adpPlayers : [adpPlayers]) : [];
-        rankedPlayerIds = adpArray
-          .sort((a: any, b: any) => parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'))
-          .map((p: any) => p.id as string)
-          .filter(Boolean);
+        const adpArray: any[] = adpPlayers
+          ? (Array.isArray(adpPlayers) ? adpPlayers : [adpPlayers])
+          : [];
+        const ordered = adpArray
+          .sort(
+            (a: any, b: any) =>
+              parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'),
+          )
+          .map((p: any) => p.id as string);
+        rankedPlayerIds = dedupe(ordered);
+        if (rankedPlayerIds.length > 0) rankingSource = 'mfl-rookie-adp';
       }
     } catch {
-      console.warn('[mock-draft/create] MFL rookie ADP fetch failed, using local fallback');
+      // fall through
     }
 
-    // Fallback: rookies from local players feed sorted by ID (MFL assigns IDs roughly in draft order)
+    // 2. MFL dynasty ADP (local feed, filter to rookies)
     if (rankedPlayerIds.length === 0) {
-      try {
-        const playersFeeds = import.meta.glob(
-          '../../../../data/theleague/mfl-feeds/*/players.json',
-          { eager: true },
-        );
-        const playersKey = Object.keys(playersFeeds).find(
-          (path) => path.includes(`/${leagueYearStr}/`),
-        );
-        if (playersKey) {
-          const mod = playersFeeds[playersKey] as any;
-          const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-          const allPlayers = data?.players?.player;
-          const playerArray: any[] = allPlayers ? (Array.isArray(allPlayers) ? allPlayers : [allPlayers]) : [];
-          rankedPlayerIds = playerArray
-            .filter((p: any) => p.status === 'R' || p.draft_year === leagueYearStr)
-            .sort((a: any, b: any) => parseInt(a.id || '99999') - parseInt(b.id || '99999'))
-            .map((p: any) => p.id as string)
-            .filter(Boolean);
-        }
-      } catch {
-        console.warn('[mock-draft/create] Could not load players feed for rookie fallback');
+      const dynasty = loadJsonFile(`data/theleague/mfl-feeds/${leagueYearStr}/adp-dynasty.json`);
+      const raw = dynasty?.adp?.player;
+      const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      const ordered = arr
+        .filter((p: any) => rookieIdSet.has(p.id))
+        .sort(
+          (a: any, b: any) =>
+            parseFloat(a.averagePick || '999') - parseFloat(b.averagePick || '999'),
+        )
+        .map((p: any) => p.id as string);
+      rankedPlayerIds = dedupe(ordered);
+      if (rankedPlayerIds.length > 0) rankingSource = 'mfl-dynasty-adp';
+    }
+
+    // 3. Sleeper (cached)
+    if (rankedPlayerIds.length === 0) {
+      const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${leagueYearStr}.json`);
+      if (sleeper?.players?.length) {
+        const ids = (sleeper.players as any[])
+          .map((p) =>
+            resolveMflId(rookieNameLookup, p.name, { position: p.position, team: p.team }),
+          )
+          .filter((id): id is string => !!id);
+        rankedPlayerIds = dedupe(ids);
+        if (rankedPlayerIds.length > 0) rankingSource = 'sleeper';
       }
     }
+
+    // 4. KTC (cached, 1QB)
+    if (rankedPlayerIds.length === 0) {
+      const ktc = loadJsonFile(`data/adp/ktc-rookies-${leagueYearStr}.json`);
+      if (ktc?.players?.length) {
+        const ids = (ktc.players as any[])
+          .map((p) =>
+            resolveMflId(rookieNameLookup, p.name, { position: p.position, team: p.team }),
+          )
+          .filter((id): id is string => !!id);
+        rankedPlayerIds = dedupe(ids);
+        if (rankedPlayerIds.length > 0) rankingSource = 'ktc';
+      }
+    }
+
+    // 5. FBG rookies
+    if (rankedPlayerIds.length === 0) {
+      const fbg = loadJsonFile(`data/fantasy-expert/sources/fbg/${leagueYearStr}-rookies.json`);
+      const fbgPlayers: any[] = fbg?.players || fbg?.rankings || [];
+      if (fbgPlayers.length) {
+        // FBG entries may have a `rank` field; preserve that order if present
+        const ordered = fbgPlayers
+          .slice()
+          .sort((a: any, b: any) => (a.rank ?? 9999) - (b.rank ?? 9999))
+          .map((p) =>
+            resolveMflId(rookieNameLookup, p.name || p.playerName || '', {
+              position: p.position,
+              team: p.team || p.nflTeam,
+            }),
+          )
+          .filter((id): id is string => !!id);
+        rankedPlayerIds = dedupe(ordered);
+        if (rankedPlayerIds.length > 0) rankingSource = 'fbg';
+      }
+    }
+
+    // Last-resort top-up: any rookies not yet in the list, appended by name
+    // order. Avoids empty picks when every source is stale, but keeps the
+    // meaningful ranking at the front of the list.
+    if (rankedPlayerIds.length < rookiePool.length) {
+      const covered = new Set(rankedPlayerIds);
+      const tail = rookiePool
+        .filter((p: any) => !covered.has(p.id))
+        .sort((a: any, b: any) =>
+          formatMflName(a.name || '').localeCompare(formatMflName(b.name || '')),
+        )
+        .map((p: any) => p.id as string);
+      rankedPlayerIds = rankedPlayerIds.concat(tail);
+    }
+
+    console.log(
+      `[mock-draft/create] Ranking source=${rankingSource} size=${rankedPlayerIds.length}`,
+    );
 
     // ── Build pre-populated pick slots ──
     const totalPicks = totalRounds * picksPerRound;
@@ -235,7 +372,7 @@ export const POST: APIRoute = async ({ request }) => {
     const partyRes = await fetch(partyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session, rankedPlayerIds }),
+      body: JSON.stringify({ session, rankedPlayerIds, rankingSource }),
     });
 
     if (!partyRes.ok) {

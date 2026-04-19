@@ -9,6 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DraftRoomPlayer } from '../types/draft-room';
+import { normalizePlayerName } from './player-name-matching';
 
 export interface DraftPlayerEnrichment {
   rspTier?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
@@ -47,15 +48,6 @@ interface RspIdMap {
 let rspCache: Map<string, RspPlayer> | null = null;
 let adpCache: Map<string, any> | null = null;
 
-function normalizeName(n: string): string {
-  return n
-    .toLowerCase()
-    .replace(/[.'"`]/g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s+(jr|sr|ii|iii|iv|v)\.?$/, '')
-    .trim();
-}
-
 function loadRsp(leagueYear: number): Map<string, RspPlayer> {
   if (rspCache) return rspCache;
   const result = new Map<string, RspPlayer>();
@@ -72,11 +64,11 @@ function loadRsp(leagueYear: number): Map<string, RspPlayer> {
     // Build name → mflId map for fuzzy matching (normalized)
     const nameToMfl = new Map<string, string>();
     for (const [name, ids] of Object.entries(idMap)) {
-      if (ids.mflId) nameToMfl.set(normalizeName(name), ids.mflId);
+      if (ids.mflId) nameToMfl.set(normalizePlayerName(name), ids.mflId);
     }
 
     for (const p of players) {
-      const mflId = nameToMfl.get(normalizeName(p.name));
+      const mflId = nameToMfl.get(normalizePlayerName(p.name));
       if (mflId) result.set(mflId, p);
     }
   } catch {

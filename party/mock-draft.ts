@@ -602,6 +602,9 @@ export default class MockDraftServer implements Party.Server {
         if (body.rankedPlayerIds) {
           await this.room.storage.put('ranked-players', body.rankedPlayerIds);
         }
+        if (body.rankingSource) {
+          await this.room.storage.put('ranking-source', body.rankingSource);
+        }
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: JSON_CT,
