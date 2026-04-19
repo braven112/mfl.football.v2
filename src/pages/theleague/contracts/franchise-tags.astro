@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { getFranchiseTagsByYear } from '../../../utils/contract-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
@@ -45,7 +46,11 @@ function formatDate(iso: string): string {
     <header class="ft-header">
       <div class="ft-header__title-row">
         <div>
-          <p class="ft-header__eyebrow">CONTRACT DECLARATIONS</p>
+          <Breadcrumbs items={[
+            { label: 'The League', href: '/theleague' },
+            { label: 'Manage Contracts', href: '/theleague/contracts/manage' },
+            { label: 'Franchise Tags' },
+          ]} />
           <h1 class="ft-header__title">Franchise Tags</h1>
           <p class="ft-header__sub">{leagueYear} Offseason &mdash; {sorted.length} tag{sorted.length !== 1 ? 's' : ''} declared</p>
         </div>
