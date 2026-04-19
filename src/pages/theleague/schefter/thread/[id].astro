@@ -12,6 +12,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../../components/theleague/Breadcrumbs.astro';
 import feedData from '../../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed, SchefterPost } from '../../../../types/schefter';
 import { formatRelativeTime } from '../../../../utils/schefter-feed';
@@ -33,12 +34,11 @@ const threadPosts: SchefterPost[] = feed.posts
 
 <TheLeagueLayout title="Rumor thread — The Schefter Report">
   <main class="sf-thread">
-    <a href="/theleague/news?source=theleague" class="sf-thread__back">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M10 3L5 8l5 5" />
-      </svg>
-      The Schefter Report
-    </a>
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: 'The Schefter Report', href: '/theleague/news?source=theleague' },
+      { label: 'Rumor Thread' },
+    ]} />
 
     <header class="sf-thread__header">
       <span class="sf-thread__eyebrow">Rumor thread</span>
@@ -81,19 +81,6 @@ const threadPosts: SchefterPost[] = feed.posts
     max-width: 40rem;
     margin: 0 auto;
     padding: 1rem 1rem 3rem;
-  }
-  .sf-thread__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-gray-600, #4b5563);
-    text-decoration: none;
-    margin-bottom: 1rem;
-  }
-  .sf-thread__back:hover {
-    color: var(--color-primary, #1c497c);
   }
   .sf-thread__header {
     display: flex;

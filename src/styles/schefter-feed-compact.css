@@ -24,11 +24,14 @@
   --sfc-typing-dot-color: var(--sf-text-secondary, #6b7280);
 }
 
-/* ── Feed Container ── */
+/* ── Feed Container ──
+   Card spec (design system README): 8px radius, medium shadow,
+   1px content-border. Matches the homepage hp-sections. */
 .sfc-feed {
   background: var(--sf-bg, #fff);
   border: 1px solid var(--sf-border, #e5e7eb);
-  border-radius: var(--radius-lg, 0.75rem);
+  border-radius: var(--radius-md, 0.5rem);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 

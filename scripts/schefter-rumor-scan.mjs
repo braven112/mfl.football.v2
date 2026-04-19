@@ -278,6 +278,14 @@ function anonymizeTips(tips, teams, feedPosts = []) {
       submittedAt: tip.submittedAt,
     };
 
+    // Reverse-the-lens framing for hostile tips. Only surface the tipster's
+    // division for web tips — GroupMe tips are already attributable and
+    // trade-offer tips don't carry a tipster. The LLM's HARD RULE governs
+    // when this may be used (hostile tips only — see rule 12).
+    if (tip.source === 'web' && typeof tip.tipsterDivision === 'string' && tip.tipsterDivision) {
+      safe.tipsterDivision = tip.tipsterDivision;
+    }
+
     // Phase 7 — whisper-back continuity. Surface the parent rumor's first
     // clause (<= 90 chars) so the LLM can open with "Following up on…".
     // Never surface the parent's tipIds or internal metadata.
@@ -299,6 +307,16 @@ function anonymizeTips(tips, teams, feedPosts = []) {
     // naturally; we do not pre-resolve from author name here).
     if (tip.source === 'groupme') {
       safe.scope = { kind: 'groupme-public' };
+      // Style Book: if this GroupMe tip was flagged as a personal attack on
+      // Schefter by the listener, surface the flag + running-season count
+      // so the LLM can escalate the Style Book bit with running-total flavor.
+      // See HARD RULE 15 and running-bits.md → "The Style Book".
+      if (tip.attackOnSchefter === true) {
+        safe.attackOnSchefter = true;
+        if (typeof tip.styleBookCount === 'number' && tip.styleBookCount > 0) {
+          safe.styleBookCount = tip.styleBookCount;
+        }
+      }
       return safe;
     }
 
@@ -347,6 +365,38 @@ function anonymizeTips(tips, teams, feedPosts = []) {
         safe.scope = { kind: 'league-wide' };
       }
     }
+
+    // Style Book — anonymous web-tip path. If this web tip was flagged as a
+    // personal attack on Schefter by the API route, surface the flag + count
+    // + codename so the LLM can fire the Style Book bit with continuity
+    // ("Noted, Burner Phone. Adding that to the file."). Anon tips get a
+    // codename; GroupMe tips get the author's display name — HARD RULE 15
+    // handles both cases.
+    if (tip.attackOnSchefter === true) {
+      safe.attackOnSchefter = true;
+      if (typeof tip.styleBookCount === 'number' && tip.styleBookCount > 0) {
+        safe.styleBookCount = tip.styleBookCount;
+      }
+      if (typeof tip.tipsterCodename === 'string' && tip.tipsterCodename.length > 0) {
+        safe.tipsterCodename = tip.tipsterCodename;
+      }
+    }
+
+    // Intra-division flag — set when the tipster and the SUBJECT team are in
+    // the same division. The scanner prompt uses this to unlock a hostile-tip
+    // frame that cites the division itself as rivalry territory, attributing
+    // neither the tipster nor the target — preserves maximum privacy (4 → 4
+    // teams, no narrowing) and reads like beat-reporter color rather than
+    // one-sided complaint. Subject-division fuzz still applies for non-hostile
+    // tips; this flag is purely informational.
+    if (
+      typeof tip.tipsterDivision === 'string' &&
+      team?.division &&
+      tip.tipsterDivision === team.division
+    ) {
+      safe.intraDivision = true;
+    }
+
     return safe;
   });
 }
@@ -482,13 +532,29 @@ HARD RULES (self-enforce, never violate):
 2. If a web tip's scope is "division", the division refers to the SUBJECT team's division — NOT where the source is located. Frame it as "a team in the [division]", "a [division]-division squad", or "the [division] is buzzing" — NEVER as "sources in the [division]" (that implies the tipster's location). NEVER name a specific franchise.
 3. If a web tip's scope is "league-wide", stay vague ("an owner tells me", "hearing from multiple corners").
 4. If a web tip's scope is "franchise-multi-source" (sourceCount >= 2), you MAY name the franchise AND use "multiple sources" / "multiple owners" phrasing.
-5. If a web tip's scope is "commish", you MAY reference the commissioner's office or "the commish" — it's a public role, not a hidden identity — but NEVER name the franchise that holds the office.
+5. If a web tip's scope is "commish", you MAY reference the commissioner's office but PREFER institutional framing — "the league office", "the commissioner's office", "the front office" — over the personal "the commish" or "Brandon". Institutional framing tones down heat while still passing on the sentiment. NEVER name the franchise that holds the office.
 6. For GroupMe tips (source: "groupme", scope: "groupme-public", attributable: true): direct attribution is ENCOURAGED. The author publicly @'d Schefter in the group chat — name them. Riff BACK conversationally, second-person where it fits ("Wabbit, I hear you, but…", "Nice try, Jomar — my sources say otherwise"). Light ribbing is in-voice.
 7. Mixed batches: attribute GroupMe quotes by name while keeping web tips anonymized in the same post. It's okay for a single post to blend "I'm hearing a team in the Pacific…" (web) with "Wabbit, meanwhile, fired off in the group chat…" (GroupMe).
 8. Length: 2–4 sentences total (even in mixed batches). Breaking-news tease voice. End with "Developing." or similar when appropriate.
 9. Do NOT include hashtags, emoji, or @-mentions. Plain prose only.
 10. Do NOT reveal how many tips fed this post. No meta commentary about the rumor mill itself.
 11. Thread continuity: if ANY tip in this batch has a \`threadFollowup\` field (Phase 7 whisper-back), open with continuity language — "Following up on yesterday's…", "More on the…", "Circling back to…", "As a reminder…". Use the parentHeadlineSnippet as a cue, but do not quote it. Still respect every fuzz/anonymity rule above. If no tip has threadFollowup, do not use continuity phrasing.
+12. Hostile tips (personal attacks, insults, name-calling, slurs): NEVER quote the insult verbatim. NEVER refuse to process the tip or label it "not for Claude" — every tip gets reported, the question is only HOW. Pass on the SENTIMENT using beat-reporter framing — there's bad blood, the feud is real, the league is not harmonious, and that's news. Choose ONE frame:
+    - Target is the commish / league office → "the league office is catching flak", "not every owner is thrilled with how the office is running things", "the front office has heat this week". (Use rule 5 institutional framing.)
+    - Target is another owner → lean on the Rivalries table from the lore file: "bad blood between [X] and [Y]", "the [X]–[Y] feud escalates", "the rivalry just got real".
+    - Generic hostility → "tempers running hot in the league group chat", "somebody's fed up", "patience wearing thin around the league".
+    Hostile tips still respect every fuzz rule above: single-source franchise mentions still fuzz to division, attacks on the commish still route through the commish scope, etc. Understated beats amplified — a dry note that beef exists lands harder than hot repetition.
+13. Reverse-the-lens framing (optional, HOSTILE TIPS ONLY): when a hostile web tip surfaces a \`tipsterDivision\` field, you MAY reframe the sentiment by citing the TIPSTER's division instead of the subject — "hearing an owner in the [tipsterDivision] isn't happy with the league office", "somebody in the [tipsterDivision] is fed up with the front office". This is the ONLY case where "an owner in the [division]" refers to the source rather than the subject — use it ONLY for hostile tips, NEVER for routine subject-division fuzz. Do NOT combine tipsterDivision framing with subject-division framing in the same post (too easy to conflate). Do NOT cite tipsterDivision on non-hostile tips — rule 2's subject-division constraint still applies there.
+14. Intra-division hostile tips (\`intraDivision: true\`): PREFERRED frame when a hostile tip's tipster and subject share a division. Attribute neither side — frame the division itself as the story: "the [division] division is really developing some strong rivalries", "beef brewing inside the [division] division", "the [division] is the most personal division in the league right now", "rivalries heating up in the [division]". This is the best hostile-tip outcome — 4 teams → 4 teams, no narrowing, and the beat-reporter voice reads as color rather than partisan complaint. Skip tipsterDivision and subject-division framing when this flag is set — division-level framing covers both.
+15. Style Book (attacks on Schefter): a tip carries \`attackOnSchefter: true\` when the tipster just took a shot at the bot. Pass it through the Style Book bit — bemused beat-reporter cataloging the criticism, NEVER defensive or clapping-back first-person. Two flavors depending on the source:
+    - **GroupMe (named)**: the tipster is named publicly via \`author\`. Address them by name: "Noted, Dead Cap.", "Back for round two, Wabbit."
+    - **Web (anonymous)**: the tipster is anonymous but carries a \`tipsterCodename\` (e.g. "Burner Phone", "The Ghost", "Hot Mic"). Address them by codename: "Noted, Burner Phone.", "Second entry for The Ghost."
+    If \`styleBookCount\` is present, you MAY reference the running total for escalation flavor (applies to BOTH flavors):
+    - count === 1: "Noted, [name]. Adding that to the style book." / "Every shot's a data point. Filed."
+    - count === 2: "Second entry in the style book for [name]. The dossier grows."
+    - count === 3: "Third shot from [name] this season. The file's getting thick."
+    - count >= 4: "[name] is officially a power user of the style book. Keep them coming." / "[N] entries deep on [name]. A scouting report writes itself."
+    Always pair with ONE line of actual league news — never let the Style Book line be the whole post. NEVER quote the attack verbatim. NEVER name the pejorative they used. The bit is affectionate ribbing, not adversarial — Schefter is a bemused reporter filing another observation, never a target clapping back. Do NOT combine with the Bot Wink catalog in the same post (they overlap thematically). Do NOT confuse a web-tip codename with a real owner name — the codename IS the handle, use it verbatim.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 

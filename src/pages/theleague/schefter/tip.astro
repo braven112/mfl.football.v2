@@ -10,6 +10,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { getAuthUser } from '../../../utils/auth';
 import theLeagueConfig from '../../../data/theleague.config.json';
 import { chooseTeamName } from '../../../utils/team-names';
@@ -84,6 +85,11 @@ const franchiseOptions = teams.map((t) => ({
   <main class="tip-page">
     <div class="tip-main">
       <header class="tip-hero tip-hero--persona">
+        <Breadcrumbs items={[
+          { label: 'The League', href: '/theleague' },
+          { label: 'The Schefter Report', href: '/theleague/news' },
+          { label: 'Tip Schefter' },
+        ]} />
         <p class="tip-hero__eyebrow">Schefter Rumor Mill</p>
         <div class="sf-page-header tip-hero__persona-card">
           <div class="sf-page-header__persona">

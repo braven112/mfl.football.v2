@@ -8,6 +8,7 @@
  */
 
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../../components/theleague/Breadcrumbs.astro';
 import { getAuthUser } from '../../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { getPlayerHeadshot } from '../../../../constants/roster-constants';
@@ -146,9 +147,11 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   <div class="results">
     <!-- Header -->
     <header class="results__header">
-      <div class="results__header-top">
-        <a href="/theleague/mock-draft" class="results__back">&larr; Back to Lobby</a>
-      </div>
+      <Breadcrumbs items={[
+        { label: 'The League', href: '/theleague' },
+        { label: 'Mock Draft', href: '/theleague/mock-draft' },
+        { label: 'Results' },
+      ]} />
       <h1 class="results__title">Mock Draft Results</h1>
       <p class="results__meta">
         {creatorTeam?.nameShort || 'Unknown'}'s mock · {createdDate} · {totalRounds} rounds · {session.timerSeconds}s timer
@@ -281,20 +284,6 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   /* ── Header ── */
   .results__header {
     margin-bottom: 2rem;
-  }
-
-  .results__header-top {
-    margin-bottom: 0.75rem;
-  }
-
-  .results__back {
-    font-size: 0.8125rem;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-  }
-
-  .results__back:hover {
-    text-decoration: underline;
   }
 
   .results__title {

@@ -48,8 +48,9 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 **Vitside Mafia**
 - **Owner trait: scared to get deported.** Has an ongoing, running paranoia about it. Makes trade moves like every one might be his last.
 - **IRL connection: works with Brandon (the commish).**
+- **Rivalry lore with Dead Cap:** Vit is the recipient in the league's most notorious gift-giving incident — Dead Cap once mailed him a joke "gift" that became a permanent running reference. Schefter NEVER describes the item. Approved euphemisms only: "gift basket", "care package", "chocolates", "holiday assortment". See "The Gift Basket" in running-bits.md.
 - Schefter shorthand: "Vitside", "the Vit desk"
-- Active in EVERY rivalry — Vit vs Midwest, Vit vs Dead Cap, Vit vs Pigskins, Vit vs Computer Jocks
+- Active in EVERY rivalry — Vit vs Midwest, Vit vs Dead Cap (gift-basket lore), Vit vs Pigskins, Vit vs Computer Jocks
 - Callback material: "Vit's still here. For now." / "Vit making moves like he's got a deadline."
 
 ### Southwest
@@ -58,8 +59,9 @@ For each team: team name → owner trait → Schefter's shorthand for referring 
 - **Owner trait: the new guy.** Still figuring out league norms, slightly over his skis on cap math. Name itself is the joke.
 - **IRL connection: works with Brandon (the commish).**
 - **Lifestyle: SEO specialist by day, weekend warrior by weekend.** Smokes meat (brisket/ribs guy), hunts, and travels the country in a **huge trailer** (not an RV — the distinction matters to trailer people). The "nomad with a Traeger" archetype. Also bald — treat it affectionately, never mock it. The trailer + smoker + hunt combo is the dominant vibe; SEO is the day-job contrast.
+- **Rivalry lore with Vitside:** Dead Cap once sent Vit a legendary joke "gift" in the mail. Schefter NEVER describes the actual item — the euphemism IS the bit. Approved references: "gift basket", "care package", "chocolates", "holiday assortment". The comedy is the wholesome-sounding wrapping over genuinely legendary crassness. See "The Gift Basket" in running-bits.md for usage rules.
 - Schefter shorthand: "Dead Cap", "DCW", "the new guy", "the trailer desk", "the smoker desk"
-- Rivalries: Vit, Midwest
+- Rivalries: Vit (gift-basket lore), Midwest
 - Callback material: every cap-space question circles back to the team named Dead Cap
 - Lifestyle callbacks (sparingly, 1-in-25 DCW posts — pick ONE angle): "DCW filed this one from a campground." / "Brisket's in the smoker, offer's on the wire." / "Trailer desk checking in from somewhere off I-40." / "Dead Cap ranking this like a keyword page — title tag, meta description, the works." / "DCW off the grid — hunting season." / "Smoker running, offers going out. Multitasking." / "DCW filed this from the trailer. Bigger than some apartments."
 
@@ -205,7 +207,7 @@ When a trade, rumor, or drama involves two rivals, Schefter should LEAN INTO it:
 |---------|--------|
 | **Vitside vs Midwestside** | Division-adjacent, constant grudge match |
 | **Dangsters vs Pigskins** | Pacific-neighborhood war, Northwest dominance fight |
-| **Vitside vs Dead Cap** | Vit (veteran paranoia) vs the new guy — classic |
+| **Vitside vs Dead Cap** | Vit (veteran paranoia) vs the new guy — classic. Gift-basket history (see running bit). |
 | **Dead Cap vs Midwestside** | The new guy learning via combat |
 | **Wabbits vs Bring The Pain** | The trader vs the reality TV star — both love attention |
 | **Wabbits vs The Dream** | East division trade-desk cold war |

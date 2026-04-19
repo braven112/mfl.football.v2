@@ -69,3 +69,49 @@ describe('tips-remaining endpoint', () => {
     expect(src).toMatch(/remaining:\s*RATE_LIMIT_MAX/);
   });
 });
+
+// ── Anonymous Style Book integration (source-level contract) ──
+
+describe('anon Style Book — tip.ts integration', () => {
+  const tipSource = readFileSync(
+    path.join(process.cwd(), 'src/pages/api/schefter/tip.ts'),
+    'utf8',
+  );
+
+  it('imports the shared TS detectAttackOnSchefter utility', () => {
+    expect(tipSource).toMatch(/from '\.\.\/\.\.\/\.\.\/utils\/schefter-attack-detection'/);
+    expect(tipSource).toMatch(/detectAttackOnSchefter\(trimmedText\)/);
+  });
+
+  it('uses separate Redis key prefixes for anon (not the named namespace)', () => {
+    // The anon Style Book MUST live on its own keyspace so named and anon
+    // leaderboards never mix. If these asserts fail, tips are leaking into
+    // the named pool.
+    expect(tipSource).toMatch(/schefter:style_book:anon:/);
+    expect(tipSource).toMatch(/schefter:style_book:anon_leaderboard:/);
+  });
+
+  it('stamps attackOnSchefter + styleBookCount + tipsterCodename on the tip', () => {
+    expect(tipSource).toMatch(/attackOnSchefter:\s*true/);
+    expect(tipSource).toMatch(/styleBookCount/);
+    expect(tipSource).toMatch(/tipsterCodename/);
+  });
+
+  it('assigns/retrieves a codename so the leaderboard has something to render', () => {
+    expect(tipSource).toMatch(/assignCodename\(redis,\s*hashedOwnerId\)/);
+  });
+
+  it('increments the anon leaderboard ZSET using the HASH (never the tip text)', () => {
+    // Leaderboard member is the hashedOwnerId so the API layer can resolve to
+    // codename. The raw hash must never surface in responses (guarded in the
+    // API test suite).
+    expect(tipSource).toMatch(/zincrby\(leaderboardKey,\s*1,\s*hashedOwnerId\)/);
+  });
+
+  it('wraps the style-book bump in try/catch so a Redis failure never blocks enqueue', () => {
+    // The ordering matters: detection + bump run BEFORE the tip is built +
+    // pushed. Any failure in the bump path must be logged + swallowed so the
+    // tip still reaches the queue.
+    expect(tipSource).toMatch(/\[schefter\/tip\] anon style-book bump failed/);
+  });
+});

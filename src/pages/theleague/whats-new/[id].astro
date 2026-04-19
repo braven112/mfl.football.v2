@@ -8,6 +8,7 @@
  * Styled using the editorial design language from PlayerDetailsModal.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
 import type { WhatsNewEntry, DescriptionImageBlock } from '../../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
@@ -49,13 +50,11 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 <TheLeagueLayout title={`${entry.title} - What's New`}>
   <main class="wn-detail">
 
-    <!-- Back link -->
-    <a href={r('/theleague/whats-new')} class="wn-detail__back">
-      <svg class="wn-detail__back-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M10 3L5 8l5 5" />
-      </svg>
-      What's New
-    </a>
+    <Breadcrumbs items={[
+      { label: 'The League', href: '/theleague' },
+      { label: "What's New", href: '/theleague/whats-new' },
+      { label: entry.title },
+    ]} />
 
     <!-- 2-Column Grid -->
     <div class="wn-detail__grid">
@@ -358,30 +357,6 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     line-height: 1.5;
     color: var(--color-gray-400, #9ca3af);
     margin: 0.75rem 0 0 0;
-  }
-
-  /* ── Back link ── */
-  .wn-detail__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-gray-400, #9ca3af);
-    text-decoration: none;
-    transition: color 0.15s ease;
-  }
-
-  .wn-detail__back:hover {
-    color: var(--color-primary, #1c497c);
-  }
-
-  .wn-detail__back-icon {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
   }
 
   /* ── Article card ── */
