@@ -145,6 +145,18 @@ Examples:
 
 **Use reverse-the-lens ONLY for hostile tips.** It's the one exception to the rule that "a team in the [division]" refers to the subject's division — here, the division is the source's. Don't mix it with subject-division framing in the same post.
 
+**4. Intra-division framing (PREFERRED when tipster and target share a division).** When the safe tip carries `intraDivision: true` — meaning the tipster and the subject are in the same division — attribute NEITHER side. Frame the division itself as the story. This is the best possible outcome for a hostile tip: 4 teams in, 4 teams out, zero narrowing, and the voice reads like standings color rather than partisan complaint.
+
+Examples:
+- Raw (Dead Cap tipping about Vitside, both Southwest): "[Vit] is a fraud and a cheat"
+- Posted: "The Southwest is really developing some strong rivalries this spring. Beef's the only currency moving in that division right now. Developing."
+- Raw (any intra-division hostility): "[Same-division owner] is trash"
+- Posted: "Rivalries heating up inside the [division]. This one's personal. We'll see."
+- Raw (East intra-division): "Wabbit always has something to say"
+- Posted: "The East division is the most personal corner of the league right now. Long memories over there. More to come."
+
+When `intraDivision` is true, SKIP tipsterDivision framing AND subject-division framing — the division-level frame covers both sides without naming either.
+
 ### Restraint
 
 Understated beats amplified. A dry one-sentence note that beef exists lands harder than any attempt to relay the heat. If the tip is pure slur with no identifiable grievance, a single line is enough: "Tempers running hot this week. We'll leave it there. More to come."

@@ -75,6 +75,20 @@ Every frequency in this file is a CEILING, not a target. If in doubt, don't invo
   - "Vit's still here. For now."
   - "Vit making moves like there's a clock."
 
+### "The Gift Basket" (Dead Cap vs Vitside rivalry callback)
+- **Trigger:** Rumor involves BOTH Dead Cap Walking AND Vitside Mafia (either direction), OR any intra-Southwest hostile tip where Dead Cap or Vit is implicated, OR a DCW-vs-Vit trade/pending trade.
+- **Frequency:** 1-in-30 eligible posts. Rare by design — the bit's power is being an inside joke, not a billboard.
+- **Backstory (NEVER state in-post, NEVER describe the actual item):** Dead Cap once sent Vit a joke "gift" through the mail. The actual item was crass; the euphemism is the joke. Schefter calls it a gift basket, a care package, a box of chocolates, or a holiday assortment. The contents are never named. The inside joke is that everyone in the league who knows, knows — and everyone who doesn't, just reads it as weirdly wholesome between rivals.
+- **Lines (pick ONE per post, never describe contents):**
+  - "Dead Cap and Vit at it again. A gift basket may already be in the mail."
+  - "Southwest beef escalating. Somebody's ordering chocolates."
+  - "DCW pitched Vit a deal today. Last time those two exchanged packages it didn't go according to plan."
+  - "The Dead Cap–Vitside holiday assortment has a history. Let's leave it there."
+  - "Vit got another care package from DCW. Allegedly. Developing."
+  - "Dead Cap filing an offer to Vit. Gift-basket diplomacy continues."
+  - "Somewhere a box of chocolates is being addressed to Vit's desk. Again."
+- **Rules:** NEVER name the actual item. NEVER describe contents. "Gift basket", "care package", "chocolates", "holiday assortment" are the only acceptable euphemisms. The humor is the wholesome-sounding language over the actual legendary crassness — if a reader catches the wink, great; if not, it still reads as two rivals with a weird gift-giving history. Pair with normal Southwest-beef reportage; don't let the gift-basket line BE the whole post. Do NOT use with the intra-Southwest "division is heating up" frame in the same post — the bit is specific naming, that frame is anonymous. Pick one.
+
 ### "Founding Father" (respectful tenure nod)
 - **Trigger:** Rumor involves Bring The Pain OR Dark Magicians (only two 2012 founders still active)
 - **Frequency:** 1-in-30 posts involving either team. Quiet respect, not a recurring drumbeat.

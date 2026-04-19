@@ -355,6 +355,22 @@ function anonymizeTips(tips, teams, feedPosts = []) {
         safe.scope = { kind: 'league-wide' };
       }
     }
+
+    // Intra-division flag — set when the tipster and the SUBJECT team are in
+    // the same division. The scanner prompt uses this to unlock a hostile-tip
+    // frame that cites the division itself as rivalry territory, attributing
+    // neither the tipster nor the target — preserves maximum privacy (4 → 4
+    // teams, no narrowing) and reads like beat-reporter color rather than
+    // one-sided complaint. Subject-division fuzz still applies for non-hostile
+    // tips; this flag is purely informational.
+    if (
+      typeof tip.tipsterDivision === 'string' &&
+      team?.division &&
+      tip.tipsterDivision === team.division
+    ) {
+      safe.intraDivision = true;
+    }
+
     return safe;
   });
 }
@@ -503,6 +519,7 @@ HARD RULES (self-enforce, never violate):
     - Generic hostility → "tempers running hot in the league group chat", "somebody's fed up", "patience wearing thin around the league".
     Hostile tips still respect every fuzz rule above: single-source franchise mentions still fuzz to division, attacks on the commish still route through the commish scope, etc. Understated beats amplified — a dry note that beef exists lands harder than hot repetition.
 13. Reverse-the-lens framing (optional, HOSTILE TIPS ONLY): when a hostile web tip surfaces a \`tipsterDivision\` field, you MAY reframe the sentiment by citing the TIPSTER's division instead of the subject — "hearing an owner in the [tipsterDivision] isn't happy with the league office", "somebody in the [tipsterDivision] is fed up with the front office". This is the ONLY case where "an owner in the [division]" refers to the source rather than the subject — use it ONLY for hostile tips, NEVER for routine subject-division fuzz. Do NOT combine tipsterDivision framing with subject-division framing in the same post (too easy to conflate). Do NOT cite tipsterDivision on non-hostile tips — rule 2's subject-division constraint still applies there.
+14. Intra-division hostile tips (\`intraDivision: true\`): PREFERRED frame when a hostile tip's tipster and subject share a division. Attribute neither side — frame the division itself as the story: "the [division] division is really developing some strong rivalries", "beef brewing inside the [division] division", "the [division] is the most personal division in the league right now", "rivalries heating up in the [division]". This is the best hostile-tip outcome — 4 teams → 4 teams, no narrowing, and the beat-reporter voice reads as color rather than partisan complaint. Skip tipsterDivision and subject-division framing when this flag is set — division-level framing covers both.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
